@@ -1,0 +1,10 @@
+# Fern docs site for the APIs in apis/ (preview locally: mise run sdk:docs). Reference:
+# https://buildwithfern.com/learn/docs/getting-started/project-structure
+instances:
+  - url: cf-cli-test.docs.buildwithfern.com
+title: cf-cli-test APIs
+navigation:
+  - api: Showcase API
+    api-name: showcase
+  - api: Petstore API
+    api-name: petstore

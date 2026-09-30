@@ -1,0 +1,12 @@
+{
+  "name": "forge-tools",
+  "private": true,
+  "description": "Fern (buildwithfern.com): SDKs, a CLI and docs from OpenAPI specs. Plus the TypeScript toolchain sdk:check uses.",
+  "devDependencies": {
+    "@types/node": "^18.19.70",
+    "@types/ws": "^8.5.12",
+    "fern-api": "5.140.0",
+    "typescript": "~5.9.3",
+    "ws": "^8.18.0"
+  }
+}

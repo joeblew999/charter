@@ -1,0 +1,268 @@
+{
+  "info": {
+    "title": "orpc-api",
+    "version": "1.0.0",
+    "description": "Notes API: oRPC contract -> OpenAPI -> Fern."
+  },
+  "servers": [
+    {
+      "url": "https://orpc-api.gedw99.workers.dev"
+    }
+  ],
+  "openapi": "3.1.1",
+  "paths": {
+    "/api/hello": {
+      "get": {
+        "operationId": "hello",
+        "summary": "Say hello",
+        "tags": [
+          "meta"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-fern-sdk-group-name": "meta",
+        "x-fern-sdk-method-name": "hello"
+      }
+    },
+    "/api/notes": {
+      "get": {
+        "operationId": "listNotes",
+        "summary": "List notes, newest first (cursor pagination)",
+        "tags": [
+          "notes"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "description": "Opaque cursor from the previous page's next_cursor",
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "body": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "body",
+                          "created_at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "next_cursor": {
+                      "description": "Pass as cursor for the next page; absent on the last page",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-fern-sdk-group-name": "notes",
+        "x-fern-sdk-method-name": "list",
+        "x-fern-pagination": {
+          "cursor": "$request.cursor",
+          "next_cursor": "$response.next_cursor",
+          "results": "$response.data"
+        }
+      },
+      "post": {
+        "operationId": "createNote",
+        "summary": "Create a note",
+        "tags": [
+          "notes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "body": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "body",
+                    "created_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-fern-sdk-group-name": "notes",
+        "x-fern-sdk-method-name": "create"
+      }
+    },
+    "/api/notes/watch": {
+      "get": {
+        "operationId": "watchNotes",
+        "summary": "Stream notes as they are created (Server-Sent Events). The stream ends after `seconds`; call again with `after` = the last note id to continue without gaps",
+        "description": "Each event's SSE id is the note id, so a browser EventSource resumes by itself (Last-Event-ID).",
+        "tags": [
+          "notes"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "description": "Resume after this note id (the id of the last note you received). Absent: only notes created from now on",
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "in": "query",
+            "name": "seconds",
+            "schema": {
+              "default": 30,
+              "description": "How long to keep the stream open",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "body": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "body",
+                    "created_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-fern-sdk-group-name": "notes",
+        "x-fern-sdk-method-name": "watch",
+        "x-fern-streaming": {
+          "format": "sse",
+          "terminator": "[end-of-stream]",
+          "resumable": true
+        }
+      }
+    }
+  }
+}

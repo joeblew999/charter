@@ -1,0 +1,380 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Showcase",
+    "version": "1.0.0",
+    "description": "Every Fern feature we care about, via standard OpenAPI + x-fern-* extensions."
+  },
+  "servers": [
+    {
+      "url": "https://orpc-sdk-harness-api.gedw99.workers.dev/api/mock",
+      "description": "The deployed mock of this API (sdk/harness, mode api). Fern's CLI takes its OAuth token URL from here; --base-url doesn't move it."
+    }
+  ],
+  "x-fern-idempotency-headers": [
+    {
+      "header": "Idempotency-Key",
+      "name": "idempotency_key"
+    }
+  ],
+  "security": [
+    {
+      "OAuth": []
+    }
+  ],
+  "paths": {
+    "/oauth/token": {
+      "post": {
+        "operationId": "getToken",
+        "summary": "OAuth client-credentials token (used by the SDK itself)",
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "client_id",
+                  "client_secret"
+                ],
+                "properties": {
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "access_token",
+                    "expires_in"
+                  ],
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "expires_in": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-fern-audiences": [
+          "public",
+          "internal"
+        ]
+      }
+    },
+    "/notes": {
+      "get": {
+        "operationId": "listNotes",
+        "summary": "List notes (cursor pagination)",
+        "tags": [
+          "notes"
+        ],
+        "x-fern-pagination": {
+          "cursor": "$request.cursor",
+          "next_cursor": "$response.next_cursor",
+          "results": "$response.data"
+        },
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "a page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Note"
+                      }
+                    },
+                    "next_cursor": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-fern-audiences": [
+          "public",
+          "internal"
+        ]
+      },
+      "post": {
+        "operationId": "createNote",
+        "summary": "Create a note (idempotent: safe to retry with an Idempotency-Key)",
+        "tags": [
+          "notes"
+        ],
+        "x-fern-idempotent": true,
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "body"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          }
+        },
+        "x-fern-audiences": [
+          "public",
+          "internal"
+        ]
+      }
+    },
+    "/files": {
+      "post": {
+        "operationId": "uploadFile",
+        "summary": "Upload a file (multipart)",
+        "tags": [
+          "files"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "size"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "size": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-fern-audiences": [
+          "internal"
+        ]
+      }
+    },
+    "/chat": {
+      "post": {
+        "operationId": "chat",
+        "summary": "Stream a reply (Server-Sent Events)",
+        "tags": [
+          "chat"
+        ],
+        "x-fern-streaming": {
+          "format": "sse"
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "chunks",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chunk"
+                }
+              }
+            }
+          }
+        },
+        "x-fern-audiences": [
+          "public",
+          "internal"
+        ]
+      }
+    }
+  },
+  "webhooks": {
+    "noteCreated": {
+      "post": {
+        "operationId": "noteCreatedWebhook",
+        "summary": "Sent to you when a note is created",
+        "tags": [
+          "notes"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "event",
+                  "note"
+                ],
+                "properties": {
+                  "event": {
+                    "type": "string"
+                  },
+                  "note": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "received"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "OAuth": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "/oauth/token",
+            "scopes": {}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Note": {
+        "type": "object",
+        "required": [
+          "id",
+          "body"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        }
+      },
+      "Chunk": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "x-fern-webhook-signature": {
+    "type": "hmac",
+    "header": "x-webhook-signature",
+    "algorithm": "sha256",
+    "encoding": "hex"
+  }
+}

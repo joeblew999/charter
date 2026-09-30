@@ -1,0 +1,14 @@
+# OpenAPI Overlay: change how the SDK looks without editing openapi.json (e.g. a spec you don't own).
+overlay: 1.0.0
+info:
+  title: Showcase SDK naming
+  version: 1.0.0
+actions:
+  - target: $.paths['/notes'].get
+    update:
+      x-fern-sdk-group-name: notes
+      x-fern-sdk-method-name: list
+  - target: $.paths['/notes'].post
+    update:
+      x-fern-sdk-group-name: notes
+      x-fern-sdk-method-name: create

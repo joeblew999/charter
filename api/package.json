@@ -1,0 +1,29 @@
+{
+	"name": "orpc-api",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "cf dev",
+		"build": "cf build",
+		"deploy": "cf deploy",
+		"typecheck": "cf workers types && tsc",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "beta",
+		"@cloudflare/vitest-pool-workers": "^0.22.0",
+		"cf": "1.0.0-beta.5",
+		"typescript": "^7.0.2",
+		"vite": "^8.3.0",
+		"vitest": "^4.1.11"
+	},
+	"dependencies": {
+		"@orpc/cloudflare": "2.0.0-beta.40",
+		"@orpc/contract": "2.0.0-beta.40",
+		"@orpc/json-schema": "2.0.0-beta.40",
+		"@orpc/openapi": "2.0.0-beta.40",
+		"@orpc/server": "2.0.0-beta.40",
+		"@orpc/zod": "2.0.0-beta.40",
+		"zod": "^4.6.5"
+	}
+}

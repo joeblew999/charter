@@ -1,0 +1,20 @@
+node_modules/
+.cloudflare/
+.wrangler/
+.dev.vars*
+.env*
+.secrets/
+*.log
+*.cpuprofile
+.DS_Store
+
+# Generated SDKs, CLIs and docs (mise run sdk:gen), and the SDK copy the harness Worker uses
+sdk/out/
+sdk/.work/
+sdk/harness/src/client/
+target/
+go.work.sum
+
+# The Forge OpenAPI spec (26 MB; mise run sdk:cloudflare downloads it)
+.forge/
+mise.local.toml

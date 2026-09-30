@@ -1,0 +1,12 @@
+{
+  "//": "How sdk:check typechecks a generated TypeScript SDK. Matches Fern's own published SDKs (TypeScript 5.9, @types/node 18, default libs), in bundler mode so Forge's import attributes work too.",
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  }
+}
