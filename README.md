@@ -1,5 +1,7 @@
 # orpc-api
 
+[![check](https://github.com/joeblew999/orpc-api/actions/workflows/check.yml/badge.svg)](https://github.com/joeblew999/orpc-api/actions/workflows/check.yml)
+
 An oRPC API on Cloudflare Workers, contract first, with real-time (SSE + WebSockets) that doesn't lose data. Typed SDKs, a CLI and a docs site are generated from it with Fern. It's the base for our other API projects: copy the patterns, not the notes.
 
 - **One contract** (`api/src/contract.ts`, Zod 4) gives:
