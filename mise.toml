@@ -28,6 +28,7 @@ HARNESS_API_URL = "{{ get_env(name='HARNESS_API_URL', default='https://orpc-sdk-
 # ---------------------------------------------------------------------------------------------------
 
 [tasks.setup]
+shell = "bash -o errexit -c"
 description = "Install the npm packages: api/ (oRPC, cf), sdk/ (Fern), sdk/harness/ (the SDK test Worker)"
 run = [
   "npm ci --prefix api --no-fund --no-audit",
@@ -36,6 +37,7 @@ run = [
 ]
 
 [tasks.check]
+shell = "bash -o errexit -c"
 description = "Every LOCAL check (no Cloudflare account; needs Docker): api:check, sdk:demo, sdk:harness:test"
 run = '''
 failed=0
@@ -49,6 +51,7 @@ exit $failed
 '''
 
 [tasks."upstream:status"]
+shell = "bash -o errexit -c"
 description = "Upstream issues our code works around (every `Upstream: <repo>#<n>` tag) and their state: CLOSED means that workaround can go (table in api/README.md)"
 run = '''
 set -euo pipefail
@@ -72,11 +75,13 @@ echo "$total upstream issues, $closed closed$([ "$closed" -gt 0 ] && echo ': rem
 # ---------------------------------------------------------------------------------------------------
 
 [tasks.dev]
+shell = "bash -o errexit -c"
 description = "Local dev server for the API on PORT (cf dev). First run: mise run db:migrate:local in another shell"
 dir = "{{config_root}}/api"
 run = "./node_modules/.bin/cf dev"
 
 [tasks."db:migrate:local"]
+shell = "bash -o errexit -c"
 description = "LOCAL: apply api/migrations/*.sql to the dev server's D1 (each once; cf can't migrate the local DB). Needs mise run dev"
 dir = "{{config_root}}/api"
 run = '''
@@ -98,6 +103,7 @@ echo "local DB-orpc-api: $applied migration(s) applied"
 '''
 
 [tasks.deploy]
+shell = "bash -o errexit -c"
 description = "REMOTE: deploy the API Worker (orpc-api) with cf, then apply pending D1 migrations"
 dir = "{{config_root}}/api"
 run = [
@@ -106,6 +112,7 @@ run = [
 ]
 
 [tasks."db:migrate"]
+shell = "bash -o errexit -c"
 description = "REMOTE: apply pending api/migrations to the deployed D1 database (orpc-api-db)"
 dir = "{{config_root}}/api"
 run = '''
@@ -117,11 +124,13 @@ uuid=$(./node_modules/.bin/cf d1 list --name orpc-api-db --per-page 100 | jq -r 
 '''
 
 [tasks."api:spec"]
+shell = "bash -o errexit -c"
 description = "Write the OpenAPI and AsyncAPI specs from the contract (api/src/contract.ts) into sdk/fern/apis/api/, with API_URL as their server"
 dir = "{{config_root}}/api"
 run = 'node spec.ts ../sdk/fern/apis/api/openapi.json ../sdk/fern/apis/api/asyncapi.json "$API_URL"'
 
 [tasks."api:check"]
+shell = "bash -o errexit -c"
 description = "LOCAL: the API's checks: typecheck, unit tests (follow()), and both committed specs match the contract"
 dir = "{{config_root}}/api"
 run = '''
@@ -137,11 +146,13 @@ echo "specs match the contract"
 '''
 
 [tasks."api:test"]
+shell = "bash -o errexit -c"
 description = "Unit tests for the API (api/test: follow(), the one real-time feed)"
 dir = "{{config_root}}/api"
 run = "./node_modules/.bin/vitest run"
 
 [tasks."api:live-test"]
+shell = "bash -o errexit -c"
 description = "REMOTE, writes test notes: the deployed API's real-time paths (raw SSE + WebSocket, then the generated TypeScript SDK)"
 run = '''
 set -uo pipefail
@@ -153,6 +164,7 @@ exit $failed
 '''
 
 [tasks."api:soak"]
+shell = "bash -o errexit -c"
 description = "REMOTE, redeploys orpc-api and writes test notes: the real-time matrix (every client x scenario: planned end, hub restart, client drop). --idle <min> for the long-idle case; other flags reach api/soak.mjs"
 raw_args = true
 # mise appends the arguments to the script: the function takes them.
@@ -165,6 +177,7 @@ soak() { node api/soak.mjs "$API_URL" "$@"; }; soak'''
 # ---------------------------------------------------------------------------------------------------
 
 [tasks."sdk:doctor"]
+shell = "bash -o errexit -c"
 description = "Check what Fern needs: its npm install, Docker, Go, Rust, FERN_TOKEN, leftover containers"
 run = '''
 ok() { printf '  ok    %s\n' "$1"; }; warn() { printf '  WARN  %s\n' "$1"; }; bad() { printf '  FAIL  %s\n' "$1"; failed=1; }
@@ -181,6 +194,7 @@ exit $failed
 '''
 
 [tasks."sdk:list"]
+shell = "bash -o errexit -c"
 description = "List the APIs in sdk/fern/apis and the SDK groups each one defines"
 run = '''
 for api in sdk/fern/apis/*/; do
@@ -189,12 +203,14 @@ done
 '''
 
 [tasks."sdk:check-spec"]
+shell = "bash -o errexit -c"
 description = "Validate an API's spec and config with Fern (fern check): mise run sdk:check-spec <api>"
 usage = 'arg "<api>" help="a folder in sdk/fern/apis"'
 dir = "{{config_root}}/sdk"
 run = './node_modules/.bin/fern check --api "$usage_api" --warnings'
 
 [tasks."sdk:gen"]
+shell = "bash -o errexit -c"
 description = "Generate an SDK with Fern (fern generate --local): mise run sdk:gen <api> <group> -> sdk/out/<api>/<group>"
 usage = '''
 arg "<api>" help="a folder in sdk/fern/apis"
@@ -207,6 +223,7 @@ docker info >/dev/null 2>&1 || { echo "Docker is not running: start it first." >
 '''
 
 [tasks."sdk:check"]
+shell = "bash -o errexit -c"
 description = "Prove a generated SDK works: Go = build + vet + its tests against Fern's WireMock mock; TypeScript = typecheck. mise run sdk:check <dir>"
 usage = 'arg "<dir>" help="a directory made by sdk:gen, e.g. sdk/out/petstore/go"'
 run = '''
@@ -236,6 +253,7 @@ fi
 '''
 
 [tasks."sdk:demo"]
+shell = "bash -o errexit -c"
 description = "Small end-to-end run: Go + TypeScript SDKs for the petstore API, checked"
 run = '''
 set -euo pipefail
@@ -246,6 +264,7 @@ done
 '''
 
 [tasks."sdk:cloudflare"]
+shell = "bash -o errexit -c"
 description = "HEAVY (26 MB spec, minutes of Docker): add Cloudflare products as an API (sdk/fern/apis/cloudflare), sliced from Forge's spec of the whole Cloudflare API: mise run sdk:cloudflare [--products d1,kv]"
 usage = '''
 flag "--products <list>" default="d1,kv" help="comma-separated: workers, d1, kv, r2, queues, workflows, ..."
@@ -266,6 +285,7 @@ echo "Now: mise run sdk:gen cloudflare go (or typescript, python)"
 '''
 
 [tasks."sdk:clean"]
+shell = "bash -o errexit -c"
 description = "Remove generated SDKs (sdk/out) and stop leftover WireMock containers"
 run = '''
 rm -rf sdk/out sdk/.work
@@ -275,6 +295,7 @@ echo "clean"
 '''
 
 [tasks."sdk:docs"]
+shell = "bash -o errexit -c"
 description = "Preview the API docs site for all APIs locally (fern docs dev, sdk/fern/docs.yml): http://localhost:3030"
 dir = "{{config_root}}/sdk"
 # Fern installs its preview app in ~/.fern/app-preview and runs node there, outside this repo:
@@ -287,6 +308,7 @@ run = "./node_modules/.bin/fern docs dev --port 3030"
 # come from the generated dist-workspace.toml (cargo-dist on GitHub Actions).
 
 [tasks."sdk:cli:build:mac"]
+shell = "bash -o errexit -c"
 description = "HEAVY: build a generated Rust CLI natively for this Mac: mise run sdk:cli:build:mac <dir>"
 usage = 'arg "<dir>" help="a CLI made by sdk:gen, e.g. sdk/out/api/cli"'
 run = '''
@@ -298,6 +320,7 @@ echo "built: $usage_dir/target/release/$bin (macOS)"
 '''
 
 [tasks."sdk:cli:build:linux"]
+shell = "bash -o errexit -c"
 description = "HEAVY: build a generated Rust CLI for Linux inside Docker (the container's arch): mise run sdk:cli:build:linux <dir>"
 usage = 'arg "<dir>" help="a CLI made by sdk:gen, e.g. sdk/out/api/cli"'
 run = '''
@@ -316,6 +339,7 @@ echo "built: $usage_dir/target-linux/release/$bin (Linux)"
 # SDK against it inside workerd: pagination, OAuth, idempotency, SSE, webhook signatures, WebSockets.
 
 [tasks."sdk:harness:sync"]
+shell = "bash -o errexit -c"
 description = "Copy the compiled showcase TypeScript SDK (group typescript-dist) into the harness Worker (sdk/harness/src/client)"
 run = '''
 set -euo pipefail
@@ -326,6 +350,7 @@ echo "SDK copied into sdk/harness/src/client"
 '''
 
 [tasks."sdk:harness:test"]
+shell = "bash -o errexit -c"
 description = "Run the SDK test in the harness Worker: locally under cf dev (default), or against the deployed Worker with --remote"
 usage = 'flag "--remote" help="test the deployed harness (HARNESS_URL) instead of cf dev"'
 run = '''
@@ -355,6 +380,7 @@ exit $failed
 '''
 
 [tasks."sdk:harness:deploy"]
+shell = "bash -o errexit -c"
 description = "REMOTE: deploy the harness Worker twice: orpc-sdk-harness, and orpc-sdk-harness-api (--mode api, what the in-Worker WebSocket test connects to)"
 dir = "{{config_root}}/sdk/harness"
 run = '''
