@@ -1,0 +1,17 @@
+# Every local check (no Cloudflare account; Fern generation needs Docker, which the runner has):
+# mise installs the pinned tools, `setup` the npm packages, then `mise run check`.
+name: check
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.0
+      - run: mise run setup
+      - run: mise run check
