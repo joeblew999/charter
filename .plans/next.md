@@ -23,4 +23,4 @@ Where this repo stands (2026-09-30) and what comes next, in order. What's proven
 6. **Worker-to-Worker through service bindings:** pass `env.X.fetch` as the SDK's `fetch` (no public URL). Not tested yet.
 7. **CI:** GitHub Actions running `mise run check` (needs Docker for Fern), plus cargo-dist for CLI releases.
 8. **Move to oRPC 2.0.0 final** when it ships (we're on the beta).
-9. **Flue** (issue #2): message channels and agents on Cloudflare with oRPC/Fern. Start small.
+9. **Flue** (issue #1): message channels and agents on Cloudflare with oRPC/Fern. Start small.

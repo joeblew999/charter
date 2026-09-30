@@ -1,6 +1,6 @@
 # Plan: generate the AsyncAPI spec from the oRPC contract
 
-Tracked in issue #4. Part of [realtime.md](realtime.md) (rule 4: both transports are declared in the one contract).
+Tracked in issue #3. Part of [realtime.md](realtime.md) (rule 4: both transports are declared in the one contract).
 
 Goal: `sdk/fern/apis/api/asyncapi.yml` is generated from `api/src/contract.ts`, like `openapi.json`, and never written by hand. First in this repo, then offered to oRPC (middleapi/orpc#2115).
 

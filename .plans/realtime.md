@@ -1,6 +1,6 @@
 # Plan: the real-time system (SSE + WebSockets on Cloudflare)
 
-Tracked in issue #3. Replaces the earlier `sse.md` list of tricks. The contract side is in [asyncapi.md](asyncapi.md) (issue #4).
+Tracked in issue #2. Replaces the earlier `sse.md` list of tricks. The contract side is in [asyncapi.md](asyncapi.md) (issue #3).
 
 The goal is one design where every transport and every client gets the same guarantee from the same code, so the test matrix stays small and a fix lands once. The design is meant to be copied into our real oRPC projects.
 
