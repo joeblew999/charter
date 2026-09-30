@@ -34,12 +34,12 @@ What Fern does through **standard options only**: the spec's OpenAPI features, `
 
 ## Does the TypeScript SDK work on Cloudflare Workers? Yes (verified 2026-09-29)
 
-`sdk/harness/` is a Worker made with `mise run new`. It implements the showcase API itself (`/api/mock/*`), and `/api/sdk-test` runs the generated SDK against it inside workerd.
+`sdk/harness/` is a small cf Worker project. It implements the showcase API itself (`/api/mock/*`), and `/api/sdk-test` runs the generated SDK against it inside workerd.
 
 ```sh
 mise run sdk:harness:sync                             # compiled SDK (group typescript-dist) -> sdk/harness/src/client
 mise run sdk:harness:test                             # under cf dev
-mise run sdk:harness:deploy                           # cf deploy: orpc-sdk-harness + orpc-sdk-harness-api (recorded for cleanup)
+mise run sdk:harness:deploy                           # cf deploy: orpc-sdk-harness + orpc-sdk-harness-api
 mise run sdk:harness:test --remote                    # on Cloudflare
 ```
 
@@ -155,7 +155,7 @@ Everything runs through mise from the repo root:
 
 ```sh
 mise run sdk:doctor                     # check the setup
-mise run sdk:install                    # Fern (fern-api) + TypeScript toolchain into sdk/node_modules
+mise run setup                          # npm packages, including Fern (fern-api) into sdk/node_modules
 mise run sdk:list                       # APIs and their groups
 mise run sdk:check-spec petstore        # fern check
 mise run sdk:gen petstore go            # fern generate --local -> out/petstore/go

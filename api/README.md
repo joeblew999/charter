@@ -20,8 +20,8 @@ A notes API: an oRPC 2.0 (`2.0.0-beta.40`) Worker on D1, contract first. From th
 ## Tasks (from the repo root)
 
 ```sh
-PROJECT=api mise run dev       # local dev server (then: PROJECT=api mise run local:db:migrate)
-PROJECT=api mise run deploy    # deploy orpc-api
+mise run dev                   # local dev server on PORT (first time, in another shell: mise run db:migrate:local)
+mise run deploy                # deploy orpc-api, then apply D1 migrations
 mise run api:check             # typecheck + unit tests + both committed specs match the contract
 mise run api:spec              # regenerate the specs after changing the contract
 mise run api:live-test         # quick live check
