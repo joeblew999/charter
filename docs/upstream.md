@@ -20,14 +20,22 @@ Every workaround in the code carries a tag `Upstream: <owner>/<repo>#<n> (when f
 | [tinygo-org/tinygo#3599](https://github.com/tinygo-org/tinygo/issues/3599) | TinyGo has no `reflect.StructOf`; Huma's default config installs a hook that calls it | `humaworkers.Config` leaves the hook out (`api-go/humaworkers`) | Keep Huma's default hooks |
 | [tinygo-org/tinygo#5798](https://github.com/tinygo-org/tinygo/issues/5798) | **Go timers stall on Cloudflare** (not under local workerd): after `setTimeout(d)` the production clock has moved by `d` rounded down to a millisecond, and TinyGo sleeps for fractions, so `time.Sleep`, timers and context deadlines hang about half the time (6 of 10 streams) | `api-go/worker/tinygo-clock.mjs` rounds every TinyGo sleep up to a whole millisecond (16 of 16 then end on time) | Delete the file and its import |
 | [tinygo-org/tinygo#5799](https://github.com/tinygo-org/tinygo/issues/5799) | TinyGo's `http.ServeMux` doesn't match method patterns: `"GET /a"` is 404 (wildcards work), so Huma's `humago` adapter serves nothing | `api-go/humaworkers` matches routes itself | Huma's own adapter can do the routing |
-| [syumai/workers-go#97](https://github.com/syumai/workers-go/issues/97) | workers-go can't answer a WebSocket upgrade | Go answers with a stream of lines; `api-go/worker/index.mjs` sends each as a frame | Answer the upgrade in Go and delete the adapter |
+| [tinygo-org/tinygo#3862](https://github.com/tinygo-org/tinygo/issues/3862) | TinyGo has no `reflect.Value.MethodByName`; Huma's typed multipart form (`huma.MultipartFormFiles[T]`) calls it | The upload takes the plain `multipart.Form` and declares its schema on the operation (`api-go/showcase/contract.go`) | Use `huma.MultipartFormFiles[T]` |
+| [syumai/workers-go#97](https://github.com/syumai/workers-go/issues/97) | workers-go can't answer a WebSocket upgrade | Go answers with a stream of lines; `api-go/worker/websocket.mjs` sends each as a frame, and gives each frame from the client to Go as a `POST` | Answer the upgrade in Go and delete the adapter |
 | [syumai/workers-go#220](https://github.com/syumai/workers-go/issues/220) | A Durable Object class can't be written in Go | The hub is JavaScript (`api-go/worker/hub.mjs`) | The hub can be Go |
 
 The oRPC rows are tagged in `api/src/`; the Go Worker carries the same tags for the Fern issues (`api-go/api/`), and the showcase contract (`sdk/harness/src/contract.ts`) the one for its SSE stream, so `upstream:status` lists every place.
 
+## Found, not filed yet
+
+- **Fern's Go generator writes a test that doesn't compile** when the OAuth token endpoint is form-encoded and its request schema is a named one (a `$ref`): `auth/oauth_wire_test/oauth_wire_test.go: undefined: showcase.Request` (fern-go-sdk 1.64.0; `go vet` and `go test` of the generated SDK fail, the SDK itself builds). With the same schema written inline it names the type `GetTokenRequest` and passes. Huma names every body schema, so the Go showcase writes this one into the operation (`api-go/showcase/contract.go`, the token operation). When fixed: drop that `RequestBody`.
+- **`cf dev` drops a WebSocket upgrade that the Worker refuses.** Go answers 401 to an upgrade without a token; natively the client sees the 401, under `cf dev` the connection just closes. Nothing works around it: `test/showcase-test.mjs` accepts either.
+
 ## Not an issue, a setting
 
 **Huma needs a bigger stack than TinyGo's Wasm default.** With the default 64 KB stack the first Huma request fails with `memory access out of bounds`. `-stack-size=256kb` works (128 KB also did). `mise run api-go:build` passes it.
+
+**Huma's adapter writes uploads over 8 KB to a temporary file, and a Worker has no disk.** A multipart upload then fails with `open /tmp/multipart-...: file does not exist`. `humaworkers` sets `humago.MultipartMaxMemory` to 32 MB, so uploads stay in memory.
 
 ## Useful to the workers-go maintainers
 

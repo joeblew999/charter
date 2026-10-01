@@ -1,0 +1,96 @@
+# The showcase API from a Go contract: openapi.json and asyncapi.json are written by
+# `mise run showcase-go:spec` from api-go/showcase/contract.go (never by hand). Everything the oRPC
+# showcase (../showcase) says is said there, in Go: OAuth client credentials (the security scheme and
+# a form-encoded token endpoint; auth-schemes below points the SDKs at it), idempotency, cursor
+# pagination, SSE, multipart upload, webhooks with HMAC signatures, the WebSocket both ways, and
+# audiences. The overlay is the same as ../showcase's. See docs/showcase-go.md.
+# Same groups and names as ../showcase, so the same code runs against either SDK.
+# Generate: mise run sdk:gen showcase-go <group>   (output: sdk/out/showcase-go/<group>)
+auth-schemes:
+  OAuth:
+    scheme: oauth
+    type: client-credentials
+    client-id-env: SHOWCASE_CLIENT_ID
+    client-secret-env: SHOWCASE_CLIENT_SECRET
+    get-token:
+      endpoint: "POST /oauth/token"
+      request-properties:
+        client-id: $request.client_id
+        client-secret: $request.client_secret
+      response-properties:
+        access-token: $response.access_token
+        expires-in: $response.expires_in
+
+api:
+  auth: OAuth
+  specs:
+    - openapi: openapi.json
+      overlays: overlays.yml
+    - asyncapi: asyncapi.json
+
+groups:
+  go:
+    generators:
+      - name: fernapi/fern-go-sdk
+        version: 1.64.0
+        output:
+          location: local-file-system
+          path: ../../../out/showcase-go/go
+        config:
+          module:
+            path: example.com/showcase
+            version: "1.22"
+          packageName: showcase
+
+  typescript:
+    generators:
+      - name: fernapi/fern-typescript-sdk
+        version: 3.98.0
+        output:
+          location: local-file-system
+          path: ../../../out/showcase-go/typescript
+        config:
+          namespaceExport: Showcase
+          generateWebSocketClients: true
+          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
+          guardProcessEnvAccess: true
+
+  # Audiences: the same spec, minus everything not tagged "public" (here: the internal file upload).
+  typescript-public:
+    audiences:
+      - public
+    generators:
+      - name: fernapi/fern-typescript-sdk
+        version: 3.98.0
+        output:
+          location: local-file-system
+          path: ../../../out/showcase-go/typescript-public
+        config:
+          namespaceExport: Showcase
+          generateWebSocketClients: true
+          guardProcessEnvAccess: true
+
+  # Compiled (.js + .d.ts), the way an npm package reaches its users: what test/showcase-test.mjs uses.
+  typescript-dist:
+    generators:
+      - name: fernapi/fern-typescript-sdk
+        version: 3.98.0
+        output:
+          location: local-file-system
+          path: ../../../out/showcase-go/typescript-dist
+        config:
+          namespaceExport: Showcase
+          generateWebSocketClients: true
+          guardProcessEnvAccess: true
+          outputSourceFiles: false
+
+  # Fern's CLI generator (early access): a Rust CLI for this API.
+  cli:
+    generators:
+      - name: fernapi/fern-cli-generator
+        version: 0.44.0
+        output:
+          location: local-file-system
+          path: ../../../out/showcase-go/cli
+        config:
+          binaryName: showcase

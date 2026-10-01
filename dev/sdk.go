@@ -9,13 +9,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
 func init() {
 	commands["sdk-gen"] = command{"<api> <group>", "generate one SDK with Fern (Docker) into sdk/out/<api>/<group>", sdkGen}
 	commands["sdk-check"] = command{"<dir>", "prove a generated SDK works: Go = build, vet, tests against WireMock; TypeScript = typecheck", sdkCheck}
-	commands["sdk-ready"] = command{"<api> [group...]", "generate and build what the tests use, if missing: TypeScript and Go SDKs, the Fern CLI (or only the groups named)", sdkReady}
+	commands["sdk-ready"] = command{"<api> [group...]", "generate and build what the tests use, if missing: TypeScript and Go SDKs, the Fern CLI (or only the groups named, any of the API's)", sdkReady}
 	commands["sdk-list"] = command{"", "the APIs in sdk/fern/apis and the SDK groups each one defines", sdkList}
 	commands["sdk-clean"] = command{"", "remove generated SDKs (sdk/out) and stop leftover WireMock containers", sdkClean}
 	commands["cli-build"] = command{"[-linux] <dir>", "HEAVY: build a Fern-generated Rust CLI, natively or for Linux in Docker", cliBuild}
@@ -107,11 +108,18 @@ func sdkReady(args []string) error {
 		}
 		return len(args) == 1
 	}
-	for _, need := range []struct{ file, group string }{
+	needs := []struct{ file, group string }{
 		{"typescript-dist/esm/index.mjs", "typescript-dist"},
 		{"go/go.mod", "go"},
 		{"cli/Cargo.toml", "cli"},
-	} {
+	}
+	// Any other group named (an API's own, like showcase-go's typescript-public) is there when its folder is.
+	for _, group := range args[1:] {
+		if !slices.ContainsFunc(needs, func(need struct{ file, group string }) bool { return need.group == group }) {
+			needs = append(needs, struct{ file, group string }{group, group})
+		}
+	}
+	for _, need := range needs {
 		if wanted(need.group) && !exists(filepath.Join(out, need.file)) {
 			if err := sdkGen([]string{api, need.group}); err != nil {
 				return err

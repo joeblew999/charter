@@ -22,6 +22,12 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 )
 
+func init() {
+	// Workers have no disk, and Huma's adapter keeps only 8 KB of an uploaded file in memory before
+	// it writes the rest to a temporary file. Keep whole uploads in memory, up to this size.
+	humago.MultipartMaxMemory = 32 << 20
+}
+
 // Route is one operation: where it is served, and how to register it with Huma (a huma.Register call).
 type Route struct {
 	Method string

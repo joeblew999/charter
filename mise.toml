@@ -24,10 +24,12 @@ fnox = "1.35.2"
 # Local dev ports.
 PORT = "{{ get_env(name='PORT', default='5173') }}"
 API_GO_PORT = "{{ get_env(name='API_GO_PORT', default='5174') }}"
+SHOWCASE_GO_PORT = "{{ get_env(name='SHOWCASE_GO_PORT', default='5175') }}"
 # Where the Workers are deployed (cf deploy prints it; there is no cf command to look it up). On
 # another Cloudflare account, set these in mise.local.toml (gitignored).
 API_URL = "{{ get_env(name='API_URL', default='https://orpc-api.gedw99.workers.dev') }}"
 API_GO_URL = "{{ get_env(name='API_GO_URL', default='https://orpc-api-go.gedw99.workers.dev') }}"
+SHOWCASE_GO_URL = "{{ get_env(name='SHOWCASE_GO_URL', default='https://orpc-showcase-go.gedw99.workers.dev') }}"
 HARNESS_URL = "{{ get_env(name='HARNESS_URL', default='https://orpc-sdk-harness.gedw99.workers.dev') }}"
 HARNESS_API_URL = "{{ get_env(name='HARNESS_API_URL', default='https://orpc-sdk-harness-api.gedw99.workers.dev') }}"
 # Optional: an API token instead of cf's OAuth login (`api/node_modules/.bin/cf auth login`).
@@ -41,7 +43,7 @@ run = "for dir in api api-go sdk sdk/harness; do npm ci --prefix $dir --no-fund 
 
 [tasks.check]
 description = "Every LOCAL check (no Cloudflare account; needs Docker)"
-depends = ["api:check", "api-go:check", "dev:check", "sdk:demo", "showcase:check", "sdk:harness:test"]
+depends = ["api:check", "api-go:check", "showcase-go:check", "dev:check", "sdk:demo", "showcase:check", "sdk:harness:test"]
 
 [tasks.doctor]
 description = "Check what the tasks need: npm installs, Docker, Go, TinyGo, Rust"
@@ -237,6 +239,64 @@ run = 'node test/soak.mjs "$API_GO_URL" --sdk api-go --deploy-task api-go:deploy
 description = "REMOTE, read-only: wall time per route of the deployed Go Worker (docs/benchmarks.md)"
 run = 'go run ./dev bench "$API_GO_URL"'
 
+# ---- api-go/showcase: every Fern feature we use, from a Go contract (docs/showcase-go.md) -----------
+
+[tasks."showcase-go:run"]
+description = "The Go showcase API natively on SHOWCASE_GO_PORT: no Cloudflare. WEBHOOK_URL=<url> to get the webhook"
+dir = "api-go"
+run = "PORT=$SHOWCASE_GO_PORT go run ./cmd/showcase"
+
+[tasks."showcase-go:build"]
+description = "Build the showcase Worker's Wasm with TinyGo into api-go/cmd/showcase/build (fails over 3 MB gzipped)"
+dir = "api-go/cmd/showcase"
+run = "go run github.com/syumai/workers-go/cmd/workers-assets-gen -mode=tinygo && tinygo build -o build/app.wasm -target wasm -no-debug -stack-size=256kb . && go run ../../../dev size -max 3000000 api-go/cmd/showcase/build/app.wasm"
+
+[tasks."showcase-go:dev"]
+description = "The Go showcase API under workerd on SHOWCASE_GO_PORT (cf dev). SHOWCASE_WEBHOOK_URL=<url> to get the webhook"
+depends = ["showcase-go:build"]
+dir = "api-go/cmd/showcase"
+run = "PORT=$SHOWCASE_GO_PORT ../../node_modules/.bin/cf dev"
+
+[tasks."showcase-go:spec"]
+description = "Write both specs from the Go contract (api-go/showcase/contract.go) into sdk/fern/apis/showcase-go/"
+dir = "api-go"
+run = 'go run ./cmd/showcase-spec ../sdk/fern/apis/showcase-go/openapi.json ../sdk/fern/apis/showcase-go/asyncapi.json "$SHOWCASE_GO_URL"'
+
+[tasks."showcase-go:spec:check"]
+description = "Fail if a committed showcase-go spec is stale against the Go contract"
+dir = "api-go"
+run = 'go run ./cmd/showcase-spec -check ../sdk/fern/apis/showcase-go/openapi.json ../sdk/fern/apis/showcase-go/asyncapi.json "$SHOWCASE_GO_URL"'
+
+[tasks."showcase-go:test:native"]
+description = "Every Fern feature through the TypeScript SDK made from the Go specs, against the native build (Docker the first time, for the SDK)"
+depends = ["sdk:ready showcase-go typescript-dist typescript-public"]
+run = 'go run ./dev with-server -dir api-go -url http://localhost:{port}/openapi.json -start "PORT={port} WEBHOOK_URL=http://localhost:{port2}/webhook go run ./cmd/showcase" -run "node ../test/showcase-test.mjs http://localhost:{port} showcase-go --webhook-port {port2}"'
+
+[tasks."showcase-go:test:workerd"]
+description = "The same against the TinyGo Wasm under workerd (go test can't see TinyGo's gaps)"
+depends = ["showcase-go:build", "sdk:ready showcase-go typescript-dist typescript-public"]
+run = 'go run ./dev with-server -dir api-go/cmd/showcase -url http://localhost:{port}/openapi.json -start "PORT={port} SHOWCASE_WEBHOOK_URL=http://localhost:{port2}/webhook ../../node_modules/.bin/cf dev" -run "node ../../../test/showcase-test.mjs http://localhost:{port} showcase-go --webhook-port {port2}"'
+
+[tasks."showcase-go:test"]
+description = "The showcase test against a running showcase-go:run or showcase-go:dev (no webhook check: it needs the server to know the receiver)"
+depends = ["sdk:ready showcase-go typescript-dist typescript-public"]
+run = 'node test/showcase-test.mjs "http://localhost:$SHOWCASE_GO_PORT" showcase-go'
+
+[tasks."showcase-go:lint"]
+description = "go vet of the showcase server for Wasm (api-go:lint does gofmt and the host's vet for the whole module)"
+dir = "api-go"
+run = "GOOS=js GOARCH=wasm go vet ./cmd/showcase"
+
+[tasks."showcase-go:check"]
+description = "LOCAL: lint, Go tests (the same SDK surface as the oRPC showcase), spec drift, the TinyGo build, and the SDK test natively and under workerd"
+depends = ["api-go:lint", "showcase-go:lint", "api-go:test", "showcase-go:spec:check", "showcase-go:test:native", "showcase-go:test:workerd"]
+
+[tasks."showcase-go:deploy"]
+description = "REMOTE: build and deploy the showcase Worker (orpc-showcase-go). It has no storage"
+depends = ["showcase-go:build"]
+dir = "api-go/cmd/showcase"
+run = "../../node_modules/.bin/cf deploy"
+
 # ---- sdk/: Fern (each API is sdk/fern/apis/<api>/ with its specs and a generators.yml) --------------
 
 [tasks."sdk:list"]
@@ -257,7 +317,7 @@ description = "Prove a generated SDK works (Go: build, vet, tests against WireMo
 run = "go run ./dev sdk-check"
 
 [tasks."sdk:ready"]
-description = "Generate and build what the tests use, if missing (TypeScript and Go SDKs, the Fern CLI): mise run sdk:ready <api>"
+description = "Generate and build what the tests use, if missing (TypeScript and Go SDKs, the Fern CLI): mise run sdk:ready <api> [group...]"
 run = "go run ./dev sdk-ready"
 
 [tasks."sdk:demo"]
