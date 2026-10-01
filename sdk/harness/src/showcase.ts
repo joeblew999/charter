@@ -47,7 +47,8 @@ export const router = api.router({
 		}),
 	},
 	files: {
-		upload: api.files.upload.handler(({ input }) => ({ id: `${input.file.name}:${input.note ?? ""}`, size: input.file.size })),
+		// Zod types a file by its `type` and `size` only; under Workers' types it is the global File.
+		upload: api.files.upload.handler(({ input }) => ({ id: `${(input.file as File).name}:${input.note ?? ""}`, size: input.file.size })),
 	},
 	chat: api.chat.handler(async function* ({ input }) {
 		const words = `echo ${input.prompt}`.split(" ");

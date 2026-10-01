@@ -17,7 +17,7 @@ node test/mcp-test.mjs <url>
 node test/soak.mjs <url> [--sdk api-go] [--deploy-task api-go:deploy] [--no-deploy] [--seconds 100] [--idle 20]
 ```
 
-The design they test is in [plans/realtime.md](plans/realtime.md). Unit tests live with the code: `api/test/` (vitest) and `api-go/**/_test.go`.
+The design they test is in [plans/realtime.md](plans/realtime.md). Unit tests live with the code: `api/test/` (vitest), `api-go/**/_test.go`, and `sdk/harness/test/` (Node's test runner, `mise run showcase:test`: the showcase server's routes, and its generated specs against the surface of the hand-written ones).
 
 ## Local and remote: both, with the same programs
 

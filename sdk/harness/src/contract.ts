@@ -9,7 +9,8 @@ import { asyncapi } from "../../../api/src/asyncapi.ts";
 // - on an operation, by `openapi({ operationId, tags, spec })`: the SDK names and Fern's x-fern-*;
 // - for the whole document, by `document` below: oRPC's contract has no place for those;
 // - the WebSocket by `asyncapi({...})` (api/src/asyncapi.ts), and the webhooks by `webhooks` below.
-// The Go Worker's showcase (sdk/fern/apis/showcase-go) is compared with these names: change both.
+// A Go server of the same API is being built (sdk/fern/apis/showcase-go) and compares its spec with
+// these names: operation ids, paths, parameters, x-fern-* values, the channel and its messages.
 
 export const info = { title: "Showcase", version: "1.0.0", description: "Every Fern feature we care about, via standard OpenAPI + x-fern-* extensions." };
 export const asyncInfo = { title: "Showcase live", version: "1.0.0" };
@@ -92,7 +93,7 @@ export const contract = {
 			// Upstream: fern-api/fern#17938 (when fixed: Fern could read oRPC's envelope, event: message|close|error, as is)
 			// oRPC describes the stream as its SSE envelope; tell Fern its `data:` payloads are chunks.
 			spec: op => {
-				const stream = (op.responses?.["200"] as OpenAPIV3_2.ResponseObject | undefined)?.content?.["text/event-stream"];
+				const stream = (op.responses?.["200"] as OpenAPIV3_2.ResponseObject | undefined)?.content?.["text/event-stream"] as OpenAPIV3_2.MediaTypeObject | undefined;
 				if (stream) stream.schema = { $ref: "#/components/schemas/Chunk" };
 				return fern({ ...everyone, "x-fern-streaming": { format: "sse" } })(op);
 			},

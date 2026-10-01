@@ -10,9 +10,10 @@ The TypeScript half of the repo (the Go half is [api-go.md](api-go.md); [README.
 | `src/index.ts` | The Worker: the contract implemented on D1, the SSE and WebSocket transports, `/api/openapi.json` and `/api/asyncapi.json` |
 | `src/follow.ts` | `follow()`: the one gap-free real-time feed that both transports use |
 | `src/hub.ts` | `NotesHub`: oRPC's `DurablePublisherObject`, a hibernatable live fan-out |
-| `src/asyncapi.ts` | The AsyncAPI generator (oRPC has none yet) |
-| `src/specs.ts` | Both specs from the contract, shared by `spec.ts` and the Worker |
+| `src/asyncapi.ts` | The AsyncAPI generator (oRPC has none yet): channels, what the server sends and what the client sends |
+| `src/specs.ts` | Both specs from a contract, shared by `spec.ts` and the Worker. It knows no contract, so the showcase (`sdk/harness`) uses it too; it also writes OpenAPI `webhooks` |
 | `spec.ts` | Writes `sdk/fern/apis/api/{openapi,asyncapi}.json` offline |
+| `spec-files.ts` | The command behind `spec.ts` (write, or `--check`), shared with `sdk/harness/spec.ts` |
 | `test/` | Unit tests for `follow()` |
 
 The tests it must pass are in [testing.md](testing.md), and its D1 schema is `../migrations/`; both are shared with the Go Worker.

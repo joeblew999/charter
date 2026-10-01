@@ -46,6 +46,10 @@ async function sdkTest(): Promise<Response> {
 		for await (const chunk of await client.chat({ prompt: "from workers" })) chunks.push(chunk.text);
 		return [chunks.join(" ") === "echo from workers", chunks];
 	});
+	await check("file upload (multipart: the file and a field)", async () => {
+		const stored = await client.files.uploadFile({ file: new File(["hello"], "hello.txt", { type: "text/plain" }), note: "greeting" });
+		return [stored.id === "hello.txt:greeting" && stored.size === 5, stored];
+	});
 	await check("webhook HMAC signature (valid accepted, forged rejected)", async () => {
 		const body = JSON.stringify({ event: "note.created", note: notes[0] });
 		const good = await WebhooksHelper.verifySignature(body, await hmacHex("whsec", body), "whsec");

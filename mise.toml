@@ -41,7 +41,7 @@ run = "for dir in api api-go sdk sdk/harness; do npm ci --prefix $dir --no-fund 
 
 [tasks.check]
 description = "Every LOCAL check (no Cloudflare account; needs Docker)"
-depends = ["api:check", "api-go:check", "dev:check", "sdk:demo", "sdk:harness:test"]
+depends = ["api:check", "api-go:check", "dev:check", "sdk:demo", "showcase:check", "sdk:harness:test"]
 
 [tasks.doctor]
 description = "Check what the tasks need: npm installs, Docker, Go, TinyGo, Rust"
@@ -292,13 +292,19 @@ dir = "sdk/harness"
 run = 'node spec.ts --check ../fern/apis/showcase/openapi.json ../fern/apis/showcase/asyncapi.json "$HARNESS_API_URL/api/mock"'
 
 [tasks."showcase:test"]
-description = "The generated showcase specs give Fern the surface the hand-written ones did (sdk/harness/test)"
+description = "sdk/harness/test, in Node: the showcase server's routes, and its generated specs give Fern the surface the hand-written ones did"
 dir = "sdk/harness"
 run = "node --test test/*.test.ts"
 
+[tasks."showcase:typecheck"]
+description = "Typecheck the harness Worker: the showcase contract, its oRPC implementation and the SDK test (copies the SDK in first; Docker if it is stale)"
+# Both copy the SDK into sdk/harness/src/client: not at the same time.
+wait_for = ["sdk:harness:test"]
+run = "go run ./dev harness-sync && cd sdk/harness && ./node_modules/.bin/cf workers types >/dev/null && ./node_modules/.bin/tsc"
+
 [tasks."showcase:check"]
-description = "LOCAL: the committed showcase specs match the contract, and their surface is the hand-written one's"
-depends = ["showcase:spec:check", "showcase:test"]
+description = "LOCAL: the committed showcase specs match the contract, Fern accepts them, the tests in sdk/harness/test pass, and the Worker typechecks"
+depends = ["showcase:spec:check", "sdk:check-spec showcase", "showcase:test", "showcase:typecheck"]
 
 [tasks."sdk:harness:test"]
 description = "Run Fern's TypeScript SDK inside a Worker (sdk/harness): under cf dev, or with -remote the deployed one"

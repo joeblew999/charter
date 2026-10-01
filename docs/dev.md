@@ -15,7 +15,7 @@ mise run <task>              # what you normally type: each task is one line tha
 | `size` | Fails if a file is over a gzipped size (the Wasm limit) | `api-go:build` |
 | `sdk-gen`, `sdk-check`, `sdk-ready`, `sdk-list`, `sdk-clean` | Fern: generate an SDK, prove it works, make what the tests need | `sdk:*` |
 | `cli-build` | Builds the Rust CLI that Fern generates, natively or for Linux in Docker | `sdk:cli:build` |
-| `harness-test`, `harness-deploy` | Fern's TypeScript SDK inside a Worker (`sdk/harness`) | `sdk:harness:*` |
+| `harness-sync`, `harness-test`, `harness-deploy` | Fern's TypeScript SDK inside a Worker (`sdk/harness`). `harness-sync` copies the SDK in, generating it again when a showcase spec is newer than it | `sdk:harness:*`, `showcase:typecheck` |
 | `bench` | Times the read routes of a notes API as a client sees them ([benchmarks.md](benchmarks.md)) | `api:bench`, `api-go:bench` |
 | `upstream` | Lists every `Upstream: owner/repo#n` tag in the code with the issue's state | `upstream:status` |
 | `doctor` | Checks the tools and installs the tasks need | `doctor` |
@@ -39,7 +39,7 @@ Every step that does work is `mise run <task>`, so a failing step is one line yo
 | Workflow | When | What it runs | Secrets |
 |---|---|---|---|
 | `api-check` | push to main, pull requests | `api:check` and `api-go:check`, one job each | none |
-| `sdk-check` | push to main, pull requests | `sdk:demo`, `sdk:harness:test`, and `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of `api` and `api-go` | none |
+| `sdk-check` | push to main, pull requests | `sdk:demo`; `showcase:check` and `sdk:harness:test`; and `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of `api`, `api-go` and `showcase` | none |
 | `dev-check` | push to main, pull requests | `dev:check` | none |
 | `api-deploy` | by hand only (pick `api` or `api-go`) | `cloudflare:token`, `<api>:deploy`, then `<api>:live-test` against the Worker it just deployed | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 | `dev-release` | a version tag. A dry run by hand, and on pull requests that touch `dev/` | `dev:dist`, `release`, `release:tags` | none (the workflow's own token) |
@@ -78,7 +78,7 @@ go run github.com/joeblew999/orpc-api/dev@latest workflows -into . -check   # fa
 
 It writes the `api-` and `sdk-` workflows. `-only api` or `-only sdk` writes one set; the `dev-` ones are only written where there is a `dev/` module, as here.
 
-They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `api:check`, `api-go:check`, `api:deploy`, `api-go:deploy`, `cloudflare:token`, `sdk:demo`, `sdk:harness:test`, `sdk:gen`, `sdk:check`, `sdk:dist`, `sdk:dist:cli` and `release`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
+They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `api:check`, `api-go:check`, `api:deploy`, `api-go:deploy`, `cloudflare:token`, `sdk:demo`, `showcase:check`, `sdk:harness:test`, `sdk:gen`, `sdk:check`, `sdk:dist`, `sdk:dist:cli` and `release`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
 
 ## Using it from another repo
 

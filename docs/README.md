@@ -59,7 +59,7 @@ Things that are easy to mix up:
 - **"Go" means two different things here.** `api-go/` is a Go *server*. `sdk/out/*/go` is a Go *client SDK* that Fern generated, and it exists for both servers.
 - **The tests and the database schema are shared.** `test/` has one set of test programs for both servers (they take a URL, and `--sdk api-go` picks the SDKs generated from the Go specs), and `migrations/` is the one D1 schema.
 - **What is the product and what is an example.** `dev/` and the Go packages in `api-go/` (`humaworkers`, `asyncapi`, `follow`, `humamcp`) are what other projects use. `api/` and `api-go/` as Workers are the reference examples they are proven against.
-- **`sdk/fern/apis/` has other folders** (`petstore`, `showcase`, `modern`): sample specs for trying Fern features. They have no server here except the showcase mock in `sdk/harness`.
+- **`sdk/fern/apis/` has other folders** (`petstore`, `showcase`, `modern`), for trying Fern features. `petstore` and `modern` are hand-written sample specs with no server. `showcase` is contract first like the two APIs: its specs are generated from an oRPC contract (`sdk/harness/src/contract.ts`, `mise run showcase:spec`), and the harness Worker serves that contract ([sdk.md](sdk.md#the-showcase-is-contract-first-orpc-verified-2026-10-01)).
 
 ## What it shows
 
@@ -73,7 +73,7 @@ Things that are easy to mix up:
 **A TypeScript (oRPC) project:**
 
 1. Write the contract with `openapi({...})` and `asyncapi({...})` metadata, as in `api/src/contract.ts`.
-2. Copy `api/src/follow.ts`, `api/src/asyncapi.ts` and `api/src/specs.ts` unchanged, and give `follow()` your own source (`subscribe`, `since`, `latest`).
+2. Copy `api/src/follow.ts`, `api/src/asyncapi.ts`, `api/src/specs.ts` and `api/spec-files.ts` unchanged, and give `follow()` your own source (`subscribe`, `since`, `latest`). For OAuth, idempotency, file upload, webhooks or a WebSocket the client also sends on, see the showcase contract (`sdk/harness/src/contract.ts`).
 3. Copy `sdk/fern/apis/api/` as your API's Fern folder, plus the `api:*` and `sdk:*` tasks.
 
 **A Go (workers-go) project:**

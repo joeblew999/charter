@@ -18,7 +18,7 @@ Every workaround in the code carries a tag `Upstream: <owner>/<repo>#<n> (when f
 | [syumai/workers-go#97](https://github.com/syumai/workers-go/issues/97) | workers-go can't answer a WebSocket upgrade | Go answers with a stream of lines; `api-go/worker/index.mjs` sends each as a frame | Answer the upgrade in Go and delete the adapter |
 | [syumai/workers-go#220](https://github.com/syumai/workers-go/issues/220) | A Durable Object class can't be written in Go | The hub is JavaScript (`api-go/worker/hub.mjs`) | The hub can be Go |
 
-The oRPC rows are tagged in `api/src/`; the Go Worker carries the same tags for the Fern issues (`api-go/api/`), so `upstream:status` lists both places.
+The oRPC rows are tagged in `api/src/`; the Go Worker carries the same tags for the Fern issues (`api-go/api/`), and the showcase contract (`sdk/harness/src/contract.ts`) the one for its SSE stream, so `upstream:status` lists every place.
 
 ## Not an issue, a setting
 

@@ -1,8 +1,8 @@
 // The specs generated from the contract give Fern what the hand-written specs gave it.
 // handwritten-surface.json is surface() of the showcase's last hand-written openapi.json and
 // asyncapi.yml (commit c6093ae), so this test is the claim "same SDK surface", checkable. Every
-// difference is named below, with why. If the contract changes on purpose, change this list too,
-// and the Go Worker's showcase (sdk/fern/apis/showcase-go) with it.
+// difference is named below, with why. If the contract changes on purpose, change this list too
+// (and the Go server of the same API, sdk/fern/apis/showcase-go, once it is here).
 //   mise run showcase:test
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

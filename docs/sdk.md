@@ -13,28 +13,72 @@ fern/
     │   ├── openapi.json      the spec
     │   └── generators.yml    one group per language, options under config:
     ├── modern/               SSE streaming (x-fern-streaming) + cursor pagination (x-fern-pagination)
-    └── showcase/             every feature below, in one API
+    └── showcase/             every feature below, in one API; its specs are generated (see below)
 ```
 
-What Fern does through **standard options only**: the spec's OpenAPI features, `x-fern-*` extensions and `generators.yml`. All of it was verified in `showcase/` on 2026-09-29 (Go: build, vet and tests; TypeScript: typecheck).
+What Fern does through **standard options only**: the spec's OpenAPI features, `x-fern-*` extensions and `generators.yml`. All of it was verified in `showcase/` on 2026-09-29 (Go: build, vet and tests; TypeScript: typecheck), and again on 2026-10-01 with the specs generated from an oRPC contract.
 
-| Feature | How to switch it on | What the Go SDK gets |
+| Feature | How to switch it on | In the oRPC contract (`sdk/harness/src/contract.ts`) | What the Go SDK gets |
+|---|---|---|---|
+| OAuth client credentials | `auth-schemes:` in generators.yml plus a form-encoded token endpoint | `document` (`security`, `securitySchemes`); the token operation's `spec` hook makes its body form-encoded | `option.WithClientID/WithClientSecret`; token fetched and reused |
+| Idempotency | `x-fern-idempotency-headers` plus `x-fern-idempotent: true` | `document`, and the operation's `spec` hook | `option.WithIdempotencyKey` |
+| Retries | built in (per endpoint: `x-fern-retries`) | nothing | `option.WithMaxAttempts` |
+| Cursor/offset pagination | `x-fern-pagination` | the operation's `spec` hook | `*core.Page[...]`, auto-paging |
+| SSE / streaming | `x-fern-streaming: { format: sse }` | output `asyncIteratorObject(chunk)`, plus the `spec` hook | `core.Stream[T]` |
+| File upload | `multipart/form-data` body | `z.file()` in the input: oRPC writes and reads multipart by itself | typed `UploadFile(...)` |
+| Webhooks | OpenAPI 3.1 `webhooks:` | the `webhooks` contract: one procedure per webhook, its input is the payload | typed payload structs |
+| Webhook signatures | `x-fern-webhook-signature` (HMAC or asymmetric) | `document` | `WebhooksHelper.verifySignature(...)` (TypeScript), `webhooks_helper.go` (Go). Fern lists this as Enterprise; it generated locally here |
+| WebSockets | an AsyncAPI spec beside the OpenAPI one, plus TypeScript `generateWebSocketClients: true` | `asyncapi({...})` on a procedure: its output is what the server sends, and an `asyncIteratorObject` input is what the client sends | Go: message types only. TypeScript: a reconnecting `LiveNotesSocket` with `connect`, typed `sendSubscribe`, `on('message')` and `close` (needs the `ws` package on Node). Fern lists WS clients as Enterprise; it generated locally here |
+| Audiences | `x-fern-audiences` on endpoints plus `audiences: [public]` on a group | the operation's `spec` hook | one spec gives a full SDK and a public SDK (group `typescript-public` has no internal `uploadFile`) |
+| Overlays | `overlays: overlays.yml` beside the spec (OpenAPI Overlay 1.0) | not in the contract: the overlay file stays, applied to the generated spec | changes the SDK without editing the spec: `notes.listNotes` becomes `notes.list` |
+
+## The showcase is contract first (oRPC, verified 2026-10-01)
+
+The showcase's `openapi.json` and `asyncapi.json` are generated from an oRPC contract, like `api/`'s. Nothing in `sdk/fern/apis/showcase/` is written by hand except `generators.yml` and `overlays.yml`.
+
+| File | What it is |
+|---|---|
+| `sdk/harness/src/contract.ts` | The contract: every operation, the WebSocket channel, the webhooks, and the document-level settings (`document`) |
+| `sdk/harness/src/showcase.ts` | The contract implemented with oRPC, served by the harness Worker under `/api/mock/*` |
+| `sdk/harness/src/specs.ts`, `spec.ts` | Both specs from the contract, with `api/`'s generators (`api/src/specs.ts`, `api/src/asyncapi.ts`, `api/spec-files.ts`), imported, not copied |
+| `sdk/harness/test/` | Run in Node, no Worker: the server's routes and its channel (`showcase.test.ts`), and the generated specs against the surface the hand-written ones had (`surface.test.ts`, `handwritten-surface.json`), but for the differences the test names |
+
+The contract lives in the harness because the harness Worker is what serves it and tests it. `api/` and `sdk/harness/` each install the same pinned oRPC and Zod; keep the two pins equal.
+
+```sh
+mise run showcase:spec             # contract -> sdk/fern/apis/showcase/{openapi,asyncapi}.json
+mise run showcase:check            # specs match the contract, fern check, the tests in sdk/harness/test, typecheck (part of mise run check)
+mise run sdk:gen showcase go       # + typescript, typescript-public, typescript-dist, cli
+mise run sdk:harness:test          # the SDK made from those specs, against the contract's server, inside workerd
+```
+
+After a contract change, run `showcase:spec`. `sdk:harness:test` generates the SDK again when a spec is newer than it.
+
+**What oRPC's generators can't say, and where it is added in code.** None of it is patched into the JSON. Only the last row has an upstream issue; the others are things to tell oRPC about, and we have filed nothing for them.
+
+| Fern needs | oRPC 2.0.0-beta.40 | Where it is added |
 |---|---|---|
-| OAuth client credentials | `auth-schemes:` in generators.yml plus a form-encoded token endpoint | `option.WithClientID/WithClientSecret`; token fetched and reused |
-| Idempotency | `x-fern-idempotency-headers` plus `x-fern-idempotent: true` | `option.WithIdempotencyKey` |
-| Retries | built in (per endpoint: `x-fern-retries`) | `option.WithMaxAttempts` |
-| Cursor/offset pagination | `x-fern-pagination` | `*core.Page[...]`, auto-paging |
-| SSE / streaming | `x-fern-streaming: { format: sse }` | `core.Stream[T]` |
-| File upload | `multipart/form-data` body | typed `UploadFile(...)` |
-| Webhooks | OpenAPI 3.1 `webhooks:` | typed payload structs |
-| Webhook signatures | `x-fern-webhook-signature` (HMAC or asymmetric) | `WebhooksHelper.verifySignature(...)` (TypeScript), `webhooks_helper.go` (Go). Fern lists this as Enterprise; it generated locally here |
-| WebSockets | an AsyncAPI spec beside the OpenAPI one (for `api/`, generated from the contract), plus TypeScript `generateWebSocketClients: true` | Go: message types only. TypeScript: a reconnecting `LiveNotesSocket` with `connect`, typed `sendSubscribe`, `on('message')` and `close` (needs the `ws` package on Node). Fern lists WS clients as Enterprise; it generated locally here |
-| Audiences | `x-fern-audiences` on endpoints plus `audiences: [public]` on a group | one spec gives a full SDK and a public SDK (group `typescript-public` has no internal `uploadFile`) |
-| Overlays | `overlays: overlays.yml` beside the spec (OpenAPI Overlay 1.0) | changes the SDK without editing the spec: `notes.listNotes` becomes `notes.list` |
+| A form-encoded request body (the OAuth token endpoint) | The handler reads `application/x-www-form-urlencoded`, but the generator always writes the body as `application/json` | The operation's `spec` hook renames the media type |
+| `security: []` on one operation; `x-fern-*` on an operation | No field for them | The operation's `spec` hook |
+| `security`, `components.securitySchemes`, `x-fern-idempotency-headers`, `x-fern-webhook-signature` | The contract has no document level. The generator takes them as `base` | `document` in the contract, passed as `base` by `openapiSpec` |
+| OpenAPI 3.1 `webhooks` | Not generated | `openapiSpec({ webhooks })` in `api/src/specs.ts` writes one from a contract of webhook procedures |
+| An SSE response whose schema is the event's data | Describes its own envelope (`event: message` / `close` / `error`) | The operation's `spec` hook (the same as `api/`'s `notes.watch`) |
+| AsyncAPI, with messages both ways | No AsyncAPI generator (middleapi/orpc#2115) | `api/src/asyncapi.ts`, which now also writes `send` operations |
+
+Multipart is not on the list: a `z.file()` in the input is enough.
+
+**What differs from the hand-written specs.** All five groups (Go, TypeScript, the public and the compiled TypeScript, the CLI) were generated from the old specs and from the new ones and compared file by file. The output is identical except for two things (and the copy of the spec the CLI carries):
+
+- `NoteEvent` has a new optional field `auth`. The server always sent it and the harness test reads it; the contract validates what a handler yields, so it is now declared.
+- The WebSocket server is the deployed harness (`wss://orpc-sdk-harness-api...`) where it was a placeholder (`api.example.com`). Fern ignores an AsyncAPI server's `pathname`, so the default WebSocket URL lacks `/api/mock`; the tests pass `baseUrl`.
+
+In the spec itself, and invisible in the SDKs: OpenAPI `3.1.1` (was `3.1.0`); `additionalProperties: false` on response objects; safe-integer bounds on integers; `allowEmptyValue` and `allowReserved` on query parameters; `contentEncoding: binary` on the file; a `name` on each AsyncAPI message.
+
+The server behaves as the plain mock did, with three differences no test depends on: errors are oRPC's JSON (the status codes are the same: 401, 400, 404, 426); `limit` is honoured (the mock ignored it; the default page is still 2); and the chat stream is oRPC's SSE (`event: message` per chunk, then `event: close` without data).
 
 ## Does the TypeScript SDK work on Cloudflare Workers? Yes (verified 2026-09-29)
 
-`sdk/harness/` is a small cf Worker project. It implements the showcase API itself (`/api/mock/*`), and `/api/sdk-test` runs the generated SDK against it inside workerd.
+`sdk/harness/` is a small cf Worker project. It serves the showcase API itself (`/api/mock/*`, the oRPC contract above), and `/api/sdk-test` runs the generated SDK against it inside workerd.
 
 ```sh
 mise run sdk:harness:test                             # under cf dev
@@ -42,11 +86,12 @@ mise run sdk:harness:deploy                           # cf deploy: orpc-sdk-harn
 mise run sdk:harness:test --remote                    # on Cloudflare
 ```
 
-All pass in both places:
+All pass in both places (the deployed harness is still the plain mock of 2026-09-29, without the upload check: `mise run sdk:harness:deploy` updates it):
 - auto-pagination over 3 pages;
 - OAuth client credentials (token fetched form-encoded, then reused);
 - idempotent create (`Idempotency-Key` plus bearer token);
 - an SSE stream of typed chunks;
+- a multipart file upload with a form field (added 2026-10-01, under `cf dev` only so far);
 - webhook HMAC verification (valid signature accepted, forged one rejected);
 - the **WebSocket client**, both inside a Worker (on Cloudflare it connects to `orpc-sdk-harness-api`) and from Node over the network, with typed events and the bearer token received.
 

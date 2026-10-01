@@ -10,9 +10,10 @@ import (
 	"sort"
 )
 
-// The TypeScript SDK on Cloudflare Workers (sdk/harness). The harness implements the showcase API
-// itself (/api/mock/*), and /api/sdk-test runs the generated SDK against it inside workerd:
-// pagination, OAuth, idempotency, SSE, webhook signatures, WebSockets.
+// The TypeScript SDK on Cloudflare Workers (sdk/harness). The harness serves the showcase API itself
+// (/api/mock/*: an oRPC contract, from which the SDK's specs are generated), and /api/sdk-test runs
+// the generated SDK against it inside workerd: pagination, OAuth, idempotency, SSE, file upload,
+// webhook signatures, WebSockets.
 
 func init() {
 	commands["harness-sync"] = command{"", "copy the compiled showcase TypeScript SDK into the harness Worker (sdk/harness/src/client)", harnessSync}
@@ -21,7 +22,22 @@ func init() {
 }
 
 func harnessSync([]string) error {
-	if !exists("sdk/out/showcase/typescript-dist/esm") {
+	// Generate when there is no SDK yet, or when a spec or Fern's settings changed after it was made:
+	// the specs come from the contract, so a contract change must reach the SDK the test runs.
+	const sdk, specs = "sdk/out/showcase/typescript-dist/esm/index.mjs", "sdk/fern/apis/showcase"
+	stale := !exists(sdk)
+	if made, err := os.Stat(sdk); err == nil {
+		entries, err := os.ReadDir(specs)
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			if info, err := entry.Info(); err == nil && info.ModTime().After(made.ModTime()) {
+				stale = true
+			}
+		}
+	}
+	if stale {
 		if err := sdkGen([]string{"showcase", "typescript-dist"}); err != nil {
 			return err
 		}
