@@ -8,13 +8,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
 func init() {
 	commands["docs"] = command{"[-into <repo dir>] [-check]",
-		"write the docs site's config into a repo's docs/ folder (GitHub Pages renders it; any repo, same look)", docs}
+		"write the docs site's config and the writing rules into a repo's docs/ folder (GitHub Pages renders it; any repo, same look)", docs}
+	commands["docs-review"] = command{"[-print]",
+		"have Claude bring docs/ up to date and into line with docs/writing.md (-print: only show the prompt)", docsReviewRun}
+	anywhere["docs"], anywhere["docs-review"] = true, true
 }
 
 //go:embed docs/_config.yml
@@ -22,6 +26,12 @@ var docsConfig string
 
 //go:embed docs/custom.scss
 var docsStyle string
+
+//go:embed docs/writing.md
+var docsWriting string
+
+//go:embed docs/review.md
+var docsReview string
 
 // docs writes the two files that make a repo's docs/ folder a site on GitHub Pages. They are the
 // same for every repo except for its name, description and URLs, which GitHub is asked for. With
@@ -51,7 +61,7 @@ func docs(args []string) error {
 	config := strings.NewReplacer("__NAME__", repo.Name, "__DESCRIPTION__", string(description),
 		"__REPO__", repo.NameWithOwner, "__BRANCH__", repo.DefaultBranchRef.Name).Replace(docsConfig)
 	stale := 0
-	for path, content := range map[string]string{"docs/_config.yml": config, "docs/_sass/custom/custom.scss": docsStyle} {
+	for path, content := range map[string]string{"docs/_config.yml": config, "docs/_sass/custom/custom.scss": docsStyle, "docs/writing.md": docsWriting} {
 		path = filepath.Join(into, path)
 		if current, _ := os.ReadFile(path); bytes.Equal(current, []byte(content)) {
 			continue
@@ -75,4 +85,25 @@ func docs(args []string) error {
 	owner, name, _ := strings.Cut(repo.NameWithOwner, "/")
 	fmt.Printf("docs site: https://%s.github.io/%s/ (first time: mise run docs:pages)\n", owner, name)
 	return nil
+}
+
+// docsReviewRun hands Claude (the claude command, Claude Code) the review prompt with what
+// docs-lint found, in this repo, allowed to edit files. The prompt is the same for every repo; the
+// standard it applies is docs/writing.md.
+func docsReviewRun(args []string) error {
+	show := false
+	flags("docs-review", args, func(f *flag.FlagSet) { f.BoolVar(&show, "print", false, "print the prompt, don't run Claude") })
+	lint := exec.Command(os.Args[0], "docs-lint")
+	found, _ := lint.CombinedOutput() // a failing lint is the point: its output goes into the prompt
+	prompt := strings.Replace(docsReview, "__LINT__", strings.TrimSpace(string(found)), 1)
+	if show {
+		fmt.Println(prompt)
+		return nil
+	}
+	if _, err := exec.LookPath("claude"); err != nil {
+		return errNoClaude
+	}
+	// It may edit files and run the checks, nothing else.
+	return sh(".", "claude", "-p", prompt, "--permission-mode", "acceptEdits", "--allowedTools",
+		"Read,Edit,Write,Glob,Grep,Bash(mise run docs:lint),Bash(mise run dev:check),Bash(mise tasks),Bash(git status:*),Bash(git diff:*),Bash(ls:*)")
 }

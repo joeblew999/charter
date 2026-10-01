@@ -143,6 +143,7 @@ func newProject(args []string) error {
 		"CLAUDE.md":       "@AGENTS.md\n",
 		"docs/README.md":  projectDocs(name),
 		"docs/rules.md":   projectRules,
+		"docs/writing.md": docsWriting,
 		"sdk/.gitignore":  "node_modules/\nout/\n.work/\n",
 		"test/.gitignore": "soak-go/soak-go\n",
 	}
@@ -297,6 +298,7 @@ Everything written about this project lives in this folder. ` + "`AGENTS.md`" + 
 |---|---|
 | This page | What is what |
 | [rules.md](rules.md) | The working rules |
+| [writing.md](writing.md) | The rules a page in ` + "`docs/`" + ` is held to |
 
 ## What is what
 
@@ -327,7 +329,7 @@ nav_order: 2
 
 # Rules for working in this project
 
-- **` + "`docs/`" + ` is the single source of truth.** Write things down in a page here. A new page starts with its sidebar lines (` + "`title`, `nav_order`" + `).
+- **` + "`docs/`" + ` is the single source of truth.** Write things down in a page here, following [writing.md](writing.md). ` + "`mise run docs:lint`" + ` checks what a program can, ` + "`mise run docs:review`" + ` has Claude check the rest.
 - **mise drives everything, locally and on GitHub, and every task is one line.** Anything longer belongs in the dev tool the tasks call.
 - **The contract is the source.** After changing ` + "`api-go/api/contract.go`" + `, run ` + "`mise run api-go:spec`" + `. ` + "`mise run check`" + ` fails if a committed spec is stale. Never edit ` + "`sdk/fern/apis/api-go/*.json`" + ` by hand.
 - **Everything that ships to Workers builds with TinyGo** (` + "`mise run api-go:build`" + `). ` + "`go test`" + ` can't see TinyGo's gaps, so the check also runs the Wasm under workerd.

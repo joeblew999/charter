@@ -10,6 +10,7 @@ One notes API on Cloudflare Workers, built twice (oRPC in `api/`, Go with Huma o
 ## Rules
 
 - **`docs/` is the single source of truth.** Everything written about the repo goes in a page there. `AGENTS.md`, `CLAUDE.md` and the folder READMEs only point to it: don't put content in them.
+- **Pages in `docs/` follow [writing.md](writing.md).** `mise run docs:lint` checks what a program can (links, tasks and paths that don't exist), and `mise run docs:review` has Claude check the rest. Run the lint before committing a docs change.
 - **A new page in `docs/` starts with its sidebar lines** (`title`, `nav_order`, and `parent` if it sits under another page; copy them from any page) and gets a row in `docs/README.md`.
 - **`docs/_config.yml` and `docs/_sass/` are written by `mise run docs:setup`.** Don't edit them: change the templates in `dev/docs/`, as with the workflows.
 - **Docs are plain Markdown that GitHub Pages renders as it is.** Link pages relatively (`[api-go.md](api-go.md)`), and don't write two opening curly braces together or a curly brace followed by a percent sign: Jekyll reads those as template code.

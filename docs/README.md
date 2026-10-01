@@ -13,6 +13,7 @@ Live: the [oRPC Worker's OpenAPI](https://orpc-api.gedw99.workers.dev/api/openap
 |---|---|
 | **This page** | What is what, and how to use the patterns in another project |
 | [rules.md](rules.md) | The working rules. Read them before changing anything |
+| [writing.md](writing.md) | The rules a page in `docs/` is held to, and how they are checked |
 | [api.md](api.md) | `api/`: the oRPC Worker (TypeScript) |
 | [api-go.md](api-go.md) | `api-go/`: the Go Worker (Huma on workers-go), and what Huma needs to run there |
 | [sdk.md](sdk.md) | `sdk/`: Fern, the generated SDKs and CLI, and the real-time client rules |

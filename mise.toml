@@ -52,8 +52,16 @@ description = "The upstream issues our code works around (every `Upstream:` tag)
 run = "go run ./dev upstream"
 
 [tasks."docs:setup"]
-description = "Write the docs site's config into docs/ (the same for every repo; GitHub Pages renders the folder)"
+description = "Write the docs site's config and docs/writing.md (the same for every repo; GitHub Pages renders the folder)"
 run = "go run ./dev docs"
+
+[tasks."docs:lint"]
+description = "Check docs/ for what a program can check: front matter, links, the index, tasks and paths that don't exist"
+run = "go run ./dev docs-lint"
+
+[tasks."docs:review"]
+description = "Have Claude (the claude command) bring docs/ up to date and into line with docs/writing.md"
+run = "go run ./dev docs-review"
 
 [tasks."docs:pages"]
 description = "REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself)"
