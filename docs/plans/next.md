@@ -17,6 +17,7 @@ Where this repo stands (2026-10-01) and what comes next, in order. What's proven
 
 ## Next
 
+00. **Promised on middleapi/orpc#2115 (2026-10-01):** publish `api/src/asyncapi.ts` as a community package (`asyncapi()` + `AsyncAPIGenerator`, API-compatible with `openapi()` / `OpenAPIGenerator`), then link it on the issue. The maintainer prefers community packages first. An MCP generator for oRPC, built the same way, was offered too.
 0. **The Go Worker (api-go/), what is left:**
    - **Make it cheaper:** 40 to 70 ms of CPU per request today. The plan is [performance.md](performance.md).
    - **Upstream:** three findings are drafted and not filed ([../upstream.md](../upstream.md)); the timer one matters to every workers-go project. Filing needs a go-ahead.
