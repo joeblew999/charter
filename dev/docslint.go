@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -85,7 +86,9 @@ func docsLint(args []string) error {
 		if rel != "README.md" && !strings.Contains(string(index), "("+filepath.ToSlash(rel)) {
 			say(page, "not linked from docs/README.md (the index)")
 		}
-		for _, m := range mdLink.FindAllStringSubmatch(text, -1) {
+		// Links and paths are read from the prose: an example inside code is not a link.
+		prose := codeSpan.ReplaceAllString(fenced.ReplaceAllString(text, ""), "")
+		for _, m := range mdLink.FindAllStringSubmatch(prose, -1) {
 			target, anchor, _ := strings.Cut(m[1], "#")
 			if strings.Contains(target, "://") || strings.HasPrefix(target, "mailto:") {
 				continue
@@ -120,7 +123,7 @@ func docsLint(args []string) error {
 			if !repoPath.MatchString(span) || !top[first] || strings.ContainsAny(span, "*<>{}") || strings.Contains(span, "...") || gitTag.MatchString(span) {
 				continue
 			}
-			if !exists(filepath.Join(into, span)) {
+			if !exists(filepath.Join(into, span)) && !ignored(into, span) {
 				say(page, "`%s`: no such path in the repo", span)
 			}
 		}
@@ -131,6 +134,14 @@ func docsLint(args []string) error {
 	}
 	fmt.Println(strings.Join(problems, "\n"))
 	return fmt.Errorf("docs: %d problems in %d pages", len(problems), len(pages))
+}
+
+// ignored reports whether git ignores the path: a build's output (sdk/out/) is a real place that a
+// fresh checkout doesn't have yet.
+func ignored(repo, path string) bool {
+	cmd := exec.Command("git", "check-ignore", "-q", path)
+	cmd.Dir = repo
+	return cmd.Run() == nil
 }
 
 // hasAnchor reports whether a heading in file makes this anchor, the way GitHub and Jekyll do:

@@ -43,7 +43,7 @@ A developer or an agent who is new to this repo and has a job to do. They know t
 ## The mechanics
 
 - **Front matter first:** `title` (short, for the sidebar), `nav_order`, and `parent` if the page sits under another.
-- **Links are relative** (`[api-go.md](api-go.md)`), and an anchor must match a heading.
+- **Links are relative** (`[other-page.md](other-page.md)`), and an anchor must match a heading.
 - **A new page gets a row in the start page's table.**
 - **No two opening curly braces together, and no curly brace followed by a percent sign:** the site's renderer reads those as template code.
 - **Don't edit what is generated:** `_config.yml`, `_sass/`, this page.

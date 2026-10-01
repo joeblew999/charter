@@ -143,8 +143,21 @@ func TestWatchCatchesUpAndEndsWithTheTerminator(t *testing.T) {
 func TestWatchWithoutAfterStartsFromNowAndGoesLive(t *testing.T) {
 	srv, _ := server(t)
 	create(t, srv.URL, "old")
+	// Create the live note only once the stream has started, so a slow machine can't make the note
+	// older than the stream (the check runs this beside a TinyGo build).
+	res, err := http.Get(srv.URL + "/api/notes/watch?seconds=3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	lines := bufio.NewScanner(res.Body)
+	lines.Scan() // the opening comment: the response has started
 	go func() { time.Sleep(300 * time.Millisecond); create(t, srv.URL, "new") }()
-	_, body, _ := do(t, "GET", srv.URL+"/api/notes/watch?seconds=1", "")
+	var seen strings.Builder
+	for lines.Scan() {
+		seen.WriteString(lines.Text() + "\n")
+	}
+	body := seen.String()
 	if strings.Contains(body, `"old"`) || !strings.Contains(body, "id: 2\n") {
 		t.Fatalf("want only the live note 2:\n%s", body)
 	}
