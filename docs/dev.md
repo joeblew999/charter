@@ -119,6 +119,7 @@ mise run docs:setup      # writes docs/_config.yml and docs/_sass/custom/custom.
 mise run docs:pages      # once per repo: turns GitHub Pages on for docs/ on the default branch
 ```
 
+- **For agents:** the site also serves `llms.txt` (https://joeblew999.github.io/orpc-api/llms.txt): every page in sidebar order, each linked as raw Markdown. The site's renderer builds it from the pages; nothing to maintain.
 - **The config is the same for every repo.** `dev docs` fills in the repo's name, description and URLs from GitHub, so there is nothing to edit. `mise run dev:check` fails if the committed files differ.
 - **The sidebar comes from the pages.** Each page starts with its short title, its order, and its parent if it has one:
 
