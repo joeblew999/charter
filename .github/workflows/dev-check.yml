@@ -1,0 +1,19 @@
+# Written by `dev workflows` from its template (github.com/joeblew999/orpc-api/dev, dev/workflows/dev-check.yml):
+# change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# The dev tool: gofmt, vet, tests, and the committed workflows match their templates.
+name: dev-check
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dev:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run dev:check

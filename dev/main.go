@@ -26,6 +26,13 @@ type command struct {
 
 var commands = map[string]command{}
 
+// anywhere names the commands that also run outside this repo's layout, from another repo:
+// go run github.com/joeblew999/orpc-api/dev@latest <command>. The others need the repo (go.work).
+var anywhere = map[string]bool{}
+
+// started is the directory the command was started in (main moves to the repo's root when there is one).
+var started string
+
 func main() {
 	if len(os.Args) < 2 || os.Args[1] == "help" || os.Args[1] == "-h" || os.Args[1] == "--help" {
 		names := make([]string, 0, len(commands))
@@ -43,8 +50,12 @@ func main() {
 	if !ok {
 		fail(fmt.Errorf("no command %q: go run ./dev help", os.Args[1]))
 	}
-	if err := os.Chdir(root()); err != nil {
-		fail(err)
+	if dir, ok := root(); ok {
+		if err := os.Chdir(dir); err != nil {
+			fail(err)
+		}
+	} else if !anywhere[os.Args[1]] {
+		fail(errors.New("not inside the repo (no go.work above here)"))
 	}
 	if err := cmd.run(os.Args[2:]); err != nil {
 		fail(err)
@@ -59,21 +70,19 @@ func fail(err error) {
 	os.Exit(1)
 }
 
-// root is the repo: the directory with go.work, found from the working directory upwards.
-func root() string {
-	dir, err := os.Getwd()
-	if err != nil {
+// root is the repo: the directory with go.work, found from where the command was started upwards.
+func root() (string, bool) {
+	var err error
+	if started, err = os.Getwd(); err != nil {
 		fail(err)
 	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.work")); err == nil {
-			return dir
+	for dir := started; ; dir = filepath.Dir(dir) {
+		if exists(filepath.Join(dir, "go.work")) {
+			return dir, true
 		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			fail(errors.New("not inside the repo (no go.work above here)"))
+		if dir == filepath.Dir(dir) {
+			return "", false
 		}
-		dir = parent
 	}
 }
 

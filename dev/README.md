@@ -19,11 +19,65 @@ mise run <task>              # what you normally type: each task is one line tha
 | `upstream` | Lists every `Upstream: owner/repo#n` tag in the code with the issue's state | `upstream:status` |
 | `doctor` | Checks the tools and installs the tasks need | `doctor` |
 | `cloudflare-spec` | Slices Cloudflare products out of Forge's spec as a Fern API | `sdk:cloudflare` |
+| `workflows` | Writes the GitHub workflows from the templates in `dev/workflows/`; `-check` fails if a committed one differs | `dev:workflows`, `dev:check` |
+| `dist-dev`, `dist-sdk`, `dist-cli` | Build what a release ships into `dist/`: this tool's binaries, the SDK sources and specs, the Fern CLI | `dev:dist`, `sdk:dist`, `sdk:dist:cli` |
+| `release`, `release-tags` | Attach `dist/` to the tag's GitHub Release; tag the Go modules. Without a version tag both are a dry run | `release`, `release:tags` |
+| `need-env` | Fails, naming them, unless the given environment variables are set | `cloudflare:token` |
 
 ## Adding a task
 
 1. If it's one command, write the one-line task in `mise.toml`.
 2. If it isn't, add a command here (register it in an `init`, as the others do) and write a one-line task that calls it.
+
+## GitHub workflows
+
+The workflows are templates in `dev/workflows/`, compiled into this tool. `mise run dev:workflows` writes them to `.github/workflows/`, and `mise run dev:check` fails if a committed one differs. Edit the template, never the copy.
+
+Every step that does work is `mise run <task>`, so a failing step is one line you can run locally. A test (`dev/workflows_test.go`) holds the templates to that, and to exact versions of the actions and runners. The prefix says what a workflow is for: `api-`, `sdk-`, or `dev-` (this tool).
+
+| Workflow | When | What it runs | Secrets |
+|---|---|---|---|
+| `api-check` | push to main, pull requests | `api:check` and `api-go:check`, one job each | none |
+| `sdk-check` | push to main, pull requests | `sdk:demo`, `sdk:harness:test`, and `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of `api` and `api-go` | none |
+| `dev-check` | push to main, pull requests | `dev:check` | none |
+| `api-deploy` | by hand only (pick `api` or `api-go`) | `cloudflare:token`, then `<api>:deploy` | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
+| `dev-release` | a version tag. A dry run by hand, and on pull requests that touch `dev/` | `dev:dist`, `release`, `release:tags` | none (the workflow's own token) |
+| `sdk-release` | a version tag. A dry run by hand, and on pull requests that touch `sdk/` or `dev/` | `sdk:dist`, `sdk:dist:cli <api>` (on an amd64 and an arm64 runner), `release` | none |
+
+`api-deploy` fails at its first step, naming the secrets, when they are missing. Set them with `gh secret set CLOUDFLARE_API_TOKEN` and `gh secret set CLOUDFLARE_ACCOUNT_ID`.
+
+### Cutting a release
+
+```sh
+git tag v0.1.0 && git push origin v0.1.0        # on the commit to release, once its checks are green
+```
+
+The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release. The two release workflows build everything again from that commit and attach it to the GitHub Release `v0.1.0` (the first job to finish creates it):
+
+| File | What |
+|---|---|
+| `dev-linux-amd64`, `dev-linux-arm64`, `dev-darwin-arm64`, `dev-darwin-amd64` | This tool |
+| `api-sdk-go.tar.gz`, `api-sdk-typescript.tar.gz` | The SDK sources Fern generates from the oRPC specs: generated fresh, then checked (`sdk:check`) |
+| `api-go-sdk-go.tar.gz`, `api-go-sdk-typescript.tar.gz` | The same from the Go Worker's specs |
+| `api-specs.tar.gz`, `api-go-specs.tar.gz` | `openapi.json` and `asyncapi.json` of each API |
+| `api-cli-linux-amd64`, `api-cli-linux-arm64`, `api-go-cli-linux-amd64`, `api-go-cli-linux-arm64` | The Fern CLI of each API (the binary calls itself `orpc-api`) |
+
+**Go module versions.** `api-go/` and `dev/` are Go modules in subdirectories, and Go only finds a version of such a module under a tag with the directory in front. So `release:tags` adds `api-go/v0.1.0` and `dev/v0.1.0` on the same commit as `v0.1.0`. You push one tag; those two follow. Then `go get github.com/joeblew999/orpc-api/api-go@v0.1.0` and `go run github.com/joeblew999/orpc-api/dev@v0.1.0 help` work.
+
+**A dry run** is the same build without a version tag: `release` lists what is in `dist/` and publishes nothing, `release:tags` says which tags it would add, and the files are kept as workflow artifacts. Pull requests do that, and so does `gh workflow run dev-release.yml`. Locally: `mise run dev:dist && mise run sdk:dist && mise run release`.
+
+Not released yet: the SDKs as packages (npm, a Go module of their own) and the CLI for macOS and Windows. See `.plans/next.md`.
+
+### The workflows in another repo
+
+```sh
+go run github.com/joeblew999/orpc-api/dev@latest workflows -into .          # writes .github/workflows/api-*.yml and sdk-*.yml
+go run github.com/joeblew999/orpc-api/dev@latest workflows -into . -check   # fails if they differ from the templates
+```
+
+It writes the `api-` and `sdk-` workflows. `-only api` or `-only sdk` writes one set; the `dev-` ones are only written where there is a `dev/` module, as here.
+
+They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `api:check`, `api-go:check`, `api:deploy`, `api-go:deploy`, `cloudflare:token`, `sdk:demo`, `sdk:harness:test`, `sdk:gen`, `sdk:check`, `sdk:dist`, `sdk:dist:cli` and `release`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
 
 ## Using it from another repo
 
@@ -33,4 +87,6 @@ The module path is real, so another repo can run it without copying it:
 go run github.com/joeblew999/orpc-api/dev@latest help
 ```
 
-It expects this repo's layout (`api/`, `api-go/`, `sdk/`, `migrations/`, a `go.work` at the root).
+Every command but `workflows` expects this repo's layout (`api/`, `api-go/`, `sdk/`, `migrations/`, a `go.work` at the root).
+
+Each release also has the tool as a binary (`dev-<os>-<arch>`), for a repo that doesn't want Go only to run it.

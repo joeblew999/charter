@@ -50,8 +50,28 @@ description = "The upstream issues our code works around (every `Upstream:` tag)
 run = "go run ./dev upstream"
 
 [tasks."dev:check"]
-description = "The dev tool's own checks: gofmt, vet, tests"
-run = 'test -z "$(gofmt -l dev)" && go vet ./dev && go test ./dev'
+description = "The dev tool's own checks: gofmt, vet, tests, and the committed GitHub workflows match their templates"
+run = 'test -z "$(gofmt -l dev)" && go vet ./dev && go test ./dev && go run ./dev workflows -check'
+
+[tasks."dev:workflows"]
+description = "Write .github/workflows/ from the templates in dev/workflows (edit those, never the copies)"
+run = "go run ./dev workflows"
+
+[tasks."dev:dist"]
+description = "Build the dev tool for linux and darwin, amd64 and arm64, into dist/"
+run = "go run ./dev dist-dev"
+
+[tasks.release]
+description = "REMOTE on a version tag (vX.Y.Z): attach dist/* to its GitHub Release. Anywhere else: a dry run that lists dist/"
+run = "go run ./dev release"
+
+[tasks."release:tags"]
+description = "REMOTE on a version tag (vX.Y.Z): tag the Go modules api-go/vX.Y.Z and dev/vX.Y.Z. Anywhere else: a dry run"
+run = "go run ./dev release-tags api-go dev"
+
+[tasks."cloudflare:token"]
+description = "Fail unless CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set: what a deploy from GitHub needs (locally, cf auth login is enough)"
+run = "go run ./dev need-env CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"
 
 # ---- api/: the oRPC Worker (TypeScript) -------------------------------------------------------------
 
@@ -213,6 +233,14 @@ run = "for group in go typescript; do go run ./dev sdk-gen petstore $group && go
 [tasks."sdk:cli:build"]
 description = "HEAVY: build a Fern-generated Rust CLI: mise run sdk:cli:build [-linux] <dir>, e.g. sdk/out/api/cli"
 run = "go run ./dev cli-build"
+
+[tasks."sdk:dist"]
+description = "Generate, check and archive what a release ships for both APIs into dist/: Go and TypeScript SDK sources, the specs (Docker)"
+run = "go run ./dev dist-sdk api api-go"
+
+[tasks."sdk:dist:cli"]
+description = "HEAVY: generate and build an API's Fern CLI into dist/: mise run sdk:dist:cli [-linux] <api>"
+run = "go run ./dev dist-cli"
 
 [tasks."sdk:docs"]
 description = "Preview the API docs site locally (fern docs dev): http://localhost:3030"

@@ -1,6 +1,8 @@
 # orpc-api
 
-[![check](https://github.com/joeblew999/orpc-api/actions/workflows/check.yml/badge.svg)](https://github.com/joeblew999/orpc-api/actions/workflows/check.yml)
+[![api-check](https://github.com/joeblew999/orpc-api/actions/workflows/api-check.yml/badge.svg)](https://github.com/joeblew999/orpc-api/actions/workflows/api-check.yml)
+[![sdk-check](https://github.com/joeblew999/orpc-api/actions/workflows/sdk-check.yml/badge.svg)](https://github.com/joeblew999/orpc-api/actions/workflows/sdk-check.yml)
+[![dev-check](https://github.com/joeblew999/orpc-api/actions/workflows/dev-check.yml/badge.svg)](https://github.com/joeblew999/orpc-api/actions/workflows/dev-check.yml)
 
 One notes API on Cloudflare Workers, built twice: in TypeScript with oRPC (`api/`) and in Go with Huma on workers-go (`api-go/`). Both are contract first, both have real-time (SSE + WebSockets) that doesn't lose data, and both hand Fern an OpenAPI and an AsyncAPI file, from which Fern generates typed SDKs, a CLI and a docs site for other developers. It's the base for our other API projects: copy the patterns, not the notes.
 
@@ -88,6 +90,7 @@ On another Cloudflare account, set `API_URL`, `API_GO_URL` (and `HARNESS_URL`, `
 | [FINDINGS.md](FINDINGS.md) | Verified results only |
 | [.plans/](.plans/) | [next.md](.plans/next.md), [realtime.md](.plans/realtime.md) (the design), [asyncapi.md](.plans/asyncapi.md) |
 | [dev/](dev/README.md) | The tool the tasks run, and the part other repos reuse: `go run ./dev help` |
+| `.github/workflows/` | CI, deploys and releases (`api-*`, `sdk-*`, `dev-*`), written from templates by `mise run dev:workflows`. What each does, how to cut a release and how another repo gets them: [dev/README.md](dev/README.md#github-workflows) |
 | `mise.toml` | Every task, one line each. Anything longer is a `dev` command |
 
 ## Using it in another project

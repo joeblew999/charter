@@ -1,0 +1,30 @@
+# Written by `dev workflows` from its template (github.com/joeblew999/orpc-api/dev, dev/workflows/dev-release.yml):
+# change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# On a version tag (vX.Y.Z): the dev binaries go onto the GitHub Release, and the Go modules get their tags.
+# On a pull request or by hand it is a dry run: the same build, kept as a workflow artifact, nothing published.
+name: dev-release
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths: [dev/**, mise.toml, go.work, .github/workflows/dev-release.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+env:
+  GH_TOKEN: ${{ github.token }}
+jobs:
+  dev:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run dev:dist
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: dev
+          path: dist/
+          if-no-files-found: error
+      - run: mise run release
+      - run: mise run release:tags

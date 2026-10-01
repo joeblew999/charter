@@ -5,6 +5,8 @@ One notes API on Cloudflare Workers, built twice (oRPC in `api/`, Go with Huma o
 ## Rules
 
 - **mise drives everything, locally and on GitHub, and every task is one line.** Anything that needs more is a command of the `dev` tool (`dev/`, Go, standard library only): add a command there, then a one-line task that calls it. No `scripts/` or tasks folder, no shell blocks in `mise.toml`. Test programs (`test/*.mjs`, `test/soak-go`) are code, not glue.
+- **GitHub workflows are generated and only call mise.** The templates are `dev/workflows/*.yml` (prefix `api-`, `sdk-` or `dev-`). Edit a template, run `mise run dev:workflows`, commit both; `mise run dev:check` fails if they differ. A step that does work is `mise run <task>`: no shell in YAML. Actions and runners are pinned to exact versions.
+- **A release is a version tag** (`vX.Y.Z`), built by the `*-release` workflows. Don't upload release files or push the module tags (`api-go/vX.Y.Z`, `dev/vX.Y.Z`) by hand. See dev/README.md.
 - **Exact pins, one source each.** Node, jq, gh, TinyGo and binaryen go in `mise.toml`; Rust in `rust-toolchain.toml`; Go in the `toolchain` line of `go.work`; Go modules in `go.mod`. Lockfiles are committed. No global installs.
 - **The contract is the source, one per server.**
   - oRPC: after changing `api/src/contract.ts`, run `mise run api:spec`. `mise run api:check` fails if a committed spec is stale.

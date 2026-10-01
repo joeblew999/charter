@@ -1,0 +1,28 @@
+# Written by `dev workflows` from its template (github.com/joeblew999/orpc-api/dev, dev/workflows/api-check.yml):
+# change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# Both APIs' local checks (no Cloudflare account): one job each, so a failure names its half.
+name: api-check
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run api:check
+  api-go:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run api-go:check
