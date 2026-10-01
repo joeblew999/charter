@@ -24,7 +24,9 @@ for (const [era, mode, version] of [["stateless", { pin: "2026-07-28" }, "2026-0
   // The tools are the contract's operations that answer once; their schemas are the contract's.
   const { tools } = await client.listTools();
   const byName = Object.fromEntries(tools.map(tool => [tool.name, tool]));
-  check(label("tools/list is hello, listNotes, createNote"), tools.map(tool => tool.name).join() === "hello,listNotes,createNote", tools.map(tool => tool.name));
+  // The notes tools are among them, each once; a stream and a channel never are. (Not "is exactly": a project adds its own.)
+  const names = tools.map(tool => tool.name);
+  check(label("tools/list has hello, listNotes, createNote, and no stream or channel"), ["hello", "listNotes", "createNote"].every(name => names.filter(n => n === name).length === 1) && !names.includes("watchNotes") && !names.includes("liveNotes"), names);
   const limit = byName.listNotes?.inputSchema.properties?.limit;
   check(label("listNotes takes the query parameters"), limit?.minimum === 1 && limit?.maximum === 100 && limit?.default === 20 && "cursor" in byName.listNotes.inputSchema.properties, byName.listNotes?.inputSchema);
   check(label("createNote takes the JSON body's properties"), byName.createNote?.inputSchema.required?.join() === "body" && byName.createNote.inputSchema.properties.body.minLength === 1, byName.createNote?.inputSchema);

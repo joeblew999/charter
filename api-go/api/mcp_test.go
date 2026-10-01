@@ -35,15 +35,26 @@ func toolCall(t *testing.T, base, name, arguments string) (string, any, bool) {
 	return text, result["structuredContent"], result["isError"] == true
 }
 
+// The notes operations that answer once are tools, each exactly as the contract describes it. Other
+// operations of the contract are tools too (the list is not held to these three); a stream
+// (watchNotes) and a channel (liveNotes) never are.
 func TestMCPToolsAreTheContractsOperations(t *testing.T) {
 	srv, _ := server(t)
 	status, answer := mcp(t, srv.URL, "tools/list", `{}`)
 	if status != 200 {
 		t.Fatalf("HTTP %d %v", status, answer)
 	}
-	got, _ := json.Marshal(answer["result"])
-	// The three operations that answer once. Not watchNotes (a stream) and not liveNotes (a channel).
-	want := `{"tools":[
+	result, _ := answer["result"].(map[string]any)
+	listed, _ := result["tools"].([]any)
+	got := map[string]any{}
+	for _, tool := range listed {
+		name, _ := tool.(map[string]any)["name"].(string)
+		if _, twice := got[name]; twice || name == "" {
+			t.Errorf("tools/list names %q twice, or a tool has no name", name)
+		}
+		got[name] = tool
+	}
+	want := `[
 		{"name":"hello","description":"Say hello","annotations":{"readOnlyHint":true},
 		 "inputSchema":{"type":"object","properties":{},"additionalProperties":false},
 		 "outputSchema":{"type":"object","properties":{"message":{"type":"string"}},"required":["message"],"additionalProperties":false}},
@@ -60,14 +71,23 @@ func TestMCPToolsAreTheContractsOperations(t *testing.T) {
 		 "inputSchema":{"type":"object","additionalProperties":false,"required":["body"],"properties":{"body":{"type":"string","minLength":1}}},
 		 "outputSchema":{"type":"object","additionalProperties":false,"required":["id","body","created_at"],"properties":{
 			"id":{"type":"integer","format":"int64"},"body":{"type":"string"},"created_at":{"type":"string"}}}}
-	]}`
-	var gotValue, wantValue any
-	json.Unmarshal(got, &gotValue)
-	if err := json.Unmarshal([]byte(want), &wantValue); err != nil {
+	]`
+	var wanted []map[string]any
+	if err := json.Unmarshal([]byte(want), &wanted); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(gotValue, wantValue) {
-		t.Fatalf("tools/list:\n got %s\nwant %s", got, want)
+	for _, tool := range wanted {
+		name := tool["name"].(string)
+		if !reflect.DeepEqual(got[name], any(tool)) {
+			have, _ := json.Marshal(got[name])
+			need, _ := json.Marshal(tool)
+			t.Errorf("tool %s:\n got %s\nwant %s", name, have, need)
+		}
+	}
+	for _, name := range []string{"watchNotes", "liveNotes"} {
+		if _, ok := got[name]; ok {
+			t.Errorf("%s is listed as a tool: it does not answer once", name)
+		}
 	}
 }
 

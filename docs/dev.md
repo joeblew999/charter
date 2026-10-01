@@ -20,7 +20,7 @@ mise run dev:check           # the tool's own checks: gofmt, vet, tests, and the
 
 | Command | What it does | Task that calls it |
 |---|---|---|
-| `with-server` | Starts a server, waits up to 90 s until a URL answers, runs commands against it, stops it. `{port}` in its arguments is a free port, `{port2}` another | `api-go:test:native`, `api-go:test:workerd`, `showcase-go:test:native`, `showcase-go:test:workerd` |
+| `with-server` | Starts a server, waits up to 90 s until a URL answers, runs commands against it, stops it. `{port}` in its arguments is a free port, `{port2}` another. A command's output is shown only if it fails; `-show` streams it | `api-go:test:native`, `api-go:test:workerd`, `showcase-go:test:native`, `showcase-go:test:workerd` |
 | `migrate-local` | Applies `migrations/*.sql` to a running dev server's local D1, each once (cf can't) | `api:migrate:local`, `api-go:migrate:local`, `api-go:test:workerd` |
 | `migrate` | Finds the Worker's D1 database (`<worker>-db`) and applies pending migrations | `api:migrate`, `api-go:migrate`, the two notes `deploy` tasks |
 | `size` | Fails if a file is over a gzipped size (the Wasm limit) | `api-go:build`, `showcase-go:build` |
@@ -29,6 +29,7 @@ mise run dev:check           # the tool's own checks: gofmt, vet, tests, and the
 | `harness-sync`, `harness-test`, `harness-deploy` | Fern's TypeScript SDK inside the harness Worker (`sdk/harness/`). `harness-sync` copies the SDK in, generating it again when a showcase spec is newer than it | `showcase:typecheck`, `sdk:harness:test`, `sdk:harness:deploy` |
 | `bench` | Times the read routes of a notes API as a client sees them; `-n` requests per route ([benchmarks.md](benchmarks.md)) | `api:bench`, `api-go:bench` |
 | `new` | Creates a new Go API project from this repo's example ([below](#a-new-project-dev-new)) | none: run it with `go run ...dev@latest new` |
+| `version` | Prints the release the tool is: what `new` pins a project to | none |
 | `docs` | Writes the docs site's config, `docs/writing.md` and `docs/llms.txt` into a repo; `-check` fails if one differs ([below](#the-docs-site)) | `docs:setup`, `dev:check` |
 | `docs-lint` | Checks `docs/` for what a program can check | `docs:lint` |
 | `docs-review` | Hands Claude the review prompt with what `docs-lint` found; `-print` only shows the prompt | `docs:review` |
@@ -41,7 +42,7 @@ mise run dev:check           # the tool's own checks: gofmt, vet, tests, and the
 | `need-env` | Fails, naming them, unless the given environment variables are set | `cloudflare:token` |
 | `github-secrets` | Copies the given environment variables into the repo's GitHub Actions secrets, without printing them | `cloudflare:secrets` |
 
-A command runs from the repo's root, which it finds by the `go.work` above where it was started. Five also run outside this repo's layout, in any repo: `new`, `workflows`, `docs`, `docs-lint` and `docs-review`.
+A command runs from the repo's root, which it finds by the `go.work` above where it was started. Six also run outside this repo's layout, in any repo: `new`, `version`, `workflows`, `docs`, `docs-lint` and `docs-review`.
 
 ## Adding a task
 
@@ -140,18 +141,22 @@ mise run api-go:deploy         # to Cloudflare, then: mise run api-go:live-test
 |---|---|---|
 | `-name` | The project and its Worker: lower-case letters, digits and hyphens | required |
 | `-module` | The Go module path | `github.com/<your GitHub login>/<name>`, from `gh` |
+| `-subdomain` | Your Cloudflare account's workers.dev subdomain: the word before `.workers.dev` in a deployed Worker's URL | the placeholder `your-subdomain` |
 | `-into` | Where to create it; the folder must be empty | `./<name>` |
 | `-from` | A checkout of this repo to copy from | the tool's own version, cloned from GitHub |
 
+- **Its first line is the tool's version and what it pinned to it:** the dev tool in the project's `mise.toml`, the Go packages in `api-go/go.mod`. `dev version` prints the version alone. Minutes after a release, `dev@latest` can still be the release before (Go's module proxy caches it); the release binary and `dev@vX.Y.Z` are exact.
 - **It copies the example** from this repo at the tool's own version: the notes API in `api-go/` (contract, handlers, Worker entry, hub, platform files, spec command), `migrations/`, the notes test programs from `test/`, and the Fern folder `sdk/fern/apis/api-go/`. There is no separate template, so a new project starts from code that passed this repo's checks. The Go showcase and the test that compares with the oRPC contract are left out.
 - **It renames:** the Worker and its D1 database (`-name`), the Go module (`-module`), and the SDK's names (`billing-api` gives `BillingApiClient`).
+- **It sets the Worker's URL** to `https://<name>.<subdomain>.workers.dev`, as the default of `API_GO_URL` in the project's `mise.toml` and in the two copied specs, which must agree for `mise run check` to pass. Without `-subdomain` that is a placeholder, and the closing message says what to do after the first deploy: put the URL the deploy prints in `mise.local.toml` as `API_GO_URL` (or make it the default in `mise.toml`, which CI reads too), then `mise run api-go:spec`. Nothing in a project names this repo's own subdomain.
+- **Its closing message also says what the Go Worker costs to run** ([api-go.md](api-go.md#cost)), and links the guide to putting your own API in the example's place ([guides/replace-the-example.md](guides/replace-the-example.md)).
 - **It keeps as imports** the reusable packages (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`), pinned to the same version, so fixes arrive with `go get -u`. Made with `-from`, the project builds against that checkout through a `replace` line in its `go.mod`; remove it once you depend on a release.
 - **It writes** a `mise.toml` with the Go and SDK tasks (the dev tool is one of its mise tools, pinned to the release, so tasks call `dev <command>`), `go.work`, a README, `AGENTS.md`, and a `docs/` folder with a start page, rules and the writing rules.
 - **Then, with a GitHub repo:** `mise run dev:workflows` (the workflows come out for one Go API), `mise run docs:setup` and `mise run docs:pages`.
 
 The project starts as the notes API. Change `api-go/api/contract.go`, run `mise run api-go:spec`, and go from there ([api-go.md](api-go.md#starting-a-go-workers-go-project-from-it)).
 
-Before a release, the scaffold is proven by hand: `go run ./dev new -name trial -into /tmp/trial -from .`, then that project's `mise run setup` and `mise run check`. `go test ./dev` covers the copy, the renaming and a build.
+Before a release, the scaffold is proven by hand: `go run ./dev new -name trial -into /tmp/trial -from .`, then that project's `mise run setup` and `mise run check`. `go test ./dev` covers the copy, the renaming, the Worker's URL with and without `-subdomain`, the first line and a build.
 
 ## The docs site
 
