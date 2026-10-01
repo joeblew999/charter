@@ -214,6 +214,22 @@ For a Go SDK (a folder with `go.mod`): build, vet and test, outside the workspac
 - **Needs:** Go, and Docker for the WireMock tests; or npm packages installed in `sdk/` for TypeScript.
 - **Runs:** project layout.
 
+### sdk-publish
+
+```sh
+dev sdk-publish [-check] [-into <dir>] <api>   # copy an API's Go SDK into the committed folder another repo can go get
+```
+
+Removes `sdk/out/<api>/go`, generates it again, runs `sdk-check` on it, and replaces the committed folder with its sources: everything except Fern's run record (`.fern/`), the WireMock fixtures and the tests that need them (`wiremock/`, folders ending in `_test`), and `CONTRIBUTING.md`. Then it adds the folder to `go.work`. It fails when the module path in the SDK's `go.mod` does not end in the folder: Go finds a module in a subfolder by that path. How to use the result: [Giving the Go SDK to another repo](../guides/sdks.md#giving-the-go-sdk-to-another-repo).
+
+| Flag | Default | What it is |
+|---|---|---|
+| `-check` | off | Write nothing: generate, and fail if the committed folder differs, naming the files. Passes when the folder does not exist |
+| `-into` | `sdk/go` | The committed folder |
+
+- **Needs:** Docker running, npm packages installed in `sdk/`, Go.
+- **Runs:** project layout.
+
 ### sdk-ready
 
 ```sh
@@ -398,7 +414,7 @@ Lists the files in `dist/` with their sizes. With a tag it creates the tag's Git
 dev release-tags [-tag vX.Y.Z] <module dir>...   # tag each Go module in a subdirectory
 ```
 
-For each directory (it must have a `go.mod`), adds the tag `<dir>/vX.Y.Z` on the commit of `vX.Y.Z`, through the GitHub API. A tag that exists on that commit is left; one that exists on another commit is an error. Without a tag it is a dry run that prints the tags it would add. Why these tags exist: [Releases](releases.md#the-three-tags-of-a-release).
+For each directory (it must have a `go.mod`; one that does not exist is skipped, as `sdk/go` is before the first `sdk-publish`), adds the tag `<dir>/vX.Y.Z` on the commit of `vX.Y.Z`, through the GitHub API. A tag that exists on that commit is left; one that exists on another commit is an error. Without a tag it is a dry run that prints the tags it would add. Why these tags exist: [Releases](releases.md#the-tags-of-a-release).
 
 | Flag | Default | What it is |
 |---|---|---|
@@ -474,6 +490,7 @@ The same list as `dev help` prints, with where each one runs.
 | `sdk-clean` | SDKs | Project layout |
 | `sdk-gen` | SDKs | Project layout |
 | `sdk-list` | SDKs | Project layout |
+| `sdk-publish` | SDKs | Project layout |
 | `sdk-ready` | SDKs | Project layout |
 | `size` | API and database | Below a `go.work` |
 | `upstream` | Project | Below a `go.work` |
@@ -485,4 +502,4 @@ The same list as `dev help` prints, with where each one runs.
 - **No Windows build.** The tool starts and stops process groups, which is Unix-only. It runs on Linux and macOS.
 - **`dev help` is the only help.** A command that takes flags prints them when given `-h`. There is no longer help per command.
 - **`docs-lint` and `upstream` need a git repository.** In a project that has not had `git init`, `docs-lint` reports ignored paths (`sdk/out/`) as missing, and `upstream` finds no tags.
-- **What was run for this page:** `new`, `help`, `workflows`, `workflows -check`, `docs -check`, `docs-lint`, `sdk-list`, `doctor`, `upstream`, `release` and `release-tags` (dry runs) and `migrate` (the failure above) were run on 2026-10-01 in a new project. The other commands are described from their source.
+- **What was run for this page:** `new`, `help`, `workflows`, `workflows -check`, `docs -check`, `docs-lint`, `sdk-list`, `doctor`, `upstream`, `release` and `release-tags` (dry runs) and `migrate` (the failure above) were run on 2026-10-01 in a new project, and so were `sdk-publish` and `sdk-publish -check`, with the tool built from a checkout. The other commands are described from their source.

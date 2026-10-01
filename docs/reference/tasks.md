@@ -66,6 +66,8 @@ An `<api>` is a folder under `sdk/fern/apis/`. A new project has one, `api-go`. 
 | `sdk:gen <api> <group>` | Generates one SDK with Fern into `sdk/out/<api>/<group>`, replacing what is there | npm packages, Docker | Local |
 | `sdk:check <dir>` | Proves a generated SDK works. Go: build, vet, and its tests against a WireMock container. TypeScript: a typecheck | The SDK generated; Docker for a Go SDK | Local |
 | `sdk:ready <api> [group...]` | Generates and builds what the tests use, only where it is missing: the `typescript-dist` and `go` SDKs and the Fern CLI, or only the groups named | npm packages; Docker and `cargo` when something is missing | Local |
+| `sdk:publish` | Generates the Go SDK of `api-go` fresh, checks it as `sdk:check` does, and copies its sources into `sdk/go`: the committed Go module another repo fetches with `go get`. Adds `sdk/go` to `go.work`. Commit the result | npm packages, Docker | Local |
+| `sdk:publish:check` | Generates the Go SDK again and fails if `sdk/go` differs. Passes when there is no `sdk/go` yet | npm packages, Docker | Local |
 | `sdk:cli:build [-linux] <dir>` | Builds a generated Rust CLI, for example `sdk/out/api-go/cli`. Heavy: the first build takes minutes at full CPU. `-linux` builds for Linux in Docker | The CLI generated, `cargo`; Docker with `-linux` | Local |
 | `sdk:dist` | Generates the Go and TypeScript SDKs of `api-go` fresh, checks them, and archives them and the specs into `dist/` | npm packages, Docker | Local |
 | `sdk:dist:cli [-linux] <api>` | Generates and builds the API's Fern CLI into `dist/`. Heavy | npm packages, Docker, `cargo` | Local |
@@ -91,7 +93,7 @@ What a release ships is built by `sdk:dist` and `sdk:dist:cli`, in [SDKs](#sdks)
 | `cloudflare:token` | Fails unless `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set. The deploy workflow runs it first | Nothing | Local |
 | `cloudflare:secrets` | Copies those two variables from fnox into the repo's GitHub Actions secrets, without printing them. Once per repo | `gh`, the two values stored in fnox | Remote: sets GitHub secrets |
 | `release` | On a version tag in a GitHub workflow: attaches the files in `dist/` to the tag's GitHub Release. Anywhere else: a dry run that lists `dist/` | Files in `dist/`; `gh` for a real run | Remote on a tag; otherwise local |
-| `release:tags` | On a version tag: adds the tag `api-go/vX.Y.Z` on the same commit, which Go needs to find the module. Anywhere else: a dry run | `gh` for a real run | Remote on a tag; otherwise local |
+| `release:tags` | On a version tag: adds the tags `api-go/vX.Y.Z` and, when `sdk/go` exists, `sdk/go/vX.Y.Z` on the same commit, which Go needs to find a version of those modules. Anywhere else: a dry run | `gh` for a real run | Remote on a tag; otherwise local |
 
 ## Tasks that exist only in the orpc-api repo
 
@@ -112,5 +114,5 @@ In that repo `check` runs more (both servers, both showcases, the SDK test Worke
 
 ## Limits
 
-- **Some descriptions in a new project's `mise.toml` describe the orpc-api repo, not the project.** `mise tasks` there says `check` needs Docker, `setup` installs `api/` and `sdk/harness/`, `sdk:dist` archives "both APIs", and `release:tags` adds `dev/vX.Y.Z`. The tables above say what the tasks do in a project.
+- **Some descriptions in a new project's `mise.toml` describe the orpc-api repo, not the project.** `mise tasks` there says `check` needs Docker, `setup` installs `api/` and `sdk/harness/`, and `sdk:dist` archives "both APIs". The tables above say what the tasks do in a project.
 - **What was run for this page:** `mise tasks`, `api-go:spec:check`, `sdk:list`, `doctor` and `release:tags` (a dry run) were run in a new project on 2026-10-01. The other rows are read from the project's `mise.toml` and the tool's source.
