@@ -10,7 +10,7 @@ permalink: /llms.txt
 
 > {{ site.description }}
 
-The links below are the pages' Markdown sources. Everything in one file: {{ "/llms-full.txt" | absolute_url }}
+The links below are the pages' Markdown sources. Rendered for people: {{ "/" | absolute_url }}
 
 ## Docs
 
