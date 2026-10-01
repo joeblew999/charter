@@ -1,5 +1,4 @@
 {
-  "openapi": "3.1.0",
   "info": {
     "title": "Showcase",
     "version": "1.0.0",
@@ -11,17 +10,70 @@
       "description": "The deployed mock of this API (sdk/harness, mode api). Fern's CLI takes its OAuth token URL from here; --base-url doesn't move it."
     }
   ],
+  "security": [
+    {
+      "OAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "OAuth": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "/oauth/token",
+            "scopes": {}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Note": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "Chunk": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
   "x-fern-idempotency-headers": [
     {
       "header": "Idempotency-Key",
       "name": "idempotency_key"
     }
   ],
-  "security": [
-    {
-      "OAuth": []
-    }
-  ],
+  "x-fern-webhook-signature": {
+    "type": "hmac",
+    "header": "x-webhook-signature",
+    "algorithm": "sha256",
+    "encoding": "hex"
+  },
+  "openapi": "3.1.1",
   "paths": {
     "/oauth/token": {
       "post": {
@@ -30,17 +82,12 @@
         "tags": [
           "auth"
         ],
-        "security": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/x-www-form-urlencoded": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "client_id",
-                  "client_secret"
-                ],
                 "properties": {
                   "client_id": {
                     "type": "string"
@@ -48,7 +95,11 @@
                   "client_secret": {
                     "type": "string"
                   }
-                }
+                },
+                "required": [
+                  "client_id",
+                  "client_secret"
+                ]
               }
             }
           }
@@ -60,18 +111,21 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "access_token",
-                    "expires_in"
-                  ],
                   "properties": {
                     "access_token": {
                       "type": "string"
                     },
                     "expires_in": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
                     }
-                  }
+                  },
+                  "required": [
+                    "access_token",
+                    "expires_in"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -80,7 +134,8 @@
         "x-fern-audiences": [
           "public",
           "internal"
-        ]
+        ],
+        "security": []
       }
     },
     "/notes": {
@@ -90,25 +145,26 @@
         "tags": [
           "notes"
         ],
-        "x-fern-pagination": {
-          "cursor": "$request.cursor",
-          "next_cursor": "$response.next_cursor",
-          "results": "$response.data"
-        },
         "parameters": [
           {
-            "name": "cursor",
             "in": "query",
+            "name": "cursor",
             "schema": {
               "type": "string"
-            }
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
           },
           {
-            "name": "limit",
             "in": "query",
+            "name": "limit",
             "schema": {
-              "type": "integer"
-            }
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
           }
         ],
         "responses": {
@@ -118,9 +174,6 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "data"
-                  ],
                   "properties": {
                     "data": {
                       "type": "array",
@@ -131,7 +184,11 @@
                     "next_cursor": {
                       "type": "string"
                     }
-                  }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -140,7 +197,12 @@
         "x-fern-audiences": [
           "public",
           "internal"
-        ]
+        ],
+        "x-fern-pagination": {
+          "cursor": "$request.cursor",
+          "next_cursor": "$response.next_cursor",
+          "results": "$response.data"
+        }
       },
       "post": {
         "operationId": "createNote",
@@ -148,21 +210,20 @@
         "tags": [
           "notes"
         ],
-        "x-fern-idempotent": true,
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "body"
-                ],
                 "properties": {
                   "body": {
                     "type": "string"
                   }
-                }
+                },
+                "required": [
+                  "body"
+                ]
               }
             }
           }
@@ -182,7 +243,8 @@
         "x-fern-audiences": [
           "public",
           "internal"
-        ]
+        ],
+        "x-fern-idempotent": true
       }
     },
     "/files": {
@@ -198,18 +260,19 @@
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "file"
-                ],
                 "properties": {
                   "file": {
                     "type": "string",
-                    "format": "binary"
+                    "format": "binary",
+                    "contentEncoding": "binary"
                   },
                   "note": {
                     "type": "string"
                   }
-                }
+                },
+                "required": [
+                  "file"
+                ]
               }
             }
           }
@@ -221,18 +284,21 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "id",
-                    "size"
-                  ],
                   "properties": {
                     "id": {
                       "type": "string"
                     },
                     "size": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
                     }
-                  }
+                  },
+                  "required": [
+                    "id",
+                    "size"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -250,23 +316,20 @@
         "tags": [
           "chat"
         ],
-        "x-fern-streaming": {
-          "format": "sse"
-        },
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "prompt"
-                ],
                 "properties": {
                   "prompt": {
                     "type": "string"
                   }
-                }
+                },
+                "required": [
+                  "prompt"
+                ]
               }
             }
           }
@@ -286,7 +349,10 @@
         "x-fern-audiences": [
           "public",
           "internal"
-        ]
+        ],
+        "x-fern-streaming": {
+          "format": "sse"
+        }
       }
     }
   },
@@ -303,10 +369,6 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "event",
-                  "note"
-                ],
                 "properties": {
                   "event": {
                     "type": "string"
@@ -314,7 +376,12 @@
                   "note": {
                     "$ref": "#/components/schemas/Note"
                   }
-                }
+                },
+                "required": [
+                  "event",
+                  "note"
+                ],
+                "additionalProperties": false
               }
             }
           }
@@ -326,55 +393,5 @@
         }
       }
     }
-  },
-  "components": {
-    "securitySchemes": {
-      "OAuth": {
-        "type": "oauth2",
-        "flows": {
-          "clientCredentials": {
-            "tokenUrl": "/oauth/token",
-            "scopes": {}
-          }
-        }
-      }
-    },
-    "schemas": {
-      "Note": {
-        "type": "object",
-        "required": [
-          "id",
-          "body"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "body": {
-            "type": "string"
-          }
-        }
-      },
-      "Chunk": {
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "properties": {
-          "text": {
-            "type": "string"
-          },
-          "done": {
-            "type": "boolean"
-          }
-        }
-      }
-    }
-  },
-  "x-fern-webhook-signature": {
-    "type": "hmac",
-    "header": "x-webhook-signature",
-    "algorithm": "sha256",
-    "encoding": "hex"
   }
 }

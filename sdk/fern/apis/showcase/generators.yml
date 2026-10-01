@@ -1,7 +1,9 @@
 # Fern features through standard options only: OAuth client credentials (auth-schemes below, token
 # endpoint in openapi.json), idempotency (x-fern-idempotent), SSE (x-fern-streaming), cursor pagination
 # (x-fern-pagination), multipart upload, OpenAPI 3.1 webhooks with HMAC signature verification
-# (x-fern-webhook-signature), WebSockets (asyncapi.yml), an overlay (overlays.yml) and audiences.
+# (x-fern-webhook-signature), WebSockets (asyncapi.json), an overlay (overlays.yml) and audiences.
+# openapi.json and asyncapi.json are written by `mise run showcase:spec` from the oRPC contract in
+# sdk/harness/src/contract.ts (never by hand); the harness Worker serves that contract.
 # Docs: https://buildwithfern.com/learn/api-definitions/openapi (Authentication, Webhooks, extensions)
 # Generate: mise run sdk:gen showcase <group>   (output: sdk/out/showcase/<group>)
 auth-schemes:
@@ -24,7 +26,7 @@ api:
   specs:
     - openapi: openapi.json
       overlays: overlays.yml
-    - asyncapi: asyncapi.yml
+    - asyncapi: asyncapi.json
 
 groups:
   go:

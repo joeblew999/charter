@@ -1,72 +1,10 @@
 // Does the Fern-generated TypeScript SDK (src/client, from sdk/fern/apis/showcase) work on Cloudflare
-// Workers? This Worker implements the showcase API itself under /api/mock/*, and /api/sdk-test runs the
-// SDK against it inside workerd, through the SDK's own `fetch` option (no network round trip).
+// Workers? This Worker serves the showcase API itself under /api/mock/* (src/showcase.ts: the oRPC
+// contract the SDK's specs are generated from), and /api/sdk-test runs the SDK against it inside
+// workerd, through the SDK's own `fetch` option (no network round trip).
 import { ShowcaseClient } from "./client/index.mjs";
 import { WebhooksHelper } from "./client/webhooks/index.mjs";
-
-const notes = ["n1", "n2", "n3", "n4", "n5"].map(id => ({ id, body: `note ${id}` }));
-const seen = { tokenCalls: 0, tokenContentType: "", authOnCreate: "", idempotencyKey: "" };
-
-async function mockApi(request: Request): Promise<Response> {
-	const url = new URL(request.url);
-	const route = `${request.method} ${url.pathname.replace(/^\/api\/mock/, "")}`;
-	switch (route) {
-		case "POST /oauth/token": {
-			seen.tokenCalls++;
-			seen.tokenContentType = request.headers.get("content-type") ?? "";
-			const form = new URLSearchParams(await request.text());
-			if (form.get("client_id") !== "id-1" || form.get("client_secret") !== "secret-1") return new Response("bad client", { status: 401 });
-			return Response.json({ access_token: "tok-1", expires_in: 3600 });
-		}
-		case "GET /notes": {
-			const start = Number(url.searchParams.get("cursor") ?? 0);
-			const next = start + 2;
-			return Response.json({ data: notes.slice(start, next), next_cursor: next < notes.length ? String(next) : undefined });
-		}
-		case "POST /notes": {
-			seen.authOnCreate = request.headers.get("authorization") ?? "";
-			seen.idempotencyKey = request.headers.get("idempotency-key") ?? "";
-			const { body } = await request.json<{ body: string }>();
-			return Response.json({ id: seen.idempotencyKey || "new", body });
-		}
-		case "POST /files": {
-			const form = await request.formData();
-			const file = form.get("file");
-			if (!(file instanceof File)) return new Response("missing file", { status: 400 });
-			return Response.json({ id: `${file.name}:${form.get("note") ?? ""}`, size: file.size });
-		}
-		case "GET /notes/live": {
-			if (request.headers.get("upgrade") !== "websocket") return new Response("expected a WebSocket upgrade", { status: 426 });
-			const [client, server] = Object.values(new WebSocketPair());
-			// The SDK sends the token as a header (Node). Workers and browsers can't set WebSocket headers,
-			// so it may come as ?access_token= instead.
-			const token = url.searchParams.get("access_token");
-			const auth = request.headers.get("authorization") ?? (token ? `Bearer ${token}` : "");
-			server.accept();
-			server.addEventListener("message", event => {
-				const { topic } = JSON.parse(String(event.data)) as { topic: string };
-				for (const note of notes.slice(0, 3)) server.send(JSON.stringify({ event: `${topic}.created`, id: note.id, body: note.body, auth }));
-			});
-			return new Response(null, { status: 101, webSocket: client });
-		}
-		case "POST /chat": {
-			const { prompt } = await request.json<{ prompt: string }>();
-			const words = `echo ${prompt}`.split(" ");
-			const stream = new ReadableStream({
-				async start(controller) {
-					const enc = new TextEncoder();
-					for (const [i, text] of words.entries()) {
-						controller.enqueue(enc.encode(`data: ${JSON.stringify({ text, done: i === words.length - 1 })}\n\n`));
-						await new Promise(r => setTimeout(r, 10));
-					}
-					controller.close();
-				},
-			});
-			return new Response(stream, { headers: { "content-type": "text/event-stream" } });
-		}
-	}
-	return new Response("not found", { status: 404 });
-}
+import { mockApi, notes, seen } from "./showcase.ts";
 
 async function hmacHex(secret: string, body: string) {
 	const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);

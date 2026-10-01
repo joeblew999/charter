@@ -3,7 +3,7 @@ import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { DurablePublisher } from "@orpc/cloudflare";
 import { call, implement, withEventMeta } from "@orpc/server";
 import type { z } from "zod";
-import { contract, END, type note } from "./contract.ts";
+import { asyncInfo, contract, END, info, type note } from "./contract.ts";
 import { asyncapiSpec, openapiSpec } from "./specs.ts";
 import { follow, type FollowSource } from "./follow.ts";
 export { NotesHub } from "./hub.ts";
@@ -106,8 +106,8 @@ export default {
 	async fetch(request) {
 		const url = new URL(request.url);
 		// The specs, generated from the same router as sdk/fern/apis/api/{openapi,asyncapi}.json.
-		if (url.pathname === "/api/openapi.json") return Response.json(await openapiSpec(router, url.origin));
-		if (url.pathname === "/api/asyncapi.json") return Response.json(await asyncapiSpec(router, url.origin));
+		if (url.pathname === "/api/openapi.json") return Response.json(await openapiSpec(router, { info, server: url.origin }));
+		if (url.pathname === "/api/asyncapi.json") return Response.json(await asyncapiSpec(router, { info: asyncInfo, server: url.origin }));
 		if (url.pathname === "/api/notes/live") return live(request);
 		const { matched, response } = await handler.handle(request, { context: {} });
 		return matched ? response : new Response("not found", { status: 404 });

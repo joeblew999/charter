@@ -4,8 +4,11 @@
 // (`asyncapi()`, like `openapi()`), `walkProcedureContractsAsync`, and the JSON Schema converters.
 //
 // A procedure with `asyncapi({ channel, address })` metadata is a WebSocket channel:
-// - its input (an object) becomes the channel's query parameters (`bindings.ws.query`);
-// - its output, `asyncIteratorObject(x)`, becomes a `receive` operation whose message payload is `x`.
+// - its output, `asyncIteratorObject(x)`, becomes a `receive` operation whose message payload is `x`;
+// - its input is one of two things. An object becomes the channel's query parameters
+//   (`bindings.ws.query`). `asyncIteratorObject(y)` is what the client sends: it becomes a `send`
+//   operation whose message payload is `y`, named by `send` in the metadata.
+// One message type each way, and not query parameters and a send side together, so far.
 import type { AnySchema, Meta, MetaPlugin, RouterContract } from "@orpc/contract";
 import { getAsyncIteratorObjectSchemaDetails } from "@orpc/contract";
 import { DelegatingJsonSchemaConverter, type JsonSchemaConverter } from "@orpc/json-schema";
@@ -20,6 +23,12 @@ export interface AsyncAPIMeta {
 	operationId?: string;
 	/** Name of the message in components.messages. @default the channel id */
 	message?: string;
+	/**
+	 * The client-to-server side, for a channel whose input is `asyncIteratorObject(...)`: the name of
+	 * its message in components.messages (Fern's TypeScript client gets `send<Message>()`), and the
+	 * send operation's id. @default operationId `send<Message>`
+	 */
+	send?: { message: string; operationId?: string };
 	summary?: string;
 	description?: string;
 	/** Last word on the generated channel object (for x-fern-* extensions and the like). */
@@ -71,7 +80,15 @@ export class AsyncAPIGenerator {
 				...(meta.description && { description: meta.description }),
 				messages: { [message]: { $ref: `#/components/messages/${message}` } },
 			};
-			if (inputSchema) {
+			// What the client sends: an input that is itself a stream of messages.
+			const sent = getAsyncIteratorObjectSchemaDetails(inputSchema);
+			const send = meta.send;
+			if (sent && !send) { errors.push(`${path.join(".")}: a channel whose input is asyncIteratorObject(...) needs \`send: { message }\` in its asyncapi() metadata`); return; }
+			if (sent && send) {
+				const [sentPayload] = this.converter.convert(sent.yieldSchema, "input");
+				doc.components.messages[send.message] = { name: send.message, payload: sentPayload };
+				(channel.messages as Record<string, unknown>)[send.message] = { $ref: `#/components/messages/${send.message}` };
+			} else if (inputSchema) {
 				const [query] = this.converter.convert(inputSchema, "input");
 				if (typeof query !== "object" || query.type !== "object") errors.push(`${path.join(".")}: an AsyncAPI channel's input must be an object (its query parameters)`);
 				else channel.bindings = { ws: { query } };
@@ -83,6 +100,11 @@ export class AsyncAPIGenerator {
 				action: "receive",
 				channel: { $ref: `#/channels/${meta.channel}` },
 				messages: [{ $ref: `#/channels/${meta.channel}/messages/${message}` }],
+			};
+			if (sent && send) doc.operations[send.operationId ?? `send${send.message}`] = {
+				action: "send",
+				channel: { $ref: `#/channels/${meta.channel}` },
+				messages: [{ $ref: `#/channels/${meta.channel}/messages/${send.message}` }],
 			};
 		});
 		if (errors.length) throw new Error(`AsyncAPIGenerator:\n${errors.join("\n")}`);

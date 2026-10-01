@@ -279,6 +279,27 @@ run = "go run ./dev cloudflare-spec"
 description = "Remove generated SDKs (sdk/out) and stop leftover WireMock containers"
 run = "go run ./dev sdk-clean"
 
+# ---- sdk/harness/: the showcase API (oRPC), every Fern feature in one contract -----------------------
+
+[tasks."showcase:spec"]
+description = "Write both specs from the showcase contract (sdk/harness/src/contract.ts) into sdk/fern/apis/showcase/"
+dir = "sdk/harness"
+run = 'node spec.ts ../fern/apis/showcase/openapi.json ../fern/apis/showcase/asyncapi.json "$HARNESS_API_URL/api/mock"'
+
+[tasks."showcase:spec:check"]
+description = "Fail if a committed showcase spec is stale against its contract"
+dir = "sdk/harness"
+run = 'node spec.ts --check ../fern/apis/showcase/openapi.json ../fern/apis/showcase/asyncapi.json "$HARNESS_API_URL/api/mock"'
+
+[tasks."showcase:test"]
+description = "The generated showcase specs give Fern the surface the hand-written ones did (sdk/harness/test)"
+dir = "sdk/harness"
+run = "node --test test/*.test.ts"
+
+[tasks."showcase:check"]
+description = "LOCAL: the committed showcase specs match the contract, and their surface is the hand-written one's"
+depends = ["showcase:spec:check", "showcase:test"]
+
 [tasks."sdk:harness:test"]
 description = "Run Fern's TypeScript SDK inside a Worker (sdk/harness): under cf dev, or with -remote the deployed one"
 run = "go run ./dev harness-test"
