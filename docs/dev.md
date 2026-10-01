@@ -45,7 +45,7 @@ Every step that does work is `mise run <task>`, so a failing step is one line yo
 | `dev-release` | a version tag. A dry run by hand, and on pull requests that touch `dev/` | `dev:dist`, `release`, `release:tags` | none (the workflow's own token) |
 | `sdk-release` | a version tag. A dry run by hand, and on pull requests that touch `sdk/` or `dev/` | `sdk:dist`, `sdk:dist:cli <api>`, `release` | none |
 
-`api-deploy` fails at its first step, naming the secrets, when they are missing. Set them with `gh secret set CLOUDFLARE_API_TOKEN` and `gh secret set CLOUDFLARE_ACCOUNT_ID`.
+`api-deploy` fails at its first step, naming the secrets, when they are missing. Set them once per repo with `mise run cloudflare:secrets`: it copies both values from fnox (the keychain) into the repo's GitHub secrets, without printing them.
 
 ### Cutting a release
 

@@ -1,3 +1,4 @@
+// Upstream: tinygo-org/tinygo#5798 (when fixed: delete this file and its import in index.mjs)
 // Makes Go timers fire on Cloudflare. Import it before anything creates a Go runtime (index.mjs does).
 //
 // On Cloudflare (not under local workerd) the clock only moves on I/O, and after a setTimeout(d)

@@ -17,6 +17,8 @@ gh = "2.101.0"
 # api-go/: TinyGo builds the Go Worker's Wasm (workers-go needs >= 0.42.0), and runs wasm-opt (binaryen) doing it.
 tinygo = "0.42.0"
 "aqua:WebAssembly/binaryen" = "133"
+# Holds the Cloudflare credentials (the keychain, through fnox): mise run cloudflare:secrets.
+fnox = "1.35.2"
 
 [env]
 # Local dev ports.
@@ -68,6 +70,10 @@ run = "go run ./dev release"
 [tasks."release:tags"]
 description = "REMOTE on a version tag (vX.Y.Z): tag the Go modules api-go/vX.Y.Z and dev/vX.Y.Z. Anywhere else: a dry run"
 run = "go run ./dev release-tags api-go dev"
+
+[tasks."cloudflare:secrets"]
+description = "REMOTE, once per repo: copy CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from fnox into this repo's GitHub secrets, for the api-deploy workflow"
+run = "fnox exec -- go run ./dev github-secrets CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"
 
 [tasks."cloudflare:token"]
 description = "Fail unless CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set: what a deploy from GitHub needs (locally, cf auth login is enough)"

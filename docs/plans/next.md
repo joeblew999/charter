@@ -20,7 +20,7 @@ Where this repo stands (2026-10-01) and what comes next, in order. What's proven
 00. **Promised on middleapi/orpc#2115 (2026-10-01):** publish `api/src/asyncapi.ts` as a community package (`asyncapi()` + `AsyncAPIGenerator`, API-compatible with `openapi()` / `OpenAPIGenerator`), then link it on the issue. The maintainer prefers community packages first. An MCP generator for oRPC, built the same way, was offered too.
 0. **The Go Worker (api-go/), what is left:**
    - **Make it cheaper:** 40 to 70 ms of CPU per request today. The plan is [performance.md](performance.md).
-   - **Upstream:** three findings are drafted and not filed ([../upstream.md](../upstream.md)); the timer one matters to every workers-go project. Filing needs a go-ahead.
+   - **Upstream:** the timer and `ServeMux` findings are filed (tinygo-org/tinygo#5798, #5799) and tracked in [../upstream.md](../upstream.md). The timer one matters to every workers-go project: tell syumai/workers-go, which ships the file, once TinyGo answers.
    - **A native database:** `api.SQLStore` is `database/sql`, so a SQLite driver in `platform_other.go` gives the native build persistence.
    - **MCP from the same contract** is built (`api-go/humamcp`, `/api/mcp`) and passes on Cloudflare. Left, in [mcp.md](mcp.md): authorization for the endpoint, a run with a model behind the client, and the oRPC side (`api/src/mcp.ts`, built like `asyncapi.ts`).
    - **Go client and server on separate Workers:** [microservices.md](microservices.md), including a try of [humaclient](https://github.com/danielgtaylor/humaclient) beside Fern.
