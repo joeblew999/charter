@@ -4,10 +4,9 @@
 //
 //	go run . -base <origin> [-after <id>] [-seconds 15]
 //
-// It imports the Go SDK by its module path, which both notes APIs' SDKs declare (they have the same
-// surface), so the same code builds against either. On its own it builds against the committed SDK
-// (sdk/go, see go.mod); test/soak.mjs builds it with a workspace file of its own that points that
-// module path at the generated SDK under test (sdk/out/<api>/go), which is why it is not in go.work.
+// It imports the Go SDK by its module path. On its own it builds against the committed SDK (sdk/go,
+// see go.mod); test/soak.mjs builds it with a workspace file of its own that points that module path
+// at the generated SDK under test (sdk/out/<api>/go), which is why it is not in go.work.
 package main
 
 import (
