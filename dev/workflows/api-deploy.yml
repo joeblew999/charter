@@ -1,0 +1,29 @@
+# Written by `dev workflows` from its template (github.com/joeblew999/orpc-api/dev, dev/workflows/api-deploy.yml):
+# change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# By hand only: deploy one Worker to Cloudflare, then apply its D1 migrations. Needs the two secrets below.
+name: api-deploy
+on:
+  workflow_dispatch:
+    inputs:
+      api:
+        description: The Worker to deploy (api = orpc-api, api-go = orpc-api-go)
+        type: choice
+        options: [api, api-go]
+        required: true
+permissions:
+  contents: read
+concurrency: api-deploy-${{ inputs.api }}
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      API: ${{ inputs.api }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run cloudflare:token
+      - run: mise run setup
+      - run: mise run "$API:deploy"

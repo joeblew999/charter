@@ -43,7 +43,7 @@ groups:
         config:
           binaryName: orpc-api
 
-  # Compiled (.js + .d.ts): what a Worker or Node app imports; api/sdk-live-test.mjs uses it.
+  # Compiled (.js + .d.ts): what a Worker or Node app imports; test/sdk-live-test.mjs uses it.
   typescript-dist:
     generators:
       - name: fernapi/fern-typescript-sdk

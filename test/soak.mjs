@@ -1,4 +1,4 @@
-// The real-time test matrix (.plans/realtime.md): every client × scenario against the deployed Worker.
+// The real-time test matrix (docs/plans/realtime.md): every client × scenario against the deployed Worker.
 // Each client follows the one client rule: when a stream ends (planned, error or drop), call again
 // with `after` = the last note id. The server must make every scenario gap-free:
 //   steady state  - a note every 2 s
@@ -12,23 +12,30 @@
 //
 //   node soak.mjs <origin> [--no-deploy] [--seconds 100] [--deploy-at 30] [--drop-at 65] [--stream-seconds 15]
 //   node soak.mjs <origin> --idle 20
-// Uses `ws` from sdk/node_modules, the TypeScript SDK (sdk/out/api/typescript-dist), the CLI
-// (sdk/out/api/cli) and the Go SDK through api/soak-go; the redeploy runs `mise run deploy`.
+//   node soak.mjs <origin> --sdk api-go --deploy-task api-go:deploy     (the Go Worker, with its own SDKs)
+// Uses `ws` from sdk/node_modules and the SDKs generated for --sdk (a folder in sdk/fern/apis,
+// default api): the TypeScript SDK (sdk/out/<sdk>/typescript-dist), the CLI (sdk/out/<sdk>/cli) and
+// the Go SDK through test/soak-go; the redeploy runs `mise run <--deploy-task>` (default api:deploy).
 import { execFileSync, spawn } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
-import { OrpcApiClient } from "../sdk/out/api/typescript-dist/esm/index.mjs";
 const WebSocket = createRequire(new URL("../sdk/package.json", import.meta.url))("ws");
 
 const args = process.argv.slice(2);
 const origin = args[0];
-const opt = (name, def) => { const i = args.indexOf(`--${name}`); return i < 0 ? def : Number(args[i + 1]); };
+const str = (name, def) => { const i = args.indexOf(`--${name}`); return i < 0 ? def : args[i + 1]; };
+const opt = (name, def) => Number(str(name, def));
+const sdk = str("sdk", "api");
+const deployTask = str("deploy-task", "api:deploy");
 const idleMinutes = opt("idle", 0);
 const total = (idleMinutes ? idleMinutes * 60 + 15 : opt("seconds", 100)) * 1000;
 const deployAt = idleMinutes || args.includes("--no-deploy") ? Infinity : opt("deploy-at", 30) * 1000;
 const dropAt = idleMinutes ? Infinity : opt("drop-at", 65) * 1000;
 const streamSeconds = opt("stream-seconds", idleMinutes ? 60 : 15);
 const root = new URL("..", import.meta.url).pathname;
+const { OrpcApiClient } = await import(`../sdk/out/${sdk}/typescript-dist/esm/index.mjs`);
 const t0 = Date.now();
 const t = () => ((Date.now() - t0) / 1000).toFixed(1);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -67,8 +74,8 @@ function lines(proc, signal, onLine) {
   return new Promise(resolve => proc.on("exit", code => resolve(`exit ${code}${err.trim() ? ` ${err.trim().slice(0, 100)}` : ""}`)));
 }
 const ws = origin.replace(/^http/, "ws");
-const goBin = `${root}/api/soak-go/soak-go`;
-const cliBin = `${root}/sdk/out/api/cli/target/release/orpc-api`;
+const goBin = `${root}test/soak-go/soak-go`;
+const cliBin = `${root}sdk/out/${sdk}/cli/target/release/orpc-api`;
 
 const clients = [
   { name: "SSE raw (after)", run: (after, signal, onNote) =>
@@ -129,7 +136,7 @@ async function drive(c) {
 function redeploy() {
   console.log(`${t()}s hub restart: redeploying...`);
   return new Promise(resolve => {
-    const proc = spawn("mise", ["run", "deploy"], { cwd: root });
+    const proc = spawn("mise", ["run", deployTask], { cwd: root });
     let out = ""; proc.stdout.on("data", d => out += d); proc.stderr.on("data", d => out += d);
     proc.on("exit", code => { console.log(`${t()}s redeploy exited ${code}, version ${/Current Version ID: (\S+)/.exec(out)?.[1] ?? "?"}`); resolve(); });
   });
@@ -137,7 +144,10 @@ function redeploy() {
 
 // ---- run ----
 
-execFileSync("go", ["build", "-o", goBin, "."], { cwd: `${root}/api/soak-go` });
+// The Go client against the chosen SDK: a workspace file that points the SDK's module at it.
+const work = `${mkdtempSync(`${tmpdir()}/soak-go-`)}/go.work`;
+writeFileSync(work, `go 1.27.1\n\nuse ${root}test/soak-go\n\nreplace example.com/orpcapi => ${root}sdk/out/${sdk}/go\n`);
+execFileSync("go", ["build", "-o", goBin, "."], { cwd: `${root}test/soak-go`, env: { ...process.env, GOWORK: work } });
 console.log(`baseline note ${baseline}; ${clients.length} clients; SSE streams end every ${streamSeconds}s`);
 const driving = clients.map(drive);
 await sleep(3000);

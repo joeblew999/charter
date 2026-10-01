@@ -1,0 +1,59 @@
+# The Go Worker in api-go/: openapi.json and asyncapi.json are written by `mise run api-go:spec` from the Go
+# contract, api-go/api/contract.go (never by hand). What Fern needs (SDK names, x-fern-pagination,
+# x-fern-streaming) is declared there; the WebSocket channel comes from api-go/asyncapi. Same groups and
+# names as ../api, so the same test programs run against either SDK.
+# Generate: mise run sdk:gen api-go <group>
+api:
+  specs:
+    - openapi: openapi.json
+    - asyncapi: asyncapi.json
+
+groups:
+  go:
+    generators:
+      - name: fernapi/fern-go-sdk
+        version: 1.64.0
+        output:
+          location: local-file-system
+          path: ../../../out/api-go/go
+        config:
+          module:
+            path: example.com/orpcapi
+            version: "1.22"
+          packageName: orpcapi
+
+  typescript:
+    generators:
+      - name: fernapi/fern-typescript-sdk
+        version: 3.98.0
+        output:
+          location: local-file-system
+          path: ../../../out/api-go/typescript
+        config:
+          namespaceExport: OrpcApi
+          guardProcessEnvAccess: true
+          generateWebSocketClients: true
+
+  cli:
+    generators:
+      - name: fernapi/fern-cli-generator
+        version: 0.45.1
+        output:
+          location: local-file-system
+          path: ../../../out/api-go/cli
+        config:
+          binaryName: orpc-api
+
+  # Compiled (.js + .d.ts): what a Worker or Node app imports; test/sdk-live-test.mjs uses it.
+  typescript-dist:
+    generators:
+      - name: fernapi/fern-typescript-sdk
+        version: 3.98.0
+        output:
+          location: local-file-system
+          path: ../../../out/api-go/typescript-dist
+        config:
+          namespaceExport: OrpcApi
+          guardProcessEnvAccess: true
+          generateWebSocketClients: true
+          outputSourceFiles: false
