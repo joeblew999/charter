@@ -1,7 +1,8 @@
 // Package specfile is the body of a spec command: it writes the specs a contract generates to
 // files, for Fern, or checks that the committed files are what the contract gives. One command per
 // contract calls Main with the contract's spec functions (cmd/spec, cmd/showcase-spec), after Must
-// with what else is wrong with the contract that no spec shows.
+// with what else is wrong with the contract that no spec shows. Examples (examples.go) is a check of
+// what the specs give Fern, for a contract's tests.
 package specfile
 
 import (
