@@ -28,7 +28,7 @@ var upstreamTag = regexp.MustCompile(`^([^:]+:[0-9]+):.*Upstream: ([\w.-]+/[\w.-
 // upstream finds the tags and asks GitHub for each issue's state. CLOSED means that workaround can
 // go (the table in docs/upstream.md says what to do).
 func upstream([]string) error {
-	out, err := output(".", "git", "grep", "-n", "-E", `Upstream: [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+`, "--", ":!*.md", ":!mise.toml", ":!dev/")
+	out, err := output(".", "git", "grep", "-n", "-E", `Upstream: [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+`, "--", ":!*.md", ":!mise.toml", ":!dev/misc.go", ":!dev/*_test.go")
 	if err != nil {
 		return errors.New("no Upstream: tags found")
 	}
