@@ -273,7 +273,9 @@ func releaseTags(args []string) error {
 			modules = append(modules, dir)
 		}
 	}
-	dirs = modules
+	if dirs = modules; len(dirs) == 0 {
+		return nil
+	}
 	if tag == "" {
 		fmt.Printf("dry run (not on a version tag): on vX.Y.Z this tags %s/vX.Y.Z\n", strings.Join(dirs, "/vX.Y.Z, "))
 		return nil
