@@ -40,10 +40,20 @@ Then follow [Getting started](getting-started.md): run it, change it, deploy it,
 
 For an agent: [llms.txt](https://joeblew999.github.io/orpc-api/llms.txt) lists every page as Markdown.
 
+## Before you choose Go: what it costs to run
+
+The Go Worker uses about **40 to 70 ms of CPU per request** on Cloudflare (measured 2026-10-01: [benchmarks](benchmarks.md)); the same API in TypeScript uses 1 to 3 ms. Cloudflare starts a fresh Go runtime for every request, and that is most of it.
+
+- **It needs the Workers Paid plan.** Workers Free allows 10 ms of CPU per request, which the Go Worker exceeds.
+- **On Workers Paid it works and is billed by CPU time,** so each request costs more than a TypeScript one would.
+- **If you need the Free plan or the lowest cost per request, use the TypeScript version** ([The same in TypeScript](guides/typescript.md)): the design, the tests and the generated SDKs are the same.
+
+Why, and what is planned: [Go on Cloudflare Workers](concepts/workers-go.md).
+
 ## What you need
 
 - [mise](https://mise.jdx.dev): it installs everything else (Go, TinyGo, Node) at pinned versions.
 - Docker, only to generate SDKs (Fern runs in containers).
-- A Cloudflare account, only to deploy. The API also runs on your machine without one.
+- A Cloudflare account on the Workers Paid plan, only to deploy the Go Worker (see above). The API also runs on your machine without one.
 
 Prefer TypeScript? The same design exists with oRPC: [The same in TypeScript](guides/typescript.md).
