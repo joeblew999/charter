@@ -211,7 +211,7 @@ run = 'node test/mcp-test.mjs "http://localhost:$API_GO_PORT"'
 
 [tasks."api-go:check"]
 description = "LOCAL: lint, tests, spec drift, the TinyGo build, and the live and MCP tests natively and under workerd"
-depends = ["api-go:lint", "api-go:test", "api-go:spec:check", "api-go:test:native", "api-go:test:workerd"]
+depends = ["api-go:lint", "api-go:test", "api-go:spec:check", "sdk:publish:fresh", "api-go:test:native", "api-go:test:workerd"]
 
 [tasks."api-go:deploy"]
 description = "REMOTE: build and deploy the Go Worker (orpc-api-go), then apply pending D1 migrations"
@@ -326,6 +326,10 @@ run = "go run ./dev sdk-publish api-go"
 [tasks."sdk:publish:check"]
 description = "Fail if sdk/go is not what the Go API's committed specs generate now (Docker)"
 run = "go run ./dev sdk-publish -check api-go"
+
+[tasks."sdk:publish:fresh"]
+description = "Fail if the specs changed since sdk/go was made from them (no Docker: it compares a hash). sdk:publish:check proves the content"
+run = "go run ./dev sdk-publish -check -quick api-go"
 
 [tasks."sdk:demo"]
 description = "Small end-to-end run: Go + TypeScript SDKs for the petstore API, checked"

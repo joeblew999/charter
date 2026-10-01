@@ -42,7 +42,7 @@ var projectFiles = []string{
 var projectSkip = map[string]bool{"api-go/api/surface_test.go": true, "test/soak-go/soak-go": true}
 
 // The tasks a Go-only project keeps from mise.toml.
-var projectTasks = regexp.MustCompile(`^(setup|check|doctor|upstream:status|dev:check|dev:workflows|docs:.*|api-go:.*|sdk:(list|check-spec|gen|check|ready|publish|publish:check|cli:build|clean|dist|dist:cli)|cloudflare:.*|release|release:tags)$`)
+var projectTasks = regexp.MustCompile(`^(setup|check|doctor|upstream:status|dev:check|dev:workflows|docs:.*|api-go:.*|sdk:(list|check-spec|gen|check|ready|publish|publish:check|publish:fresh|cli:build|clean|dist|dist:cli)|cloudflare:.*|release|release:tags)$`)
 
 // newProject makes a project that is the Go half of this repo under another name: the notes API as
 // a starting contract, every task, the Fern folder, the tests, a docs folder. The files come from

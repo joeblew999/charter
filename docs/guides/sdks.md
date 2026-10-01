@@ -250,6 +250,7 @@ go get github.com/acme/billing-api/sdk/go@latest    # the newest release, once t
 Then import it and call it as in [Use the SDK](#use-the-sdk), with no `replace` line.
 
 - **What is in `sdk/go`:** the client's Go source, its `go.mod` and `go.sum`, Fern's `README.md` and `reference.md`, and the tests that run on their own. Left out: Fern's tests that need a WireMock container (`wiremock/` and the `*_test` folders), `CONTRIBUTING.md`, and Fern's record of the run (`.fern/`, which names the commit it ran at).
+- **After a contract change, publish again.** `mise run check` fails until you do: `sdk:publish:fresh` sees that the specs are no longer the ones `sdk/go` was made from.
 - **Never edit `sdk/go` by hand.** `mise run sdk:publish:check` generates the SDK again and fails when the folder differs, naming the files. The `sdk-check` workflow runs it on every push and pull request, so a contract change without `mise run sdk:publish` fails there. `mise run check` does not run it. Before the first publish there is no `sdk/go`, and the check passes.
 - **A release gives it a version.** A Go module in a subfolder only has a version under a tag that starts with the folder. On a version tag `vX.Y.Z` the `sdk-release` workflow runs `mise run release:tags`, which adds `sdk/go/vX.Y.Z` on the same commit ([CI and releases on GitHub](ci-releases.md#cut-a-release)). After that `@latest` and `@vX.Y.Z` work.
 - **`sdk/go` is in `go.work`:** `sdk:publish` adds it, so `go build` and `go test` work inside it.

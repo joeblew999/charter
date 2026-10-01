@@ -46,7 +46,7 @@ Every task is one line in `mise.toml`. Most call a command of the tool the tasks
 | `api-go:test:native` | Starts the native build on a free port and runs the real-time test (`test/live-test.mjs`) and the MCP test (`test/mcp-test.mjs`) against it | npm packages | Local |
 | `api-go:test:workerd` | Runs `api-go:build`, starts the Wasm under workerd on a free port, applies the migrations, and runs the same two tests | npm packages | Local |
 | `api-go:mcp-test` | Runs the MCP test against a server already running on `API_GO_PORT`. It writes test notes | npm packages, `api-go:run` or `api-go:dev` running | Local |
-| `api-go:check` | Runs `api-go:lint`, `api-go:test`, `api-go:spec:check`, `api-go:test:native` and `api-go:test:workerd` | npm packages | Local |
+| `api-go:check` | Runs `api-go:lint`, `api-go:test`, `api-go:spec:check`, `sdk:publish:fresh`, `api-go:test:native` and `api-go:test:workerd` | npm packages | Local |
 | `api-go:deploy` | Runs `api-go:build`, deploys the Worker (`cf deploy`, which creates its D1 database), then applies pending migrations as `api-go:migrate` does | npm packages, a Cloudflare login | Remote: changes the Worker and its database |
 | `api-go:migrate` | Applies pending files of `migrations/` to the D1 database `<name>-db` | npm packages, a Cloudflare login, the Worker deployed once | Remote: changes the database |
 | `api-go:live-test` | Tests the deployed Worker at `API_GO_URL`: SSE and the WebSocket, raw and through the TypeScript SDK, then MCP. It writes test notes. It generates the `typescript-dist` SDK first when that is missing | npm packages; Docker the first time | Remote: writes notes |
@@ -67,6 +67,7 @@ An `<api>` is a folder under `sdk/fern/apis/`. A new project has one, `api-go`. 
 | `sdk:ready <api> [group...]` | Generates and builds what the tests use, only where it is missing: the `typescript-dist` and `go` SDKs and the Fern CLI, or only the groups named | npm packages; Docker and `cargo` when something is missing | Local |
 | `sdk:publish` | Generates the Go SDK of `api-go` fresh, checks it as `sdk:check` does, and copies its sources into `sdk/go`: the committed Go module another repo fetches with `go get`. Adds `sdk/go` to `go.work`. Commit the result | npm packages, Docker | Local |
 | `sdk:publish:check` | Generates the Go SDK again and fails if `sdk/go` differs. Passes when there is no `sdk/go` yet | npm packages, Docker | Local |
+| `sdk:publish:fresh` | Fails if the specs changed since `sdk/go` was generated from them. It compares a hash, so it is quick and needs no Docker; `api-go:check` runs it. Passes when there is no `sdk/go` yet | Nothing | Local |
 | `sdk:cli:build [-linux] <dir>` | Builds a generated Rust CLI, for example `sdk/out/api-go/cli`. Heavy: the first build takes minutes at full CPU. `-linux` builds for Linux in Docker | The CLI generated, `cargo`; Docker with `-linux` | Local |
 | `sdk:dist` | Generates the Go and TypeScript SDKs of `api-go` fresh, checks them, and archives them and the specs into `dist/` | npm packages, Docker | Local |
 | `sdk:dist:cli [-linux] <api>` | Generates and builds the API's Fern CLI into `dist/`. Heavy | npm packages, Docker, `cargo` | Local |

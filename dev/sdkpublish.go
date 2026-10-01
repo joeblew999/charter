@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"errors"
 	"flag"
 	"fmt"
@@ -19,14 +20,15 @@ import (
 // in a subdirectory: at a branch or commit straight away, at a version once `release-tags` has tagged it.
 
 func init() {
-	commands["sdk-publish"] = command{"[-check] [-into <dir>] <api>", "generate an API's Go SDK, check it, and copy its sources into the committed folder another repo can go get (sdk/go); -check: fail if that copy is stale (Docker)", sdkPublish}
+	commands["sdk-publish"] = command{"[-check [-quick]] [-into <dir>] <api>", "generate an API's Go SDK, check it, and copy its sources into the committed folder another repo can go get (sdk/go); -check: fail if that copy is stale (Docker)", sdkPublish}
 }
 
 func sdkPublish(args []string) error {
-	var check bool
+	var check, quick bool
 	var into string
 	rest := flags("sdk-publish", args, func(f *flag.FlagSet) {
 		f.BoolVar(&check, "check", false, "write nothing: fail if the committed copy is not what the specs generate now")
+		f.BoolVar(&quick, "quick", false, "with -check: generate nothing (no Docker), only compare the specs with the ones the copy was made from")
 		f.StringVar(&into, "into", "sdk/go", "the committed folder: the SDK's module path must end in it")
 	})
 	if len(rest) != 1 {
@@ -36,6 +38,18 @@ func sdkPublish(args []string) error {
 	into = filepath.Clean(into)
 	if check && !exists(into) {
 		fmt.Printf("%s: not published yet (mise run sdk:publish writes it)\n", into)
+		return nil
+	}
+	source, err := sdkSourceHash(api)
+	if err != nil {
+		return err
+	}
+	if check && quick {
+		made, _ := os.ReadFile(filepath.Join(into, sdkMadeFrom))
+		if strings.TrimSpace(string(made)) != source {
+			return fmt.Errorf("%s was not made from the specs in sdk/fern/apis/%s as they are now: mise run sdk:publish writes it again (Docker), then commit it", into, api)
+		}
+		fmt.Printf("%s was made from the specs in sdk/fern/apis/%s as they are now\n", into, api)
 		return nil
 	}
 	// Fresh, so that what is committed is what the committed specs give.
@@ -97,6 +111,9 @@ func sdkPublish(args []string) error {
 		}
 		size += len(content)
 	}
+	if err := write(filepath.Join(into, sdkMadeFrom), source+"\n"); err != nil {
+		return err
+	}
 	// In the workspace, so `go build`, `go vet` and `go test` work inside it like in any module here.
 	if err := quiet(".", nil, "go", "work", "use", "./"+filepath.ToSlash(into)); err != nil {
 		return err
@@ -104,6 +121,32 @@ func sdkPublish(args []string) error {
 	fmt.Printf("published: %s (module %s, %d files, %d KB). Commit it; another repo gets it with: go get %s@<branch, commit or version>\n",
 		into, module[1], len(generated), (size+1023)/1024, module[1])
 	return nil
+}
+
+// sdkMadeFrom is a file in the committed copy that records which specs it was generated from, so
+// that a stale copy shows without generating it again: sdk-publish -check -quick.
+const sdkMadeFrom = ".made-from"
+
+// sdkSourceHash is a hash of an API's Fern folder: the specs and generators.yml.
+func sdkSourceHash(api string) (string, error) {
+	dir := filepath.Join("sdk/fern/apis", api)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.New()
+	for _, entry := range entries { // ReadDir sorts by name
+		if !entry.Type().IsRegular() {
+			continue
+		}
+		content, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			return "", err
+		}
+		fmt.Fprintf(hash, "%s %d\n", entry.Name(), len(content))
+		hash.Write(content)
+	}
+	return fmt.Sprintf("sha256:%x sdk/fern/apis/%s", hash.Sum(nil), api), nil
 }
 
 // sdkSources are the files of a Go SDK that get committed, by path: what a program that imports it
@@ -118,7 +161,7 @@ func sdkSources(dir string) (map[string][]byte, error) {
 		switch base := entry.Name(); {
 		case entry.IsDir() && (base == ".fern" || base == "wiremock" || strings.HasSuffix(base, "_test")):
 			return filepath.SkipDir
-		case entry.Type().IsRegular() && base != "CONTRIBUTING.md": // how to change generated code: not for this copy
+		case entry.Type().IsRegular() && base != "CONTRIBUTING.md" && base != sdkMadeFrom: // how to change generated code: not for this copy
 			rel, err := filepath.Rel(dir, path)
 			if err != nil {
 				return err

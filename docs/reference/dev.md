@@ -255,7 +255,7 @@ For a Go SDK (a folder with `go.mod`): build, vet and test, outside the workspac
 ### sdk-publish
 
 ```sh
-dev sdk-publish [-check] [-into <dir>] <api>   # copy an API's Go SDK into the committed folder another repo can go get
+dev sdk-publish [-check [-quick]] [-into <dir>] <api>   # copy an API's Go SDK into the committed folder another repo can go get
 ```
 
 Removes `sdk/out/<api>/go`, generates it again, runs `sdk-check` on it, and replaces the committed folder with its sources: everything except Fern's run record (`.fern/`), the WireMock fixtures and the tests that need them (`wiremock/`, folders ending in `_test`), and `CONTRIBUTING.md`. Then it adds the folder to `go.work`. It fails when the module path in the SDK's `go.mod` does not end in the folder: Go finds a module in a subfolder by that path. How to use the result: [Giving the Go SDK to another repo](../guides/sdks.md#giving-the-go-sdk-to-another-repo).
@@ -263,6 +263,7 @@ Removes `sdk/out/<api>/go`, generates it again, runs `sdk-check` on it, and repl
 | Flag | Default | What it is |
 |---|---|---|
 | `-check` | off | Write nothing: generate, and fail if the committed folder differs, naming the files. Passes when the folder does not exist |
+| `-quick` | off | With `-check`: generate nothing, so no Docker. The committed folder holds a file `.made-from` with a hash of the specs and `generators.yml` it was generated from; this fails if they have changed since. It fails too for a folder published before that file existed: publish it again |
 | `-into` | `sdk/go` | The committed folder |
 
 - **Needs:** Docker running, npm packages installed in `sdk/`, Go.
@@ -541,4 +542,4 @@ The same list as `dev help` prints, with where each one runs.
 - **No Windows build.** The tool starts and stops process groups, which is Unix-only. It runs on Linux and macOS.
 - **`dev help` is the only help.** A command that takes flags prints them when given `-h`. There is no longer help per command.
 - **`docs-lint` and `upstream` need a git repository.** In a project that has not had `git init`, `docs-lint` reports ignored paths (`sdk/out/`) as missing, and `upstream` finds no tags.
-- **What was run for this page:** `new`, `help`, `workflows`, `workflows -check`, `docs -check`, `docs-lint`, `sdk-list`, `doctor`, `upstream`, `release` and `release-tags` (dry runs) and `migrate` (the failure above) were run on 2026-10-01 in a new project, and so were `sdk-publish` and `sdk-publish -check`, with the tool built from a checkout. The other commands are described from their source.
+- **What was run for this page:** `new`, `help`, `workflows`, `workflows -check`, `docs -check`, `docs-lint`, `sdk-list`, `doctor`, `upstream`, `release` and `release-tags` (dry runs) and `migrate` were run on 2026-10-01 in a new project, and so were `sdk-publish` and `sdk-publish -check`, with the tool built from a checkout. The other commands are described from their source.
