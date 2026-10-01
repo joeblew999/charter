@@ -20,3 +20,39 @@ gh_edit_link_text: Edit this page on GitHub
 gh_edit_branch: main
 gh_edit_source: docs
 gh_edit_view_mode: edit
+
+# The sidebar: each page's short title, its order, and what it sits under. Set here, not in the pages,
+# so the Markdown stays plain. A new page needs an entry, or it lands at the bottom under its full heading.
+defaults:
+  - scope: { path: "README.md" }
+    values: { title: "Start here", nav_order: 1 }
+  - scope: { path: "rules.md" }
+    values: { title: "Rules", nav_order: 2 }
+  - scope: { path: "api.md" }
+    values: { title: "oRPC Worker (api/)", nav_order: 3 }
+  - scope: { path: "api-go.md" }
+    values: { title: "Go Worker (api-go/)", nav_order: 4 }
+  - scope: { path: "sdk.md" }
+    values: { title: "Fern SDKs and CLI (sdk/)", nav_order: 5 }
+  - scope: { path: "testing.md" }
+    values: { title: "Testing", nav_order: 6 }
+  - scope: { path: "dev.md" }
+    values: { title: "Tasks, workflows, releases", nav_order: 7 }
+  - scope: { path: "benchmarks.md" }
+    values: { title: "Benchmarks", nav_order: 8 }
+  - scope: { path: "upstream.md" }
+    values: { title: "Upstream issues", nav_order: 9 }
+  - scope: { path: "findings.md" }
+    values: { title: "Findings", nav_order: 10 }
+  - scope: { path: "plans/next.md" }
+    values: { title: "Plans", nav_order: 11, has_children: true }
+  - scope: { path: "plans/realtime.md" }
+    values: { title: "Real-time design", nav_order: 1, parent: "Plans" }
+  - scope: { path: "plans/asyncapi.md" }
+    values: { title: "AsyncAPI generator", nav_order: 2, parent: "Plans" }
+  - scope: { path: "plans/mcp.md" }
+    values: { title: "MCP", nav_order: 3, parent: "Plans" }
+  - scope: { path: "plans/performance.md" }
+    values: { title: "Performance", nav_order: 4, parent: "Plans" }
+  - scope: { path: "plans/microservices.md" }
+    values: { title: "Go microservices", nav_order: 5, parent: "Plans" }
