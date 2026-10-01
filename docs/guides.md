@@ -10,6 +10,7 @@ Each guide is a task, start to finish, in a project made by `dev new` ([Getting 
 
 | Guide | You want to |
 |---|---|
+| [Replace the example with your API](guides/replace-the-example.md) | Put your own operations in the place of the notes: which files hold the example, and what to do with each |
 | [Define your API](guides/contract.md) | Add operations, inputs, outputs, validation and errors to the contract |
 | [Real-time: SSE and WebSocket](guides/streaming.md) | Stream to clients without losing data across deploys and disconnects |
 | [Auth, idempotency, uploads, webhooks](guides/fern-features.md) | Add what a production API needs, so the generated SDKs handle it |

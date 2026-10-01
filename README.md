@@ -58,6 +58,8 @@ dev docs-review             # have Claude bring docs/ up to date against docs/wr
 gh api -X POST 'repos/{owner}/{repo}/pages' -f 'source[branch]=main' -f 'source[path]=/docs'   # once: turn the site on
 ```
 
+The first line `dev new` prints is the tool's version and what it pinned to it (the tool in `mise.toml`, the Go packages in `api-go/go.mod`): minutes after a release `@latest` can still be the previous one, while the release binary or `dev@vX.Y.Z` is exact.
+
 Or make the tool a mise tool of your project, so its tasks can call `dev <command>` and the version is pinned in one place:
 
 ```toml

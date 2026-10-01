@@ -17,6 +17,8 @@ dev new -name billing-api                                            # creates .
 cd billing-api && git init
 ```
 
+The first line `dev new` prints is the tool's version and what it pinned to it (the tool in `mise.toml`, the Go packages in `api-go/go.mod`): minutes after a release `@latest` can still be the previous one, while the release binary or `dev@vX.Y.Z` is exact.
+
 `-name` becomes the Worker's name, its database and the SDK's names (`BillingApiClient`). The Go module defaults to `github.com/<your GitHub login>/billing-api`; pass `-module` to choose.
 
 The project starts as a small notes API, so everything works before you change anything.
@@ -30,6 +32,8 @@ mise run check        # lint, tests, spec drift, the Wasm build, and live tests 
 ```
 
 `check` takes about half a minute and must pass. It is the same command CI runs.
+
+`setup` ends with npm's warning that the install scripts of `fsevents` and `@scarf/scarf` are "not yet covered by allowScripts". That is expected: npm skips those scripts, and nothing here needs them.
 
 ## 3. Run it
 
@@ -75,14 +79,14 @@ mise run api-go:deploy                   # the Worker, its D1 database, the migr
 mise run api-go:live-test                # SSE, WebSocket, the SDK and MCP against what you just deployed
 ```
 
-The deploy prints the Worker's URL. If it is not `https://billing-api.gedw99.workers.dev` (another account), put yours in `mise.local.toml`:
+The deploy prints the Worker's URL. The project has a placeholder for it, `https://billing-api.your-subdomain.workers.dev`, in `mise.toml` and in the specs (`dev new -subdomain <yours>` in step 1 writes the real one instead). So before the live test, put the URL the deploy printed in `mise.local.toml`:
 
 ```toml
 [env]
 API_GO_URL = "https://billing-api.<your-subdomain>.workers.dev"
 ```
 
-Then `mise run api-go:spec`, so the specs name the right server. Always run the live test after a deploy: some failures only exist on Cloudflare itself. More: [Deploy to Cloudflare](guides/deploy.md).
+Then `mise run api-go:spec`, so the specs name the right server. `mise.local.toml` is gitignored: for CI to agree with the specs you commit, make the URL the default of `API_GO_URL` in `mise.toml` instead. Always run the live test after a deploy: some failures only exist on Cloudflare itself. More: [Deploy to Cloudflare](guides/deploy.md).
 
 ## 6. Generate an SDK
 
