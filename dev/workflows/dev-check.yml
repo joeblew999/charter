@@ -9,6 +9,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  GH_TOKEN: ${{ github.token }} # dev docs -check reads the repo's name and description with gh
 jobs:
   dev:
     runs-on: ubuntu-24.04
