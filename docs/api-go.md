@@ -71,6 +71,8 @@ api-go/api/contract.go  --(mise run api-go:spec)-->  sdk/fern/apis/api-go/{opena
 
 - **The contract is Go structs.** Their tags (`query:"limit" minimum:"1" maximum:"100" default:"20"`) are the schema, the way Zod is for oRPC. Huma validates requests against them and writes the OpenAPI from them. A rule the tags can't say goes in the input's `Resolve` method (a note body must not contain the stream terminator).
 - **Fern's needs are said in the contract:** `OperationID` and `Tags` name the SDK methods, and `Extensions` carry `x-fern-sdk-*`, `x-fern-pagination` and `x-fern-streaming`.
+- **Give every constrained field an example:** `After string` with `query:"after" pattern:"^\\d+$" example:"42"`. Fern shows an example of each request in the SDKs' READMEs and references, and makes up what the contract doesn't give (`"id"` for an id, whatever its pattern), so whoever copies it gets a 422. `TestExamplesAreThereAndValid` (`api-go/api/contract_test.go`) fails when a request field with a pattern, an enum, a bound or a length has no example, or when an example isn't valid against its own schema.
+- **Errors are typed by status.** `humaworkers` declares 422 on every operation that has input and 401 on every one that needs credentials, because Huma by itself declares its error only as the `default` response, which Fern doesn't type. A status a handler answers with itself (404, 409) goes in the operation's `Errors`. In the Go SDK a refused request is then `errors.As(err, &refused)` with a `*UnprocessableEntityError`, and `refused.Body.Errors` has each `Location` (checked against the native server on 2026-10-01, fern-go-sdk 1.64.0).
 - **The WebSocket is in the contract too.** `asyncapi.Operation(...)` marks an operation as a channel: it's hidden from OpenAPI and written to AsyncAPI, with its query parameters as the channel's `bindings.ws.query`.
 - **One contract entry is one `humaworkers.Route`:** its method, path, `OperationID`, and the `huma.Register` call.
 - **To keep a request exactly as posted,** give the input a `RawBody []byte` next to its typed `Body`: Huma validates `Body` and the handler stores `RawBody`. The spec still says JSON only, so the SDKs take the typed request ([upstream.md](upstream.md#found-not-filed)).
@@ -118,7 +120,7 @@ It passes the same tests as the oRPC Worker, and it costs more to run: 40 to 70 
 
 Fern sees the same API: the same operations, parameters, constraints, `x-fern-*` extensions and WebSocket channel. `TestSameSurfaceAsTheORPCContract` (`api-go/api/surface_test.go`) checks this against the committed oRPC specs in `sdk/fern/apis/api/`. What differs:
 
-- **Invalid input is 422** with Huma's `application/problem+json` body (`errors[].location`, e.g. `query.limit`), where oRPC answers 400. Huma also puts this error in the spec, so SDKs get a typed error.
+- **Invalid input is 422** with Huma's `application/problem+json` body (`errors[].location`, e.g. `query.limit`), where oRPC answers 400. The spec declares it by status, so the Go SDK gets a typed error ([above](#how-it-fits-together)).
 - **A known path with the wrong method is 405,** where the oRPC Worker answers 404.
 - **Schemas are named.** Huma writes `components.schemas.Note` and refers to it; oRPC inlines it. Fern's SDKs then have a `Note` type instead of one type per response.
 - **OpenAPI 3.1.0** (Huma) against 3.1.1 (oRPC). Fern accepts both.

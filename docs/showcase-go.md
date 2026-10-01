@@ -129,7 +129,7 @@ Fern sees the same API. `TestSameSurfaceAsTheORPCShowcase` compares the two gene
 - **`limit` has bounds and a default** (1 to 100, 2) in the Go contract. The oRPC contract leaves it open.
 - **The channel's `access_token` query parameter is declared,** so `connect({ access_token })` is typed. The oRPC server reads it undeclared.
 
-Left out of the comparison, because no SDK sees them: descriptions, `additionalProperties: false`, integer formats and safe-integer bounds, and schema names where one side has none. Huma names every body (`CreateInputBody`), so the SDK's request types have those names. Huma also declares its error model on every operation, so the SDKs get a typed error.
+Left out of the comparison, because no SDK sees them: descriptions, `additionalProperties: false`, integer formats and safe-integer bounds, and schema names where one side has none. Huma names every body (`CreateInputBody`), so the SDK's request types have those names. The Go spec also declares Huma's error model by status (422 and 401 on every operation that can answer them, from `humaworkers`), so the Go SDK gets a typed error ([api-go.md](api-go.md#how-it-fits-together)).
 
 The servers behave the same where the SDK test looks, and differ here:
 
