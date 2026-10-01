@@ -143,6 +143,7 @@ func Routes(env Env) []humaworkers.Route {
 			huma.Register(api, asyncapi.Operation(huma.Operation{
 				OperationID: "liveNotes", Method: http.MethodGet, Path: "/api/notes/live",
 				Summary: "New notes over a WebSocket, as plain JSON. On close, reconnect with `after` = the last note id to continue without gaps",
+				Errors:  []int{http.StatusUpgradeRequired},
 			}, asyncapi.Channel{Name: "liveNotes", OperationID: "receiveNote", Message: "Note", Payload: Note{}}), env.live)
 		}},
 		{Method: http.MethodPost, Path: "/api/notes", OperationID: "createNote", Register: func(api huma.API) {

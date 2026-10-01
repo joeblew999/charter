@@ -239,6 +239,16 @@
             },
             "description": "OK"
           },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
           "default": {
             "content": {
               "application/problem+json": {
@@ -284,6 +294,16 @@
               }
             },
             "description": "OK"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
           },
           "default": {
             "content": {
@@ -351,6 +371,16 @@
               }
             },
             "description": "OK"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
           },
           "default": {
             "content": {

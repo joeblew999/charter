@@ -15,6 +15,8 @@ package humaworkers
 
 import (
 	"net/http"
+	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -231,11 +233,52 @@ func jsonOnly(op *huma.Operation) {
 	}
 }
 
+// statuses declares, by status, the errors Huma answers with before a handler runs: 422 when the
+// operation has input to validate (parameters or a body), 401 when it needs credentials (its own
+// Security, or the document's). Huma declares its error once, as the `default` response, unless an
+// operation lists Errors; Fern types an SDK's errors by status and makes nothing of `default`, so
+// without this a caller gets the problem as text. What a handler itself answers with (404, 409)
+// goes in the operation's Errors, as always.
+func (a *API) statuses(op *huma.Operation) {
+	if op.Hidden {
+		return
+	}
+	doc := a.API.OpenAPI()
+	security := doc.Security
+	if op.Security != nil {
+		security = op.Security
+	}
+	for status, applies := range map[int]bool{
+		http.StatusUnprocessableEntity: len(op.Parameters) > 0 || op.RequestBody != nil,
+		http.StatusUnauthorized:        len(security) > 0,
+	} {
+		code := strconv.Itoa(status)
+		if !applies || op.Responses[code] != nil {
+			continue
+		}
+		// The content Huma gives its own error responses (defineErrors in its huma.go).
+		model := huma.NewError(0, "")
+		contentType := "application/json"
+		if filter, ok := model.(huma.ContentTypeFilter); ok {
+			contentType = filter.ContentType(contentType)
+		}
+		kind := reflect.TypeOf(model)
+		for kind.Kind() == reflect.Pointer {
+			kind = kind.Elem()
+		}
+		op.Responses[code] = &huma.Response{
+			Description: http.StatusText(status),
+			Content:     map[string]*huma.MediaType{contentType: {Schema: doc.Components.Schemas.Schema(kind, true, "Error")}},
+		}
+	}
+}
+
 // adapter is what Huma registers operations with.
 type adapter struct{ api *API }
 
 func (ad adapter) Handle(op *huma.Operation, run func(huma.Context)) {
 	jsonOnly(op)
+	ad.api.statuses(op)
 	ad.api.handlers[op.Method+" "+op.Path] = handler{op, run}
 	ad.api.ops[ad.api.current] = append(ad.api.ops[ad.api.current], op)
 }

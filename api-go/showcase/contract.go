@@ -191,6 +191,9 @@ func Routes(env Env) []humaworkers.Route {
 				OperationID: "getToken", Method: http.MethodPost, Path: "/oauth/token",
 				Summary: "OAuth client-credentials token (used by the SDK itself)", Tags: []string{"auth"},
 				Security: []map[string][]string{},
+				// Wrong credentials. The other operations' 401 and 422 are declared for every route
+				// (humaworkers): what Huma and the token check answer with before a handler runs.
+				Errors: []int{http.StatusUnauthorized},
 				// The body's schema is written into the operation, not referred to by name. With a
 				// named one, the test Fern's Go generator (1.64.0) writes for a form-encoded token
 				// endpoint doesn't compile (it names a type `Request` that doesn't exist). Not filed
@@ -248,6 +251,7 @@ func Routes(env Env) []humaworkers.Route {
 				OperationID: "liveNotes", Method: http.MethodGet, Path: livePath,
 				Summary:       "Note events over a WebSocket: send `subscribe` with a topic, receive that topic's events",
 				DefaultStatus: http.StatusNoContent,
+				Errors:        []int{http.StatusUpgradeRequired},
 			}, asyncapi.Channel{Name: "liveNotes", OperationID: "receiveNoteEvent", Payload: NoteEvent{}}), env.live)
 		}},
 		{Method: http.MethodPost, Path: livePath, OperationID: "subscribe", Register: func(api huma.API) {

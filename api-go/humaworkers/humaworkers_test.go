@@ -242,3 +242,48 @@ func TestALiteralSegmentWinsOverAParameterWhateverTheOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestErrorsHumaAnswersWithAreDeclaredByStatus(t *testing.T) {
+	config := Config("t", "1")
+	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{"token": {Type: "http", Scheme: "bearer"}}
+	config.Security = []map[string][]string{{"token": {}}}
+	route := func(op huma.Operation, register func(huma.API, huma.Operation)) Route {
+		return Route{Method: op.Method, Path: op.Path, Register: func(api huma.API) { register(api, op) }}
+	}
+	withID := func(api huma.API, op huma.Operation) {
+		huma.Register(api, op, func(context.Context, *thingInput) (*thingOutput, error) { return nil, nil })
+	}
+	plain := func(api huma.API, op huma.Operation) {
+		huma.Register(api, op, func(context.Context, *struct{}) (*thingOutput, error) { return nil, nil })
+	}
+	doc := New(config, []Route{
+		route(huma.Operation{OperationID: "validated", Method: "GET", Path: "/things/{id}"}, withID),
+		// No input and no credentials: nothing to refuse.
+		route(huma.Operation{OperationID: "open", Method: "GET", Path: "/open", Security: []map[string][]string{}}, plain),
+		// What the handler answers with is the operation's to say; Huma then leaves `default` out.
+		route(huma.Operation{OperationID: "listed", Method: "GET", Path: "/listed", Errors: []int{404}}, plain),
+		route(huma.Operation{OperationID: "hidden", Method: "GET", Path: "/hidden/{id}", Hidden: true}, withID),
+	}).OpenAPI()
+	statuses := func(path string) string {
+		var all []string
+		for status := range doc.Paths[path].Get.Responses {
+			all = append(all, status)
+		}
+		slices.Sort(all)
+		return strings.Join(all, " ")
+	}
+	for path, want := range map[string]string{
+		"/things/{id}": "200 401 422 default",
+		"/open":        "200 default",
+		"/listed":      "200 401 404 500",
+	} {
+		if got := statuses(path); got != want {
+			t.Errorf("%s: responses %s, want %s", path, got, want)
+		}
+	}
+	// The same body as Huma's own: its error model, as problem+json.
+	refused := doc.Paths["/things/{id}"].Get.Responses["422"]
+	if media := refused.Content["application/problem+json"]; refused.Description != "Unprocessable Entity" || media == nil || media.Schema.Ref != "#/components/schemas/ErrorModel" {
+		t.Errorf("422: %+v", refused)
+	}
+}
