@@ -12,6 +12,7 @@ One set of test programs for the oRPC Worker (`api/`) and the Go Worker (`api-go
 | `live-test.mjs` | Quick check with raw clients: an SSE stream and a WebSocket both receive a new note, then SSE resume after a reconnect | `mise run api:live-test`, `mise run api-go:live-test`; locally inside `mise run api-go:check` |
 | `sdk-live-test.mjs` | The same through Fern's TypeScript SDK: `notes.watch()` and `liveNotes.connect()` | part of the two `live-test` tasks |
 | `mcp-test.mjs` | The MCP endpoint (`/api/mcp`, the Go server only so far) with the official TypeScript MCP client, in both protocol eras: the tools are the contract's operations, and a tool call does what the REST route does | `mise run api-go:mcp-test`; locally inside `mise run api-go:check`, natively and under workerd |
+| `showcase-test.mjs` | The showcase API ([showcase-go.md](showcase-go.md)) through Fern's TypeScript SDK, every Fern feature: OAuth, pagination, idempotency, SSE, upload, the signed webhook, the WebSocket both ways, audiences. Against the Go server it also checks that tokens are enforced | `mise run showcase-go:test`; locally inside `mise run showcase-go:check`, natively and under workerd |
 | `soak.mjs` | The real-time matrix: 7 clients × (planned end, hub restart by redeploy, client drop, long idle). PASS = every note exactly once, in order | `mise run api:soak`, `mise run api-go:soak` |
 | `soak-go/` | The Go SDK client that `soak.mjs` runs | built by `soak.mjs` |
 
@@ -19,6 +20,7 @@ One set of test programs for the oRPC Worker (`api/`) and the Go Worker (`api-go
 node test/live-test.mjs <url>
 node test/sdk-live-test.mjs <url> [api|api-go]
 node test/mcp-test.mjs <url>
+node test/showcase-test.mjs <url> [showcase-go|showcase] [--webhook-port <port>] [--open]
 node test/soak.mjs <url> [--sdk api-go] [--deploy-task api-go:deploy] [--no-deploy] [--seconds 100] [--idle 20]
 ```
 

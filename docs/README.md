@@ -17,6 +17,7 @@ Live: the [oRPC Worker's OpenAPI](https://orpc-api.gedw99.workers.dev/api/openap
 | [api.md](api.md) | `api/`: the oRPC Worker (TypeScript) |
 | [api-go.md](api-go.md) | `api-go/`: the Go Worker (Huma on workers-go), and what Huma needs to run there |
 | [sdk.md](sdk.md) | `sdk/`: Fern, the generated SDKs and CLI, and the real-time client rules |
+| [showcase-go.md](showcase-go.md) | The showcase in Go: every Fern feature from a Huma contract, feature by feature |
 | [testing.md](testing.md) | `test/`: the tests both servers must pass |
 | [dev.md](dev.md) | `dev/`: the tool behind the tasks, the GitHub workflows, releases |
 | [benchmarks.md](benchmarks.md) | Measured cost per request of both Workers, and how to measure it |
@@ -66,14 +67,15 @@ Things that are easy to mix up:
 - **"The CLI" means the command-line program Fern generates** (`orpc-api notes list`, `orpc-api notes watch`). It runs on a developer's machine and calls the API over HTTPS, like an SDK. It never runs on Cloudflare. It is not `cf` (Cloudflare's tool), `mise`, or `dev` (this repo's task tool).
 - **"Go" means two different things here.** `api-go/` is a Go *server*. `sdk/out/*/go` is a Go *client SDK* that Fern generated, and it exists for both servers.
 - **The tests and the database schema are shared.** `test/` has one set of test programs for both servers (they take a URL, and `--sdk api-go` picks the SDKs generated from the Go specs), and `migrations/` is the one D1 schema.
-- **What is the product and what is an example.** `dev/` and the Go packages in `api-go/` (`humaworkers`, `asyncapi`, `follow`, `humamcp`) are what other projects use. `api/` and `api-go/` as Workers are the reference examples they are proven against.
-- **`sdk/fern/apis/` has other folders** (`petstore`, `showcase`, `modern`), for trying Fern features. `petstore` and `modern` are hand-written sample specs with no server. `showcase` is contract first like the two APIs: its specs are generated from an oRPC contract (`sdk/harness/src/contract.ts`, `mise run showcase:spec`), and the harness Worker serves that contract ([sdk.md](sdk.md#the-showcase-is-contract-first-orpc-verified-2026-10-01)).
+- **What is the product and what is an example.** `dev/` and the Go packages in `api-go/` (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`) are what other projects use. `api/` and `api-go/` as Workers are the reference examples they are proven against.
+- **`sdk/fern/apis/` has other folders** (`petstore`, `showcase`, `modern`), for trying Fern features. `petstore` and `modern` are hand-written sample specs with no server. `showcase` is contract first like the two APIs: its specs are generated from an oRPC contract (`sdk/harness/src/contract.ts`, `mise run showcase:spec`), and the harness Worker serves that contract ([sdk.md](sdk.md#the-showcase-is-contract-first-orpc-verified-2026-10-01)). `showcase-go` is the same API from a Go contract (`api-go/showcase/contract.go`, `mise run showcase-go:spec`), with its own Go server ([showcase-go.md](showcase-go.md)); a test keeps the two equal.
 
 ## What it shows
 
 - **One contract gives everything.** Plain REST, SSE (`notes.watch`) and a WebSocket (`notes.live`) on a Worker with D1; an OpenAPI and an AsyncAPI spec, both generated; and from those, Fern's SDKs (Go, TypeScript), Rust CLI and docs.
 - **Real-time that holds up on Cloudflare.** One primitive, `follow()`, gives every client a gap-free feed across deploys, Durable Object restarts, disconnects and long idle periods. The hub hibernates. It's tested by a client × scenario matrix on both Workers ([testing.md](testing.md)).
 - **Go on Workers with the same tooling.** Huma runs under TinyGo on workers-go with a handful of workarounds ([api-go.md](api-go.md)), and the SDKs Fern generates from either server's specs work against the other.
+- **Every Fern feature we use, from either language.** The showcase is one API with OAuth, idempotency, pagination, SSE, file upload, signed webhooks, a WebSocket both ways, audiences and an overlay: once as an oRPC contract ([sdk.md](sdk.md)) and once as a Go one ([showcase-go.md](showcase-go.md)).
 - **Upstream gaps are tracked.** Every workaround names its issue ([upstream.md](upstream.md)), and `mise run upstream:status` shows which are fixed.
 
 ## Using it in another project
@@ -86,8 +88,8 @@ Things that are easy to mix up:
 
 **A Go (workers-go) project:** run `go run github.com/joeblew999/orpc-api/dev@latest new -name <name>` ([dev.md](dev.md#a-new-project-dev-new)). It does the three steps below for you, and what follows is what you then own:
 
-1. Write the contract as Huma operations, as in `api-go/api/contract.go`: one `humaworkers.Route` per operation, with `asyncapi.Operation(...)` around the WebSocket ones.
-2. Import the packages `humaworkers`, `asyncapi` and `follow` (`go get github.com/joeblew999/orpc-api/api-go`), and copy `api-go/worker/` (the entry, the hub and the clock fix), `api-go/cmd/spec` and the two `platform_*.go` files.
+1. Write the contract as Huma operations, as in `api-go/api/contract.go`: one `humaworkers.Route` per operation, with `asyncapi.Operation(...)` around the WebSocket ones. For OAuth, idempotency, file upload, webhooks or a WebSocket the client also sends on, see the Go showcase (`api-go/showcase/contract.go`, [showcase-go.md](showcase-go.md)).
+2. Import the packages `humaworkers`, `asyncapi`, `follow`, `transport` and `specfile` (`go get github.com/joeblew999/orpc-api/api-go`), and copy `api-go/worker/` (the entry, the WebSocket adapter, the hub and the clock fix), `api-go/cmd/spec` and the two `platform_*.go` files.
 3. Copy `sdk/fern/apis/api-go/` as your API's Fern folder, plus the `api-go:*` and `sdk:*` tasks.
 
 **Both:**

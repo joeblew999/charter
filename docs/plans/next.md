@@ -20,6 +20,7 @@ Where this repo stands (2026-10-01) and what comes next, in order. What's proven
   - The contract is Go (`api-go/api/contract.go`), and both specs are generated from it into `sdk/fern/apis/api-go/`.
   - Fern generates the Go and TypeScript SDKs and the CLI from them; a test keeps the SDK surface equal to the oRPC contract's.
   - Deployed as `orpc-api-go` and verified on Cloudflare: live test 5/5, soak 7/7 through a redeploy, a client drop and 20 minutes idle.
+  - **The showcase in Go** (2026-10-01): `api-go/showcase`, a second Huma contract in the same module with every Fern feature the oRPC showcase has, its own server (`api-go/cmd/showcase`) and Fern folder (`sdk/fern/apis/showcase-go/`). Verified natively and under workerd; not deployed.
 - **Upstream:** six issues are tracked (Fern #17936–#17939 and #9559, oRPC #2115); see `mise run upstream:status`.
 
 ## Next
@@ -27,7 +28,11 @@ Where this repo stands (2026-10-01) and what comes next, in order. What's proven
 000. **The showcase, what is left** ([../sdk.md](../sdk.md#the-showcase-is-contract-first-orpc-verified-2026-10-01)):
    - **Tell oRPC what its generators can't say:** a form-encoded request body, `security` per operation, document-level settings from the contract, OpenAPI `webhooks`. The list and what we do instead is in sdk.md. Nothing is filed yet.
    - **Tell Fern** that its generators ignore an AsyncAPI server's `pathname`. Not filed yet.
-   - **The same contract in Go** (`sdk/fern/apis/showcase-go/`, in progress on another branch): keep its names equal to this one's. `NoteEvent` gained an optional `auth` here.
+   - **The same contract in Go is built** (`api-go/showcase`, `sdk/fern/apis/showcase-go/`, [../showcase-go.md](../showcase-go.md)): every feature passes natively and as Wasm under workerd, and a test keeps its SDK surface equal to this one's. Left:
+     - **Deploy it** (`mise run showcase-go:deploy`, Worker `orpc-showcase-go`) and run `node test/showcase-test.mjs` against it. Nothing of it has run on Cloudflare; the webhook needs `WEBHOOK_URL`, and the secrets need setting.
+     - **Run the Go SDK against it,** and build its CLI.
+     - **File the Fern Go generator bug** (a test that doesn't compile for a named form-encoded token request; [../upstream.md](../upstream.md#found-not-filed-yet)), and offer Huma the form format (`humaworkers.WithForm`).
+     - **Check tokens in the oRPC showcase too,** so both servers refuse the same requests and `--open` can go from the test.
 00. **Promised on middleapi/orpc#2115 (2026-10-01):** publish `api/src/asyncapi.ts` as a community package (`asyncapi()` + `AsyncAPIGenerator`, API-compatible with `openapi()` / `OpenAPIGenerator`), then link it on the issue. It now also writes `send` operations (what the client sends), and `api/src/specs.ts` writes OpenAPI `webhooks`: both belong in the package. The maintainer prefers community packages first. An MCP generator for oRPC, built the same way, was offered too.
 0. **The Go Worker (api-go/), what is left:**
    - **Make it cheaper:** 40 to 70 ms of CPU per request today. The plan is [performance.md](performance.md).

@@ -18,7 +18,8 @@ fern/
     │   ├── openapi.json      the spec
     │   └── generators.yml    one group per language, options under config:
     ├── modern/               SSE streaming (x-fern-streaming) + cursor pagination (x-fern-pagination)
-    └── showcase/             every feature below, in one API; its specs are generated (see below)
+    ├── showcase/             every feature below, in one API; its specs are generated (see below)
+    └── showcase-go/          the same API, its specs generated from a Go contract (showcase-go.md)
 ```
 
 What Fern does through **standard options only**: the spec's OpenAPI features, `x-fern-*` extensions and `generators.yml`. All of it was verified in `showcase/` on 2026-09-29 (Go: build, vet and tests; TypeScript: typecheck), and again on 2026-10-01 with the specs generated from an oRPC contract.
@@ -80,6 +81,18 @@ Multipart is not on the list: a `z.file()` in the input is enough.
 In the spec itself, and invisible in the SDKs: OpenAPI `3.1.1` (was `3.1.0`); `additionalProperties: false` on response objects; safe-integer bounds on integers; `allowEmptyValue` and `allowReserved` on query parameters; `contentEncoding: binary` on the file; a `name` on each AsyncAPI message.
 
 The server behaves as the plain mock did, with three differences no test depends on: errors are oRPC's JSON (the status codes are the same: 401, 400, 404, 426); `limit` is honoured (the mock ignored it; the default page is still 2); and the chat stream is oRPC's SSE (`event: message` per chunk, then `event: close` without data).
+
+### The same showcase from a Go contract (verified locally 2026-10-01)
+
+`sdk/fern/apis/showcase-go/` is the showcase with its specs written by a Go contract (`api-go/showcase/contract.go`, Huma) and served by a Go server, natively and as TinyGo Wasm on workers-go. It has the same groups and the same overlay, and a Go test keeps what an SDK sees equal to this contract's. How each feature is switched on in Go, and how it is tested, is in [showcase-go.md](showcase-go.md).
+
+```sh
+mise run showcase-go:spec               # Go contract -> sdk/fern/apis/showcase-go/{openapi,asyncapi}.json
+mise run showcase-go:check              # lint, Go tests, spec drift, TinyGo build, the SDK test natively and under workerd
+mise run sdk:gen showcase-go go         # + typescript, typescript-public, typescript-dist, cli
+```
+
+One test program, `test/showcase-test.mjs`, runs the generated TypeScript SDK against either server. Each server passes it with the SDK made from the other's specs too.
 
 ## Does the TypeScript SDK work on Cloudflare Workers? Yes (verified 2026-09-29)
 

@@ -14,7 +14,7 @@ mise run <task>              # what you normally type: each task is one line tha
 
 | Command | What it does | Task that calls it |
 |---|---|---|
-| `with-server` | Starts a server, waits until a URL answers, runs commands against it, stops it | `api-go:test:native`, `api-go:test:workerd` |
+| `with-server` | Starts a server, waits until a URL answers, runs commands against it, stops it. `{port}` in its arguments is a free port, `{port2}` another | `api-go:test:native`, `api-go:test:workerd`, `showcase-go:test:native`, `showcase-go:test:workerd` |
 | `migrate-local` | Applies `migrations/*.sql` to a running dev server's local D1, each once (cf can't) | `api:migrate:local`, `api-go:migrate:local` |
 | `migrate` | Finds the Worker's D1 database and applies pending migrations | `api:migrate`, `api-go:migrate`, the deploy tasks |
 | `size` | Fails if a file is over a gzipped size (the Wasm limit) | `api-go:build` |
@@ -45,8 +45,8 @@ Every step that does work is `mise run <task>`, so a failing step is one line yo
 
 | Workflow | When | What it runs | Secrets |
 |---|---|---|---|
-| `api-check` | push to main, pull requests | `api:check` and `api-go:check`, one job each | none |
-| `sdk-check` | push to main, pull requests | `sdk:demo`; `showcase:check` and `sdk:harness:test`; and `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of `api`, `api-go` and `showcase` | none |
+| `api-check` | push to main, pull requests | `api:check`, `api-go:check` and `showcase-go:check`, one job each | none |
+| `sdk-check` | push to main, pull requests | `sdk:demo`; `showcase:check` and `sdk:harness:test`; and `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of `api`, `api-go`, `showcase` and `showcase-go` | none |
 | `dev-check` | push to main, pull requests | `dev:check` | none |
 | `api-deploy` | by hand only (pick `api` or `api-go`) | `cloudflare:token`, `<api>:deploy`, then `<api>:live-test` against the Worker it just deployed | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 | `dev-release` | a version tag. A dry run by hand, and on pull requests that touch `dev/` | `dev:dist`, `release`, `release:tags` | none (the workflow's own token) |
@@ -85,7 +85,7 @@ go run github.com/joeblew999/orpc-api/dev@latest workflows -into . -check   # fa
 
 It writes the `api-` and `sdk-` workflows. `-only api` or `-only sdk` writes one set; the `dev-` ones are only written where there is a `dev/` module, as here. The templates adapt to the repo: one without an `api/` folder (a project made by `dev new`) gets the Go API's jobs only.
 
-They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `api:check`, `api-go:check`, `api:deploy`, `api-go:deploy`, `cloudflare:token`, `sdk:demo`, `showcase:check`, `sdk:harness:test`, `sdk:gen`, `sdk:check`, `sdk:dist`, `sdk:dist:cli` and `release`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
+They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `api:check`, `api-go:check`, `showcase-go:check`, `api:deploy`, `api-go:deploy`, `cloudflare:token`, `sdk:demo`, `showcase:check`, `sdk:harness:test`, `sdk:gen`, `sdk:check`, `sdk:dist`, `sdk:dist:cli` and `release`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
 
 ## A new project: `dev new`
 
@@ -102,7 +102,7 @@ mise run api-go:deploy         # to Cloudflare, then: mise run api-go:live-test
 
 - **It pulls this repo from GitHub at the tool's own version** and copies the example: `api-go/` (contract, handlers, Worker entry, hub, platform files, spec command), `migrations/`, `test/`, the Fern folder `sdk/fern/apis/api-go/`. There is no separate template, so a new project starts from code that passed this repo's checks.
 - **It renames:** the Worker and its D1 database (`-name`), the Go module (`-module`, default `github.com/<your GitHub login>/<name>`), and the SDK's names (`billing-api` gives `BillingApiClient`).
-- **It keeps as imports** the reusable packages (`humaworkers`, `asyncapi`, `follow`, `humamcp`), pinned to the same version, so fixes arrive with `go get -u`.
+- **It keeps as imports** the reusable packages (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`), pinned to the same version, so fixes arrive with `go get -u`.
 - **It writes** a `mise.toml` with the Go and SDK tasks (the dev tool pinned by version, not copied), `go.work`, a README, and a `docs/` folder with a start page and rules.
 - **Then, with a GitHub repo:** `mise run dev:workflows` (the workflows come out for one Go API), `mise run docs:setup` and `mise run docs:pages`.
 

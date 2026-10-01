@@ -49,6 +49,7 @@ That creates a working project (contract, Worker, tests, Fern folder, tasks, doc
 |---|---|---|
 | `api/` | The oRPC Worker (TypeScript): a reference example | [docs/api.md](docs/api.md) |
 | `api-go/` | The Go Worker, and the Go packages other projects import | [docs/api-go.md](docs/api-go.md) |
+| `api-go/showcase/`, `api-go/cmd/showcase/` | Every Fern feature we use (OAuth, idempotency, upload, webhooks, a WebSocket both ways, ...) from a Go contract, with its server | [docs/showcase-go.md](docs/showcase-go.md) |
 | `sdk/` | Fern: each API's specs and generator settings, the SDK test Worker | [docs/sdk.md](docs/sdk.md) |
 | `test/` | The tests both servers must pass | [docs/testing.md](docs/testing.md) |
 | `migrations/` | The D1 schema, for both Workers | |

@@ -21,9 +21,10 @@ One notes API on Cloudflare Workers, built twice (oRPC in `api/`, Go with Huma o
 - **The contract is the source, one per server.**
   - oRPC: after changing `api/src/contract.ts`, run `mise run api:spec`. `mise run api:check` fails if a committed spec is stale.
   - Go: after changing `api-go/api/contract.go`, run `mise run api-go:spec`. `mise run api-go:check` fails if a committed spec is stale.
-  - Never edit `sdk/fern/apis/api/*.json` or `sdk/fern/apis/api-go/*.json` by hand.
-- **The two contracts describe the same API.** Change both together: `api-go`'s `TestSameSurfaceAsTheORPCContract` fails when what Fern sees differs.
-- **Everything that ships to Workers from `api-go/` builds with TinyGo** (`mise run api-go:build`). Standard Go is for the native build, `go test` and `cmd/spec`. `go test` can't see TinyGo's gaps, so `api-go:check` also runs the Wasm under workerd.
+  - The Go showcase: after changing `api-go/showcase/contract.go`, run `mise run showcase-go:spec`. `mise run showcase-go:check` fails if a committed spec is stale.
+  - Never edit `sdk/fern/apis/api/*.json`, `sdk/fern/apis/api-go/*.json` or `sdk/fern/apis/showcase-go/*.json` by hand.
+- **The two contracts describe the same API.** Change both together: `api-go`'s `TestSameSurfaceAsTheORPCContract` fails when what Fern sees differs. The two showcase contracts do too: `TestSameSurfaceAsTheORPCShowcase` (`api-go/showcase`).
+- **Everything that ships to Workers from `api-go/` builds with TinyGo** (`mise run api-go:build`, `showcase-go:build`). Standard Go is for the native build, `go test` and `cmd/spec`. `go test` can't see TinyGo's gaps, so `api-go:check` and `showcase-go:check` also run the Wasm under workerd.
 - **Workarounds name their upstream issue.** Tag them in the code as `Upstream: <owner>/<repo>#<n> (when fixed: ...)`, add a row to the table in `docs/upstream.md`, and check with `mise run upstream:status`.
 - **Test locally and on Cloudflare.** `mise run check` is the local half. After a deploy, the live test must pass against the deployed Worker (`api-deploy` does it; by hand: `mise run api:live-test` or `api-go:live-test`). Some bugs exist only in production.
 - **Only verified results** go into docs/findings.md.
