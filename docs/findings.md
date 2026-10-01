@@ -55,7 +55,7 @@ Verified results only: each entry was run and checked. Newest sections last.
 - **`/api/notes/live` (WebSocket) goes silently dead.** The socket stays open, but no note arrives after the hub restart. The Worker subscribes without `onError` and never closes or resubscribes. The TypeScript SDK's `liveNotes.connect()` can't reconnect either, because nothing tells it the socket died. This was our bug in `api/src/index.ts`; `follow()` fixed it (next section).
 - Cloudflare doesn't compress or buffer the stream: there's no `content-encoding` with gzip, br or zstd, and the first byte arrives in about 0.1 s. The response has no `Cache-Control` header.
 
-## The real-time system: follow() (verified 2026-09-30; design in .plans/realtime.md)
+## The real-time system: follow() (verified 2026-09-30; design in docs/plans/realtime.md)
 - **Design:**
   - D1 is the log and the note id is the only position (`after`, the SSE `id:`, the WebSocket message `id`).
   - The hub DO only wakes followers.
@@ -80,15 +80,15 @@ Verified results only: each entry was run and checked. Newest sections last.
 - **The CLI's `notes watch` prints json/jsonl only when a stream ends** ([fern-api/fern#17939](https://github.com/fern-api/fern/issues/17939)), with generators 0.44.0 and 0.45.1 (`--format raw` streams). It still receives every note, at p50 about 9 s behind with 15 s streams.
 
 
-## Go on workers-go: Huma -> OpenAPI + AsyncAPI -> Fern (api-go/, verified locally 2026-10-01; not deployed yet)
+## Go on workers-go: Huma -> OpenAPI + AsyncAPI -> Fern (api-go/, verified locally 2026-10-01)
 
-Everything here ran on this machine: natively, and as TinyGo Wasm under workerd (`cf dev`). Nothing below has run on Cloudflare itself yet (`mise run api-go:deploy`, then `api-go:live-test` and `api-go:soak`).
+Everything in this section ran on this machine: natively, and as TinyGo Wasm under workerd (`cf dev`). The results on Cloudflare itself are in the next section.
 
 - **Versions:** Huma 2.39.1, workers-go 0.36.0, TinyGo 0.42.0 (binaryen 133), Go 1.27.1, workerd through cf 1.0.0-beta.5.
 - **Huma runs under TinyGo on workerd,** with three things done on our side (`api-go/humaworkers`, `mise run api-go:build`):
   - `-stack-size=256kb`. With TinyGo's default stack, the first request fails with `memory access out of bounds`; 128 KB also worked, 64 KB didn't.
   - No `SchemaLinkTransformer` hook (`huma.DefaultConfig` installs it). It calls `reflect.StructOf`, and TinyGo answers `panic: unimplemented: reflect.StructOf()`.
-  - Our own route matching. TinyGo's `http.ServeMux` treats `"GET /api/hello"` as a literal path, so Huma's `humago` adapter gives 404 for every route.
+  - Our own route matching. TinyGo's `http.ServeMux` doesn't match method patterns: `"GET /a"` is 404 (`/b/{id}` wildcards work; reproduced with `tinygo run` on the host). Huma's `humago` adapter registers exactly those, so every route is 404.
 - **What then works under TinyGo:** query, header and body parsing; validation from struct tags (`minimum`, `maximum`, `default`, `minLength`, `pattern`, so `regexp` too); `Resolve` for custom rules; 422 `application/problem+json` errors with locations; `StreamResponse`; and generating the OpenAPI document inside the Worker.
 - **Size:** `app.wasm` is 2.41 MB, 848 KB gzipped (the Workers Free limit is 3 MB gzipped). An empty workers-go handler was 863 KB, 326 KB gzipped.
 - **Request time, local workerd, wall clock:** about 14 ms for `/api/hello`, about 28 ms for a D1 list of 20 notes, about 25 ms for `/api/openapi.json`. An empty workers-go handler took about 8 ms. workers-go starts a fresh Go runtime per request, so `humaworkers` registers only the operation a request matches. CPU time on Cloudflare isn't measured yet.
@@ -106,3 +106,18 @@ Everything here ran on this machine: natively, and as TinyGo Wasm under workerd 
 - **The two servers are interchangeable to clients.** The SDKs and CLI generated from the *oRPC* specs (`sdk/out/api`) pass the same tests against the *Go* server (native build): SDK live test 2/2, soak 7/7 through a client drop.
 - **The SSE wire format is byte for byte the oRPC Worker's** (a comment line, then `event: message`, `retry`, `id`, `data` per note, then `event: close` with the terminator), checked against a capture from the deployed oRPC Worker.
 - **The same Go code runs natively** (`mise run api-go:run`): REST, SSE and the WebSocket, on an in-memory store.
+
+## The Go Worker on Cloudflare (orpc-api-go, verified 2026-10-01)
+
+Deployed with `mise run api-go:deploy` to https://orpc-api-go.gedw99.workers.dev, with its own D1 database (`orpc-api-go-db`) and the same schema.
+
+- **`mise run api-go:live-test`: 5/5.** Raw SSE, raw WebSocket through the hub Durable Object, SSE resume with `Last-Event-ID`, and the TypeScript SDK's `notes.watch()` and `liveNotes.connect()` (the SDK generated from the Go specs).
+- **`mise run api-go:soak`: 7/7 clients, 38/38 notes each,** no gaps, no duplicates, in order, through a redeploy (the hub restart) at 30 s and a 6 s client drop. The SDKs and the Fern CLI were the ones generated from the Go specs. SSE streams ended on schedule every 15 s (9 connections per client).
+- **`mise run api-go:soak --idle 20`: 7/7.** After 20 quiet minutes one note reached every client at once; the WebSocket clients held one connection the whole time.
+- **Go timers hang on Cloudflare without a fix, and not under local workerd.** The first soak there failed for the Fern CLI (5/37), because streams never ended at their limit: a stream asked for 2 s was still open after 40.
+  - Go's timers were fine in isolation (`time.Sleep`, `time.NewTimer`, a context deadline and a `select` all fired at 2 s in a probe).
+  - The cause is the production clock, measured in plain JavaScript on the deployed Worker: after `setTimeout(d)` both `Date.now()` and `performance.now()` have moved by `d` rounded down to a whole millisecond (`1999.7` gives 1999; `0.4` gives 0, however often it's repeated). TinyGo's scheduler sleeps with `setTimeout(ns / 1e6)`, so with under a millisecond left it re-arms a timer that never moves the clock.
+  - 6 of 10 streams with a 2 s limit hung. With `worker/tinygo-clock.mjs` (round every TinyGo sleep up to a whole millisecond), 16 of 16 ended on time, and the soak above passed.
+- **CPU time per request is 40 to 70 ms, against 1 to 3 ms for the oRPC Worker** (Workers Logs, median): hello 55 ms, a D1 list 71 ms, a 404 38 ms, a create about 265 ms; oRPC hello 1 ms, list 3 ms. The full tables, the local comparison of TinyGo build options, and what they mean are in [benchmarks.md](benchmarks.md).
+- **`-gc=boehm` hangs on Cloudflare.** Locally it was the fastest build with a real collector; deployed, 48 requests took 11 minutes. The default collector stays.
+- **CI runs it all on Linux:** TinyGo and binaryen install through mise on `ubuntu-24.04`, and `api-go:check` (including the Wasm under workerd) passes there.

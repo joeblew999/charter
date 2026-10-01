@@ -26,7 +26,7 @@ func init() {
 var upstreamTag = regexp.MustCompile(`^([^:]+:[0-9]+):.*Upstream: ([\w.-]+/[\w.-]+)#([0-9]+) *(.*)$`)
 
 // upstream finds the tags and asks GitHub for each issue's state. CLOSED means that workaround can
-// go (the table in api/README.md says what to do).
+// go (the table in docs/upstream.md says what to do).
 func upstream([]string) error {
 	out, err := output(".", "git", "grep", "-n", "-E", `Upstream: [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+`, "--", ":!*.md", ":!mise.toml", ":!dev/")
 	if err != nil {
@@ -59,7 +59,7 @@ func upstream([]string) error {
 	}
 	fmt.Printf("\n%d upstream issues, %d closed", len(issues), closed)
 	if closed > 0 {
-		fmt.Print(": remove those workarounds (api/README.md)")
+		fmt.Print(": remove those workarounds (docs/upstream.md)")
 	}
 	fmt.Println()
 	return nil

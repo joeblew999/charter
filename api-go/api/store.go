@@ -18,7 +18,7 @@ type Store interface {
 	Latest(ctx context.Context) (int64, error)
 }
 
-// Hub is the live fan-out: only a wake-up signal for followers (.plans/realtime.md, rule 2).
+// Hub is the live fan-out: only a wake-up signal for followers (docs/plans/realtime.md, rule 2).
 type Hub interface {
 	Publish(ctx context.Context, note Note) error
 	// Subscribe calls listener for every published note and onError when the subscription breaks;

@@ -8,7 +8,7 @@ The goal is one design where every transport and every client gets the same guar
 
 A client that says where it got to never misses a note and never sits on a dead connection. This holds across deploys, Cloudflare runtime updates, hub restarts, idle periods and its own disconnects. The hub Durable Object hibernates whenever nothing is happening.
 
-## What the platform gives us (verified; see FINDINGS.md)
+## What the platform gives us (verified; see docs/findings.md)
 
 - **Streams:** a Worker can stream as long as the client is connected, and bills CPU time, not wall time.
 - **They still get cut:**
@@ -96,7 +96,7 @@ Built and verified live: steps 1–6 are done, and 7–9 are in progress (see St
 8. **Upstream (outward-facing; needs a go-ahead):**
    - To Fern: the SDK hides the SSE error event, the CLI exits 0 on a stream error, the CLI buffers non-raw formats, event ids aren't exposed, and there's no reconnect.
    - To oRPC: the AsyncAPI generator (#2115).
-9. **Write-up:** FINDINGS.md, plus a short "real-time on Cloudflare" section in `sdk/README.md` that our other projects copy (the rules, `follow.ts`, the client loop).
+9. **Write-up:** docs/findings.md, plus a short "real-time on Cloudflare" section in `docs/sdk.md` that our other projects copy (the rules, `follow.ts`, the client loop).
 
 ## Done when
 

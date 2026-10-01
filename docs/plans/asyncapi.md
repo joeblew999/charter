@@ -51,7 +51,7 @@ Steps 1–3 are done: `api/src/asyncapi.ts` generates `sdk/fern/apis/api/asyncap
    - Post on #2115: the design above, a link to the working prototype, and the question whether they want it as `@orpc/asyncapi` or would rather keep it outside oRPC.
    - If they want a PR: port it to their repo style (package, tests, a docs page next to `openapi/specification`, and a playground). Match their API naming: `asyncapi()` metadata, `AsyncAPIGenerator` with `converters` / `version` / `base`.
    - If not: keep it here, or publish it as a small package.
-5. **Write it up in FINDINGS.md** (verified results only).
+5. **Write it up in docs/findings.md** (verified results only).
 
 ## Open questions (to settle in step 1)
 

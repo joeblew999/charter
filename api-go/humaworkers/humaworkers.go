@@ -1,6 +1,6 @@
 // Package humaworkers runs a Huma API (github.com/danielgtaylor/huma) on Cloudflare Workers through
 // workers-go and TinyGo. It exists for three reasons, each
-// measured under workerd (FINDINGS.md, "Go on workers-go"):
+// measured under workerd (docs/findings.md, "Go on workers-go"):
 //
 //   - workers-go starts a fresh Go runtime for every request, so registering every operation at
 //     start-up would be paid on every request. Here only the operation a request matches is registered.
@@ -28,6 +28,7 @@ type Route struct {
 	Register func(api huma.API)
 }
 
+// Upstream: tinygo-org/tinygo#3599 (when fixed: keep huma.DefaultConfig's CreateHooks, the schema links work)
 // Config is huma.DefaultConfig without what does not run or is not wanted on Workers: no
 // schema-link hook (reflect.StructOf), and no built-in /openapi, /docs and /schemas routes (serve
 // the specs yourself, with the request's origin as their server).

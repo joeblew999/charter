@@ -127,6 +127,10 @@ description = "REMOTE, redeploys orpc-api: the real-time matrix, every client x 
 depends = ["sdk:ready api"]
 run = 'node test/soak.mjs "$API_URL"'
 
+[tasks."api:bench"]
+description = "REMOTE, read-only: wall time per route of the deployed oRPC Worker (docs/benchmarks.md)"
+run = 'go run ./dev bench "$API_URL"'
+
 # ---- api-go/: the Go Worker (Huma on workers-go, TinyGo) ---------------------------------------------
 
 [tasks."api-go:run"]
@@ -202,6 +206,10 @@ run = 'node test/live-test.mjs "$API_GO_URL" && node test/sdk-live-test.mjs "$AP
 description = "REMOTE, redeploys orpc-api-go: the real-time matrix, with the SDKs and CLI made from the Go specs. --idle <min> for the long-idle case"
 depends = ["sdk:ready api-go"]
 run = 'node test/soak.mjs "$API_GO_URL" --sdk api-go --deploy-task api-go:deploy'
+
+[tasks."api-go:bench"]
+description = "REMOTE, read-only: wall time per route of the deployed Go Worker (docs/benchmarks.md)"
+run = 'go run ./dev bench "$API_GO_URL"'
 
 # ---- sdk/: Fern (each API is sdk/fern/apis/<api>/ with its specs and a generators.yml) --------------
 

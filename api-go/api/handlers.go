@@ -121,7 +121,7 @@ func (env Env) create(ctx context.Context, in *CreateInput) (*NoteOutput, error)
 	return &NoteOutput{Body: note}, nil
 }
 
-// feed is the one feed both transports serve (.plans/realtime.md): the store is the log, the hub
+// feed is the one feed both transports serve (docs/plans/realtime.md): the store is the log, the hub
 // only wakes followers.
 type feed struct {
 	store Store

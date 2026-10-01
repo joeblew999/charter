@@ -7,6 +7,7 @@ import "./tinygo-clock.mjs";
 
 export { NotesHub } from "./hub.mjs";
 
+// Upstream: syumai/workers-go#97 (when fixed: answer the upgrade in Go and delete this adapter)
 // WebSocket transport. Go answers a WebSocket upgrade with a stream of lines (one JSON message per
 // line; empty lines are padding), or with an error (400, 426) that is returned as it is. Each line
 // is sent as one text frame. Which paths are WebSockets, their input and their feed are all Go's
