@@ -38,7 +38,7 @@ var projectFiles = []string{
 var projectSkip = map[string]bool{"api-go/api/surface_test.go": true, "test/soak-go/soak-go": true}
 
 // The tasks a Go-only project keeps from mise.toml.
-var projectTasks = regexp.MustCompile(`^(setup|check|doctor|upstream:status|dev:check|dev:workflows|docs:.*|api-go:.*|sdk:(list|check-spec|gen|check|ready|cli:build|clean|dist|dist:cli)|cloudflare:.*|release|release:tags)$`)
+var projectTasks = regexp.MustCompile(`^(setup|check|doctor|upstream:status|dev:check|dev:workflows|docs:.*|api-go:.*|sdk:(list|check-spec|gen|check|ready|publish|publish:check|cli:build|clean|dist|dist:cli)|cloudflare:.*|release|release:tags)$`)
 
 // newProject makes a project that is the Go half of this repo under another name: the notes API as
 // a starting contract, every task, the Fern folder, the tests, a docs folder. The files come from
@@ -215,7 +215,8 @@ func write(path, content string) error {
 }
 
 // renamer turns this repo's names into the project's: the Worker (orpc-api-go), the project
-// (orpc-api), the SDK's names (OrpcApi, orpcapi), and the import path of the example's own package.
+// (orpc-api), the SDK's names (OrpcApi, orpcapi), and the import paths of what is the project's own:
+// the example's package and the Go SDK's module (<module>/sdk/go, so another repo can go get it).
 // The reusable packages keep their orpc-api import path: the project imports them.
 func renamer(name, module string) func(string) string {
 	pascal, flat := "", strings.ReplaceAll(name, "-", "")
@@ -225,7 +226,7 @@ func renamer(name, module string) func(string) string {
 		}
 	}
 	const library = "\x00library\x00" // keeps the orpc-api module path out of the renaming
-	own := strings.NewReplacer(`"`+repoModule+`/api-go/api"`, `"`+module+`/api-go/api"`, repoModule, library)
+	own := strings.NewReplacer(`"`+repoModule+`/api-go/api"`, `"`+module+`/api-go/api"`, repoModule+"/sdk/go", module+"/sdk/go", repoModule, library)
 	rename := strings.NewReplacer("orpc-api-go", name, "orpc-api", name, "OrpcApi", pascal, "orpcapi", flat)
 	return func(s string) string {
 		return strings.ReplaceAll(rename.Replace(own.Replace(s)), library, repoModule)
@@ -267,7 +268,8 @@ func projectMise(source, name, pin string) string {
 		"for dir in api api-go sdk sdk/harness;", "for dir in api-go sdk;",
 		`test -z "$(gofmt -l dev)" && go vet ./dev && go test ./dev && `, "",
 		"dist-sdk api api-go", "dist-sdk api-go",
-		"release-tags api-go dev", "release-tags api-go",
+		"release-tags api-go dev sdk/go", "release-tags api-go sdk/go",
+		"api-go/vX.Y.Z, dev/vX.Y.Z, sdk/go/vX.Y.Z", "api-go/vX.Y.Z, sdk/go/vX.Y.Z",
 		"# Local dev ports.", "# The local dev port.",
 		"# Every task is one line of plain sh", "# "+name+": a Go API on Cloudflare Workers (Huma on workers-go), made with `dev new` from\n# "+repoURL+".\n# Every task is one line of plain sh",
 		"is a command of ./dev (go run ./dev help)", "is a command of the dev tool (`dev help`), pinned under [tools]",

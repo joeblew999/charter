@@ -28,6 +28,8 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 		"api-go/main.go":                      `"github.com/zeta/billing-api/api-go/api"`,
 		"api-go/cloudflare.config.ts":         `name: "billing-api"`,
 		"sdk/fern/apis/api-go/generators.yml": "namespaceExport: BillingApi",
+		"test/soak-go/main.go":                `billingapi "github.com/zeta/billing-api/sdk/go"`,
+		"test/soak-go/go.mod":                 "github.com/zeta/billing-api/sdk/go => ../../sdk/go",
 		"mise.toml":                           `"go:github.com/joeblew999/orpc-api/dev" = "latest"`,
 		"go.work":                             "use ./api-go",
 		"docs/README.md":                      "# billing-api",
@@ -40,8 +42,18 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 			t.Errorf("%s: no %q", file, want)
 		}
 	}
+	// The Go SDK's module path is the project's, so another repo can go get what sdk:publish commits.
+	generators, _ := os.ReadFile(filepath.Join(into, "sdk/fern/apis/api-go/generators.yml"))
+	if want := "path: github.com/zeta/billing-api/sdk/go\n"; !strings.Contains(string(generators), want) || strings.Contains(string(generators), "example.com") {
+		t.Errorf("generators.yml: the Go SDK's module path is not %q", want)
+	}
 	tasks, _ := os.ReadFile(filepath.Join(into, "mise.toml"))
-	for _, gone := range []string{"api:check", "sdk:harness", "sdk:demo", "showcase", "go run ./dev", "go run ../dev", "dev@", "orpc-api-go"} {
+	for _, want := range []string{`[tasks."sdk:publish"]`, `[tasks."sdk:publish:check"]`, "dev sdk-publish api-go", "dev release-tags api-go sdk/go"} {
+		if !strings.Contains(string(tasks), want) {
+			t.Errorf("mise.toml: no %q", want)
+		}
+	}
+	for _, gone := range []string{"api:check", "sdk:harness", "sdk:demo", "showcase", "go run ./dev", "go run ../dev", "dev@", "orpc-api-go", "dev/vX.Y.Z"} {
 		if strings.Contains(string(tasks), gone) {
 			t.Errorf("mise.toml still mentions %q", gone)
 		}
