@@ -33,6 +33,14 @@ var docsWriting string
 //go:embed docs/review.md
 var docsReview string
 
+// llms.txt and llms-full.txt: the docs for agents. Templates the site's renderer fills in.
+//
+//go:embed docs/llms.txt
+var docsLLMs string
+
+//go:embed docs/llms-full.txt
+var docsLLMsFull string
+
 // docs writes the two files that make a repo's docs/ folder a site on GitHub Pages. They are the
 // same for every repo except for its name, description and URLs, which GitHub is asked for. With
 // -check nothing is written, and it fails if a file differs.
@@ -61,7 +69,8 @@ func docs(args []string) error {
 	config := strings.NewReplacer("__NAME__", repo.Name, "__DESCRIPTION__", string(description),
 		"__REPO__", repo.NameWithOwner, "__BRANCH__", repo.DefaultBranchRef.Name).Replace(docsConfig)
 	stale := 0
-	for path, content := range map[string]string{"docs/_config.yml": config, "docs/_sass/custom/custom.scss": docsStyle, "docs/writing.md": docsWriting} {
+	for path, content := range map[string]string{"docs/_config.yml": config, "docs/_sass/custom/custom.scss": docsStyle, "docs/writing.md": docsWriting,
+		"docs/llms.txt": docsLLMs, "docs/llms-full.txt": docsLLMsFull} {
 		path = filepath.Join(into, path)
 		if current, _ := os.ReadFile(path); bytes.Equal(current, []byte(content)) {
 			continue

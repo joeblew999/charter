@@ -1,0 +1,21 @@
+---
+layout: null
+permalink: /llms-full.txt
+---
+{%- comment -%} Written by `dev docs`: don't edit. Every page's Markdown, in sidebar order. {%- endcomment -%}
+{%- assign titled = site.pages | where_exp: "p", "p.title" | where_exp: "p", "p.nav_order" -%}
+{%- assign tops = titled | where_exp: "p", "p.parent == nil" | sort: "nav_order" -%}
+# {{ site.title }}: all docs
+
+> {{ site.description }}
+{% for p in tops %}
+<!-- page: {{ p.path }} -->
+
+{{ p.content }}
+{% assign kids = titled | where: "parent", p.title | sort: "nav_order" -%}
+{%- for k in kids %}
+<!-- page: {{ k.path }} -->
+
+{{ k.content }}
+{% endfor -%}
+{%- endfor %}
