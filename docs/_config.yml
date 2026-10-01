@@ -10,6 +10,7 @@
 #   parent: Plans             # optional: sits under the page with this title
 #   has_children: true        # on that parent page
 #   ---
+# The start page, README.md, also needs `permalink: /` there: it is the site's home page.
 title: orpc-api
 description: "oRPC API on Cloudflare Workers: contract-first REST + SSE + WebSockets that don't lose data, with Fern SDKs, CLI and docs. Driven by mise."
 aux_links:

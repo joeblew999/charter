@@ -79,6 +79,9 @@ func docsLint(args []string) error {
 		if !strings.HasPrefix(text, "---\n") || !strings.Contains(strings.SplitN(text, "\n---", 2)[0], "title:") || !strings.Contains(strings.SplitN(text, "\n---", 2)[0], "nav_order:") {
 			say(page, "no front matter with title and nav_order (the sidebar needs them)")
 		}
+		if filepath.Base(page) == "README.md" && filepath.Dir(page) == docs && !strings.Contains(strings.SplitN(text, "\n---", 2)[0], "permalink: /") {
+			say(page, "the start page needs `permalink: /` in its front matter, or the site has no home page")
+		}
 		if strings.Contains(text, "{{") || strings.Contains(text, "{%") {
 			say(page, "two curly braces together, or a curly brace and a percent sign: Jekyll reads those as template code")
 		}

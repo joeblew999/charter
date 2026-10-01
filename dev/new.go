@@ -288,6 +288,7 @@ func projectDocs(name string) string {
 	return `---
 title: Start here
 nav_order: 1
+permalink: /
 ---
 
 # ` + name + `

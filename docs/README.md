@@ -1,6 +1,7 @@
 ---
 title: Start here
 nav_order: 1
+permalink: /
 ---
 
 # Docs
