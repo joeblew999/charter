@@ -2,6 +2,7 @@ package humaworkers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -150,5 +151,49 @@ func TestSpecsRegisterEveryRouteAndHiddenOnesStayOutOfOpenAPI(t *testing.T) {
 		if n != 1 {
 			t.Errorf("%s registered %d times", id, n)
 		}
+	}
+}
+
+// The reporter's shape: the request as posted, kept next to the validated one.
+type rawInput struct {
+	ID   string `path:"id"`
+	Body struct {
+		Name string `json:"name" minLength:"2"`
+	}
+	RawBody []byte
+}
+
+func TestABodyWithARawBodyIsJSONOnlyInTheSpec(t *testing.T) {
+	api := New(Config("t", "1"), []Route{
+		{Method: http.MethodPost, Path: "/things/{id}", Register: func(api huma.API) {
+			huma.Register(api, huma.Operation{OperationID: "both", Method: http.MethodPost, Path: "/things/{id}"},
+				func(_ context.Context, in *rawInput) (*thingOutput, error) {
+					out := &thingOutput{}
+					out.Body.ID = in.Body.Name + " " + string(in.RawBody)
+					return out, nil
+				})
+		}},
+		// A RawBody by itself is the operation's body: it stays.
+		{Method: http.MethodPut, Path: "/blobs/{id}", Register: func(api huma.API) {
+			huma.Register(api, huma.Operation{OperationID: "rawOnly", Method: http.MethodPut, Path: "/blobs/{id}"},
+				func(context.Context, *struct{ RawBody []byte }) (*struct{}, error) { return nil, nil })
+		}},
+	})
+	doc := api.OpenAPI()
+	content := doc.Paths["/things/{id}"].Post.RequestBody.Content
+	if len(content) != 1 || content["application/json"] == nil || content["application/json"].Schema == nil {
+		t.Errorf("Body + RawBody: request content %v, want application/json only", content)
+	}
+	if content := doc.Paths["/blobs/{id}"].Put.RequestBody.Content; len(content) != 1 || content["application/octet-stream"] == nil {
+		t.Errorf("RawBody alone: request content %v, want application/octet-stream", content)
+	}
+	// The handler still gets both: the validated body and the bytes as posted.
+	posted := `{ "name" :  "abc" }`
+	req := httptest.NewRequest(http.MethodPost, "/things/1", strings.NewReader(posted))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	api.ServeHTTP(rec, req)
+	if want, _ := json.Marshal("abc " + posted); rec.Code != 200 || !strings.Contains(rec.Body.String(), string(want)) {
+		t.Errorf("HTTP %d %s", rec.Code, rec.Body)
 	}
 }

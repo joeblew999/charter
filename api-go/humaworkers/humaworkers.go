@@ -192,10 +192,27 @@ func match(pattern, path string) (map[string]string, bool) {
 	return values, true
 }
 
+// jsonOnly takes application/octet-stream out of op's request body when it is there only because
+// the input has a RawBody []byte next to its typed Body (the request as posted, kept beside the
+// validated one). Huma 2.39.1 then documents both content types, though only the Body's is read,
+// and Fern's Go generator takes the binary one: the method's request becomes an io.Reader
+// (docs/upstream.md, "Found, not filed"). op is the one in the OpenAPI document. An input with a
+// RawBody alone keeps it: it is its only content.
+func jsonOnly(op *huma.Operation) {
+	const raw = "application/octet-stream"
+	if op.RequestBody == nil || len(op.RequestBody.Content) < 2 {
+		return
+	}
+	if media := op.RequestBody.Content[raw]; media != nil && media.Schema != nil && media.Schema.Type == huma.TypeString && media.Schema.Format == "binary" {
+		delete(op.RequestBody.Content, raw)
+	}
+}
+
 // adapter is what Huma registers operations with.
 type adapter struct{ api *API }
 
 func (ad adapter) Handle(op *huma.Operation, run func(huma.Context)) {
+	jsonOnly(op)
 	ad.api.handlers[op.Method+" "+op.Path] = handler{op, run}
 	ad.api.ops[ad.api.current] = append(ad.api.ops[ad.api.current], op)
 }
