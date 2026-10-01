@@ -244,7 +244,7 @@ func projectMise(source, name, pin string) string {
 		case strings.HasPrefix(line, "["):
 			keep, task = true, ""
 		}
-		if !keep || strings.HasPrefix(line, "API_URL =") || strings.HasPrefix(line, "HARNESS_") || strings.HasPrefix(line, "PORT =") {
+		if !keep || strings.HasPrefix(line, "API_URL =") || strings.HasPrefix(line, "HARNESS_") || strings.HasPrefix(line, "SHOWCASE_") || strings.HasPrefix(line, "PORT =") {
 			continue
 		}
 		out = append(out, line)
@@ -318,7 +318,7 @@ You write the contract in Go; everything else is generated from it.
 
 How it works, what Huma needs on workers-go, the real-time design and the measured costs are documented
 once, in [orpc-api's docs](https://joeblew999.github.io/orpc-api/): the Go packages this project imports
-(` + "`humaworkers`, `asyncapi`, `follow`, `humamcp`" + `) come from there.
+(` + "`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`" + `) come from there.
 `
 }
 

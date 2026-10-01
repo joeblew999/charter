@@ -20,7 +20,7 @@ import (
 
 func init() {
 	commands["with-server"] = command{"-url <url> -start <cmd> [-dir <dir>] -run <cmd>...",
-		"start a server, wait for <url>, run the commands, stop the server ({port} in any of them is a free port)", withServer}
+		"start a server, wait for <url>, run the commands, stop the server ({port} in any of them is a free port, {port2} another)", withServer}
 	commands["migrate-local"] = command{"[-worker orpc-api] [-port <port>]",
 		"apply migrations/*.sql to a running dev server's local D1, each once", migrateLocal}
 	commands["migrate"] = command{"[-worker orpc-api]",
@@ -96,14 +96,16 @@ func withServer(args []string) error {
 		return errors.New("with-server needs -url, -start and at least one -run")
 	}
 	// {port} is a free port, the same one everywhere: several checks can then run at once (two
-	// worktrees, two agents) without agreeing on port numbers.
-	port, err := freePort()
+	// worktrees, two agents) without agreeing on port numbers. {port2} is a second one, for a test
+	// that listens itself (a webhook receiver the server is told about).
+	ports, err := freePorts(2)
 	if err != nil {
 		return err
 	}
-	url, start = strings.ReplaceAll(url, "{port}", port), strings.ReplaceAll(start, "{port}", port)
+	fill := strings.NewReplacer("{port}", ports[0], "{port2}", ports[1])
+	url, start = fill.Replace(url), fill.Replace(start)
 	for i := range runs {
-		runs[i] = strings.ReplaceAll(runs[i], "{port}", port)
+		runs[i] = fill.Replace(runs[i])
 	}
 	stop, err := server(dir, start, url)
 	if err != nil {
@@ -121,12 +123,25 @@ func withServer(args []string) error {
 
 // freePort asks the system for a port nobody is using.
 func freePort() (string, error) {
-	listener, err := net.Listen("tcp", "localhost:0")
+	ports, err := freePorts(1)
 	if err != nil {
 		return "", err
 	}
-	defer listener.Close()
-	return strconv.Itoa(listener.Addr().(*net.TCPAddr).Port), nil
+	return ports[0], nil
+}
+
+// freePorts asks for n different ones: it holds them all before letting any go.
+func freePorts(n int) ([]string, error) {
+	var ports []string
+	for range n {
+		listener, err := net.Listen("tcp", "localhost:0")
+		if err != nil {
+			return nil, err
+		}
+		defer listener.Close()
+		ports = append(ports, strconv.Itoa(listener.Addr().(*net.TCPAddr).Port))
+	}
+	return ports, nil
 }
 
 // workerFlags are what both migrate commands take.
