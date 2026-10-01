@@ -239,7 +239,12 @@ func migrateLocal(args []string) error {
 // more) and applies what is pending.
 func migrate(args []string) error {
 	database := workerFlags("migrate", args, nil) + "-db"
-	out, err := output("api", cf, "d1", "list", "--name", database, "--per-page", "100")
+	// cf is installed per Worker folder: this repo has api/, a project made by `dev new` only api-go/.
+	dir := "api"
+	if !exists(dir) {
+		dir = "api-go"
+	}
+	out, err := output(dir, cf, "d1", "list", "--name", database, "--per-page", "100")
 	if err != nil {
 		return err
 	}
@@ -249,7 +254,7 @@ func migrate(args []string) error {
 	}
 	for _, d := range databases {
 		if d.Name == database {
-			return sh("api", cf, "d1", "migrations", "apply", d.UUID, "--dir", "../migrations")
+			return sh(dir, cf, "d1", "migrations", "apply", d.UUID, "--dir", "../migrations")
 		}
 	}
 	return fmt.Errorf("no D1 database %s yet: deploy its Worker first", database)
