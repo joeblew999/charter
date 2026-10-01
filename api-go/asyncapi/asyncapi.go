@@ -6,7 +6,14 @@
 //     bindings.ws.query;
 //   - Channel.Payload (a value of the message type) becomes the payload of a `receive` operation.
 //
-// The operation is hidden from OpenAPI: Fern reads WebSockets from AsyncAPI only.
+// An operation marked with SendOperation is a message the client sends on a channel: its JSON
+// request body becomes the payload of a `send` operation (Fern's TypeScript client then has a typed
+// send<Message>() on the socket). It is `send: { message, operationId }` of api/src/asyncapi.ts, and
+// the document comes out the same. There the message is the channel procedure's input stream; a
+// Huma operation takes one request, so here it is an operation of its own, the one that handles
+// the message. A channel can so have query parameters and a send side together.
+//
+// Both are hidden from OpenAPI: Fern reads WebSockets from AsyncAPI only.
 package asyncapi
 
 import (
@@ -31,7 +38,20 @@ type Channel struct {
 	Extensions map[string]any
 }
 
-const metadataKey = "asyncapi"
+// Send describes a message the client sends on a channel.
+type Send struct {
+	// Channel is the Name of the channel it is sent on.
+	Channel string
+	// OperationID of the send operation. Default: send<Message>.
+	OperationID string
+	// Message is the message's name in components.messages. Default: the body's schema name.
+	Message string
+}
+
+const (
+	metadataKey     = "asyncapi"
+	sendMetadataKey = "asyncapi.send"
+)
 
 // Operation marks op as a channel: its Path is the channel's address, its Summary and Description
 // the channel's.
@@ -41,6 +61,18 @@ func Operation(op huma.Operation, channel Channel) huma.Operation {
 		op.Metadata = map[string]any{}
 	}
 	op.Metadata[metadataKey] = channel
+	return op
+}
+
+// SendOperation marks op as a message the client sends on a channel: its JSON request body (the
+// input struct's Body) is the message's payload. How the message reaches the operation is the
+// transport's business (api-go/transport gives each frame to a POST on the channel's path).
+func SendOperation(op huma.Operation, send Send) huma.Operation {
+	op.Hidden = true
+	if op.Metadata == nil {
+		op.Metadata = map[string]any{}
+	}
+	op.Metadata[sendMetadataKey] = send
 	return op
 }
 
@@ -120,6 +152,43 @@ func Generate(ops []*huma.Operation, registry huma.Registry, info Info, server s
 			"action":   "receive",
 			"channel":  map[string]any{"$ref": "#/channels/" + channel.Name},
 			"messages": []any{map[string]any{"$ref": "#/channels/" + channel.Name + "/messages/" + message}},
+		}
+	}
+	for _, op := range ops {
+		send, ok := op.Metadata[sendMetadataKey].(Send)
+		if !ok {
+			continue
+		}
+		channel, ok := channels[send.Channel].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("asyncapi: %s %s: sends on %q, which is not a channel", op.Method, op.Path, send.Channel)
+		}
+		var payload *huma.Schema
+		if op.RequestBody != nil && op.RequestBody.Content["application/json"] != nil {
+			payload = op.RequestBody.Content["application/json"].Schema
+		}
+		if payload == nil {
+			return nil, fmt.Errorf("asyncapi: %s %s: a send operation needs a JSON body, the message", op.Method, op.Path)
+		}
+		message := send.Message
+		if message == "" {
+			message = strings.TrimPrefix(payload.Ref, "#/components/schemas/")
+		}
+		if message == "" {
+			return nil, fmt.Errorf("asyncapi: %s %s: name the message (Send.Message): its body has no schema name", op.Method, op.Path)
+		}
+		collect(registry, payload, used)
+		messages[message] = map[string]any{"name": message, "payload": payload}
+		channel["messages"].(map[string]any)[message] = map[string]any{"$ref": "#/components/messages/" + message}
+
+		operationID := send.OperationID
+		if operationID == "" {
+			operationID = "send" + strings.ToUpper(message[:1]) + message[1:]
+		}
+		operations[operationID] = map[string]any{
+			"action":   "send",
+			"channel":  map[string]any{"$ref": "#/channels/" + send.Channel},
+			"messages": []any{map[string]any{"$ref": "#/channels/" + send.Channel + "/messages/" + message}},
 		}
 	}
 	components := map[string]any{"messages": messages}

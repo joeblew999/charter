@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"syscall/js"
 
-	"github.com/syumai/workers-go"
 	"github.com/syumai/workers-go/cloudflare"
 	"github.com/syumai/workers-go/cloudflare/d1"
 
@@ -39,23 +38,6 @@ func env() api.Env {
 			return hub{namespace}, nil
 		},
 	}
-}
-
-// serve cancels the request's context when the client has gone. workers-go runs one request per Go
-// runtime and closes workers.Done() when the response body is closed or cancelled.
-func serve(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithCancel(r.Context())
-		defer cancel()
-		go func() {
-			select {
-			case <-workers.Done():
-				cancel()
-			case <-ctx.Done():
-			}
-		}()
-		h.ServeHTTP(w, r.WithContext(ctx))
-	})
 }
 
 // hub is the NotesHub Durable Object (worker/hub.mjs): one object, named "notes".
