@@ -176,6 +176,10 @@ func newProject(args []string) error {
 	if err := quiet(filepath.Join(into, "api-go"), []string{"GOWORK=off"}, "go", "mod", "tidy"); err != nil {
 		return fmt.Errorf("go mod tidy in the new project: %w", err)
 	}
+	// A new module path sorts differently among the imports: format, so the project's own lint passes.
+	if err := quiet(into, nil, "gofmt", "-w", "api-go", "test/soak-go"); err != nil {
+		return err
+	}
 
 	fmt.Printf(`created %s (module %s/api-go, Worker %s)
 
