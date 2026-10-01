@@ -8,7 +8,7 @@ parent: Guides
 
 This page gets your API running on Cloudflare Workers with its database, and tested there. Read it for the first deploy, and when you set up deploys from GitHub.
 
-You need a Cloudflare account, on the Workers Paid plan for anything beyond a trial ([why](#what-it-costs-to-run)), and the project checked: `mise run check`.
+You need a Cloudflare account ([which plan](#what-it-costs-to-run)), and the project checked: `mise run check`.
 
 This page was written without deploying. The commands are the project's tasks as they are in `mise.toml`, and the results quoted are those recorded for orpc-api's own Go Worker, which is the same code ([findings](../findings.md)). What was run in a new project on 2026-10-01: the build, the local migration, the change of URL, and the remote migration command up to the point where it fails ([below](#migrations)).
 
@@ -116,7 +116,7 @@ mise run cloudflare:secrets    # REMOTE: copies both from fnox into the repo's G
 
 ## What it costs to run
 
-A read costs 6 to 28 ms of CPU and a write about 60 ms, and Workers Free allows 10 ms per request, so plan on Workers Paid. `mise run api-go:bench` measures your own API on Cloudflare; the figures and what they mean are on the docs home page ([what it costs](../README.md#before-you-choose-go-what-it-costs-to-run)) and in [benchmarks](../benchmarks.md).
+A read costs 2 to 7 ms of CPU and a write 10 to 13 ms; the slowest requests cost 9 to 20 ms. Workers Free allows 10 ms per request, so it is enough to try the project, and production wants Workers Paid. `mise run api-go:bench` measures your own API on Cloudflare; the figures and what they mean are on the docs home page ([what it costs](../README.md#before-you-choose-go-what-it-costs-to-run)) and in [benchmarks](../benchmarks.md).
 
 Measure your own Worker as a client sees it:
 

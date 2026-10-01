@@ -17,8 +17,8 @@
 //     Anything but 2xx closes the socket with 1008. Without the header, what the client sends is
 //     ignored.
 //
-// The limit: on Cloudflare the feed and each message run in Go runtimes of their own (workers-go
-// starts one per request), so a message can't change what the feed sends through memory. What must
+// The limit: on Cloudflare the feed and each message run in Go runtimes of their own (a runtime
+// serves one request at a time), so a message can't change what the feed sends through memory. What must
 // be shared goes through a binding, a Durable Object or a database, as the notes hub does.
 package transport
 

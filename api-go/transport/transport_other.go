@@ -13,7 +13,13 @@ import (
 	"sync"
 
 	"github.com/coder/websocket"
+	"github.com/syumai/workers-go"
 )
+
+// Run serves h as a plain HTTP server on :9900 (or $PORT): workers-go's native build.
+func Run(h http.Handler) {
+	workers.Serve(Serve(h))
+}
 
 // Serve is the native WebSocket adapter, the same job as worker/websocket.mjs on Cloudflare: see
 // the package comment for what the API answers an upgrade with.

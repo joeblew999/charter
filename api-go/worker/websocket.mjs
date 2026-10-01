@@ -15,8 +15,8 @@
 //     sends is ignored.
 //
 // Which paths are WebSockets, their input, their feed and their messages are all Go's business.
-// Every call to Go is a Go runtime of its own (workers-go), so a message can't reach the feed
-// through memory: what they share goes through a binding.
+// Every call to Go may be in a Go runtime of its own (go.mjs), so a message can't count on reaching
+// the feed through memory: what they share goes through a binding.
 export async function webSocket(goWorker, request, env, ctx) {
 	const answer = await goWorker.fetch(request, env, ctx);
 	if (!answer.ok) return answer;

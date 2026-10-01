@@ -7,7 +7,7 @@ nav_order: 2
 
 About fifteen minutes. You end with a Go API running on Cloudflare Workers, tested there, with a generated TypeScript SDK. Every command below was run as written.
 
-You need [mise](https://mise.jdx.dev) and Go. For step 5 you need a Cloudflare account, on the Workers Paid plan for anything beyond a trial: a read costs 6 to 28 ms of CPU, against the Free plan's 10 ms ([what it costs](README.md#before-you-choose-go-what-it-costs-to-run)).
+You need [mise](https://mise.jdx.dev) and Go. For step 5 you need a Cloudflare account. The Free plan is enough to try it: a read costs 2 to 7 ms of CPU against the plan's 10 ms, a write 10 to 13 ms ([what it costs](README.md#before-you-choose-go-what-it-costs-to-run)).
 
 ## 1. Create the project
 

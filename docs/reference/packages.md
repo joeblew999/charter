@@ -30,7 +30,7 @@ In the signatures, `huma` is `github.com/danielgtaylor/huma/v2`.
 
 ## humaworkers
 
-A Huma API whose operations are registered only when a request needs them. On Workers a fresh Go runtime starts for every request, so registering every operation at start-up would be paid on every request ([Go on Cloudflare Workers](../concepts/workers-go.md)). It also matches routes itself and leaves out the one Huma hook that TinyGo cannot run.
+A Huma API whose operations are registered only when a request needs them. On Workers a Go runtime serves only a few requests, so registering every operation at start-up would be paid again and again ([Go on Cloudflare Workers](../concepts/workers-go.md)). It also matches routes itself and leaves out the one Huma hook that TinyGo cannot run.
 
 | Name | Signature | What it does |
 |---|---|---|
@@ -66,7 +66,7 @@ routes := humaworkers.New(humaworkers.Config(Title, Version), Routes(env))
 
 Limits:
 
-- **Build with `-stack-size=256kb`.** Huma overflows TinyGo's default stack. `mise run api-go:build` passes it.
+- **Build with `-stack-size=128kb` or more.** Huma overflows TinyGo's default stack. `mise run api-go:build` passes 128 KB.
 - **Form values are strings.** With `WithForm`, the fields of the `Body` must be strings, or lists of strings for a repeated name.
 - **Uploads stay in memory, up to 32 MB.** A Worker has no disk. Importing the package sets Huma's limit (`humago.MultipartMaxMemory`).
 - **Huma's typed multipart form does not run under TinyGo.** Take the plain `multipart.Form` and declare its schema on the operation, as `api-go/showcase/contract.go` does in the orpc-api repo.
@@ -216,7 +216,8 @@ What goes around the handler so that Go can serve WebSockets. In both builds Go 
 
 | Name | Signature | What it does |
 |---|---|---|
-| `Serve` | `func Serve(h http.Handler) http.Handler` | Natively: the WebSocket adapter. Under TinyGo for Workers: it only cancels the request's context when the client has gone, and the adapter is the JavaScript file |
+| `Run` | `func Run(h http.Handler)` | Serves the handler and never returns: `Serve` around it, then workers-go. On Workers the Go runtime stays alive after a response, so `api-go/worker/go.mjs` can give it the next request. Natively it is a plain HTTP server on `:9900` or `$PORT` |
+| `Serve` | `func Serve(h http.Handler) http.Handler` | Natively: the WebSocket adapter. Under TinyGo for Workers: it cancels the request's context when the client has gone, and tells `go.mjs` when the runtime's heap has no room for another request; the WebSocket adapter is the JavaScript file |
 | `MessagesHeader` | `const MessagesHeader = "X-Websocket-Messages"` | The header that, on the answer to an upgrade, says how the channel takes what the client sends |
 | `MessagesPost` | `const MessagesPost = "post"` | Its one value: every text frame from the client becomes a `POST` to the upgrade's URL |
 
@@ -233,13 +234,14 @@ A minimal use, the whole of `main` in `api-go/main.go`:
 
 ```go
 func main() {
-	workers.Serve(transport.Serve(api.Handler(env())))
+	transport.Run(api.Handler(env()))
 }
 ```
 
 Limits:
 
-- **On Cloudflare the feed and each message run in Go runtimes of their own.** A message cannot change what the feed sends through memory. What they share goes through a binding: a Durable Object or a database.
+- **On Cloudflare the feed and each message run in Go runtimes of their own.** A message cannot change what the feed sends through memory.
+- **`Run` needs the project's Worker entry.** With workers-go's own entry (`build/worker.mjs`) it works, one runtime per request as before, and gains nothing. What they share goes through a binding: a Durable Object or a database.
 - **Text frames only.** Natively a binary frame on a channel that takes messages closes the socket.
 - **A line is at most 1 MB natively.**
 

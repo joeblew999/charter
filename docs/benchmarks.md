@@ -13,44 +13,60 @@ Measured on 2026-10-01 on Cloudflare, with the two Workers serving the same API 
 
 CPU time per request, median:
 
-| Operation | oRPC Worker (`orpc-api`) | Go Worker, TinyGo as it is | Go Worker, tuned build: the faster runs | Go Worker, tuned build: the slower runs |
+| Operation | oRPC Worker (`orpc-api`) | Go Worker, TinyGo and workers-go as they come | Go Worker, tuned build only | Go Worker now: tuned build and reused runtimes |
 |---|---|---|---|---|
-| `GET /api/hello` | 1 ms | 55 ms | 6 to 8 ms | 14 to 19 ms |
-| `GET /api/notes` (D1) | 1 to 3 ms | 71 ms | 8 to 11 ms | 22 to 29 ms |
-| A path that does not exist (404) | not measured | 38 ms | 5 to 7 ms | 12 to 17 ms |
-| `POST /api/notes` (D1 write and hub publish) | not measured | about 265 ms | not measured | 61 to 66 ms |
+| `GET /api/hello` | 1 ms | 55 ms | 6 to 19 ms | 3 ms |
+| `GET /api/notes` (D1) | 1 to 3 ms | 71 ms | 8 to 29 ms | 7 ms |
+| A path that does not exist (404) | not measured | 38 ms | 5 to 17 ms | 2 ms |
+| `POST /api/notes` (D1 write and hub publish) | not measured | about 265 ms | 61 to 66 ms | 10 to 13 ms |
 
-The tuned build is what `mise run api-go:build` makes and what is deployed. The two columns for it are whole runs of `mise run api-go:bench`, minutes apart, on the same build: every run landed in one range or the other. The two runs made for this page were both in the slower one:
+The last column is what a project made by `dev new` gets. Two runs of `mise run api-go:bench` with writes, each right after a deploy:
 
 | Operation | Wall median | Wall slowest | CPU median | CPU p99 |
 |---|---|---|---|---|
-| `GET /api/hello` | 37.5 ms | 54.1 ms | 14 ms | 39 ms |
-| `GET /api/notes` | 85.4 ms | 110.7 ms | 28 ms | 43 ms |
-| `POST /api/notes` | 172.4 ms | 467.8 ms | 61 ms | 78 ms |
-| A path that does not exist | 46.5 ms | 184.6 ms | 12 ms | 31 ms |
+| `GET /api/hello` | 16.5 ms | 46.5 ms | 3 ms | 13 to 14 ms |
+| `GET /api/notes` | 55.7 ms | 79.7 ms | 7 ms | 16 ms |
+| `POST /api/notes` | 103.7 ms | 196.8 ms | 10 to 13 ms | 17 to 20 ms |
+| A path that does not exist | 16.7 ms | 27.9 ms | 2 ms | 9 to 16 ms |
 
 The oRPC Worker in the same hour: hello 13.1 ms wall and 1 ms CPU, the list 49.7 ms wall and 1 ms CPU.
 
-The Go showcase Worker (`orpc-showcase-go`: every Fern feature, a bearer token checked with HMAC on every request), tuned build: a list 14 to 15 ms, a create 15 to 18 ms, a 404 7 to 12 ms.
+The Go showcase Worker (`orpc-showcase-go`: every Fern feature, a bearer token checked with HMAC on every request): a list 2 ms (p99 13), a create 5 ms (p99 10), a 404 2 ms. With the tuned build only they were 14 to 15, 15 to 18 and 7 to 12 ms.
 
 What this means:
 
-- **The tuned build costs a third to an eighth of what TinyGo's own build cost.** Nothing in the API changed: the same code, the same tests.
+- **A read costs 2 to 7 ms and a write 10 to 13 ms.** That is 10 to 20 times less than TinyGo and workers-go as they come. Nothing in the API changed: the same code, the same tests.
 - **It is still several times the oRPC Worker,** which uses about 1 ms.
-- **Workers Free's limit is 10 ms of CPU per request.** The faster runs fit for reads; the slower runs and every write do not. Plan on Workers Paid, where CPU is billed per millisecond and the default limit is 30 s.
-- **Why two ranges is not established.** It did not depend on the optimisation level (`-opt=2` measured the same as `-opt=z`) or on whether the run wrote data. The likely cause is that Cloudflare runs the Worker on many machines and each optimises the Wasm on its own schedule; that was not verified ([plans/performance.md](plans/performance.md)).
-- **The slowest requests cost about 40 ms** (the 99th percentile) in either range.
+- **Workers Free's limit is 10 ms of CPU per request.** Reads fit. Writes are at the limit and the slowest requests are over it. Free is enough to try a project; plan on Workers Paid for production.
+- **A client sees almost no difference:** 16.5 ms for a hello against 13.1 ms from the oRPC Worker.
 
 ## What made it cheaper
 
-TinyGo's collector ran far more often than a Worker needs:
+Request by request, the CPU time of a hello looks like this (Workers Logs, one line per build):
 
-- **A full collection at every pause.** TinyGo collects whenever the program waits and 32 objects with finalizers were made since the last time. workers-go makes one for every JavaScript value it touches, and a request waits many times: for its body, for D1, for the hub.
-- **A collection each time the heap grows.** TinyGo starts with a heap of a few pages.
+```
+TinyGo and workers-go as they come   55 55 43 67 20 60 56 57
+tuned build, new isolate             12 30 12 30 13 31 11 28 12 26 ...
+tuned build, isolate in use a while   5 13  6 12  5 13  5 12  6 11 ...
+tuned build and reused runtimes       3  3  6  3  3 13  2  3  5  2  3  9 ...
+```
 
-`dev wasm-build` builds against a copy of TinyGo's runtime with that threshold set to 0, and with a starting heap of 8 MB ([the dev tool](reference/dev.md#wasm-build)). The collector still runs when the heap is full, so a stream that lives for hours is still collected. Reported as [tinygo-org/tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800).
+Three things, in the order they were found:
 
-The same Wasm under `cf dev` on an Apple M-series Mac, time inside the Worker per request (4 requests each, 2026-10-01):
+1. **TinyGo's collector ran at every pause.** TinyGo collects whenever the program waits and 32 objects with finalizers were made since the last time. workers-go makes one for every JavaScript value it touches, and a request waits many times: for its body, for D1, for the hub. It also collects each time its small starting heap must grow. `dev wasm-build` builds against a copy of TinyGo's runtime with that threshold at 0 and with a starting heap of 8 MB ([the dev tool](reference/dev.md#wasm-build)). Reported as [tinygo-org/tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800). That is the second and third line.
+2. **Every second request cost double, and a new isolate cost double again.** workers-go starts a Go runtime for each request and drops it. The JavaScript engine then has an 8 MB memory to clear away per request, and the Wasm is not yet optimised in an isolate that has just started.
+3. **Reusing a runtime removes both,** and the start-up of Go with them. `api-go/worker/go.mjs` keeps a runtime that has finished a request for the next one. That is the last line: the higher values are the requests that start a new runtime.
+
+Why a runtime is reused only a few times: a request's memory is mostly goroutine stacks, and TinyGo's collector rarely frees them. Measured under `cf dev`, with 256 KB stacks:
+
+| | Allocated per request | In use after 9 hellos, collector run |
+|---|---|---|
+| A hello | 3.4 MB (about 13 stacks) | TinyGo as it is: 23 MB after 14 collections |
+| A create | 8 MB (about 30 stacks) | |
+
+A runtime that was reused without limit had collections costing 65, 148, 175 and 293 ms of CPU, then ran out of memory. So the Go side counts what each request allocates and says when the heap has no room for another (`transport.Serve`), and the runtime is dropped before the collector runs. With stacks of 128 KB a hello allocates 1.7 MB, so a runtime serves about three of them.
+
+The same Wasm under `cf dev` on an Apple M-series Mac, time inside the Worker per request (4 requests each, 2026-10-01, runtimes not reused, 256 KB stacks). It shows what the patch and the heap each do:
 
 | Build | 404 | hello | list 20 (D1) | openapi.json | create |
 |---|---|---|---|---|---|
@@ -64,7 +80,6 @@ The same Wasm under `cf dev` on an Apple M-series Mac, time inside the Worker pe
 
 - **Both changes are needed.** The patch alone helps only the D1 read; the heap does the rest.
 - **8 MB is enough.** 16 MB measured the same.
-- **The tuned build is as fast as having no collector,** and still collects.
 
 ## Other build options, measured before the fix
 
@@ -102,6 +117,6 @@ go run ./dev bench <url>      # any server: a local cf dev, the native build. Wa
 - **`-write`** adds the operations that change data, with the example of each request body.
 - **`-header 'Authorization: Bearer <token>'`** sends a header with every request, for an API that needs a token.
 - **`-cpu`** needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (the environment, or fnox) and waits up to two minutes for Cloudflare's logs.
-- **Run it more than once.** One run shows one of the two ranges above.
+- **To see each request,** not the median: Workers Logs in the dashboard, the field `$workers.cpuTimeMs`.
 
 Every flag is in [the dev tool](reference/dev.md#bench).

@@ -52,7 +52,7 @@ The remote tasks use `API_GO_URL`, which defaults to this repo's deployed Worker
 | `api-go/transport/` | **Import it.** What goes around the handler so Go can serve WebSockets: natively the adapter itself, on Workers the cancel when the client has gone. Its package comment is the rule both adapters follow |
 | `api-go/main.go`, `api-go/platform_js.go` | The Worker: bindings (D1, the hub, variables) through workers-go |
 | `api-go/platform_other.go` | The native build: one in-memory store and hub for the process |
-| `api-go/worker/index.mjs`, `api-go/worker/websocket.mjs`, `api-go/worker/hub.mjs`, `api-go/worker/tinygo-clock.mjs` | What must be JavaScript: the entry, the WebSocket adapter, the hub Durable Object class (hibernating WebSockets), and the fix that makes Go timers fire on Cloudflare |
+| `api-go/worker/index.mjs`, `api-go/worker/go.mjs`, `api-go/worker/websocket.mjs`, `api-go/worker/hub.mjs`, `api-go/worker/tinygo-clock.mjs` | What must be JavaScript: the entry, the runner that reuses Go runtimes between requests, the WebSocket adapter, the hub Durable Object class (hibernating WebSockets), and the fix that makes Go timers fire on Cloudflare |
 | `api-go/showcase/`, `api-go/cmd/showcase/`, `api-go/cmd/showcase-spec/` | The Go showcase: a second API and its server in the same module ([showcase-go.md](showcase-go.md)) |
 | `api-go/cloudflare.config.ts` | The Worker `orpc-api-go`: D1 (`DB`), the hub (`HUB`), `APP_NAME` |
 | `api-go/build/` | Gitignored: the TinyGo Wasm and workers-go's glue (`mise run api-go:build`) |
@@ -90,7 +90,7 @@ Huma works, with four things done on our side (in `api-go/humaworkers/`, `api-go
 
 | Problem | What happens without | What we do |
 |---|---|---|
-| TinyGo's default stack is too small for Huma | `memory access out of bounds` on the first request | Build with `-stack-size=256kb` |
+| TinyGo's default stack is too small for Huma | `memory access out of bounds` on the first request | Build with `-stack-size=128kb` (`dev wasm-build` does) |
 | Huma's default config installs a hook that calls `reflect.StructOf`, which TinyGo lacks | `panic: unimplemented: reflect.StructOf()` | `humaworkers.Config` leaves the hook out (it only adds `$schema` links). It also switches off Huma's built-in `/openapi`, `/docs` and `/schemas` routes |
 | TinyGo's `http.ServeMux` doesn't match method patterns (`"GET /path"`), which Huma's net/http adapter registers | every route is 404 | `humaworkers` matches routes itself |
 | **Go timers hang on Cloudflare** (not under local workerd): the production clock moves by a `setTimeout`'s delay rounded down to a millisecond, and TinyGo sleeps for fractions | streams don't end at their deadline about half the time; `time.Sleep` and context timeouts stall | `api-go/worker/tinygo-clock.mjs` rounds TinyGo's sleeps up to a whole millisecond |
@@ -100,7 +100,7 @@ Two more, met by the Go showcase's file upload ([showcase-go.md](showcase-go.md#
 - **TinyGo has no `reflect.Value.MethodByName`,** which Huma's typed multipart form (`huma.MultipartFormFiles[T]`) calls. Take the plain `multipart.Form` and declare its schema on the operation.
 - **A Worker has no disk,** and Huma's adapter writes an upload over 8 KB to a temporary file. `humaworkers` keeps uploads in memory, up to 32 MB.
 
-One design point: **workers-go starts a fresh Go runtime for every request.** Registering every Huma operation at start-up would be paid on every request, so `humaworkers` registers only the operation a request matches. Specs and `tools/list` register them all.
+One design point: **a Go runtime serves only a few requests** (`api-go/worker/go.mjs` reuses one while its heap has room; workers-go on its own starts one per request). Registering every Huma operation at start-up would be paid each time a runtime starts, so `humaworkers` registers an operation when a request first matches it. Specs and `tools/list` register them all.
 
 Two things workers-go can't do, and where they went:
 
@@ -115,7 +115,7 @@ Started without the task (`go run .` in `api-go/`), it listens on `PORT`, or on 
 
 ## Cost
 
-It passes the same tests as the oRPC Worker, and it costs more to run: on Cloudflare a read uses 6 to 28 ms of CPU and a write about 60 ms, against about 1 ms for the oRPC Worker. That is with the tuned build (`dev wasm-build`, which `mise run api-go:build` runs); TinyGo as it is costs 40 to 70 ms for a read. The numbers and how to measure your own are in [benchmarks.md](benchmarks.md); why, in [concepts/workers-go.md](concepts/workers-go.md).
+It passes the same tests as the oRPC Worker, and it costs more to run: on Cloudflare a read uses 2 to 7 ms of CPU and a write 10 to 13 ms, against about 1 ms for the oRPC Worker. That is with the tuned build (`dev wasm-build`) and the Worker entry that reuses Go runtimes (`api-go/worker/go.mjs`); TinyGo and workers-go as they come cost 40 to 70 ms for a read. The numbers and how to measure your own are in [benchmarks.md](benchmarks.md); why, in [concepts/workers-go.md](concepts/workers-go.md).
 
 ## Differences from the oRPC Worker
 
@@ -134,7 +134,7 @@ Fern sees the same API: the same operations, parameters, constraints, `x-fern-*`
 Run `go run github.com/joeblew999/orpc-api/dev@latest new -name <name>` ([dev.md](dev.md#a-new-project-dev-new)). It does the three steps below, and what follows is what you then own:
 
 1. **The contract as Huma operations,** as in `api-go/api/contract.go`: one `humaworkers.Route` per operation, with `asyncapi.Operation(...)` around the WebSocket ones. For OAuth, idempotency, file upload, webhooks or a WebSocket the client also sends on, see the Go showcase ([showcase-go.md](showcase-go.md)).
-2. **The packages as imports** (`go get github.com/joeblew999/orpc-api/api-go`): `humaworkers`, `asyncapi`, `follow`, `hub`, `humamcp`, `transport` and `specfile`. Copied, because they are yours to change: `api-go/worker/` (the entry, the WebSocket adapter, the hub and the clock fix), `api-go/cmd/spec/` and the two `platform_*.go` files.
+2. **The packages as imports** (`go get github.com/joeblew999/orpc-api/api-go`): `humaworkers`, `asyncapi`, `follow`, `hub`, `humamcp`, `transport` and `specfile`. Copied, because they are yours to change: `api-go/worker/` (the entry, the runner, the WebSocket adapter, the hub and the clock fix), `api-go/cmd/spec/` and the two `platform_*.go` files.
 3. **`sdk/fern/apis/api-go/` as your API's Fern folder,** plus the `api-go:*` and `sdk:*` tasks.
 
 Then have clients follow the client rule in [realtime.md](realtime.md#what-a-client-does).

@@ -27,7 +27,7 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 	if first, _, _ := strings.Cut(said, "\n"); !strings.HasPrefix(first, "dev (not a release: built from a checkout), copying from "+repo+": pins the dev tool to latest in mise.toml") {
 		t.Errorf("first line: %q", first)
 	}
-	for _, want := range []string{"https://billing-api.your-subdomain.workers.dev", "mise.local.toml as API_GO_URL", "mise run api-go:spec", "6 to 28 ms of CPU", replaceGuide} {
+	for _, want := range []string{"https://billing-api.your-subdomain.workers.dev", "mise.local.toml as API_GO_URL", "mise run api-go:spec", "2 to 7 ms of CPU", replaceGuide} {
 		if !strings.Contains(said, want) {
 			t.Errorf("new does not say %q:\n%s", want, said)
 		}

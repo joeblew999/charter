@@ -245,7 +245,7 @@ huma.Register(api, asyncapi.SendOperation(huma.Operation{
 
 The upgrade handler answers 204 with the header `X-Websocket-Messages: post` (`transport.MessagesPost`), which tells the Worker's adapter that the channel takes messages. Each text frame from the client then becomes a POST to the same path, with the upgrade's headers, and the lines of the answer go back as frames. Anything but 2xx to a message closes the socket with 1008.
 
-Two limits. On Cloudflare every call to Go is a fresh Go runtime, so a message cannot change what a feed in another call sends; share state through a binding (a database, a Durable Object). Messages are handled one at a time, in order. Details: the repo's [showcase page](../showcase-go.md#the-websocket-both-ways).
+Two limits. On Cloudflare every call to Go may be in a Go runtime of its own, so a message cannot change what a feed in another call sends; share state through a binding (a database, a Durable Object). Messages are handled one at a time, in order. Details: the repo's [showcase page](../showcase-go.md#the-websocket-both-ways).
 
 **Check it.** The two operations are in the AsyncAPI spec, and neither is in OpenAPI (a run of the showcase):
 

@@ -34,7 +34,7 @@ In another Huma project: `humamcp.Handler(api)` with a `*humaworkers.API`, mount
 | Decision | Why |
 |---|---|
 | No MCP SDK: the Streamable HTTP transport is written out (JSON-RPC in one POST, one `application/json` answer) | The official Go SDK doesn't compile with TinyGo ([findings.md](findings.md)), and a tools-only server needs nothing else |
-| No state | workers-go starts a fresh Go runtime per request, so there can be no session. Revision 2026-07-28 made MCP stateless, and the handshake revisions let a server decline to give a session id |
+| No state | A Go runtime serves only a few requests and two requests may be in two runtimes, so there can be no session. Revision 2026-07-28 made MCP stateless, and the handshake revisions let a server decline to give a session id |
 | A tool call builds an `http.Request` and runs it through `humaworkers.API.ServeHTTP` | One code path: Huma's validation, `Resolve`, middleware and the handler are the REST ones. Nothing is validated twice or differently |
 | Both eras are answered | Clients are mid-migration: the TypeScript client 2.x speaks both, and the 1.x SDK opens with `initialize` |
 | Arguments are flat | It is what a model writes most easily, and it is oRPC's input shape, so both servers could expose the same tool schemas. When a parameter and a body property share a name, that one operation keeps its body under `body`, so both values have a place |

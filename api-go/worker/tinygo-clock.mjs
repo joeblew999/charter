@@ -11,7 +11,7 @@
 //
 // So every sleep TinyGo asks for is rounded UP to a whole millisecond.
 const TinyGo = globalThis.Go;
-if (!TinyGo) throw new Error("tinygo-clock.mjs: import build/worker.mjs (wasm_exec.js) first");
+if (!TinyGo) throw new Error("tinygo-clock.mjs: import build/wasm_exec.js first");
 
 globalThis.Go = class extends TinyGo {
 	constructor() {

@@ -107,6 +107,7 @@ billing-api/
 │   ├── vite.config.ts           the dev server's port
 │   ├── worker/
 │   │   ├── index.mjs            the Worker's entry in JavaScript
+│   │   ├── go.mjs               runs the Go Wasm, reusing a Go runtime for the next request
 │   │   ├── websocket.mjs        the WebSocket adapter
 │   │   ├── hub.mjs              the hub: a Durable Object class
 │   │   └── tinygo-clock.mjs     the fix that makes Go timers fire on Cloudflare

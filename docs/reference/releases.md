@@ -95,6 +95,31 @@ mise run check           # every local check
 
 What an update does not touch: the files `dev new` copied into your project. They are yours, and no command updates them: the contract and handlers, `api-go/worker/`, the two `platform_*.go` files, `api-go/cmd/spec/`, the test programs in `test/`, and the tasks in `mise.toml`. A fix to one of those in orpc-api reaches your project only if you copy it. Compare with the [orpc-api repository](https://github.com/joeblew999/orpc-api) when a release's notes mention them.
 
+### Getting the faster Worker in a project made before it
+
+A project made before Go runtimes were reused keeps working after an update, at its old cost: about five times the CPU per request ([Benchmarks](../benchmarks.md)). Three of the copied files carry the change. After updating the tool and the Go packages as above:
+
+1. **The build task** in `mise.toml`, if it still calls `tinygo build` itself:
+
+   ```toml
+   [tasks."api-go:build"]
+   run = "dev wasm-build -dir api-go"
+   ```
+
+2. **`api-go/worker/go.mjs`:** copy it from [orpc-api](https://github.com/joeblew999/orpc-api/blob/main/api-go/worker/go.mjs), and in `api-go/worker/index.mjs` replace the import of `../build/worker.mjs` with:
+
+   ```js
+   import "../build/wasm_exec.js";
+   import * as build from "../build/runtime.mjs";
+   import { goWorker } from "./go.mjs";
+   ```
+
+   and, below the imports, `const go = goWorker(build);`. Use `go` where the file used `goWorker`.
+
+3. **`api-go/main.go`:** `transport.Run(api.Handler(env()))` in place of `workers.Serve(transport.Serve(api.Handler(env())))`, so the Go program stays alive after a response.
+
+Then `mise run check`, deploy, and `mise run api-go:bench`. One thing to read first: a package variable can now hold what an earlier request left there ([Go on Cloudflare Workers](../concepts/workers-go.md#a-go-runtime-lives-for-a-few-requests)).
+
 ## What compatibility is promised
 
 None. The releases are `v0` versions, and under semantic versioning a `v0` release may change anything. Between two releases the exported names of the Go packages, the tool's commands and flags, the tasks and the workflow templates can all change. The release notes are generated from the commits: there is no separate list of breaking changes. Pin exact versions, update on purpose, and run `mise run check` after.

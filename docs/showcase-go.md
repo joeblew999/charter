@@ -110,7 +110,7 @@ workers-go can't answer a WebSocket upgrade, so Go answers it with plain HTTP an
 
 Why this way: a message is an ordinary Huma operation. Its body is the message, so Huma validates it against the contract, the same middleware authorizes it (the upgrade's headers and query come with every message), and `asyncapi.SendOperation` writes it into the AsyncAPI spec. There is nothing to configure in JavaScript: which paths are sockets and what they take stays in Go.
 
-The limit: on Cloudflare every call to Go is a fresh Go runtime. The feed and each message can't share memory, so a message can't change what the feed sends. What they must share goes through a binding (a Durable Object, a database), as the notes hub does. In the showcase the answer to `subscribe` is sent in the message's own reply, so the socket needs no Go runtime between messages. Messages are handled one at a time, in order.
+The limit: on Cloudflare every call to Go may be in a Go runtime of its own. The feed and each message can't count on shared memory, so a message can't change what the feed sends. What they must share goes through a binding (a Durable Object, a database), as the notes hub does. In the showcase the answer to `subscribe` is sent in the message's own reply, so the socket needs no Go runtime between messages. Messages are handled one at a time, in order.
 
 ## TinyGo: what it took
 

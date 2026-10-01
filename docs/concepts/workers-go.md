@@ -15,7 +15,7 @@ A Worker runs JavaScript and WebAssembly, not native programs. So the Go code is
 ```mermaid
 flowchart LR
     R["Request"] --> J["api-go/worker/index.mjs<br/>(JavaScript entry)"]
-    J --> G["A fresh Go runtime<br/>(TinyGo Wasm)"]
+    J --> G["A Go runtime<br/>(TinyGo Wasm)"]
     G --> H["Your handler<br/>(Huma)"]
     H --> D["D1: the database"]
     H --> U["The hub<br/>(a Durable Object)"]
@@ -23,25 +23,28 @@ flowchart LR
 
 The API itself is ordinary Go: [Huma](https://huma.rocks) operations and handlers on `net/http` types ([Contract first](contract-first.md)).
 
-## A fresh Go runtime for every request
+## A Go runtime lives for a few requests
 
-This is the difference that shapes everything else. A normal Go server is one process that starts once and serves requests for days. Here, workers-go starts a new Go runtime for each request, and it is gone when the response ends.
+This is the difference that shapes everything else. A normal Go server is one process that starts once and serves requests for days. Here a Go runtime serves a few requests, one at a time, and is then replaced by a new one. Two requests at the same moment are in two runtimes.
 
 What follows from that:
 
-- **No memory between requests.** A package variable, a cache in a map, a connection pool, a counter: each starts empty on every request. Two requests never see each other's memory, even one second apart.
+- **Do not count on memory between requests.** A package variable, a cache in a map, a counter: the next request may be in a runtime where it is empty.
+- **Do not count on memory being empty either.** The next request may be in the same runtime and see what the last one left in a package variable. As in any Go server, never keep one caller's data there.
 - **State goes in a binding.** What must outlast a request is stored in D1 (the database), and what must be shared live between requests goes through a Durable Object. The notes example does both: D1 is the log of notes, and one Durable Object, the hub, tells open streams that a new note exists.
-- **No background work.** A goroutine cannot outlive its request. There is no place for a ticker, a queue worker or a warm-up.
-- **Start-up is paid every time.** Everything a Go program does before `main` serves, it does on each request. This is where most of the cost below comes from, and why the `humaworkers` package registers only the one operation a request matches ([Go packages](../reference/packages.md#humaworkers)).
-- **A stream is one long request.** An SSE stream or a WebSocket feed keeps its runtime for as long as it is open. A WebSocket's feed and each message the client sends on it run in runtimes of their own, so they too share nothing through memory.
+- **No background work.** A goroutine must not outlive its request. There is no place for a ticker, a queue worker or a warm-up.
+- **Start-up is paid often.** Everything a Go program does before `main` serves, it does each time a runtime starts: every third request or so. This is why the `humaworkers` package registers an operation only when a request first matches it ([Go packages](../reference/packages.md#humaworkers)).
+- **A stream is one long request.** An SSE stream or a WebSocket feed keeps its runtime for as long as it is open. A WebSocket's feed and each message the client sends on it run in runtimes of their own, so they share nothing through memory.
+
+Why only a few requests: TinyGo gives every goroutine, and every call from JavaScript into Go, a stack of its own (128 KB here), and its collector rarely gets that memory back. A hello uses about 1.7 MB of an 8 MB heap. So a runtime is reused while its heap has room for another request, and dropped before the collector would have to run: a collection in a full heap costs far more than starting a new runtime. `api-go/worker/go.mjs` does the reusing, and the Go side says when it is full (`transport.Serve`). workers-go on its own starts a runtime for every request.
 
 ## What Go cannot do there, and what does it instead
 
-Three things are JavaScript because Go cannot do them on Workers. They are four small files in `api-go/worker/`, copied into your project, and you rarely touch them.
+Four things are JavaScript because Go cannot do them on Workers. They are five small files in `api-go/worker/`, copied into your project, and you rarely touch them.
 
 | Go cannot | What does it instead | File |
 |---|---|---|
-| Be the Worker's entry | A few lines of JavaScript receive each request and hand it to the Go Wasm | `api-go/worker/index.mjs` |
+| Be the Worker's entry | A few lines of JavaScript receive each request and hand it to a Go runtime: one that is waiting, or a new one | `api-go/worker/index.mjs`, `api-go/worker/go.mjs` |
 | Answer a WebSocket upgrade | Go answers the upgrade with a plain stream of lines, one JSON message per line. The adapter opens the socket and sends each line as a frame. What the client sends reaches Go as a `POST` | `api-go/worker/websocket.mjs` |
 | Be a Durable Object class | The hub is a small JavaScript class with hibernating WebSockets. It stores nothing. Go calls it to publish, and subscribes to it over a WebSocket | `api-go/worker/hub.mjs` |
 | Rely on its timers | On Cloudflare (not under the local runtime) Go timers stalled about half the time: `time.Sleep`, timers and context deadlines hung. The fix rounds every sleep TinyGo asks for up to a whole millisecond | `api-go/worker/tinygo-clock.mjs` |
@@ -54,7 +57,7 @@ TinyGo is not the standard Go compiler, and some of the standard library is miss
 
 | Gap | What you see | What the project does |
 |---|---|---|
-| The default stack is too small for Huma | `memory access out of bounds` on the first request | The build passes `-stack-size=256kb` |
+| The default stack is too small for Huma | `memory access out of bounds` on the first request | The build passes `-stack-size=128kb` |
 | No `reflect.StructOf` | `panic: unimplemented: reflect.StructOf()` from a hook in Huma's default config | `humaworkers.Config` leaves that hook out |
 | `http.ServeMux` does not match patterns with a method (`"GET /path"`) | Every route is 404 with Huma's own router | `humaworkers` matches routes itself |
 | No `reflect.Value.MethodByName` | Huma's typed multipart form does not work | Take the plain `multipart.Form` and declare its schema on the operation |
@@ -65,21 +68,21 @@ Expect the same with other libraries: one that leans on `reflect`, on the file s
 
 ## What a request costs
 
-On Cloudflare a read costs 6 to 28 ms of CPU and a write that also notifies the hub about 60 ms. The same API in TypeScript uses about 1 ms. Measured 2026-10-01 on the orpc-api project's two Workers; the numbers per operation are in [Benchmarks](../benchmarks.md), and what they mean for choosing a plan is on the home page: [Before you choose Go](../README.md#before-you-choose-go-what-it-costs-to-run).
+On Cloudflare a read costs 2 to 7 ms of CPU and a write that also notifies the hub 10 to 13 ms; the slowest requests cost 9 to 20 ms. The same API in TypeScript uses about 1 ms. Measured 2026-10-01 on the orpc-api project's Workers; the numbers per operation are in [Benchmarks](../benchmarks.md), and what they mean for choosing a plan is on the home page: [Before you choose Go](../README.md#before-you-choose-go-what-it-costs-to-run).
 
-Why it costs more than TypeScript:
+TinyGo and workers-go as they come cost far more: 40 to 70 ms for a read, about 265 ms for a write. Three things in this project make the difference, and a project made by `dev new` has all three:
 
-- **A fresh Go runtime starts for every request.** A path that does not exist, which runs none of your code, costs 5 to 13 ms.
-- **Every value that crosses between Go and JavaScript costs.** A request, a header, a D1 row, a call to the hub: each is a JavaScript value that Go holds a handle to. A write crosses many more times than a read.
-
-What the build does about it. `mise run api-go:build` runs `dev wasm-build`, which changes two things in how TinyGo builds:
-
-- **It stops the collector running at every pause.** TinyGo as it is collects garbage each time the program waits, once 32 JavaScript handles have been made. A request waits many times: for the body, for D1, for the hub. That was most of the cost: the same read was 40 to 70 ms before.
-- **It starts with a heap of 8 MB,** so an ordinary request never fills it and never collects. A stream that lives for hours does fill it, and is collected then, so memory does not grow without end.
+- **Go runtimes are reused** (`api-go/worker/go.mjs`, above). A request that finds a waiting runtime pays nothing for start-up, and the JavaScript engine has fewer dead runtimes to clear away.
+- **The collector does not run in an ordinary request** (`dev wasm-build`, which `mise run api-go:build` runs). TinyGo as it is collects garbage each time the program waits, once 32 JavaScript values have been touched, and each time its small starting heap must grow. The build turns the first off and starts with a heap of 8 MB. A stream that lives for hours still fills the heap, and is collected then.
+- **Goroutine stacks are 128 KB, not more.** Stacks are most of what a request allocates.
 
 The change to TinyGo is one constant in a copy of its runtime source. TinyGo itself is not rebuilt, and the change is reported upstream ([tinygo-org/tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800)). The details are in [the dev tool](../reference/dev.md#wasm-build).
 
-**The same request does not always cost the same.** Runs minutes apart on the same build measured 6 ms and 17 ms for the same request: a whole run is in one state or the other. It did not depend on the build's optimisation level or on whether the run wrote data. The cause is not established. The likely one is that Cloudflare runs a Worker on many machines and each optimises the Wasm on its own schedule; that was not verified. Plan for the higher figure.
+What still costs:
+
+- **About one request in three starts a new runtime** and costs 5 to 13 ms instead of 2 to 3.
+- **Every value that crosses between Go and JavaScript costs.** A request, a header, a D1 row, a call to the hub. A write crosses many more times than a read.
+- **A new isolate runs slower at first.** Cloudflare's engine optimises the Wasm as it is used. Before the runtimes were reused that doubled every figure; now the figures above were measured right after a deploy.
 
 These numbers are for the notes example. Measure your own API:
 
@@ -107,13 +110,13 @@ That build is standard Go, one process, with REST, the SSE stream, the WebSocket
 A good fit:
 
 - **Your team writes Go** and wants one language for the API, its types and its tests.
-- **You are on Workers Paid,** or your traffic is light enough that an occasional request over Free's 10 ms limit is acceptable.
+- **You are on Workers Paid,** or an occasional request over Free's 10 ms limit is acceptable.
 - **The API is request and response, plus streams,** with its state in D1 or a Durable Object.
 - **You want the same code to run off Cloudflare too,** for development or as a way out.
 
 Not a good fit:
 
-- **You need to stay within Workers Free for certain.** Its limit is 10 ms of CPU per request: some reads fit, others and every write do not.
+- **You need to stay within Workers Free for certain.** Its limit is 10 ms of CPU per request: reads fit, writes and the slowest requests reach it.
 - **Cost per request or latency matters most.** The same API in TypeScript used a small fraction of the CPU, and the orpc-api repository has that version, built on the same design ([its page](../api.md)).
-- **You depend on Go libraries TinyGo cannot build,** or on in-process state: caches, pools, background goroutines.
-- **You cannot accept workarounds in the path.** This runs on four small JavaScript files and several open upstream issues. Each is small and tracked, but they are there.
+- **You depend on Go libraries TinyGo cannot build,** or on in-process state that must last: caches, pools, background goroutines.
+- **You cannot accept workarounds in the path.** This runs on five small JavaScript files and several open upstream issues. Each is small and tracked, but they are there.

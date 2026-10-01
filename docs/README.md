@@ -42,11 +42,11 @@ For an agent: [llms.txt](https://joeblew999.github.io/orpc-api/llms.txt) lists e
 
 ## Before you choose Go: what it costs to run
 
-On Cloudflare, with the build this project uses (`mise run api-go:build`), a read costs 6 to 28 ms of CPU and a write that also notifies the hub about 60 ms. The same API in TypeScript uses about 1 ms. Measured 2026-10-01 on this project's two Workers: [Benchmarks](benchmarks.md).
+On Cloudflare a read costs 2 to 7 ms of CPU and a write that also notifies the hub 10 to 13 ms. The slowest requests cost 9 to 20 ms. The same API in TypeScript uses about 1 ms. Measured 2026-10-01 on this project's Workers: [Benchmarks](benchmarks.md).
 
-- **Plan on Workers Paid.** Workers Free allows 10 ms of CPU per request. Some reads fit and some do not; a write does not.
-- **The same request does not always cost the same.** Runs minutes apart, on the same build, gave 6 to 11 ms for a read or 14 to 28 ms. Plan for the higher figure.
-- **If you need the Free plan or the lowest cost per request, use the TypeScript version** ([The same in TypeScript](guides/typescript.md)): the design, the tests and the generated SDKs are the same.
+- **Workers Free allows 10 ms of CPU per request.** Reads fit. Writes are at the limit, and the slowest requests are over it. Free is enough to try the project; plan on Workers Paid for production.
+- **This is with the project's build and Worker entry** (`mise run api-go:build`, `api-go/worker/go.mjs`). TinyGo and workers-go as they come cost 40 to 70 ms for a read and about 265 ms for a write. [Go on Cloudflare Workers](concepts/workers-go.md) says what the difference is.
+- **If you need the lowest cost per request, use the TypeScript version** ([The same in TypeScript](guides/typescript.md)): the design, the tests and the generated SDKs are the same.
 - **Measure your own API** with `mise run api-go:bench`: it times every operation in your spec and reads the CPU time Cloudflare recorded.
 
 Why Go costs more there, and what the build does about it: [Go on Cloudflare Workers](concepts/workers-go.md).
@@ -55,6 +55,6 @@ Why Go costs more there, and what the build does about it: [Go on Cloudflare Wor
 
 - [mise](https://mise.jdx.dev): it installs everything else (Go, TinyGo, Node) at pinned versions.
 - Docker, only to generate SDKs (Fern runs in containers).
-- A Cloudflare account on the Workers Paid plan, only to deploy the Go Worker (see above). The API also runs on your machine without one.
+- A Cloudflare account, only to deploy the Go Worker (see above for the plan). The API also runs on your machine without one.
 
 Prefer TypeScript? The same design exists with oRPC: [The same in TypeScript](guides/typescript.md).
