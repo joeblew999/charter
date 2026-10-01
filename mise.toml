@@ -154,10 +154,8 @@ depends = ["sdk:ready api"]
 run = 'node test/soak.mjs "$API_URL"'
 
 [tasks."api:bench"]
-description = "REMOTE, read-only: wall time per route of the deployed oRPC Worker (docs/benchmarks.md)"
-run = 'go run ./dev bench "$API_URL"'
-
-# ---- api-go/: the Go Worker (Huma on workers-go, TinyGo) ---------------------------------------------
+description = "REMOTE, read-only: every GET operation of the deployed oRPC Worker, wall time and Cloudflare's CPU time (docs/benchmarks.md)"
+run = 'go run ./dev bench -cpu -worker orpc-api -spec sdk/fern/apis/api/openapi.json "$API_URL"'
 
 [tasks."api-go:run"]
 description = "The Go API natively on API_GO_PORT: no Cloudflare, an in-memory store"
@@ -165,10 +163,8 @@ dir = "api-go"
 run = "PORT=$API_GO_PORT go run ."
 
 [tasks."api-go:build"]
-description = "Build the Go Worker's Wasm with TinyGo into api-go/build (fails over 3 MB gzipped, the Workers Free limit)"
-dir = "api-go"
-# -stack-size: Huma overflows TinyGo's default stack ("memory access out of bounds" under workerd).
-run = "go run github.com/syumai/workers-go/cmd/workers-assets-gen -mode=tinygo && tinygo build -o build/app.wasm -target wasm -no-debug -stack-size=256kb . && go run ../dev size -max 3000000 api-go/build/app.wasm"
+description = "Build the Go Worker's Wasm with TinyGo into api-go/build, tuned for Workers (docs/concepts/workers-go.md); fails over 3 MB gzipped"
+run = "go run ./dev wasm-build -dir api-go"
 
 [tasks."api-go:dev"]
 description = "The Go API under workerd on API_GO_PORT (cf dev). First time: mise run api-go:migrate:local. After a Go change: mise run api-go:build"
@@ -238,10 +234,8 @@ depends = ["sdk:ready api-go"]
 run = 'node test/soak.mjs "$API_GO_URL" --sdk api-go --deploy-task api-go:deploy'
 
 [tasks."api-go:bench"]
-description = "REMOTE, read-only: wall time per route of the deployed Go Worker (docs/benchmarks.md)"
-run = 'go run ./dev bench "$API_GO_URL"'
-
-# ---- api-go/showcase: every Fern feature we use, from a Go contract (docs/showcase-go.md) -----------
+description = "REMOTE, read-only: every GET operation of the deployed Go Worker, wall time and Cloudflare's CPU time. Add -write to include the ones that change data"
+run = 'go run ./dev bench -cpu "$API_GO_URL"'
 
 [tasks."showcase-go:run"]
 description = "The Go showcase API natively on SHOWCASE_GO_PORT: no Cloudflare. WEBHOOK_URL=<url> to get the webhook"
@@ -249,9 +243,8 @@ dir = "api-go"
 run = "PORT=$SHOWCASE_GO_PORT go run ./cmd/showcase"
 
 [tasks."showcase-go:build"]
-description = "Build the showcase Worker's Wasm with TinyGo into api-go/cmd/showcase/build (fails over 3 MB gzipped)"
-dir = "api-go/cmd/showcase"
-run = "go run github.com/syumai/workers-go/cmd/workers-assets-gen -mode=tinygo && tinygo build -o build/app.wasm -target wasm -no-debug -stack-size=256kb . && go run ../../../dev size -max 3000000 api-go/cmd/showcase/build/app.wasm"
+description = "Build the Go showcase's Wasm with TinyGo into api-go/cmd/showcase/build, tuned for Workers"
+run = "go run ./dev wasm-build -dir api-go/cmd/showcase"
 
 [tasks."showcase-go:dev"]
 description = "The Go showcase API under workerd on SHOWCASE_GO_PORT (cf dev). SHOWCASE_WEBHOOK_URL=<url> to get the webhook"
