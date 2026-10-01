@@ -85,6 +85,11 @@ func TestSameSurfaceAsTheORPCContract(t *testing.T) {
 		{"channels", "liveNotes", "bindings", "ws", "query", "properties", "after"},
 		{"operations", "receiveNote"},
 	} {
+		// Examples are left out, here as in surface: the Go contract gives them (`example` tags) and
+		// the oRPC one doesn't, and they change no SDK method.
+		if property, ok := at(goSpec, path...).(map[string]any); ok {
+			delete(property, "examples")
+		}
 		w, _ := json.Marshal(at(orpc, path...))
 		g, _ := json.Marshal(at(goSpec, path...))
 		if string(w) != string(g) {

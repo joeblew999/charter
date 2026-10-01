@@ -9,6 +9,9 @@
             "properties": {
               "after": {
                 "description": "Resume after this note id (the id of the last note you received). Absent: only notes created from now on",
+                "examples": [
+                  "42"
+                ],
                 "pattern": "^\\d+$",
                 "type": "string"
               }
@@ -39,12 +42,21 @@
         "additionalProperties": false,
         "properties": {
           "body": {
+            "examples": [
+              "Buy milk"
+            ],
             "type": "string"
           },
           "created_at": {
+            "examples": [
+              "2026-10-01 12:00:00"
+            ],
             "type": "string"
           },
           "id": {
+            "examples": [
+              42
+            ],
             "format": "int64",
             "type": "integer"
           }

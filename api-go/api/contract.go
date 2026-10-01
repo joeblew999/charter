@@ -3,7 +3,9 @@
 // struct tags are the schema (as Zod is for oRPC). From this one definition come the handlers'
 // validation, the OpenAPI spec and the AsyncAPI spec (spec.go), from which Fern makes SDKs, a CLI
 // and docs. Everything the SDKs need is said here too: OperationID and Tags name the SDK methods,
-// and Extensions carry Fern's x-fern-*.
+// and Extensions carry Fern's x-fern-*. The `example` tags are what the SDKs' READMEs and references
+// show: without one Fern makes a value up, which a pattern or a bound then refuses
+// (TestExamplesAreThereAndValid).
 package api
 
 import (
@@ -34,9 +36,9 @@ const END = "[end-of-stream]"
 
 // Note is the one resource.
 type Note struct {
-	ID        int64  `json:"id"`
-	Body      string `json:"body"`
-	CreatedAt string `json:"created_at"`
+	ID        int64  `json:"id" example:"42"`
+	Body      string `json:"body" example:"Buy milk"`
+	CreatedAt string `json:"created_at" example:"2026-10-01 12:00:00"`
 }
 
 // Position is the note's place in the log: the only position anywhere (docs/realtime.md, rule 1).
@@ -47,41 +49,41 @@ const afterDoc = "Resume after this note id (the id of the last note you receive
 
 type HelloOutput struct {
 	Body struct {
-		Message string `json:"message"`
+		Message string `json:"message" example:"Hello from orpc-api-go"`
 	}
 }
 
 type ListInput struct {
 	// Opaque string cursors: the generated CLI's --page-all stops on numeric ones.
-	Cursor string `query:"cursor" doc:"Opaque cursor from the previous page's next_cursor"`
+	Cursor string `query:"cursor" example:"42" doc:"Opaque cursor from the previous page's next_cursor"`
 	// int32, not int: Huma writes `format`, and Fern's Go SDK then types it as int, as for the oRPC spec.
-	Limit int32 `query:"limit" minimum:"1" maximum:"100" default:"20"`
+	Limit int32 `query:"limit" minimum:"1" maximum:"100" default:"20" example:"20"`
 }
 
 type ListOutput struct {
 	Body struct {
 		Data       []Note `json:"data"`
-		NextCursor string `json:"next_cursor,omitempty" doc:"Pass as cursor for the next page; absent on the last page"`
+		NextCursor string `json:"next_cursor,omitempty" example:"41" doc:"Pass as cursor for the next page; absent on the last page"`
 	}
 }
 
 type WatchInput struct {
-	After   string `query:"after" pattern:"^\\d+$" doc:"Resume after this note id (the id of the last note you received). Absent: only notes created from now on"`
-	Seconds int32  `query:"seconds" minimum:"1" maximum:"300" default:"30" doc:"How long to keep the stream open"`
+	After   string `query:"after" pattern:"^\\d+$" example:"42" doc:"Resume after this note id (the id of the last note you received). Absent: only notes created from now on"`
+	Seconds int32  `query:"seconds" minimum:"1" maximum:"300" default:"30" example:"30" doc:"How long to keep the stream open"`
 	// What a browser's EventSource sends when it reconnects: the same position as After. Not in the
 	// spec: generated clients use After.
 	LastEventID string `header:"Last-Event-ID" hidden:"true"`
 }
 
 type LiveInput struct {
-	After string `query:"after" pattern:"^\\d+$" doc:"Resume after this note id (the id of the last note you received). Absent: only notes created from now on"`
+	After string `query:"after" pattern:"^\\d+$" example:"42" doc:"Resume after this note id (the id of the last note you received). Absent: only notes created from now on"`
 	// The Worker's entry (worker/index.mjs) passes the upgrade request on; a plain GET is refused.
 	Upgrade string `header:"Upgrade" hidden:"true"`
 }
 
 type CreateInput struct {
 	Body struct {
-		Body string `json:"body" minLength:"1"`
+		Body string `json:"body" minLength:"1" example:"Buy milk"`
 	}
 }
 

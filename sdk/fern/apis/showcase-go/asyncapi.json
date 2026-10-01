@@ -51,12 +51,21 @@
             "type": "string"
           },
           "body": {
+            "examples": [
+              "Buy milk"
+            ],
             "type": "string"
           },
           "event": {
+            "examples": [
+              "notes.created"
+            ],
             "type": "string"
           },
           "id": {
+            "examples": [
+              "note-1"
+            ],
             "type": "string"
           }
         },
@@ -70,6 +79,9 @@
         "additionalProperties": false,
         "properties": {
           "topic": {
+            "examples": [
+              "notes"
+            ],
             "type": "string"
           }
         },

@@ -37,40 +37,40 @@ const SignatureHeader = "x-webhook-signature"
 
 // Note is the one resource.
 type Note struct {
-	ID   string `json:"id"`
-	Body string `json:"body"`
+	ID   string `json:"id" example:"note-1"`
+	Body string `json:"body" example:"Buy milk"`
 }
 
 // Chunk is one piece of a chat reply: the `data:` of one SSE event.
 type Chunk struct {
-	Text string `json:"text"`
+	Text string `json:"text" example:"echo"`
 	// Sent on every chunk, but not required of one: true on the last.
 	Done bool `json:"done" required:"false"`
 }
 
 // NoteCreated is the webhook's payload: what the server sends to you.
 type NoteCreated struct {
-	Event string `json:"event"`
+	Event string `json:"event" example:"note.created"`
 	Note  Note   `json:"note"`
 }
 
 // Subscribe is what the client sends on the WebSocket.
 type Subscribe struct {
-	Topic string `json:"topic"`
+	Topic string `json:"topic" example:"notes"`
 }
 
 // NoteEvent is what the server sends on the WebSocket.
 type NoteEvent struct {
-	Event string `json:"event"`
-	ID    string `json:"id"`
-	Body  string `json:"body,omitempty"`
+	Event string `json:"event" example:"notes.created"`
+	ID    string `json:"id" example:"note-1"`
+	Body  string `json:"body,omitempty" example:"Buy milk"`
 	Auth  string `json:"auth,omitempty" doc:"The Authorization the server saw on this socket"`
 }
 
 // TokenRequest is the OAuth token request: a form, not JSON (RFC 6749).
 type TokenRequest struct {
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
+	ClientID     string `json:"client_id" example:"id-1"`
+	ClientSecret string `json:"client_secret" example:"secret-1"`
 }
 
 type TokenInput struct {
@@ -81,19 +81,19 @@ type TokenInput struct {
 type TokenOutput struct {
 	Body struct {
 		AccessToken string `json:"access_token"`
-		ExpiresIn   int32  `json:"expires_in"`
+		ExpiresIn   int32  `json:"expires_in" example:"3600"`
 	}
 }
 
 type ListInput struct {
-	Cursor string `query:"cursor" doc:"Opaque cursor from the previous page's next_cursor"`
-	Limit  int32  `query:"limit" minimum:"1" maximum:"100" default:"2"`
+	Cursor string `query:"cursor" example:"2" doc:"Opaque cursor from the previous page's next_cursor"`
+	Limit  int32  `query:"limit" minimum:"1" maximum:"100" default:"2" example:"2"`
 }
 
 type ListOutput struct {
 	Body struct {
 		Data       []Note `json:"data"`
-		NextCursor string `json:"next_cursor,omitempty" doc:"Pass as cursor for the next page; absent on the last page"`
+		NextCursor string `json:"next_cursor,omitempty" example:"4" doc:"Pass as cursor for the next page; absent on the last page"`
 	}
 }
 
@@ -102,7 +102,7 @@ type CreateInput struct {
 	// the SDKs then offer it on every operation marked x-fern-idempotent.
 	IdempotencyKey string `header:"Idempotency-Key" hidden:"true"`
 	Body           struct {
-		Body string `json:"body"`
+		Body string `json:"body" example:"Buy milk"`
 	}
 }
 
@@ -132,15 +132,15 @@ func uploadForm() *huma.RequestBody {
 
 type UploadOutput struct {
 	Body struct {
-		ID string `json:"id"`
+		ID string `json:"id" example:"file-1"`
 		// int32, not int64: Fern's Go SDK then types it int, as it does for a plain integer.
-		Size int32 `json:"size"`
+		Size int32 `json:"size" example:"1024"`
 	}
 }
 
 type ChatInput struct {
 	Body struct {
-		Prompt string `json:"prompt"`
+		Prompt string `json:"prompt" example:"Say hello"`
 	}
 }
 

@@ -5,6 +5,9 @@
         "additionalProperties": false,
         "properties": {
           "prompt": {
+            "examples": [
+              "Say hello"
+            ],
             "type": "string"
           }
         },
@@ -20,6 +23,9 @@
             "type": "boolean"
           },
           "text": {
+            "examples": [
+              "echo"
+            ],
             "type": "string"
           }
         },
@@ -32,6 +38,9 @@
         "additionalProperties": false,
         "properties": {
           "body": {
+            "examples": [
+              "Buy milk"
+            ],
             "type": "string"
           }
         },
@@ -120,6 +129,9 @@
           },
           "next_cursor": {
             "description": "Pass as cursor for the next page; absent on the last page",
+            "examples": [
+              "4"
+            ],
             "type": "string"
           }
         },
@@ -132,9 +144,15 @@
         "additionalProperties": false,
         "properties": {
           "body": {
+            "examples": [
+              "Buy milk"
+            ],
             "type": "string"
           },
           "id": {
+            "examples": [
+              "note-1"
+            ],
             "type": "string"
           }
         },
@@ -148,6 +166,9 @@
         "additionalProperties": false,
         "properties": {
           "event": {
+            "examples": [
+              "note.created"
+            ],
             "type": "string"
           },
           "note": {
@@ -167,6 +188,9 @@
             "type": "string"
           },
           "expires_in": {
+            "examples": [
+              3600
+            ],
             "format": "int32",
             "type": "integer"
           }
@@ -181,9 +205,15 @@
         "additionalProperties": false,
         "properties": {
           "id": {
+            "examples": [
+              "file-1"
+            ],
             "type": "string"
           },
           "size": {
+            "examples": [
+              1024
+            ],
             "format": "int32",
             "type": "integer"
           }
@@ -330,6 +360,9 @@
             "name": "cursor",
             "schema": {
               "description": "Opaque cursor from the previous page's next_cursor",
+              "examples": [
+                "2"
+              ],
               "type": "string"
             }
           },
@@ -339,6 +372,9 @@
             "name": "limit",
             "schema": {
               "default": 2,
+              "examples": [
+                2
+              ],
               "format": "int32",
               "maximum": 100,
               "minimum": 1,
@@ -437,9 +473,15 @@
                 "additionalProperties": false,
                 "properties": {
                   "client_id": {
+                    "examples": [
+                      "id-1"
+                    ],
                     "type": "string"
                   },
                   "client_secret": {
+                    "examples": [
+                      "secret-1"
+                    ],
                     "type": "string"
                   }
                 },

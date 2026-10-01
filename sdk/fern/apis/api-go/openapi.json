@@ -5,6 +5,9 @@
         "additionalProperties": false,
         "properties": {
           "body": {
+            "examples": [
+              "Buy milk"
+            ],
             "minLength": 1,
             "type": "string"
           }
@@ -87,6 +90,9 @@
         "additionalProperties": false,
         "properties": {
           "message": {
+            "examples": [
+              "Hello from orpc-api-go"
+            ],
             "type": "string"
           }
         },
@@ -106,6 +112,9 @@
           },
           "next_cursor": {
             "description": "Pass as cursor for the next page; absent on the last page",
+            "examples": [
+              "41"
+            ],
             "type": "string"
           }
         },
@@ -118,12 +127,21 @@
         "additionalProperties": false,
         "properties": {
           "body": {
+            "examples": [
+              "Buy milk"
+            ],
             "type": "string"
           },
           "created_at": {
+            "examples": [
+              "2026-10-01 12:00:00"
+            ],
             "type": "string"
           },
           "id": {
+            "examples": [
+              42
+            ],
             "format": "int64",
             "type": "integer"
           }
@@ -188,6 +206,9 @@
             "name": "cursor",
             "schema": {
               "description": "Opaque cursor from the previous page's next_cursor",
+              "examples": [
+                "42"
+              ],
               "type": "string"
             }
           },
@@ -197,6 +218,9 @@
             "name": "limit",
             "schema": {
               "default": 20,
+              "examples": [
+                20
+              ],
               "format": "int32",
               "maximum": 100,
               "minimum": 1,
@@ -292,6 +316,9 @@
             "name": "after",
             "schema": {
               "description": "Resume after this note id (the id of the last note you received). Absent: only notes created from now on",
+              "examples": [
+                "42"
+              ],
               "pattern": "^\\d+$",
               "type": "string"
             }
@@ -304,6 +331,9 @@
             "schema": {
               "default": 30,
               "description": "How long to keep the stream open",
+              "examples": [
+                30
+              ],
               "format": "int32",
               "maximum": 300,
               "minimum": 1,
