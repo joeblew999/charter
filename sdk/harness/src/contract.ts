@@ -9,7 +9,7 @@ import { asyncapi } from "../../../api/src/asyncapi.ts";
 // - on an operation, by `openapi({ operationId, tags, spec })`: the SDK names and Fern's x-fern-*;
 // - for the whole document, by `document` below: oRPC's contract has no place for those;
 // - the WebSocket by `asyncapi({...})` (api/src/asyncapi.ts), and the webhooks by `webhooks` below.
-// A Go server of the same API is being built (sdk/fern/apis/showcase-go) and compares its spec with
+// A Go server of the same API (api-go/showcase, sdk/fern/apis/showcase-go) compares its spec with
 // these names: operation ids, paths, parameters, x-fern-* values, the channel and its messages.
 
 export const info = { title: "Showcase", version: "1.0.0", description: "Every Fern feature we care about, via standard OpenAPI + x-fern-* extensions." };

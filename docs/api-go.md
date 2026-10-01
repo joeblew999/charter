@@ -3,123 +3,128 @@ title: Go Worker (api-go/)
 nav_order: 4
 ---
 
-# api-go/: the same API in Go, on Cloudflare and natively
+# api-go/: the notes API in Go, on Cloudflare and natively
 
-The notes API of [api.md](api.md), written in Go: [Huma](https://huma.rocks) for the contract, [workers-go](https://github.com/syumai/workers-go) to run on Cloudflare Workers, TinyGo to build the Wasm. From the one Go contract come the handlers' validation, the OpenAPI spec and the AsyncAPI spec; Fern turns those into SDKs, a CLI and docs, exactly as it does for the oRPC Worker (see [sdk.md](sdk.md)). The same contract is also served as MCP tools at `/api/mcp` ([below](#mcp-the-contract-as-tools)).
+The Go Worker: the notes API of [api.md](api.md#the-notes-api), written in Go. [Huma](https://huma.rocks) is the contract, [workers-go](https://github.com/syumai/workers-go) runs it on Cloudflare Workers, and TinyGo builds the Wasm. From the one Go contract come the handlers' validation, both specs (which Fern turns into SDKs, a CLI and docs, as for the oRPC Worker: [sdk.md](sdk.md)) and MCP tools ([mcp.md](mcp.md)). Read this page to run or change the Go Worker, to learn what Huma needs on workers-go, or to start a Go project from it.
 
-If the repo's two halves are confusing, read ["What is what"](README.md#what-is-what) first.
+`api-go/` is also a Go module that other projects import: the packages marked "Import it" below. A second API lives in the same module, the Go showcase ([showcase-go.md](showcase-go.md)).
 
-## How it fits together
+## Tasks (from the repo root)
 
+```sh
+mise run api-go:run            # natively on :5174 (API_GO_PORT): no Cloudflare, an in-memory store
+mise run api-go:dev            # under workerd on :5174: the TinyGo build, then cf dev, with local D1 and the hub
+mise run api-go:migrate:local  # first time, while api-go:dev runs: the D1 schema
+mise run api-go:build          # the Wasm into api-go/build; run it after a Go change while api-go:dev runs (cf dev reloads)
+mise run api-go:spec           # write both specs again, after changing the contract
+mise run api-go:check          # LOCAL: lint, test, spec:check, test:native and test:workerd (the five below)
+mise run api-go:lint           # gofmt, and go vet for the host and for Wasm
+mise run api-go:test           # go test ./... (the whole module, the Go showcase included)
+mise run api-go:spec:check     # fail if a committed spec is stale against the contract
+mise run api-go:test:native    # the live test and the MCP test against the native build
+mise run api-go:test:workerd   # the same against the TinyGo Wasm under workerd
+mise run api-go:mcp-test       # the MCP test against a running api-go:run or api-go:dev
+mise run sdk:gen api-go go     # Fern (Docker); the other groups: typescript, typescript-dist, cli
+mise run api-go:deploy         # REMOTE: build and deploy orpc-api-go, then apply pending D1 migrations
+mise run api-go:migrate        # REMOTE: apply pending migrations to orpc-api-go-db
+mise run api-go:live-test      # REMOTE, writes test notes: SSE and WebSocket, raw and through the TypeScript SDK, then MCP
+mise run api-go:soak           # REMOTE, redeploys orpc-api-go: the real-time matrix; --idle 20 for the long-idle case
+mise run api-go:bench          # REMOTE, read-only: wall time per route (benchmarks.md)
 ```
-api/contract.go  --(mise run api-go:spec)-->  ../sdk/fern/apis/api-go/{openapi,asyncapi}.json  --(Fern)-->  SDKs, CLI, docs
-      |
-      +--> api/handlers.go serves it: REST and SSE directly, the WebSocket as a stream of lines
-                                                                          |
-            on Cloudflare: worker/websocket.mjs turns lines into frames --+-- natively: transport/ does
-```
 
-- **The contract is Go structs.** Their tags (`query:"limit" minimum:"1" maximum:"100" default:"20"`) are the schema, the way Zod is for oRPC. Huma validates requests against them and writes the OpenAPI from them.
-- **Fern's needs are said in the contract:** `OperationID` and `Tags` name the SDK methods, and `Extensions` carry `x-fern-sdk-*`, `x-fern-pagination` and `x-fern-streaming`.
-- **The WebSocket is in the contract too.** `asyncapi.Operation(...)` marks an operation as a channel: it's hidden from OpenAPI and written to AsyncAPI, with its query parameters as the channel's `bindings.ws.query`.
+The remote tasks use `API_GO_URL`, which defaults to this repo's deployed Worker; on another Cloudflare account set it in `mise.local.toml` (gitignored). The build fails if the Wasm is over 3 MB gzipped, the Workers Free limit. The tests are the shared ones in [testing.md](testing.md).
 
 ## Layout
 
 | Path | What it is |
 |---|---|
-| `api/contract.go` | **The API (edit this):** every route, its input and output structs, and what Fern needs |
-| `api/handlers.go` | The contract implemented: REST on the store, SSE and the WebSocket feed over `follow`; mounts `/api/mcp` |
-| `api/store.go` | The log (`Store`) and the live signal (`Hub`): D1 through `database/sql`, or memory |
-| `api/spec.go` | Both specs from the contract, for `cmd/spec` and for `/api/openapi.json`, `/api/asyncapi.json` |
-| `cmd/spec/` | Writes the two spec files offline (`mise run api-go:spec`), with `specfile` |
-| `specfile/` | **Import it.** The body of a spec command: write the generated specs, or check the committed ones |
-| `follow/` | **Import it.** `Follow`: the gap-free feed, the port of `api/src/follow.ts` with the same tests |
-| `asyncapi/` | **Import it.** The AsyncAPI 3.0 generator for Huma, the port of `api/src/asyncapi.ts` |
-| `humaworkers/` | **Import it.** What Huma needs to run on workers-go and TinyGo (below) |
-| `humamcp/` | **Import it.** An MCP server from a Huma API: every operation a tool, no MCP SDK (below) |
-| `transport/` | **Import it.** What goes around the handler so Go can serve WebSockets: natively the adapter itself, on Workers the cancel when the client has gone. Its package comment is the rule both adapters follow |
-| `main.go`, `platform_js.go` | The Worker: bindings (D1, the hub, vars) through workers-go and `syscall/js` |
-| `platform_other.go` | The native build: an in-memory store and hub |
-| `worker/index.mjs`, `worker/websocket.mjs`, `worker/hub.mjs`, `worker/tinygo-clock.mjs` | What must be JavaScript: the entry, the WebSocket adapter, the hub Durable Object class (hibernating WebSockets), and the fix that makes Go timers fire on Cloudflare |
-| `showcase/`, `cmd/showcase/` | A second API and its server in the same module: every Fern feature from a Go contract ([showcase-go.md](showcase-go.md)) |
-| `cloudflare.config.ts` | The Worker `orpc-api-go`: D1 (`DB`), the hub (`HUB`), `APP_NAME` |
-| `build/` | Gitignored: the TinyGo Wasm and workers-go's glue (`mise run api-go:build`) |
+| `api-go/api/contract.go` | **The contract (edit this):** every route, its input and output structs, and what Fern needs |
+| `api-go/api/handlers.go` | The contract implemented: REST on the store, SSE and the WebSocket feed over `follow`. It also serves the two spec routes and mounts `/api/mcp` |
+| `api-go/api/store.go` | The log (`Store`) and the live signal (`Hub`): D1 through `database/sql` (`SQLStore`), or memory (`MemStore`) |
+| `api-go/api/spec.go` | Both specs from the contract, for `api-go/cmd/spec/` and for `/api/openapi.json`, `/api/asyncapi.json` |
+| `api-go/cmd/spec/` | Writes the two spec files offline (`mise run api-go:spec`), with `specfile` |
+| `api-go/specfile/` | **Import it.** The body of a spec command: write the generated specs, or check the committed ones (`-check`) |
+| `api-go/follow/` | **Import it.** `Follow`: the gap-free feed, the port of `api/src/follow.ts` with the same tests ([realtime.md](realtime.md)) |
+| `api-go/asyncapi/` | **Import it.** The AsyncAPI 3.0.0 generator for Huma, the port of `api/src/asyncapi.ts` |
+| `api-go/humaworkers/` | **Import it.** What Huma needs to run on workers-go and TinyGo ([below](#huma-on-workers-go-and-tinygo-what-it-takes)), and a format for form-encoded bodies (`WithForm`) |
+| `api-go/humamcp/` | **Import it.** An MCP server from a Huma API: every operation a tool, no MCP SDK ([mcp.md](mcp.md)) |
+| `api-go/transport/` | **Import it.** What goes around the handler so Go can serve WebSockets: natively the adapter itself, on Workers the cancel when the client has gone. Its package comment is the rule both adapters follow |
+| `api-go/main.go`, `api-go/platform_js.go` | The Worker: bindings (D1, the hub, variables) through workers-go and `syscall/js` |
+| `api-go/platform_other.go` | The native build: one in-memory store and hub for the process |
+| `api-go/worker/index.mjs`, `api-go/worker/websocket.mjs`, `api-go/worker/hub.mjs`, `api-go/worker/tinygo-clock.mjs` | What must be JavaScript: the entry, the WebSocket adapter, the hub Durable Object class (hibernating WebSockets), and the fix that makes Go timers fire on Cloudflare |
+| `api-go/showcase/`, `api-go/cmd/showcase/`, `api-go/cmd/showcase-spec/` | The Go showcase: a second API and its server in the same module ([showcase-go.md](showcase-go.md)) |
+| `api-go/cloudflare.config.ts` | The Worker `orpc-api-go`: D1 (`DB`), the hub (`HUB`), `APP_NAME` |
+| `api-go/build/` | Gitignored: the TinyGo Wasm and workers-go's glue (`mise run api-go:build`) |
+| `migrations/` | The D1 schema, shared with the oRPC Worker: each Worker has its own database |
 
-## Tasks (from the repo root)
+Versions: Huma 2.39.1 and workers-go 0.36.0 (`api-go/go.mod`), TinyGo 0.42.0 (`mise.toml`), Go 1.27.1 (`go.work`).
 
-```sh
-mise run api-go:run            # natively on :5174: no Cloudflare, in-memory store, REST + SSE + WebSocket
-mise run api-go:dev            # under workerd on :5174 (TinyGo build, then cf dev), with local D1 and the hub
-mise run api-go:migrate:local  # first time, while api-go:dev runs
-mise run api-go:build          # after a Go change while api-go:dev runs (cf dev reloads)
-mise run api-go:spec           # regenerate the specs after changing the contract
-mise run api-go:check          # gofmt, vet, tests, spec drift, TinyGo build, the live and MCP tests natively and under workerd
-mise run api-go:mcp-test       # the MCP client test against a running api-go:run or api-go:dev
-mise run sdk:gen api-go go     # Fern: also typescript, typescript-dist, cli
-mise run api-go:deploy         # REMOTE: deploy orpc-api-go, then apply D1 migrations
-mise run api-go:live-test      # REMOTE: quick live check
-mise run api-go:soak           # REMOTE: the real-time matrix (redeploys orpc-api-go)
-mise run api-go:bench          # REMOTE, read-only: wall time per route
+## How it fits together
+
+```
+api-go/api/contract.go  --(mise run api-go:spec)-->  sdk/fern/apis/api-go/{openapi,asyncapi}.json  --(Fern)-->  SDKs, CLI, docs
+      |
+      +--> api-go/api/handlers.go serves it: REST and SSE directly, the WebSocket as a stream of lines
+                                                                          |
+     on Cloudflare: api-go/worker/websocket.mjs turns lines into frames --+-- natively: api-go/transport/ does
 ```
 
-The schema is `../migrations/`: one schema for both Workers, each with its own D1 database. The tests are the shared ones in [testing.md](testing.md).
+- **The contract is Go structs.** Their tags (`query:"limit" minimum:"1" maximum:"100" default:"20"`) are the schema, the way Zod is for oRPC. Huma validates requests against them and writes the OpenAPI from them. A rule the tags can't say goes in the input's `Resolve` method (a note body must not contain the stream terminator).
+- **Fern's needs are said in the contract:** `OperationID` and `Tags` name the SDK methods, and `Extensions` carry `x-fern-sdk-*`, `x-fern-pagination` and `x-fern-streaming`.
+- **The WebSocket is in the contract too.** `asyncapi.Operation(...)` marks an operation as a channel: it's hidden from OpenAPI and written to AsyncAPI, with its query parameters as the channel's `bindings.ws.query`.
+- **One contract entry is one `humaworkers.Route`:** its method, path, `OperationID`, and the `huma.Register` call.
 
 ## Huma on workers-go and TinyGo: what it takes
 
-Huma works, with four things done on our side (in `humaworkers/`, `worker/` and the build task), each measured. The upstream issues behind them are in [upstream.md](upstream.md).
+Huma works, with four things done on our side (in `api-go/humaworkers/`, `api-go/worker/` and the build task). The upstream issues behind them are in [upstream.md](upstream.md), and the measurements in [findings.md](findings.md).
 
 | Problem | What happens without | What we do |
 |---|---|---|
 | TinyGo's default stack is too small for Huma | `memory access out of bounds` on the first request | Build with `-stack-size=256kb` |
-| Huma's default config installs a hook that calls `reflect.StructOf`, which TinyGo lacks | `panic: unimplemented: reflect.StructOf()` | `humaworkers.Config` leaves the hook out (it only adds `$schema` links) |
+| Huma's default config installs a hook that calls `reflect.StructOf`, which TinyGo lacks | `panic: unimplemented: reflect.StructOf()` | `humaworkers.Config` leaves the hook out (it only adds `$schema` links). It also switches off Huma's built-in `/openapi`, `/docs` and `/schemas` routes |
 | TinyGo's `http.ServeMux` doesn't match method patterns (`"GET /path"`), which Huma's net/http adapter registers | every route is 404 | `humaworkers` matches routes itself |
-| **Go timers hang on Cloudflare** (not under local workerd): the production clock moves by a `setTimeout`'s delay rounded down to a millisecond, and TinyGo sleeps for fractions | streams don't end at their deadline about half the time; `time.Sleep` and context timeouts stall | `worker/tinygo-clock.mjs` rounds TinyGo's sleeps up to a whole millisecond |
+| **Go timers hang on Cloudflare** (not under local workerd): the production clock moves by a `setTimeout`'s delay rounded down to a millisecond, and TinyGo sleeps for fractions | streams don't end at their deadline about half the time; `time.Sleep` and context timeouts stall | `api-go/worker/tinygo-clock.mjs` rounds TinyGo's sleeps up to a whole millisecond |
 
-Two more, met by the showcase's file upload ([showcase-go.md](showcase-go.md#tinygo-what-it-took)):
+Two more, met by the Go showcase's file upload ([showcase-go.md](showcase-go.md#tinygo-what-it-took)):
 
 - **TinyGo has no `reflect.Value.MethodByName`,** which Huma's typed multipart form (`huma.MultipartFormFiles[T]`) calls. Take the plain `multipart.Form` and declare its schema on the operation.
 - **A Worker has no disk,** and Huma's adapter writes an upload over 8 KB to a temporary file. `humaworkers` keeps uploads in memory, up to 32 MB.
 
-And one design point: **workers-go starts a fresh Go runtime for every request.** Registering every Huma operation at start-up would be paid on every request, so `humaworkers` registers only the operation a request matches. Specs register them all.
+One design point: **workers-go starts a fresh Go runtime for every request.** Registering every Huma operation at start-up would be paid on every request, so `humaworkers` registers only the operation a request matches. Specs and `tools/list` register them all.
 
-Two more things that workers-go can't do, and where they went:
+Two things workers-go can't do, and where they went:
 
-- **Answer a WebSocket upgrade.** Go answers the upgrade with a stream of lines, one JSON message each, and `worker/websocket.mjs` sends each line as a frame (`transport.Serve` does the same natively). Which paths are WebSockets, their input and their feed stay in Go. A channel can also take what the client sends: each frame becomes a `POST` to Go ([showcase-go.md](showcase-go.md#the-websocket-both-ways)). The notes channel doesn't.
-- **Be a Durable Object.** `worker/hub.mjs` is the hub (hibernating WebSockets, stores nothing). Go publishes to it with workers-go's stub and subscribes with a WebSocket through `syscall/js` (`platform_js.go`).
-
-## MCP: the contract as tools
-
-`POST /api/mcp` is an MCP server (Model Context Protocol, Streamable HTTP) made from the same Huma operations by `humamcp`, in the Worker and natively. The design, its limits and what was looked at are in [plans/mcp.md](plans/mcp.md); what was measured is in [findings.md](findings.md). It has run locally (natively and under workerd), not on Cloudflare yet.
-
-- **Every operation that answers once is a tool:** `hello`, `listNotes`, `createNote`. The name is the `OperationID`, the description the `Summary`.
-- **The arguments are the input struct, flat:** path, query and header parameters, and the properties of a JSON object body, in one `inputSchema` (`createNote` takes `{"body": "..."}`, as the oRPC procedure does). The 200 response's schema is the `outputSchema`.
-- **A call runs the operation's own handler** through `humaworkers`, so validation and errors are the REST ones. A 4xx or 5xx is a tool result with `isError` and Huma's problem as its text (`errors[].location`, e.g. `query.limit`), which a model can correct itself from.
-- **Not tools:** `watchNotes` (SSE) and `liveNotes` (the WebSocket). A tool call is one request and one answer. `humamcp.Expose(op, true|false)` overrides the default for an operation.
-- **No MCP SDK, no state.** The official Go MCP SDK doesn't build with TinyGo, and workers-go starts a fresh Go runtime per request, so there are no sessions. Both protocol eras are answered on the one endpoint: the stateless revision 2026-07-28 (`server/discover`, the version in every request) and the handshake ones (`initialize`; 2025-11-25, 2025-06-18). `GET` is 405: there's no stream.
-- **No authorization of its own.** The endpoint is as open as the REST API. The `Authorization` header is passed on to the operation.
-
-```sh
-mise run api-go:run        # or api-go:dev
-mise run api-go:mcp-test   # the official TypeScript client, both eras: test/mcp-test.mjs
-npx @modelcontextprotocol/inspector --cli http://localhost:5174/api/mcp --transport http --method tools/list
-```
-
-In another Huma project: `humamcp.Handler(api)` with a `*humaworkers.API`, mounted on one path. Give each `humaworkers.Route` its `OperationID`, so a tool call registers only its own operation.
-
-## Cost
-
-It works and passes the same tests as the oRPC Worker, and it costs more to run: 40 to 70 ms of CPU per request on Cloudflare against 1 to 3 ms, because workers-go starts a fresh Go runtime for every request. That fits Workers Paid, not Workers Free (10 ms). The numbers are in [benchmarks.md](benchmarks.md) and the plan to bring them down in [plans/performance.md](plans/performance.md).
-
-## Differences from the oRPC Worker
-
-Fern sees the same API: the same operations, parameters, constraints, `x-fern-*` extensions and WebSocket channel (`TestSameSurfaceAsTheORPCContract` checks this against `../sdk/fern/apis/api/`). What differs:
-
-- **Invalid input is 422** with Huma's `application/problem+json` body (`errors[].location`, e.g. `query.limit`), where oRPC answers 400. Huma also puts this error in the spec, so SDKs get a typed error.
-- **A known path with the wrong method is 405**, where the oRPC Worker answers 404.
-- **Schemas are named.** Huma writes `components.schemas.Note` and refers to it; oRPC inlines it. Fern's SDKs then have a `Note` type instead of one type per response.
-- **OpenAPI 3.1.0** (Huma) against 3.1.1 (oRPC). Fern accepts both.
-- **`/api/mcp` exists only here.** The oRPC Worker has no MCP endpoint yet ([plans/mcp.md](plans/mcp.md) says what its equivalent would be).
+- **Answer a WebSocket upgrade.** Go answers the upgrade with a stream of lines, one JSON message each, and `api-go/worker/websocket.mjs` sends each line as a frame (`transport.Serve` does the same natively). Which paths are WebSockets, their input and their feed stay in Go. A channel can also take what the client sends: each frame becomes a `POST` to Go ([showcase-go.md](showcase-go.md#the-websocket-both-ways)). The notes channel doesn't.
+- **Be a Durable Object.** `api-go/worker/hub.mjs` is the hub (hibernating WebSockets, stores nothing). Go publishes to it with workers-go's stub and subscribes with a WebSocket through `syscall/js` (`api-go/platform_js.go`).
 
 ## Running natively
 
-`mise run api-go:run` is the same handlers on `net/http`, with an in-memory store and hub in one process. REST, SSE and the WebSocket all work, and `test/live-test.mjs` passes against it. There's no database yet: `api.SQLStore` is plain `database/sql`, so a native SQLite driver is the missing piece.
+`mise run api-go:run` is the same handlers on `net/http`, with an in-memory store and hub in one process. REST, SSE, the WebSocket and MCP all work, and `mise run api-go:test:native` runs the live test and the MCP test against it. There's no database: notes are gone when the process stops. `api.SQLStore` is plain `database/sql`, so a native SQLite driver is the missing piece ([plans/next.md](plans/next.md)).
+
+Started without the task (`go run .` in `api-go/`), it listens on `PORT`, or on 9900.
+
+## Cost
+
+It passes the same tests as the oRPC Worker, and it costs more to run: 40 to 70 ms of CPU per request on Cloudflare against 1 to 3 ms (measured 2026-10-01), because workers-go starts a fresh Go runtime for every request. That fits Workers Paid, not Workers Free (10 ms). The numbers are in [benchmarks.md](benchmarks.md) and the plan to bring them down in [plans/performance.md](plans/performance.md).
+
+## Differences from the oRPC Worker
+
+Fern sees the same API: the same operations, parameters, constraints, `x-fern-*` extensions and WebSocket channel. `TestSameSurfaceAsTheORPCContract` (`api-go/api/surface_test.go`) checks this against the committed oRPC specs in `sdk/fern/apis/api/`. What differs:
+
+- **Invalid input is 422** with Huma's `application/problem+json` body (`errors[].location`, e.g. `query.limit`), where oRPC answers 400. Huma also puts this error in the spec, so SDKs get a typed error.
+- **A known path with the wrong method is 405,** where the oRPC Worker answers 404.
+- **Schemas are named.** Huma writes `components.schemas.Note` and refers to it; oRPC inlines it. Fern's SDKs then have a `Note` type instead of one type per response.
+- **OpenAPI 3.1.0** (Huma) against 3.1.1 (oRPC). Fern accepts both.
+- **`limit` and `seconds` are `int32` in the contract.** Huma writes `format: int64` for a Go `int`, and Fern's Go SDK then types the parameter `*int64` instead of `*int`.
+- **`/api/mcp` exists only here,** and so does the native build.
+- **No static page.** The oRPC Worker serves one outside `/api/`.
+
+## Starting a Go (workers-go) project from it
+
+Run `go run github.com/joeblew999/orpc-api/dev@latest new -name <name>` ([dev.md](dev.md#a-new-project-dev-new)). It does the three steps below, and what follows is what you then own:
+
+1. **The contract as Huma operations,** as in `api-go/api/contract.go`: one `humaworkers.Route` per operation, with `asyncapi.Operation(...)` around the WebSocket ones. For OAuth, idempotency, file upload, webhooks or a WebSocket the client also sends on, see the Go showcase ([showcase-go.md](showcase-go.md)).
+2. **The packages as imports** (`go get github.com/joeblew999/orpc-api/api-go`): `humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport` and `specfile`. Copied, because they are yours to change: `api-go/worker/` (the entry, the WebSocket adapter, the hub and the clock fix), `api-go/cmd/spec/` and the two `platform_*.go` files.
+3. **`sdk/fern/apis/api-go/` as your API's Fern folder,** plus the `api-go:*` and `sdk:*` tasks.
+
+Then have clients follow the client rule in [realtime.md](realtime.md#what-a-client-does).

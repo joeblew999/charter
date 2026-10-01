@@ -1,9 +1,11 @@
 ---
 title: Benchmarks
-nav_order: 8
+nav_order: 11
 ---
 
 # Benchmarks: what a request costs on each Worker
+
+What one request costs on the oRPC Worker and on the Go Worker, and how to measure it again. Read it before choosing between the two for a project, or before trying to make the Go Worker cheaper ([plans/performance.md](plans/performance.md)).
 
 Measured on 2026-10-01 on Cloudflare, with the two Workers serving the same API from the same kind of D1 database. CPU time is what Workers bills and limits; it comes from Workers Logs (`$workers.cpuTimeMs`, median over 8 or more requests per route).
 
@@ -35,7 +37,7 @@ What this means:
 
 ## Locally (workerd on an Apple M-series Mac, wall clock, mean of 20)
 
-The same Wasm under `cf dev`. Useful for comparing builds, not for absolute numbers: production CPU was about four times these.
+The same Wasm under `cf dev`, measured on 2026-10-01. Useful for comparing builds, not for absolute numbers: production CPU was about four times these. The sizes are of the build measured that day; with the MCP endpoint the default build is 875 KB gzipped ([findings.md](findings.md)).
 
 | Build (`tinygo build ...`) | Wasm gzipped | 404 | hello | list 20 (D1) | openapi.json |
 |---|---|---|---|---|---|
@@ -60,7 +62,7 @@ What this says:
 ```sh
 mise run api:bench            # wall time per route against the deployed oRPC Worker
 mise run api-go:bench         # the same against the deployed Go Worker
-go run ./dev bench <url>      # any server: a local cf dev, the native build
+go run ./dev bench <url>      # any server: a local cf dev, the native build; -n 50 before the URL for 50 requests per route
 ```
 
-`bench` reports wall time as a client sees it (median and slowest of 20, after 3 warm-up requests). CPU time has to be read from Workers Logs: in the dashboard, or with the Workers Observability API, the median of `$workers.cpuTimeMs` grouped by `$metadata.trigger`.
+`bench` times four read routes (`/api/hello`, `/api/notes?limit=20`, `/api/openapi.json` and a 404) and reports wall time as a client sees it: the median and the slowest of 20 requests, after 3 warm-up requests. CPU time has to be read from Workers Logs: in the dashboard, or with the Workers Observability API, the median of `$workers.cpuTimeMs` grouped by `$metadata.trigger`.

@@ -1,8 +1,9 @@
 import { bindings, defineConfig, exports } from "cf/config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
-// The oRPC API (src/contract.ts) on D1, plus NotesHub: a Durable Object that holds the live
-// WebSocket connections and SSE streams, and broadcasts every new note to them.
+// The oRPC API (src/contract.ts) on D1, plus NotesHub: a hibernating Durable Object that fans every
+// new note out to the Worker's follow() loops. The Worker, not the hub, holds the clients' SSE
+// streams and WebSockets (docs/realtime.md).
 export default defineConfig({
 	worker: {
 		name: "orpc-api",
@@ -15,7 +16,7 @@ export default defineConfig({
 		exports: {
 			NotesHub: exports.durableObject({ storage: "sqlite" }),
 		},
-		// Workers Logs is off unless enabled; mise run logs / errors need it.
+		// Workers Logs is off unless enabled.
 		observability: { enabled: true },
 		env: {
 			APP_NAME: bindings.text("orpc-api"),

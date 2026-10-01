@@ -1,4 +1,4 @@
-// The real-time test matrix (docs/plans/realtime.md): every client × scenario against the deployed Worker.
+// The real-time test matrix (docs/realtime.md): every client × scenario against the deployed Worker.
 // Each client follows the one client rule: when a stream ends (planned, error or drop), call again
 // with `after` = the last note id. The server must make every scenario gap-free:
 //   steady state  - a note every 2 s

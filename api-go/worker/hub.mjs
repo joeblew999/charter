@@ -1,7 +1,7 @@
 // NotesHub: the live fan-out for new notes, the Go Worker's counterpart of api/src/hub.ts. Subscribers
 // (the Go Worker's Follow loops) are hibernatable WebSockets, so the hub sleeps between notes. It
 // stores nothing: D1 is the log and Follow catches up from it, so the hub may restart at any time
-// (docs/plans/realtime.md, rule 2). It is JavaScript because a Durable Object class has to be: workers-go
+// (docs/realtime.md, rule 2). It is JavaScript because a Durable Object class has to be: workers-go
 // can call one, not be one.
 //
 //   GET  /subscribe  (WebSocket upgrade)  every published message arrives as one text frame

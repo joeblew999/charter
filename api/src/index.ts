@@ -13,7 +13,7 @@ type Note = z.infer<typeof note>;
 // New notes go through oRPC's publisher on the NotesHub Durable Object (live fan-out only).
 const publisher = () => new DurablePublisher<{ note: Note }>(env.HUB);
 
-// The feed both transports serve (docs/plans/realtime.md): D1 is the log, the hub only wakes followers.
+// The feed both transports serve (docs/realtime.md): D1 is the log, the hub only wakes followers.
 const notes: FollowSource<Note> = {
 	subscribe: (listener, onError) => publisher().subscribe("note", listener, { onError }),
 	since: async (after, limit) =>

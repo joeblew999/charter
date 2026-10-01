@@ -70,8 +70,8 @@ description = "REMOTE, once per repo: turn on GitHub Pages for docs/ on main (Gi
 run = "gh api -X POST 'repos/{owner}/{repo}/pages' -f 'source[branch]=main' -f 'source[path]=/docs'"
 
 [tasks."dev:check"]
-description = "The dev tool's own checks: gofmt, vet, tests, and the committed GitHub workflows and docs config match their templates"
-run = 'test -z "$(gofmt -l dev)" && go vet ./dev && go test ./dev && go run ./dev workflows -check && go run ./dev docs -check'
+description = "The dev tool's own checks (gofmt, vet, tests), the generated workflows and docs config match their templates, and docs/ passes the lint"
+run = 'test -z "$(gofmt -l dev)" && go vet ./dev && go test ./dev && go run ./dev workflows -check && go run ./dev docs -check && go run ./dev docs-lint'
 
 [tasks."dev:workflows"]
 description = "Write .github/workflows/ from the templates in dev/workflows (edit those, never the copies)"

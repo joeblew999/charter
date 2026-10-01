@@ -32,7 +32,7 @@ await Promise.race([Promise.all([sse, wsDone]), new Promise(r => setTimeout(r, 1
 ws.close();
 
 // Resume: disconnect, miss a note, reconnect with Last-Event-ID -> the missed note is replayed
-// (oRPC's Durable Object publisher keeps 60 s of events).
+// from D1, the log: follow() catches up from the position the client names.
 async function sseEvents(headers, seconds, until) {
   const res = await fetch(`${origin}/api/notes/watch?seconds=${seconds}`, { headers: { accept: "text/event-stream", ...headers } });
   const decoder = new TextDecoder(); let buf = ""; const events = [];

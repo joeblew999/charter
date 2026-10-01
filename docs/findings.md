@@ -1,6 +1,6 @@
 ---
 title: Findings
-nav_order: 10
+nav_order: 13
 ---
 
 # Findings
@@ -60,7 +60,7 @@ Verified results only: each entry was run and checked. Newest sections last.
 - **`/api/notes/live` (WebSocket) goes silently dead.** The socket stays open, but no note arrives after the hub restart. The Worker subscribes without `onError` and never closes or resubscribes. The TypeScript SDK's `liveNotes.connect()` can't reconnect either, because nothing tells it the socket died. This was our bug in `api/src/index.ts`; `follow()` fixed it (next section).
 - Cloudflare doesn't compress or buffer the stream: there's no `content-encoding` with gzip, br or zstd, and the first byte arrives in about 0.1 s. The response has no `Cache-Control` header.
 
-## The real-time system: follow() (verified 2026-09-30; design in docs/plans/realtime.md)
+## The real-time system: follow() (verified 2026-09-30; design in docs/realtime.md)
 - **Design:**
   - D1 is the log and the note id is the only position (`after`, the SSE `id:`, the WebSocket message `id`).
   - The hub DO only wakes followers.
@@ -103,7 +103,7 @@ Everything in this section ran on this machine: natively, and as TinyGo Wasm und
 - **Fern accepts them.** `fern check --api api-go` passes. The Go SDK (build, vet, tests against WireMock), the TypeScript SDK and the Rust CLI all generate and build from them.
 - **The SDK surface is the oRPC one.** `TestSameSurfaceAsTheORPCContract` compares each operation's id, tags, summary, parameters with their constraints, `x-fern-*` extensions and 200 media types, plus the channel's address, summary, query binding and receive operation, with `sdk/fern/apis/api/`. One thing had to be matched by hand: Huma writes `format: int64` for a Go `int`, and Fern's Go SDK then types the parameter `*int64` instead of `*int`, so the contract uses `int32`.
 - **The real-time design carries over unchanged.** `follow.Follow` is `follow()` in Go, with the same ten tests plus one, passing under the race detector. The hub is a small JavaScript Durable Object with hibernating WebSockets.
-- **workers-go can't answer a WebSocket upgrade** (a 101 from Go has no `webSocket`) and has no WebSocket client. So Go answers the upgrade with a stream of lines and `worker/index.mjs` sends each as a frame; Go subscribes to the hub through `syscall/js`.
+- **workers-go can't answer a WebSocket upgrade** (a 101 from Go has no `webSocket`) and has no WebSocket client. So Go answers the upgrade with a stream of lines and `api-go/worker/index.mjs` sends each as a frame; Go subscribes to the hub through `syscall/js`.
 - **The same tests pass against the Go Worker, locally:**
   - `test/live-test.mjs`: 3/3 (SSE, WebSocket through the hub, resume with `Last-Event-ID`), against the Wasm under workerd and against the native build.
   - `test/sdk-live-test.mjs` with the TypeScript SDK generated from the Go specs: 2/2 (`notes.watch()`, `liveNotes.connect()`).
@@ -122,7 +122,7 @@ Deployed with `mise run api-go:deploy` to https://orpc-api-go.gedw99.workers.dev
 - **Go timers hang on Cloudflare without a fix, and not under local workerd.** The first soak there failed for the Fern CLI (5/37), because streams never ended at their limit: a stream asked for 2 s was still open after 40.
   - Go's timers were fine in isolation (`time.Sleep`, `time.NewTimer`, a context deadline and a `select` all fired at 2 s in a probe).
   - The cause is the production clock, measured in plain JavaScript on the deployed Worker: after `setTimeout(d)` both `Date.now()` and `performance.now()` have moved by `d` rounded down to a whole millisecond (`1999.7` gives 1999; `0.4` gives 0, however often it's repeated). TinyGo's scheduler sleeps with `setTimeout(ns / 1e6)`, so with under a millisecond left it re-arms a timer that never moves the clock.
-  - 6 of 10 streams with a 2 s limit hung. With `worker/tinygo-clock.mjs` (round every TinyGo sleep up to a whole millisecond), 16 of 16 ended on time, and the soak above passed.
+  - 6 of 10 streams with a 2 s limit hung. With `api-go/worker/tinygo-clock.mjs` (round every TinyGo sleep up to a whole millisecond), 16 of 16 ended on time, and the soak above passed.
 - **The hub Durable Object hibernates** (Cloudflare's GraphQL analytics, `durableObjectsPeriodicGroups`, namespace `orpc-api-go_NotesHub`). In the hour that held the soak and the 20-minute idle run, with client streams subscribed for about half of it, the hub's active time was 5.7 s; it sent 804 WebSocket messages and took 565 requests. The next hour, mostly idle: 0.2 s.
 - **Everything Fern's clients do works against the Go Worker,** with the clients generated from the Go specs:
   - the CLI: `meta hello`, `notes create`, `notes watch --after` (the notes after the cursor, then the terminator), and `notes list --page-all --limit 30`: 4 pages, 102 notes, 102 unique ids;
@@ -135,7 +135,7 @@ Deployed with `mise run api-go:deploy` to https://orpc-api-go.gedw99.workers.dev
 
 ## MCP from the Huma contract (api-go/humamcp, verified locally 2026-10-01; on Cloudflare: see the section above)
 
-Everything here ran on this machine: natively, and as TinyGo Wasm under workerd (`cf dev`). Nothing ran on Cloudflare itself. The design and its limits are in [plans/mcp.md](plans/mcp.md).
+Everything here ran on this machine: natively, and as TinyGo Wasm under workerd (`cf dev`). Nothing ran on Cloudflare itself. The design and its limits are in [mcp.md](mcp.md).
 
 - **Versions:** MCP revisions 2026-07-28, 2025-11-25 and 2025-06-18; clients `@modelcontextprotocol/client` 2.2.0, `@modelcontextprotocol/sdk` 1.31.0 and `@modelcontextprotocol/inspector` 2.9.0 (CLI); Huma 2.39.1, TinyGo 0.42.0, Go 1.27.1, workerd through cf 1.0.0-beta.5.
 - **An MCP server needs no MCP SDK.** `api-go/humamcp` is the Streamable HTTP transport written out: JSON-RPC over one POST, one `application/json` answer, no state. It serves `/api/mcp` from the same Huma operations as REST, in the Worker and in the native build.
@@ -167,7 +167,7 @@ Cut with `git tag v0.1.0 && git push origin v0.1.0` on main, after `api-check`, 
 
 ## The showcase, contract first in oRPC (sdk/harness, verified locally 2026-10-01)
 
-Everything in this list ran on this machine, the Worker under `cf dev`. It was then deployed (`mise run sdk:harness:deploy`), and `mise run sdk:harness:test -remote` passes 9/9 on Cloudflare against the oRPC implementation: SSE, the multipart upload, idempotent create, OAuth client credentials, pagination, the webhook signature, and the WebSocket client inside a Worker and from Node. How it is built is in [sdk.md](sdk.md#the-showcase-is-contract-first-orpc-verified-2026-10-01).
+Everything in this list ran on this machine, the Worker under `cf dev`. It was then deployed (`mise run sdk:harness:deploy`), and `mise run sdk:harness:test -remote` passes 9/9 on Cloudflare against the oRPC implementation: SSE, the multipart upload, idempotent create, OAuth client credentials, pagination, the webhook signature, and the WebSocket client inside a Worker and from Node. How it is built is in [sdk.md](sdk.md#the-orpc-showcase).
 
 - **Versions:** oRPC 2.0.0-beta.40, Zod 4.6.5, Fern 5.140.0 (Go SDK 1.64.0, TypeScript SDK 3.98.0, CLI generator 0.44.0), workerd through cf 1.0.0-beta.5.
 - **One oRPC contract now gives the whole showcase:** OAuth client credentials with a form-encoded token endpoint, idempotency, cursor pagination, an SSE stream, a multipart upload, a webhook with an HMAC signature, a WebSocket both ways, and audiences. `openapi.json` and `asyncapi.json` are generated from it, and the hand-written `asyncapi.yml` is deleted.
@@ -201,7 +201,7 @@ Everything here ran on this machine: natively, and as TinyGo Wasm under workerd 
 - **The two showcases are interchangeable to the SDKs.** The same program passes against the oRPC showcase under `cf dev` with its own SDK (9/9: `--open` leaves out the token checks, and it sends no webhook). Each server also passes with the SDK made from the other's specs: the oRPC-spec SDK against the Go server (12/12, native), the Go-spec SDK against the oRPC server (9/9).
 - **The SDK surface is the oRPC showcase's.** `TestSameSurfaceAsTheORPCShowcase` compares the two generated specs: operations, parameters, request and response bodies by media type with their shapes, `x-fern-*` extensions, security, the webhook, the channel, its operations and its messages. Two differences are named in the test: `limit` has bounds and a default in Go, and the channel's `access_token` query parameter is declared in Go. Both showcases use the same overlay.
 - **Fern's generators accept the Go specs.** The Go SDK builds, vets and passes its tests; the TypeScript SDK and the public one typecheck; the compiled TypeScript SDK and the CLI generate. The CLI was not built.
-- **Huma says most of it natively.** The document's `security`, `securitySchemes` and `x-fern-*` are fields of its config; `security: []` and `x-fern-*` are fields of an operation; `OpenAPI.Webhooks` is a field (filled by hand in `spec.go`); the `contentType` tag writes a form-encoded body into the spec. What was added: a format that decodes a form (`humaworkers.WithForm`), and `send` operations in the AsyncAPI generator (`asyncapi.SendOperation`). The notes API's `asyncapi.json` is unchanged, byte for byte.
+- **Huma says most of it natively.** The document's `security`, `securitySchemes` and `x-fern-*` are fields of its config; `security: []` and `x-fern-*` are fields of an operation; `OpenAPI.Webhooks` is a field (filled by hand in `api-go/showcase/spec.go`); the `contentType` tag writes a form-encoded body into the spec. What was added: a format that decodes a form (`humaworkers.WithForm`), and `send` operations in the AsyncAPI generator (`asyncapi.SendOperation`). The notes API's `asyncapi.json` is unchanged, byte for byte.
 - **`crypto/hmac` and `crypto/sha256` work under TinyGo.** The access token is an expiry signed with HMAC, made by one request and checked by the next, and the webhook is signed, all in the Wasm under workerd.
 - **Huma's typed multipart form doesn't run under TinyGo.** `huma.MultipartFormFiles[T]` panics with `unimplemented: (reflect.Value).MethodByName()` (tinygo-org/tinygo#3862). The plain `multipart.Form` as `RawBody` works, with the schema declared on the operation.
 - **A multipart upload over 8 KB failed under workerd** with `cannot read multipart form: open /tmp/multipart-...: file does not exist`. Huma's adapter keeps 8 KB in memory (`humago.MultipartMaxMemory`) and writes the rest to a temporary file. With the limit at 32 MB (`humaworkers` sets it), 100 KB and 5 MB uploads passed; 5 MB took 2.4 s under workerd, 5 ms natively.
