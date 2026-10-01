@@ -3,6 +3,9 @@
 // client rule: run again with -after <last id>.
 //
 //	go run . -base <origin> [-after <id>] [-seconds 15]
+//
+// Not in go.work: it needs a generated SDK (sdk/out/<api>/go, gitignored), which a fresh checkout
+// doesn't have. test/soak.mjs builds it with a workspace file of its own that points at the SDK.
 package main
 
 import (

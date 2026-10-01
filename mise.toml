@@ -3,13 +3,12 @@
 #   mise install && mise run setup     # tools, then npm packages
 #   mise run check                     # every local check (needs Docker, no Cloudflare account)
 #   mise tasks                         # all of them
-# Every task is one line. Anything longer is a command of ./dev (go run ./dev help).
+# Every task is one line of plain sh (on Linux mise runs dash: no pipes that need pipefail, no
+# bashisms). Anything longer is a command of ./dev (go run ./dev help).
 # Tool versions: here; Rust in rust-toolchain.toml, Go in go.work (read by mise, see settings).
 
 [settings]
 idiomatic_version_file_enable_tools = ["rust", "go"]
-# bash everywhere: on Linux mise's default sh is dash (no pipefail).
-unix_default_inline_shell_args = "bash -o errexit -o pipefail -c"
 
 [tools]
 node = "26.10.0"
