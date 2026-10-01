@@ -40,7 +40,7 @@ import (
 func do() {
     client := client.NewClient()
     request := &orpcapi.CreateInputBody{
-        Body: "body",
+        Body: "Buy milk",
     }
     client.Notes.Create(
         context.TODO(),

@@ -41,7 +41,14 @@ client.Meta.Hello(
 <dd>
 
 ```go
-request := &orpcapi.ListNotesRequest{}
+request := &orpcapi.ListNotesRequest{
+    Cursor: orpcapi.String(
+        "42",
+    ),
+    Limit: orpcapi.Int(
+        20,
+    ),
+}
 client.Notes.List(
     context.TODO(),
     request,
@@ -94,7 +101,7 @@ client.Notes.List(
 
 ```go
 request := &orpcapi.CreateInputBody{
-    Body: "body",
+    Body: "Buy milk",
 }
 client.Notes.Create(
     context.TODO(),
@@ -153,7 +160,14 @@ Each event's SSE id is the note id, so a browser EventSource resumes by itself (
 <dd>
 
 ```go
-request := &orpcapi.WatchNotesRequest{}
+request := &orpcapi.WatchNotesRequest{
+    After: orpcapi.String(
+        "42",
+    ),
+    Seconds: orpcapi.Int(
+        30,
+    ),
+}
 client.Notes.Watch(
     context.TODO(),
     request,

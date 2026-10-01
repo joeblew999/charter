@@ -37,7 +37,14 @@ func NewClient(options *core.RequestOptions) *Client {
 
 // Example:
 //
-//	request := &orpcapi.ListNotesRequest{}
+//	request := &orpcapi.ListNotesRequest{
+//	    Cursor: orpcapi.String(
+//	        "42",
+//	    ),
+//	    Limit: orpcapi.Int(
+//	        20,
+//	    ),
+//	}
 //	client.Notes.List(
 //	    context.TODO(),
 //	    request,
@@ -88,6 +95,7 @@ func (c *Client) List(
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
 			Response:        pageRequest.Response,
+			ErrorDecoder:    internal.NewErrorDecoder(orpcapi.ErrorCodes),
 		}
 	}
 	readPageResponse := func(response *orpcapi.ListOutputBody) *core.PageResponse[*string, *orpcapi.Note, *orpcapi.ListOutputBody] {
@@ -112,7 +120,7 @@ func (c *Client) List(
 // Example:
 //
 //	request := &orpcapi.CreateInputBody{
-//	    Body: "body",
+//	    Body: "Buy milk",
 //	}
 //	client.Notes.Create(
 //	    context.TODO(),
@@ -138,7 +146,14 @@ func (c *Client) Create(
 //
 // Example:
 //
-//	request := &orpcapi.WatchNotesRequest{}
+//	request := &orpcapi.WatchNotesRequest{
+//	    After: orpcapi.String(
+//	        "42",
+//	    ),
+//	    Seconds: orpcapi.Int(
+//	        30,
+//	    ),
+//	}
 //	client.Notes.Watch(
 //	    context.TODO(),
 //	    request,

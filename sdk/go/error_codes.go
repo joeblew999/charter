@@ -3,7 +3,14 @@
 package orpcapi
 
 import (
+	core "github.com/joeblew999/orpc-api/sdk/go/core"
 	internal "github.com/joeblew999/orpc-api/sdk/go/internal"
 )
 
-var ErrorCodes internal.ErrorCodes = internal.ErrorCodes{}
+var ErrorCodes internal.ErrorCodes = internal.ErrorCodes{
+	422: func(apiError *core.APIError) error {
+		return &UnprocessableEntityError{
+			APIError: apiError,
+		}
+	},
+}
