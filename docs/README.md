@@ -1,6 +1,6 @@
 # Docs
 
-Everything written about this repo lives in this folder: one place for developers and for agents. Folder READMEs and `AGENTS.md` only point here.
+Everything written about this repo lives in this folder: one place for developers and for agents. Folder READMEs and `AGENTS.md` only point here. GitHub Pages renders it at https://joeblew999.github.io/orpc-api/ straight from these files (`_config.yml`; no build step).
 
 | Page | What it covers |
 |---|---|

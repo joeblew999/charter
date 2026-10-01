@@ -5,6 +5,7 @@ One notes API on Cloudflare Workers, built twice (oRPC in `api/`, Go with Huma o
 ## Rules
 
 - **`docs/` is the single source of truth.** Everything written about the repo goes in a page there. `AGENTS.md`, `CLAUDE.md` and the folder READMEs only point to it: don't put content in them.
+- **Docs are plain Markdown that GitHub Pages renders as it is.** Link pages relatively (`[api-go.md](api-go.md)`), and don't write two opening curly braces together or a curly brace followed by a percent sign: Jekyll reads those as template code.
 - **mise drives everything, locally and on GitHub, and every task is one line.** Anything that needs more is a command of the `dev` tool (`dev/`, Go, standard library only): add a command there, then a one-line task that calls it. No `scripts/` or tasks folder, no shell blocks in `mise.toml`. Test programs (`test/*.mjs`, `test/soak-go`) are code, not glue.
 - **GitHub workflows are generated and only call mise.** The templates are `dev/workflows/*.yml` (prefix `api-`, `sdk-` or `dev-`). Edit a template, run `mise run dev:workflows`, commit both; `mise run dev:check` fails if they differ. A step that does work is `mise run <task>`: no shell in YAML. Actions and runners are pinned to exact versions.
 - **A release is a version tag** (`vX.Y.Z`), built by the `*-release` workflows. Don't upload release files or push the module tags (`api-go/vX.Y.Z`, `dev/vX.Y.Z`) by hand. See docs/dev.md.

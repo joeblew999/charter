@@ -51,6 +51,10 @@ run = "go run ./dev doctor"
 description = "The upstream issues our code works around (every `Upstream:` tag): CLOSED means that workaround can go"
 run = "go run ./dev upstream"
 
+[tasks."docs:pages"]
+description = "REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself)"
+run = "gh api -X POST 'repos/{owner}/{repo}/pages' -f 'source[branch]=main' -f 'source[path]=/docs'"
+
 [tasks."dev:check"]
 description = "The dev tool's own checks: gofmt, vet, tests, and the committed GitHub workflows match their templates"
 run = 'test -z "$(gofmt -l dev)" && go vet ./dev && go test ./dev && go run ./dev workflows -check'
