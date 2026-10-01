@@ -35,13 +35,27 @@ mise run api-go:soak
 
 On another Cloudflare account, set `API_URL`, `API_GO_URL` (and `HARNESS_URL`, `HARNESS_API_URL`) in `mise.local.toml`, which is gitignored.
 
-## Start a new Go API project
+## Use it in another repo
+
+Everything runs through one tool, straight from GitHub. Nothing to copy by hand.
 
 ```sh
-go run github.com/joeblew999/orpc-api/dev@latest new -name billing-api
+D="go run github.com/joeblew999/orpc-api/dev@latest"
+
+# A new Go API project (contract, Worker, tests, Fern folder, tasks, docs), under your name:
+$D new -name billing-api && cd billing-api && git init
+mise install && mise run setup && mise run check      # proves it works on your machine
+mise run api-go:deploy && mise run api-go:live-test   # to Cloudflare, then test what was deployed
+
+# In any repo that has a GitHub remote:
+$D workflows -into .        # GitHub workflows (api-*, sdk-*), which only call mise tasks
+$D docs -into .             # the docs site for docs/: config, writing rules, llms.txt
+$D docs-lint                # check docs/: links, tasks and paths that don't exist
+$D docs-review              # have Claude bring docs/ up to date against docs/writing.md
+gh api -X POST 'repos/{owner}/{repo}/pages' -f 'source[branch]=main' -f 'source[path]=/docs'   # once: turn the site on
 ```
 
-That creates a working project (contract, Worker, tests, Fern folder, tasks, docs) from the Go example here, under your name. See [docs/dev.md](docs/dev.md#a-new-project-dev-new).
+A project made by `new` has all of these as one-line tasks already (`mise tasks`). What each command does: [docs/dev.md](docs/dev.md). For an agent: start at [AGENTS.md](AGENTS.md), or https://joeblew999.github.io/orpc-api/llms.txt.
 
 ## Layout
 
