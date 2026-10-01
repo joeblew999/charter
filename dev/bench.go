@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	commands["bench"] = command{"[-n 20] [-spec <file or url>] [-write] [-cpu] [-worker <name>] <url>",
+	commands["bench"] = command{"[-n 20] [-spec <file or url>] [-write] [-cpu] [-warm 45s] [-worker <name>] [-header 'Name: value']... <url>",
 		"time every operation of an API from its OpenAPI spec: wall time, and with -cpu the CPU time Cloudflare measured", bench}
 	anywhere["bench"] = true
 }
@@ -40,7 +40,11 @@ type call struct {
 //     and observability enabled on the Worker; the events take up to a minute or two to arrive.
 func bench(args []string) error {
 	n, spec, write, cpu, worker := 20, "", false, false, ""
+	var headers list
+	var warm time.Duration
 	rest := flags("bench", args, func(f *flag.FlagSet) {
+		f.DurationVar(&warm, "warm", 0, "send requests for this long first (e.g. 45s): a Worker just deployed or idle is slower for up to a minute")
+		f.Var(&headers, "header", "a header for every request, e.g. 'Authorization: Bearer <token>' (repeat)")
 		f.IntVar(&n, "n", n, "requests per operation")
 		f.StringVar(&spec, "spec", "", "the OpenAPI spec, a file or a URL (default: <url>/api/openapi.json)")
 		f.BoolVar(&write, "write", false, "also call operations that change data (POST, PUT, PATCH, DELETE)")
@@ -60,6 +64,19 @@ func bench(args []string) error {
 	}
 	calls = append(calls, call{method: "GET", path: "/__bench/not-found", trigger: "GET /__bench/not-found"})
 
+	// A Worker that was just deployed or has been idle runs slower for up to a minute. -warm sends
+	// requests for that long first, so the figures are the steady ones; without it they are whatever
+	// state the Worker is in.
+	if warm > 0 {
+		fmt.Printf("warming up for %s...\n", warm)
+		for end := time.Now().Add(warm); time.Now().Before(end); {
+			if res, err := http.Get(base + calls[0].path); err == nil {
+				io.Copy(io.Discard, res.Body)
+				res.Body.Close()
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
 	started := time.Now()
 	type timing struct {
 		status          int
@@ -77,6 +94,11 @@ func bench(args []string) error {
 			}
 			if c.body != nil {
 				req.Header.Set("Content-Type", "application/json")
+			}
+			for _, header := range headers {
+				if name, value, ok := strings.Cut(header, ":"); ok {
+					req.Header.Set(strings.TrimSpace(name), strings.TrimSpace(value))
+				}
 			}
 			start := time.Now()
 			res, err := http.DefaultClient.Do(req)
@@ -192,6 +214,10 @@ func callsFromSpec(source string, write bool) (calls []call, skipped []string, e
 				}
 			}
 			var body []byte
+			if content, ok := dig(op, "requestBody", "content").(map[string]any); ok && content["application/json"] == nil {
+				skipped = append(skipped, trigger+": its request body is not JSON (a form or a file upload)")
+				continue
+			}
 			if schema, ok := dig(op, "requestBody", "content", "application/json", "schema").(map[string]any); ok && missing == "" {
 				value := example(doc, map[string]any{"schema": schema})
 				if value == nil {
