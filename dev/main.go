@@ -40,7 +40,7 @@ func main() {
 			names = append(names, name)
 		}
 		sort.Strings(names)
-		fmt.Println("go run ./dev <command> [flags] [args]")
+		fmt.Println("dev <command> [flags] [args]    (in the orpc-api repo itself: go run ./dev <command>)")
 		for _, name := range names {
 			fmt.Printf("  %-34s %s\n", strings.TrimSpace(name+" "+commands[name].usage), commands[name].help)
 		}
@@ -48,7 +48,7 @@ func main() {
 	}
 	cmd, ok := commands[os.Args[1]]
 	if !ok {
-		fail(fmt.Errorf("no command %q: go run ./dev help", os.Args[1]))
+		fail(fmt.Errorf("no command %q: dev help lists them", os.Args[1]))
 	}
 	if dir, ok := root(); ok {
 		if err := os.Chdir(dir); err != nil {
