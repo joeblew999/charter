@@ -111,6 +111,9 @@ func docsReviewRun(args []string) error {
 		return errNoClaude
 	}
 	// It may edit files and run the checks, nothing else.
-	return sh(".", "claude", "-p", prompt, "--permission-mode", "acceptEdits", "--allowedTools",
+	cmd := exec.Command("claude", "-p", prompt, "--permission-mode", "acceptEdits", "--allowedTools",
 		"Read,Edit,Write,Glob,Grep,Bash(mise run docs:lint),Bash(mise run dev:check),Bash(mise tasks),Bash(git status:*),Bash(git diff:*),Bash(ls:*)")
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr // no stdin: the prompt is the whole input
+	fmt.Println("Claude is reviewing docs/ (it prints its report when it is done; watch `git status` for its edits)")
+	return cmd.Run()
 }
