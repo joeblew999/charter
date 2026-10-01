@@ -28,14 +28,14 @@ jobs:
           path: dist/
           if-no-files-found: error
       - run: mise run release
+  # amd64 only: the pinned binaryen in mise.toml has no linux/arm64 build, so mise can't install on an arm runner.
   cli:
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 45
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         api: [api, api-go]
-        runner: [ubuntu-24.04, ubuntu-24.04-arm]
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.0.1
@@ -43,7 +43,7 @@ jobs:
       - run: mise run sdk:dist:cli ${{ matrix.api }}
       - uses: actions/upload-artifact@v7.0.1
         with:
-          name: cli-${{ matrix.api }}-${{ matrix.runner }}
+          name: cli-${{ matrix.api }}
           path: dist/
           if-no-files-found: error
       - run: mise run release

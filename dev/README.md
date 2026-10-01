@@ -42,7 +42,7 @@ Every step that does work is `mise run <task>`, so a failing step is one line yo
 | `dev-check` | push to main, pull requests | `dev:check` | none |
 | `api-deploy` | by hand only (pick `api` or `api-go`) | `cloudflare:token`, then `<api>:deploy` | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 | `dev-release` | a version tag. A dry run by hand, and on pull requests that touch `dev/` | `dev:dist`, `release`, `release:tags` | none (the workflow's own token) |
-| `sdk-release` | a version tag. A dry run by hand, and on pull requests that touch `sdk/` or `dev/` | `sdk:dist`, `sdk:dist:cli <api>` (on an amd64 and an arm64 runner), `release` | none |
+| `sdk-release` | a version tag. A dry run by hand, and on pull requests that touch `sdk/` or `dev/` | `sdk:dist`, `sdk:dist:cli <api>`, `release` | none |
 
 `api-deploy` fails at its first step, naming the secrets, when they are missing. Set them with `gh secret set CLOUDFLARE_API_TOKEN` and `gh secret set CLOUDFLARE_ACCOUNT_ID`.
 
@@ -60,7 +60,7 @@ The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release
 | `api-sdk-go.tar.gz`, `api-sdk-typescript.tar.gz` | The SDK sources Fern generates from the oRPC specs: generated fresh, then checked (`sdk:check`) |
 | `api-go-sdk-go.tar.gz`, `api-go-sdk-typescript.tar.gz` | The same from the Go Worker's specs |
 | `api-specs.tar.gz`, `api-go-specs.tar.gz` | `openapi.json` and `asyncapi.json` of each API |
-| `api-cli-linux-amd64`, `api-cli-linux-arm64`, `api-go-cli-linux-amd64`, `api-go-cli-linux-arm64` | The Fern CLI of each API (the binary calls itself `orpc-api`) |
+| `api-cli-linux-amd64`, `api-go-cli-linux-amd64` | The Fern CLI of each API (the binary calls itself `orpc-api`). About 3 minutes each on the runner |
 
 **Go module versions.** `api-go/` and `dev/` are Go modules in subdirectories, and Go only finds a version of such a module under a tag with the directory in front. So `release:tags` adds `api-go/v0.1.0` and `dev/v0.1.0` on the same commit as `v0.1.0`. You push one tag; those two follow. Then `go get github.com/joeblew999/orpc-api/api-go@v0.1.0` and `go run github.com/joeblew999/orpc-api/dev@v0.1.0 help` work.
 
