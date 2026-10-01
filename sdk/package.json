@@ -3,6 +3,7 @@
   "private": true,
   "description": "Fern (buildwithfern.com): SDKs, a CLI and docs from OpenAPI specs. Plus the TypeScript toolchain sdk:check uses.",
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.2.0",
     "@types/node": "^18.19.70",
     "@types/ws": "^8.5.12",
     "fern-api": "5.140.0",

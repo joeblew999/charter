@@ -14,7 +14,7 @@ Everything written about this repo lives in this folder: one place for developer
 | [benchmarks.md](benchmarks.md) | Measured cost per request of both Workers, and how to measure it |
 | [upstream.md](upstream.md) | Every upstream issue we work around, and drafts for ones not filed yet |
 | [findings.md](findings.md) | Verified results only, newest last |
-| [plans/](plans/next.md) | What comes next: [next.md](plans/next.md), [realtime.md](plans/realtime.md) (the design), [asyncapi.md](plans/asyncapi.md), [performance.md](plans/performance.md), [microservices.md](plans/microservices.md) |
+| [plans/](plans/next.md) | What comes next: [next.md](plans/next.md), [realtime.md](plans/realtime.md) (the design), [asyncapi.md](plans/asyncapi.md), [performance.md](plans/performance.md), [microservices.md](plans/microservices.md), [mcp.md](plans/mcp.md) (the contract as MCP tools) |
 
 ## What is what
 
@@ -53,7 +53,7 @@ Things that are easy to mix up:
 - **"The CLI" means the command-line program Fern generates** (`orpc-api notes list`, `orpc-api notes watch`). It runs on a developer's machine and calls the API over HTTPS, like an SDK. It never runs on Cloudflare. It is not `cf` (Cloudflare's tool), `mise`, or `dev` (this repo's task tool).
 - **"Go" means two different things here.** `api-go/` is a Go *server*. `sdk/out/*/go` is a Go *client SDK* that Fern generated, and it exists for both servers.
 - **The tests and the database schema are shared.** `test/` has one set of test programs for both servers (they take a URL, and `--sdk api-go` picks the SDKs generated from the Go specs), and `migrations/` is the one D1 schema.
-- **What is the product and what is an example.** `dev/` and the Go packages in `api-go/` (`humaworkers`, `asyncapi`, `follow`) are what other projects use. `api/` and `api-go/` as Workers are the reference examples they are proven against.
+- **What is the product and what is an example.** `dev/` and the Go packages in `api-go/` (`humaworkers`, `asyncapi`, `follow`, `humamcp`) are what other projects use. `api/` and `api-go/` as Workers are the reference examples they are proven against.
 - **`sdk/fern/apis/` has other folders** (`petstore`, `showcase`, `modern`): sample specs for trying Fern features. They have no server here except the showcase mock in `sdk/harness`.
 
 ## What it shows

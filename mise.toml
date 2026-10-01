@@ -170,21 +170,25 @@ dir = "api-go"
 run = 'test -z "$(gofmt -l .)" && go vet ./... && GOOS=js GOARCH=wasm go vet .'
 
 [tasks."api-go:test"]
-description = "Go tests: follow, the API, and the same SDK surface as the oRPC contract"
+description = "Go tests: follow, the API, the MCP endpoint, and the same SDK surface as the oRPC contract"
 dir = "api-go"
 run = "go test ./..."
 
 [tasks."api-go:test:native"]
-description = "The real-time live test against the native build"
-run = 'go run ./dev with-server -dir api-go -url http://localhost:5396/api/hello -start "PORT=5396 go run ." -run "node ../test/live-test.mjs http://localhost:5396"'
+description = "The real-time live test and the MCP client test against the native build"
+run = 'go run ./dev with-server -dir api-go -url http://localhost:5396/api/hello -start "PORT=5396 go run ." -run "node ../test/live-test.mjs http://localhost:5396" -run "node ../test/mcp-test.mjs http://localhost:5396"'
 
 [tasks."api-go:test:workerd"]
-description = "The real-time live test against the TinyGo Wasm under workerd (go test can't see TinyGo's gaps)"
+description = "The real-time live test and the MCP client test against the TinyGo Wasm under workerd (go test can't see TinyGo's gaps)"
 depends = ["api-go:build"]
-run = 'go run ./dev with-server -dir api-go -url http://localhost:5397/api/hello -start "PORT=5397 ./node_modules/.bin/cf dev" -run "go run ../dev migrate-local -worker orpc-api-go -port 5397" -run "node ../test/live-test.mjs http://localhost:5397"'
+run = 'go run ./dev with-server -dir api-go -url http://localhost:5397/api/hello -start "PORT=5397 ./node_modules/.bin/cf dev" -run "go run ../dev migrate-local -worker orpc-api-go -port 5397" -run "node ../test/live-test.mjs http://localhost:5397" -run "node ../test/mcp-test.mjs http://localhost:5397"'
+
+[tasks."api-go:mcp-test"]
+description = "The MCP client test (/api/mcp, official TypeScript client) against a running api-go:run or api-go:dev; writes test notes"
+run = 'node test/mcp-test.mjs "http://localhost:$API_GO_PORT"'
 
 [tasks."api-go:check"]
-description = "LOCAL: lint, tests, spec drift, the TinyGo build, and the live test natively and under workerd"
+description = "LOCAL: lint, tests, spec drift, the TinyGo build, and the live and MCP tests natively and under workerd"
 depends = ["api-go:lint", "api-go:test", "api-go:spec:check", "api-go:test:native", "api-go:test:workerd"]
 
 [tasks."api-go:deploy"]
