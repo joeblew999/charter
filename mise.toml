@@ -125,7 +125,7 @@ run = "go run ./dev migrate -worker orpc-api"
 
 [tasks."api:live-test"]
 description = "REMOTE, writes test notes: SSE + WebSocket, raw and through the TypeScript SDK"
-depends = ["sdk:ready api"]
+depends = ["sdk:ready api typescript-dist"]
 run = 'node test/live-test.mjs "$API_URL" && node test/sdk-live-test.mjs "$API_URL" api'
 
 [tasks."api:soak"]
@@ -208,9 +208,9 @@ description = "REMOTE: apply pending migrations/ to orpc-api-go-db"
 run = "go run ./dev migrate -worker orpc-api-go"
 
 [tasks."api-go:live-test"]
-description = "REMOTE, writes test notes: SSE + WebSocket, raw and through the TypeScript SDK made from the Go specs"
-depends = ["sdk:ready api-go"]
-run = 'node test/live-test.mjs "$API_GO_URL" && node test/sdk-live-test.mjs "$API_GO_URL" api-go'
+description = "REMOTE, writes test notes: SSE + WebSocket, raw and through the TypeScript SDK made from the Go specs, then MCP"
+depends = ["sdk:ready api-go typescript-dist"]
+run = 'node test/live-test.mjs "$API_GO_URL" && node test/sdk-live-test.mjs "$API_GO_URL" api-go && node test/mcp-test.mjs "$API_GO_URL"'
 
 [tasks."api-go:soak"]
 description = "REMOTE, redeploys orpc-api-go: the real-time matrix, with the SDKs and CLI made from the Go specs. --idle <min> for the long-idle case"

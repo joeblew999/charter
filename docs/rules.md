@@ -16,6 +16,7 @@ One notes API on Cloudflare Workers, built twice (oRPC in `api/`, Go with Huma o
 - **The two contracts describe the same API.** Change both together: `api-go`'s `TestSameSurfaceAsTheORPCContract` fails when what Fern sees differs.
 - **Everything that ships to Workers from `api-go/` builds with TinyGo** (`mise run api-go:build`). Standard Go is for the native build, `go test` and `cmd/spec`. `go test` can't see TinyGo's gaps, so `api-go:check` also runs the Wasm under workerd.
 - **Workarounds name their upstream issue.** Tag them in the code as `Upstream: <owner>/<repo>#<n> (when fixed: ...)`, add a row to the table in `docs/upstream.md`, and check with `mise run upstream:status`.
+- **Test locally and on Cloudflare.** `mise run check` is the local half. After a deploy, the live test must pass against the deployed Worker (`api-deploy` does it; by hand: `mise run api:live-test` or `api-go:live-test`). Some bugs exist only in production.
 - **Only verified results** go into docs/findings.md.
 - **Heavy jobs:**
   - `sdk:gen` needs Docker;

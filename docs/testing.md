@@ -18,3 +18,14 @@ node test/soak.mjs <url> [--sdk api-go] [--deploy-task api-go:deploy] [--no-depl
 ```
 
 The design they test is in [plans/realtime.md](plans/realtime.md). Unit tests live with the code: `api/test/` (vitest) and `api-go/**/_test.go`.
+
+## Local and remote: both, with the same programs
+
+Every test program takes a URL, so one file tests a local server and the deployed Worker. Both runs are needed, because each catches what the other can't:
+
+| Where | What runs it | What it catches |
+|---|---|---|
+| Native Go build, and the Wasm under local workerd (`cf dev`) | `mise run check`, and CI on every push | Logic, the contract, TinyGo's gaps |
+| The deployed Worker on Cloudflare | `mise run api:live-test`, `api-go:live-test` (also the last step of the `api-deploy` workflow), and the soak tasks | What only production does. Go timers hung there and nowhere else: local workerd has a real clock, Cloudflare's only moves on I/O ([upstream.md](upstream.md)) |
+
+A green local run is not a verdict on a deploy. Deploy through `api-deploy`, or run the live test yourself afterwards.

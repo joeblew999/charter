@@ -1,6 +1,7 @@
 # Written by `dev workflows` from its template (github.com/joeblew999/orpc-api/dev, dev/workflows/api-deploy.yml):
 # change the template, not this file. Every step that does work is a mise task, so it runs locally too.
-# By hand only: deploy one Worker to Cloudflare, then apply its D1 migrations. Needs the two secrets below.
+# By hand only: deploy one Worker to Cloudflare, apply its D1 migrations, then run the live test against
+# what was deployed (some failures only show on Cloudflare itself). Needs the two secrets below.
 name: api-deploy
 on:
   workflow_dispatch:
@@ -27,3 +28,4 @@ jobs:
       - run: mise run cloudflare:token
       - run: mise run setup
       - run: mise run "$API:deploy"
+      - run: mise run "$API:live-test"

@@ -15,7 +15,7 @@ import (
 func init() {
 	commands["sdk-gen"] = command{"<api> <group>", "generate one SDK with Fern (Docker) into sdk/out/<api>/<group>", sdkGen}
 	commands["sdk-check"] = command{"<dir>", "prove a generated SDK works: Go = build, vet, tests against WireMock; TypeScript = typecheck", sdkCheck}
-	commands["sdk-ready"] = command{"<api>", "generate and build what the tests use, if missing: TypeScript and Go SDKs, the Fern CLI", sdkReady}
+	commands["sdk-ready"] = command{"<api> [group...]", "generate and build what the tests use, if missing: TypeScript and Go SDKs, the Fern CLI (or only the groups named)", sdkReady}
 	commands["sdk-list"] = command{"", "the APIs in sdk/fern/apis and the SDK groups each one defines", sdkList}
 	commands["sdk-clean"] = command{"", "remove generated SDKs (sdk/out) and stop leftover WireMock containers", sdkClean}
 	commands["cli-build"] = command{"[-linux] <dir>", "HEAVY: build a Fern-generated Rust CLI, natively or for Linux in Docker", cliBuild}
@@ -95,20 +95,31 @@ func sdkCheck(args []string) error {
 }
 
 func sdkReady(args []string) error {
-	if len(args) != 1 {
-		return errors.New("sdk-ready needs <api>: a folder in sdk/fern/apis")
+	if len(args) < 1 {
+		return errors.New("sdk-ready needs <api>: a folder in sdk/fern/apis, then optionally the groups wanted")
 	}
 	api, out := args[0], filepath.Join("sdk/out", args[0])
+	wanted := func(group string) bool {
+		for _, name := range args[1:] {
+			if name == group {
+				return true
+			}
+		}
+		return len(args) == 1
+	}
 	for _, need := range []struct{ file, group string }{
 		{"typescript-dist/esm/index.mjs", "typescript-dist"},
 		{"go/go.mod", "go"},
 		{"cli/Cargo.toml", "cli"},
 	} {
-		if !exists(filepath.Join(out, need.file)) {
+		if wanted(need.group) && !exists(filepath.Join(out, need.file)) {
 			if err := sdkGen([]string{api, need.group}); err != nil {
 				return err
 			}
 		}
+	}
+	if !wanted("cli") {
+		return nil
 	}
 	cli := filepath.Join(out, "cli")
 	bin, err := cargoBin(cli)

@@ -41,7 +41,7 @@ Every step that does work is `mise run <task>`, so a failing step is one line yo
 | `api-check` | push to main, pull requests | `api:check` and `api-go:check`, one job each | none |
 | `sdk-check` | push to main, pull requests | `sdk:demo`, `sdk:harness:test`, and `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of `api` and `api-go` | none |
 | `dev-check` | push to main, pull requests | `dev:check` | none |
-| `api-deploy` | by hand only (pick `api` or `api-go`) | `cloudflare:token`, then `<api>:deploy` | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
+| `api-deploy` | by hand only (pick `api` or `api-go`) | `cloudflare:token`, `<api>:deploy`, then `<api>:live-test` against the Worker it just deployed | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 | `dev-release` | a version tag. A dry run by hand, and on pull requests that touch `dev/` | `dev:dist`, `release`, `release:tags` | none (the workflow's own token) |
 | `sdk-release` | a version tag. A dry run by hand, and on pull requests that touch `sdk/` or `dev/` | `sdk:dist`, `sdk:dist:cli <api>`, `release` | none |
 
