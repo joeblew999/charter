@@ -71,6 +71,9 @@ func doctor([]string) error {
 	warn := func(format string, a ...any) { fmt.Printf("  WARN  "+format+"\n", a...) }
 	bad := func(format string, a ...any) { fmt.Printf("  FAIL  "+format+"\n", a...); failed = true }
 	for _, dir := range []string{"api", "api-go", "sdk", "sdk/harness"} {
+		if !exists(dir) {
+			continue // a project made by `dev new` has only api-go and sdk
+		}
 		if exists(filepath.Join(dir, "node_modules")) {
 			ok("npm packages in %s", dir)
 		} else {

@@ -22,6 +22,7 @@ mise run <task>              # what you normally type: each task is one line tha
 | `cli-build` | Builds the Rust CLI that Fern generates, natively or for Linux in Docker | `sdk:cli:build` |
 | `harness-sync`, `harness-test`, `harness-deploy` | Fern's TypeScript SDK inside a Worker (`sdk/harness`). `harness-sync` copies the SDK in, generating it again when a showcase spec is newer than it | `sdk:harness:*`, `showcase:typecheck` |
 | `bench` | Times the read routes of a notes API as a client sees them ([benchmarks.md](benchmarks.md)) | `api:bench`, `api-go:bench` |
+| `new` | Creates a new Go API project from this repo's example ([a new project](#a-new-project-dev-new)) | none: run it with `go run ...dev@latest new` |
 | `docs` | Writes the docs site's config into a repo's `docs/` ([the docs site](#the-docs-site)) | `docs:setup` |
 | `upstream` | Lists every `Upstream: owner/repo#n` tag in the code with the issue's state | `upstream:status` |
 | `doctor` | Checks the tools and installs the tasks need | `doctor` |
@@ -82,9 +83,32 @@ go run github.com/joeblew999/orpc-api/dev@latest workflows -into .          # wr
 go run github.com/joeblew999/orpc-api/dev@latest workflows -into . -check   # fails if they differ from the templates
 ```
 
-It writes the `api-` and `sdk-` workflows. `-only api` or `-only sdk` writes one set; the `dev-` ones are only written where there is a `dev/` module, as here.
+It writes the `api-` and `sdk-` workflows. `-only api` or `-only sdk` writes one set; the `dev-` ones are only written where there is a `dev/` module, as here. The templates adapt to the repo: one without an `api/` folder (a project made by `dev new`) gets the Go API's jobs only.
 
 They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `api:check`, `api-go:check`, `api:deploy`, `api-go:deploy`, `cloudflare:token`, `sdk:demo`, `showcase:check`, `sdk:harness:test`, `sdk:gen`, `sdk:check`, `sdk:dist`, `sdk:dist:cli` and `release`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
+
+## A new project: `dev new`
+
+One command makes a working Go API project: the Go half of this repo under your project's name.
+
+```sh
+go run github.com/joeblew999/orpc-api/dev@latest new -name billing-api      # into ./billing-api
+cd billing-api && git init
+mise install && mise run setup
+mise run check                 # lint, tests, spec drift, the TinyGo build, the live and MCP tests natively and under workerd
+mise run api-go:run            # natively: http://localhost:5174/api/hello
+mise run api-go:deploy         # to Cloudflare, then: mise run api-go:live-test
+```
+
+- **It pulls this repo from GitHub at the tool's own version** and copies the example: `api-go/` (contract, handlers, Worker entry, hub, platform files, spec command), `migrations/`, `test/`, the Fern folder `sdk/fern/apis/api-go/`. There is no separate template, so a new project starts from code that passed this repo's checks.
+- **It renames:** the Worker and its D1 database (`-name`), the Go module (`-module`, default `github.com/<your GitHub login>/<name>`), and the SDK's names (`billing-api` gives `BillingApiClient`).
+- **It keeps as imports** the reusable packages (`humaworkers`, `asyncapi`, `follow`, `humamcp`), pinned to the same version, so fixes arrive with `go get -u`.
+- **It writes** a `mise.toml` with the Go and SDK tasks (the dev tool pinned by version, not copied), `go.work`, a README, and a `docs/` folder with a start page and rules.
+- **Then, with a GitHub repo:** `mise run dev:workflows` (the workflows come out for one Go API), `mise run docs:setup` and `mise run docs:pages`.
+
+The project starts as the notes API. Change `api-go/api/contract.go`, run `mise run api-go:spec`, and go from there.
+
+Before a release, the scaffold is proven by hand: `go run ./dev new -name trial -into /tmp/trial -from .`, then that project's `mise run setup` and `mise run check` (`go test ./dev` covers the copy, the renaming and a build).
 
 ## The docs site
 

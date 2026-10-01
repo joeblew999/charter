@@ -11,6 +11,7 @@ on:
 permissions:
   contents: read
 jobs:
+  # if-dir sdk/harness
   demo:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -28,13 +29,18 @@ jobs:
       - run: mise run setup
       - run: mise run showcase:check
       - run: mise run sdk:harness:test
+  # end
   sdk:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
+        # if-dir api
         api: [api, api-go, showcase]
+        # else
+        api: [api-go]
+        # end
         group: [go, typescript]
     steps:
       - uses: actions/checkout@v7.0.1

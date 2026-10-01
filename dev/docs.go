@@ -32,6 +32,10 @@ func docs(args []string) error {
 		f.StringVar(&into, "into", into, "the repo to write into (its docs/ folder)")
 		f.BoolVar(&check, "check", false, "write nothing; fail if a file differs")
 	})
+	if check && !exists(filepath.Join(into, "docs", "_config.yml")) {
+		fmt.Println("no docs/_config.yml here yet: mise run docs:setup writes it")
+		return nil
+	}
 	out, err := output(into, "gh", "repo", "view", "--json", "nameWithOwner,name,description,defaultBranchRef")
 	if err != nil {
 		return errors.New("docs needs a GitHub repo here (gh repo view failed)")

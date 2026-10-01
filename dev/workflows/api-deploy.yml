@@ -9,7 +9,11 @@ on:
       api:
         description: The Worker to deploy (api = orpc-api, api-go = orpc-api-go)
         type: choice
+        # if-dir api
         options: [api, api-go]
+        # else
+        options: [api-go]
+        # end
         required: true
 permissions:
   contents: read

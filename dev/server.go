@@ -156,9 +156,9 @@ func migrateLocal(args []string) error {
 	var port string
 	worker := workerFlags("migrate-local", args, &port)
 	if port == "" {
-		name := "PORT"
-		if worker == "orpc-api-go" {
-			name = "API_GO_PORT"
+		name := "API_GO_PORT" // the Go Worker's, whatever it is called in this project
+		if worker == "orpc-api" {
+			name = "PORT"
 		}
 		var err error
 		if port, err = env(name); err != nil {

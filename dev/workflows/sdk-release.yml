@@ -35,7 +35,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # if-dir api
         api: [api, api-go]
+        # else
+        api: [api-go]
+        # end
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.0.1

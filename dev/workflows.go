@@ -55,6 +55,32 @@ func workflowTemplates(only []string) (map[string][]byte, error) {
 	return templates, nil
 }
 
+// conditional keeps the lines a repo needs. A template says which with comment lines of its own:
+//
+//	# if-dir api      the lines up to "# else" or "# end" are for a repo that has the folder api/
+//	# else            the lines up to "# end" are for a repo that doesn't
+//	# end
+//
+// So one set of templates serves this repo (two APIs, the showcase, the harness) and a project made
+// by `dev new` (one Go API). The marker lines themselves are never written.
+func conditional(template []byte, repo string) []byte {
+	var out []string
+	keep, inside := true, false
+	for _, line := range strings.Split(string(template), "\n") {
+		switch marker := strings.TrimSpace(line); {
+		case strings.HasPrefix(marker, "# if-dir "):
+			inside, keep = true, exists(filepath.Join(repo, strings.TrimPrefix(marker, "# if-dir ")))
+		case inside && marker == "# else":
+			keep = !keep
+		case inside && marker == "# end":
+			inside, keep = false, true
+		case keep:
+			out = append(out, line)
+		}
+	}
+	return []byte(strings.Join(out, "\n"))
+}
+
 func workflows(args []string) error {
 	var check bool
 	var into, only string
@@ -82,7 +108,14 @@ func workflows(args []string) error {
 	if err != nil {
 		return err
 	}
+	for name, template := range templates {
+		templates[name] = conditional(template, into)
+	}
 	dir := filepath.Join(into, ".github", "workflows")
+	if check && !exists(dir) {
+		fmt.Println("no .github/workflows here yet: mise run dev:workflows writes them")
+		return nil
+	}
 	if rel, err := filepath.Rel(started, dir); err == nil && filepath.IsLocal(rel) {
 		dir = rel // shorter to read; main may have moved to the repo's root, so only when that is where we started
 	}

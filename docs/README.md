@@ -83,7 +83,7 @@ Things that are easy to mix up:
 2. Copy `api/src/follow.ts`, `api/src/asyncapi.ts`, `api/src/specs.ts` and `api/spec-files.ts` unchanged, and give `follow()` your own source (`subscribe`, `since`, `latest`). For OAuth, idempotency, file upload, webhooks or a WebSocket the client also sends on, see the showcase contract (`sdk/harness/src/contract.ts`).
 3. Copy `sdk/fern/apis/api/` as your API's Fern folder, plus the `api:*` and `sdk:*` tasks.
 
-**A Go (workers-go) project:**
+**A Go (workers-go) project:** run `go run github.com/joeblew999/orpc-api/dev@latest new -name <name>` ([dev.md](dev.md#a-new-project-dev-new)). It does the three steps below for you, and what follows is what you then own:
 
 1. Write the contract as Huma operations, as in `api-go/api/contract.go`: one `humaworkers.Route` per operation, with `asyncapi.Operation(...)` around the WebSocket ones.
 2. Import the packages `humaworkers`, `asyncapi` and `follow` (`go get github.com/joeblew999/orpc-api/api-go`), and copy `api-go/worker/` (the entry, the hub and the clock fix), `api-go/cmd/spec` and the two `platform_*.go` files.

@@ -35,6 +35,14 @@ mise run api-go:soak
 
 On another Cloudflare account, set `API_URL`, `API_GO_URL` (and `HARNESS_URL`, `HARNESS_API_URL`) in `mise.local.toml`, which is gitignored.
 
+## Start a new Go API project
+
+```sh
+go run github.com/joeblew999/orpc-api/dev@latest new -name billing-api
+```
+
+That creates a working project (contract, Worker, tests, Fern folder, tasks, docs) from the Go example here, under your name. See [docs/dev.md](docs/dev.md#a-new-project-dev-new).
+
 ## Layout
 
 | Path | What | Docs |
