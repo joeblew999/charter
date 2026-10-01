@@ -278,9 +278,10 @@ Add `"errors"` to the file's imports.
 
 ### Change the tables: a migration
 
-The tables are SQL files in `migrations/` at the root of your project (`migrations/0001_init.sql` holds the `notes` table). To change them, add the next file, for example `migrations/0002_note_title.sql`:
+The tables are SQL files in `migrations/` at the root of your project (`migrations/0001_init.sql` holds the `notes` table). To change them, add the next numbered file, for example one named `0002_note_title.sql`:
 
 ```sql
+-- migrations/0002_note_title.sql
 ALTER TABLE notes ADD COLUMN title TEXT;
 ```
 

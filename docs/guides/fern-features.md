@@ -284,7 +284,7 @@ Operations with no `x-fern-audiences` are, as far as I read the showcase, in no 
 
 ## Overlays: rename without touching the contract
 
-**The caller gets** the SDK names you choose. When the contract is yours, say them in the contract (`x-fern-sdk-group-name` and `x-fern-sdk-method-name`, [Define your API](contract.md#name-the-sdk-methods)). An overlay is for a spec you do not own, or a rename you want to keep out of the Go code. It is a file beside the specs, `sdk/fern/apis/api-go/overlays.yml`:
+**The caller gets** the SDK names you choose. When the contract is yours, say them in the contract (`x-fern-sdk-group-name` and `x-fern-sdk-method-name`, [Define your API](contract.md#name-the-sdk-methods)). An overlay is for a spec you do not own, or a rename you want to keep out of the Go code. It is a file named `overlays.yml` beside the specs, in `sdk/fern/apis/api-go/`:
 
 ```yaml
 overlay: 1.0.0
