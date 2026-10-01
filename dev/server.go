@@ -19,8 +19,8 @@ import (
 )
 
 func init() {
-	commands["with-server"] = command{"-url <url> -start <cmd> [-dir <dir>] -run <cmd>...",
-		"start a server, wait for <url>, run the commands, stop the server ({port} in any of them is a free port, {port2} another)", withServer}
+	commands["with-server"] = command{"-url <url> -start <cmd> [-dir <dir>] [-show] -run <cmd>...",
+		"start a server, wait for <url>, run the commands, stop the server ({port} in any of them is a free port, {port2} another). A command's output is shown only if it fails; -show streams it", withServer}
 	commands["migrate-local"] = command{"[-worker orpc-api] [-port <port>]",
 		"apply migrations/*.sql to a running dev server's local D1, each once", migrateLocal}
 	commands["migrate"] = command{"[-worker orpc-api]",
@@ -86,11 +86,13 @@ func server(dir, start, url string) (stop func(), err error) {
 func withServer(args []string) error {
 	var url, start, dir string
 	var runs list
+	var show bool
 	flags("with-server", args, func(f *flag.FlagSet) {
 		f.StringVar(&url, "url", "", "what must answer before the commands run")
 		f.StringVar(&start, "start", "", "the server's command (a shell line)")
 		f.StringVar(&dir, "dir", ".", "where to start the server and run the commands")
 		f.Var(&runs, "run", "a command to run while the server is up (a shell line; repeat)")
+		f.BoolVar(&show, "show", false, "stream the commands' output (default: shown only when one fails)")
 	})
 	if url == "" || start == "" || len(runs) == 0 {
 		return errors.New("with-server needs -url, -start and at least one -run")
@@ -113,7 +115,11 @@ func withServer(args []string) error {
 	}
 	defer stop()
 	for _, run := range runs {
-		if err := quiet(dir, nil, "bash", "-c", run); err != nil {
+		do := func() error { return quiet(dir, nil, "bash", "-c", run) }
+		if show {
+			do = func() error { return sh(dir, "bash", "-c", run) }
+		}
+		if err := do(); err != nil {
 			stop()
 			return fmt.Errorf("failed: %s", run)
 		}

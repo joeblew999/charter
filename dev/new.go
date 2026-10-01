@@ -13,9 +13,13 @@ import (
 )
 
 func init() {
-	commands["new"] = command{"-name <name> [-module <go module>] [-into <dir>] [-from <checkout>]",
+	commands["new"] = command{"-name <name> [-module <go module>] [-subdomain <workers.dev subdomain>] [-into <dir>] [-from <checkout>]",
 		"create a new Go API project: the tested example (api-go/) under your name, with its tasks, Fern folder, tests and docs", newProject}
-	anywhere["new"] = true
+	commands["version"] = command{"", "the release this tool is, which is what new pins a project to", func([]string) error {
+		fmt.Println(orCheckout(toolVersion()))
+		return nil
+	}}
+	anywhere["new"], anywhere["version"] = true, true
 }
 
 const (
@@ -46,15 +50,19 @@ var projectTasks = regexp.MustCompile(`^(setup|check|doctor|upstream:status|dev:
 // is run in, so a new project starts from code that passed this repo's checks, not from a template
 // kept beside it.
 func newProject(args []string) error {
-	var name, module, into, from string
+	var name, module, subdomain, into, from string
 	flags("new", args, func(f *flag.FlagSet) {
 		f.StringVar(&name, "name", "", "the project and its Worker, e.g. billing-api (lower case, digits, hyphens)")
 		f.StringVar(&module, "module", "", "its Go module path (default: github.com/<your GitHub login>/<name>)")
+		f.StringVar(&subdomain, "subdomain", placeholderSubdomain, "your account's workers.dev subdomain: the Worker's URL is https://<name>.<subdomain>.workers.dev (the default is a placeholder)")
 		f.StringVar(&into, "into", "", "where to create it (default: ./<name>)")
 		f.StringVar(&from, "from", "", "a checkout of orpc-api to copy from (default: this tool's version)")
 	})
 	if !regexp.MustCompile(`^[a-z][a-z0-9-]{1,40}[a-z0-9]$`).MatchString(name) {
 		return errors.New("new needs -name: lower-case letters, digits and hyphens, e.g. -name billing-api")
+	}
+	if !regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`).MatchString(subdomain) {
+		return errors.New("new: -subdomain is the one word before .workers.dev, e.g. -subdomain acme")
 	}
 	if into == "" {
 		into = filepath.Join(started, name)
@@ -106,7 +114,23 @@ func newProject(args []string) error {
 		pin = "latest" // from a checkout: the tasks name the newest release of the tool
 	}
 
+	fmt.Println(pinned(version, local, from))
+
+	tasks, err := os.ReadFile(filepath.Join(from, "mise.toml"))
+	if err != nil {
+		return err
+	}
 	names := renamer(name, module)
+	// This repo's Workers are on its owner's workers.dev subdomain; the project's are on its own
+	// (mise.toml's default URL and the copied specs, which must agree for the spec check to pass).
+	owner := ownerSubdomain.FindSubmatch(tasks)
+	if owner == nil {
+		return fmt.Errorf("%s/mise.toml has no workers.dev default for API_GO_URL", from)
+	}
+	renamed := names
+	names = func(s string) string {
+		return strings.ReplaceAll(renamed(s), "."+string(owner[1])+".workers.dev", "."+subdomain+".workers.dev")
+	}
 	for _, entry := range projectFiles {
 		source := filepath.Join(from, entry)
 		err := filepath.WalkDir(source, func(path string, d fs.DirEntry, err error) error {
@@ -131,10 +155,6 @@ func newProject(args []string) error {
 		}
 	}
 
-	tasks, err := os.ReadFile(filepath.Join(from, "mise.toml"))
-	if err != nil {
-		return err
-	}
 	generated := map[string]string{
 		"mise.toml":       names(projectMise(string(tasks), name, pin)),
 		"go.work":         "go 1.27.1\n\ntoolchain go1.27.1\n\nuse ./api-go\n",
@@ -190,9 +210,52 @@ func newProject(args []string) error {
   mise run api-go:deploy             # to Cloudflare, then: mise run api-go:live-test
 
 The API is the notes example: change api-go/api/contract.go, then mise run api-go:spec.
+To put your own API in its place: %s
 With a GitHub repo: mise run dev:workflows, mise run docs:setup, mise run docs:pages.
-`, into, module, name, into)
+
+%s
+Cost: the Go Worker uses about 40 to 70 ms of CPU per request (measured 2026-10-01), which fits Workers Paid and not Workers Free's 10 ms.
+`, into, module, name, into, replaceGuide, afterDeploy(name, subdomain))
 	return nil
+}
+
+const (
+	placeholderSubdomain = "your-subdomain"
+	replaceGuide         = "https://joeblew999.github.io/orpc-api/guides/replace-the-example.html"
+)
+
+// The workers.dev subdomain this repo's own Workers are deployed on, as its mise.toml names it.
+var ownerSubdomain = regexp.MustCompile(`https://orpc-api-go\.([a-z0-9-]+)\.workers\.dev`)
+
+// afterDeploy says where the project thinks its Worker is, and what to do when that is not so.
+func afterDeploy(name, subdomain string) string {
+	url := "https://" + name + "." + subdomain + ".workers.dev"
+	fix := "put the URL it prints into mise.local.toml as API_GO_URL (or make it the default in mise.toml, which CI reads too), then: mise run api-go:spec"
+	if subdomain == placeholderSubdomain {
+		return "The Worker's URL is a placeholder (" + url + ") in mise.toml and in the specs: -subdomain was not given.\nAfter the first mise run api-go:deploy, " + fix + "."
+	}
+	return "The Worker's URL is " + url + " in mise.toml and in the specs.\nIf mise run api-go:deploy prints another, " + fix + "."
+}
+
+// pinned is the first line new prints: which release the tool is, and what the project pins to it.
+// (Minutes after a release, dev@latest can still be the one before.)
+func pinned(version string, local bool, from string) string {
+	if !local {
+		return fmt.Sprintf("dev %s: pins the dev tool to %s in mise.toml and the Go packages to %s in api-go/go.mod", version, version, version)
+	}
+	tool := version
+	if tool == "" {
+		tool = "latest"
+	}
+	return fmt.Sprintf("dev %s, copying from %s: pins the dev tool to %s in mise.toml; api-go/go.mod builds against that checkout (a replace line)", orCheckout(version), from, tool)
+}
+
+// orCheckout names the tool's version, or says that it has none.
+func orCheckout(version string) string {
+	if version == "" {
+		return "(not a release: built from a checkout)"
+	}
+	return version
 }
 
 // toolVersion is the release this tool was built from (go run ...dev@v0.2.0), or "" from a checkout.
@@ -269,6 +332,7 @@ func projectMise(source, name, pin string) string {
 		"dist-sdk api api-go", "dist-sdk api-go",
 		"release-tags api-go dev", "release-tags api-go",
 		"# Local dev ports.", "# The local dev port.",
+		"# Where the Workers are deployed (cf deploy prints it; there is no cf command to look it up). On\n# another Cloudflare account, set these in mise.local.toml (gitignored).", "# Where the Worker is deployed (cf deploy prints it; there is no cf command to look it up). If it is\n# not this, set it in mise.local.toml (gitignored) or change the default here, then: mise run api-go:spec.",
 		"# Every task is one line of plain sh", "# "+name+": a Go API on Cloudflare Workers (Huma on workers-go), made with `dev new` from\n# "+repoURL+".\n# Every task is one line of plain sh",
 		"is a command of ./dev (go run ./dev help)", "is a command of the dev tool (`dev help`), pinned under [tools]",
 		"\n[env]", "# The tool every task runs ("+repoModule+"/dev): `mise up` moves to a newer release.\n\"go:"+repoModule+"/dev\" = \""+pinned+"\"\n\n[env]",
@@ -329,6 +393,9 @@ You write the contract in Go; everything else is generated from it.
 | The D1 schema | ` + "`migrations/`" + ` |
 | The tests a deploy must pass | ` + "`test/`" + ` (` + "`mise run api-go:live-test`, `mise run api-go:soak`" + `) |
 | MCP | ` + "`/api/mcp`" + `: every one-shot operation of the contract is a tool |
+
+The project starts as the notes example. Which files hold it, and what to do with each when you put your
+own API in: [Replace the example with your API](` + replaceGuide + `).
 
 How it works, what Huma needs on workers-go, the real-time design and the measured costs are documented
 once, in [orpc-api's docs](https://joeblew999.github.io/orpc-api/): the Go packages this project imports
