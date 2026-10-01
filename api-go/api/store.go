@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"sync"
 	"time"
+
+	"github.com/joeblew999/orpc-api/api-go/hub"
 )
 
 // Store is the log: D1 on Cloudflare (SQLStore), memory for `go run .` and the tests (MemStore).
@@ -18,13 +20,9 @@ type Store interface {
 	Latest(ctx context.Context) (int64, error)
 }
 
-// Hub is the live fan-out: only a wake-up signal for followers (docs/realtime.md, rule 2).
-type Hub interface {
-	Publish(ctx context.Context, note Note) error
-	// Subscribe calls listener for every published note and onError when the subscription breaks;
-	// neither may block. It returns unsubscribe.
-	Subscribe(listener func(Note), onError func(error)) (unsubscribe func(), err error)
-}
+// Hub is the live fan-out of notes: only a wake-up signal for followers (docs/realtime.md, rule 2).
+// A feed of another type has its own: hub.Hub[T].
+type Hub = hub.Hub[Note]
 
 // SQLStore is the notes table (migrations/ at the repo root) through database/sql: workers-go's d1 driver.
 type SQLStore struct{ DB *sql.DB }
@@ -73,10 +71,9 @@ func (s SQLStore) query(ctx context.Context, query string, args ...any) ([]Note,
 
 // MemStore is a Store and a Hub in one process: for `go run .` and the tests.
 type MemStore struct {
-	mu        sync.Mutex
-	notes     []Note
-	listeners map[int]func(Note)
-	next      int
+	hub.Memory[Note]
+	mu    sync.Mutex
+	notes []Note
 }
 
 func (m *MemStore) Create(_ context.Context, body string) (Note, error) {
@@ -115,29 +112,4 @@ func (m *MemStore) Latest(context.Context) (int64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return int64(len(m.notes)), nil
-}
-
-func (m *MemStore) Publish(_ context.Context, note Note) error {
-	m.mu.Lock()
-	listeners := make([]func(Note), 0, len(m.listeners))
-	for _, listener := range m.listeners {
-		listeners = append(listeners, listener)
-	}
-	m.mu.Unlock()
-	for _, listener := range listeners {
-		listener(note)
-	}
-	return nil
-}
-
-func (m *MemStore) Subscribe(listener func(Note), _ func(error)) (func(), error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.listeners == nil {
-		m.listeners = map[int]func(Note){}
-	}
-	n := m.next
-	m.next++
-	m.listeners[n] = listener
-	return func() { m.mu.Lock(); delete(m.listeners, n); m.mu.Unlock() }, nil
 }

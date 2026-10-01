@@ -22,6 +22,9 @@ func init() {
 	anywhere["bench"] = true
 }
 
+// benchClient gives every request a limit, so a run can't hang on one.
+var benchClient = &http.Client{Timeout: 30 * time.Second}
+
 // A call is one operation made callable from the spec's own examples.
 type call struct {
 	method, path, trigger string
@@ -70,7 +73,7 @@ func bench(args []string) error {
 	if warm > 0 {
 		fmt.Printf("warming up for %s...\n", warm)
 		for end := time.Now().Add(warm); time.Now().Before(end); {
-			if res, err := http.Get(base + calls[0].path); err == nil {
+			if res, err := benchClient.Get(base + calls[0].path); err == nil {
 				io.Copy(io.Discard, res.Body)
 				res.Body.Close()
 			}
@@ -101,7 +104,7 @@ func bench(args []string) error {
 				}
 			}
 			start := time.Now()
-			res, err := http.DefaultClient.Do(req)
+			res, err := benchClient.Do(req)
 			if err != nil {
 				return err
 			}
@@ -155,7 +158,7 @@ func bench(args []string) error {
 func callsFromSpec(source string, write bool) (calls []call, skipped []string, err error) {
 	var raw []byte
 	if strings.Contains(source, "://") {
-		res, err := http.Get(source)
+		res, err := benchClient.Get(source)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -325,7 +328,7 @@ func workerCPU(worker string, since time.Time, expect int) (map[string][2]float6
 		req, _ := http.NewRequest("POST", "https://api.cloudflare.com/client/v4/accounts/"+account+"/workers/observability/telemetry/query", bytes.NewReader(body))
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
-		res, err := http.DefaultClient.Do(req)
+		res, err := benchClient.Do(req)
 		if err != nil {
 			return nil, err
 		}

@@ -36,7 +36,7 @@ Every task is one line in `mise.toml`. Most call a command of the tool the tasks
 | Task | What it does | Needs | Local or remote |
 |---|---|---|---|
 | `api-go:run` | Runs the API natively on `API_GO_PORT` (5174), with an in-memory store. Notes are gone when it stops | Nothing | Local |
-| `api-go:build` | Builds the Worker's Wasm with TinyGo into `api-go/build/`. Fails if `api-go/build/app.wasm` is over 3,000,000 bytes gzipped | Nothing | Local |
+| `api-go:build` | Builds the Worker's Wasm into `api-go/build/`, tuned for Workers (`dev wasm-build`: [what it changes](dev.md#wasm-build)). Fails if `api-go/build/app.wasm` is over 3,000,000 bytes gzipped | Nothing | Local |
 | `api-go:dev` | Runs `api-go:build`, then the Worker under workerd (`cf dev`) on `API_GO_PORT`, with a local D1 database and the hub. After a Go change, run `api-go:build` in another shell: `cf dev` reloads | npm packages | Local |
 | `api-go:migrate:local` | Applies `migrations/` to the local D1 database of a running `api-go:dev`, each file once | `api-go:dev` running | Local |
 | `api-go:spec` | Writes `sdk/fern/apis/api-go/openapi.json` and `sdk/fern/apis/api-go/asyncapi.json` from the contract, with `API_GO_URL` as their server | Nothing | Local |
@@ -51,9 +51,8 @@ Every task is one line in `mise.toml`. Most call a command of the tool the tasks
 | `api-go:migrate` | Applies pending files of `migrations/` to the D1 database `<name>-db` | npm packages, a Cloudflare login, the Worker deployed once | Remote: changes the database |
 | `api-go:live-test` | Tests the deployed Worker at `API_GO_URL`: SSE and the WebSocket, raw and through the TypeScript SDK, then MCP. It writes test notes. It generates the `typescript-dist` SDK first when that is missing | npm packages; Docker the first time | Remote: writes notes |
 | `api-go:soak` | Runs every client against every real-time scenario on the deployed Worker, and redeploys it once in the middle. Add `--idle <minutes>` for the long-idle case. It generates the SDKs and builds the Fern CLI first when they are missing | npm packages, a Cloudflare login; Docker and `cargo` the first time | Remote: redeploys the Worker, writes notes |
-| `api-go:bench` | Prints wall time per route of the deployed Worker, as one client sees it | The Worker deployed | Remote: read-only |
-
-At this commit the migration step fails in a project made by `dev new`: the command behind `api-go:migrate` runs from a folder `api/`, which only the orpc-api repo has ([The dev tool](dev.md#migrate)). `api-go:deploy` deploys the Worker and then fails at that step.
+| `api-go:bench` | Calls every GET operation of the deployed Worker that the spec has examples for, and prints wall time as one client sees it and the CPU time Cloudflare recorded. About a minute and a half | The Worker deployed; for CPU time, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment or in fnox | Remote: read-only |
+| `api-go:perf` | Runs `api-go:deploy`, then the same bench: one command to see what a change costs on Cloudflare. About three minutes | As `api-go:deploy` and `api-go:bench` | Remote: changes the Worker and its database |
 
 ## SDKs
 

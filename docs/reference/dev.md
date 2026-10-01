@@ -147,7 +147,7 @@ Finds the D1 database named `<worker>-db` on your Cloudflare account and applies
 | `-worker` | `orpc-api` | The Worker's name. The database is `<worker>-db` |
 
 - **Needs:** npm packages installed (`mise run setup`) and a Cloudflare login (`cf auth login`, or `CLOUDFLARE_API_TOKEN`).
-- **Runs:** orpc-api only, at this commit. It runs `cf` from a folder `api/`, which a project made by `dev new` does not have: there it fails with `chdir api: no such file or directory` (seen on 2026-10-01 in a new project). `mise run api-go:migrate` and the last step of `mise run api-go:deploy` call it.
+- **Runs:** project layout. It runs `cf` from `api-go/` (from `api/` in orpc-api, which has both).
 
 ### size
 
@@ -164,20 +164,58 @@ Prints the file's size and its size gzipped (best compression), and fails over t
 - **Needs:** nothing.
 - **Runs:** any directory below a `go.work`. The file's path is from the root.
 
-### bench
+### wasm-build
 
 ```sh
-dev bench [-n <requests>] <url>   # wall time per route, as a client sees it
+dev wasm-build [-dir <folder>]   # build a Go program into <folder>/build/app.wasm for workers-go
 ```
 
-Requests four routes of a notes API (`/api/hello`, `/api/notes?limit=20`, `/api/openapi.json`, and `/api/nope` for a 404) and prints the HTTP status, the median and the slowest time of each, after 3 warm-up requests. It measures wall time, network included. CPU time, which Workers bills, is in Workers Logs.
+Builds the Wasm a Go Worker deploys, tuned for Cloudflare Workers, and fails if it is too large. It does four things TinyGo's own `tinygo build` does not:
+
+- **Turns off one collector run per pause.** TinyGo runs a full garbage collection whenever the program waits and 32 objects with finalizers were made since the last one. workers-go makes one such object for every JavaScript value, so a request collected many times over. The build compiles against a copy of TinyGo's runtime with that one constant set to 0. The copy is made once per TinyGo version in your cache folder; TinyGo itself is not rebuilt or changed.
+- **Starts with a heap of 8 MB.** TinyGo starts with a few pages and collects each time it must grow. With 8 MB an ordinary request never fills the heap, so the collector does not run in it. A stream that lives long does fill it, and is collected then.
+- **Gives each goroutine a 256 KB stack.** Huma overflows TinyGo's default.
+- **Checks the size:** the Wasm, gzipped, against `-max`.
 
 | Flag | Default | What it is |
 |---|---|---|
-| `-n` | `20` | Requests per route |
+| `-dir` | `api-go` | The folder of the Go program. Its `build/` gets the Wasm and workers-go's glue |
+| `-heap` | `8` | Starting heap in MB. `0` keeps TinyGo's own |
+| `-stack` | `256kb` | Stack per goroutine |
+| `-opt` | `z` | TinyGo's optimisation level. Measured on Cloudflare, `2` was no faster than `z` and is larger |
+| `-max` | `3000000` | Fail if the Wasm, gzipped, is larger than this many bytes |
+| `-plain` | off | Build with TinyGo as it is, with no patch and no starting heap: to compare |
 
-- **Needs:** a server at the URL that has those routes.
+- **Needs:** TinyGo and binaryen (pinned in `mise.toml`).
+- **Runs:** project layout.
+
+What the two changes save is in [Benchmarks](../benchmarks.md). The patch carries the tag `Upstream: tinygo-org/tinygo#5800`; when TinyGo fixes it, the patch goes and the flags stay.
+
+### bench
+
+```sh
+dev bench [-cpu] [-warm 30s] <url>   # what each operation of an API costs
+```
+
+Works on any API with an OpenAPI spec. It reads the spec, calls every operation it can build a request for, and prints one row each: the HTTP status, the median and the slowest wall time as a client sees it, and with `-cpu` the CPU time Cloudflare recorded.
+
+- **Which operations:** every GET whose required parameters have an example in the spec. A stream (`text/event-stream`) is skipped, and so is a body that is not JSON. `-write` adds POST, PUT, PATCH and DELETE, with the request body's example. It also requests one path that does not exist, which shows what a request costs before any handler runs. Operations it skipped are listed with the reason.
+- **CPU time** is what Workers bills and limits. It comes from Workers Logs through Cloudflare's API: the median and the 99th percentile per operation, over the requests this run made.
+
+| Flag | Default | What it is |
+|---|---|---|
+| `-n` | `20` | Requests per operation, after 3 that are not counted |
+| `-spec` | `<url>/api/openapi.json` | The OpenAPI spec, a file or a URL |
+| `-write` | off | Also call operations that change data. They do change it |
+| `-cpu` | off | Also report CPU time from Cloudflare |
+| `-warm` | `0` | Send requests for this long first, for example `30s`. A Worker just deployed or idle is slower at first |
+| `-worker` | the first label of the URL's host | The Worker's name, for `-cpu` |
+| `-header` | none | A header for every request, for example `'Authorization: Bearer <token>'`. Repeat it for more |
+
+- **Needs:** a server at the URL. For `-cpu`: a deployed Worker with observability enabled (the example's `cloudflare.config.ts` enables it), and `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment or in fnox. The token needs permission to read Workers Observability.
 - **Runs:** any directory below a `go.work`.
+
+With `-cpu` a run waits for the logs to arrive, which takes up to two minutes.
 
 ## SDKs
 
@@ -494,6 +532,7 @@ The same list as `dev help` prints, with where each one runs.
 | `sdk-ready` | SDKs | Project layout |
 | `size` | API and database | Below a `go.work` |
 | `upstream` | Project | Below a `go.work` |
+| `wasm-build` | API and database | Project layout |
 | `with-server` | API and database | Below a `go.work` |
 | `workflows` | Workflows and releases | Anywhere |
 

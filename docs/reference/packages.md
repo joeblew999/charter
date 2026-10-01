@@ -19,6 +19,7 @@ cd api-go && go get github.com/joeblew999/orpc-api/api-go@latest   # add or upda
 | `humaworkers` | `github.com/joeblew999/orpc-api/api-go/humaworkers` | Runs a [Huma](https://huma.rocks) API on Cloudflare Workers | Yes |
 | `asyncapi` | `github.com/joeblew999/orpc-api/api-go/asyncapi` | Writes the AsyncAPI spec of the API's WebSocket channels | Yes |
 | `follow` | `github.com/joeblew999/orpc-api/api-go/follow` | Gives a client every item of a log once, in order, live | Yes |
+| `hub` | `github.com/joeblew999/orpc-api/api-go/hub` | The live signal of a feed: publish an item, every subscriber gets it. A Durable Object on Cloudflare, memory natively | Yes |
 | `humamcp` | `github.com/joeblew999/orpc-api/api-go/humamcp` | Serves the API's operations as MCP tools | Yes |
 | `transport` | `github.com/joeblew999/orpc-api/api-go/transport` | Lets the Go handler serve WebSockets, on Workers and natively | Yes, with a different body |
 | `specfile` | `github.com/joeblew999/orpc-api/api-go/specfile` | The body of the command that writes the spec files | Not used there: it runs on your machine |
@@ -147,6 +148,36 @@ Limits:
 
 - **The log must make a visible id imply all lower ones.** A single SQLite writer (D1) does. `Follow` relies on it to restore order.
 - **A hub that closes silently costs up to `Recheck` of delay,** never a lost item.
+
+## hub
+
+The live signal of a feed. A handler that creates an item publishes it; every open stream that subscribed is woken. It is only a signal: `follow.Follow` fills any gap from the log, so a hub may drop a message or restart.
+
+```go
+type Hub[T any] interface {
+	Publish(ctx context.Context, item T) error
+	Subscribe(listener func(T), onError func(error)) (unsubscribe func(), err error)
+}
+
+func DurableObject[T any](binding, name string) (Hub[T], error)   // on Cloudflare only
+type Memory[T any] struct{ /* ... */ }                             // natively and in tests; the zero value is ready
+```
+
+- **`DurableObject`** is the object called `name` of the Durable Object namespace bound as `binding` in `cloudflare.config.ts`. The class is the example's `api-go/worker/hub.mjs`, which sends each published body to every subscriber and knows nothing of the type. Open it per request.
+- **One class serves every feed.** Each name is its own object with its own subscribers, so a second feed needs no second class and no second binding:
+
+```go
+notes, err := hub.DurableObject[Note]("HUB", "notes")
+devices, err := hub.DurableObject[Device]("HUB", "devices")
+```
+
+- **`Memory`** is the same in one process. The example's `MemStore` embeds `hub.Memory[Note]`.
+
+Limits:
+
+- **`DurableObject` exists only in the Wasm build** (`js && wasm`). Call it from a file with that build tag, as `api-go/platform_js.go` does.
+- **Items travel as JSON,** so `T` must marshal and unmarshal to itself.
+- **Checked with one feed.** The notes feed runs through it under workerd and on Cloudflare. Two names on one binding were not run there; `Memory` is tested with two feeds.
 
 ## humamcp
 

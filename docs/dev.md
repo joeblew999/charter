@@ -23,12 +23,13 @@ mise run dev:check           # the tool's own checks: gofmt, vet, tests, and the
 | `with-server` | Starts a server, waits up to 90 s until a URL answers, runs commands against it, stops it. `{port}` in its arguments is a free port, `{port2}` another. A command's output is shown only if it fails; `-show` streams it | `api-go:test:native`, `api-go:test:workerd`, `showcase-go:test:native`, `showcase-go:test:workerd` |
 | `migrate-local` | Applies `migrations/*.sql` to a running dev server's local D1, each once (cf can't) | `api:migrate:local`, `api-go:migrate:local`, `api-go:test:workerd` |
 | `migrate` | Finds the Worker's D1 database (`<worker>-db`) and applies pending migrations | `api:migrate`, `api-go:migrate`, the two notes `deploy` tasks |
-| `size` | Fails if a file is over a gzipped size (the Wasm limit) | `api-go:build`, `showcase-go:build` |
+| `wasm-build` | Builds a Go program into the Wasm a Worker deploys, tuned for Workers (a patched copy of TinyGo's runtime and an 8 MB starting heap: [benchmarks.md](benchmarks.md)), and checks its size. `-plain` builds with TinyGo as it is | `api-go:build`, `showcase-go:build` |
+| `size` | Fails if a file is over a gzipped size | none: `wasm-build` does it |
 | `sdk-gen`, `sdk-check`, `sdk-ready`, `sdk-list`, `sdk-clean` | Fern: generate an SDK, prove it works, make what the tests need | `sdk:gen`, `sdk:check`, `sdk:ready`, `sdk:list`, `sdk:clean`, `sdk:demo` |
 | `sdk-publish` | Copies the Go API's Go SDK, generated fresh and checked, into `sdk/go`: the committed Go module another repo fetches with `go get`. `-check` fails when that copy is stale | `sdk:publish`, `sdk:publish:check` |
 | `cli-build` | Builds the Fern CLI (Rust), natively or with `-linux` for Linux in Docker | `sdk:cli:build` |
 | `harness-sync`, `harness-test`, `harness-deploy` | Fern's TypeScript SDK inside the harness Worker (`sdk/harness/`). `harness-sync` copies the SDK in, generating it again when a showcase spec is newer than it | `showcase:typecheck`, `sdk:harness:test`, `sdk:harness:deploy` |
-| `bench` | Times the read routes of a notes API as a client sees them; `-n` requests per route ([benchmarks.md](benchmarks.md)) | `api:bench`, `api-go:bench` |
+| `bench` | Calls every operation of an API that its OpenAPI spec has examples for and prints wall time; `-cpu` adds the CPU time Cloudflare recorded, `-write` the operations that change data ([benchmarks.md](benchmarks.md)) | `api:bench`, `api-go:bench`, `api-go:perf` |
 | `new` | Creates a new Go API project from this repo's example ([below](#a-new-project-dev-new)) | none: run it with `go run ...dev@latest new` |
 | `version` | Prints the release the tool is: what `new` pins a project to | none |
 | `docs` | Writes the docs site's config, `docs/writing.md` and `docs/llms.txt` into a repo; `-check` fails if one differs ([below](#the-docs-site)) | `docs:setup`, `dev:check` |
@@ -38,7 +39,8 @@ mise run dev:check           # the tool's own checks: gofmt, vet, tests, and the
 | `doctor` | Checks the tools and installs the tasks need, and lists the APIs | `doctor` |
 | `cloudflare-spec` | Slices Cloudflare products out of Forge's spec as a Fern API; `-products`, `-release` | `sdk:cloudflare` |
 | `workflows` | Writes the GitHub workflows from the templates in `dev/workflows/`; `-check` fails if a committed one differs | `dev:workflows`, `dev:check` |
-| `dist-dev`, `dist-sdk`, `dist-cli` | Build what a release ships into `dist/`: this tool's binaries, the SDK sources and specs, the Fern CLI | `dev:dist`, `sdk:dist`, `sdk:dist:cli` |
+| `release-dev` | Builds this tool for Linux and macOS and publishes it to the tag's GitHub release, with GoReleaser (`.goreleaser.yaml`) | `dev:release` |
+| `dist-sdk`, `dist-cli` | Build what an SDK release ships into `dist/`: the SDK sources and specs, the Fern CLI | `sdk:dist`, `sdk:dist:cli` |
 | `release`, `release-tags` | Attach `dist/` to the tag's GitHub Release; tag the Go modules. Without a version tag both are a dry run | `release`, `release:tags` |
 | `need-env` | Fails, naming them, unless the given environment variables are set | `cloudflare:token` |
 | `github-secrets` | Copies the given environment variables into the repo's GitHub Actions secrets, without printing them | `cloudflare:secrets` |
@@ -203,4 +205,4 @@ go run github.com/joeblew999/orpc-api/dev@latest help
 
 `new`, `workflows`, `docs`, `docs-lint` and `docs-review` run anywhere. Every other command expects this repo's layout, or that of a project made by `dev new` (a `go.work` at the root, `api-go/`, `sdk/`, `migrations/`).
 
-Each release also has the tool as a binary (`dev-<os>-<arch>`), for a repo that doesn't want Go only to run it.
+Each release also has the tool as a binary (`dev_<os>_<arch>.tar.gz`, with checksums), for a repo that doesn't want Go only to run it.

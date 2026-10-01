@@ -214,7 +214,8 @@ To put your own API in its place: %s
 With a GitHub repo: mise run dev:workflows, mise run docs:setup, mise run docs:pages.
 
 %s
-Cost: the Go Worker uses about 40 to 70 ms of CPU per request (measured 2026-10-01), which fits Workers Paid and not Workers Free's 10 ms.
+Cost: on Cloudflare a read uses 6 to 28 ms of CPU and a write about 60 ms (measured 2026-10-01).
+Workers Free allows 10 ms per request, so plan on Workers Paid. mise run api-go:bench measures yours.
 `, into, module, name, into, replaceGuide, afterDeploy(name, subdomain))
 	return nil
 }
@@ -401,7 +402,7 @@ own API in: [Replace the example with your API](` + replaceGuide + `).
 
 How it works, what Huma needs on workers-go, the real-time design and the measured costs are documented
 once, in [orpc-api's docs](https://joeblew999.github.io/orpc-api/): the Go packages this project imports
-(` + "`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`" + `) come from there.
+(` + "`humaworkers`, `asyncapi`, `follow`, `hub`, `humamcp`, `transport`, `specfile`" + `) come from there.
 `
 }
 

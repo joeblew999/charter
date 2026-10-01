@@ -222,7 +222,7 @@ func release(args []string) error {
 		return err
 	}
 	if len(files) == 0 {
-		return errors.New("nothing in dist/: run a dist task first (mise run dev:dist, sdk:dist, sdk:dist:cli)")
+		return errors.New("nothing in dist/: run a dist task first (mise run sdk:dist, sdk:dist:cli)")
 	}
 	for _, file := range files {
 		info, err := os.Stat(file)

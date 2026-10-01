@@ -8,7 +8,7 @@ parent: Guides
 
 This page gets your API running on Cloudflare Workers with its database, and tested there. Read it for the first deploy, and when you set up deploys from GitHub.
 
-You need a Cloudflare account on the Workers Paid plan ([why](#what-it-costs-to-run)), and the project checked: `mise run check`. The names below are those of a project made by `dev new -name billing-api`.
+You need a Cloudflare account, on the Workers Paid plan for anything beyond a trial ([why](#what-it-costs-to-run)), and the project checked: `mise run check`.
 
 This page was written without deploying. The commands are the project's tasks as they are in `mise.toml`, and the results quoted are those recorded for orpc-api's own Go Worker, which is the same code ([findings](../findings.md)). What was run in a new project on 2026-10-01: the build, the local migration, the change of URL, and the remote migration command up to the point where it fails ([below](#migrations)).
 
@@ -60,19 +60,7 @@ mise run api-go:migrate:local    # the same for the local database of a running 
 
 `api-go:migrate:local` works, and `mise run check` uses it. Each file is applied once: the local database remembers them in a table `_local_migrations`.
 
-**The remote migration fails at this commit in a project made by `dev new`.** `mise run api-go:migrate`, and so the last step of `mise run api-go:deploy`, stops with:
-
-```
-dev: chdir api: no such file or directory
-```
-
-The tool looks for `cf` in a folder `api/`, which orpc-api has and your project does not. The Worker is deployed by then; only the tables are missing, so the routes that read or write notes cannot work. Until that is fixed, apply the migrations with `cf` yourself. These are the two commands the task runs, taken from the tool's source and not run for this page:
-
-```sh
-cd api-go
-./node_modules/.bin/cf d1 list --name billing-api-db --per-page 100       # prints the database, with its uuid
-./node_modules/.bin/cf d1 migrations apply <uuid> --dir ../migrations     # applies what is pending
-```
+`api-go:deploy` runs the remote migration as its last step, so a first deploy leaves the tables in place.
 
 ## The Worker's URL
 
@@ -128,7 +116,7 @@ mise run cloudflare:secrets    # REMOTE: copies both from fnox into the repo's G
 
 ## What it costs to run
 
-A request costs 40 to 70 ms of CPU, so the Worker fits Workers Paid and not Workers Free, whose limit is 10 ms per request. That is stated once, with what follows from it, in [Before you choose Go: what it costs to run](../README.md#before-you-choose-go-what-it-costs-to-run); the measurements per route are in [benchmarks](../benchmarks.md). They are of orpc-api's own Go Worker, on 2026-10-01, not of a new project.
+A read costs 6 to 28 ms of CPU and a write about 60 ms, and Workers Free allows 10 ms per request, so plan on Workers Paid. `mise run api-go:bench` measures your own API on Cloudflare; the figures and what they mean are on the docs home page ([what it costs](../README.md#before-you-choose-go-what-it-costs-to-run)) and in [benchmarks](../benchmarks.md).
 
 Measure your own Worker as a client sees it:
 

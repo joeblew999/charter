@@ -65,17 +65,28 @@ Expect the same with other libraries: one that leans on `reflect`, on the file s
 
 ## What a request costs
 
-A request to the Go Worker uses about 40 to 70 ms of CPU on Cloudflare; the same API in TypeScript uses 1 to 3 ms (measured 2026-10-01 on the orpc-api project's two Workers). That fits Workers Paid and not Workers Free, whose limit is 10 ms of CPU per request. What this means for choosing a plan is on the home page: [Before you choose Go](../README.md#before-you-choose-go-what-it-costs-to-run). The numbers per route and how they were measured are in [Benchmarks](../benchmarks.md).
+On Cloudflare a read costs 6 to 28 ms of CPU and a write that also notifies the hub about 60 ms. The same API in TypeScript uses about 1 ms. Measured 2026-10-01 on the orpc-api project's two Workers; the numbers per operation are in [Benchmarks](../benchmarks.md), and what they mean for choosing a plan is on the home page: [Before you choose Go](../README.md#before-you-choose-go-what-it-costs-to-run).
 
-Why it costs that:
+Why it costs more than TypeScript:
 
-- **Most of it is start-up.** A 404, which runs none of your code, already cost 38 ms: that is the fresh Go runtime, on every request.
-- **Much of the rest is the garbage collector.** Measured locally, the same build without a collector took about half the time. It is not safe to deploy that way: a stream can live for hours, and its memory would only grow.
-- **It is cost, not correctness.** Both Workers pass the same tests.
+- **A fresh Go runtime starts for every request.** A path that does not exist, which runs none of your code, costs 5 to 13 ms.
+- **Every value that crosses between Go and JavaScript costs.** A request, a header, a D1 row, a call to the hub: each is a JavaScript value that Go holds a handle to. A write crosses many more times than a read.
 
-Nothing is built yet to bring the cost down. The ideas, most promising first, are in the plan: [Performance](../plans/performance.md).
+What the build does about it. `mise run api-go:build` runs `dev wasm-build`, which changes two things in how TinyGo builds:
 
-These numbers are for the notes example. Your own API was not measured: run `mise run api-go:bench` against your Worker for wall time, and read CPU time from Workers Logs.
+- **It stops the collector running at every pause.** TinyGo as it is collects garbage each time the program waits, once 32 JavaScript handles have been made. A request waits many times: for the body, for D1, for the hub. That was most of the cost: the same read was 40 to 70 ms before.
+- **It starts with a heap of 8 MB,** so an ordinary request never fills it and never collects. A stream that lives for hours does fill it, and is collected then, so memory does not grow without end.
+
+The change to TinyGo is one constant in a copy of its runtime source. TinyGo itself is not rebuilt, and the change is reported upstream ([tinygo-org/tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800)). The details are in [the dev tool](../reference/dev.md#wasm-build).
+
+**The same request does not always cost the same.** Runs minutes apart on the same build measured 6 ms and 17 ms for the same request: a whole run is in one state or the other. It did not depend on the build's optimisation level or on whether the run wrote data. The cause is not established. The likely one is that Cloudflare runs a Worker on many machines and each optimises the Wasm on its own schedule; that was not verified. Plan for the higher figure.
+
+These numbers are for the notes example. Measure your own API:
+
+```sh
+mise run api-go:bench   # every GET operation in your spec: wall time and Cloudflare's CPU time
+mise run api-go:perf    # REMOTE: build, deploy, then the same bench
+```
 
 ## The size limit
 
@@ -96,13 +107,13 @@ That build is standard Go, one process, with REST, the SSE stream, the WebSocket
 A good fit:
 
 - **Your team writes Go** and wants one language for the API, its types and its tests.
-- **You are on Workers Paid,** and the CPU cost per request above is acceptable for your traffic.
+- **You are on Workers Paid,** or your traffic is light enough that an occasional request over Free's 10 ms limit is acceptable.
 - **The API is request and response, plus streams,** with its state in D1 or a Durable Object.
 - **You want the same code to run off Cloudflare too,** for development or as a way out.
 
 Not a good fit:
 
-- **You need Workers Free.** Its 10 ms limit rules it out.
+- **You need to stay within Workers Free for certain.** Its limit is 10 ms of CPU per request: some reads fit, others and every write do not.
 - **Cost per request or latency matters most.** The same API in TypeScript used a small fraction of the CPU, and the orpc-api repository has that version, built on the same design ([its page](../api.md)).
 - **You depend on Go libraries TinyGo cannot build,** or on in-process state: caches, pools, background goroutines.
 - **You cannot accept workarounds in the path.** This runs on four small JavaScript files and several open upstream issues. Each is small and tracked, but they are there.

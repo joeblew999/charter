@@ -185,9 +185,9 @@ The positions must come from one ordered log with no gaps that appear later. The
 
 ### 4. The hub
 
-The hub is the live fan-out: when a handler creates a note it calls `hub.Publish`, and every open stream is woken. It is a Cloudflare Durable Object class, `NotesHub`, in `api-go/worker/hub.mjs`. It is JavaScript because a Durable Object class has to be. It stores nothing and sleeps between notes, so it may restart at any time without losing data: the database is the log.
+The hub is the live fan-out: when a handler creates a note it calls `hub.Publish`, and every open stream is woken. In Go it is the `hub` package ([reference](../reference/packages.md#hub)). On Cloudflare it is a Durable Object class, `NotesHub`, in `api-go/worker/hub.mjs`: JavaScript, because a Durable Object class has to be. It stores nothing and sleeps between notes, so it may restart at any time without losing data: the database is the log.
 
-Natively (`mise run api-go:run`) the in-memory store plays both parts (`MemStore` is a `Store` and a `Hub`), so no hub is needed to try a stream.
+Natively (`mise run api-go:run`) the in-memory store plays both parts (`MemStore` is a `Store` and embeds `hub.Memory[Note]`), so no Durable Object is needed to try a stream.
 
 ## The WebSocket
 
@@ -215,7 +215,7 @@ Running natively, `api-go/transport` does the same job in Go. I did not open a W
 
 The SSE and WebSocket operations, `Follow` and the `Source` are yours to reuse by writing them again for your type: copy `watch`, `live`, `feed` and their input structs, rename, give your item type `Position()`, and add the `Since` and `Latest` methods to your store.
 
-**One limit, stated plainly:** the glue between Go and the hub, `api-go/platform_js.go`, is written for the `Note` type. It marshals `api.Note`, publishes to one Durable Object named `notes`, and `Subscribe` decodes `api.Note`. So a second feed today means copying that file's `hub` type and adapting it (another type and another Durable Object name, plus a second class in `api-go/worker/hub.mjs` and a binding in `api-go/cloudflare.config.ts`). A generic, importable version is planned; until then it is a copy. Why the hub is built this way: [How real-time works](../realtime.md).
+**The hub needs no copying.** A second feed is a second name on the same binding: `hub.DurableObject[Device]("HUB", "devices")` in `api-go/platform_js.go`, and `hub.Memory[Device]` in `api-go/platform_other.go`. The class in `api-go/worker/hub.mjs` and the `HUB` binding stay as they are: each name is its own object with its own subscribers. Add a function for it to `Env` beside `Hub`. Why the hub is built this way: [How real-time works](../realtime.md).
 
 ## Check it
 

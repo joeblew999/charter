@@ -42,13 +42,14 @@ For an agent: [llms.txt](https://joeblew999.github.io/orpc-api/llms.txt) lists e
 
 ## Before you choose Go: what it costs to run
 
-The Go Worker uses about **40 to 70 ms of CPU per request** on Cloudflare (measured 2026-10-01: [benchmarks](benchmarks.md)); the same API in TypeScript uses 1 to 3 ms. Cloudflare starts a fresh Go runtime for every request, and that is most of it.
+On Cloudflare, with the build this project uses (`mise run api-go:build`), a read costs 6 to 28 ms of CPU and a write that also notifies the hub about 60 ms. The same API in TypeScript uses about 1 ms. Measured 2026-10-01 on this project's two Workers: [Benchmarks](benchmarks.md).
 
-- **It needs the Workers Paid plan.** Workers Free allows 10 ms of CPU per request, which the Go Worker exceeds.
-- **On Workers Paid it works and is billed by CPU time,** so each request costs more than a TypeScript one would.
+- **Plan on Workers Paid.** Workers Free allows 10 ms of CPU per request. Some reads fit and some do not; a write does not.
+- **The same request does not always cost the same.** Runs minutes apart, on the same build, gave 6 to 11 ms for a read or 14 to 28 ms. Plan for the higher figure.
 - **If you need the Free plan or the lowest cost per request, use the TypeScript version** ([The same in TypeScript](guides/typescript.md)): the design, the tests and the generated SDKs are the same.
+- **Measure your own API** with `mise run api-go:bench`: it times every operation in your spec and reads the CPU time Cloudflare recorded.
 
-Why, and what is planned: [Go on Cloudflare Workers](concepts/workers-go.md).
+Why Go costs more there, and what the build does about it: [Go on Cloudflare Workers](concepts/workers-go.md).
 
 ## What you need
 
