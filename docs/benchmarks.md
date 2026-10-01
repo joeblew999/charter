@@ -1,3 +1,8 @@
+---
+title: Benchmarks
+nav_order: 8
+---
+
 # Benchmarks: what a request costs on each Worker
 
 Measured on 2026-10-01 on Cloudflare, with the two Workers serving the same API from the same kind of D1 database. CPU time is what Workers bills and limits; it comes from Workers Logs (`$workers.cpuTimeMs`, median over 8 or more requests per route).

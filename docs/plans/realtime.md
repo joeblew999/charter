@@ -1,3 +1,9 @@
+---
+title: Real-time design
+nav_order: 1
+parent: Plans
+---
+
 # Plan: the real-time system (SSE + WebSockets on Cloudflare)
 
 Tracked in issue #2. Replaces the earlier `sse.md` list of tricks. The contract side is in [asyncapi.md](asyncapi.md) (issue #3).

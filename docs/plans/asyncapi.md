@@ -1,3 +1,9 @@
+---
+title: AsyncAPI generator
+nav_order: 2
+parent: Plans
+---
+
 # Plan: generate the AsyncAPI spec from the oRPC contract
 
 Tracked in issue #3. Part of [realtime.md](realtime.md) (rule 4: both transports are declared in the one contract).

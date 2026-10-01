@@ -1,3 +1,8 @@
+---
+title: Fern SDKs and CLI (sdk/)
+nav_order: 5
+---
+
 # sdk/
 
 Typed SDKs, a CLI and a docs site from OpenAPI specs, with **[Fern](https://buildwithfern.com)** (the `fern-api` npm package, running its generators locally in Docker). Fern is also what Cloudflare's own [Forge](https://github.com/cloudflare/forge) builds `cf` on. Forge itself isn't used here, only its spec of the Cloudflare API, in `sdk:cloudflare`.

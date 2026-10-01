@@ -1,3 +1,8 @@
+---
+title: Upstream issues
+nav_order: 9
+---
+
 # Upstream issues
 
 Every workaround in the code carries a tag `Upstream: <owner>/<repo>#<n> (when fixed: ...)`. `mise run upstream:status` finds the tags and shows each issue's state. When an issue closes, do what its tag says, then re-run `mise run check` and the soak for that server.

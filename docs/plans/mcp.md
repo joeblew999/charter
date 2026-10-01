@@ -1,3 +1,9 @@
+---
+title: MCP
+nav_order: 3
+parent: Plans
+---
+
 # Plan: the contract as MCP tools
 
 Goal: the schemas written once in the contract serve REST, the specs and MCP tools (Model Context Protocol), on Cloudflare and natively. Done for the Go server (`api-go/humamcp`, `/api/mcp`); the oRPC server is next. What was measured is in [findings.md](../findings.md) ("MCP from the Huma contract").

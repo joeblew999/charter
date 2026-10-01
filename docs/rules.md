@@ -1,3 +1,8 @@
+---
+title: Rules
+nav_order: 2
+---
+
 # Rules for working in this repo
 
 One notes API on Cloudflare Workers, built twice (oRPC in `api/`, Go with Huma on workers-go in `api-go/`), plus Fern-generated SDKs/CLI/docs. It's the reference for our other API projects, so keep it clean, pinned and verified. These rules are for developers and agents alike. Read [README.md](README.md) first ("What is what": it's easy to mix up the two servers, their contracts and their Fern folders).
@@ -5,7 +10,8 @@ One notes API on Cloudflare Workers, built twice (oRPC in `api/`, Go with Huma o
 ## Rules
 
 - **`docs/` is the single source of truth.** Everything written about the repo goes in a page there. `AGENTS.md`, `CLAUDE.md` and the folder READMEs only point to it: don't put content in them.
-- **A new page in `docs/` gets a line in `docs/_config.yml`** (its sidebar title, order and parent) and a row in `docs/README.md`.
+- **A new page in `docs/` starts with its sidebar lines** (`title`, `nav_order`, and `parent` if it sits under another page; copy them from any page) and gets a row in `docs/README.md`.
+- **`docs/_config.yml` and `docs/_sass/` are written by `mise run docs:setup`.** Don't edit them: change the templates in `dev/docs/`, as with the workflows.
 - **Docs are plain Markdown that GitHub Pages renders as it is.** Link pages relatively (`[api-go.md](api-go.md)`), and don't write two opening curly braces together or a curly brace followed by a percent sign: Jekyll reads those as template code.
 - **mise drives everything, locally and on GitHub, and every task is one line.** Anything that needs more is a command of the `dev` tool (`dev/`, Go, standard library only): add a command there, then a one-line task that calls it. No `scripts/` or tasks folder, no shell blocks in `mise.toml`. Test programs (`test/*.mjs`, `test/soak-go`) are code, not glue.
 - **GitHub workflows are generated and only call mise.** The templates are `dev/workflows/*.yml` (prefix `api-`, `sdk-` or `dev-`). Edit a template, run `mise run dev:workflows`, commit both; `mise run dev:check` fails if they differ. A step that does work is `mise run <task>`: no shell in YAML. Actions and runners are pinned to exact versions.

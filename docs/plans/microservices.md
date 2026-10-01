@@ -1,3 +1,9 @@
+---
+title: Go microservices
+nav_order: 5
+parent: Plans
+---
+
 # Plan: Go client and server on separate Workers
 
 An idea, saved for later. Nothing here is built.

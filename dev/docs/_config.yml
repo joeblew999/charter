@@ -10,14 +10,14 @@
 #   parent: Plans             # optional: sits under the page with this title
 #   has_children: true        # on that parent page
 #   ---
-title: orpc-api
-description: "oRPC API on Cloudflare Workers: contract-first REST + SSE + WebSockets that don't lose data, with Fern SDKs, CLI and docs. Driven by mise."
+title: __NAME__
+description: __DESCRIPTION__
 aux_links:
-  "GitHub": ["https://github.com/joeblew999/orpc-api"]
-gh_edit_repository: https://github.com/joeblew999/orpc-api
+  "GitHub": ["https://github.com/__REPO__"]
+gh_edit_repository: https://github.com/__REPO__
 nav_external_links:
   - title: Releases
-    url: https://github.com/joeblew999/orpc-api/releases
+    url: https://github.com/__REPO__/releases
 
 remote_theme: just-the-docs/just-the-docs@v0.12.0
 plugins: [jekyll-remote-theme]
@@ -30,7 +30,7 @@ back_to_top: true
 back_to_top_text: Back to top
 gh_edit_link: true
 gh_edit_link_text: Edit this page on GitHub
-gh_edit_branch: main
+gh_edit_branch: __BRANCH__
 gh_edit_source: docs
 gh_edit_view_mode: edit
 search:

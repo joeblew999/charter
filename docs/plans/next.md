@@ -1,3 +1,9 @@
+---
+title: Plans
+nav_order: 11
+has_children: true
+---
+
 # Next
 
 Where this repo stands (2026-10-01) and what comes next, in order. What's proven is in docs/findings.md.

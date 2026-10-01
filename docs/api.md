@@ -1,3 +1,8 @@
+---
+title: oRPC Worker (api/)
+nav_order: 3
+---
+
 # api/: an oRPC API with real-time, on Cloudflare
 
 The TypeScript half of the repo (the Go half is [api-go.md](api-go.md); [README.md](README.md#what-is-what) says what is what). A notes API: an oRPC 2.0 (`2.0.0-beta.40`) Worker on D1, contract first. From the one contract, oRPC serves plain REST, SSE and a WebSocket, and generates the OpenAPI and AsyncAPI specs that Fern turns into SDKs, a CLI and docs (see [sdk.md](sdk.md)).

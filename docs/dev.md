@@ -1,3 +1,8 @@
+---
+title: Tasks, workflows, releases
+nav_order: 7
+---
+
 # dev/: the tool the tasks run
 
 Every task in `../mise.toml` is one line. Anything that needs more than one line is a command of this Go program (standard library only), so the logic is real code that can be read, tested and reused, not shell inside TOML.
@@ -17,6 +22,7 @@ mise run <task>              # what you normally type: each task is one line tha
 | `cli-build` | Builds the Rust CLI that Fern generates, natively or for Linux in Docker | `sdk:cli:build` |
 | `harness-sync`, `harness-test`, `harness-deploy` | Fern's TypeScript SDK inside a Worker (`sdk/harness`). `harness-sync` copies the SDK in, generating it again when a showcase spec is newer than it | `sdk:harness:*`, `showcase:typecheck` |
 | `bench` | Times the read routes of a notes API as a client sees them ([benchmarks.md](benchmarks.md)) | `api:bench`, `api-go:bench` |
+| `docs` | Writes the docs site's config into a repo's `docs/` ([the docs site](#the-docs-site)) | `docs:setup` |
 | `upstream` | Lists every `Upstream: owner/repo#n` tag in the code with the issue's state | `upstream:status` |
 | `doctor` | Checks the tools and installs the tasks need | `doctor` |
 | `cloudflare-spec` | Slices Cloudflare products out of Forge's spec as a Fern API | `sdk:cloudflare` |
@@ -79,6 +85,32 @@ go run github.com/joeblew999/orpc-api/dev@latest workflows -into . -check   # fa
 It writes the `api-` and `sdk-` workflows. `-only api` or `-only sdk` writes one set; the `dev-` ones are only written where there is a `dev/` module, as here.
 
 They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `api:check`, `api-go:check`, `api:deploy`, `api-go:deploy`, `cloudflare:token`, `sdk:demo`, `showcase:check`, `sdk:harness:test`, `sdk:gen`, `sdk:check`, `sdk:dist`, `sdk:dist:cli` and `release`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
+
+## The docs site
+
+`docs/` is plain Markdown, and GitHub Pages renders it as it is: its built-in Jekyll with the Just the Docs theme (sidebar, search, diagrams from ```` ```mermaid ```` blocks). There is no build step and no workflow.
+
+```sh
+mise run docs:setup      # writes docs/_config.yml and docs/_sass/custom/custom.scss (go run ./dev docs)
+mise run docs:pages      # once per repo: turns GitHub Pages on for docs/ on the default branch
+```
+
+- **The config is the same for every repo.** `dev docs` fills in the repo's name, description and URLs from GitHub, so there is nothing to edit. `mise run dev:check` fails if the committed files differ.
+- **The sidebar comes from the pages.** Each page starts with its short title, its order, and its parent if it has one:
+
+  ```
+  ---
+  title: Go Worker (api-go/)
+  nav_order: 4
+  ---
+  ```
+
+- **In another repo** (any repo whose docs are in `docs/`):
+
+  ```sh
+  go run github.com/joeblew999/orpc-api/dev@latest docs -into .
+  gh api -X POST 'repos/{owner}/{repo}/pages' -f 'source[branch]=main' -f 'source[path]=/docs'
+  ```
 
 ## Using it from another repo
 

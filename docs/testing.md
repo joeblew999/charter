@@ -1,3 +1,8 @@
+---
+title: Testing
+nav_order: 6
+---
+
 # test/: the tests both servers must pass
 
 One set of test programs for the oRPC Worker (`api/`) and the Go Worker (`api-go/`). They only know the API's URL and, where they use a generated SDK, which Fern folder it came from (`api` or `api-go`), so they also check that the two servers are interchangeable.

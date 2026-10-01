@@ -1,3 +1,8 @@
+---
+title: Go Worker (api-go/)
+nav_order: 4
+---
+
 # api-go/: the same API in Go, on Cloudflare and natively
 
 The notes API of [api.md](api.md), written in Go: [Huma](https://huma.rocks) for the contract, [workers-go](https://github.com/syumai/workers-go) to run on Cloudflare Workers, TinyGo to build the Wasm. From the one Go contract come the handlers' validation, the OpenAPI spec and the AsyncAPI spec; Fern turns those into SDKs, a CLI and docs, exactly as it does for the oRPC Worker (see [sdk.md](sdk.md)). The same contract is also served as MCP tools at `/api/mcp` ([below](#mcp-the-contract-as-tools)).

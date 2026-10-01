@@ -1,6 +1,13 @@
+---
+title: Start here
+nav_order: 1
+---
+
 # Docs
 
-Everything written about this repo lives in this folder: one place for developers and for agents. Folder READMEs and `AGENTS.md` only point here. GitHub Pages renders it at https://joeblew999.github.io/orpc-api/ straight from these files (`_config.yml`; no build step).
+Everything written about this repo lives in this folder: one place for developers and for agents. Folder READMEs and `AGENTS.md` only point here. GitHub Pages renders it at https://joeblew999.github.io/orpc-api/ straight from these files, with no build step ([how, and how to get the same in another repo](dev.md#the-docs-site)).
+
+Live: the [oRPC Worker's OpenAPI](https://orpc-api.gedw99.workers.dev/api/openapi.json) and the [Go Worker's](https://orpc-api-go.gedw99.workers.dev/api/openapi.json).
 
 | Page | What it covers |
 |---|---|
