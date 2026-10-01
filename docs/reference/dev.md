@@ -170,12 +170,15 @@ Prints the file's size and its size gzipped (best compression), and fails over t
 dev wasm-build [-dir <folder>]   # build a Go program into <folder>/build/app.wasm for workers-go
 ```
 
-Builds the Wasm a Go Worker deploys, tuned for Cloudflare Workers, and fails if it is too large. It does four things TinyGo's own `tinygo build` does not:
+Builds the Wasm a Go Worker deploys, tuned for Cloudflare Workers, and fails if it is too large. It does five things TinyGo's own `tinygo build` does not:
 
-- **Turns off one collector run per pause.** TinyGo runs a full garbage collection whenever the program waits and 32 objects with finalizers were made since the last one. workers-go makes one such object for every JavaScript value, so a request collected many times over. The build compiles against a copy of TinyGo's runtime with that one constant set to 0. The copy is made once per TinyGo version in your cache folder; TinyGo itself is not rebuilt or changed.
+- **Turns off one collector run per pause.** TinyGo runs a full garbage collection whenever the program waits and 32 objects with finalizers were made since the last one. workers-go makes one such object for every JavaScript value, so a request collected many times over. The build sets that one constant to 0.
+- **Reuses goroutine stacks.** TinyGo allocates a stack for every goroutine and for every call from JavaScript into Go, and its collector rarely frees one. The build makes TinyGo's scheduler keep the stack of a finished goroutine, which it has just cleared, for the next goroutine: about 20 lines in one file.
 - **Starts with a heap of 8 MB.** TinyGo starts with a few pages and collects each time it must grow. With 8 MB an ordinary request never fills the heap, so the collector does not run in it. A stream that lives long does fill it, and is collected then.
-- **Gives each goroutine a 128 KB stack.** Huma overflows TinyGo's default of 64 KB. Every goroutine and every callback from JavaScript gets a stack of this size, and a request makes ten or more, so twice the stack is twice the memory a request uses. 96 KB ran the examples; 128 KB leaves room. If a deep contract fails with `stack overflow` or `memory access out of bounds`, raise it.
+- **Gives each goroutine a 128 KB stack.** Huma overflows TinyGo's default of 64 KB. 96 KB ran the examples; 128 KB leaves room. If a deep contract fails with `stack overflow` or `memory access out of bounds`, raise it.
 - **Checks the size:** the Wasm, gzipped, against `-max`.
+
+The first two are patches to TinyGo's runtime, which is Go source that TinyGo compiles into every program. The build compiles against a copy of that source with the two changes, made once per TinyGo version in your cache folder. TinyGo itself, the compiler, is not rebuilt or changed. If a newer TinyGo no longer has the text a patch replaces, the build stops and says so; `-plain` builds without them.
 
 | Flag | Default | What it is |
 |---|---|---|
@@ -184,12 +187,12 @@ Builds the Wasm a Go Worker deploys, tuned for Cloudflare Workers, and fails if 
 | `-stack` | `128kb` | Stack per goroutine |
 | `-opt` | `z` | TinyGo's optimisation level. Measured on Cloudflare, `2` was no faster than `z` and is larger |
 | `-max` | `3000000` | Fail if the Wasm, gzipped, is larger than this many bytes |
-| `-plain` | off | Build with TinyGo as it is, with no patch and no starting heap: to compare |
+| `-plain` | off | Build with TinyGo as it is, with no patches and no starting heap: to compare |
 
 - **Needs:** TinyGo and binaryen (pinned in `mise.toml`).
 - **Runs:** project layout.
 
-What the two changes save is in [Benchmarks](../benchmarks.md). The patch carries the tag `Upstream: tinygo-org/tinygo#5800`; when TinyGo fixes it, the patch goes and the flags stay.
+What the changes save is in [Benchmarks](../benchmarks.md). The patches carry the tags `Upstream: tinygo-org/tinygo#5800` and `#5801`; when TinyGo has them, they go and the flags stay.
 
 ### bench
 

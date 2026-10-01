@@ -23,9 +23,9 @@ flowchart LR
 
 The API itself is ordinary Go: [Huma](https://huma.rocks) operations and handlers on `net/http` types ([Contract first](contract-first.md)).
 
-## A Go runtime lives for a few requests
+## A Go runtime is not a server process
 
-This is the difference that shapes everything else. A normal Go server is one process that starts once and serves requests for days. Here a Go runtime serves a few requests, one at a time, and is then replaced by a new one. Two requests at the same moment are in two runtimes.
+This is the difference that shapes everything else. A normal Go server is one process that starts once and serves requests for days. Here a Go runtime serves one request at a time, for some dozens of requests, and is then replaced by a new one. Two requests at the same moment are in two runtimes, and Cloudflare drops them all whenever it drops the isolate.
 
 What follows from that:
 
@@ -33,10 +33,10 @@ What follows from that:
 - **Do not count on memory being empty either.** The next request may be in the same runtime and see what the last one left in a package variable. As in any Go server, never keep one caller's data there.
 - **State goes in a binding.** What must outlast a request is stored in D1 (the database), and what must be shared live between requests goes through a Durable Object. The notes example does both: D1 is the log of notes, and one Durable Object, the hub, tells open streams that a new note exists.
 - **No background work.** A goroutine must not outlive its request. There is no place for a ticker, a queue worker or a warm-up.
-- **Start-up is paid often.** Everything a Go program does before `main` serves, it does each time a runtime starts: every third request or so. This is why the `humaworkers` package registers an operation only when a request first matches it ([Go packages](../reference/packages.md#humaworkers)).
+- **Start-up is paid more often than in a server.** Everything a Go program does before `main` serves, it does each time a runtime starts. This is why the `humaworkers` package registers an operation only when a request first matches it ([Go packages](../reference/packages.md#humaworkers)).
 - **A stream is one long request.** An SSE stream or a WebSocket feed keeps its runtime for as long as it is open. A WebSocket's feed and each message the client sends on it run in runtimes of their own, so they share nothing through memory.
 
-Why only a few requests: TinyGo gives every goroutine, and every call from JavaScript into Go, a stack of its own (128 KB here), and its collector rarely gets that memory back. A hello uses about 1.7 MB of an 8 MB heap. So a runtime is reused while its heap has room for another request, and dropped before the collector would have to run: a collection in a full heap costs far more than starting a new runtime. `api-go/worker/go.mjs` does the reusing, and the Go side says when it is full (`transport.Serve`). workers-go on its own starts a runtime for every request.
+Why a runtime is replaced at all: it is dropped before Go's collector would have to run in it. The Go side says when its heap has no room for another request (`transport.Serve`), and `api-go/worker/go.mjs` then starts a new one for the request after. With the 8 MB heap the build gives it, that is after about 80 hellos. A collection in a full heap costs far more than starting a runtime. workers-go on its own starts a runtime for every request.
 
 ## What Go cannot do there, and what does it instead
 
@@ -68,21 +68,20 @@ Expect the same with other libraries: one that leans on `reflect`, on the file s
 
 ## What a request costs
 
-On Cloudflare a read costs 2 to 7 ms of CPU and a write that also notifies the hub 10 to 13 ms; the slowest requests cost 9 to 20 ms. The same API in TypeScript uses about 1 ms. Measured 2026-10-01 on the orpc-api project's Workers; the numbers per operation are in [Benchmarks](../benchmarks.md), and what they mean for choosing a plan is on the home page: [Before you choose Go](../README.md#before-you-choose-go-what-it-costs-to-run).
+On Cloudflare a read costs 1 to 3 ms of CPU and a write that also notifies the hub about 4 ms. The same API in TypeScript uses about 1 ms. Measured 2026-10-01 on the orpc-api project's Workers; the numbers per operation are in [Benchmarks](../benchmarks.md), and what they mean for choosing a plan is on the home page: [Before you choose Go](../README.md#before-you-choose-go-what-it-costs-to-run).
 
 TinyGo and workers-go as they come cost far more: 40 to 70 ms for a read, about 265 ms for a write. Three things in this project make the difference, and a project made by `dev new` has all three:
 
-- **Go runtimes are reused** (`api-go/worker/go.mjs`, above). A request that finds a waiting runtime pays nothing for start-up, and the JavaScript engine has fewer dead runtimes to clear away.
-- **The collector does not run in an ordinary request** (`dev wasm-build`, which `mise run api-go:build` runs). TinyGo as it is collects garbage each time the program waits, once 32 JavaScript values have been touched, and each time its small starting heap must grow. The build turns the first off and starts with a heap of 8 MB. A stream that lives for hours still fills the heap, and is collected then.
-- **Goroutine stacks are 128 KB, not more.** Stacks are most of what a request allocates.
+- **Go runtimes are reused** (`api-go/worker/go.mjs`, above). A request that finds a waiting runtime pays nothing for start-up.
+- **The collector does not run in an ordinary request.** TinyGo as it is collects garbage each time the program waits, once 32 JavaScript values have been touched, and each time its small starting heap must grow. The build turns the first off and starts with a heap of 8 MB. A stream that lives for hours still fills the heap, and is collected then.
+- **Goroutine stacks are reused.** TinyGo gives every goroutine, and every call from JavaScript into Go, a new stack (128 KB here), and its collector rarely gets one back: a hello allocated 1.7 MB. The build keeps the stack of a finished goroutine for the next one, and a hello allocates 38 KB.
 
-The change to TinyGo is one constant in a copy of its runtime source. TinyGo itself is not rebuilt, and the change is reported upstream ([tinygo-org/tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800)). The details are in [the dev tool](../reference/dev.md#wasm-build).
+The last two are changes to TinyGo's runtime: two small patches that `dev wasm-build` (which `mise run api-go:build` runs) applies to a copy of TinyGo's runtime source. TinyGo itself is not rebuilt. Both are reported upstream ([Upstream issues](../upstream.md)), and the details are in [the dev tool](../reference/dev.md#wasm-build).
 
 What still costs:
 
-- **About one request in three starts a new runtime** and costs 5 to 13 ms instead of 2 to 3.
-- **Every value that crosses between Go and JavaScript costs.** A request, a header, a D1 row, a call to the hub. A write crosses many more times than a read.
-- **A new isolate runs slower at first.** Cloudflare's engine optimises the Wasm as it is used. Before the runtimes were reused that doubled every figure; now the figures above were measured right after a deploy.
+- **The first request a new isolate serves costs 40 to 100 ms.** The Wasm is not yet optimised there, and Go starts up in it. Cloudflare starts an isolate after a deploy, when a Worker has been idle, and when traffic spreads to another machine, so a rarely used Worker meets this often.
+- **Every value that crosses between Go and JavaScript costs.** A request, a header, a D1 row, a call to the hub. A write crosses more often than a read.
 
 These numbers are for the notes example. Measure your own API:
 
@@ -116,7 +115,7 @@ A good fit:
 
 Not a good fit:
 
-- **You need to stay within Workers Free for certain.** Its limit is 10 ms of CPU per request: reads fit, writes and the slowest requests reach it.
-- **Cost per request or latency matters most.** The same API in TypeScript used a small fraction of the CPU, and the orpc-api repository has that version, built on the same design ([its page](../api.md)).
+- **You need to stay within Workers Free for certain.** Its limit is 10 ms of CPU per request: ordinary requests fit, the first one in a new isolate does not.
+- **Cold starts matter most.** The first request in a new isolate costs 40 to 100 ms of CPU in Go and a few in TypeScript, and the orpc-api repository has that version, built on the same design ([its page](../api.md)).
 - **You depend on Go libraries TinyGo cannot build,** or on in-process state that must last: caches, pools, background goroutines.
 - **You cannot accept workarounds in the path.** This runs on five small JavaScript files and several open upstream issues. Each is small and tracked, but they are there.

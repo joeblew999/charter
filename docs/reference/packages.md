@@ -30,7 +30,7 @@ In the signatures, `huma` is `github.com/danielgtaylor/huma/v2`.
 
 ## humaworkers
 
-A Huma API whose operations are registered only when a request needs them. On Workers a Go runtime serves only a few requests, so registering every operation at start-up would be paid again and again ([Go on Cloudflare Workers](../concepts/workers-go.md)). It also matches routes itself and leaves out the one Huma hook that TinyGo cannot run.
+A Huma API whose operations are registered only when a request needs them. On Workers a Go runtime starts often (in every new isolate, and for a request that finds none waiting), so registering every operation at start-up would be paid again and again ([Go on Cloudflare Workers](../concepts/workers-go.md)). It also matches routes itself and leaves out the one Huma hook that TinyGo cannot run.
 
 | Name | Signature | What it does |
 |---|---|---|

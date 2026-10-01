@@ -138,6 +138,15 @@ Deployed with `mise run api-go:deploy` to https://orpc-api-go.gedw99.workers.dev
   - A runtime cannot be reused without limit: TinyGo allocates a stack per goroutine and per callback from JavaScript (about 13 for a hello, 30 for a create) and its collector rarely frees them. Unlimited reuse gave collections of 65, 148, 175 and 293 ms and then a 503 from memory. So a runtime is dropped when its heap has no room for another request (`transport.Serve` sets the binding's `full`).
   - With TinyGo as it is and 256 KB stacks, 9 hellos left 23 MB in use after 14 collections (`runtime.ReadMemStats` under `cf dev`).
   - On that build: `mise run check` passes, `mise run api-go:live-test` 34 of 34 on Cloudflare, `mise run api-go:soak` 7 of 7 clients with 45 of 45 notes through a redeploy and a client drop, and `test/showcase-test.mjs` passes against the deployed showcase, which measured a list at 2 ms and a create at 5.
+  - `mise run api-go:soak --idle 20` on it: 7 of 7 after 20 quiet minutes.
+- **Reusing goroutine stacks inside TinyGo takes a hello to 1 ms of CPU, the list to 3, a create to 4 and a 404 to 1** (medians of 20, right after a deploy; p99 2 to 19 ms). It is a second patch that `dev wasm-build` applies to its copy of TinyGo's runtime (`src/internal/task/task_asyncify.go`): a finished goroutine's stack is kept for the next one. Filed with the patch as tinygo-org/tinygo#5801.
+  - Under `cf dev`, a hello allocated 38 KB instead of 1.7 MB (128 KB stacks) and a create about 100 KB instead of 4 MB; one runtime served 30 hellos and 2 creates with no collection.
+  - On Cloudflare a hello's CPU time, request by request: 1 2 2 2 1 2 1 1 2 1 1 2.
+  - The showcase Worker on the same build: a list 1 ms, a create 2 ms, a 404 1 ms.
+  - During the soak (7 open streams, a note every 2 s) a create cost 3 to 6 ms; on the build before it cost 50 to 115 ms for most of them.
+  - **The first request a new isolate serves costs 40 to 100 ms.** 8 connections opened at once: the first request of each cost 41 to 77 ms, the rest 1 to 2. Not new: it was 90 to 170 ms with TinyGo and workers-go as they come.
+  - On that build: `mise run check` passes; locally 692 requests 8 at a time with 12 cut-off streams, all 200; on Cloudflare 1,016 requests 8 at a time with 16 cut-off streams, all 200, `mise run api-go:live-test` 34 of 34, `mise run api-go:soak` 7 of 7 with 46 of 46 notes through a redeploy and a client drop, and `test/showcase-test.mjs` passes against the deployed showcase.
+  - In the soak's logs 6 WebSocket requests ended as `exception`, as 7 did on the build before: sockets cut by the redeploy and the client drop.
   - Not run on it: `mise run api-go:soak --idle 20`.
 - **`-gc=boehm` hangs on Cloudflare.** Locally it was the fastest build with a real collector; deployed, 48 requests took 11 minutes. The default collector stays.
 - **CI runs it all on Linux:** TinyGo and binaryen install through mise on `ubuntu-24.04`, and `api-go:check` (including the Wasm under workerd) passes there.

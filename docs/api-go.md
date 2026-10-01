@@ -100,7 +100,7 @@ Two more, met by the Go showcase's file upload ([showcase-go.md](showcase-go.md#
 - **TinyGo has no `reflect.Value.MethodByName`,** which Huma's typed multipart form (`huma.MultipartFormFiles[T]`) calls. Take the plain `multipart.Form` and declare its schema on the operation.
 - **A Worker has no disk,** and Huma's adapter writes an upload over 8 KB to a temporary file. `humaworkers` keeps uploads in memory, up to 32 MB.
 
-One design point: **a Go runtime serves only a few requests** (`api-go/worker/go.mjs` reuses one while its heap has room; workers-go on its own starts one per request). Registering every Huma operation at start-up would be paid each time a runtime starts, so `humaworkers` registers an operation when a request first matches it. Specs and `tools/list` register them all.
+One design point: **a Go runtime starts often** (`api-go/worker/go.mjs` reuses one for the next request, but every new isolate and every request that finds none waiting starts one; workers-go on its own starts one per request). Registering every Huma operation at start-up would be paid each time, so `humaworkers` registers an operation when a request first matches it. Specs and `tools/list` register them all.
 
 Two things workers-go can't do, and where they went:
 
@@ -115,7 +115,7 @@ Started without the task (`go run .` in `api-go/`), it listens on `PORT`, or on 
 
 ## Cost
 
-It passes the same tests as the oRPC Worker, and it costs more to run: on Cloudflare a read uses 2 to 7 ms of CPU and a write 10 to 13 ms, against about 1 ms for the oRPC Worker. That is with the tuned build (`dev wasm-build`) and the Worker entry that reuses Go runtimes (`api-go/worker/go.mjs`); TinyGo and workers-go as they come cost 40 to 70 ms for a read. The numbers and how to measure your own are in [benchmarks.md](benchmarks.md); why, in [concepts/workers-go.md](concepts/workers-go.md).
+It passes the same tests as the oRPC Worker, and it costs a little more to run: on Cloudflare a read uses 1 to 3 ms of CPU and a write about 4 ms, against about 1 ms for the oRPC Worker. That is with the tuned build (`dev wasm-build`) and the Worker entry that reuses Go runtimes (`api-go/worker/go.mjs`); TinyGo and workers-go as they come cost 40 to 70 ms for a read. The numbers and how to measure your own are in [benchmarks.md](benchmarks.md); why, in [concepts/workers-go.md](concepts/workers-go.md).
 
 ## Differences from the oRPC Worker
 

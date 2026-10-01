@@ -116,7 +116,7 @@ mise run cloudflare:secrets    # REMOTE: copies both from fnox into the repo's G
 
 ## What it costs to run
 
-A read costs 2 to 7 ms of CPU and a write 10 to 13 ms; the slowest requests cost 9 to 20 ms. Workers Free allows 10 ms per request, so it is enough to try the project, and production wants Workers Paid. `mise run api-go:bench` measures your own API on Cloudflare; the figures and what they mean are on the docs home page ([what it costs](../README.md#before-you-choose-go-what-it-costs-to-run)) and in [benchmarks](../benchmarks.md).
+A read costs 1 to 3 ms of CPU and a write about 4 ms. The first request a new isolate serves costs 40 to 100 ms. Workers Free allows 10 ms per request, so it is enough to try the project, and production wants Workers Paid. `mise run api-go:bench` measures your own API on Cloudflare; the figures and what they mean are on the docs home page ([what it costs](../README.md#before-you-choose-go-what-it-costs-to-run)) and in [benchmarks](../benchmarks.md).
 
 Measure your own Worker as a client sees it:
 

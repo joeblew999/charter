@@ -26,7 +26,7 @@ And anyone outside Cloudflare uses the Fern-generated SDKs and CLI to reach the 
 2. **Service bindings instead of public URLs.** Worker-to-Worker calls through a binding skip the public internet and Cloudflare's error 1042. The client's transport takes the binding's `fetch` (the TypeScript side of this is item 6 in [next.md](next.md), also untested).
 3. **Streams between Workers.** A client Worker following a server Worker's feed is `follow` again, with the server's SSE or WebSocket as the live source. A stream held between two Workers counts against both.
 4. **A second example** beside `api-go/`: a small Worker that consumes the notes API and exposes something of its own, with a soak test across the pair.
-5. **Cost.** Every hop is a request to a Go Worker: 2 to 7 ms of CPU for a read ([../benchmarks.md](../benchmarks.md)). Service bindings avoid the network, not that.
+5. **Cost.** Every hop is a request to a Go Worker: 1 to 3 ms of CPU for a read ([../benchmarks.md](../benchmarks.md)). Service bindings avoid the network, not that.
 
 ## Open questions
 

@@ -37,10 +37,9 @@ func Run(h http.Handler) {
 // when the response body is closed or cancelled.
 //
 // No more requests: a runtime is reused only while its heap has room for another request without
-// the collector running. TinyGo gives every goroutine and every callback from JavaScript a stack
-// of its own (-stack-size, 128 KB here) and its collector rarely frees them, so a collection in a
-// reused runtime costs far more than a new runtime does. When the room is gone the binding's
-// "full" is set, and worker/go.mjs drops the runtime after this response.
+// the collector running. A collection in a full heap cost 65 to 293 ms of CPU on Cloudflare, far
+// more than a new runtime does, and TinyGo's collector got little back. When the room is gone the
+// binding's "full" is set, and worker/go.mjs drops the runtime after this response.
 //
 // The WebSocket adapter is JavaScript here: worker/websocket.mjs.
 func Serve(h http.Handler) http.Handler {

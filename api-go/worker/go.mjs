@@ -9,9 +9,9 @@
 //   - A runtime is reused only when its response ended normally: the body was read to its end.
 //     After an error, or when the client went away, it is dropped.
 //   - A runtime is dropped before Go's collector would run in it: Go says when its heap has no
-//     room for another request (transport.Serve sets the binding's "full"). So a runtime serves a
-//     few requests, not thousands, and what must be shared between requests still goes through a
-//     binding.
+//     room for another request (transport.Serve sets the binding's "full"). So a runtime serves
+//     some dozens of requests, not thousands, and what must be shared between requests still goes
+//     through a binding.
 //
 // The Go side must stay alive after a response: transport.Run instead of workers.Serve.
 //

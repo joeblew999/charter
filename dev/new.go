@@ -214,8 +214,8 @@ To put your own API in its place: %s
 With a GitHub repo: mise run dev:workflows, mise run docs:setup, mise run docs:pages.
 
 %s
-Cost: on Cloudflare a read uses 2 to 7 ms of CPU and a write 10 to 13 ms (measured 2026-10-01).
-Workers Free allows 10 ms per request: enough to try it, Workers Paid for production. mise run api-go:bench measures yours.
+Cost: on Cloudflare a read uses 1 to 3 ms of CPU and a write about 4 ms; the first request in a new
+isolate 40 to 100 ms (measured 2026-10-01). mise run api-go:bench measures yours.
 `, into, module, name, into, replaceGuide, afterDeploy(name, subdomain))
 	return nil
 }

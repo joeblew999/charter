@@ -16,20 +16,58 @@ func init() {
 		"build a Go Worker's Wasm with TinyGo, tuned for Workers (see docs: Go on Cloudflare Workers); -plain: TinyGo as it is", wasmBuild}
 }
 
-// The one change made to TinyGo, in its runtime source (read at build time: the compiler is not rebuilt).
+// The changes made to TinyGo, in its runtime source (read at build time: the compiler is not
+// rebuilt). Each is a piece of text replaced in a copy of TinyGo's src/.
 //
-// TinyGo runs a full garbage collection whenever the scheduler goes idle once 32 finalizers have
-// been registered since the last one. Every JavaScript reference registers one, and a Worker goes
-// idle at every await, so one request ran many full collections: measured on Cloudflare, 38 to 71 ms
-// of CPU per request against 9 to 13 ms without it (docs/benchmarks.md). Zero switches that trigger
-// off; the collector still runs when the heap is full, so long-lived streams are still collected.
+// 1. No collection at every pause. TinyGo runs a full garbage collection whenever the scheduler
+// goes idle once 32 finalizers have been registered since the last one. Every JavaScript reference
+// registers one, and a Worker goes idle at every await, so one request ran many full collections:
+// measured on Cloudflare, 38 to 71 ms of CPU per request against 9 to 13 ms without it
+// (docs/benchmarks.md). Zero switches that trigger off; the collector still runs when the heap is
+// full, so long-lived streams are still collected.
 //
-// Upstream: tinygo-org/tinygo#5800 (when fixed: drop the patch and build with TinyGo as it is)
-const (
-	tinygoPatchFile = "src/runtime/gc_finalizer.go"
-	tinygoPatchOld  = "const finalizerGCThreshold = 32"
-	tinygoPatchNew  = "const finalizerGCThreshold = 0"
+// 2. Goroutine stacks are reused. TinyGo allocates a stack (-stack-size) for every goroutine and
+// for every call from JavaScript into Go, and leaves the finished ones to the collector, which
+// rarely frees them: a hello on workers-go allocated 1.7 MB of stacks. A finished goroutine's
+// stack, which TinyGo has just cleared, now goes on a list, and the next goroutine takes it.
+//
+// Upstream: tinygo-org/tinygo#5800 (when fixed: drop the first patch)
+// Upstream: tinygo-org/tinygo#5801 (when fixed: drop the stack patches)
+var tinygoPatches = []struct{ file, old, new string }{
+	{"src/runtime/gc_finalizer.go", "const finalizerGCThreshold = 32", "const finalizerGCThreshold = 0"},
+	{"src/internal/task/task_asyncify.go", `	// Create a stack.
+	stack := runtime_alloc(stackSize, nil)
+`, `	// Take the stack of a finished goroutine (Resume keeps them), or create one.
+	stack := freeStack
+	if stack != nil && freeStackSize == stackSize {
+		freeStack = *(*unsafe.Pointer)(stack)
+		*(*unsafe.Pointer)(stack) = nil
+	} else {
+		stack = runtime_alloc(stackSize, nil)
+	}
+`},
+	{"src/internal/task/task_asyncify.go", `		t.clearStack()
+		t.state.args = nil
+`, `		t.clearStack()
+		t.state.args = nil
+		// Keep the cleared stack for the next goroutine: a list through the first word of each.
+		base := unsafe.Pointer(t.state.canaryPtr)
+		if size := uintptr(t.state.top) - uintptr(base); freeStack == nil || size == freeStackSize {
+			*(*unsafe.Pointer)(base) = freeStack
+			freeStack, freeStackSize = base, size
+			t.state.stackState = stackState{}
+		}
+`},
+	{"src/internal/task/task_asyncify.go", `// currentTask is the current running task, or nil if currently in the scheduler.
+`, `// freeStack is a list of the stacks of finished goroutines, all of freeStackSize bytes.
+var (
+	freeStack     unsafe.Pointer
+	freeStackSize uintptr
 )
+
+// currentTask is the current running task, or nil if currently in the scheduler.
+`},
+}
 
 // wasmBuild builds dir's Go program into dir/build/app.wasm for workers-go:
 //   - with the runtime patch above;
@@ -79,7 +117,11 @@ func tinygoRoot() (string, error) {
 		return "", errors.New("wasm-build needs tinygo (mise install)")
 	}
 	version, _ := output(".", "tinygo", "version")
-	key := fmt.Sprintf("%x", sha256.Sum256([]byte(version+tinygoPatchOld+tinygoPatchNew)))[:12]
+	text := version
+	for _, patch := range tinygoPatches {
+		text += patch.file + patch.old + patch.new
+	}
+	key := fmt.Sprintf("%x", sha256.Sum256([]byte(text)))[:12]
 	cache, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
@@ -114,14 +156,16 @@ func tinygoRoot() (string, error) {
 	if err := quiet(".", nil, "cp", copyArgs...); err != nil {
 		return "", err
 	}
-	file := filepath.Join(root, tinygoPatchFile)
-	source, err := os.ReadFile(file)
-	if err != nil || strings.Count(string(source), tinygoPatchOld) != 1 {
-		os.RemoveAll(root)
-		return "", fmt.Errorf("this TinyGo (%s) does not have the line the patch changes (%q in %s): see docs/upstream.md, or build with -plain", version, tinygoPatchOld, tinygoPatchFile)
-	}
-	if err := os.WriteFile(file, []byte(strings.Replace(string(source), tinygoPatchOld, tinygoPatchNew, 1)), 0o644); err != nil {
-		return "", err
+	for _, patch := range tinygoPatches {
+		file := filepath.Join(root, patch.file)
+		source, err := os.ReadFile(file)
+		if err != nil || strings.Count(string(source), patch.old) != 1 {
+			os.RemoveAll(root)
+			return "", fmt.Errorf("this TinyGo (%s) does not have the text a patch changes (%q in %s): see docs/upstream.md, or build with -plain", version, patch.old, patch.file)
+		}
+		if err := os.WriteFile(file, []byte(strings.Replace(string(source), patch.old, patch.new, 1)), 0o644); err != nil {
+			return "", err
+		}
 	}
 	fmt.Printf("TinyGo runtime patched once into %s\n", root)
 	return root, os.WriteFile(filepath.Join(root, ".patched"), []byte(version+"\n"), 0o644)

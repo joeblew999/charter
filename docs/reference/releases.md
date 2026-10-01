@@ -97,7 +97,7 @@ What an update does not touch: the files `dev new` copied into your project. The
 
 ### Getting the faster Worker in a project made before it
 
-A project made before Go runtimes were reused keeps working after an update, at its old cost: about five times the CPU per request ([Benchmarks](../benchmarks.md)). Three of the copied files carry the change. After updating the tool and the Go packages as above:
+A project made before Go runtimes were reused keeps working after an update, at its old cost: ten times the CPU per request or more ([Benchmarks](../benchmarks.md)). Three of the copied files carry the change. After updating the tool and the Go packages as above:
 
 1. **The build task** in `mise.toml`, if it still calls `tinygo build` itself:
 
@@ -118,7 +118,7 @@ A project made before Go runtimes were reused keeps working after an update, at 
 
 3. **`api-go/main.go`:** `transport.Run(api.Handler(env()))` in place of `workers.Serve(transport.Serve(api.Handler(env())))`, so the Go program stays alive after a response.
 
-Then `mise run check`, deploy, and `mise run api-go:bench`. One thing to read first: a package variable can now hold what an earlier request left there ([Go on Cloudflare Workers](../concepts/workers-go.md#a-go-runtime-lives-for-a-few-requests)).
+Then `mise run check`, deploy, and `mise run api-go:bench`. One thing to read first: a package variable can now hold what an earlier request left there ([Go on Cloudflare Workers](../concepts/workers-go.md#a-go-runtime-is-not-a-server-process)).
 
 ## What compatibility is promised
 
