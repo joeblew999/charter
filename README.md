@@ -40,18 +40,18 @@ On another Cloudflare account, set `API_URL`, `API_GO_URL` (and `HARNESS_URL`, `
 Everything runs through one tool, straight from GitHub. Nothing to copy by hand.
 
 ```sh
-D="go run github.com/joeblew999/orpc-api/dev@latest"
+dev() { go run github.com/joeblew999/orpc-api/dev@latest "$@"; }
 
 # A new Go API project (contract, Worker, tests, Fern folder, tasks, docs), under your name:
-$D new -name billing-api && cd billing-api && git init
+dev new -name billing-api && cd billing-api && git init
 mise install && mise run setup && mise run check      # proves it works on your machine
 mise run api-go:deploy && mise run api-go:live-test   # to Cloudflare, then test what was deployed
 
 # In any repo that has a GitHub remote:
-$D workflows -into .        # GitHub workflows (api-*, sdk-*), which only call mise tasks
-$D docs -into .             # the docs site for docs/: config, writing rules, llms.txt
-$D docs-lint                # check docs/: links, tasks and paths that don't exist
-$D docs-review              # have Claude bring docs/ up to date against docs/writing.md
+dev workflows -into .        # GitHub workflows (api-*, sdk-*), which only call mise tasks
+dev docs -into .            # the docs site for docs/: config, writing rules, llms.txt
+dev docs-lint               # check docs/: links, tasks and paths that don't exist
+dev docs-review             # have Claude bring docs/ up to date against docs/writing.md
 gh api -X POST 'repos/{owner}/{repo}/pages' -f 'source[branch]=main' -f 'source[path]=/docs'   # once: turn the site on
 ```
 
