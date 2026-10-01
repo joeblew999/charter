@@ -86,7 +86,7 @@ mise run sdk:harness:deploy                           # cf deploy: orpc-sdk-harn
 mise run sdk:harness:test --remote                    # on Cloudflare
 ```
 
-All pass in both places (the deployed harness is still the plain mock of 2026-09-29, without the upload check: `mise run sdk:harness:deploy` updates it):
+All pass in both places (the deployed harness is the oRPC implementation, deployed 2026-10-01):
 - auto-pagination over 3 pages;
 - OAuth client credentials (token fetched form-encoded, then reused);
 - idempotent create (`Idempotency-Key` plus bearer token);

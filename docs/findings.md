@@ -128,7 +128,7 @@ Deployed with `mise run api-go:deploy` to https://orpc-api-go.gedw99.workers.dev
 - **`-gc=boehm` hangs on Cloudflare.** Locally it was the fastest build with a real collector; deployed, 48 requests took 11 minutes. The default collector stays.
 - **CI runs it all on Linux:** TinyGo and binaryen install through mise on `ubuntu-24.04`, and `api-go:check` (including the Wasm under workerd) passes there.
 
-## MCP from the Huma contract (api-go/humamcp, verified locally 2026-10-01; not deployed)
+## MCP from the Huma contract (api-go/humamcp, verified locally 2026-10-01; on Cloudflare: see the section above)
 
 Everything here ran on this machine: natively, and as TinyGo Wasm under workerd (`cf dev`). Nothing ran on Cloudflare itself. The design and its limits are in [plans/mcp.md](plans/mcp.md).
 
@@ -162,7 +162,7 @@ Cut with `git tag v0.1.0 && git push origin v0.1.0` on main, after `api-check`, 
 
 ## The showcase, contract first in oRPC (sdk/harness, verified locally 2026-10-01)
 
-Everything here ran on this machine, the Worker under `cf dev`. Nothing was deployed: the harness on Cloudflare is still the plain mock. How it is built is in [sdk.md](sdk.md#the-showcase-is-contract-first-orpc-verified-2026-10-01).
+Everything in this list ran on this machine, the Worker under `cf dev`. It was then deployed (`mise run sdk:harness:deploy`), and `mise run sdk:harness:test -remote` passes 9/9 on Cloudflare against the oRPC implementation: SSE, the multipart upload, idempotent create, OAuth client credentials, pagination, the webhook signature, and the WebSocket client inside a Worker and from Node. How it is built is in [sdk.md](sdk.md#the-showcase-is-contract-first-orpc-verified-2026-10-01).
 
 - **Versions:** oRPC 2.0.0-beta.40, Zod 4.6.5, Fern 5.140.0 (Go SDK 1.64.0, TypeScript SDK 3.98.0, CLI generator 0.44.0), workerd through cf 1.0.0-beta.5.
 - **One oRPC contract now gives the whole showcase:** OAuth client credentials with a form-encoded token endpoint, idempotency, cursor pagination, an SSE stream, a multipart upload, a webhook with an HMAC signature, a WebSocket both ways, and audiences. `openapi.json` and `asyncapi.json` are generated from it, and the hand-written `asyncapi.yml` is deleted.

@@ -19,7 +19,6 @@ Where this repo stands (2026-10-01) and what comes next, in order. What's proven
 ## Next
 
 000. **The showcase, what is left** ([../sdk.md](../sdk.md#the-showcase-is-contract-first-orpc-verified-2026-10-01)):
-   - **Deploy the harness** (`mise run sdk:harness:deploy`, then `mise run sdk:harness:test -remote`). The deployed one is still the plain mock; the oRPC one has only run under `cf dev`.
    - **Tell oRPC what its generators can't say:** a form-encoded request body, `security` per operation, document-level settings from the contract, OpenAPI `webhooks`. The list and what we do instead is in sdk.md. Nothing is filed yet.
    - **Tell Fern** that its generators ignore an AsyncAPI server's `pathname`. Not filed yet.
    - **The same contract in Go** (`sdk/fern/apis/showcase-go/`, in progress on another branch): keep its names equal to this one's. `NoteEvent` gained an optional `auth` here.
