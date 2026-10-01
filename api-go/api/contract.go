@@ -101,14 +101,14 @@ func sdk(group, method string, extra map[string]any) map[string]any {
 // Routes is the contract with its implementation on env.
 func Routes(env Env) []humaworkers.Route {
 	return []humaworkers.Route{
-		{Method: http.MethodGet, Path: "/api/hello", Register: func(api huma.API) {
+		{Method: http.MethodGet, Path: "/api/hello", OperationID: "hello", Register: func(api huma.API) {
 			huma.Register(api, huma.Operation{
 				OperationID: "hello", Method: http.MethodGet, Path: "/api/hello",
 				Summary: "Say hello", Tags: []string{"meta"},
 				Extensions: sdk("meta", "hello", nil),
 			}, env.hello)
 		}},
-		{Method: http.MethodGet, Path: "/api/notes", Register: func(api huma.API) {
+		{Method: http.MethodGet, Path: "/api/notes", OperationID: "listNotes", Register: func(api huma.API) {
 			huma.Register(api, huma.Operation{
 				OperationID: "listNotes", Method: http.MethodGet, Path: "/api/notes",
 				Summary: "List notes, newest first (cursor pagination)", Tags: []string{"notes"},
@@ -117,7 +117,7 @@ func Routes(env Env) []humaworkers.Route {
 				}),
 			}, env.list)
 		}},
-		{Method: http.MethodGet, Path: "/api/notes/watch", Register: func(api huma.API) {
+		{Method: http.MethodGet, Path: "/api/notes/watch", OperationID: "watchNotes", Register: func(api huma.API) {
 			huma.Register(api, huma.Operation{
 				OperationID: "watchNotes", Method: http.MethodGet, Path: "/api/notes/watch",
 				Summary:     "Stream notes as they are created (Server-Sent Events). The stream ends after `seconds`; call again with `after` = the last note id to continue without gaps",
@@ -137,13 +137,13 @@ func Routes(env Env) []humaworkers.Route {
 		}},
 		// The WebSocket channel: in the AsyncAPI spec, not in OpenAPI. Plain JSON notes; `after` (a
 		// query parameter) resumes, the same position as watch.
-		{Method: http.MethodGet, Path: "/api/notes/live", Register: func(api huma.API) {
+		{Method: http.MethodGet, Path: "/api/notes/live", OperationID: "liveNotes", Register: func(api huma.API) {
 			huma.Register(api, asyncapi.Operation(huma.Operation{
 				OperationID: "liveNotes", Method: http.MethodGet, Path: "/api/notes/live",
 				Summary: "New notes over a WebSocket, as plain JSON. On close, reconnect with `after` = the last note id to continue without gaps",
 			}, asyncapi.Channel{Name: "liveNotes", OperationID: "receiveNote", Message: "Note", Payload: Note{}}), env.live)
 		}},
-		{Method: http.MethodPost, Path: "/api/notes", Register: func(api huma.API) {
+		{Method: http.MethodPost, Path: "/api/notes", OperationID: "createNote", Register: func(api huma.API) {
 			huma.Register(api, huma.Operation{
 				OperationID: "createNote", Method: http.MethodPost, Path: "/api/notes",
 				Summary: "Create a note", Tags: []string{"notes"},
