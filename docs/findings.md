@@ -147,7 +147,7 @@ Deployed with `mise run api-go:deploy` to https://orpc-api-go.gedw99.workers.dev
   - **The first request a new isolate serves costs 40 to 100 ms.** 8 connections opened at once: the first request of each cost 41 to 77 ms, the rest 1 to 2. Not new: it was 90 to 170 ms with TinyGo and workers-go as they come.
   - On that build: `mise run check` passes; locally 692 requests 8 at a time with 12 cut-off streams, all 200; on Cloudflare 1,016 requests 8 at a time with 16 cut-off streams, all 200, `mise run api-go:live-test` 34 of 34, `mise run api-go:soak` 7 of 7 with 46 of 46 notes through a redeploy and a client drop, and `test/showcase-test.mjs` passes against the deployed showcase.
   - In the soak's logs 6 WebSocket requests ended as `exception`, as 7 did on the build before: sockets cut by the redeploy and the client drop.
-  - Not run on it: `mise run api-go:soak --idle 20`.
+  - `mise run api-go:soak --idle 20` on it: 7 of 7 after 20 quiet minutes.
 - **`-gc=boehm` hangs on Cloudflare.** Locally it was the fastest build with a real collector; deployed, 48 requests took 11 minutes. The default collector stays.
 - **CI runs it all on Linux:** TinyGo and binaryen install through mise on `ubuntu-24.04`, and `api-go:check` (including the Wasm under workerd) passes there.
 
