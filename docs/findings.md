@@ -146,3 +146,16 @@ Everything here ran on this machine: natively, and as TinyGo Wasm under workerd 
 - **`go test` missed one thing and the combined check found it.** In the native build (one process for all requests), routes are registered as requests need them, so `tools/list` came out in the order of earlier calls (`hello, createNote, listNotes` after the live test had created a note). `humaworkers.Operations()` now returns the routes' order whatever came before, and registration is under a mutex: the race detector reported unsynchronised registration when the first requests arrive together, which the native build could already do before MCP.
 - **Seen once each and not reproduced** (so not explained): the first run of the client test against a just-started `cf dev` ended with `ECONNRESET` at its first tool call (after 5 passing checks), and one of eight back-to-back runs took about five minutes instead of one second (all its checks passed). After that: 5 runs against a just-started server (3 of them with no local state and no Vite cache), 24 runs against a running one, and about 3,000 single requests, with no failure and no request over one second.
 - **Not run:** anything on Cloudflare; an MCP host with a model behind it (Claude, an IDE); authorization.
+
+## The first release, v0.1.0 (verified 2026-10-01)
+
+Cut with `git tag v0.1.0 && git push origin v0.1.0` on main, after `api-check`, `sdk-check` and `dev-check` passed there. Both release workflows succeeded.
+
+- **The GitHub Release has 12 files:** the `dev` tool for linux and darwin (amd64, arm64); for each API the Go and TypeScript SDK sources and its two specs; and each API's Fern CLI for linux/amd64.
+- **The Go module tags were added by the workflow:** `api-go/v0.1.0` and `dev/v0.1.0`, on the same commit.
+- **Checked from outside the repo, in an empty folder:**
+  - the downloaded `dev-darwin-arm64` runs;
+  - `go run github.com/joeblew999/orpc-api/dev@v0.1.0 help` runs;
+  - `... dev@v0.1.0 workflows -into <dir>` writes `api-check.yml`, `api-deploy.yml`, `sdk-check.yml` and `sdk-release.yml` there;
+  - a new module with `go get github.com/joeblew999/orpc-api/api-go@v0.1.0` imports and uses `humaworkers`, `asyncapi`, `follow` and `humamcp`.
+- **The two servers are interchangeable to clients, in both directions, on Cloudflare.** The SDKs and CLI generated from the Go specs pass the SDK live test (2/2) and a short soak (7/7, nothing missing, no duplicates, through a client drop) against the deployed *oRPC* Worker; the oRPC-spec ones had passed against the Go server.

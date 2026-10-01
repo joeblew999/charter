@@ -32,6 +32,7 @@ type Route struct {
 	Register    func(api huma.API)
 }
 
+// Upstream: tinygo-org/tinygo#5799 (when fixed: Huma's own humago adapter can do the routing, on http.ServeMux)
 // Upstream: tinygo-org/tinygo#3599 (when fixed: keep huma.DefaultConfig's CreateHooks, the schema links work)
 // Config is huma.DefaultConfig without what does not run or is not wanted on Workers: no
 // schema-link hook (reflect.StructOf), and no built-in /openapi, /docs and /schemas routes (serve
