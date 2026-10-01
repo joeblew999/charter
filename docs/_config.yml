@@ -20,6 +20,26 @@ gh_edit_link_text: Edit this page on GitHub
 gh_edit_branch: main
 gh_edit_source: docs
 gh_edit_view_mode: edit
+enable_copy_code_button: true
+back_to_top: true
+back_to_top_text: Back to top
+footer_content: Written in docs/ of the repo, rendered by GitHub Pages.
+search:
+  heading_level: 3
+  previews: 3
+  preview_words_before: 4
+  preview_words_after: 12
+# ```mermaid blocks become diagrams (GitHub renders the same blocks in the repo view).
+mermaid:
+  version: "12.0.0"
+# Quick links at the foot of the sidebar.
+nav_external_links:
+  - title: Releases
+    url: https://github.com/joeblew999/orpc-api/releases
+  - title: "Live: oRPC Worker's OpenAPI"
+    url: https://orpc-api.gedw99.workers.dev/api/openapi.json
+  - title: "Live: Go Worker's OpenAPI"
+    url: https://orpc-api-go.gedw99.workers.dev/api/openapi.json
 
 # The sidebar: each page's short title, its order, and what it sits under. Set here, not in the pages,
 # so the Markdown stays plain. A new page needs an entry, or it lands at the bottom under its full heading.

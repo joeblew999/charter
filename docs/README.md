@@ -20,10 +20,15 @@ Everything written about this repo lives in this folder: one place for developer
 
 The one idea: **you write a contract in code; everything else is generated from it.**
 
-```
-contract (code you write)  ->  openapi.json + asyncapi.json (generated)  ->  Fern  ->  SDKs, CLI, docs
-        |
-        +-> the server validates requests against the same contract
+```mermaid
+flowchart LR
+    C["Contract<br/>(code you write)"] --> S["openapi.json + asyncapi.json<br/>(generated)"]
+    S --> F[Fern]
+    F --> K["SDKs: Go, TypeScript"]
+    F --> L["CLI"]
+    F --> D["API docs"]
+    C --> V["The server validates requests<br/>against the same contract"]
+    C --> M["MCP tools<br/>(Go Worker)"]
 ```
 
 There are two contracts in this repo because there are two servers. They describe the same API, and a test keeps them the same. A real project has one: pick the column for its language.
