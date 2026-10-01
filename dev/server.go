@@ -6,11 +6,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -18,7 +20,7 @@ import (
 
 func init() {
 	commands["with-server"] = command{"-url <url> -start <cmd> [-dir <dir>] -run <cmd>...",
-		"start a server, wait for <url>, run the commands, stop the server", withServer}
+		"start a server, wait for <url>, run the commands, stop the server ({port} in any of them is a free port)", withServer}
 	commands["migrate-local"] = command{"[-worker orpc-api] [-port <port>]",
 		"apply migrations/*.sql to a running dev server's local D1, each once", migrateLocal}
 	commands["migrate"] = command{"[-worker orpc-api]",
@@ -93,6 +95,16 @@ func withServer(args []string) error {
 	if url == "" || start == "" || len(runs) == 0 {
 		return errors.New("with-server needs -url, -start and at least one -run")
 	}
+	// {port} is a free port, the same one everywhere: several checks can then run at once (two
+	// worktrees, two agents) without agreeing on port numbers.
+	port, err := freePort()
+	if err != nil {
+		return err
+	}
+	url, start = strings.ReplaceAll(url, "{port}", port), strings.ReplaceAll(start, "{port}", port)
+	for i := range runs {
+		runs[i] = strings.ReplaceAll(runs[i], "{port}", port)
+	}
 	stop, err := server(dir, start, url)
 	if err != nil {
 		return err
@@ -105,6 +117,16 @@ func withServer(args []string) error {
 		}
 	}
 	return nil
+}
+
+// freePort asks the system for a port nobody is using.
+func freePort() (string, error) {
+	listener, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		return "", err
+	}
+	defer listener.Close()
+	return strconv.Itoa(listener.Addr().(*net.TCPAddr).Port), nil
 }
 
 // workerFlags are what both migrate commands take.

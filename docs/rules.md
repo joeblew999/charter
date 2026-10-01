@@ -24,6 +24,16 @@ One notes API on Cloudflare Workers, built twice (oRPC in `api/`, Go with Huma o
   - `api:soak` and `api-go:soak` redeploy their Worker.
   - Stop the containers and dev servers you start.
 
+## Starting in a fresh checkout or worktree
+
+```sh
+mise install && mise run setup     # tools, then npm packages (a new worktree has neither node_modules nor sdk/out)
+mise run check                     # every local check; about 30 s once things are cached
+mise tasks                         # every task is one line; `go run ./dev help` lists what is behind them
+```
+
+The local checks pick free ports themselves, so several can run at once (two worktrees, two agents). Give any server you start by hand a port of your own, and stop it when you are done.
+
 ## Using cf (the Cloudflare CLI, pinned in api/package.json)
 
 - Tasks call `./node_modules/.bin/cf` from `api/`, `api-go/` or `sdk/harness/`.

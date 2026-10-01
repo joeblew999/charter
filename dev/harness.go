@@ -44,7 +44,7 @@ func harnessTest(args []string) error {
 	if err := harnessSync(nil); err != nil {
 		return err
 	}
-	base, target := "http://localhost:5398", ""
+	base, target := "", ""
 	if remote {
 		var err error
 		if base, err = env("HARNESS_URL"); err != nil {
@@ -57,7 +57,12 @@ func harnessTest(args []string) error {
 		}
 		target = "?target=" + api
 	} else {
-		stop, err := server("sdk/harness", "PORT=5398 "+cf+" dev", base+"/")
+		port, err := freePort()
+		if err != nil {
+			return err
+		}
+		base = "http://localhost:" + port
+		stop, err := server("sdk/harness", "PORT="+port+" "+cf+" dev", base+"/")
 		if err != nil {
 			return err
 		}
