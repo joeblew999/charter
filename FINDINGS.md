@@ -44,8 +44,8 @@ Verified results only: each entry was run and checked. Newest sections last.
 - Hibernation: `DurablePublisherObject` accepts subscribers with `ctx.acceptWebSocket` (the hibernatable API) and keeps its state in SQLite plus an alarm, so the DO can sleep between events. SSE streams and `/api/notes/live` sockets are held by the Worker, which bills CPU time, not wall time, and connects to the DO as a WebSocket client.
 - 2.0 doesn't remove `asyncapi.yml`: no oRPC package generates AsyncAPI (asked upstream in middleapi/orpc#2115). `@orpc/hibernation` gives hibernatable WebSockets that speak oRPC's RPC protocol, not the plain JSON messages Fern's WebSocket client expects.
 
-## SSE and WebSockets across a redeploy (api/sse-soak.mjs, since replaced by api/soak.mjs, verified 2026-09-30, two runs)
-- The test: six clients watch while a note is created every 2 s, and the Worker is redeployed mid-run (`node api/sse-soak.mjs, since replaced by api/soak.mjs <origin>`).
+## SSE and WebSockets across a redeploy (api/sse-soak.mjs, since replaced by test/soak.mjs, verified 2026-09-30, two runs)
+- The test: six clients watch while a note is created every 2 s, and the Worker is redeployed mid-run (`node api/sse-soak.mjs, since replaced by test/soak.mjs <origin>`).
 - The hub (NotesHub) restarted 5 s after the deploy finished in one run and 36 s after in the other. Rollout is eventually consistent, so the break comes at an unpredictable time after a deploy.
 - **SSE streams end with an error, not silently.** At the hub restart the Worker's stream sends `event: error` (`INTERNAL_SERVER_ERROR`) and closes. oRPC surfaced the hub's close as an error here; the feared silent 1000/1001 close didn't happen.
 - **Reconnecting with `Last-Event-ID` loses nothing:** 41/41 and 26/26 notes, 0 duplicates, for a raw client that reconnects like a browser's `EventSource`.
@@ -79,3 +79,30 @@ Verified results only: each entry was run and checked. Newest sections last.
 - **Fern's Rust generator pastes the terminator into source unescaped** ([fern-api/fern#17939](https://github.com/fern-api/fern/issues/17939)). With a terminator containing `"` or `\`, the CLI's SDK doesn't compile (`Some(""\u0000"".to_string())`). The terminator is therefore plain text, `[end-of-stream]`, and note bodies reject it.
 - **The CLI's `notes watch` prints json/jsonl only when a stream ends** ([fern-api/fern#17939](https://github.com/fern-api/fern/issues/17939)), with generators 0.44.0 and 0.45.1 (`--format raw` streams). It still receives every note, at p50 about 9 s behind with 15 s streams.
 
+
+## Go on workers-go: Huma -> OpenAPI + AsyncAPI -> Fern (api-go/, verified locally 2026-10-01; not deployed yet)
+
+Everything here ran on this machine: natively, and as TinyGo Wasm under workerd (`cf dev`). Nothing below has run on Cloudflare itself yet (`mise run api-go:deploy`, then `api-go:live-test` and `api-go:soak`).
+
+- **Versions:** Huma 2.39.1, workers-go 0.36.0, TinyGo 0.42.0 (binaryen 133), Go 1.27.1, workerd through cf 1.0.0-beta.5.
+- **Huma runs under TinyGo on workerd,** with three things done on our side (`api-go/humaworkers`, `mise run api-go:build`):
+  - `-stack-size=256kb`. With TinyGo's default stack, the first request fails with `memory access out of bounds`; 128 KB also worked, 64 KB didn't.
+  - No `SchemaLinkTransformer` hook (`huma.DefaultConfig` installs it). It calls `reflect.StructOf`, and TinyGo answers `panic: unimplemented: reflect.StructOf()`.
+  - Our own route matching. TinyGo's `http.ServeMux` treats `"GET /api/hello"` as a literal path, so Huma's `humago` adapter gives 404 for every route.
+- **What then works under TinyGo:** query, header and body parsing; validation from struct tags (`minimum`, `maximum`, `default`, `minLength`, `pattern`, so `regexp` too); `Resolve` for custom rules; 422 `application/problem+json` errors with locations; `StreamResponse`; and generating the OpenAPI document inside the Worker.
+- **Size:** `app.wasm` is 2.41 MB, 848 KB gzipped (the Workers Free limit is 3 MB gzipped). An empty workers-go handler was 863 KB, 326 KB gzipped.
+- **Request time, local workerd, wall clock:** about 14 ms for `/api/hello`, about 28 ms for a D1 list of 20 notes, about 25 ms for `/api/openapi.json`. An empty workers-go handler took about 8 ms. workers-go starts a fresh Go runtime per request, so `humaworkers` registers only the operation a request matches. CPU time on Cloudflare isn't measured yet.
+- **Both specs come from the Go contract** (`api-go/api/contract.go`), nothing hand-written:
+  - OpenAPI 3.1.0 by Huma, with `x-fern-sdk-*`, `x-fern-pagination` and `x-fern-streaming` set through `Operation.Extensions`, and the SSE response declared as `text/event-stream` with the `Note` schema.
+  - AsyncAPI 3.0.0 by `api-go/asyncapi` (a port of `api/src/asyncapi.ts` onto Huma's operations and schema registry). The channel is a hidden Huma operation, so it stays out of OpenAPI; its query parameters become `bindings.ws.query`.
+- **Fern accepts them.** `fern check --api api-go` passes. The Go SDK (build, vet, tests against WireMock), the TypeScript SDK and the Rust CLI all generate and build from them.
+- **The SDK surface is the oRPC one.** `TestSameSurfaceAsTheORPCContract` compares each operation's id, tags, summary, parameters with their constraints, `x-fern-*` extensions and 200 media types, plus the channel's address, summary, query binding and receive operation, with `sdk/fern/apis/api/`. One thing had to be matched by hand: Huma writes `format: int64` for a Go `int`, and Fern's Go SDK then types the parameter `*int64` instead of `*int`, so the contract uses `int32`.
+- **The real-time design carries over unchanged.** `follow.Follow` is `follow()` in Go, with the same ten tests plus one, passing under the race detector. The hub is a small JavaScript Durable Object with hibernating WebSockets.
+- **workers-go can't answer a WebSocket upgrade** (a 101 from Go has no `webSocket`) and has no WebSocket client. So Go answers the upgrade with a stream of lines and `worker/index.mjs` sends each as a frame; Go subscribes to the hub through `syscall/js`.
+- **The same tests pass against the Go Worker, locally:**
+  - `test/live-test.mjs`: 3/3 (SSE, WebSocket through the hub, resume with `Last-Event-ID`), against the Wasm under workerd and against the native build.
+  - `test/sdk-live-test.mjs` with the TypeScript SDK generated from the Go specs: 2/2 (`notes.watch()`, `liveNotes.connect()`).
+  - `test/soak.mjs --sdk api-go --no-deploy`: 7/7 clients, 27/27 notes each, no gaps or duplicates, in order, through a 6 s client drop. The SDKs and the CLI were the ones generated from the Go specs. The hub-restart scenario needs a deploy and hasn't run.
+- **The two servers are interchangeable to clients.** The SDKs and CLI generated from the *oRPC* specs (`sdk/out/api`) pass the same tests against the *Go* server (native build): SDK live test 2/2, soak 7/7 through a client drop.
+- **The SSE wire format is byte for byte the oRPC Worker's** (a comment line, then `event: message`, `retry`, `id`, `data` per note, then `event: close` with the terminator), checked against a capture from the deployed oRPC Worker.
+- **The same Go code runs natively** (`mise run api-go:run`): REST, SSE and the WebSocket, on an in-memory store.

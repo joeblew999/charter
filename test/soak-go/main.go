@@ -1,4 +1,4 @@
-// One notes.watch() call through the generated Go SDK, for the soak matrix (api/sse-soak.mjs): prints
+// One notes.watch() call through the generated Go SDK, for the soak matrix (test/soak.mjs): prints
 // each note as a JSON line and exits when the stream ends (0) or fails (1). The caller follows the
 // client rule: run again with -after <last id>.
 //

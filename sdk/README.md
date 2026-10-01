@@ -37,7 +37,6 @@ What Fern does through **standard options only**: the spec's OpenAPI features, `
 `sdk/harness/` is a small cf Worker project. It implements the showcase API itself (`/api/mock/*`), and `/api/sdk-test` runs the generated SDK against it inside workerd.
 
 ```sh
-mise run sdk:harness:sync                             # compiled SDK (group typescript-dist) -> sdk/harness/src/client
 mise run sdk:harness:test                             # under cf dev
 mise run sdk:harness:deploy                           # cf deploy: orpc-sdk-harness + orpc-sdk-harness-api
 mise run sdk:harness:test --remote                    # on Cloudflare
@@ -76,8 +75,8 @@ Built and tried on 2026-09-29. The macOS build took 55 s (the first build compil
 - A generator bug to avoid: a paginated method on the *root* client (an overlay renaming it with no `x-fern-sdk-group-name`) breaks the Rust build. Keep methods in a group.
 
 Building is **heavy** the first time:
-- `mise run sdk:cli:build:linux sdk/out/petstore/cli`: Linux, inside Docker (the container's architecture).
-- `mise run sdk:cli:build:mac sdk/out/petstore/cli`: macOS, native (needs Rust).
+- `mise run sdk:cli:build -linux sdk/out/petstore/cli`: Linux, inside Docker (the container's architecture).
+- `mise run sdk:cli:build sdk/out/petstore/cli`: this machine, native (needs Rust).
 - All 7 platforms: cargo-dist on GitHub Actions, one native runner per OS, as Fern sets it up. A Linux container can't build macOS binaries (no Apple SDK) or the `windows-msvc` target.
 
 ## From an oRPC Worker (api/) to SDKs and a CLI (verified 2026-09-30)
@@ -89,7 +88,7 @@ mise run api:spec                  # contract -> sdk/fern/apis/api/{openapi,asyn
 mise run api:check                 # typecheck + unit tests + both specs match the contract (part of mise run check)
 mise run sdk:gen api go            # + typescript, cli
 mise run sdk:check sdk/out/api/go
-mise run sdk:cli:build:mac sdk/out/api/cli   # then: orpc-api notes list --page-all / notes watch
+mise run sdk:cli:build sdk/out/api/cli       # then: orpc-api notes list --page-all / notes watch
 mise run api:live-test             # SSE + WebSocket, raw and through the SDK
 mise run api:soak                  # the real-time matrix: every client x scenario (redeploys orpc-api)
 ```
@@ -101,6 +100,19 @@ mise run api:soak                  # the real-time matrix: every client x scenar
 - **Make cursors strings in the contract:** with a numeric `next_cursor`, the CLI's `--page-all` stopped after page one.
 - **OpenAPI version:** 2.0 defaults to 3.2.0, which `fern check` rejects, so both generators ask for 3.1.1 (`api/src/specs.ts`).
 - **Where output goes:** here, `sdk/out/` (gitignored). For real use, SDKs ship as packages or repos (npm, a Go module repo, CLI releases). Fern's `output: location: github` can write to those repos.
+
+### The same from a Go Worker (api-go/) (verified locally 2026-10-01)
+
+`sdk/fern/apis/api-go/` is the same API with its specs written by the Go contract (`api-go/api/contract.go`, Huma) instead of the oRPC one. Its `generators.yml` has the same groups and names, so the same test programs run against either SDK.
+
+```sh
+mise run api-go:spec               # Go contract -> sdk/fern/apis/api-go/{openapi,asyncapi}.json
+mise run sdk:gen api-go go         # + typescript, typescript-dist, cli
+mise run sdk:check sdk/out/api-go/go
+mise run sdk:cli:build sdk/out/api-go/cli
+```
+
+What Fern makes of Huma's spec differs in one way: Huma names its schemas (`components.schemas.Note`), so the SDKs get a shared `Note` type where the oRPC spec gives one type per response.
 
 ### Real-time on Cloudflare: the pattern to copy (.plans/realtime.md)
 
@@ -154,7 +166,7 @@ A browser's `EventSource` needs nothing: the SSE id is the note id, so its autom
 Everything runs through mise from the repo root:
 
 ```sh
-mise run sdk:doctor                     # check the setup
+mise run doctor                         # check the setup
 mise run setup                          # npm packages, including Fern (fern-api) into sdk/node_modules
 mise run sdk:list                       # APIs and their groups
 mise run sdk:check-spec petstore        # fern check

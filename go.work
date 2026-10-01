@@ -2,4 +2,8 @@ go 1.27.1
 
 toolchain go1.27.1
 
-use ./api/soak-go
+use (
+	./api-go
+	./dev
+	./test/soak-go
+)

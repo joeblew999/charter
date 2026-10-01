@@ -80,7 +80,7 @@ Built and verified live: steps 1–6 are done, and 7–9 are in progress (see St
 | Long idle | 20 min, no notes, then one | the note arrives |
 
 - **Clients:** raw SSE, browser-style `EventSource`, TypeScript SDK, Go SDK, CLI, raw WebSocket, TypeScript SDK WebSocket.
-- **Runner:** `mise run api:soak` (`api/soak.mjs`) prints this table, with latency. A green table on the deployed Worker is the acceptance. `--idle 20` runs the long-idle case.
+- **Runner:** `mise run api:soak` (`test/soak.mjs`) prints this table, with latency. A green table on the deployed Worker is the acceptance. `--idle 20` runs the long-idle case.
 - **SDK reconnect** is checked separately against mock servers: a clean end without the terminator reconnects; a network reset throws, and the client rule covers it.
 - **Unit tests** for `follow()`, with a fake publisher that drops and a fake catch-up: a drop mid-stream, a duplicate across catch-up and live, abort, and `after` beyond the newest note.
 
