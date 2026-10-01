@@ -17,7 +17,7 @@
 // default api): the TypeScript SDK (sdk/out/<sdk>/typescript-dist), the CLI (sdk/out/<sdk>/cli) and
 // the Go SDK through test/soak-go; the redeploy runs `mise run <--deploy-task>` (default api:deploy).
 import { execFileSync, spawn } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
@@ -144,9 +144,11 @@ function redeploy() {
 
 // ---- run ----
 
-// The Go client against the chosen SDK: a workspace file that points the SDK's module at it.
+// The Go client against the chosen SDK: a workspace file that points the SDK's module path (the one
+// its go.mod declares, which test/soak-go imports) at it.
 const work = `${mkdtempSync(`${tmpdir()}/soak-go-`)}/go.work`;
-writeFileSync(work, `go 1.27.1\n\nuse ${root}test/soak-go\n\nreplace example.com/orpcapi => ${root}sdk/out/${sdk}/go\n`);
+const goModule = /^module\s+(\S+)/m.exec(readFileSync(`${root}sdk/out/${sdk}/go/go.mod`, "utf8"))[1];
+writeFileSync(work, `go 1.27.1\n\nuse ${root}test/soak-go\n\nreplace ${goModule} => ${root}sdk/out/${sdk}/go\n`);
 execFileSync("go", ["build", "-o", goBin, "."], { cwd: `${root}test/soak-go`, env: { ...process.env, GOWORK: work } });
 console.log(`baseline note ${baseline}; ${clients.length} clients; SSE streams end every ${streamSeconds}s`);
 const driving = clients.map(drive);

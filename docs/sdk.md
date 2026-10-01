@@ -67,7 +67,7 @@ sdk/
 
 - **`typescript-dist`** is the TypeScript SDK compiled to `.js` plus `.d.ts` (`outputSourceFiles: false`), the way an npm package reaches its users. The test programs and the harness Worker import it.
 - **`typescript-public`** is the same spec without the operations not tagged `public` (audiences).
-- **The names:** the notes API's SDKs are `OrpcApiClient` (TypeScript), the Go module `example.com/orpcapi`, and the CLI binary `orpc-api`, from either Fern folder. The showcases' are `ShowcaseClient`, `example.com/showcase` and `showcase`.
+- **The names:** the notes API's SDKs are `OrpcApiClient` (TypeScript), the Go module `github.com/joeblew999/orpc-api/sdk/go`, and the CLI binary `orpc-api`, from either Fern folder. Both Fern folders declare that one module path, so `test/soak-go` builds against either SDK; the one committed at that path (`sdk/go/`) is the Go API's ([dev.md](dev.md#cutting-a-release)). The showcases' are `ShowcaseClient`, `example.com/showcase` and `showcase`.
 - **Never edit a generated spec.** `generators.yml` and `overlays.yml` are the only hand-written files in the four generated folders.
 
 ## Adding an API
@@ -212,6 +212,6 @@ Limits of the generator:
 
 - **Versions are pinned.** `fern-api` 5.140.0 in `sdk/package.json`; in each `generators.yml`, `fern-go-sdk` 1.64.0, `fern-typescript-sdk` 3.98.0, `fern-python-sdk` 5.34.0 and `fern-cli-generator` 0.45.1 for the two notes APIs, 0.44.0 for the others. They were the latest when checked on 2026-09-29; Forge pins older ones.
 - **Licensing is not settled.** Fern's docs call local generation, WebSocket clients, webhook signatures and the CLI generator Enterprise or early access, needing a `FERN_TOKEN`. All of it has run here without one ([plans/next.md](plans/next.md)).
-- **Where output goes:** `sdk/out/`, which is gitignored. Releases attach the SDK sources and the Linux CLIs to the GitHub Release ([dev.md](dev.md#cutting-a-release)). Publishing them as packages is planned, not done.
+- **Where output goes:** `sdk/out/`, which is gitignored. The exception is `sdk/go/`, the committed copy of the Go API's Go SDK that another repo fetches with `go get`. Releases attach the SDK sources and the Linux CLIs to the GitHub Release ([dev.md](dev.md#cutting-a-release)). Publishing the SDKs as packages (npm, a repository per SDK) is planned, not done.
 - **The docs site covers two APIs.** `sdk/fern/docs.yml` lists the showcase and petstore; `mise run sdk:docs` previews it locally. No task publishes it.
 - **`mise run sdk:check` on a Go SDK starts a WireMock container** and stops it again. `mise run sdk:clean` stops any that were left behind.

@@ -88,8 +88,8 @@ description = "REMOTE on a version tag (vX.Y.Z): attach dist/* to its GitHub Rel
 run = "go run ./dev release"
 
 [tasks."release:tags"]
-description = "REMOTE on a version tag (vX.Y.Z): tag the Go modules api-go/vX.Y.Z and dev/vX.Y.Z. Anywhere else: a dry run"
-run = "go run ./dev release-tags api-go dev"
+description = "REMOTE on a version tag (vX.Y.Z): tag the Go modules in subdirectories (api-go/vX.Y.Z, dev/vX.Y.Z, sdk/go/vX.Y.Z). Anywhere else: a dry run"
+run = "go run ./dev release-tags api-go dev sdk/go"
 
 [tasks."cloudflare:secrets"]
 description = "REMOTE, once per repo: copy CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from fnox into this repo's GitHub secrets, for the api-deploy workflow"
@@ -321,6 +321,14 @@ run = "go run ./dev sdk-check"
 [tasks."sdk:ready"]
 description = "Generate and build what the tests use, if missing (TypeScript and Go SDKs, the Fern CLI): mise run sdk:ready <api> [group...]"
 run = "go run ./dev sdk-ready"
+
+[tasks."sdk:publish"]
+description = "Generate and check the Go API's Go SDK, then copy its sources into sdk/go, the committed module another repo can go get (Docker). Commit the result"
+run = "go run ./dev sdk-publish api-go"
+
+[tasks."sdk:publish:check"]
+description = "Fail if sdk/go is not what the Go API's committed specs generate now (Docker)"
+run = "go run ./dev sdk-publish -check api-go"
 
 [tasks."sdk:demo"]
 description = "Small end-to-end run: Go + TypeScript SDKs for the petstore API, checked"

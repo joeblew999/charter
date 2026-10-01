@@ -4,8 +4,9 @@
 //
 //	go run . -base <origin> [-after <id>] [-seconds 15]
 //
-// Not in go.work: it needs a generated SDK (sdk/out/<api>/go, gitignored), which a fresh checkout
-// doesn't have. test/soak.mjs builds it with a workspace file of its own that points at the SDK.
+// It imports the Go SDK by its module path. On its own it builds against the committed SDK (sdk/go,
+// see go.mod); test/soak.mjs builds it with a workspace file of its own that points that module path
+// at the generated SDK under test (sdk/out/<api>/go), which is why it is not in go.work.
 package main
 
 import (
@@ -17,9 +18,9 @@ import (
 	"io"
 	"os"
 
-	orpcapi "example.com/orpcapi"
-	"example.com/orpcapi/client"
-	"example.com/orpcapi/option"
+	orpcapi "github.com/joeblew999/orpc-api/sdk/go"
+	"github.com/joeblew999/orpc-api/sdk/go/client"
+	"github.com/joeblew999/orpc-api/sdk/go/option"
 )
 
 func main() {

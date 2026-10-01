@@ -1,6 +1,7 @@
 # Written by `dev workflows` from its template (github.com/joeblew999/orpc-api/dev, dev/workflows/sdk-release.yml):
 # change the template, not this file. Every step that does work is a mise task, so it runs locally too.
-# On a version tag (vX.Y.Z): both APIs' SDK sources, specs and Linux CLIs go onto the GitHub Release.
+# On a version tag (vX.Y.Z): both APIs' SDK sources, specs and Linux CLIs go onto the GitHub Release. In a repo
+# without the dev tool's own release workflow (dev-release), the Go modules get their tags here.
 # On a pull request or by hand it is a dry run: the same build, kept as workflow artifacts, nothing published.
 name: sdk-release
 on:

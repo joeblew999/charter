@@ -51,21 +51,22 @@ https://github.com/joeblew999/orpc-api/releases/latest/download/<file>
 
 For example `https://github.com/joeblew999/orpc-api/releases/latest/download/checksums.txt`. Use `releases/latest` and `@latest` in anything you write down: a link with a version in it is out of date after the next release.
 
-## The three tags of a release
+## The tags of a release
 
-Every release is three git tags on one commit.
+A release is four git tags on one commit.
 
 | Tag | What it is for |
 |---|---|
 | `vX.Y.Z` | The release itself. The maintainer pushes this one; the GitHub Release is made for it |
 | `api-go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/api-go`, which holds the packages |
 | `dev/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/dev`, which is the tool |
+| `sdk/go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/sdk/go`, which is the Go SDK of the notes API |
 
-The two extra tags exist because of a rule of Go: a module that sits in a subdirectory of a repository only has a version under a tag that starts with the directory. Without `api-go/vX.Y.Z`, `go get` would not find the release; without `dev/vX.Y.Z`, `go run ...dev@latest` and mise's `go:` tools would not. The release workflow adds both on the commit of `vX.Y.Z`.
+The three extra tags exist because of a rule of Go: a module that sits in a subdirectory of a repository only has a version under a tag that starts with the directory. Without `api-go/vX.Y.Z`, `go get` would not find the release; without `dev/vX.Y.Z`, `go run ...dev@latest` and mise's `go:` tools would not; without `sdk/go/vX.Y.Z`, another repo could only get the SDK at a branch or a commit. The release workflow adds all three on the commit of `vX.Y.Z`. No release has carried the `sdk/go` tag yet: the releases up to 2026-10-01 were cut before that module existed.
 
 A version is a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release. When `dev release` creates the GitHub Release of a tag with a hyphen, it marks it as a pre-release.
 
-Your own project has one Go module in a subdirectory, `api-go/`. Its task `release:tags` adds `api-go/vX.Y.Z` to your releases for the same reason.
+Your own project has one Go module in a subdirectory, `api-go/`, and a second, `sdk/go/`, once you publish its Go SDK ([Giving the Go SDK to another repo](../guides/sdks.md#giving-the-go-sdk-to-another-repo)). Its task `release:tags` adds `api-go/vX.Y.Z` and `sdk/go/vX.Y.Z` to your releases for the same reason.
 
 ## How a project picks up a new release
 

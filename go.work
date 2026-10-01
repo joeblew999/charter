@@ -5,4 +5,5 @@ toolchain go1.27.1
 use (
 	./api-go
 	./dev
+	./sdk/go
 )

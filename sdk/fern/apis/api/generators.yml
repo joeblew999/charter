@@ -16,8 +16,10 @@ groups:
           location: local-file-system
           path: ../../../out/api/go
         config:
+          # The same module path as the Go API's SDK (../api-go, the one committed to sdk/go): the two APIs
+          # have the same surface, and test/soak-go builds against either SDK under this one import path.
           module:
-            path: example.com/orpcapi
+            path: github.com/joeblew999/orpc-api/sdk/go
             version: "1.22"
           packageName: orpcapi
 

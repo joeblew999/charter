@@ -260,12 +260,21 @@ func releaseTags(args []string) error {
 		return err
 	}
 	if len(dirs) == 0 {
-		return errors.New("release-tags needs <module dir>..., e.g. api-go dev")
+		return errors.New("release-tags needs <module dir>..., e.g. api-go dev sdk/go")
 	}
+	var modules []string
 	for _, dir := range dirs {
-		if !exists(filepath.Join(dir, "go.mod")) {
+		switch {
+		case !exists(dir): // a project's sdk/go before its first mise run sdk:publish
+			fmt.Printf("skipped: %s (no such folder)\n", dir)
+		case !exists(filepath.Join(dir, "go.mod")):
 			return fmt.Errorf("%s has no go.mod", dir)
+		default:
+			modules = append(modules, dir)
 		}
+	}
+	if dirs = modules; len(dirs) == 0 {
+		return nil
 	}
 	if tag == "" {
 		fmt.Printf("dry run (not on a version tag): on vX.Y.Z this tags %s/vX.Y.Z\n", strings.Join(dirs, "/vX.Y.Z, "))
