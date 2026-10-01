@@ -15,6 +15,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/joeblew999/orpc-api/api-go/follow"
+	"github.com/joeblew999/orpc-api/api-go/humamcp"
 	"github.com/joeblew999/orpc-api/api-go/humaworkers"
 )
 
@@ -26,9 +27,11 @@ type Env struct {
 	Hub   func() (Hub, error)
 }
 
-// Handler serves the contract on env, plus the two specs with the request's origin as their server.
+// Handler serves the contract on env, plus the two specs with the request's origin as their server,
+// plus the contract as MCP tools (/api/mcp: a tool call runs the same operation as the REST route).
 func Handler(env Env) http.Handler {
 	routes := humaworkers.New(config(), Routes(env))
+	mcp := humamcp.Handler(routes)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var spec func(server string) ([]byte, error)
 		switch r.URL.Path {
@@ -36,6 +39,9 @@ func Handler(env Env) http.Handler {
 			spec = OpenAPI
 		case "/api/asyncapi.json":
 			spec = AsyncAPI
+		case "/api/mcp":
+			mcp.ServeHTTP(w, r)
+			return
 		default:
 			routes.ServeHTTP(w, r)
 			return
