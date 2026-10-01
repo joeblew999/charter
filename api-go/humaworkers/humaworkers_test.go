@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -56,6 +57,69 @@ func TestARequestRegistersOnlyItsOwnRoute(t *testing.T) {
 	}
 	if registered["getThing"] != 1 || registered["deleteThing"] != 0 || registered["hiddenThing"] != 0 {
 		t.Fatalf("registered %v, want getThing once and nothing else", registered)
+	}
+}
+
+func TestAnOperationIsFoundByIDRegisteringAsLittleAsItCan(t *testing.T) {
+	// Routes that name their operation: only the one asked for is registered.
+	registered := map[string]int{}
+	named := routes(registered)
+	for i, id := range []string{"getThing", "deleteThing", "hiddenThing"} {
+		named[i].OperationID = id
+	}
+	api := New(Config("t", "1"), named)
+	if op := api.Operation("deleteThing"); op == nil || op.Method != http.MethodDelete {
+		t.Fatalf("deleteThing: %+v", op)
+	}
+	if api.Operation("nope") != nil || len(registered) != 1 || registered["deleteThing"] != 1 {
+		t.Fatalf("registered %v, want deleteThing once and nothing else", registered)
+	}
+	// Routes that don't: one after another, until it is found.
+	registered = map[string]int{}
+	api = New(Config("t", "1"), routes(registered))
+	if op := api.Operation("deleteThing"); op == nil || registered["getThing"] != 1 || registered["deleteThing"] != 1 || registered["hiddenThing"] != 0 {
+		t.Fatalf("deleteThing: %+v, registered %v", op, registered)
+	}
+	if api.Operation("nope") != nil || api.Operation("hiddenThing") == nil || registered["hiddenThing"] != 1 || registered["getThing"] != 1 {
+		t.Fatalf("registered %v", registered)
+	}
+}
+
+// A process that lives on registers routes as requests come: the operations stay in the routes' order.
+func TestOperationsAreInTheRoutesOrderWhateverWasServedFirst(t *testing.T) {
+	api := New(Config("t", "1"), routes(map[string]int{}))
+	get(api, "GET", "/hidden/1")
+	get(api, "DELETE", "/things/1")
+	var ids []string
+	for _, op := range api.Operations() {
+		ids = append(ids, op.OperationID)
+	}
+	if strings.Join(ids, " ") != "getThing deleteThing hiddenThing" {
+		t.Fatalf("operations %v", ids)
+	}
+}
+
+// The native build serves requests at once: the first ones may register routes together (run with -race).
+func TestRoutesAreRegisteredSafelyByRequestsAtOnce(t *testing.T) {
+	api := New(Config("t", "1"), routes(map[string]int{}))
+	var wg sync.WaitGroup
+	for i := range 30 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			switch i % 3 {
+			case 0:
+				get(api, "GET", "/things/1")
+			case 1:
+				get(api, "DELETE", "/things/1")
+			default:
+				api.Operations()
+			}
+		}()
+	}
+	wg.Wait()
+	if n := len(api.Operations()); n != 3 {
+		t.Fatalf("%d operations, want 3", n)
 	}
 }
 
