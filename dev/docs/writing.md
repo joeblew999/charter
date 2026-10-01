@@ -46,6 +46,7 @@ A developer or an agent who is new to this repo and has a job to do. They know t
 - **Links are relative** (`[other-page.md](other-page.md)`), and an anchor must match a heading.
 - **A new page gets a row in the start page's table.**
 - **No two opening curly braces together, and no curly brace followed by a percent sign:** the site's renderer reads those as template code.
+- **No release version in a page:** link `releases/latest`, write `@latest`, or use the placeholder `vX.Y.Z`. A version written into a page is wrong after the next release. (Findings and plans record what was, and may name one.)
 - **Don't edit what is generated:** `_config.yml`, `_sass/`, this page.
 
 ## When the code changes

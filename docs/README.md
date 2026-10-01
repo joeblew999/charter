@@ -6,6 +6,8 @@ permalink: /
 
 # Docs
 
+[![latest release](https://img.shields.io/github/v/release/joeblew999/orpc-api)](https://github.com/joeblew999/orpc-api/releases/latest) ([how to get it](dev.md#getting-the-latest-release))
+
 Everything written about this repo lives in this folder: one place for developers and for agents. Folder READMEs and `AGENTS.md` only point here. This page is the index of the pages and says what is what: each part, its name, and where it lives. GitHub Pages renders the folder at https://joeblew999.github.io/orpc-api/ straight from these files, with no build step ([dev.md](dev.md#the-docs-site)).
 
 | Page | What it covers |

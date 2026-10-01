@@ -197,6 +197,9 @@ With a GitHub repo: mise run dev:workflows, mise run docs:setup, mise run docs:p
 
 // toolVersion is the release this tool was built from (go run ...dev@v0.2.0), or "" from a checkout.
 func toolVersion() string {
+	if built != "" && !strings.Contains(built, "SNAPSHOT") {
+		return built // a binary from a GitHub Release
+	}
 	info, ok := debug.ReadBuildInfo()
 	if !ok || !strings.HasPrefix(info.Main.Version, "v") || strings.Contains(info.Main.Version, "-0.") {
 		return "" // (devel), or a pseudo-version of an untagged commit

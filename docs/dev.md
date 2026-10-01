@@ -60,30 +60,44 @@ Every step that does work is `mise run <task>`, so a failing step is one line yo
 | `sdk-check` | push to main, pull requests, by hand | `sdk:demo`; `showcase:check` and `sdk:harness:test`; and `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of `api`, `api-go`, `showcase` and `showcase-go` | none |
 | `dev-check` | push to main, pull requests, by hand | `dev:check` | none |
 | `api-deploy` | by hand only (pick `api` or `api-go`) | `cloudflare:token`, `<api>:deploy`, then `<api>:live-test` against the Worker it just deployed | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
-| `dev-release` | a version tag. A dry run by hand, and on pull requests that touch `dev/`, `mise.toml` or `go.work` | `dev:dist`, `release`, `release:tags` | none (the workflow's own token) |
+| `dev-release` | a version tag. A dry run by hand, and on pull requests that touch `dev/`, `.goreleaser.yaml`, `mise.toml` or `go.work` | `dev:release` (GoReleaser), `release:tags` | none (the workflow's own token) |
 | `sdk-release` | a version tag. A dry run by hand, and on pull requests that touch `sdk/`, `dev/`, `mise.toml`, `go.work` or `rust-toolchain.toml` | `sdk:dist`, `sdk:dist:cli <api>`, `release` | none |
 
 `api-deploy` fails at its first step, naming the secrets, when they are missing. Set them once per repo with `mise run cloudflare:secrets`: it copies both values from fnox (the keychain) into the repo's GitHub secrets, without printing them. Whether this repo's secrets are set, and whether `api-deploy` has run, was not checked for this page; the recorded deploys were made from a machine ([findings.md](findings.md)). The Go showcase's Worker is not among the workflow's choices: deploy it with `mise run showcase-go:deploy`.
 
+### Getting the latest release
+
+Nothing in these docs names a version, so nothing here goes stale: every link below follows the newest release by itself. The current one: [![latest release](https://img.shields.io/github/v/release/joeblew999/orpc-api)](https://github.com/joeblew999/orpc-api/releases/latest)
+
+```sh
+go run github.com/joeblew999/orpc-api/dev@latest help                 # the tool, no install (needs Go)
+go get github.com/joeblew999/orpc-api/api-go@latest                   # the Go packages
+curl -fsSL https://github.com/joeblew999/orpc-api/releases/latest/download/dev_darwin_arm64.tar.gz | tar xz dev   # the tool as a binary
+```
+
+- **The release page:** https://github.com/joeblew999/orpc-api/releases/latest
+- **Any file of the latest release:** `https://github.com/joeblew999/orpc-api/releases/latest/download/<file>`, with the file names from the table below (they carry no version for this reason).
+- **`mise run docs:lint` fails on a hard-coded release version** in a page (`@v1.2.3`, a `releases/tag/` or `releases/download/v...` link). Use `@latest`, `releases/latest`, or the placeholder `vX.Y.Z`. Findings and plans may name versions: they record what was.
+
 ### Cutting a release
 
 ```sh
-git tag v0.1.0 && git push origin v0.1.0        # on the commit to release, once its checks are green
+git tag vX.Y.Z && git push origin vX.Y.Z        # on the commit to release, once its checks are green
 ```
 
-The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release. The two release workflows build everything again from that commit and attach it to the tag's GitHub Release (the first job to finish creates it):
+The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release. The two release workflows build everything again from that commit and put it on the tag's GitHub Release (the first job to finish creates it). [GoReleaser](https://goreleaser.com) builds and publishes this tool (`.goreleaser.yaml`, `mise run dev:release`); the SDK jobs add their files with `gh`:
 
 | File | What |
 |---|---|
-| `dev-linux-amd64`, `dev-linux-arm64`, `dev-darwin-arm64`, `dev-darwin-amd64` | This tool |
+| `dev_linux_amd64.tar.gz`, `dev_linux_arm64.tar.gz`, `dev_darwin_arm64.tar.gz`, `dev_darwin_amd64.tar.gz`, `checksums.txt` | This tool, and the SHA-256 of each archive. No Windows build: the tool manages process groups, which is Unix-only |
 | `api-sdk-go.tar.gz`, `api-sdk-typescript.tar.gz` | The SDK sources Fern generates from the oRPC specs: generated fresh, then checked (`sdk:check`) |
 | `api-go-sdk-go.tar.gz`, `api-go-sdk-typescript.tar.gz` | The same from the Go Worker's specs |
 | `api-specs.tar.gz`, `api-go-specs.tar.gz` | `openapi.json` and `asyncapi.json` of each API |
 | `api-cli-linux-amd64`, `api-go-cli-linux-amd64` | The Fern CLI of each API (the binary calls itself `orpc-api`) |
 
-**Go module versions.** `api-go/` and `dev/` are Go modules in subdirectories, and Go only finds a version of such a module under a tag with the directory in front. So `release:tags` adds `api-go/v0.1.0` and `dev/v0.1.0` on the same commit as `v0.1.0`. You push one tag; those two follow. Then `go get github.com/joeblew999/orpc-api/api-go@v0.1.0` and `go run github.com/joeblew999/orpc-api/dev@v0.1.0 help` work. Don't push the module tags or upload release files by hand.
+**Go module versions.** `api-go/` and `dev/` are Go modules in subdirectories, and Go only finds a version of such a module under a tag with the directory in front. So `release:tags` adds `api-go/vX.Y.Z` and `dev/vX.Y.Z` on the same commit as `vX.Y.Z`. You push one tag; those two follow. Then `go get github.com/joeblew999/orpc-api/api-go@latest` and `go run github.com/joeblew999/orpc-api/dev@latest help` pick it up. Don't push the module tags or upload release files by hand.
 
-**A dry run** is the same build without a version tag: `release` lists what is in `dist/` and publishes nothing, `release:tags` says which tags it would add, and the files are kept as workflow artifacts. Pull requests do that, and so does `gh workflow run dev-release.yml`. Locally: `mise run dev:dist && mise run sdk:dist && mise run release`.
+**A dry run** is the same build without a version tag: GoReleaser makes a snapshot in `dist/`, `release` lists what is in `dist/` and publishes nothing, `release:tags` says which tags it would add, and the files are kept as workflow artifacts. Pull requests do that, and so does `gh workflow run dev-release.yml`. Locally: `mise run dev:release && mise run sdk:dist && mise run release`.
 
 Not released: the SDKs as packages (npm, a Go module of their own), the Fern CLI for macOS and Windows, and anything of the two showcases ([plans/next.md](plans/next.md)).
 

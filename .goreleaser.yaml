@@ -1,0 +1,36 @@
+# GoReleaser builds the dev tool (dev/) and publishes it to the GitHub Release of a version tag.
+# Run through mise: `mise run dev:release` (go run ./dev release-dev). On a tag vX.Y.Z it publishes;
+# anywhere else it is a snapshot into dist/, nothing published. The SDK archives are added to the
+# same Release by the sdk-release workflow.
+version: 2
+project_name: dev
+builds:
+  - id: dev
+    dir: dev
+    binary: dev
+    env: [CGO_ENABLED=0]
+    # No Windows: the tool starts and stops process groups (dev/server.go), which is Unix-only.
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    # built: what `dev new` pins a new project to when the tool is a downloaded binary.
+    ldflags: ["-s -w -X main.built=v{{ .Version }}"]
+archives:
+  - formats: [tar.gz]
+    # No version in the name: releases/latest/download/dev_darwin_arm64.tar.gz is then always the
+    # newest one, so nothing that links to it goes stale.
+    name_template: "dev_{{ .Os }}_{{ .Arch }}"
+    files: [README.md]
+checksum:
+  name_template: checksums.txt
+changelog:
+  sort: asc
+  filters:
+    exclude: ["^Merge "]
+release:
+  github:
+    owner: joeblew999
+    name: orpc-api
+  # The sdk-release workflow may have created the Release first: add to it.
+  mode: append
+  replace_existing_artifacts: true

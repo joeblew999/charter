@@ -17,8 +17,8 @@ aux_links:
   "GitHub": ["https://github.com/joeblew999/orpc-api"]
 gh_edit_repository: https://github.com/joeblew999/orpc-api
 nav_external_links:
-  - title: Releases
-    url: https://github.com/joeblew999/orpc-api/releases
+  - title: Latest release
+    url: https://github.com/joeblew999/orpc-api/releases/latest
 
 remote_theme: just-the-docs/just-the-docs@v0.12.0
 plugins: [jekyll-remote-theme]

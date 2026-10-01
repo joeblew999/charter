@@ -17,6 +17,8 @@ gh = "2.101.0"
 # api-go/: TinyGo builds the Go Worker's Wasm (workers-go needs >= 0.42.0), and runs wasm-opt (binaryen) doing it.
 tinygo = "0.42.0"
 "aqua:WebAssembly/binaryen" = "133"
+# Builds and publishes the dev tool (.goreleaser.yaml): mise run dev:release.
+goreleaser = "2.18.2"
 # Holds the Cloudflare credentials (the keychain, through fnox): mise run cloudflare:secrets.
 fnox = "1.35.2"
 
@@ -77,9 +79,9 @@ run = 'test -z "$(gofmt -l dev)" && go vet ./dev && go test ./dev && go run ./de
 description = "Write .github/workflows/ from the templates in dev/workflows (edit those, never the copies)"
 run = "go run ./dev workflows"
 
-[tasks."dev:dist"]
-description = "Build the dev tool for linux and darwin, amd64 and arm64, into dist/"
-run = "go run ./dev dist-dev"
+[tasks."dev:release"]
+description = "GoReleaser on the dev tool (.goreleaser.yaml). REMOTE on a version tag (vX.Y.Z): archives and checksums go to its GitHub Release. Anywhere else: a snapshot into dist/"
+run = "go run ./dev release-dev"
 
 [tasks.release]
 description = "REMOTE on a version tag (vX.Y.Z): attach dist/* to its GitHub Release. Anywhere else: a dry run that lists dist/"

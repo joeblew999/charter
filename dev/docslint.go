@@ -27,6 +27,9 @@ var (
 	codeSpan  = regexp.MustCompile("`([^`\n]+)`")
 	fenced    = regexp.MustCompile("(?s)```.*?```")
 	gitTag    = regexp.MustCompile(`/v([0-9]|X\.)`) // api-go/v0.1.0 is a tag, not a path
+	// A version of this repo's own releases written into a page: @v1.2.3 after a module of ours, or a
+	// link to one tagged release.
+	pinnedVersion = regexp.MustCompile(`(orpc-api[A-Za-z0-9/_-]*@v[0-9]+\.[0-9]+\.[0-9]+|releases/(tag|download)/v[0-9][0-9A-Za-z.-]*)`)
 	// A code span that is a path into the repo: one of its top-level entries, then a slash.
 	repoPath = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_./*<>{}-]*$`)
 )
@@ -112,6 +115,9 @@ func docsLint(args []string) error {
 		// writing.md is the same page in every repo, with example names of its own.
 		if strings.Contains(rel, "plans/") || rel == "findings.md" || rel == "writing.md" {
 			continue
+		}
+		for _, m := range pinnedVersion.FindAllString(text, -1) {
+			say(page, "`%s`: a hard-coded release version goes stale. Use @latest, releases/latest, or the placeholder vX.Y.Z", m)
 		}
 		if len(tasks) > 0 {
 			for _, m := range miseRun.FindAllStringSubmatch(text, -1) {

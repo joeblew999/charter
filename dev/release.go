@@ -22,7 +22,7 @@ import (
 // would do, so the whole path can run on a branch or a pull request.
 
 func init() {
-	commands["dist-dev"] = command{"", "build this tool for linux and darwin, amd64 and arm64, into dist/", distDev}
+	commands["release-dev"] = command{"[-tag vX.Y.Z]", "GoReleaser on this tool: on a version tag, archives and checksums go to its GitHub Release; no tag: a snapshot into dist/", releaseDev}
 	commands["dist-sdk"] = command{"<api>...", "generate, check and archive the Go and TypeScript SDKs and the specs of each API into dist/ (Docker)", distSDK}
 	commands["dist-cli"] = command{"[-linux] <api>...", "HEAVY: generate and build the Fern CLI of each API into dist/, for this machine or for Linux in Docker", distCLI}
 	commands["release"] = command{"[-tag vX.Y.Z]", "attach dist/* to the tag's GitHub Release, creating it if needed (no tag: a dry run)", release}
@@ -43,20 +43,29 @@ func distDir() error {
 // Go module versions are semantic versions; anything after a hyphen is a pre-release.
 var version = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$`)
 
-func distDev([]string) error {
-	if err := distDir(); err != nil {
+// built is the release a downloaded binary was made from: GoReleaser sets it (.goreleaser.yaml).
+var built string
+
+// releaseDev runs GoReleaser (.goreleaser.yaml) on this tool. On a version tag it publishes the
+// archives and checksums to the tag's GitHub Release; anywhere else it is a snapshot: the same
+// build into dist/, nothing published.
+func releaseDev(args []string) error {
+	tag, _, err := releaseTag("release-dev", args)
+	if err != nil {
 		return err
 	}
-	for _, target := range []string{"linux/amd64", "linux/arm64", "darwin/arm64", "darwin/amd64"} {
-		goos, goarch, _ := strings.Cut(target, "/")
-		out := filepath.Join(dist, "dev-"+goos+"-"+goarch)
-		if err := quiet(".", []string{"GOOS=" + goos, "GOARCH=" + goarch, "CGO_ENABLED=0"},
-			"go", "build", "-trimpath", "-ldflags=-s -w", "-o", out, "./dev"); err != nil {
-			return err
-		}
-		fmt.Println("built:", out)
+	if tag == "" {
+		return sh(".", "goreleaser", "release", "--snapshot", "--clean")
 	}
-	return nil
+	// Several tags sit on a release's commit (vX.Y.Z, and the modules' api-go/vX.Y.Z, dev/vX.Y.Z):
+	// say which one this is. GoReleaser reads the token as GITHUB_TOKEN; the workflows set GH_TOKEN.
+	env := []string{"GORELEASER_CURRENT_TAG=" + tag}
+	if os.Getenv("GITHUB_TOKEN") == "" && os.Getenv("GH_TOKEN") != "" {
+		env = append(env, "GITHUB_TOKEN="+os.Getenv("GH_TOKEN"))
+	}
+	cmd := exec.Command("goreleaser", "release", "--clean")
+	cmd.Env, cmd.Stdout, cmd.Stderr = append(os.Environ(), env...), os.Stdout, os.Stderr
+	return cmd.Run()
 }
 
 func distSDK(apis []string) error {

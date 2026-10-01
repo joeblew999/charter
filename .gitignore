@@ -21,3 +21,6 @@ mise.local.toml
 
 # Agent worktrees (Claude Code)
 .claude/worktrees/
+
+# Release builds (mise run dev:release, sdk:dist)
+dist/

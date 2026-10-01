@@ -17,8 +17,8 @@ aux_links:
   "GitHub": ["https://github.com/__REPO__"]
 gh_edit_repository: https://github.com/__REPO__
 nav_external_links:
-  - title: Releases
-    url: https://github.com/__REPO__/releases
+  - title: Latest release
+    url: https://github.com/__REPO__/releases/latest
 
 remote_theme: just-the-docs/just-the-docs@v0.12.0
 plugins: [jekyll-remote-theme]
