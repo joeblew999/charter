@@ -6,7 +6,7 @@
 //     start-up would be paid on every request. Here only the operation a request matches is registered
 //     (ServeHTTP by path, Operation by id). Specs register them all (Operations, OpenAPI).
 //   - TinyGo's http.ServeMux has no "GET /path/{id}" patterns, which Huma's own net/http adapter
-//     needs. Routes are matched here.
+//     needs. Routes are matched here: the most specific one wins, whatever their order.
 //   - Huma's default config installs a hook that calls reflect.StructOf, which TinyGo does not have.
 //     Config leaves it out.
 //
@@ -135,38 +135,61 @@ func (a *API) register(i int) {
 }
 
 // ServeHTTP registers the one route the request matches and runs it. An unknown path is 404; a
-// known path with another method is 405.
+// known path with another method is 405. Of several routes that match, the most specific one runs,
+// whatever their order: /things/watch before /things/{id} for a request for /things/watch.
 func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var allow []string
+	var values map[string]string
+	best := -1
 	for i, route := range a.routes {
-		values, ok := match(route.Path, r.URL.Path)
+		found, ok := match(route.Path, r.URL.Path)
 		if !ok {
 			continue
 		}
 		if route.Method != r.Method {
 			allow = append(allow, route.Method)
-			continue
+		} else if best < 0 || moreSpecific(route.Path, a.routes[best].Path) {
+			best, values = i, found
 		}
-		a.registering.Lock()
-		a.register(i)
-		h, ok := a.handlers[route.Method+" "+route.Path]
-		a.registering.Unlock()
-		if !ok {
-			http.Error(w, "route "+route.Method+" "+route.Path+" registered no such operation", http.StatusInternalServerError)
+	}
+	if best < 0 {
+		if len(allow) > 0 {
+			w.Header().Set("Allow", strings.Join(allow, ", "))
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		for name, value := range values {
-			r.SetPathValue(name, value)
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	route := a.routes[best]
+	a.registering.Lock()
+	a.register(best)
+	h, ok := a.handlers[route.Method+" "+route.Path]
+	a.registering.Unlock()
+	if !ok {
+		http.Error(w, "route "+route.Method+" "+route.Path+" registered no such operation", http.StatusInternalServerError)
+		return
+	}
+	for name, value := range values {
+		r.SetPathValue(name, value)
+	}
+	h.run(humago.NewContext(h.op, r, w))
+}
+
+// moreSpecific reports whether path a is more specific than path b, both matching one request: at
+// the first segment where one is literal and the other a {name}, the literal one is.
+func moreSpecific(a, b string) bool {
+	one, other := strings.Split(a, "/"), strings.Split(b, "/")
+	for i := range one {
+		if isParam(one[i]) != isParam(other[i]) {
+			return isParam(other[i])
 		}
-		h.run(humago.NewContext(h.op, r, w))
-		return
 	}
-	if len(allow) > 0 {
-		w.Header().Set("Allow", strings.Join(allow, ", "))
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	http.Error(w, "not found", http.StatusNotFound)
+	return false
+}
+
+func isParam(segment string) bool {
+	return len(segment) > 2 && segment[0] == '{' && segment[len(segment)-1] == '}'
 }
 
 // match compares a Huma path with a request path, segment by segment; {name} takes one segment.
@@ -177,7 +200,7 @@ func match(pattern, path string) (map[string]string, bool) {
 	}
 	var values map[string]string
 	for i, segment := range want {
-		if len(segment) > 2 && segment[0] == '{' && segment[len(segment)-1] == '}' {
+		if isParam(segment) {
 			if got[i] == "" {
 				return nil, false
 			}

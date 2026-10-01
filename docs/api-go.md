@@ -73,6 +73,13 @@ api-go/api/contract.go  --(mise run api-go:spec)-->  sdk/fern/apis/api-go/{opena
 - **Fern's needs are said in the contract:** `OperationID` and `Tags` name the SDK methods, and `Extensions` carry `x-fern-sdk-*`, `x-fern-pagination` and `x-fern-streaming`.
 - **The WebSocket is in the contract too.** `asyncapi.Operation(...)` marks an operation as a channel: it's hidden from OpenAPI and written to AsyncAPI, with its query parameters as the channel's `bindings.ws.query`.
 - **One contract entry is one `humaworkers.Route`:** its method, path, `OperationID`, and the `huma.Register` call.
+- **To keep a request exactly as posted,** give the input a `RawBody []byte` next to its typed `Body`: Huma validates `Body` and the handler stores `RawBody`. The spec still says JSON only, so the SDKs take the typed request ([upstream.md](upstream.md#found-not-filed)).
+
+## Which route a request reaches
+
+The most specific route that matches, whatever the order of `Routes`: at the first path segment where one route has a literal and the other a `{name}`, the literal one wins. So with `/api/notes/watch` and `/api/notes/{id}`, a request for `/api/notes/watch` reaches `watch`, and every other segment is an id. Only routes with the request's method take part, and `TestALiteralSegmentWinsOverAParameterWhateverTheOrder` (`api-go/humaworkers/`) holds it.
+
+Fern warns that two such paths "conflict". The pair is valid OpenAPI, which gives the literal path precedence, so the warning is expected and the generated SDKs call the right one.
 
 ## Huma on workers-go and TinyGo: what it takes
 

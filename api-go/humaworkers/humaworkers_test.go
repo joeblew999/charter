@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -195,5 +196,49 @@ func TestABodyWithARawBodyIsJSONOnlyInTheSpec(t *testing.T) {
 	api.ServeHTTP(rec, req)
 	if want, _ := json.Marshal("abc " + posted); rec.Code != 200 || !strings.Contains(rec.Body.String(), string(want)) {
 		t.Errorf("HTTP %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestALiteralSegmentWinsOverAParameterWhateverTheOrder(t *testing.T) {
+	paths := []string{"/things/{id}", "/things/watch", "/things/{id}/parts/{part}", "/things/{id}/parts/all", "/things/watch/parts/{part}"}
+	for _, order := range []string{"as listed", "reversed"} {
+		var list []Route
+		for _, path := range paths {
+			list = append(list, Route{Method: http.MethodGet, Path: path, Register: func(api huma.API) {
+				op := huma.Operation{Method: http.MethodGet, Path: path}
+				if !strings.Contains(path, "{id}") {
+					huma.Register(api, op, func(context.Context, *struct{}) (*thingOutput, error) {
+						out := &thingOutput{}
+						out.Body.ID = path + " "
+						return out, nil
+					})
+					return
+				}
+				huma.Register(api, op, func(_ context.Context, in *thingInput) (*thingOutput, error) {
+					out := &thingOutput{}
+					out.Body.ID = path + " " + in.ID
+					return out, nil
+				})
+			}})
+		}
+		// Another method on the parameter's path: it is not the request's, so it is not in the running.
+		list = append(list, Route{Method: http.MethodDelete, Path: "/things/{id}", Register: func(huma.API) {}})
+		if order == "reversed" {
+			slices.Reverse(list)
+		}
+		api := New(Config("t", "1"), list)
+		for request, want := range map[string]string{
+			"/things/watch":         "/things/watch ",
+			"/things/42":            "/things/{id} 42",
+			"/things/42/parts/all":  "/things/{id}/parts/all 42",
+			"/things/42/parts/7":    "/things/{id}/parts/{part} 42",
+			"/things/watch/parts/7": "/things/watch/parts/{part} ",
+			// The first segment that differs decides: watch is literal there.
+			"/things/watch/parts/all": "/things/watch/parts/{part} ",
+		} {
+			if rec := get(api, "GET", request); rec.Code != 200 || !strings.Contains(rec.Body.String(), `"id":"`+want+`"`) {
+				t.Errorf("%s, GET %s: HTTP %d %s, want the route %s", order, request, rec.Code, rec.Body, want)
+			}
+		}
 	}
 }
