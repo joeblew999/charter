@@ -1,8 +1,8 @@
 ---
 title: Benchmarks
-nav_order: 11
+nav_order: 9
+parent: This repository
 ---
-
 # Benchmarks: what a request costs on each Worker
 
 What one request costs on the oRPC Worker and on the Go Worker, and how to measure it again. Read it before choosing between the two for a project, or before trying to make the Go Worker cheaper ([plans/performance.md](plans/performance.md)).

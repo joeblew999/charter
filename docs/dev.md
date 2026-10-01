@@ -1,8 +1,8 @@
 ---
-title: Tasks, workflows, releases
-nav_order: 10
+title: The dev tool, workflows, releases
+nav_order: 8
+parent: This repository
 ---
-
 # dev/: the tool the tasks run
 
 Every task in `mise.toml` is one line. Anything that needs more than one line is a command of the `dev` tool: a Go program in `dev/` (standard library only), so the logic is real code that can be read, tested and reused, not shell inside TOML. Read this page to add a task, to change a GitHub workflow, to cut a release, to start a new project, or to set up the docs site.

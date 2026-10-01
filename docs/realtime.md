@@ -1,8 +1,8 @@
 ---
-title: Real-time design
-nav_order: 8
+title: How real-time works
+nav_order: 2
+parent: Concepts
 ---
-
 # Real-time: one gap-free feed over SSE and a WebSocket
 
 How both servers deliver new notes to clients without losing any, and what a client has to do. Read it before changing a stream, the hub or `follow()`, and copy it (the rules, the feed and the client loop) into a project that needs real-time on Cloudflare. The test programs are in [testing.md](testing.md); what was measured is in [findings.md](findings.md).

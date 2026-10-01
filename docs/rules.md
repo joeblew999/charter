@@ -1,8 +1,8 @@
 ---
 title: Rules
-nav_order: 2
+nav_order: 1
+parent: This repository
 ---
-
 # Rules for working in this repo
 
 The rules for changing this repo, for developers and agents alike. They are binding. The repo is the reference for our other API projects, so it stays clean, pinned and verified. Read [README.md](README.md) first: "What is what" names the parts, and the two servers, their contracts and their Fern folders are easy to mix up.

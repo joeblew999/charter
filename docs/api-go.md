@@ -1,8 +1,8 @@
 ---
-title: Go Worker (api-go/)
-nav_order: 4
+title: Go Worker internals (api-go/)
+nav_order: 2
+parent: This repository
 ---
-
 # api-go/: the notes API in Go, on Cloudflare and natively
 
 The Go Worker: the notes API of [api.md](api.md#the-notes-api), written in Go. [Huma](https://huma.rocks) is the contract, [workers-go](https://github.com/syumai/workers-go) runs it on Cloudflare Workers, and TinyGo builds the Wasm. From the one Go contract come the handlers' validation, both specs (which Fern turns into SDKs, a CLI and docs, as for the oRPC Worker: [sdk.md](sdk.md)) and MCP tools ([mcp.md](mcp.md)). Read this page to run or change the Go Worker, to learn what Huma needs on workers-go, or to start a Go project from it.

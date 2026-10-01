@@ -2,8 +2,8 @@
 title: MCP
 nav_order: 3
 parent: Plans
+grand_parent: This repository
 ---
-
 # Plan: the contract as MCP tools
 
 Goal: the schemas written once in the contract serve REST, the specs and MCP tools (Model Context Protocol), on Cloudflare and natively. The Go server's half is built: how it works, its limits and the libraries looked at are in [../mcp.md](../mcp.md), and what was measured is in [../findings.md](../findings.md). This page keeps what is left.

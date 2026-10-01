@@ -1,8 +1,8 @@
 ---
-title: Fern SDKs and CLI (sdk/)
-nav_order: 7
+title: Fern folder internals (sdk/)
+nav_order: 5
+parent: This repository
 ---
-
 # sdk/: Fern, the SDKs it generates, and the Fern CLI
 
 Typed SDKs, a command-line program and a docs site, generated from each API's specs by **[Fern](https://buildwithfern.com)** (the `fern-api` npm package, running its generators locally in Docker). Read this page to generate or check an SDK, to add an API, to see which Fern feature is switched on how, or to work on the oRPC showcase and the harness Worker that runs the TypeScript SDK inside workerd. The Go showcase has its own page ([showcase-go.md](showcase-go.md)).

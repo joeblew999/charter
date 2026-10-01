@@ -2,8 +2,8 @@
 title: Performance
 nav_order: 4
 parent: Plans
+grand_parent: This repository
 ---
-
 # Plan: make the Go Worker cheaper per request
 
 Not started. The numbers are in [../benchmarks.md](../benchmarks.md): 40 to 70 ms of CPU per request on Cloudflare against 1 to 3 ms for the oRPC Worker, most of it start-up and garbage collection paid on every request.

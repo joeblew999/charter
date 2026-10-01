@@ -29,6 +29,21 @@ A developer or an agent who is new to this repo and has a job to do. They know t
 - **Headings a reader would search for:** what the section answers, not a label.
 - **Examples are real.** Output shown is output that was produced; names in examples exist.
 
+## How the docs are laid out
+
+A reader comes to use the thing, not to study the repo. So the docs are ordered by what a reader is doing, not by the repo's folders:
+
+| Section | What goes there | It answers |
+|---|---|---|
+| Home (`README.md`) | What this is, who it is for, the shortest way to something running, where to go next | "Is this for me, and where do I start?" |
+| Getting started | One tutorial: from nothing to a working result, every step run as written | "Show me it working" |
+| Guides | One task per page, start to finish, for someone who has done the tutorial | "How do I do X?" |
+| Concepts | Why it works the way it does, and what follows from that | "Why?" |
+| Reference | Every command, task, package, setting: complete, uniform, no narrative | "What exactly is Y?" |
+| This repository | How the repo itself is built and kept: rules, internals, findings, plans | "How do I change this project?" |
+
+A page belongs to exactly one section. A guide does not explain why (it links to a concept), a concept does not list flags (it links to reference), and nothing a user needs is only under "This repository".
+
 ## What each kind of page is for
 
 | Page | Its job | It must not |

@@ -66,7 +66,18 @@ func docsLint(args []string) error {
 			top[e.Name()] = true
 		}
 	}
-	index, _ := os.ReadFile(filepath.Join(docs, "README.md"))
+	// Every page must be reachable: linked from at least one other page.
+	linked := map[string]bool{}
+	for _, page := range pages {
+		raw, _ := os.ReadFile(page)
+		for _, m := range mdLink.FindAllStringSubmatch(string(raw), -1) {
+			if target, _, _ := strings.Cut(m[1], "#"); target != "" && !strings.Contains(target, "://") {
+				if to := filepath.Join(filepath.Dir(page), target); to != page {
+					linked[to] = true
+				}
+			}
+		}
+	}
 
 	var problems []string
 	say := func(page, format string, a ...any) {
@@ -89,8 +100,8 @@ func docsLint(args []string) error {
 			say(page, "two curly braces together, or a curly brace and a percent sign: Jekyll reads those as template code")
 		}
 		rel, _ := filepath.Rel(docs, page)
-		if rel != "README.md" && !strings.Contains(string(index), "("+filepath.ToSlash(rel)) {
-			say(page, "not linked from docs/README.md (the index)")
+		if rel != "README.md" && !linked[page] {
+			say(page, "no other page links to it: add it to its section's table (or the home page's)")
 		}
 		// Links and paths are read from the prose: an example inside code is not a link.
 		prose := codeSpan.ReplaceAllString(fenced.ReplaceAllString(text, ""), "")

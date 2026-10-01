@@ -1,8 +1,8 @@
 ---
-title: Go showcase (all Fern features)
-nav_order: 6
+title: Go showcase internals
+nav_order: 4
+parent: This repository
 ---
-
 # The Go showcase: every Fern feature from a Huma contract
 
 The showcase is one small API with every Fern feature we use. It exists twice, like the notes API: as an oRPC contract (the oRPC showcase, in [sdk.md](sdk.md#the-orpc-showcase)) and, on this page, as a Go one. Read this page when a Go API needs OAuth, idempotency, a file upload, webhooks or a WebSocket the client also sends on: it says, feature by feature, what to write in the contract.

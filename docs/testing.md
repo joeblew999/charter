@@ -1,8 +1,8 @@
 ---
-title: Testing
-nav_order: 9
+title: Test programs (test/)
+nav_order: 7
+parent: This repository
 ---
-
 # test/: the tests both servers must pass
 
 One set of test programs for the oRPC Worker (`api/`) and the Go Worker (`api-go/`), plus one for the two showcases. They only know the server's URL and, where they use a generated SDK, which Fern folder it came from, so they also check that the servers are interchangeable. Read this page to run a test, to see what a check covers, or before deploying.

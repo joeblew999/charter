@@ -1,9 +1,9 @@
 ---
 title: Plans
-nav_order: 14
+nav_order: 12
+parent: This repository
 has_children: true
 ---
-
 # Next
 
 What is not built yet, in order. What exists is on each part's page ([../README.md](../README.md) is the index), and what was proven is in [../findings.md](../findings.md). The numbers are kept as they were, because other pages refer to them.

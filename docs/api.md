@@ -1,8 +1,8 @@
 ---
-title: oRPC Worker (api/)
+title: oRPC Worker internals (api/)
 nav_order: 3
+parent: This repository
 ---
-
 # api/: the notes API in TypeScript, on Cloudflare
 
 The oRPC Worker: the notes API as an oRPC 2.0 (`2.0.0-beta.40`) Worker on D1, contract first. From the one contract, oRPC serves plain REST, an SSE stream and a WebSocket, and both specs are generated that Fern turns into SDKs, a CLI and docs ([sdk.md](sdk.md)). Read this page to run or change the oRPC Worker, to see what the notes API is (the Go Worker in [api-go.md](api-go.md) serves the same one), or to copy the pattern into a TypeScript project.

@@ -1,9 +1,9 @@
 ---
-title: Real-time design
+title: Real-time: what is left
 nav_order: 1
 parent: Plans
+grand_parent: This repository
 ---
-
 # Plan: the real-time system (SSE + WebSockets on Cloudflare)
 
 Tracked in issue #2. The design this plan led to is built on both Workers and is described in [../realtime.md](../realtime.md): the guarantee, the five rules that code comments cite by number, the feed, the client loops and the test matrix. This page keeps only what is left.

@@ -1,8 +1,8 @@
 ---
 title: Upstream issues
-nav_order: 12
+nav_order: 10
+parent: This repository
 ---
-
 # Upstream issues
 
 Every upstream gap this repo works around, what the workaround is, and what to do when the gap closes. Read it when you meet an `Upstream:` tag in the code, when an issue closes, or before filing a new one.
