@@ -235,7 +235,9 @@ func renamer(name, module string) func(string) string {
 // projectMise is this repo's mise.toml cut down to a Go-only project: the same tools, the Go and
 // SDK tasks, and the dev tool run at a pinned version instead of from ./dev.
 func projectMise(source, name, pin string) string {
-	tool := "go run " + repoModule + "/dev@" + pin
+	// The dev tool is a mise tool of the project: one pin, and `dev` on the path of every task.
+	const tool = "dev"
+	pinned := strings.TrimPrefix(pin, "v")
 	var out []string
 	keep, task := true, ""
 	for _, line := range strings.Split(source, "\n") {
@@ -251,6 +253,9 @@ func projectMise(source, name, pin string) string {
 		case strings.HasPrefix(line, "["):
 			keep, task = true, ""
 		}
+		if strings.HasPrefix(line, "goreleaser =") || strings.HasPrefix(line, "# Builds and publishes the dev tool") {
+			continue // this repo releases the tool; a project uses it
+		}
 		if !keep || strings.HasPrefix(line, "API_URL =") || strings.HasPrefix(line, "HARNESS_") || strings.HasPrefix(line, "SHOWCASE_") || strings.HasPrefix(line, "PORT =") {
 			continue
 		}
@@ -265,7 +270,8 @@ func projectMise(source, name, pin string) string {
 		"release-tags api-go dev", "release-tags api-go",
 		"# Local dev ports.", "# The local dev port.",
 		"# Every task is one line of plain sh", "# "+name+": a Go API on Cloudflare Workers (Huma on workers-go), made with `dev new` from\n# "+repoURL+".\n# Every task is one line of plain sh",
-		"is a command of ./dev (go run ./dev help)", "is a command of the dev tool ("+tool+" help)",
+		"is a command of ./dev (go run ./dev help)", "is a command of the dev tool (`dev help`), pinned under [tools]",
+		"\n[env]", "# The tool every task runs ("+repoModule+"/dev): `mise up` moves to a newer release.\n\"go:"+repoModule+"/dev\" = \""+pinned+"\"\n\n[env]",
 	).Replace(text)
 	return regexp.MustCompile(`\n{3,}`).ReplaceAllString(text, "\n\n")
 }

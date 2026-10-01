@@ -75,6 +75,17 @@ go get github.com/joeblew999/orpc-api/api-go@latest                   # the Go p
 curl -fsSL https://github.com/joeblew999/orpc-api/releases/latest/download/dev_darwin_arm64.tar.gz | tar xz dev   # the tool as a binary
 ```
 
+As a mise tool in any project (`dev` is then on the path of that project's tasks):
+
+```toml
+[tools]
+"go:github.com/joeblew999/orpc-api/dev" = "latest"                                   # built with Go
+# or a prebuilt binary, no Go needed:
+"ubi:joeblew999/orpc-api" = { version = "latest", exe = "dev", matching = "dev_" }
+```
+
+A project made by `dev new` has the first line already, with the release it was made from; `mise up` moves it on.
+
 - **The release page:** https://github.com/joeblew999/orpc-api/releases/latest
 - **Any file of the latest release:** `https://github.com/joeblew999/orpc-api/releases/latest/download/<file>`, with the file names from the table below (they carry no version for this reason).
 - **`mise run docs:lint` fails on a hard-coded release version** in a page (`@v1.2.3`, a `releases/tag/` or `releases/download/v...` link). Use `@latest`, `releases/latest`, or the placeholder `vX.Y.Z`. Findings and plans may name versions: they record what was.
@@ -135,7 +146,7 @@ mise run api-go:deploy         # to Cloudflare, then: mise run api-go:live-test
 - **It copies the example** from this repo at the tool's own version: the notes API in `api-go/` (contract, handlers, Worker entry, hub, platform files, spec command), `migrations/`, the notes test programs from `test/`, and the Fern folder `sdk/fern/apis/api-go/`. There is no separate template, so a new project starts from code that passed this repo's checks. The Go showcase and the test that compares with the oRPC contract are left out.
 - **It renames:** the Worker and its D1 database (`-name`), the Go module (`-module`), and the SDK's names (`billing-api` gives `BillingApiClient`).
 - **It keeps as imports** the reusable packages (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`), pinned to the same version, so fixes arrive with `go get -u`. Made with `-from`, the project builds against that checkout through a `replace` line in its `go.mod`; remove it once you depend on a release.
-- **It writes** a `mise.toml` with the Go and SDK tasks (the dev tool pinned by version, not copied), `go.work`, a README, `AGENTS.md`, and a `docs/` folder with a start page, rules and the writing rules.
+- **It writes** a `mise.toml` with the Go and SDK tasks (the dev tool is one of its mise tools, pinned to the release, so tasks call `dev <command>`), `go.work`, a README, `AGENTS.md`, and a `docs/` folder with a start page, rules and the writing rules.
 - **Then, with a GitHub repo:** `mise run dev:workflows` (the workflows come out for one Go API), `mise run docs:setup` and `mise run docs:pages`.
 
 The project starts as the notes API. Change `api-go/api/contract.go`, run `mise run api-go:spec`, and go from there ([api-go.md](api-go.md#starting-a-go-workers-go-project-from-it)).

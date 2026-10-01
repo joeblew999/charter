@@ -28,7 +28,7 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 		"api-go/main.go":                      `"github.com/zeta/billing-api/api-go/api"`,
 		"api-go/cloudflare.config.ts":         `name: "billing-api"`,
 		"sdk/fern/apis/api-go/generators.yml": "namespaceExport: BillingApi",
-		"mise.toml":                           `depends = ["api-go:check", "dev:check"]`,
+		"mise.toml":                           `"go:github.com/joeblew999/orpc-api/dev" = "latest"`,
 		"go.work":                             "use ./api-go",
 		"docs/README.md":                      "# billing-api",
 	} {
@@ -41,7 +41,7 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 		}
 	}
 	tasks, _ := os.ReadFile(filepath.Join(into, "mise.toml"))
-	for _, gone := range []string{"api:check", "sdk:harness", "sdk:demo", "showcase", "go run ./dev", "go run ../dev", "orpc-api-go"} {
+	for _, gone := range []string{"api:check", "sdk:harness", "sdk:demo", "showcase", "go run ./dev", "go run ../dev", "dev@", "orpc-api-go"} {
 		if strings.Contains(string(tasks), gone) {
 			t.Errorf("mise.toml still mentions %q", gone)
 		}

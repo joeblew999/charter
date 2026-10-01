@@ -56,7 +56,16 @@ dev docs-review             # have Claude bring docs/ up to date against docs/wr
 gh api -X POST 'repos/{owner}/{repo}/pages' -f 'source[branch]=main' -f 'source[path]=/docs'   # once: turn the site on
 ```
 
-A project made by `new` has all of these as one-line tasks already (`mise tasks`). What each command does: [docs/dev.md](docs/dev.md). For an agent: start at [AGENTS.md](AGENTS.md), or https://joeblew999.github.io/orpc-api/llms.txt.
+Or make the tool a mise tool of your project, so its tasks can call `dev <command>` and the version is pinned in one place:
+
+```toml
+[tools]
+"go:github.com/joeblew999/orpc-api/dev" = "latest"                                   # built with Go
+# or a prebuilt binary, no Go needed:
+"ubi:joeblew999/orpc-api" = { version = "latest", exe = "dev", matching = "dev_" }
+```
+
+A project made by `new` has that tool line and all of these as one-line tasks already (`mise tasks`). What each command does: [docs/dev.md](docs/dev.md). For an agent: start at [AGENTS.md](AGENTS.md), or https://joeblew999.github.io/orpc-api/llms.txt.
 
 ## Layout
 
