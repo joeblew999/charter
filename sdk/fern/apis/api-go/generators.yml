@@ -17,8 +17,8 @@ groups:
           location: local-file-system
           path: ../../../out/api-go/go
         config:
-          # A real module path, so another repo can go get the copy `mise run sdk:publish` commits to
-          # sdk/go (docs/dev.md). ../api declares the same path: the same client code builds against either.
+          # The repo's module with /sdk/go added: the folder `mise run sdk:publish` commits this SDK to,
+          # so another repo can go get it.
           module:
             path: github.com/joeblew999/orpc-api/sdk/go
             version: "1.22"
