@@ -21,7 +21,7 @@ Where this repo stands (2026-10-01) and what comes next, in order. What's proven
    - **Make it cheaper:** 40 to 70 ms of CPU per request today. The plan is [performance.md](performance.md).
    - **Upstream:** three findings are drafted and not filed ([../upstream.md](../upstream.md)); the timer one matters to every workers-go project. Filing needs a go-ahead.
    - **A native database:** `api.SQLStore` is `database/sql`, so a SQLite driver in `platform_other.go` gives the native build persistence.
-   - **MCP from the same contract:** see [mcp.md](mcp.md) if it exists; Huma's operations and schemas are enough to list tools and validate their input.
+   - **MCP from the same contract** is built (`api-go/humamcp`, `/api/mcp`) and passes on Cloudflare. Left, in [mcp.md](mcp.md): authorization for the endpoint, a run with a model behind the client, and the oRPC side (`api/src/mcp.ts`, built like `asyncapi.ts`).
    - **Go client and server on separate Workers:** [microservices.md](microservices.md), including a try of [humaclient](https://github.com/danielgtaylor/humaclient) beside Fern.
 1. **The real-time plan's remaining steps:** see [realtime.md](realtime.md). Document a client loop per client (done in docs/sdk.md) and follow the upstream issues.
 2. **The AsyncAPI generator upstream:** see [asyncapi.md](asyncapi.md) and middleapi/orpc#2115. If they want it, port it as `@orpc/asyncapi`; if they ship their own, switch to it.
