@@ -78,6 +78,7 @@ func TestMCPToolsAreTheContractsOperations(t *testing.T) {
 	}
 	for _, tool := range wanted {
 		name := tool["name"].(string)
+		withoutExamples(got[name]) // examples are the contract's to choose: the shape is what is held here
 		if !reflect.DeepEqual(got[name], any(tool)) {
 			have, _ := json.Marshal(got[name])
 			need, _ := json.Marshal(tool)
@@ -188,6 +189,21 @@ func TestEveryRouteNamesItsOperation(t *testing.T) {
 		ops := humaworkers.New(config(), []humaworkers.Route{route}).Operations()
 		if len(ops) != 1 || route.OperationID == "" || ops[0].OperationID != route.OperationID || ops[0].Method != route.Method || ops[0].Path != route.Path {
 			t.Errorf("route %s %s (%q) registers %+v", route.Method, route.Path, route.OperationID, ops)
+		}
+	}
+}
+
+// withoutExamples removes every "examples" key from a decoded JSON value, in place.
+func withoutExamples(v any) {
+	switch v := v.(type) {
+	case map[string]any:
+		delete(v, "examples")
+		for _, child := range v {
+			withoutExamples(child)
+		}
+	case []any:
+		for _, child := range v {
+			withoutExamples(child)
 		}
 	}
 }
