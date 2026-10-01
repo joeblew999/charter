@@ -3,8 +3,10 @@ package humamcp
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -474,23 +476,98 @@ func TestStatelessEra(t *testing.T) {
 	same(t, "unsupported version data", a.Error.Data, `{"supported": ["2026-07-28", "2025-11-25", "2025-06-18"], "requested": "2027-01-01"}`)
 }
 
-func TestAParameterAndABodyPropertyOfOneNameIsAnError(t *testing.T) {
-	api := humaworkers.New(humaworkers.Config("t", "1"), []humaworkers.Route{{Method: "POST", Path: "/things", Register: func(api huma.API) {
-		huma.Register(api, huma.Operation{OperationID: "clash", Method: "POST", Path: "/things"}, func(context.Context, *struct {
-			Name string `query:"name"`
-			Body struct {
-				Name string `json:"name"`
-			}
-		}) (*struct{}, error) {
-			return nil, nil
-		})
-	}}})
-	a := post(t, Handler(api), rpc("tools/list", ""))
-	if a.Error == nil || a.Error.Code != -32603 || !strings.Contains(a.Error.Message, `both named "name"`) {
-		t.Fatalf("tools/list: %s", a.Raw)
+// The reporter's shape: POST /x/{id} whose body has an id too.
+type clashInput struct {
+	ID   string `path:"id"`
+	Body struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
 	}
-	// Without Route.OperationID, the operation is still found by id.
-	if result := call(t, Handler(api), "clash", `{"name":"x"}`); result["isError"] != true {
-		t.Fatalf("tools/call: %v", result)
+}
+
+type clashOutput struct {
+	Body struct {
+		Path string `json:"path"`
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+}
+
+// No Route.OperationID: the operation is still found by id.
+func clashRoute(id, path string, register func(huma.API, huma.Operation)) humaworkers.Route {
+	return humaworkers.Route{Method: "POST", Path: path, Register: func(api huma.API) {
+		register(api, huma.Operation{OperationID: id, Method: "POST", Path: path})
+	}}
+}
+
+func clashAPI() *humaworkers.API {
+	nothing := func(api huma.API, op huma.Operation) {
+		huma.Register(api, op, func(context.Context, *struct{}) (*struct{}, error) { return nil, nil })
+	}
+	return humaworkers.New(humaworkers.Config("t", "1"), []humaworkers.Route{
+		clashRoute("before", "/before", nothing),
+		clashRoute("clash", "/x/{id}", func(api huma.API, op huma.Operation) {
+			huma.Register(api, op, func(_ context.Context, in *clashInput) (*clashOutput, error) {
+				out := &clashOutput{}
+				out.Body.Path, out.Body.ID, out.Body.Name = in.ID, in.Body.ID, in.Body.Name
+				return out, nil
+			})
+		}),
+		// No object can hold these arguments: a parameter named body, and a body that is the argument body.
+		clashRoute("bodyTwice", "/twice", func(api huma.API, op huma.Operation) {
+			huma.Register(api, op, func(context.Context, *struct {
+				Mode string `query:"body"`
+				Body []string
+			}) (*struct{}, error) {
+				return nil, nil
+			})
+		}),
+		clashRoute("after", "/after", nothing),
+	})
+}
+
+func TestABodyPropertyNamedAsAParameterKeepsTheBodyWhole(t *testing.T) {
+	h := Handler(clashAPI())
+	same(t, "clash.inputSchema", tools(t, h)["clash"]["inputSchema"], `{
+		"type": "object", "additionalProperties": false, "required": ["id", "body"],
+		"properties": {
+			"id": {"type": "string"},
+			"body": {
+				"type": "object", "additionalProperties": false, "required": ["id", "name"],
+				"properties": {"id": {"type": "string"}, "name": {"type": "string"}}
+			}
+		}}`)
+	result := call(t, h, "clash", `{"id": "from-the-path", "body": {"id": "from-the-body", "name": "n"}}`)
+	same(t, "clash result", result["structuredContent"], `{"path": "from-the-path", "id": "from-the-body", "name": "n"}`)
+	// The flat form has no place for the second id.
+	if result := call(t, h, "clash", `{"id": "x", "name": "n"}`); result["isError"] != true || !strings.Contains(textOf(t, result), "unexpected arguments: name") {
+		t.Errorf("flat arguments: %v", result)
+	}
+}
+
+func TestAnOperationThatCannotBeAToolIsLeftOutAndTheOthersAreListed(t *testing.T) {
+	var logged strings.Builder
+	log.SetOutput(&logged)
+	defer log.SetOutput(os.Stderr)
+	api := clashAPI()
+	a := post(t, Handler(api), rpc("tools/list", ""))
+	var names []string
+	for _, tool := range a.Result["tools"].([]any) {
+		names = append(names, tool.(map[string]any)["name"].(string))
+	}
+	if want := []string{"before", "clash", "after"}; !reflect.DeepEqual(names, want) {
+		t.Fatalf("tools %v (%s), want %v", names, a.Raw, want)
+	}
+	// Why, in the log and from Check, which a contract's tests and its spec command call.
+	problems := Check(api)
+	if want := `bodyTwice has a parameter named "body"`; len(problems) != 1 || !strings.Contains(problems[0].Error(), want) || !strings.Contains(logged.String(), want) {
+		t.Errorf("want %q in Check (%v) and in the log (%s)", want, problems, logged.String())
+	}
+	// A call says why too.
+	if result := call(t, Handler(api), "bodyTwice", `{"body": "x"}`); result["isError"] != true || !strings.Contains(textOf(t, result), `a parameter named "body"`) {
+		t.Errorf("tools/call bodyTwice: %v", result)
+	}
+	if problems := Check(testAPI(map[string]int{})); problems != nil {
+		t.Errorf("Check on an API without problems: %v", problems)
 	}
 }

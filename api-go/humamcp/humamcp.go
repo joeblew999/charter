@@ -50,7 +50,6 @@ const (
 	invalidRequest     = -32600
 	methodNotFound     = -32601
 	invalidParams      = -32602
-	internalError      = -32603
 	headerMismatch     = -32020
 	unsupportedVersion = -32022
 )
@@ -185,9 +184,7 @@ func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			result["instructions"] = instructions
 		}
 	case "tools/list":
-		if result = s.list(w, msg); result == nil {
-			return
-		}
+		result = s.list()
 		result["ttlMs"], result["cacheScope"] = listTTL, "public"
 	case "tools/call":
 		if result = s.call(w, r, msg, p); result == nil {
@@ -221,7 +218,7 @@ func (s server) legacy(w http.ResponseWriter, r *http.Request, msg message, p pa
 	case "ping":
 		result = map[string]any{}
 	case "tools/list":
-		result = s.list(w, msg)
+		result = s.list()
 	case "tools/call":
 		result = s.call(w, r, msg, p)
 	default:
@@ -249,14 +246,9 @@ func (s server) implementation() map[string]any {
 	return map[string]any{"name": s.info().Title, "version": s.info().Version}
 }
 
-// list is the result of tools/list, or nil when it has answered with an error.
-func (s server) list(w http.ResponseWriter, msg message) map[string]any {
-	tools, err := Tools(s.api.Operations(), s.api.API.OpenAPI().Components.Schemas)
-	if err != nil {
-		fail(w, http.StatusOK, msg.ID, internalError, "Internal error: "+err.Error(), nil)
-		return nil
-	}
-	return map[string]any{"tools": tools}
+// list is the result of tools/list.
+func (s server) list() map[string]any {
+	return map[string]any{"tools": Tools(s.api.Operations(), s.api.API.OpenAPI().Components.Schemas)}
 }
 
 // call is the result of tools/call, or nil when it has answered with an error. Only a call that

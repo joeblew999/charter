@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"sort"
@@ -21,7 +22,9 @@ import (
 //   - inputSchema: one object. Every path, query, header and cookie parameter is a property (hidden
 //     ones are not parameters to Huma, so they are left out). A JSON request body that is an object
 //     adds its properties next to them, so the arguments are flat, as an oRPC procedure's input is;
-//     any other body is the property "body".
+//     any other body is the property "body". An object body with a property that has a parameter's
+//     name is also the property "body" (PUT /things/{id} with the thing, id and all, as its body),
+//     so both values have a place.
 //   - outputSchema: the schema of the 2xx application/json response, when it is an object.
 //   - $ref: Huma's "#/components/schemas/Note" becomes "#/$defs/Note", with the schemas referred to
 //     in $defs, so each tool's schemas stand alone.
@@ -80,8 +83,9 @@ func IsTool(op *huma.Operation) bool {
 }
 
 // Tools are the tools among ops (humaworkers' API.Operations()), in their order, with schemas from
-// registry (api.OpenAPI().Components.Schemas).
-func Tools(ops []*huma.Operation, registry huma.Registry) ([]Tool, error) {
+// registry (api.OpenAPI().Components.Schemas). An operation that cannot be a tool is left out and
+// logged, and the others are listed: Check says which, before a client asks.
+func Tools(ops []*huma.Operation, registry huma.Registry) []Tool {
 	tools := []Tool{}
 	for _, op := range ops {
 		if !IsTool(op) {
@@ -89,7 +93,8 @@ func Tools(ops []*huma.Operation, registry huma.Registry) ([]Tool, error) {
 		}
 		in, err := inputOf(op, registry)
 		if err != nil {
-			return nil, err
+			log.Printf("%v: it is not in tools/list", err)
+			continue
 		}
 		tool := Tool{Name: op.OperationID, Description: op.Summary, InputSchema: in.schema(registry), OutputSchema: outputSchema(op, registry)}
 		if op.Summary != "" && op.Description != "" {
@@ -108,7 +113,24 @@ func Tools(ops []*huma.Operation, registry huma.Registry) ([]Tool, error) {
 		}
 		tools = append(tools, tool)
 	}
-	return tools, nil
+	return tools
+}
+
+// Check is why each operation that would be a tool cannot be one: nil for an API whose tools/list
+// is complete. Call it where a contract is tested and where its specs are written (cmd/spec), so
+// that a missing tool is found there and not by a client. The fix is to rename what clashes, or
+// Expose(op, false).
+func Check(api *humaworkers.API) []error {
+	var problems []error
+	for _, op := range api.Operations() {
+		if !IsTool(op) {
+			continue
+		}
+		if _, err := inputOf(op, api.API.OpenAPI().Components.Schemas); err != nil {
+			problems = append(problems, err)
+		}
+	}
+	return problems
 }
 
 // input is where a tool's arguments go in the operation's request.
@@ -116,9 +138,11 @@ type input struct {
 	op     *huma.Operation
 	params []*huma.Param
 	body   *huma.Schema // the JSON request body, or nil
-	flat   bool         // the body is an object: its properties are arguments. Otherwise it is the argument "body"
+	flat   bool         // the body's properties are arguments. Otherwise it is the argument "body"
 }
 
+// inputOf is op's input, or why its arguments cannot be one object: two parameters of one name, or
+// a parameter named "body" next to a body that is that argument.
 func inputOf(op *huma.Operation, registry huma.Registry) (input, error) {
 	in := input{op: op}
 	names := map[string]bool{}
@@ -137,17 +161,12 @@ func inputOf(op *huma.Operation, registry huma.Registry) (input, error) {
 	}
 	in.body = resolve(op.RequestBody.Content[jsonType].Schema, registry)
 	in.flat = in.body.Type == huma.TypeObject && len(in.body.Properties) > 0
-	taken := []string{bodyName}
-	if in.flat {
-		taken = taken[:0]
-		for name := range in.body.Properties {
-			taken = append(taken, name)
-		}
+	// A body property named as a parameter is: the body stays whole, so both have a place.
+	for name := range in.body.Properties {
+		in.flat = in.flat && !names[name]
 	}
-	for _, name := range taken {
-		if names[name] {
-			return in, fmt.Errorf("humamcp: %s has a parameter and a body property both named %q", op.OperationID, name)
-		}
+	if !in.flat && names[bodyName] {
+		return in, fmt.Errorf("humamcp: %s has a parameter named %q, which is the argument its request body is", op.OperationID, bodyName)
 	}
 	return in, nil
 }

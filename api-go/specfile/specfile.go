@@ -1,6 +1,7 @@
 // Package specfile is the body of a spec command: it writes the specs a contract generates to
 // files, for Fern, or checks that the committed files are what the contract gives. One command per
-// contract calls Main with the contract's spec functions (cmd/spec, cmd/showcase-spec).
+// contract calls Main with the contract's spec functions (cmd/spec, cmd/showcase-spec), after Must
+// with what else is wrong with the contract that no spec shows.
 package specfile
 
 import (
@@ -11,6 +12,17 @@ import (
 	"os"
 	"strings"
 )
+
+// Must prints the problems and ends the command if there are any: a contract with problems gets no
+// specs, written or checked. cmd/spec gives it humamcp.Check, the operations that cannot be MCP tools.
+func Must(problems []error) {
+	for _, problem := range problems {
+		fmt.Fprintln(os.Stderr, problem)
+	}
+	if len(problems) > 0 {
+		os.Exit(1)
+	}
+}
 
 // Main runs the command:
 //
