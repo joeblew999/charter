@@ -1,6 +1,6 @@
 # For agents
 
-Everything about this repo is in [docs/](docs/README.md), the same pages developers read. Nothing is kept here, so there is one source of truth. The same index for machines: https://joeblew999.github.io/orpc-api/llms.txt
+Everything about this repo is in [docs/](docs/README.md), the same pages developers read. Nothing is kept here, so there is one source of truth. The same index for machines: https://joeblew999.github.io/charter/llms.txt
 
 Read, in this order:
 

@@ -12,12 +12,12 @@ You need [mise](https://mise.jdx.dev) and Go. For step 5 you need a Cloudflare a
 ## 1. Create the project
 
 ```sh
-dev() { go run github.com/joeblew999/orpc-api/dev@latest "$@"; }   # the tool, straight from GitHub
-dev new -name billing-api                                            # creates ./billing-api
+charter() { go run github.com/joeblew999/charter/cmd/charter@latest "$@"; }   # the tool, straight from GitHub
+charter new -name billing-api                                            # creates ./billing-api
 cd billing-api && git init
 ```
 
-The first line `dev new` prints is the tool's version and what it pinned to it (the tool in `mise.toml`, the Go packages in `api/go/go.mod`): minutes after a release `@latest` can still be the previous one, while the release binary or `dev@vX.Y.Z` is exact.
+The first line `charter new` prints is the tool's version and what it pinned to it (the tool in `mise.toml`, the Go packages in `go.mod`): minutes after a release `@latest` can still be the previous one, while the release binary or `charter@vX.Y.Z` is exact.
 
 `-name` becomes the Worker's name, its database and the SDK's names (`BillingApiClient`). The Go module defaults to `github.com/<your GitHub login>/billing-api`; pass `-module` to choose.
 
@@ -26,7 +26,7 @@ The project starts as a small notes API, so everything works before you change a
 ## 2. Install and check
 
 ```sh
-mise install          # Go, TinyGo, Node and the dev tool, at pinned versions
+mise install          # Go, TinyGo, Node and the charter tool, at pinned versions
 mise run setup        # npm packages
 mise run check        # lint, tests, spec drift, the Wasm build, and live tests natively and under workerd
 ```
@@ -38,7 +38,7 @@ mise run check        # lint, tests, spec drift, the Wasm build, and live tests 
 ## 3. Run it
 
 ```sh
-mise run api:go:run   # natively, in-memory store: http://localhost:5174
+mise run run   # natively, in-memory store: http://localhost:5174
 ```
 
 In another shell:
@@ -54,18 +54,18 @@ curl localhost:5174/api/openapi.json                             # the spec, gen
 To run it the way Cloudflare does (the real Wasm, a local D1 database and the hub):
 
 ```sh
-mise run api:go:dev             # in one shell
-mise run api:go:migrate:local   # in another, the first time: creates the tables
+mise run dev             # in one shell
+mise run migrate:local   # in another, the first time: creates the tables
 ```
 
 ## 4. Make it yours
 
-The whole API is one file: `api/go/api/contract.go`. Each operation is a few lines: its path, its input struct, its output struct. Struct tags are the validation rules and the schema.
+The whole API is one file: `api/contract.go`. Each operation is a few lines: its path, its input struct, its output struct. Struct tags are the validation rules and the schema.
 
 Change it, then:
 
 ```sh
-mise run api:go:spec    # regenerates the OpenAPI and AsyncAPI files from the contract
+mise run spec    # regenerates the OpenAPI and AsyncAPI files from the contract
 mise run check          # fails if you forgot the line above, or broke something
 ```
 
@@ -74,25 +74,25 @@ How to add operations, validation and errors: [Define your API](guides/contract.
 ## 5. Deploy
 
 ```sh
-api/go/node_modules/.bin/cf auth login   # once: your Cloudflare account
-mise run api:go:deploy                   # the Worker, its D1 database, the migrations
-mise run api:go:live-test                # SSE, WebSocket, the SDK and MCP against what you just deployed
+node_modules/.bin/cf auth login   # once: your Cloudflare account
+mise run deploy                   # the Worker, its D1 database, the migrations
+mise run live-test                # SSE, WebSocket, the SDK and MCP against what you just deployed
 ```
 
-The deploy prints the Worker's URL. The project has a placeholder for it, `https://billing-api.your-subdomain.workers.dev`, in `mise.toml` and in the specs (`dev new -subdomain <yours>` in step 1 writes the real one instead). So before the live test, put the URL the deploy printed in `mise.local.toml`:
+The deploy prints the Worker's URL. The project has a placeholder for it, `https://billing-api.your-subdomain.workers.dev`, in `mise.toml` and in the specs (`charter new -subdomain <yours>` in step 1 writes the real one instead). So before the live test, put the URL the deploy printed in `mise.local.toml`:
 
 ```toml
 [env]
-API_GO_URL = "https://billing-api.<your-subdomain>.workers.dev"
+API_URL = "https://billing-api.<your-subdomain>.workers.dev"
 ```
 
-Then `mise run api:go:spec`, so the specs name the right server. `mise.local.toml` is gitignored: for CI to agree with the specs you commit, make the URL the default of `API_GO_URL` in `mise.toml` instead. Always run the live test after a deploy: some failures only exist on Cloudflare itself. More: [Deploy to Cloudflare](guides/deploy.md).
+Then `mise run spec`, so the specs name the right server. `mise.local.toml` is gitignored: for CI to agree with the specs you commit, make the URL the default of `API_URL` in `mise.toml` instead. Always run the live test after a deploy: some failures only exist on Cloudflare itself. More: [Deploy to Cloudflare](guides/deploy.md).
 
 ## 6. Generate an SDK
 
 ```sh
-mise run sdk:gen api-go typescript   # Fern, in Docker -> sdk/out/api-go/typescript
-mise run sdk:gen api-go go           # the same for Go; also: cli
+mise run sdk:gen typescript   # Fern, in Docker -> sdk/out/typescript
+mise run sdk:gen go           # the same for Go; also: cli
 ```
 
 That is a typed client for your API, with pagination, the SSE stream and the WebSocket built in. What to do with it: [Generate SDKs and a CLI](guides/sdks.md).
@@ -102,7 +102,7 @@ That is a typed client for your API, with pagination, the SSE stream and the Web
 With the repo pushed to GitHub:
 
 ```sh
-mise run dev:workflows   # GitHub workflows that run the same checks on every push
+mise run workflows   # GitHub workflows that run the same checks on every push
 mise run docs:setup      # a docs site for docs/, and llms.txt for agents
 mise run docs:pages      # once: turns the site on
 ```

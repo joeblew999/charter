@@ -113,65 +113,9 @@ func newProject(args []string) error {
 		return fmt.Errorf("%s is not a checkout of charter (no %s)", from, exampleDir)
 	}
 	fmt.Println(pinned(version, checkout))
-
-	tasks, err := os.ReadFile(filepath.Join(source, "mise.toml"))
+	tasks, err := copyExample(from, into, name, module, subdomain, version, checkout)
 	if err != nil {
 		return err
-	}
-	// The example's Worker is on the charter repo owner's workers.dev subdomain; the project's is on
-	// its own (mise.toml's default URL and the copied specs, which must agree for the spec check).
-	owner := ownerSubdomain.FindSubmatch(tasks)
-	if owner == nil {
-		return fmt.Errorf("%s/mise.toml has no workers.dev default for API_URL", source)
-	}
-	// How the project's tasks run this tool, and the line of mise.toml that says which one it is.
-	// A release: mise installs it, pinned, and it is on the path of every task. A checkout: nothing
-	// is pinned (the newest release can be older than the checkout), and the tasks `go run` it from
-	// there, at the one place CHARTER names.
-	tool, which := "charter", "[tools]\n# The tool every task runs: `mise up` moves to a newer release.\n\"go:"+toolPackage+"\" = \""+strings.TrimPrefix(version, "v")+"\"\n"
-	if checkout != "" {
-		tool, which = checkoutTool, "[env]\n# The checkout of charter whose tool the tasks run (go.work lets them) and whose Go library go.mod\n# builds against: charter new -from.\nCHARTER = \""+checkout+"\"\n"
-	}
-	rename := strings.NewReplacer(
-		exampleModule, module,
-		exampleWorker+"."+string(owner[1])+".workers.dev", name+"."+subdomain+".workers.dev",
-		exampleWorker, name,
-		exampleTool, tool,
-	)
-
-	// Everything git knows of the example or would add (so not node_modules, build/ or sdk/out).
-	listed, err := output(from, "git", "ls-files", "--cached", "--others", "--exclude-standard", "--", exampleDir)
-	if err != nil {
-		return fmt.Errorf("listing the files of %s in %s: %w", exampleDir, from, err)
-	}
-	for _, file := range strings.Split(listed, "\n") {
-		rel := strings.TrimPrefix(file, exampleDir+"/")
-		if file == "" || strings.HasPrefix(rel, exampleSDK) {
-			continue
-		}
-		content, err := os.ReadFile(filepath.Join(from, filepath.FromSlash(file)))
-		if errors.Is(err, os.ErrNotExist) {
-			continue // deleted in the checkout, not yet committed
-		} else if err != nil {
-			return err
-		}
-		text := string(content)
-		if filepath.Base(rel) != "go.sum" {
-			text = rename.Replace(text)
-		}
-		switch rel {
-		case "mise.toml":
-			header, _, _ := strings.Cut(which, "\n")
-			if !strings.Contains(text, header+"\n") {
-				return fmt.Errorf("%s/mise.toml has no %s", source, header)
-			}
-			text = strings.Replace(text, header+"\n", which, 1)
-		case "fern/fern.config.json":
-			text = fernOrganization.ReplaceAllString(text, `"organization": "`+name+`"`)
-		}
-		if err := write(filepath.Join(into, filepath.FromSlash(rel)), text); err != nil {
-			return err
-		}
 	}
 
 	// What a repo has around a project: its start pages, the docs folder, the GitHub workflows.
@@ -231,6 +175,72 @@ Cost: on Cloudflare a simple read uses under 1 ms of CPU, a database read 1 to 2
 the first request in a new isolate about 10 ms (measured 2026-10-02). mise run bench measures yours.
 `, into, module, name, into, replaceGuide, afterDeploy(name, subdomain))
 	return nil
+}
+
+// copyExample writes the example in from (a checkout of charter, or a clone of a release) into
+// into, under the project's names. It returns the example's mise.toml as it was.
+func copyExample(from, into, name, module, subdomain, version, checkout string) ([]byte, error) {
+	source := filepath.Join(from, filepath.FromSlash(exampleDir))
+	tasks, err := os.ReadFile(filepath.Join(source, "mise.toml"))
+	if err != nil {
+		return nil, err
+	}
+	// The example's Worker is on the charter repo owner's workers.dev subdomain; the project's is on
+	// its own (mise.toml's default URL and the copied specs, which must agree for the spec check).
+	owner := ownerSubdomain.FindSubmatch(tasks)
+	if owner == nil {
+		return nil, fmt.Errorf("%s/mise.toml has no workers.dev default for API_URL", source)
+	}
+	// How the project's tasks run this tool, and the line of mise.toml that says which one it is.
+	// A release: mise installs it, pinned, and it is on the path of every task. A checkout: nothing
+	// is pinned (the newest release can be older than the checkout), and the tasks `go run` it from
+	// there, at the one place CHARTER names.
+	tool, which := "charter", "[tools]\n# The tool every task runs: `mise up` moves to a newer release.\n\"go:"+toolPackage+"\" = \""+strings.TrimPrefix(version, "v")+"\"\n"
+	if checkout != "" {
+		tool, which = checkoutTool, "[env]\n# The checkout of charter whose tool the tasks run (go.work lets them) and whose Go library go.mod\n# builds against: charter new -from.\nCHARTER = \""+checkout+"\"\n"
+	}
+	rename := strings.NewReplacer(
+		exampleModule, module,
+		exampleWorker+"."+string(owner[1])+".workers.dev", name+"."+subdomain+".workers.dev",
+		exampleWorker, name,
+		exampleTool, tool,
+	)
+
+	// Everything git knows of the example or would add (so not node_modules, build/ or sdk/out).
+	listed, err := output(from, "git", "ls-files", "--cached", "--others", "--exclude-standard", "--", exampleDir)
+	if err != nil {
+		return nil, fmt.Errorf("listing the files of %s in %s: %w", exampleDir, from, err)
+	}
+	for _, file := range strings.Split(listed, "\n") {
+		rel := strings.TrimPrefix(file, exampleDir+"/")
+		if file == "" || strings.HasPrefix(rel, exampleSDK) {
+			continue
+		}
+		content, err := os.ReadFile(filepath.Join(from, filepath.FromSlash(file)))
+		if errors.Is(err, os.ErrNotExist) {
+			continue // deleted in the checkout, not yet committed
+		} else if err != nil {
+			return nil, err
+		}
+		text := string(content)
+		if filepath.Base(rel) != "go.sum" {
+			text = rename.Replace(text)
+		}
+		switch rel {
+		case "mise.toml":
+			header, _, _ := strings.Cut(which, "\n")
+			if !strings.Contains(text, header+"\n") {
+				return nil, fmt.Errorf("%s/mise.toml has no %s", source, header)
+			}
+			text = strings.Replace(text, header+"\n", which, 1)
+		case "fern/fern.config.json":
+			text = fernOrganization.ReplaceAllString(text, `"organization": "`+name+`"`)
+		}
+		if err := write(filepath.Join(into, filepath.FromSlash(rel)), text); err != nil {
+			return nil, err
+		}
+	}
+	return tasks, nil
 }
 
 const (

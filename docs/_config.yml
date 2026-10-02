@@ -1,4 +1,4 @@
-# Written by `dev docs` (github.com/joeblew999/orpc-api/dev): don't edit, run it again (mise run docs:setup).
+# Written by `charter docs` (github.com/joeblew999/charter/cmd/charter): don't edit, run it again (mise run docs:setup).
 # GitHub Pages renders this folder as it is, with its built-in Jekyll: there is no build step.
 # README.md is the home page, and links between pages (other.md) become links between the rendered ones.
 # The look (sidebar, search, diagrams) is the Just the Docs theme, loaded by GitHub.
@@ -11,14 +11,14 @@
 #   has_children: true        # on that parent page
 #   ---
 # The start page, README.md, also needs `permalink: /` there: it is the site's home page.
-title: orpc-api
-description: "oRPC API on Cloudflare Workers: contract-first REST + SSE + WebSockets that don't lose data, with Fern SDKs, CLI and docs. Driven by mise."
+title: charter
+description: "Contract-first APIs on Cloudflare Workers with Huma (Go) or oRPC (TypeScript): OpenAPI and AsyncAPI generated, SDKs in any language with Fern, a CLI, MCP and real-time. Go at TypeScript's cost."
 aux_links:
-  "GitHub": ["https://github.com/joeblew999/orpc-api"]
-gh_edit_repository: https://github.com/joeblew999/orpc-api
+  "GitHub": ["https://github.com/joeblew999/charter"]
+gh_edit_repository: https://github.com/joeblew999/charter
 nav_external_links:
   - title: Latest release
-    url: https://github.com/joeblew999/orpc-api/releases/latest
+    url: https://github.com/joeblew999/charter/releases/latest
 
 remote_theme: just-the-docs/just-the-docs@v0.12.0
 plugins: [jekyll-remote-theme]

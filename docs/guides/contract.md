@@ -6,7 +6,7 @@ parent: Guides
 
 # Define your API
 
-This page gets you a new operation in your Go API, from the first line to a passing `mise run check`: its route, its inputs and outputs, validation, errors, the names the generated SDKs give it, pagination and storage. It uses one worked example, `GET /api/notes/{id}`, added to the project that `dev new -name billing-api` made ([Getting started](../getting-started.md)). Every command and every output below was run on that project.
+This page gets you a new operation in your Go API, from the first line to a passing `mise run check`: its route, its inputs and outputs, validation, errors, the names the generated SDKs give it, pagination and storage. It uses one worked example, `GET /api/notes/{id}`, added to the project that `charter new -name billing-api` made ([Getting started](../getting-started.md)). Every command and every output below was run on that project.
 
 ## The shape of an operation
 
@@ -14,8 +14,8 @@ The whole API is two files in your project:
 
 | File | What it holds |
 |---|---|
-| `api/go/api/contract.go` | The contract: one entry in `Routes` per operation, and the input and output structs |
-| `api/go/api/handlers.go` | The code that runs when the operation is called |
+| `api/contract.go` | The contract: one entry in `Routes` per operation, and the input and output structs |
+| `api/handlers.go` | The code that runs when the operation is called |
 
 The contract is [Huma](https://huma.rocks) on top of Go's `net/http`. An operation is a Huma operation plus two structs. The struct tags are the validation rules and the OpenAPI schema, so they cannot drift apart. From this one definition come the validation, the OpenAPI and AsyncAPI specs, and the SDKs, the CLI and the docs that Fern makes from the specs.
 
@@ -34,7 +34,7 @@ Each entry in `Routes` has this shape:
 - **`OperationID`** is the operation's name. Say it in both places (the route and the operation). It becomes the tool name for AI agents ([MCP](mcp.md)) and the default SDK method name.
 - **`Tags`** group operations in the docs.
 - **`Summary`** is the one line shown in the docs and given to AI agents as the tool's description.
-- **`Extensions`** carry Fern's `x-fern-*` settings. `sdk(group, method, extra)` is a small helper already in `api/go/api/contract.go` that sets the SDK names (below).
+- **`Extensions`** carry Fern's `x-fern-*` settings. `sdk(group, method, extra)` is a small helper already in `api/contract.go` that sets the SDK names (below).
 
 ## Add an operation: GET /api/notes/{id}
 
@@ -42,7 +42,7 @@ Four edits. Each is shown as it was made.
 
 ### 1. The input and output structs
 
-In `api/go/api/contract.go`:
+In `api/contract.go`:
 
 ```go
 type GetInput struct {
@@ -77,7 +77,7 @@ Add this entry to the list `Routes` returns, in the same file:
 
 ### 3. The handler
 
-In `api/go/api/handlers.go` (add `"errors"` to its imports):
+In `api/handlers.go` (add `"errors"` to its imports):
 
 ```go
 func (env Env) get(ctx context.Context, in *GetInput) (*NoteOutput, error) {
@@ -105,17 +105,17 @@ The handler needs `Get` on the store. That is in the next section, in full: add 
 ### 5. Regenerate the specs and check
 
 ```sh
-mise run api:go:spec    # rewrites sdk/fern/apis/api-go/openapi.json and asyncapi.json from the contract
-mise run api:go:lint    # gofmt and go vet, natively and for Wasm
-mise run api:go:test    # the Go tests
+mise run spec    # rewrites fern/openapi.json and asyncapi.json from the contract
+mise run lint    # gofmt and go vet, natively and for Wasm
+mise run test    # the Go tests
 ```
 
-After this change `api:go:test` fails in one place, and it is expected: `api/go/api/mcp_test.go` lists the operations that are tools for AI agents, and `getNote` is a new one. Run it, read the `got` it prints and put the new tool into `want` ([Expose the API to AI agents](mcp.md)). Then `mise run check` runs everything, including the spec drift check that fails if you forget `api:go:spec`.
+After this change `test` fails in one place, and it is expected: `api/mcp_test.go` lists the operations that are tools for AI agents, and `getNote` is a new one. Run it, read the `got` it prints and put the new tool into `want` ([Expose the API to AI agents](mcp.md)). Then `mise run check` runs everything, including the spec drift check that fails if you forget `spec`.
 
 ### 6. Call it
 
 ```sh
-mise run api:go:run                                    # in one shell: http://localhost:5174
+mise run run                                    # in one shell: http://localhost:5174
 ```
 
 In another shell (the outputs are from a run on another port):
@@ -171,7 +171,7 @@ curl -s localhost:5174/api/notes/1 -H 'X-Trace-Id: BAD ID'
 
 ### A rule the tags cannot say
 
-Give the input a `Resolve` method. It runs after the tags pass. The notes API uses it to refuse a body that contains the stream's end marker (`api/go/api/handlers.go`):
+Give the input a `Resolve` method. It runs after the tags pass. The notes API uses it to refuse a body that contains the stream's end marker (`api/handlers.go`):
 
 ```go
 func (in *CreateInput) Resolve(huma.Context) []error {
@@ -212,7 +212,7 @@ That is `client.notes.get(...)` in TypeScript, `c.Notes.Get(...)` in Go, and `bi
 
 ## Paginate a list with a cursor
 
-`listNotes` in `api/go/api/contract.go` is the pattern to copy:
+`listNotes` in `api/contract.go` is the pattern to copy:
 
 ```go
 Extensions: sdk("notes", "list", map[string]any{
@@ -226,14 +226,14 @@ Two rules, both from the code's comments. Make the cursor a string, even when it
 
 ## Store the data
 
-A handler asks `env.Store()` for a `Store` (`api/go/api/store.go`) and calls its methods. `Store` is an interface with two implementations:
+A handler asks `env.Store()` for a `Store` (`api/store.go`) and calls its methods. `Store` is an interface with two implementations:
 
 | Implementation | Used when | Where |
 |---|---|---|
-| `MemStore` | `mise run api:go:run` and the Go tests | Memory. It is gone when the process stops |
-| `SQLStore` | On Cloudflare, and under `mise run api:go:dev` | Cloudflare D1, through Go's `database/sql` |
+| `MemStore` | `mise run run` and the Go tests | Memory. It is gone when the process stops |
+| `SQLStore` | On Cloudflare, and under `mise run dev` | Cloudflare D1, through Go's `database/sql` |
 
-Adding the `Get` method to both finishes step 4. In `api/go/api/store.go`, add to the interface and define the error:
+Adding the `Get` method to both finishes step 4. In `api/store.go`, add to the interface and define the error:
 
 ```go
 type Store interface {
@@ -288,8 +288,8 @@ ALTER TABLE notes ADD COLUMN title TEXT;
 Then apply it:
 
 ```sh
-mise run api:go:migrate:local   # to the local D1 of a running api:go:dev
-mise run api:go:migrate         # REMOTE: to your Cloudflare database (api:go:deploy does this too)
+mise run migrate:local   # to the local D1 of a running dev
+mise run migrate         # REMOTE: to your Cloudflare database (deploy does this too)
 ```
 
 `MemStore` has no tables, so a new column there is a field in `Note`.
@@ -310,7 +310,7 @@ type GetInput struct {
 }
 ```
 
-After `mise run api:go:spec`, the schema in `sdk/fern/apis/api-go/openapi.json` carries them (a real run):
+After `mise run spec`, the schema in `fern/openapi.json` carries them (a real run):
 
 ```json
 "Note": {
@@ -333,12 +333,12 @@ Choose values that pass your own rules.
 To check what the SDK documentation shows, generate the SDK (Docker is needed) and read the examples in the files it writes:
 
 ```sh
-mise run sdk:gen api-go typescript   # into sdk/out/api-go/typescript
+mise run sdk:gen typescript   # into sdk/out/typescript
 ```
 
-Open `sdk/out/api-go/typescript/README.md` and `reference.md` there, and look at the values in the code samples. I did not run Fern for this page, so what it prints for these fields is not shown here.
+Open `sdk/out/typescript/README.md` and `reference.md` there, and look at the values in the code samples. I did not run Fern for this page, so what it prints for these fields is not shown here.
 
-Adding an example to `Note` changes the schema AI agents get for the tools, so `api/go/api/mcp_test.go` needs its `want` updated again (see step 5).
+Adding an example to `Note` changes the schema AI agents get for the tools, so `api/mcp_test.go` needs its `want` updated again (see step 5).
 
 ## A stream route beside a get-by-id
 

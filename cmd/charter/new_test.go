@@ -139,6 +139,30 @@ func TestNewProjectOnYourSubdomain(t *testing.T) {
 	}
 }
 
+// From a release (its tag, cloned), the project pins that release of the tool under [tools], and
+// its tasks run `charter`, which mise then has on the path.
+func TestNewProjectFromAReleasePinsTheTool(t *testing.T) {
+	repo, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	into := t.TempDir()
+	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", ""); err != nil {
+		t.Fatal(err)
+	}
+	tasks, _ := os.ReadFile(filepath.Join(into, "mise.toml"))
+	for _, want := range []string{"[tools]\n# The tool every task runs: `mise up` moves to a newer release.\n\"go:" + toolPackage + "\" = \"1.2.3\"\n", `run = "charter wasm-build"`, `-run "charter migrate-local -port {port}"`} {
+		if !strings.Contains(string(tasks), want) {
+			t.Errorf("mise.toml: no %q", want)
+		}
+	}
+	for _, gone := range []string{"go run ../../", "CHARTER", exampleWorker} {
+		if strings.Contains(string(tasks), gone) {
+			t.Errorf("mise.toml mentions %q", gone)
+		}
+	}
+}
+
 // What the first line says a release pins, and what a checkout does.
 func TestPinned(t *testing.T) {
 	for want, got := range map[string]string{

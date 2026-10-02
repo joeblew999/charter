@@ -4,27 +4,27 @@ nav_order: 3
 parent: Reference
 ---
 
-# Go packages: what a project imports from orpc-api
+# Go packages: what a project imports from charter
 
-The six Go packages a project made by `dev new` imports: what each is for, every exported name with its signature, and a minimal use. Read it when you write or change a contract, a handler or the Worker's entry. The signatures were checked against `go doc` on 2026-10-01.
+The six Go packages a project made by `charter new` imports: what each is for, every exported name with its signature, and a minimal use. Read it when you write or change a contract, a handler or the Worker's entry. The signatures were checked against `go doc` on 2026-10-01.
 
-All six are in one Go module, which the project's `api/go/go.mod` requires:
+All six are in one Go module, which the project's `go.mod` requires:
 
 ```sh
-cd api/go && go get github.com/joeblew999/orpc-api/go@latest   # add or update the module
+go get github.com/joeblew999/charter/go@latest   # add or update the module
 ```
 
 | Package | Import path | What it is for | Under TinyGo |
 |---|---|---|---|
-| `humaworkers` | `github.com/joeblew999/orpc-api/go/humaworkers` | Runs a [Huma](https://huma.rocks) API on Cloudflare Workers | Yes |
-| `asyncapi` | `github.com/joeblew999/orpc-api/go/asyncapi` | Writes the AsyncAPI spec of the API's WebSocket channels | Yes |
-| `follow` | `github.com/joeblew999/orpc-api/go/follow` | Gives a client every item of a log once, in order, live | Yes |
-| `hub` | `github.com/joeblew999/orpc-api/go/hub` | The live signal of a feed: publish an item, every subscriber gets it. A Durable Object on Cloudflare, memory natively | Yes |
-| `humamcp` | `github.com/joeblew999/orpc-api/go/humamcp` | Serves the API's operations as MCP tools | Yes |
-| `transport` | `github.com/joeblew999/orpc-api/go/transport` | Lets the Go handler serve WebSockets, on Workers and natively | Yes, with a different body |
-| `specfile` | `github.com/joeblew999/orpc-api/go/specfile` | The body of the command that writes the spec files | Not used there: it runs on your machine |
+| `humaworkers` | `github.com/joeblew999/charter/go/humaworkers` | Runs a [Huma](https://huma.rocks) API on Cloudflare Workers | Yes |
+| `asyncapi` | `github.com/joeblew999/charter/go/asyncapi` | Writes the AsyncAPI spec of the API's WebSocket channels | Yes |
+| `follow` | `github.com/joeblew999/charter/go/follow` | Gives a client every item of a log once, in order, live | Yes |
+| `hub` | `github.com/joeblew999/charter/go/hub` | The live signal of a feed: publish an item, every subscriber gets it. A Durable Object on Cloudflare, memory natively | Yes |
+| `humamcp` | `github.com/joeblew999/charter/go/humamcp` | Serves the API's operations as MCP tools | Yes |
+| `transport` | `github.com/joeblew999/charter/go/transport` | Lets the Go handler serve WebSockets, on Workers and natively | Yes, with a different body |
+| `specfile` | `github.com/joeblew999/charter/go/specfile` | The body of the command that writes the spec files | Not used there: it runs on your machine |
 
-"Under TinyGo" means the package is part of the Wasm that `mise run api:go:build` makes and that the checks run under workerd. All of them also build with standard Go.
+"Under TinyGo" means the package is part of the Wasm that `mise run build` makes and that the checks run under workerd. All of them also build with standard Go.
 
 In the signatures, `huma` is `github.com/danielgtaylor/huma/v2`.
 
@@ -45,7 +45,7 @@ A Huma API whose operations are registered only when a request needs them. On Wo
 | `(*API).Operations` | `func (a *API) Operations() []*huma.Operation` | Registers every route and returns every operation, hidden ones too, in the routes' order |
 | `(*API).OpenAPI` | `func (a *API) OpenAPI() *huma.OpenAPI` | Registers every route and returns the OpenAPI document |
 
-A minimal use, as in `api/go/api/contract.go` and `api/go/api/handlers.go`:
+A minimal use, as in `api/contract.go` and `api/handlers.go`:
 
 ```go
 // One Route per operation of the contract.
@@ -66,10 +66,10 @@ routes := humaworkers.New(humaworkers.Config(Title, Version), Routes(env))
 
 Limits:
 
-- **Build with `-stack-size=128kb` or more.** Huma overflows TinyGo's default stack. `mise run api:go:build` passes 128 KB.
+- **Build with `-stack-size=128kb` or more.** Huma overflows TinyGo's default stack. `mise run build` passes 128 KB.
 - **Form values are strings.** With `WithForm`, the fields of the `Body` must be strings, or lists of strings for a repeated name.
 - **Uploads stay in memory, up to 32 MB.** A Worker has no disk. Importing the package sets Huma's limit (`humago.MultipartMaxMemory`).
-- **Huma's typed multipart form does not run under TinyGo.** Take the plain `multipart.Form` and declare its schema on the operation, as `api/go/showcase/contract.go` does in the orpc-api repo.
+- **Huma's typed multipart form does not run under TinyGo.** Take the plain `multipart.Form` and declare its schema on the operation, as `examples/showcase-go/api/contract.go` does in the charter repo.
 
 ## asyncapi
 
@@ -85,7 +85,7 @@ Generates an AsyncAPI 3.0.0 document from Huma operations, the way Huma generate
 | `Send` | `type Send struct` with `Channel string`, `OperationID string`, `Message string` | A message the client sends. `Channel` is the `Name` of its channel. `OperationID` defaults to `send<Message>`, `Message` to the body's schema name |
 | `Info` | `type Info struct` with `Title string`, `Version string` | The document's info object |
 
-A minimal use, as in `api/go/api/contract.go` (the channel) and `api/go/api/spec.go` (the document):
+A minimal use, as in `api/contract.go` (the channel) and `api/spec.go` (the document):
 
 ```go
 // In the contract: the WebSocket operation, marked as a channel.
@@ -130,7 +130,7 @@ The fields of `Options`:
 | `PageSize` | `int` | 100 | Items per read of the log |
 | `OnBroken` | `func(error)` | none | Called when the live subscription breaks, before resubscribing: for logs |
 
-A minimal use, shortened from the WebSocket handler in `api/go/api/handlers.go` (`notes` is a `Source` made of the store and the hub; `Note` has a `Position` method):
+A minimal use, shortened from the WebSocket handler in `api/handlers.go` (`notes` is a `Source` made of the store and the hub; `Note` has a `Position` method):
 
 ```go
 options := follow.Options{After: &after}   // after: the id of the last note the client received
@@ -163,7 +163,7 @@ func DurableObject[T any](binding, name string) (Hub[T], error)   // on Cloudfla
 type Memory[T any] struct{ /* ... */ }                             // natively and in tests; the zero value is ready
 ```
 
-- **`DurableObject`** is the object called `name` of the Durable Object namespace bound as `binding` in `cloudflare.config.ts`. The class is `Hub` in the library's `go/worker/hub.mjs` (the build writes it into `api/go/build/`), which sends each published body to every subscriber and knows nothing of the type. Open it per request.
+- **`DurableObject`** is the object called `name` of the Durable Object namespace bound as `binding` in `cloudflare.config.ts`. The class is `Hub` in the library's `go/worker/hub.mjs` (the build writes it into `build/`), which sends each published body to every subscriber and knows nothing of the type. Open it per request.
 - **One class serves every feed.** Each name is its own object with its own subscribers, so a second feed needs no second class and no second binding:
 
 ```go
@@ -175,7 +175,7 @@ devices, err := hub.DurableObject[Device]("HUB", "devices")
 
 Limits:
 
-- **`DurableObject` exists only in the Wasm build** (`js && wasm`). Call it from a file with that build tag, as `api/go/platform_js.go` does.
+- **`DurableObject` exists only in the Wasm build** (`js && wasm`). Call it from a file with that build tag, as `platform_js.go` does.
 - **Items travel as JSON,** so `T` must marshal and unmarshal to itself.
 - **Checked with one feed.** The notes feed runs through it under workerd and on Cloudflare. Two names on one binding were not run there; `Memory` is tested with two feeds.
 
@@ -193,7 +193,7 @@ Serves a Huma API as an MCP server (Model Context Protocol). Every operation is 
 | `Modern` | `var Modern = []string{"2026-07-28"}` | The protocol revisions served that name their version on every request |
 | `Legacy` | `var Legacy = []string{"2025-11-25", "2025-06-18"}` | The revisions served that open with `initialize` |
 
-A minimal use, as in `api/go/api/handlers.go`:
+A minimal use, as in `api/handlers.go`:
 
 ```go
 routes := humaworkers.New(config(), Routes(env))
@@ -230,7 +230,7 @@ What the handler answers a WebSocket upgrade (a `GET` with `Upgrade: websocket`)
 | 204 | There is no feed. The socket stays open until the client closes it |
 | The header `X-Websocket-Messages: post` | The channel takes messages. Each text frame from the client is given to Go as a `POST` to the same URL, with the upgrade's headers and the frame as the JSON body. The lines of the answer are sent as frames. One message at a time, in order. Anything but 2xx closes the socket with 1008. Without the header, what the client sends is ignored |
 
-A minimal use, the whole of `main` in `api/go/main.go`:
+A minimal use, the whole of `main` in `main.go`:
 
 ```go
 func main() {
@@ -256,7 +256,7 @@ The body of the command that writes the specs a contract generates into files, f
 The command `Main` makes:
 
 ```sh
-cd api/go && go run ./cmd/spec [-check] <openapi.json> <asyncapi.json> [server-url]   # one file per spec function, in order
+go run ./cmd/spec [-check] <openapi.json> <asyncapi.json> [server-url]   # one file per spec function, in order
 ```
 
 | Argument | Default | What it is |
@@ -265,7 +265,7 @@ cd api/go && go run ./cmd/spec [-check] <openapi.json> <asyncapi.json> [server-u
 | a file per spec function | required | Where each spec is written |
 | `server-url` | `https://api.example.com` | The server the specs name |
 
-A minimal use, the whole of `api/go/cmd/spec/main.go`:
+A minimal use, the whole of the spec command (`main.go` in the project's cmd/spec folder):
 
 ```go
 func main() {
@@ -273,8 +273,8 @@ func main() {
 }
 ```
 
-`mise run api:go:spec` and `mise run api:go:spec:check` run it with the project's files and `API_GO_URL`.
+`mise run spec` and `mise run spec:check` run it with the project's files and `API_URL`.
 
 ## Versions
 
-The packages are released together, under one version ([Releases](releases.md)). They are built against the Huma and workers-go versions in the module's `go.mod`, which your project's `api/go/go.mod` then also uses.
+The packages are released together, under one version ([Releases](releases.md)). They are built against the Huma and workers-go versions in the module's `go.mod`, which your project's `go.mod` then also uses.

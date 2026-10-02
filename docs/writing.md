@@ -5,7 +5,7 @@ nav_order: 90
 
 # Writing docs
 
-Written by `dev docs` (the same page in every repo that uses it): don't edit it here, change `dev/docs/writing.md` in [orpc-api](https://github.com/joeblew999/orpc-api). These are the rules a page in `docs/` is held to. `mise run docs:lint` checks what a program can check, and `mise run docs:review` has Claude do the rest.
+Written by `charter docs` (the same page in every repo that uses it): don't edit it here, change `cmd/charter/docs/writing.md` in [charter](https://github.com/joeblew999/charter). These are the rules a page in `docs/` is held to. `mise run docs:lint` checks what a program can check, and `mise run docs:review` has Claude do the rest.
 
 ## Who reads a page
 
@@ -15,7 +15,7 @@ A developer or an agent who is new to this repo and has a job to do. They know t
 
 1. **One job.** The first paragraph says what the page covers and when to read it. If a page has two jobs, it is two pages.
 2. **True at this commit.** It describes the repo as it is. No history ("previously", "we changed", "now"): that is what git and the findings page are for. Nothing planned, except under `plans/`.
-3. **Checkable.** Every command is one the reader can paste: a real task from `mise tasks`, shown as typed. Every path exists and is written from the repo's root (`api/go/api/contract.go`, not `api/contract.go`). Every number says where it was measured and when.
+3. **Checkable.** Every command is one the reader can paste: a real task from `mise tasks`, shown as typed. Every path exists and is written from the repo's root (`api/contract.go`, not `contract.go`). Every number says where it was measured and when.
 4. **One place per fact.** A fact lives on the page that owns it; other pages link to it. A repeated fact goes stale in one of its copies.
 5. **In the order the reader needs it.** How to run or use the thing first, then how it works, then limits and reference.
 6. **Honest about limits.** What is not done, not tested, or only tested locally is said plainly, next to the claim it limits.
@@ -24,7 +24,7 @@ A developer or an agent who is new to this repo and has a job to do. They know t
 
 - **Plain words, short sentences.** One idea each. No sales language, no filler.
 - **One name per thing.** Use the names from the "What is what" table on the start page, and the same name every time. Define any other term where it first appears.
-- **Say what something is before what it is called.** "The tool the tasks run (`dev`)", not "`dev`, the tool...".
+- **Say what something is before what it is called.** "The tool the tasks run (`charter`)", not "`charter`, the tool...".
 - **Tables for mappings and comparisons, bullets for lists, code blocks for commands.** A command gets a comment saying what it does. Bullets start with their subject in bold. No bullet nested more than two deep.
 - **Headings a reader would search for:** what the section answers, not a label.
 - **Examples are real.** Output shown is output that was produced; names in examples exist.

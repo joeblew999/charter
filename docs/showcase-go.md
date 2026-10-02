@@ -7,47 +7,47 @@ parent: This repository
 
 The showcase is one small API with every Fern feature we use. It exists twice, like the notes API: as an oRPC contract (the oRPC showcase, in [sdk.md](sdk.md#the-orpc-showcase)) and, on this page, as a Go one. Read this page when a Go API needs OAuth, idempotency, a file upload, webhooks or a WebSocket the client also sends on: it says, feature by feature, what to write in the contract.
 
-- **The contract is Huma operations** (`api/go/showcase/contract.go`). Both specs are generated from it into `sdk/fern/apis/showcase-go/`.
+- **The contract is Huma operations** (`examples/showcase-go/api/contract.go`). Both specs are generated from it into `examples/showcase-go/fern/`.
 - **The server is real,** not a mock: it checks tokens, signs and sends the webhook, and validates what a WebSocket client sends.
-- **It runs three ways:** natively, as TinyGo Wasm on workers-go under local workerd, and deployed as the Worker `orpc-showcase-go`.
+- **It runs three ways:** natively, as TinyGo Wasm on workers-go under local workerd, and deployed as the Worker `charter-showcase-go`.
 - **A test keeps it equal to the oRPC showcase** in everything an SDK sees.
 
 ## Tasks (from the repo root)
 
 ```sh
-mise run showcase:go:run            # natively on :5175 (SHOWCASE_GO_PORT). WEBHOOK_URL=<url> to get the webhook
-mise run showcase:go:dev            # under workerd on :5175: the TinyGo build, then cf dev. SHOWCASE_WEBHOOK_URL=<url> to get the webhook
-mise run showcase:go:build          # the Wasm into api/go/cmd/showcase/build (fails over 3 MB gzipped)
-mise run showcase:go:spec           # write both specs again, after changing the contract
-mise run showcase:go:check          # LOCAL: lint, Go tests, spec:check, test:native and test:workerd
-mise run showcase:go:lint           # go vet of the server for Wasm (api:go:lint covers gofmt and the host)
-mise run showcase:go:spec:check     # fail if a committed spec is stale against the contract
-mise run showcase:go:test:native    # the SDK test against the native build, with the webhook
-mise run showcase:go:test:workerd   # the same against the TinyGo Wasm under workerd
-mise run showcase:go:test           # the SDK test against a running showcase:go:run or showcase:go:dev (no webhook check)
-mise run sdk:check-spec showcase-go # fern check
-mise run sdk:gen showcase-go go     # Fern (Docker); the other groups: typescript, typescript-public, typescript-dist, cli
-mise run showcase:go:deploy         # REMOTE: build and deploy orpc-showcase-go. It has no storage
+mise run run            # natively on :5175 (API_PORT). WEBHOOK_URL=<url> to get the webhook
+mise run dev            # under workerd on :5175: the TinyGo build, then cf dev. SHOWCASE_WEBHOOK_URL=<url> to get the webhook
+mise run build          # the Wasm into examples/showcase-go/build (fails over 3 MB gzipped)
+mise run spec           # write both specs again, after changing the contract
+mise run check          # LOCAL: lint, Go tests, spec:check, test:native and test:workerd
+mise run lint           # go vet of the server for Wasm (lint covers gofmt and the host)
+mise run spec:check     # fail if a committed spec is stale against the contract
+mise run test:native    # the SDK test against the native build, with the webhook
+mise run test:workerd   # the same against the TinyGo Wasm under workerd
+mise run test           # the SDK test against a running run or dev (no webhook check)
+mise run sdk:check-spec # fern check
+mise run sdk:gen go     # Fern (Docker); the other groups: typescript, typescript-public, typescript-dist, cli
+mise run deploy         # REMOTE: build and deploy charter-showcase-go. It has no storage
 ```
 
-The test tasks generate the TypeScript SDK they use the first time, which needs Docker. There is no task for the test against the deployed Worker: `node test/showcase-test.mjs "$SHOWCASE_GO_URL" showcase-go` (the variable is set by mise; it defaults to this repo's deployed Worker).
+The test tasks generate the TypeScript SDK they use the first time, which needs Docker. There is no task for the test against the deployed Worker: `node examples/notes-go/test/showcase-test.mjs "$API_URL" showcase-go` (the variable is set by mise; it defaults to this repo's deployed Worker).
 
 ## Layout
 
-It lives inside the `api/go` module, beside the notes API, so it imports `humaworkers`, `asyncapi`, `transport` and `specfile` instead of copying them. It is its own program and its own Worker, so the notes API's Wasm, specs and behaviour don't depend on it.
+It lives inside the `examples/notes-go` module, beside the notes API, so it imports `humaworkers`, `asyncapi`, `transport` and `specfile` instead of copying them. It is its own program and its own Worker, so the notes API's Wasm, specs and behaviour don't depend on it.
 
 | Path | What it is |
 |---|---|
-| `api/go/showcase/contract.go` | **The contract (edit this):** every operation, its input and output structs, and what Fern needs |
-| `api/go/showcase/handlers.go` | The contract implemented, the token check, and the settings' defaults |
-| `api/go/showcase/spec.go` | Both specs from the contract: the document-level settings and the webhook are written here |
-| `api/go/showcase/showcase_test.go`, `api/go/showcase/surface_test.go` | The handlers, and the same surface as the oRPC showcase |
-| `api/go/cmd/showcase/` | The server: `main.go` and two `platform_*.go` files; `worker.mjs`, `cloudflare.config.ts`, `package.json` and `vite.config.ts` make it a Worker (`orpc-showcase-go`). cf and its packages are `api/go/`'s |
-| `api/go/cmd/showcase-spec/` | Writes the two spec files, or checks them (`specfile`, as `api/go/cmd/spec/` does for the notes API) |
+| `examples/showcase-go/api/contract.go` | **The contract (edit this):** every operation, its input and output structs, and what Fern needs |
+| `examples/showcase-go/api/handlers.go` | The contract implemented, the token check, and the settings' defaults |
+| `examples/showcase-go/api/spec.go` | Both specs from the contract: the document-level settings and the webhook are written here |
+| `examples/showcase-go/api/showcase_test.go`, `examples/showcase-go/api/surface_test.go` | The handlers, and the same surface as the oRPC showcase |
+| `examples/showcase-go/` | The server: `main.go` and two `platform_*.go` files; `worker.mjs`, `cloudflare.config.ts`, `package.json` and `vite.config.ts` make it a Worker (`charter-showcase-go`). cf and its packages are `examples/notes-go/`'s |
+| `examples/showcase-go/cmd/spec/` | Writes the two spec files, or checks them (`specfile`, as `examples/notes-go/cmd/spec/` does for the notes API) |
 | `go/transport/` | The WebSocket adapter for the native build, and the rules both adapters follow |
 | `go/worker/websocket.mjs` | The same adapter for Cloudflare, used by both Workers' entries |
-| `sdk/fern/apis/showcase-go/` | The generated specs, `generators.yml` (the same groups as `sdk/fern/apis/showcase-ts/`) and the overlay |
-| `test/showcase-test.mjs` | The SDK test: the TypeScript SDK against a running server ([testing.md](testing.md)) |
+| `examples/showcase-go/fern/` | The generated specs, `generators.yml` (the same groups as `examples/showcase-ts/fern/`) and the overlay |
+| `examples/showcase-go/test/showcase-test.mjs` | The SDK test: the TypeScript SDK against a running server ([testing.md](testing.md)) |
 
 ## The routes
 
@@ -65,7 +65,7 @@ Paths start at the root. Every route but the token one needs a valid bearer toke
 
 ## Feature by feature
 
-"The SDK test" is `test/showcase-test.mjs`: the TypeScript SDK that Fern generates from the Go specs, from Node, over the network. `mise run showcase:go:check` runs it against the native build and against the Wasm under workerd. "Go tests" are the two test files in `api/go/showcase/`. In the table, `config()` and `document()` are in `api/go/showcase/spec.go`.
+"The SDK test" is `examples/showcase-go/test/showcase-test.mjs`: the TypeScript SDK that Fern generates from the Go specs, from Node, over the network. `mise run check` runs it against the native build and against the Wasm under workerd. "Go tests" are the two test files in `examples/showcase-go/api/`. In the table, `config()` and `document()` are in `examples/showcase-go/api/spec.go`.
 
 | Fern feature | How the Go contract switches it on | What the SDK gets | How it is tested |
 |---|---|---|---|
@@ -80,7 +80,7 @@ Paths start at the root. Every route but the token one needs a valid bearer toke
 | Audiences | `x-fern-audiences` in `Extensions`; the group `typescript-public` in `generators.yml` has `audiences: [public]` | A public SDK without the internal `files.uploadFile` | The SDK test: the generated public SDK has `notes` and `auth`, and no `files` |
 | Overlays | `overlays.yml` beside the specs, the same file as the oRPC showcase's; the contract leaves those two names out | `notes.list` and `notes.create` instead of `notes.listNotes` and `notes.createNote` | The SDK test calls the methods by those names. Go tests hold the two overlay files equal |
 
-The overlay is there to show the feature. A contract of your own says the names itself, as `api/go/api/contract.go` does (`x-fern-sdk-group-name`, `x-fern-sdk-method-name`).
+The overlay is there to show the feature. A contract of your own says the names itself, as `examples/notes-go/api/contract.go` does (`x-fern-sdk-group-name`, `x-fern-sdk-method-name`).
 
 ## What Huma has no struct tag for, and where it is written
 
@@ -89,7 +89,7 @@ All of it is Go code. Nothing is patched into the JSON.
 | Fern needs | Huma 2.39.1 | Where it is written |
 |---|---|---|
 | `security`, `components.securitySchemes`, `x-fern-idempotency-headers`, `x-fern-webhook-signature` | Fields of the document (`huma.Config`), no tags | `config()` |
-| `security: []` on one operation; `x-fern-*` on an operation | `Operation.Security`, `Operation.Extensions` | The operation in `api/go/showcase/contract.go` |
+| `security: []` on one operation; `x-fern-*` on an operation | `Operation.Security`, `Operation.Extensions` | The operation in `examples/showcase-go/api/contract.go` |
 | A form-encoded request body | The `contentType` tag writes the media type into the spec, but Huma has no format that decodes a form | `humaworkers.WithForm(config)`. Every form value is a string, so the body's fields must be strings |
 | A header the SDK sends by itself (`Idempotency-Key`) | A `header` field is a parameter in the spec | `hidden:"true"` on the field: Huma still reads it |
 | A multipart body | `huma.MultipartFormFiles[T]` writes the schema and decodes the form from a struct, but TinyGo can't run it ([below](#tinygo-what-it-took)) | `RawBody multipart.Form`, and the schema on the operation |
@@ -119,7 +119,7 @@ Measured on 2026-10-01 under local workerd (`cf dev`); the upstream issues are i
 - **`crypto/hmac` and `crypto/sha256` work.** Tokens are signed and checked, and the webhook is signed, in the Wasm.
 - **`huma.MultipartFormFiles[T]` panics:** `unimplemented: (reflect.Value).MethodByName()`. The upload takes the plain `multipart.Form` and declares its schema on the operation.
 - **Uploads over 8 KB failed** (`open /tmp/multipart-...: file does not exist`): Huma's adapter keeps 8 KB in memory and writes the rest to a temporary file, and a Worker has no disk. `humaworkers` raises the limit to 32 MB, so uploads stay in memory. 5 MB took 2.4 s.
-- **A webhook is an outgoing request:** workers-go's `fetch` client, as an `*http.Client`, in `api/go/cmd/showcase/platform_js.go`.
+- **A webhook is an outgoing request:** workers-go's `fetch` client, as an `*http.Client`, in `examples/showcase-go/platform_js.go`.
 - **The Wasm is 2.50 MB, 884 KB gzipped** (the notes Worker: 2.47 MB, 875 KB).
 
 ## Differences from the oRPC showcase
@@ -150,12 +150,12 @@ Environment variables natively, variables and secrets on Cloudflare. The default
 | `WEBHOOK_URL` | empty | Where `noteCreated` is sent. Empty: nowhere. For `cf dev` and a deploy it is read from `SHOWCASE_WEBHOOK_URL` |
 | `WEBHOOK_SECRET` | `whsec` | Signs the webhook |
 
-`api/go/cmd/showcase/cloudflare.config.ts` binds only `WEBHOOK_URL`. The other four keep their defaults unless they are set as secrets on the Worker, so a deployment that guards anything must set them.
+`examples/showcase-go/cloudflare.config.ts` binds only `WEBHOOK_URL`. The other four keep their defaults unless they are set as secrets on the Worker, so a deployment that guards anything must set them.
 
 ## What has run where
 
 - **Locally (2026-10-01):** the SDK test passes 12/12 against the native build and against the Wasm under workerd.
-- **On Cloudflare (2026-10-01):** deployed to https://orpc-showcase-go.gedw99.workers.dev, the SDK test passes every check it runs there. The one check not run is the server posting a webhook to the test's own receiver, which only exists on the machine running the test.
+- **On Cloudflare (2026-10-01):** deployed to https://charter-showcase-go.gedw99.workers.dev, the SDK test passes every check it runs there. The one check not run is the server posting a webhook to the test's own receiver, which only exists on the machine running the test.
 
 Both are in [findings.md](findings.md). Not done:
 

@@ -1,44 +1,44 @@
 ---
-title: The dev tool
+title: The charter tool
 nav_order: 1
 parent: Reference
 ---
 
-# The dev tool: every command and flag
+# The charter tool: every command and flag
 
-The program the tasks run (`dev`) is one Go binary with a command for everything that needs more than one line of shell. This page lists every command: its flags and their defaults, what it does, what it needs, and where it runs. Read it when a task fails and you want to run its command by hand, or when you write a task of your own. The tasks that call these commands are in [Tasks](tasks.md).
+The program the tasks run (`charter`) is one Go binary with a command for everything that needs more than one line of shell. This page lists every command: its flags and their defaults, what it does, what it needs, and where it runs. Read it when a task fails and you want to run its command by hand, or when you write a task of your own. The tasks that call these commands are in [Tasks](tasks.md).
 
 ## How to run it
 
 ```sh
-go run github.com/joeblew999/orpc-api/dev@latest help   # no install, needs Go: lists every command
+go run github.com/joeblew999/charter/cmd/charter@latest help   # no install, needs Go: lists every command
 ```
 
 As a shell function, for a session:
 
 ```sh
-dev() { go run github.com/joeblew999/orpc-api/dev@latest "$@"; }   # then: dev help
+charter() { go run github.com/joeblew999/charter/cmd/charter@latest "$@"; }   # then: dev help
 ```
 
-As a mise tool of a project, so that its tasks can call `dev <command>` and the version is pinned in one place. Put one of these two lines in `mise.toml`:
+As a mise tool of a project, so that its tasks can call `charter <command>` and the version is pinned in one place. Put one of these two lines in `mise.toml`:
 
 ```toml
 [tools]
-"go:github.com/joeblew999/orpc-api/dev" = "latest"                                   # built with Go
+"go:github.com/joeblew999/charter/cmd/charter" = "latest"                                   # built with Go
 # or a prebuilt binary, no Go needed:
-"ubi:joeblew999/orpc-api" = { version = "latest", exe = "dev", matching = "dev_" }
+"ubi:joeblew999/charter" = { version = "latest", exe = "dev", matching = "dev_" }
 ```
 
-A project made by `dev new` has the first line already, and every task in it calls `dev <command>`. In such a project:
+A project made by `charter new` has the first line already, and every task in it calls `charter <command>`. In such a project:
 
 ```sh
-mise exec -- dev help        # the pinned tool, from any shell
+mise exec -- charter help        # the pinned tool, from any shell
 mise run doctor              # what you normally type: a task that calls the tool
 ```
 
 The tool as a binary, without Go or mise, is in [Releases](releases.md#the-stable-links).
 
-The examples on this page write `dev <command>`. Use whichever of the forms above you have.
+The examples on this page write `charter <command>`. Use whichever of the forms above you have.
 
 ## Where a command runs
 
@@ -47,9 +47,9 @@ A command looks for a `go.work` file in the directory it was started in, then in
 | Commands | Where they run |
 |---|---|
 | `new`, `workflows`, `docs`, `docs-lint`, `docs-review` | In any directory, with or without a `go.work` |
-| Every other command | Only below a `go.work`. Without one it fails: `not inside the repo (no go.work above here)` |
+| Every other command | Only in a project. Without one it fails: `not inside the repo (no go.work above here)` |
 
-"Project layout" below means what `dev new` creates: `api/go/`, `sdk/`, `migrations/` and `test/` beside the `go.work` ([Configuration](config.md#the-files-of-a-project)). "orpc-api only" means the command reads folders that exist only in the orpc-api repo itself.
+"Project layout" below means what `charter new` creates: the project's folder, `sdk/`, `migrations/` and `test/` beside the `go.work` ([Configuration](config.md#the-files-of-a-project)). "charter only" means the command reads folders that exist only in the charter repo itself.
 
 A flag is written `-name value`. Flags come before arguments.
 
@@ -58,29 +58,29 @@ A flag is written `-name value`. Flags come before arguments.
 ### new
 
 ```sh
-dev new -name <name> [-module <go module>] [-into <dir>] [-from <checkout>]   # create a new Go API project
+charter new -name <name> [-module <go module>] [-into <dir>] [-from <checkout>]   # create a new Go API project
 ```
 
-Creates a project: the notes API of orpc-api under your project's name, with its tasks, Fern folder, tests and a `docs/` folder. It prints the next commands to run.
+Creates a project: the notes API of charter under your project's name, with its tasks, Fern folder, tests and a `docs/` folder. It prints the next commands to run.
 
 | Flag | Default | What it is |
 |---|---|---|
 | `-name` | required | The project, its Worker and its database (`<name>-db`). 3 to 42 characters: lower-case letters, digits and hyphens, starting with a letter and not ending in a hyphen. It also gives the SDK's names: `billing-api` gives `BillingApi` and `billingapi` |
-| `-module` | `github.com/<your GitHub login>/<name>` | The Go module path. The module of the API is `<module>/api/go` |
+| `-module` | `github.com/<your GitHub login>/<name>` | The Go module path. The module of the API is `<module>/.` |
 | `-into` | `./<name>` | Where to create it. The directory must be empty or absent |
-| `-from` | the tool's own release, cloned from GitHub | A checkout of orpc-api to copy from |
+| `-from` | the tool's own release, cloned from GitHub | A checkout of charter to copy from |
 
-- **Needs:** Go (it runs `go mod tidy` and `gofmt`), git and network access (it clones orpc-api at the tool's version). `gh`, logged in, only when `-module` is left out.
+- **Needs:** Go (it runs `go mod tidy` and `gofmt`), git and network access (it clones charter at the tool's version). `gh`, logged in, only when `-module` is left out.
 - **Runs:** anywhere.
-- **Which version the project pins:** run as a release (`@latest`, or a downloaded binary), the project's `mise.toml` and `api/go/go.mod` name that release. Run with `-from`, or from a checkout of orpc-api, the tool is pinned as `latest` and `api/go/go.mod` gets a `replace` line that points at the checkout. Remove that line once you depend on a release.
+- **Which version the project pins:** run as a release (`@latest`, or a downloaded binary), the project's `mise.toml` and `go.mod` name that release. Run with `-from`, or from a checkout of charter, the tool is pinned as `latest` and `go.mod` gets a `replace` line that points at the checkout. Remove that line once you depend on a release.
 
 ### doctor
 
 ```sh
-dev doctor     # check what the tasks need
+charter doctor     # check what the tasks need
 ```
 
-Prints one line per check: npm packages installed in `api/go/` and `sdk/`, Docker running, `go`, `tinygo`, `wasm-opt`, `cargo` and `gh` on the path, `FERN_TOKEN` set, no leftover WireMock containers. Then it lists the APIs, as `sdk-list` does. It fails only for missing npm packages or Docker not running. The others are warnings.
+Prints one line per check: npm packages installed in the project's folder and `sdk/`, Docker running, `go`, `tinygo`, `wasm-opt`, `cargo` and `gh` on the path, `FERN_TOKEN` set, no leftover WireMock containers. Then it lists the APIs, as `sdk-list` does. It fails only for missing npm packages or Docker not running. The others are warnings.
 
 - **Needs:** nothing.
 - **Runs:** project layout.
@@ -88,20 +88,20 @@ Prints one line per check: npm packages installed in `api/go/` and `sdk/`, Docke
 ### upstream
 
 ```sh
-dev upstream   # every workaround in the code, with the state of its upstream issue
+charter upstream   # every workaround in the code, with the state of its upstream issue
 ```
 
-Finds every comment `Upstream: <owner>/<repo>#<n>` in the files git tracks (Markdown, `mise.toml` and a `dev/` folder are left out) and asks GitHub for each issue's state. `CLOSED` means that workaround can go.
+Finds every comment `Upstream: <owner>/<repo>#<n>` in the files git tracks (Markdown, `mise.toml` and a `cmd/charter/` folder are left out) and asks GitHub for each issue's state. `CLOSED` means that workaround can go.
 
 - **Needs:** a git repository, and `gh` (an issue it cannot read is shown as `UNREACHABLE`).
-- **Runs:** any directory below a `go.work`.
+- **Runs:** any directory in a project.
 
 ## API and database
 
 ### with-server
 
 ```sh
-dev with-server -url <url> -start <cmd> [-dir <dir>] -run <cmd> [-run <cmd>]...   # start a server, run commands against it, stop it
+charter with-server -url <url> -start <cmd> [-dir <dir>] -run <cmd> [-run <cmd>]...   # start a server, run commands against it, stop it
 ```
 
 Starts a server, waits up to 90 seconds until the URL answers, runs each `-run` command in order, then stops the server and its children. It stops at the first command that fails. Output of the server and of the commands is shown only on failure.
@@ -116,43 +116,43 @@ Starts a server, waits up to 90 seconds until the URL answers, runs each `-run` 
 In `-url`, `-start` and every `-run`, the text `{port}` is replaced by a free port and `{port2}` by a second one. It fails if the URL already answers before the server starts.
 
 - **Needs:** `bash`.
-- **Runs:** any directory below a `go.work`.
+- **Runs:** any directory in a project.
 
 ### migrate-local
 
 ```sh
-dev migrate-local [-worker <name>] [-port <port>]   # apply migrations to a running local dev server
+charter migrate-local [-worker <name>] [-port <port>]   # apply migrations to a running local dev server
 ```
 
 Applies each file in `migrations/*.sql`, in name order, to the local D1 database of a running `cf dev`, each file once. It records what it applied in a table `_local_migrations` in that database.
 
 | Flag | Default | What it is |
 |---|---|---|
-| `-worker` | `orpc-api` | The Worker's name, as in `api/go/cloudflare.config.ts`. The tasks of a project pass the project's name |
-| `-port` | the value of `API_GO_PORT` (of `PORT` when the Worker is `orpc-api`) | The dev server's port |
+| `-worker` | the project's Worker: the first label of the host in `API_URL` | The Worker's name, as in `cloudflare.config.ts` |
+| `-port` | the value of `API_PORT` | The dev server's port |
 
-- **Needs:** the dev server running (`mise run api:go:dev`).
+- **Needs:** the dev server running (`mise run dev`).
 - **Runs:** project layout.
 
 ### migrate
 
 ```sh
-dev migrate [-worker <name>]   # REMOTE: apply pending migrations to the Worker's D1 database
+charter migrate [-worker <name>]   # REMOTE: apply pending migrations to the Worker's D1 database
 ```
 
 Finds the D1 database named `<worker>-db` on your Cloudflare account and applies the pending files of `migrations/` with `cf d1 migrations apply`. It fails if the database does not exist: deploy the Worker first.
 
 | Flag | Default | What it is |
 |---|---|---|
-| `-worker` | `orpc-api` | The Worker's name. The database is `<worker>-db` |
+| `-worker` | the project's Worker: the first label of the host in `API_URL` | The Worker's name. The database is `<worker>-db` |
 
 - **Needs:** npm packages installed (`mise run setup`) and a Cloudflare login (`cf auth login`, or `CLOUDFLARE_API_TOKEN`).
-- **Runs:** project layout. It runs `cf` from `api/go/` (from `api/ts/` in orpc-api, which has both).
+- **Runs:** project layout. It runs `cf` from the project's folder (from `examples/notes-ts/` in charter, which has both).
 
 ### size
 
 ```sh
-dev size -max <bytes> <file>   # fail if the file, gzipped, is larger than <bytes>
+charter size -max <bytes> <file>   # fail if the file, gzipped, is larger than <bytes>
 ```
 
 Prints the file's size and its size gzipped (best compression), and fails over the limit.
@@ -162,15 +162,15 @@ Prints the file's size and its size gzipped (best compression), and fails over t
 | `-max` | required | The limit in bytes, gzipped |
 
 - **Needs:** nothing.
-- **Runs:** any directory below a `go.work`. The file's path is from the root.
+- **Runs:** any directory in a project. The file's path is from the root.
 
 ### wasm-build
 
 ```sh
-dev wasm-build [-dir <folder>]   # build a Go program into <folder>/build/app.wasm for workers-go
+charter wasm-build [-dir <folder>]   # build a Go program into <folder>/build/app.wasm for workers-go
 ```
 
-Builds the Wasm a Go Worker deploys, tuned for Cloudflare Workers, and fails if it is too large. It also writes the JavaScript that runs the Wasm into `<folder>/build/`: workers-go's `wasm_exec.js` and `runtime.mjs`, and the Go library's glue (`go.mjs`, `websocket.mjs`, `hub.mjs`, `tinygo-clock.mjs`), taken from the module `github.com/joeblew999/orpc-api/go` at the version the project's `go.mod` requires (`go list -m`), so the JavaScript always matches the Go it talks to. For the Wasm it does five things TinyGo's own `tinygo build` does not:
+Builds the Wasm a Go Worker deploys, tuned for Cloudflare Workers, and fails if it is too large. It also writes the JavaScript that runs the Wasm into `<folder>/build/`: workers-go's `wasm_exec.js` and `runtime.mjs`, and the Go library's glue (`go.mjs`, `websocket.mjs`, `hub.mjs`, `tinygo-clock.mjs`), taken from the module `github.com/joeblew999/charter/go` at the version the project's `go.mod` requires (`go list -m`), so the JavaScript always matches the Go it talks to. For the Wasm it does five things TinyGo's own `tinygo build` does not:
 
 - **Turns off one collector run per pause.** TinyGo runs a full garbage collection whenever the program waits and 32 objects with finalizers were made since the last one. workers-go makes one such object for every JavaScript value, so a request collected many times over. The build sets that one constant to 0.
 - **Reuses goroutine stacks.** TinyGo allocates a stack for every goroutine and for every call from JavaScript into Go, and its collector rarely frees one. The build makes TinyGo's scheduler keep the stack of a finished goroutine, which it has just cleared, for the next goroutine: about 20 lines in one file.
@@ -182,7 +182,7 @@ The first two are patches to TinyGo's runtime, which is Go source that TinyGo co
 
 | Flag | Default | What it is |
 |---|---|---|
-| `-dir` | `api/go` | The folder of the Go program. Its `build/` gets the Wasm, workers-go's glue and the Go library's |
+| `-dir` | `.` | The folder of the Go program. Its `build/` gets the Wasm, workers-go's glue and the Go library's |
 | `-heap` | `8` | Starting heap in MB. `0` keeps TinyGo's own |
 | `-stack` | `128kb` | Stack per goroutine |
 | `-opt` | `z` | TinyGo's optimisation level. Measured on Cloudflare, `2` was no faster than `z` and is larger |
@@ -197,7 +197,7 @@ What the changes save is in [Benchmarks](../benchmarks.md). The patches carry th
 ### bench
 
 ```sh
-dev bench [-each] [-burst 8] [-warm 30s] <url>   # what each operation of an API costs, and each request
+charter bench [-each] [-burst 8] [-warm 30s] <url>   # what each operation of an API costs, and each request
 ```
 
 Works on any API with an OpenAPI spec. It reads the spec, calls every operation it can build a request for, and prints one row each: the HTTP status, the median and the slowest wall time as a client sees it, and with `-cpu` the CPU time Cloudflare recorded.
@@ -218,18 +218,18 @@ Works on any API with an OpenAPI spec. It reads the spec, calls every operation 
 | `-header` | none | A header for every request, for example `'Authorization: Bearer <token>'`. Repeat it for more |
 
 - **Needs:** a server at the URL. For `-cpu`: a deployed Worker with observability enabled (the example's `cloudflare.config.ts` enables it), and `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment or in fnox. The token needs permission to read Workers Observability.
-- **Runs:** any directory below a `go.work`.
+- **Runs:** any directory in a project.
 
 With `-cpu` a run waits for the logs to arrive, which takes up to two minutes.
 
 ## SDKs
 
-An API here is a Fern folder: `sdk/fern/apis/<api>/`, with the specs and a `generators.yml`. A group is one SDK that file defines. A new project has one API, `api-go`, with the groups `go`, `typescript`, `typescript-dist` and `cli`.
+An API here is a Fern folder: `fern/`, with the specs and a `generators.yml`. A group is one SDK that file defines. A new project has one API, `api-go`, with the groups `go`, `typescript`, `typescript-dist` and `cli`.
 
 ### sdk-list
 
 ```sh
-dev sdk-list   # the APIs and the groups each one defines
+charter sdk-list   # the APIs and the groups each one defines
 ```
 
 - **Needs:** nothing.
@@ -238,7 +238,7 @@ dev sdk-list   # the APIs and the groups each one defines
 ### sdk-gen
 
 ```sh
-dev sdk-gen <api> <group>   # generate one SDK with Fern into sdk/out/<api>/<group>
+charter sdk-gen <api> <group>   # generate one SDK with Fern into sdk/out/<group>
 ```
 
 Runs `fern generate --local` for one group. It overwrites what is there.
@@ -249,7 +249,7 @@ Runs `fern generate --local` for one group. It overwrites what is there.
 ### sdk-check
 
 ```sh
-dev sdk-check <dir>   # prove a generated SDK works
+charter sdk-check <dir>   # prove a generated SDK works
 ```
 
 For a Go SDK (a folder with `go.mod`): build, vet and test, outside the workspace. When the SDK has a `wiremock/docker-compose.test.yml`, it starts that WireMock container first, tells the tests where it is (`WIREMOCK_URL`) and stops it after. For a TypeScript SDK (a folder with an `index.ts`, at its top or in a folder `src` or `sdk`): a typecheck with `sdk/tsconfig.base.json`. It writes a `tsconfig.check.json` beside the entry file.
@@ -260,10 +260,10 @@ For a Go SDK (a folder with `go.mod`): build, vet and test, outside the workspac
 ### sdk-publish
 
 ```sh
-dev sdk-publish [-check [-quick]] [-into <dir>] <api>   # copy an API's Go SDK into the committed folder another repo can go get
+charter sdk-publish [-check [-quick]] [-into <dir>] <api>   # copy an API's Go SDK into the committed folder another repo can go get
 ```
 
-Removes `sdk/out/<api>/go`, generates it again, runs `sdk-check` on it, and replaces the committed folder with its sources: everything except Fern's run record (`.fern/`), the WireMock fixtures and the tests that need them (`wiremock/`, folders ending in `_test`), and `CONTRIBUTING.md`. Then it adds the folder to `go.work`. It fails when the module path in the SDK's `go.mod` does not end in the folder: Go finds a module in a subfolder by that path. How to use the result: [Giving the Go SDK to another repo](../guides/sdks.md#giving-the-go-sdk-to-another-repo).
+Removes `sdk/out/go`, generates it again, runs `sdk-check` on it, and replaces the committed folder with its sources: everything except Fern's run record (`.fern/`), the WireMock fixtures and the tests that need them (`wiremock/`, folders ending in `_test`), and `CONTRIBUTING.md`. Then it adds the folder to `go.work`. It fails when the module path in the SDK's `go.mod` does not end in the folder: Go finds a module in a subfolder by that path. How to use the result: [Giving the Go SDK to another repo](../guides/sdks.md#giving-the-go-sdk-to-another-repo).
 
 | Flag | Default | What it is |
 |---|---|---|
@@ -277,7 +277,7 @@ Removes `sdk/out/<api>/go`, generates it again, runs `sdk-check` on it, and repl
 ### sdk-ready
 
 ```sh
-dev sdk-ready <api> [group...]   # generate and build what the tests use, if it is missing
+charter sdk-ready <api> [group...]   # generate and build what the tests use, if it is missing
 ```
 
 With no group: generates `typescript-dist`, `go` and `cli` when their output is missing, and builds the CLI when it has no binary. With groups: only those. A group other than those three counts as present when its folder exists. It never regenerates something that is there.
@@ -288,7 +288,7 @@ With no group: generates `typescript-dist`, `go` and `cli` when their output is 
 ### sdk-clean
 
 ```sh
-dev sdk-clean   # remove generated SDKs and stop leftover WireMock containers
+charter sdk-clean   # remove generated SDKs and stop leftover WireMock containers
 ```
 
 Removes `sdk/out/` and `sdk/.work/`, and removes every running container of the image `wiremock/wiremock:3.9.1` on this machine, whichever project started it.
@@ -299,14 +299,14 @@ Removes `sdk/out/` and `sdk/.work/`, and removes every running container of the 
 ### cli-build
 
 ```sh
-dev cli-build [-linux] <dir>   # HEAVY: build a Fern-generated Rust CLI
+charter cli-build [-linux] <dir>   # HEAVY: build a Fern-generated Rust CLI
 ```
 
 Builds the first binary named in the folder's `Cargo.toml`, in release mode with `rustls`. The first build compiles every dependency: minutes at full CPU. The binary is `<dir>/target/release/<name>`, or with `-linux` `<dir>/target-linux/release/<name>`.
 
 | Flag | Default | What it is |
 |---|---|---|
-| `-linux` | off | Build for Linux inside Docker, for the container's architecture, with the Rust version of `rust-toolchain.toml` |
+| `-linux` | off | Build for Linux inside Docker, for the container's architecture, with the Rust version that `mise.toml` pins |
 
 - **Needs:** `cargo`; or Docker with `-linux`.
 - **Runs:** project layout.
@@ -314,7 +314,7 @@ Builds the first binary named in the folder's `Cargo.toml`, in release mode with
 ### dist-sdk
 
 ```sh
-dev dist-sdk <api>...   # generate, check and archive the SDK sources and specs into dist/
+charter dist-sdk <api>...   # generate, check and archive the SDK sources and specs into dist/
 ```
 
 For each API: removes and regenerates the `go` and `typescript` groups, checks each as `sdk-check` does, and writes `dist/<api>-sdk-go.tar.gz`, `dist/<api>-sdk-typescript.tar.gz` and `dist/<api>-specs.tar.gz` (the two spec files). `dist/` ignores itself: it needs no line in `.gitignore`.
@@ -325,7 +325,7 @@ For each API: removes and regenerates the `go` and `typescript` groups, checks e
 ### dist-cli
 
 ```sh
-dev dist-cli [-linux] <api>...   # HEAVY: generate and build the Fern CLI of each API into dist/
+charter dist-cli [-linux] <api>...   # HEAVY: generate and build the Fern CLI of each API into dist/
 ```
 
 Generates the `cli` group, builds it as `cli-build` does, and copies the binary to `dist/<api>-cli-<os>-<arch>`.
@@ -340,26 +340,26 @@ Generates the `cli` group, builds it as `cli-build` does, and copies the binary 
 ### harness-sync, harness-test, harness-deploy
 
 ```sh
-dev harness-sync            # copy the showcase TypeScript SDK into the SDK test Worker
-dev harness-test [-remote]  # run the SDK test inside that Worker
-dev harness-deploy          # REMOTE: deploy that Worker, twice
+charter harness-sync            # copy the showcase TypeScript SDK into the SDK test Worker
+charter harness-test [-remote]  # run the SDK test inside that Worker
+charter harness-deploy          # REMOTE: deploy that Worker, twice
 ```
 
-The SDK test Worker of orpc-api (`sdk/harness/`) runs Fern's TypeScript SDK inside workerd.
+The SDK test Worker of charter (`examples/showcase-ts/`) runs Fern's TypeScript SDK inside workerd.
 
 | Flag | Default | What it is |
 |---|---|---|
-| `-remote` (of `harness-test`) | off | Test the deployed Worker (`HARNESS_URL`, `HARNESS_API_URL`) instead of a local `cf dev` |
+| `-remote` (of `harness-test`) | off | Test the deployed Worker (`API_URL`, `API_MOCK_URL`) instead of a local `cf dev` |
 
 - **Needs:** Docker when the SDK is missing or stale; a Cloudflare login for `harness-deploy`.
-- **Runs:** orpc-api only.
+- **Runs:** charter only.
 
 ## Docs
 
 ### docs
 
 ```sh
-dev docs [-into <repo dir>] [-check]   # write the docs site's config into a repo's docs/ folder
+charter docs [-into <repo dir>] [-check]   # write the docs site's config into a repo's docs/ folder
 ```
 
 Writes four files, the same for every repo apart from its name, description and URLs, which it asks GitHub for: `docs/_config.yml`, `docs/_sass/custom/custom.scss`, `docs/writing.md` and `docs/llms.txt`. GitHub Pages renders `docs/` with them. It prints the site's URL.
@@ -375,10 +375,10 @@ Writes four files, the same for every repo apart from its name, description and 
 ### docs-lint
 
 ```sh
-dev docs-lint [-into <repo dir>]   # check docs/ for what a program can check
+charter docs-lint [-into <repo dir>]   # check docs/ for what a program can check
 ```
 
-Checks every Markdown page under `docs/`: front matter with `title` and `nav_order` (and `permalink: /` on `docs/README.md`); no template braces; a link to it from another page; the file and the anchor of every relative link; every `mise run <task>` against `mise.toml`; every path in a code span that starts with a top-level entry of the repo (a path git ignores passes); and no hard-coded release version of orpc-api. Tasks, paths and versions are not checked in pages under `plans/`, in `findings.md` or in `writing.md`. It prints one line per problem and fails if there is one.
+Checks every Markdown page under `docs/`: front matter with `title` and `nav_order` (and `permalink: /` on `docs/README.md`); no template braces; a link to it from another page; the file and the anchor of every relative link; every `mise run <task>` against `mise.toml`; every path in a code span that starts with a top-level entry of the repo (a path git ignores passes); and no hard-coded release version of charter. Tasks, paths and versions are not checked in pages under `plans/`, in `findings.md` or in `writing.md`. It prints one line per problem and fails if there is one.
 
 | Flag | Default | What it is |
 |---|---|---|
@@ -390,10 +390,10 @@ Checks every Markdown page under `docs/`: front matter with `title` and `nav_ord
 ### docs-review
 
 ```sh
-dev docs-review [-print]   # have Claude bring docs/ up to date
+charter docs-review [-print]   # have Claude bring docs/ up to date
 ```
 
-Runs `docs-lint`, puts its output into a review prompt, and hands that to the `claude` command, which may edit files and run `mise run docs:lint`, `mise run dev:check` and `mise tasks`. Read its edits with `git diff` before committing.
+Runs `docs-lint`, puts its output into a review prompt, and hands that to the `claude` command, which may edit files and run `mise run docs:lint`, `mise run charter:check` and `mise tasks`. Read its edits with `git diff` before committing.
 
 | Flag | Default | What it is |
 |---|---|---|
@@ -407,16 +407,16 @@ Runs `docs-lint`, puts its output into a review prompt, and hands that to the `c
 ### workflows
 
 ```sh
-dev workflows [-check] [-into <repo dir>] [-only api,sdk]   # write the GitHub workflows
+charter workflows [-check] [-into <repo dir>] [-only api,sdk]   # write the GitHub workflows
 ```
 
-Writes GitHub workflows into `.github/workflows/`. Each step that does work is `mise run <task>`. In a project made by `dev new` it writes four: `api-check.yml`, `api-deploy.yml`, `sdk-check.yml` and `sdk-release.yml`, with the jobs of one Go API. It only writes files that differ.
+Writes GitHub workflows into `.github/workflows/`. Each step that does work is `mise run <task>`. In a project made by `charter new` it writes four: `check.yml`, `deploy.yml`, `sdk-check.yml` and `release.yml`, with the jobs of one Go API. It only writes files that differ.
 
 | Flag | Default | What it is |
 |---|---|---|
 | `-check` | off | Write nothing, and fail if a workflow differs from its template. Where there is no `.github/workflows/` yet it says so and passes |
 | `-into` | the root | The repo to write into |
-| `-only` | `api,sdk` (and `dev` where the repo has a `dev/go.mod`) | Which prefixes to write, comma-separated: `api`, `sdk`, `dev` |
+| `-only` | `api,sdk` (and `charter` where the repo has a `go.mod`) | Which prefixes to write, comma-separated: `api`, `sdk`, `charter` |
 
 - **Needs:** nothing. The repo needs a `mise.toml` with the tasks the workflows name.
 - **Runs:** anywhere.
@@ -424,7 +424,7 @@ Writes GitHub workflows into `.github/workflows/`. Each step that does work is `
 ### release
 
 ```sh
-dev release [-tag vX.Y.Z]   # attach dist/* to the tag's GitHub Release
+charter release [-tag vX.Y.Z]   # attach dist/* to the tag's GitHub Release
 ```
 
 Lists the files in `dist/` with their sizes. With a tag it creates the tag's GitHub Release when there is none (marked as a pre-release when the tag has a hyphen) and uploads the files, replacing files of the same name. Without a tag it is a dry run: nothing is published. It fails if `dist/` is empty.
@@ -434,12 +434,12 @@ Lists the files in `dist/` with their sizes. With a tag it creates the tag's Git
 | `-tag` | the tag the GitHub workflow runs on (`GITHUB_REF_NAME` when `GITHUB_REF_TYPE` is `tag`); otherwise none | The version tag: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release |
 
 - **Needs:** `gh` with write access to the repo, for a real run. The tag must exist on GitHub.
-- **Runs:** any directory below a `go.work`.
+- **Runs:** any directory in a project.
 
 ### release-tags
 
 ```sh
-dev release-tags [-tag vX.Y.Z] <module dir>...   # tag each Go module in a subdirectory
+charter release-tags [-tag vX.Y.Z] <module dir>...   # tag each Go module in a subdirectory
 ```
 
 For each directory (it must have a `go.mod`; one that does not exist is skipped, as `sdk/go` is before the first `sdk-publish`), adds the tag `<dir>/vX.Y.Z` on the commit of `vX.Y.Z`, through the GitHub API. A tag that exists on that commit is left; one that exists on another commit is an error. Without a tag it is a dry run that prints the tags it would add. Why these tags exist: [Releases](releases.md#the-tags-of-a-release).
@@ -449,12 +449,12 @@ For each directory (it must have a `go.mod`; one that does not exist is skipped,
 | `-tag` | as for `release` | The version tag |
 
 - **Needs:** `gh` with write access, and the tag in the local checkout, for a real run.
-- **Runs:** any directory below a `go.work`.
+- **Runs:** any directory in a project.
 
-### release-dev
+### release-tool
 
 ```sh
-dev release-dev [-tag vX.Y.Z]   # GoReleaser on the dev tool itself
+charter release-tool [-tag vX.Y.Z]   # GoReleaser on the charter tool itself
 ```
 
 Runs GoReleaser with `.goreleaser.yaml`. On a version tag it publishes the tool's archives and checksums to the tag's GitHub Release. Without one it builds a snapshot into `dist/`.
@@ -464,33 +464,33 @@ Runs GoReleaser with `.goreleaser.yaml`. On a version tag it publishes the tool'
 | `-tag` | as for `release` | The version tag |
 
 - **Needs:** `goreleaser`, and `GH_TOKEN` or `GITHUB_TOKEN` to publish.
-- **Runs:** orpc-api only.
+- **Runs:** charter only.
 
 ### need-env
 
 ```sh
-dev need-env <NAME>...   # fail unless these environment variables are set
+charter need-env <NAME>...   # fail unless these environment variables are set
 ```
 
 Fails, naming the ones that are missing or empty. A workflow runs it first, so a missing secret is one clear line.
 
 - **Needs:** nothing.
-- **Runs:** any directory below a `go.work`.
+- **Runs:** any directory in a project.
 
 ### github-secrets
 
 ```sh
-dev github-secrets <NAME>...   # REMOTE: copy environment variables into the repo's GitHub Actions secrets
+charter github-secrets <NAME>...   # REMOTE: copy environment variables into the repo's GitHub Actions secrets
 ```
 
 Sets each named variable as a repository secret with `gh secret set`. The value goes on standard input, so it is in no command line and no output. It fails if a variable is not set where it runs.
 
 - **Needs:** `gh`, logged in as someone who may set the repo's secrets, and the variables in the environment (`mise run cloudflare:secrets` runs it under `fnox exec`).
-- **Runs:** any directory below a `go.work`.
+- **Runs:** any directory in a project.
 
 ## Every command
 
-The same list as `dev help` prints, with where each one runs.
+The same list as `charter help` prints, with where each one runs.
 
 | Command | Group | Runs |
 |---|---|---|
@@ -503,15 +503,15 @@ The same list as `dev help` prints, with where each one runs.
 | `docs-review` | Docs | Anywhere |
 | `doctor` | Project | Project layout |
 | `github-secrets` | Workflows and releases | Below a `go.work` |
-| `harness-deploy` | SDKs | orpc-api only |
-| `harness-sync` | SDKs | orpc-api only |
-| `harness-test` | SDKs | orpc-api only |
-| `migrate` | API and database | orpc-api only, at this commit |
+| `harness-deploy` | SDKs | charter only |
+| `harness-sync` | SDKs | charter only |
+| `harness-test` | SDKs | charter only |
+| `migrate` | API and database | charter only, at this commit |
 | `migrate-local` | API and database | Project layout |
 | `need-env` | Workflows and releases | Below a `go.work` |
 | `new` | Project | Anywhere |
 | `release` | Workflows and releases | Below a `go.work` |
-| `release-dev` | Workflows and releases | orpc-api only |
+| `release-tool` | Workflows and releases | charter only |
 | `release-tags` | Workflows and releases | Below a `go.work` |
 | `sdk-check` | SDKs | Project layout |
 | `sdk-clean` | SDKs | Project layout |
@@ -528,6 +528,6 @@ The same list as `dev help` prints, with where each one runs.
 ## Limits
 
 - **No Windows build.** The tool starts and stops process groups, which is Unix-only. It runs on Linux and macOS.
-- **`dev help` is the only help.** A command that takes flags prints them when given `-h`. There is no longer help per command.
+- **`charter help` is the only help.** A command that takes flags prints them when given `-h`. There is no longer help per command.
 - **`docs-lint` and `upstream` need a git repository.** In a project that has not had `git init`, `docs-lint` reports ignored paths (`sdk/out/`) as missing, and `upstream` finds no tags.
 - **What was run for this page:** `new`, `help`, `workflows`, `workflows -check`, `docs -check`, `docs-lint`, `sdk-list`, `doctor`, `upstream`, `release` and `release-tags` (dry runs) and `migrate` were run on 2026-10-01 in a new project, and so were `sdk-publish` and `sdk-publish -check`, with the tool built from a checkout. The other commands are described from their source.

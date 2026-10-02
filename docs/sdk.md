@@ -14,24 +14,24 @@ Typed SDKs, a command-line program and a docs site, generated from each API's sp
 mise run doctor                           # check the setup: npm installs, Docker, Go, TinyGo, Rust
 mise run setup                            # npm packages, including Fern (fern-api) into sdk/node_modules
 mise run sdk:list                         # the APIs in sdk/fern/apis and the groups each one defines
-mise run sdk:check-spec api-go            # fern check: validate an API's specs and settings
-mise run sdk:gen api-go go                # generate one SDK (Docker) into sdk/out/api-go/go
-mise run sdk:check api-go go              # prove it works. Go: build, vet, tests against WireMock. TypeScript: typecheck
-mise run sdk:ready api-ts                    # generate and build what the tests use, if missing: typescript-dist, go, cli
-mise run sdk:cli:build sdk/out/api-ts/cli    # HEAVY: build a generated Fern CLI natively; -linux before the folder builds for Linux in Docker
+mise run sdk:check-spec            # fern check: validate an API's specs and settings
+mise run sdk:gen go                # generate one SDK (Docker) into examples/notes-go/sdk/out/go
+mise run sdk:check go              # prove it works. Go: build, vet, tests against WireMock. TypeScript: typecheck
+mise run sdk:ready                    # generate and build what the tests use, if missing: typescript-dist, go, cli
+mise run sdk:cli:build examples/notes-ts/sdk/out/cli    # HEAVY: build a generated Fern CLI natively; -linux before the folder builds for Linux in Docker
 mise run sdk:docs                         # preview Fern's API docs site: http://localhost:3030
 mise run sdk:clean                        # remove sdk/out, stop leftover WireMock containers
 
-mise run showcase:ts:spec                    # the oRPC showcase: write both specs again, after changing its contract
-mise run showcase:ts:check                   # LOCAL: showcase:ts:spec:check, fern check, showcase:ts:test, showcase:ts:typecheck
-mise run showcase:ts:test                    # sdk/harness/test, in Node: the server's routes, and the specs' surface
-mise run showcase:ts:typecheck               # typecheck the harness Worker (copies the SDK in first)
-mise run sdk:harness:test                 # LOCAL: the TypeScript SDK inside a Worker, under cf dev
-mise run sdk:harness:test -remote         # REMOTE: the same on the deployed harness Worker
-mise run sdk:harness:deploy               # REMOTE: deploy the harness Worker twice
+mise run spec                    # the oRPC showcase: write both specs again, after changing its contract
+mise run check                   # LOCAL: spec:check, fern check, test, lint
+mise run test                    # examples/showcase-ts/test, in Node: the server's routes, and the specs' surface
+mise run lint               # typecheck the harness Worker (copies the SDK in first)
+mise run test:workerd                 # LOCAL: the TypeScript SDK inside a Worker, under cf dev
+mise run test:workerd -remote         # REMOTE: the same on the deployed harness Worker
+mise run deploy               # REMOTE: deploy the harness Worker twice
 ```
 
-`mise run sdk:ready <api> <group>...` takes the groups wanted; with none it makes the three above and builds the CLI. `mise run sdk:dist` and `mise run sdk:dist:cli` build what a release ships ([dev.md](dev.md#cutting-a-release)).
+`mise run sdk:ready <group>...` takes the groups wanted; with none it makes the three above and builds the CLI. `mise run sdk:dist` and `mise run sdk:dist:cli` build what a release ships ([dev.md](dev.md#cutting-a-release)).
 
 ## Layout
 
@@ -55,19 +55,19 @@ sdk/
 
 | API folder | Its specs | Groups |
 |---|---|---|
-| `sdk/fern/apis/api-ts/` | Generated from the oRPC contract (`mise run api:ts:spec`) | `go`, `typescript`, `typescript-dist`, `cli` |
-| `sdk/fern/apis/api-go/` | Generated from the Go contract (`mise run api:go:spec`) | the same four |
-| `sdk/fern/apis/showcase-ts/` | Generated from the oRPC showcase's contract (`mise run showcase:ts:spec`) | `go`, `typescript`, `typescript-public`, `typescript-dist`, `cli` |
-| `sdk/fern/apis/showcase-go/` | Generated from the Go showcase's contract (`mise run showcase:go:spec`) | the same five |
+| `examples/notes-ts/fern/` | Generated from the oRPC contract (`mise run spec`) | `go`, `typescript`, `typescript-dist`, `cli` |
+| `examples/notes-go/fern/` | Generated from the Go contract (`mise run spec`) | the same four |
+| `examples/showcase-ts/fern/` | Generated from the oRPC showcase's contract (`mise run spec`) | `go`, `typescript`, `typescript-public`, `typescript-dist`, `cli` |
+| `examples/showcase-go/fern/` | Generated from the Go showcase's contract (`mise run spec`) | the same five |
 
 - **`typescript-dist`** is the TypeScript SDK compiled to `.js` plus `.d.ts` (`outputSourceFiles: false`), the way an npm package reaches its users. The test programs and the harness Worker import it.
 - **`typescript-public`** is the same spec without the operations not tagged `public` (audiences).
-- **The names:** the notes API's SDKs are `OrpcApiClient` (TypeScript), the Go module `github.com/joeblew999/orpc-api/sdk/go`, and the CLI binary `orpc-api`, from either Fern folder. Both Fern folders declare that one module path, so `test/soak-go` builds against either SDK; the one committed at that path (`sdk/go/`) is the Go API's ([dev.md](dev.md#cutting-a-release)). The showcases' are `ShowcaseClient`, `example.com/showcase` and `showcase`.
+- **The names:** the notes API's SDKs are `NotesClient` (TypeScript), the Go module `github.com/joeblew999/charter/examples/notes-go/sdk/go`, and the CLI binary `notes`, from either Fern folder. Both Fern folders declare that one module path, so `examples/notes-go/test/soak-go` builds against either SDK; the one committed at that path (`examples/notes-go/sdk/go/`) is the Go API's ([dev.md](dev.md#cutting-a-release)). The showcases' are `ShowcaseClient`, `example.com/showcase` and `showcase`.
 - **Never edit a generated spec.** `generators.yml` and `overlays.yml` are the only hand-written files in the four generated folders.
 
 ## Adding an API
 
-Copy `sdk/fern/apis/api-go/` to a new folder, replace `openapi.json`, and adjust `generators.yml`: the output paths, the Go module, and each generator's options. The options for each language are documented at `buildwithfern.com/learn/sdks/generators/<lang>/configuration`. Here we use:
+Copy `examples/notes-go/fern/` to a new folder, replace `openapi.json`, and adjust `generators.yml`: the output paths, the Go module, and each generator's options. The options for each language are documented at `buildwithfern.com/learn/sdks/generators/<lang>/configuration`. Here we use:
 
 - **`namespaceExport`,** which names the TypeScript client (`Petstore` gives `PetstoreClient`);
 - **`module` and `packageName`** for Go;
@@ -79,7 +79,7 @@ For an API of your own, generate the spec from a contract instead ([api.md](api.
 
 ## What Fern does, feature by feature
 
-Everything here is switched on through **standard options only**: the spec's OpenAPI features, `x-fern-*` extensions and `generators.yml`. The oRPC column is the oRPC showcase's contract (`sdk/harness/src/contract.ts`); the same table for a Go contract is in [showcase-go.md](showcase-go.md#feature-by-feature).
+Everything here is switched on through **standard options only**: the spec's OpenAPI features, `x-fern-*` extensions and `generators.yml`. The oRPC column is the oRPC showcase's contract (`examples/showcase-ts/src/contract.ts`); the same table for a Go contract is in [showcase-go.md](showcase-go.md#feature-by-feature).
 
 | Feature | How to switch it on | In the oRPC contract | What the SDKs get |
 |---|---|---|---|
@@ -99,19 +99,19 @@ The right-hand column was read from the SDKs generated on 2026-09-29. The TypeSc
 
 ## The oRPC showcase
 
-The showcase is one small API with every Fern feature in the table. Its `openapi.json` and `asyncapi.json` are generated from an oRPC contract, like `api/ts/`'s, and the harness Worker serves that contract.
+The showcase is one small API with every Fern feature in the table. Its `openapi.json` and `asyncapi.json` are generated from an oRPC contract, like `examples/notes-ts/`'s, and the harness Worker serves that contract.
 
 | Path | What it is |
 |---|---|
-| `sdk/harness/src/contract.ts` | **The contract (edit this):** every operation, the WebSocket channel, the webhooks, and the document-level settings (`document`) |
-| `sdk/harness/src/showcase.ts` | The contract implemented with oRPC, served by the harness Worker under `/api/mock/*` |
-| `sdk/harness/src/specs.ts`, `sdk/harness/spec.ts` | Both specs from the contract, with `api/ts/`'s generators (`api/ts/src/specs.ts`, `api/ts/src/asyncapi.ts`, `api/ts/spec-files.ts`), imported, not copied |
-| `sdk/harness/test/showcase.test.ts` | Run in Node, no Worker: the server's routes and its channel |
-| `sdk/harness/test/surface.test.ts`, `sdk/harness/test/handwritten-surface.json` | The generated specs give Fern the surface the last hand-written specs had, but for the differences the test names |
+| `examples/showcase-ts/src/contract.ts` | **The contract (edit this):** every operation, the WebSocket channel, the webhooks, and the document-level settings (`document`) |
+| `examples/showcase-ts/src/showcase.ts` | The contract implemented with oRPC, served by the harness Worker under `/api/mock/*` |
+| `examples/showcase-ts/src/specs.ts`, `examples/showcase-ts/spec.ts` | Both specs from the contract, with `examples/notes-ts/`'s generators (`examples/notes-ts/src/specs.ts`, `examples/notes-ts/src/asyncapi.ts`, `examples/notes-ts/spec-files.ts`), imported, not copied |
+| `examples/showcase-ts/test/showcase.test.ts` | Run in Node, no Worker: the server's routes and its channel |
+| `examples/showcase-ts/test/surface.test.ts`, `examples/showcase-ts/test/handwritten-surface.json` | The generated specs give Fern the surface the last hand-written specs had, but for the differences the test names |
 
-The contract lives in the harness because the harness Worker is what serves it and tests it. `api/ts/` and `sdk/harness/` each install the same pinned oRPC and Zod; keep the two pins equal.
+The contract lives in the harness because the harness Worker is what serves it and tests it. `examples/notes-ts/` and `examples/showcase-ts/` each install the same pinned oRPC and Zod; keep the two pins equal.
 
-After a contract change, run `mise run showcase:ts:spec`. `mise run sdk:harness:test` generates the SDK again when a spec is newer than it.
+After a contract change, run `mise run spec`. `mise run test:workerd` generates the SDK again when a spec is newer than it.
 
 **What oRPC's generators can't say, and where it is added in code.** None of it is patched into the JSON. Only the last row has an upstream issue; nothing is filed for the others.
 
@@ -120,9 +120,9 @@ After a contract change, run `mise run showcase:ts:spec`. `mise run sdk:harness:
 | A form-encoded request body (the OAuth token endpoint) | The handler reads `application/x-www-form-urlencoded`, but the generator always writes the body as `application/json` | The operation's `spec` hook renames the media type |
 | `security: []` on one operation; `x-fern-*` on an operation | No field for them | The operation's `spec` hook |
 | `security`, `components.securitySchemes`, `x-fern-idempotency-headers`, `x-fern-webhook-signature` | The contract has no document level. The generator takes them as `base` | `document` in the contract, passed as `base` by `openapiSpec` |
-| OpenAPI 3.1 `webhooks` | Not generated | `openapiSpec({ webhooks })` in `api/ts/src/specs.ts` writes one from a contract of webhook procedures |
-| An SSE response whose schema is the event's data | Describes its own envelope (`event: message` / `close` / `error`) | The operation's `spec` hook (the same as `api/ts/`'s `notes.watch`) |
-| AsyncAPI, with messages both ways | No AsyncAPI generator (middleapi/orpc#2115) | `api/ts/src/asyncapi.ts` ([api.md](api.md#the-asyncapi-generator)) |
+| OpenAPI 3.1 `webhooks` | Not generated | `openapiSpec({ webhooks })` in `examples/notes-ts/src/specs.ts` writes one from a contract of webhook procedures |
+| An SSE response whose schema is the event's data | Describes its own envelope (`event: message` / `close` / `error`) | The operation's `spec` hook (the same as `examples/notes-ts/`'s `notes.watch`) |
+| AsyncAPI, with messages both ways | No AsyncAPI generator (middleapi/orpc#2115) | `examples/notes-ts/src/asyncapi.ts` ([api.md](api.md#the-asyncapi-generator)) |
 
 Multipart is not on the list: a `z.file()` in the input is enough.
 
@@ -135,11 +135,11 @@ How the server behaves:
 - **Fern ignores an AsyncAPI server's `pathname`,** so the SDK's default WebSocket URL lacks `/api/mock`. The tests pass `baseUrl`.
 - **The OAuth token URL comes from the spec's `servers` entry,** which is the deployed harness. The Fern CLI's `--base-url` doesn't move it.
 
-One test program, `test/showcase-test.mjs`, runs the generated TypeScript SDK against either showcase server. Each server passes it with the SDK made from the other's specs too (2026-10-01, locally; [findings.md](findings.md)).
+One test program, `examples/showcase-go/test/showcase-test.mjs`, runs the generated TypeScript SDK against either showcase server. Each server passes it with the SDK made from the other's specs too (2026-10-01, locally; [findings.md](findings.md)).
 
 ## The TypeScript SDK inside a Worker: the harness Worker
 
-`sdk/harness/` is a small cf Worker project. It serves the oRPC showcase (`/api/mock/*`), and two routes run the generated SDK against it inside workerd: `/api/sdk-test`, and `/api/ws-test` for the WebSocket client. `mise run sdk:harness:test` calls both, then runs the SDK's WebSocket client from Node (`sdk/harness/ws-client.mjs`).
+`examples/showcase-ts/` is a small cf Worker project. It serves the oRPC showcase (`/api/mock/*`), and two routes run the generated SDK against it inside workerd: `/api/sdk-test`, and `/api/ws-test` for the WebSocket client. `mise run test:workerd` calls both, then runs the SDK's WebSocket client from Node (`examples/showcase-ts/test/ws-client.mjs`).
 
 Nine checks, which pass under `cf dev` and on Cloudflare (2026-10-01, [findings.md](findings.md)):
 
@@ -157,18 +157,18 @@ What it takes:
 - **`guardProcessEnvAccess: true`.** Workers have no `process`, and the OAuth code reads `process.env`.
 - **`outputSourceFiles: false`** (the group `typescript-dist`). The raw `.ts` source clashes with Cloudflare's Worker types (`Headers`, `Response`); the compiled package typechecks cleanly.
 - **The WebSocket token as a query parameter.** The SDK sends the token as a handshake header, which Workers (like browsers) can't set, so from a Worker it never arrives. The way round uses standard SDK calls: `client.auth.getToken(...)`, then `liveNotes.connect({ queryParams: { access_token } })`, and the server accepts either the header or `?access_token=`.
-- **Two Workers on Cloudflare.** A Worker can't call its own URL (error 1042), so the harness deploys twice, as `orpc-sdk-harness` and (with `--mode api`) `orpc-sdk-harness-api`, and the WebSocket test connects from the first to the second. Calling another Worker on the same `workers.dev` zone needs the `global_fetch_strictly_public` compatibility flag.
+- **Two Workers on Cloudflare.** A Worker can't call its own URL (error 1042), so the harness deploys twice, as `charter-showcase-ts` and (with `--mode api`) `charter-showcase-ts-api`, and the WebSocket test connects from the first to the second. Calling another Worker on the same `workers.dev` zone needs the `global_fetch_strictly_public` compatibility flag.
 
-`-remote` tests the deployed pair at `HARNESS_URL` and `HARNESS_API_URL` (set in `mise.toml`; on another Cloudflare account, in `mise.local.toml`).
+`-remote` tests the deployed pair at `API_URL` and `API_MOCK_URL` (set in `mise.toml`; on another Cloudflare account, in `mise.local.toml`).
 
 ## SDKs and a CLI for the notes API
 
 ```sh
-mise run api:ts:spec                         # contract -> sdk/fern/apis/api-ts/{openapi,asyncapi}.json (offline; the server is API_URL)
-mise run sdk:gen api-ts go                   # the other groups: typescript, typescript-dist, cli
-mise run sdk:check sdk/out/api-ts/go
-mise run sdk:cli:build sdk/out/api-ts/cli    # then: sdk/out/api-ts/cli/target/release/orpc-api notes list --page-all
-mise run api:ts:live-test                    # SSE and WebSocket, raw and through the SDK
+mise run spec                         # contract -> examples/notes-ts/fern/{openapi,asyncapi}.json (offline; the server is API_URL)
+mise run sdk:gen go                   # the other groups: typescript, typescript-dist, cli
+mise run sdk:check examples/notes-ts/sdk/out/go
+mise run sdk:cli:build examples/notes-ts/sdk/out/cli    # then: examples/notes-ts/sdk/out/cli/target/release/notes notes list --page-all
+mise run live-test                    # SSE and WebSocket, raw and through the SDK
 ```
 
 The same with `api-go` in place of `api-ts` gives the SDKs and CLI from the Go contract's specs. The two Fern folders have the same groups and names, so the same test programs run against either SDK, and the SDKs from one server's specs work against the other server (2026-10-01, [findings.md](findings.md)).
@@ -198,12 +198,12 @@ Limits of the generator:
 - **A stream prints in json and jsonl only when it ends.** `--format raw` streams, as raw SSE lines ([upstream.md](upstream.md)).
 - **`--page-all` with `--format jsonl` prints one line per page,** not per item ([findings.md](findings.md)).
 - **A paginated method on the root client breaks the Rust build** (an overlay renaming it with no `x-fern-sdk-group-name`). Keep methods in a group. Seen on 2026-09-29; not filed.
-- **Building is heavy the first time:** it compiles every Rust dependency. Natively it needs Rust (`rust-toolchain.toml`); with `-linux` it builds in Docker for the container's architecture. A Linux container can't build macOS binaries (no Apple SDK) or the `windows-msvc` target, so all 7 platforms need cargo-dist on GitHub Actions, one native runner per OS, which is not set up here ([plans/next.md](plans/next.md)).
+- **Building is heavy the first time:** it compiles every Rust dependency. Natively it needs Rust (`mise.toml`); with `-linux` it builds in Docker for the container's architecture. A Linux container can't build macOS binaries (no Apple SDK) or the `windows-msvc` target, so all 7 platforms need cargo-dist on GitHub Actions, one native runner per OS, which is not set up here ([plans/next.md](plans/next.md)).
 
 ## Good to know
 
-- **Versions are pinned.** `fern-api` 5.140.0 in `sdk/package.json`; in each `generators.yml`, `fern-go-sdk` 1.64.0, `fern-typescript-sdk` 3.98.0, `fern-python-sdk` 5.34.0 and `fern-cli-generator` 0.45.1 for the two notes APIs, 0.44.0 for the others. They were the latest when checked on 2026-09-29; Forge pins older ones.
+- **Versions are pinned.** `fern-api` 5.140.0 in `examples/notes-go/package.json`; in each `generators.yml`, `fern-go-sdk` 1.64.0, `fern-typescript-sdk` 3.98.0, `fern-python-sdk` 5.34.0 and `fern-cli-generator` 0.45.1 for the two notes APIs, 0.44.0 for the others. They were the latest when checked on 2026-09-29; Forge pins older ones.
 - **Licensing is not settled.** Fern's docs call local generation, WebSocket clients, webhook signatures and the CLI generator Enterprise or early access, needing a `FERN_TOKEN`. All of it has run here without one ([plans/next.md](plans/next.md)).
-- **Where output goes:** `sdk/out/`, which is gitignored. The exception is `sdk/go/`, the committed copy of the Go API's Go SDK that another repo fetches with `go get`. Releases attach the SDK sources and the Linux CLIs to the GitHub Release ([dev.md](dev.md#cutting-a-release)). Publishing the SDKs as packages (npm, a repository per SDK) is planned, not done.
-- **The docs site covers two APIs.** `sdk/fern/docs.yml` lists the showcase and the notes API; `mise run sdk:docs` previews it locally. No task publishes it.
+- **Where output goes:** `sdk/out/`, which is gitignored. The exception is `examples/notes-go/sdk/go/`, the committed copy of the Go API's Go SDK that another repo fetches with `go get`. Releases attach the SDK sources and the Linux CLIs to the GitHub Release ([dev.md](dev.md#cutting-a-release)). Publishing the SDKs as packages (npm, a repository per SDK) is planned, not done.
+- **The docs site covers two APIs.** `examples/notes-go/fern/docs.yml` lists the showcase and the notes API; `mise run sdk:docs` previews it locally. No task publishes it.
 - **`mise run sdk:check` on a Go SDK starts a WireMock container** and stops it again. `mise run sdk:clean` stops any that were left behind.

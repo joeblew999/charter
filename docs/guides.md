@@ -6,7 +6,7 @@ has_children: true
 
 # Guides: how to do one thing
 
-Each guide is a task, start to finish, in a project made by `dev new` ([Getting started](getting-started.md)).
+Each guide is a task, start to finish, in a project made by `charter new` ([Getting started](getting-started.md)).
 
 | Guide | You want to |
 |---|---|
