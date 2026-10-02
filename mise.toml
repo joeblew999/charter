@@ -47,6 +47,10 @@ run = "for dir in api/ts api/go sdk sdk/harness; do npm ci --prefix $dir --no-fu
 description = "Every LOCAL check (no Cloudflare account; needs Docker)"
 depends = ["api:ts:check", "api:go:check", "showcase:go:check", "dev:check", "sdk:demo", "showcase:ts:check", "sdk:harness:test"]
 
+[tasks.compare]
+description = "REMOTE, writes test notes: the same bench against the TypeScript Worker and then the Go Worker, with writes and the CPU of each request: are they level? About three minutes"
+run = '''go run ./dev bench -each -write -warm 20s -n 30 -worker orpc-api -spec sdk/fern/apis/api-ts/openapi.json -body 'POST /api/notes={"body":"bench"}' "$API_URL" && go run ./dev bench -each -write -warm 20s -n 30 "$API_GO_URL"'''
+
 [tasks.doctor]
 description = "Check what the tasks need: npm installs, Docker, Go, TinyGo, Rust"
 run = "go run ./dev doctor"

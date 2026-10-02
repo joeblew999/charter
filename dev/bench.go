@@ -43,11 +43,12 @@ type call struct {
 //     and observability enabled on the Worker; the events take up to a minute or two to arrive.
 func bench(args []string) error {
 	n, spec, write, cpu, worker, each, burst := 20, "", false, false, "", false, 0
-	var headers list
+	var headers, bodies list
 	var warm time.Duration
 	rest := flags("bench", args, func(f *flag.FlagSet) {
 		f.DurationVar(&warm, "warm", 0, "send requests for this long first (e.g. 45s): a Worker just deployed or idle is slower for up to a minute")
 		f.Var(&headers, "header", "a header for every request, e.g. 'Authorization: Bearer <token>' (repeat)")
+		f.Var(&bodies, "body", `a JSON body for an operation whose spec has no example, e.g. 'POST /api/notes={"body":"x"}' (repeat)`)
 		f.IntVar(&n, "n", n, "requests per operation")
 		f.StringVar(&spec, "spec", "", "the OpenAPI spec, a file or a URL (default: <url>/api/openapi.json)")
 		f.BoolVar(&write, "write", false, "also call operations that change data (POST, PUT, PATCH, DELETE)")
@@ -64,7 +65,13 @@ func bench(args []string) error {
 	if spec == "" {
 		spec = base + "/api/openapi.json"
 	}
-	calls, skipped, err := callsFromSpec(spec, write)
+	given := map[string][]byte{}
+	for _, body := range bodies {
+		if operation, value, ok := strings.Cut(body, "="); ok {
+			given[strings.TrimSpace(operation)] = []byte(value)
+		}
+	}
+	calls, skipped, err := callsFromSpec(spec, write, given)
 	if err != nil {
 		return err
 	}
@@ -196,7 +203,7 @@ func bench(args []string) error {
 }
 
 // callsFromSpec makes every operation it can call from the spec's examples, and says which it left out.
-func callsFromSpec(source string, write bool) (calls []call, skipped []string, err error) {
+func callsFromSpec(source string, write bool, given map[string][]byte) (calls []call, skipped []string, err error) {
 	var raw []byte
 	if strings.Contains(source, "://") {
 		res, err := benchClient.Get(source)
@@ -263,11 +270,10 @@ func callsFromSpec(source string, write bool) (calls []call, skipped []string, e
 				continue
 			}
 			if schema, ok := dig(op, "requestBody", "content", "application/json", "schema").(map[string]any); ok && missing == "" {
-				value := example(doc, map[string]any{"schema": schema})
-				if value == nil {
-					missing = "request body"
-				} else {
+				if value := example(doc, map[string]any{"schema": schema}); value != nil {
 					body, _ = json.Marshal(value)
+				} else if body = given[trigger]; body == nil {
+					missing = "request body (give one with -body)"
 				}
 			}
 			if missing != "" {
