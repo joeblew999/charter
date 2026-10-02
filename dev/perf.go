@@ -22,7 +22,7 @@ import (
 // the scratch name as its first label.
 
 func init() {
-	commands["perf"] = command{"-name <experiment> [-dir api/go] [-build '<wasm-build flags>'] [-keep] [-- <bench flags>]",
+	commands["perf"] = command{"-name <experiment> [-dir api/go] [-build '<wasm-build flags>'] [-prebuilt] [-keep] [-- <bench flags>]",
 		"REMOTE: build, deploy to a scratch Worker <worker>-perf-<experiment>, bench it from its first request, delete it (-keep: leave it)", perf}
 	commands["perf-clean"] = command{"[-worker <name>]", "REMOTE: delete every scratch Worker <worker>-perf-* and its database that a perf run left", perfClean}
 }
@@ -30,11 +30,12 @@ func init() {
 var experimentName = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,20}[a-z0-9])?$`)
 
 func perf(args []string) error {
-	name, dir, build, keep := "", "api/go", "", false
+	name, dir, build, keep, prebuilt := "", "api/go", "", false, false
 	rest := flags("perf", args, func(f *flag.FlagSet) {
 		f.StringVar(&name, "name", "", "the experiment: lower-case letters, digits and hyphens, at most 22. Its Worker is <worker>-perf-<name>")
 		f.StringVar(&dir, "dir", dir, "the folder of the Go Worker")
 		f.StringVar(&build, "build", "", "flags for wasm-build, e.g. '-plain' or '-heap 4 -stack 96kb'")
+		f.BoolVar(&prebuilt, "prebuilt", false, "deploy the build/ that is there (made by another TinyGo, say) instead of building")
 		f.BoolVar(&keep, "keep", false, "leave the scratch Worker and its database (perf-clean removes them later)")
 	})
 	if !experimentName.MatchString(name) {
@@ -49,8 +50,10 @@ func perf(args []string) error {
 	worker := base + "-" + mode
 	scratch := "https://" + worker + "." + domain
 
-	if err := wasmBuild(append([]string{"-dir", dir}, strings.Fields(build)...)); err != nil {
-		return err
+	if !prebuilt {
+		if err := wasmBuild(append([]string{"-dir", dir}, strings.Fields(build)...)); err != nil {
+			return err
+		}
 	}
 	if !keep {
 		defer func() {
