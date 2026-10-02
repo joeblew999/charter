@@ -1,4 +1,4 @@
-module github.com/joeblew999/orpc-api/api-go
+module github.com/joeblew999/orpc-api/api/go
 
 go 1.27.1
 

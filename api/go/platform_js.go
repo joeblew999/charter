@@ -9,8 +9,8 @@ import (
 	"github.com/syumai/workers-go/cloudflare"
 	"github.com/syumai/workers-go/cloudflare/d1"
 
-	"github.com/joeblew999/orpc-api/api-go/api"
-	"github.com/joeblew999/orpc-api/api-go/hub"
+	"github.com/joeblew999/orpc-api/api/go/api"
+	"github.com/joeblew999/orpc-api/api/go/hub"
 )
 
 // env binds the API to the Worker's bindings (cloudflare.config.ts): APP_NAME, DB (D1), HUB (the hub Durable Object, worker/hub.mjs).

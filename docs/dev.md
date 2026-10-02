@@ -75,7 +75,7 @@ Nothing in these docs names a version, so nothing here goes stale: every link be
 
 ```sh
 go run github.com/joeblew999/orpc-api/dev@latest help                 # the tool, no install (needs Go)
-go get github.com/joeblew999/orpc-api/api-go@latest                   # the Go packages
+go get github.com/joeblew999/orpc-api/api/go@latest                   # the Go packages
 curl -fsSL https://github.com/joeblew999/orpc-api/releases/latest/download/dev_darwin_arm64.tar.gz | tar xz dev   # the tool as a binary
 ```
 
@@ -110,7 +110,7 @@ The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release
 | `api-specs.tar.gz`, `api-go-specs.tar.gz` | `openapi.json` and `asyncapi.json` of each API |
 | `api-cli-linux-amd64`, `api-go-cli-linux-amd64` | The Fern CLI of each API (the binary calls itself `orpc-api`) |
 
-**Go module versions.** `api-go/`, `dev/` and `sdk/go/` are Go modules in subdirectories, and Go only finds a version of such a module under a tag with the directory in front. So `release:tags` adds `api-go/vX.Y.Z`, `dev/vX.Y.Z` and `sdk/go/vX.Y.Z` on the same commit as `vX.Y.Z`. You push one tag; those three follow. Then `go get github.com/joeblew999/orpc-api/api-go@latest`, `go run github.com/joeblew999/orpc-api/dev@latest help` and `go get github.com/joeblew999/orpc-api/sdk/go@latest` pick it up. Don't push the module tags or upload release files by hand.
+**Go module versions.** `api-go/`, `dev/` and `sdk/go/` are Go modules in subdirectories, and Go only finds a version of such a module under a tag with the directory in front. So `release:tags` adds `api-go/vX.Y.Z`, `dev/vX.Y.Z` and `sdk/go/vX.Y.Z` on the same commit as `vX.Y.Z`. You push one tag; those three follow. Then `go get github.com/joeblew999/orpc-api/api/go@latest`, `go run github.com/joeblew999/orpc-api/dev@latest help` and `go get github.com/joeblew999/orpc-api/sdk/go@latest` pick it up. Don't push the module tags or upload release files by hand.
 
 **A dry run** is the same build without a version tag: GoReleaser makes a snapshot in `dist/`, `release` lists what is in `dist/` and publishes nothing, `release:tags` says which tags it would add, and the files are kept as workflow artifacts. Pull requests do that, and so does `gh workflow run dev-release.yml`. Locally: `mise run dev:release && mise run sdk:dist && mise run release`.
 

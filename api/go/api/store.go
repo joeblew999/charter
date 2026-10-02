@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joeblew999/orpc-api/api-go/hub"
+	"github.com/joeblew999/orpc-api/api/go/hub"
 )
 
 // Store is the log: D1 on Cloudflare (SQLStore), memory for `go run .` and the tests (MemStore).

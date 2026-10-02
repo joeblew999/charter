@@ -164,7 +164,7 @@ huma.Register(api, huma.Operation{
 
 ### 3. The feed: `follow.Follow`
 
-Both the SSE and the WebSocket handler call `follow.Follow` (package `github.com/joeblew999/orpc-api/api-go/follow`, imported by your project; you do not copy it):
+Both the SSE and the WebSocket handler call `follow.Follow` (package `github.com/joeblew999/orpc-api/api/go/follow`, imported by your project; you do not copy it):
 
 ```go
 err := follow.Follow(ctx, source, options, func(note Note) error { /* write one event */ return nil })

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/joeblew999/orpc-api/api-go/showcase"
+	"github.com/joeblew999/orpc-api/api/go/showcase"
 )
 
 // env reads the settings from the environment, and sends webhooks with net/http.

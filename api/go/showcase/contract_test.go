@@ -3,8 +3,8 @@ package showcase
 import (
 	"testing"
 
-	"github.com/joeblew999/orpc-api/api-go/humaworkers"
-	"github.com/joeblew999/orpc-api/api-go/specfile"
+	"github.com/joeblew999/orpc-api/api/go/humaworkers"
+	"github.com/joeblew999/orpc-api/api/go/specfile"
 )
 
 // As for the notes API (api/contract_test.go): every constrained request field has an example, and

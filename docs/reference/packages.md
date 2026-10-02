@@ -11,18 +11,18 @@ The six Go packages a project made by `dev new` imports: what each is for, every
 All six are in one Go module, which the project's `api-go/go.mod` requires:
 
 ```sh
-cd api-go && go get github.com/joeblew999/orpc-api/api-go@latest   # add or update the module
+cd api-go && go get github.com/joeblew999/orpc-api/api/go@latest   # add or update the module
 ```
 
 | Package | Import path | What it is for | Under TinyGo |
 |---|---|---|---|
-| `humaworkers` | `github.com/joeblew999/orpc-api/api-go/humaworkers` | Runs a [Huma](https://huma.rocks) API on Cloudflare Workers | Yes |
-| `asyncapi` | `github.com/joeblew999/orpc-api/api-go/asyncapi` | Writes the AsyncAPI spec of the API's WebSocket channels | Yes |
-| `follow` | `github.com/joeblew999/orpc-api/api-go/follow` | Gives a client every item of a log once, in order, live | Yes |
-| `hub` | `github.com/joeblew999/orpc-api/api-go/hub` | The live signal of a feed: publish an item, every subscriber gets it. A Durable Object on Cloudflare, memory natively | Yes |
-| `humamcp` | `github.com/joeblew999/orpc-api/api-go/humamcp` | Serves the API's operations as MCP tools | Yes |
-| `transport` | `github.com/joeblew999/orpc-api/api-go/transport` | Lets the Go handler serve WebSockets, on Workers and natively | Yes, with a different body |
-| `specfile` | `github.com/joeblew999/orpc-api/api-go/specfile` | The body of the command that writes the spec files | Not used there: it runs on your machine |
+| `humaworkers` | `github.com/joeblew999/orpc-api/api/go/humaworkers` | Runs a [Huma](https://huma.rocks) API on Cloudflare Workers | Yes |
+| `asyncapi` | `github.com/joeblew999/orpc-api/api/go/asyncapi` | Writes the AsyncAPI spec of the API's WebSocket channels | Yes |
+| `follow` | `github.com/joeblew999/orpc-api/api/go/follow` | Gives a client every item of a log once, in order, live | Yes |
+| `hub` | `github.com/joeblew999/orpc-api/api/go/hub` | The live signal of a feed: publish an item, every subscriber gets it. A Durable Object on Cloudflare, memory natively | Yes |
+| `humamcp` | `github.com/joeblew999/orpc-api/api/go/humamcp` | Serves the API's operations as MCP tools | Yes |
+| `transport` | `github.com/joeblew999/orpc-api/api/go/transport` | Lets the Go handler serve WebSockets, on Workers and natively | Yes, with a different body |
+| `specfile` | `github.com/joeblew999/orpc-api/api/go/specfile` | The body of the command that writes the spec files | Not used there: it runs on your machine |
 
 "Under TinyGo" means the package is part of the Wasm that `mise run api-go:build` makes and that the checks run under workerd. All of them also build with standard Go.
 

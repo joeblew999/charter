@@ -34,7 +34,7 @@ An operation marked `Hidden`, or one that answers `text/event-stream`, is left o
 
 ### Opt one in or out: `humamcp.Expose`
 
-Wrap the operation in `humamcp.Expose(op, true)` or `humamcp.Expose(op, false)`. To keep `hello` from agents, in `api-go/api/contract.go` (add `github.com/joeblew999/orpc-api/api-go/humamcp` to the imports, next to `humaworkers`):
+Wrap the operation in `humamcp.Expose(op, true)` or `humamcp.Expose(op, false)`. To keep `hello` from agents, in `api-go/api/contract.go` (add `github.com/joeblew999/orpc-api/api/go/humamcp` to the imports, next to `humaworkers`):
 
 ```go
 huma.Register(api, humamcp.Expose(huma.Operation{

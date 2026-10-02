@@ -5,8 +5,8 @@
 package main
 
 import (
-	"github.com/joeblew999/orpc-api/api-go/api"
-	"github.com/joeblew999/orpc-api/api-go/transport"
+	"github.com/joeblew999/orpc-api/api/go/api"
+	"github.com/joeblew999/orpc-api/api/go/transport"
 )
 
 func main() {

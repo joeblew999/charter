@@ -9,7 +9,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/orpc-api/api-go/humaworkers"
+	"github.com/joeblew999/orpc-api/api/go/humaworkers"
 )
 
 type event struct {

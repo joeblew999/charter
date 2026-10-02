@@ -3,9 +3,9 @@ package api
 import (
 	"testing"
 
-	"github.com/joeblew999/orpc-api/api-go/humamcp"
-	"github.com/joeblew999/orpc-api/api-go/humaworkers"
-	"github.com/joeblew999/orpc-api/api-go/specfile"
+	"github.com/joeblew999/orpc-api/api/go/humamcp"
+	"github.com/joeblew999/orpc-api/api/go/humaworkers"
+	"github.com/joeblew999/orpc-api/api/go/specfile"
 )
 
 // What a spec does not show and a client would find first. These hold for any contract: they name

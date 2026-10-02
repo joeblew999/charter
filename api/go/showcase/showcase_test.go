@@ -18,7 +18,7 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/joeblew999/orpc-api/api-go/transport"
+	"github.com/joeblew999/orpc-api/api/go/transport"
 )
 
 // A real HTTP server with the WebSocket adapter around the handlers: what `go run ./cmd/showcase` serves.

@@ -14,7 +14,7 @@ The newest release: [github.com/joeblew999/orpc-api/releases/latest](https://git
 
 ```sh
 go run github.com/joeblew999/orpc-api/dev@latest help                 # the tool, no install (needs Go)
-go get github.com/joeblew999/orpc-api/api-go@latest                   # the Go packages, run in api-go/
+go get github.com/joeblew999/orpc-api/api/go@latest                   # the Go packages, run in api-go/
 curl -fsSL https://github.com/joeblew999/orpc-api/releases/latest/download/dev_darwin_arm64.tar.gz | tar xz dev   # the tool as a binary, into ./dev
 ```
 
@@ -58,7 +58,7 @@ A release is four git tags on one commit.
 | Tag | What it is for |
 |---|---|
 | `vX.Y.Z` | The release itself. The maintainer pushes this one; the GitHub Release is made for it |
-| `api-go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/api-go`, which holds the packages |
+| `api-go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/api/go`, which holds the packages |
 | `dev/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/dev`, which is the tool |
 | `sdk/go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/sdk/go`, which is the Go SDK of the notes API |
 
@@ -83,7 +83,7 @@ Where the pin is `latest`, `mise up` alone installs the newest release.
 **The Go packages**, pinned in `api-go/go.mod`:
 
 ```sh
-cd api-go && go get -u github.com/joeblew999/orpc-api/api-go && go mod tidy   # the newest release of the packages
+cd api-go && go get -u github.com/joeblew999/orpc-api/api/go && go mod tidy   # the newest release of the packages
 ```
 
 Then prove the project against both:

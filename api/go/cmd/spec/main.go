@@ -12,10 +12,10 @@
 package main
 
 import (
-	"github.com/joeblew999/orpc-api/api-go/api"
-	"github.com/joeblew999/orpc-api/api-go/humamcp"
-	"github.com/joeblew999/orpc-api/api-go/humaworkers"
-	"github.com/joeblew999/orpc-api/api-go/specfile"
+	"github.com/joeblew999/orpc-api/api/go/api"
+	"github.com/joeblew999/orpc-api/api/go/humamcp"
+	"github.com/joeblew999/orpc-api/api/go/humaworkers"
+	"github.com/joeblew999/orpc-api/api/go/specfile"
 )
 
 func main() {

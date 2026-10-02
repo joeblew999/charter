@@ -134,7 +134,7 @@ Fern sees the same API: the same operations, parameters, constraints, `x-fern-*`
 Run `go run github.com/joeblew999/orpc-api/dev@latest new -name <name>` ([dev.md](dev.md#a-new-project-dev-new)). It does the three steps below, and what follows is what you then own:
 
 1. **The contract as Huma operations,** as in `api-go/api/contract.go`: one `humaworkers.Route` per operation, with `asyncapi.Operation(...)` around the WebSocket ones. For OAuth, idempotency, file upload, webhooks or a WebSocket the client also sends on, see the Go showcase ([showcase-go.md](showcase-go.md)).
-2. **The packages as imports** (`go get github.com/joeblew999/orpc-api/api-go`): `humaworkers`, `asyncapi`, `follow`, `hub`, `humamcp`, `transport` and `specfile`. Copied, because they are yours to change: `api-go/worker/` (the entry, the runner, the WebSocket adapter, the hub and the clock fix), `api-go/cmd/spec/` and the two `platform_*.go` files.
+2. **The packages as imports** (`go get github.com/joeblew999/orpc-api/api/go`): `humaworkers`, `asyncapi`, `follow`, `hub`, `humamcp`, `transport` and `specfile`. Copied, because they are yours to change: `api-go/worker/` (the entry, the runner, the WebSocket adapter, the hub and the clock fix), `api-go/cmd/spec/` and the two `platform_*.go` files.
 3. **`sdk/fern/apis/api-go/` as your API's Fern folder,** plus the `api-go:*` and `sdk:*` tasks.
 
 Then have clients follow the client rule in [realtime.md](realtime.md#what-a-client-does).

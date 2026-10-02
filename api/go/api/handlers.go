@@ -14,9 +14,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/orpc-api/api-go/follow"
-	"github.com/joeblew999/orpc-api/api-go/humamcp"
-	"github.com/joeblew999/orpc-api/api-go/humaworkers"
+	"github.com/joeblew999/orpc-api/api/go/follow"
+	"github.com/joeblew999/orpc-api/api/go/humamcp"
+	"github.com/joeblew999/orpc-api/api/go/humaworkers"
 )
 
 // Env is what the platform supplies: bindings on Cloudflare (platform_js.go), memory elsewhere.

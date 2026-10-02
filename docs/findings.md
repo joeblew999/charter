@@ -187,7 +187,7 @@ Cut with `git tag v0.1.0 && git push origin v0.1.0` on main, after `api-check`, 
   - the downloaded `dev-darwin-arm64` runs;
   - `go run github.com/joeblew999/orpc-api/dev@v0.1.0 help` runs;
   - `... dev@v0.1.0 workflows -into <dir>` writes `api-check.yml`, `api-deploy.yml`, `sdk-check.yml` and `sdk-release.yml` there;
-  - a new module with `go get github.com/joeblew999/orpc-api/api-go@v0.1.0` imports and uses `humaworkers`, `asyncapi`, `follow` and `humamcp`.
+  - a new module with `go get github.com/joeblew999/orpc-api/api/go@v0.1.0` imports and uses `humaworkers`, `asyncapi`, `follow` and `humamcp`.
 - **The two servers are interchangeable to clients, in both directions, on Cloudflare.** The SDKs and CLI generated from the Go specs pass the SDK live test (2/2) and a short soak (7/7, nothing missing, no duplicates, through a client drop) against the deployed *oRPC* Worker; the oRPC-spec ones had passed against the Go server.
 
 ## The showcase, contract first in oRPC (sdk/harness, verified locally 2026-10-01)

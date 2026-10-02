@@ -17,8 +17,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/orpc-api/api-go/humaworkers"
-	"github.com/joeblew999/orpc-api/api-go/transport"
+	"github.com/joeblew999/orpc-api/api/go/humaworkers"
+	"github.com/joeblew999/orpc-api/api/go/transport"
 )
 
 // Env is what the platform supplies: variables and secrets (bindings on Cloudflare, the environment

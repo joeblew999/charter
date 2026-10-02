@@ -6,7 +6,7 @@ import (
 	"github.com/syumai/workers-go/cloudflare"
 	"github.com/syumai/workers-go/cloudflare/fetch"
 
-	"github.com/joeblew999/orpc-api/api-go/showcase"
+	"github.com/joeblew999/orpc-api/api/go/showcase"
 )
 
 // env reads the settings from the Worker's variables and secrets (cloudflare.config.ts), and sends

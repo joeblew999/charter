@@ -6,8 +6,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/orpc-api/api-go/asyncapi"
-	"github.com/joeblew999/orpc-api/api-go/humaworkers"
+	"github.com/joeblew999/orpc-api/api/go/asyncapi"
+	"github.com/joeblew999/orpc-api/api/go/humaworkers"
 )
 
 func init() {
