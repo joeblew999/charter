@@ -54,7 +54,8 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 		"fern/generators.yml":           "path: github.com/zeta/billing-api/sdk/go\n",
 		"test/soak-go/main.go":          `notes "github.com/zeta/billing-api/sdk/go"`,
 		"test/soak-go/go.mod":           "github.com/zeta/billing-api/sdk/go => ../../sdk/go",
-		"mise.toml":                     `run = "go run ` + filepath.Join(repo, "cmd", "charter") + ` wasm-build"`,
+		"mise.toml":                     `run = "go run $CHARTER/cmd/charter wasm-build"`,
+		"mise.toml ":                    "\nCHARTER = \"" + repo + "\"\n",
 		".github/workflows/check.yml":   "- run: mise run check",
 		".github/workflows/release.yml": "- run: mise run release:tags",
 		"docs/README.md":                "# billing-api",
@@ -141,9 +142,9 @@ func TestNewProjectOnYourSubdomain(t *testing.T) {
 // What the first line says a release pins, and what a checkout does.
 func TestPinned(t *testing.T) {
 	for want, got := range map[string]string{
-		"charter v1.2.3: pins the tool to v1.2.3 in mise.toml and the Go library to v1.2.3 in go.mod":                                                                                              pinned("v1.2.3", ""),
-		"charter v1.2.3, copying from /src: the tasks run the tool from that checkout (go.work lets them), and go.mod builds against its library (a replace line)":                                 pinned("v1.2.3", "/src"),
-		"charter (not a release: built from a checkout), copying from /src: the tasks run the tool from that checkout (go.work lets them), and go.mod builds against its library (a replace line)": pinned("", "/src"),
+		"charter v1.2.3: pins the tool to v1.2.3 in mise.toml and the Go library to v1.2.3 in go.mod":                                                                                                 pinned("v1.2.3", ""),
+		"charter v1.2.3, copying from /src: the tasks run the tool from that checkout (CHARTER in mise.toml), and go.mod builds against its library (a replace line)":                                 pinned("v1.2.3", "/src"),
+		"charter (not a release: built from a checkout), copying from /src: the tasks run the tool from that checkout (CHARTER in mise.toml), and go.mod builds against its library (a replace line)": pinned("", "/src"),
 	} {
 		if got != want {
 			t.Errorf("got  %s\nwant %s", got, want)

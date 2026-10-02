@@ -34,6 +34,8 @@ const (
 	exampleWorker = "charter-notes-go"
 	// How the example's tasks run the tool: from the checkout they are in.
 	exampleTool = "go run ../../cmd/charter"
+	// And the tasks of a project made from a checkout: CHARTER, in its mise.toml, is that checkout.
+	checkoutTool = "go run $CHARTER/cmd/charter"
 	// Not copied: the committed Go SDK. It is generated from the specs, which carry the Worker's URL,
 	// and it is a module under the example's path: `mise run sdk:publish` writes the project's own.
 	exampleSDK = "sdk/go/"
@@ -122,9 +124,13 @@ func newProject(args []string) error {
 	if owner == nil {
 		return fmt.Errorf("%s/mise.toml has no workers.dev default for API_URL", source)
 	}
-	tool := "charter" // on the path of every task: mise installs the pinned release
+	// How the project's tasks run this tool, and the line of mise.toml that says which one it is.
+	// A release: mise installs it, pinned, and it is on the path of every task. A checkout: nothing
+	// is pinned (the newest release can be older than the checkout), and the tasks `go run` it from
+	// there, at the one place CHARTER names.
+	tool, which := "charter", "[tools]\n# The tool every task runs: `mise up` moves to a newer release.\n\"go:"+toolPackage+"\" = \""+strings.TrimPrefix(version, "v")+"\"\n"
 	if checkout != "" {
-		tool = "go run " + filepath.Join(checkout, "cmd", "charter")
+		tool, which = checkoutTool, "[env]\n# The checkout of charter whose tool the tasks run (go.work lets them) and whose Go library go.mod\n# builds against: charter new -from.\nCHARTER = \""+checkout+"\"\n"
 	}
 	rename := strings.NewReplacer(
 		exampleModule, module,
@@ -155,9 +161,11 @@ func newProject(args []string) error {
 		}
 		switch rel {
 		case "mise.toml":
-			if checkout == "" {
-				text = strings.Replace(text, "[tools]\n", "[tools]\n# The tool every task runs: `mise up` moves to a newer release.\n\"go:"+toolPackage+"\" = \""+strings.TrimPrefix(version, "v")+"\"\n", 1)
+			header, _, _ := strings.Cut(which, "\n")
+			if !strings.Contains(text, header+"\n") {
+				return fmt.Errorf("%s/mise.toml has no %s", source, header)
 			}
+			text = strings.Replace(text, header+"\n", which, 1)
 		case "fern/fern.config.json":
 			text = fernOrganization.ReplaceAllString(text, `"organization": "`+name+`"`)
 		}
@@ -274,7 +282,7 @@ func pinned(version, checkout string) string {
 	if checkout == "" {
 		return fmt.Sprintf("charter %s: pins the tool to %s in mise.toml and the Go library to %s in go.mod", version, version, version)
 	}
-	return fmt.Sprintf("charter %s, copying from %s: the tasks run the tool from that checkout (go.work lets them), and go.mod builds against its library (a replace line)", orCheckout(version), checkout)
+	return fmt.Sprintf("charter %s, copying from %s: the tasks run the tool from that checkout (CHARTER in mise.toml), and go.mod builds against its library (a replace line)", orCheckout(version), checkout)
 }
 
 // orCheckout names the tool's version, or says that it has none.
