@@ -39,7 +39,7 @@ Its settings and their defaults (recheck 30 s, retry 1 s, 5 failures, pages of 1
 
 - **A live item is only a wake-up.** The feed emits it directly only when its id is the next one; otherwise it reads the log. One SQLite writer means a visible id implies all lower ones, so this is gap-free.
 - **A silent hub costs a delay, never an item.** After the recheck time the feed reads the log anyway.
-- **It gives up** after that many failed subscribes in a row, or when the log fails. The adapter then ends the stream as rule 5 says. A cancelled context ends it quietly.
+- **It gives up** after 5 failed subscribes in a row, or when the log fails. The adapter then ends the stream as rule 5 says. A cancelled context ends it quietly.
 
 The Worker holds each client's SSE response or WebSocket, and subscribes to the hub with a WebSocket of its own. The hub accepts subscribers with the hibernatable WebSocket API, so it sleeps between items.
 

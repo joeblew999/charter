@@ -100,7 +100,7 @@ A release is a version tag. Push `vX.Y.Z` and the `release` workflow runs these;
 
 | Task | What it makes |
 |---|---|
-| `mise run sdk:dist` | `dist/<project>-sdk-<group>.tar.gz` per SDK group and `dist/<project>-specs.tar.gz`, generated fresh and checked |
+| `mise run sdk:dist` | `dist/<project>-sdk-<group>.tar.gz` per SDK group and `dist/<project>-specs.tar.gz`, generated fresh and checked. `<project>` is the folder's name |
 | `mise run sdk:dist:cli` | `dist/<project>-cli-<os>-<arch>`: Linux on amd64 in the workflow |
 | `mise run release` | Attaches every file in `dist/` to the tag's GitHub Release |
 | `mise run release:tags` | Tags `sdk/go/vX.Y.Z` on the tag's commit, so `@latest` works |

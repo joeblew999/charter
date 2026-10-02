@@ -53,7 +53,7 @@ mise run perf:try -- -name tinygodev -prebuilt          # deploy the build/ that
 
 ## What moves the cost
 
-In the order that mattered for the notes example:
+What you control in your own project:
 
 1. **Cross between Go and JavaScript as few times as possible.** Every value that crosses costs, and so does every promise Go waits for. Read rows with the library's `d1` package, not `database/sql`; publish to the hub once.
 2. **Warm what a new isolate needs.** `go.warm({ paths: [...] })` in `worker.mjs` has each waiting runtime answer those GET paths during start-up. Only paths whose handlers touch no binding.
