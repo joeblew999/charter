@@ -124,7 +124,6 @@ func newProject(args []string) error {
 		"README.md":       projectReadme(name, orCheckout(version)),
 		"AGENTS.md":       "# For agents\n\nEverything about this project is in [docs/](docs/README.md), the same pages developers read. Read [docs/README.md](docs/README.md), then [docs/rules.md](docs/rules.md): the rules are binding.\n",
 		"CLAUDE.md":       "@AGENTS.md\n",
-		".gitattributes":  projectAttributes,
 		"docs/README.md":  projectDocs(name),
 		"docs/rules.md":   projectRules,
 		"docs/writing.md": docsWriting,
@@ -144,7 +143,7 @@ func newProject(args []string) error {
 			return err
 		}
 		// The tasks `go run` the tool from the checkout, which Go allows for a module of the workspace.
-		if err := write(filepath.Join(into, "go.work"), "go "+goVersion(tasks)+"\n\nuse (\n\t.\n\t"+filepath.ToSlash(checkout)+"\n)\n"); err != nil {
+		if err := write(filepath.Join(into, "go.work"), "go "+goVersion(tasks)+"\n\nuse (\n\t.\n\t"+checkout+"\n)\n"); err != nil {
 			return err
 		}
 	} else if err := quiet(into, nil, "go", "mod", "edit", "-dropreplace="+libraryModule, "-require="+libraryModule+"@"+version); err != nil {
@@ -199,6 +198,7 @@ func copyExample(from, into, name, module, subdomain, version, checkout string) 
 	// there, at the one place CHARTER names.
 	tool, which := "charter", "[tools]\n# The tool every task runs: `mise up` moves to a newer release.\n\"go:"+toolPackage+"\" = \""+strings.TrimPrefix(version, "v")+"\"\n"
 	if checkout != "" {
+		// With forward slashes on every system: a backslash in a TOML string starts an escape.
 		tool, which = checkoutTool, "[env]\n# The checkout of charter whose tool the tasks run (go.work lets them) and whose Go library go.mod\n# builds against: charter new -from.\nCHARTER = \""+filepath.ToSlash(checkout)+"\"\n"
 	}
 	rename := strings.NewReplacer(
@@ -390,12 +390,6 @@ once, in [charter's docs](` + docsURL + `): the Go library this project requires
 glue the build writes into ` + "`build/`" + `) comes from there.
 `
 }
-
-// What is generated is compared byte for byte with what is committed (the specs, the workflows),
-// so a checkout must not change line ends, which git on Windows does unless told.
-const projectAttributes = `# Line ends are LF on every system: the checks compare generated files with the committed ones.
-* text=auto eol=lf
-`
 
 const projectRules = `---
 title: Rules

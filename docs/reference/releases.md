@@ -16,14 +16,14 @@ One GitHub Release per version tag. No file name carries the version.
 
 | File | What it is |
 |---|---|
-| `charter_linux_amd64.tar.gz`, `charter_linux_arm64.tar.gz`, `charter_darwin_amd64.tar.gz`, `charter_darwin_arm64.tar.gz` | The tool as a binary, with a `README.md` |
+| `charter_linux_amd64.tar.gz`, `charter_linux_arm64.tar.gz`, `charter_darwin_amd64.tar.gz`, `charter_darwin_arm64.tar.gz`, `charter_windows_amd64.zip`, `charter_windows_arm64.zip` | The tool as a binary, with a `README.md` |
 | `checksums.txt` | The SHA-256 of those archives |
 | `notes-go-sdk-go.tar.gz`, `notes-go-sdk-typescript.tar.gz`, `notes-go-specs.tar.gz`, `notes-go-cli-linux-amd64` | The Go notes example's SDK sources, specs and CLI, generated fresh and checked |
 | `notes-ts-sdk-go.tar.gz`, `notes-ts-sdk-typescript.tar.gz`, `notes-ts-specs.tar.gz`, `notes-ts-cli-linux-amd64` | The same for the TypeScript notes example |
 
 - **A project uses the tool and the library.** The library is not a file of the Release: Go fetches it from the repository at the release's tag.
 - **The example files** are what your own project's `release` workflow attaches for your API ([Release](../guides/sdks.md#release)).
-- **Not in a release:** a Windows build of the tool, SDK packages, the CLI for anything but Linux on amd64.
+- **Not in a release:** SDK packages, the CLI for anything but Linux on amd64.
 - **Write `@latest` and `releases/latest`** in anything you keep: a version in a link is out of date after the next release.
 
 ## The tags

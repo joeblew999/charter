@@ -6,7 +6,7 @@ parent: Reference
 
 # Tasks: every `mise run` task
 
-Every task of a project, and of this repo. Task names are the same in every project, with no prefix. Each is one line in `mise.toml`; what needs more is a command of the tool ([The charter command](charter.md)).
+Every task of a project, and of this repo. Task names are the same in every project, with no prefix. Each is one line in `mise.toml`; what needs more is a command of the tool ([The charter command](charter.md)). They run on macOS, Linux and Windows ([what is covered there](#windows)).
 
 ```sh
 mise tasks                     # every task, with its description
@@ -14,7 +14,7 @@ mise run sdk:gen typescript    # in the project's folder; words after the name g
 mise run bench -- -write       # flags go after --
 ```
 
-**REMOTE** tasks read or change something on Cloudflare or GitHub: they need a Cloudflare login (`./node_modules/.bin/cf auth login`, or `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`) or `gh`. The others touch only your machine. Tasks that run `cf`, Fern or a test program need `mise run setup` first.
+**REMOTE** tasks read or change something on Cloudflare or GitHub: they need a Cloudflare login (`npx cf auth login`, or `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`) or `gh`. The others touch only your machine. Tasks that run `cf`, Fern or a test program need `mise run setup` first.
 
 ## A Go project
 
@@ -79,6 +79,18 @@ Fern generates in Docker: `sdk:gen` and every task that generates need it runnin
 | `docs:lint`, `docs:check` | Checks `docs/`; also fails if the config is stale |
 | `docs:review` | Has Claude bring `docs/` into line with `docs/writing.md` |
 | `docs:pages` | REMOTE, once per repo. Turns GitHub Pages on for `docs/` |
+
+## Windows
+
+The tasks run natively on Windows: mise runs a task line with cmd.exe there, and every line has only what cmd.exe and sh both take.
+
+| | On Windows |
+|---|---|
+| Checked on every push, on GitHub's `windows-2025` runner | At the root: `charter:check`, `go:check`. In `examples/notes-go/`: `setup`, then `check`: `lint`, `test`, `spec:check`, `sdk:publish:fresh`, `build` (TinyGo with the patched runtime), `test:native`, `test:workerd` (`cf dev`, workerd, the local D1), `workflows:check`, `docs:check`. A project made by `charter new` gets the same job, `check-windows` |
+| Not checked there | The tasks that generate with Fern (`sdk:gen`, `sdk:check`, `sdk:ready`, `sdk:publish`, `sdk:dist`, the `sdk:cli` tasks) and those that need a generated SDK (`live-test`, `soak`, the `check` of `examples/showcase-go/` and `examples/showcase-ts/`): Fern generates in Linux containers, which GitHub's Windows runners do not run. With Docker Desktop they may work; nothing here has run them. The `check` of `examples/notes-ts/` and the REMOTE tasks have not been run on Windows either |
+| Different | A stopped server is ended by force, with everything it started (`taskkill`), since Windows has no signal to ask with. The patched TinyGo root is hard links or copies where symbolic links are not allowed |
+
+Git must check files out with LF line ends, which `.gitattributes` says: the checks compare generated files with the committed ones byte for byte.
 
 ## The other examples
 

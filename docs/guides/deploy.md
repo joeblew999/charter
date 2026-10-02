@@ -13,7 +13,7 @@ What is recorded as run is the notes example's own deploy ([Findings](../finding
 ## Log in
 
 ```sh
-./node_modules/.bin/cf auth login    # once per machine: opens the browser
+npx cf auth login     # once per machine: opens the browser
 ```
 
 Or an API token, for a machine without a browser:

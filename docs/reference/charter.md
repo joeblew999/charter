@@ -45,7 +45,7 @@ Builds the project's Go Worker into `build/`.
 In order, it:
 
 1. **Writes workers-go's JavaScript and the library's Worker glue** into `build/`. The glue is `worker/*.mjs` of the library as the project's `go.mod` resolves it, so it matches the Go the project builds against.
-2. **Makes a patched copy of TinyGo's runtime source,** once per TinyGo version, in your cache folder. TinyGo itself is not rebuilt.
+2. **Makes a patched copy of TinyGo's runtime source,** once per TinyGo version, in your cache folder. TinyGo itself is not rebuilt. The rest of that TinyGo root is symbolic links to the installed one; where Windows does not allow those, hard links or copies.
 3. **Builds** `build/app.wasm` and checks its size.
 
 | Patch | Why | Upstream |
@@ -59,7 +59,9 @@ What each was worth: [Benchmarks](../benchmarks.md). `size -max <bytes> <file>` 
 
 | Command | Flags | What it does |
 |---|---|---|
-| `with-server` * | `-url <url>`, `-start <cmd>`, `-run <cmd>` (repeat), `-show` | Starts a server, waits for the URL, runs the commands, stops it. `{port}` in any of them is a free port, `{port2}` another. Output shows only on failure, or always with `-show` |
+| `with-server` * | `-url <url>`, `-env NAME=VALUE` (repeat), `-start <cmd>`, `-run <cmd>` (repeat), `-show` | Starts a server with the `-env` variables, waits for the URL, runs the commands, then stops the server and everything it started. `{port}` in any of them is a free port, `{port2}` another. Output shows only on failure, or always with `-show` |
+| `exec` * | `-env NAME=VALUE` (repeat), `-quiet`, then `<program> [args]` | Runs a program with those variables set. `-quiet`: its output only if it fails |
+| `lint` * | `-vet <packages>`, `-wasm <packages>`, then `<file or folder>...` | Fails if `gofmt` would change a file, then runs `go vet` on `-vet` (default `./...`) and, for Wasm, on `-wasm`. Package lists are comma-separated. It matches a `*` pattern itself |
 | `migrate-local` | `-port <port>`, `-worker <name>` | Applies `migrations/*.sql` to a running dev server's local D1, each once |
 | `migrate` | `-worker <name>` | REMOTE. Applies pending migrations to the database `<worker>-db` |
 | `doctor` | | Says what the project's tasks need and lack |
@@ -68,6 +70,12 @@ What each was worth: [Benchmarks](../benchmarks.md). `size -max <bytes> <file>` 
 | `harness-deploy` | | REMOTE. Deploys the project's Worker twice: as itself and as `<worker>-api` |
 
 The `harness-` commands are for a project whose Worker imports its own generated SDK: `examples/showcase-ts/`.
+
+### Commands, programs and task lines
+
+- **A command given to `with-server` is words, not a shell line:** a program and its arguments, split at spaces. Quotes keep spaces in one word. There are no variables, pipes or `&&`.
+- **A program that an npm package of the project installs** (`cf`, `fern`, `tsc`, `vitest`) is run from `node_modules/.bin`, by `with-server` and by `exec`. It is never taken from the path: `package-lock.json` says which names those are, and one that is not installed yet is an error that names `mise run setup`. Any other program is the one on the path.
+- **A task line has only what sh and Windows' cmd.exe both take:** programs, double quotes, `&&`. `exec`, `lint` and `with-server` exist for the rest: a variable for a program, the `gofmt` test, hidden output, an npm program. A setting of `mise.toml` is written as mise's template for it, as the `spec` task writes `API_URL`: mise fills it in before a shell reads the line. `TestTaskLinesNeedNoUnixShell` holds every `mise.toml` of this repo to that.
 
 ## Measure
 
@@ -133,5 +141,5 @@ Without `-tag`, the tag is the one a GitHub workflow runs on. With neither, the 
 ## Add a command
 
 1. **Write it** in `cmd/charter/`: a function `func(args []string) error`, registered in its file's `init` with its usage and one line of help.
-2. **Add a one-line task** that calls it, in the example's `mise.toml`.
+2. **Add a one-line task** that calls it, in the example's `mise.toml` ([what a line may have](#commands-programs-and-task-lines)).
 3. **Document it** here and in [Tasks](tasks.md), in the same commit.

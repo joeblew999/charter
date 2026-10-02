@@ -44,7 +44,7 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 	for file, want := range map[string]string{
 		"go.mod":                        "module github.com/zeta/billing-api\n",
 		"go.mod ":                       "replace " + libraryModule + " => " + filepath.Join(repo, "go"),
-		"go.work":                       "\t" + filepath.ToSlash(repo) + "\n",
+		"go.work":                       "\t" + repo + "\n",
 		"worker.mjs":                    `import { goWorker } from "./build/go.mjs";`,
 		"api/handlers.go":               `"` + libraryModule + `/humaworkers"`,
 		"main.go":                       `"github.com/zeta/billing-api/api"`,
@@ -116,7 +116,7 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 	if out, err := exec.Command("gofmt", "-l", into).Output(); err != nil || len(out) > 0 {
 		t.Errorf("gofmt -l in the new project: %v\n%s", err, out)
 	}
-	for _, args := range [][]string{{"build", "./..."}, {"vet", "./..."}, {"test", "./api", "-run", "TestHello|TestCreateAndList|TestTheWebSocketChannel"}, {"run", filepath.Join(repo, "cmd", "charter"), "sdk-list"}} {
+	for _, args := range [][]string{{"build", "./..."}, {"vet", "./..."}, {"test", "./api", "-run", "TestHello|TestCreateAndList|TestTheWebSocketChannel"}, {"run", filepath.ToSlash(repo) + "/cmd/charter", "sdk-list"}} { // the tool as the project's tasks run it
 		cmd := exec.Command("go", args...)
 		cmd.Dir = into
 		if out, err := cmd.CombinedOutput(); err != nil {

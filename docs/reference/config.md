@@ -53,6 +53,7 @@ The handlers never touch a binding: they get an `api.Env` (`Var`, `Store`, `Hub`
 | `platform_js.go`, `platform_other.go` | The bindings on Cloudflare; the stand-ins natively | edit for a binding |
 | `worker.mjs`, `cloudflare.config.ts`, `vite.config.ts` | The Worker's entry, its declaration, the dev server's port | edit for a binding |
 | `go.mod`, `package.json` and their lockfiles | The pins | update on purpose |
+| `.gitattributes` | LF line ends on every system (the checks compare generated files byte for byte), and which files are generated | leave |
 | `migrations/` | The D1 schema: a file per change | add files |
 | `fern/generators.yml`, `fern/fern.config.json`, `fern/docs.yml` | Fern's settings | edit |
 | `docs/`, `README.md`, `AGENTS.md`, `CLAUDE.md` | Written once by `charter new` | edit |

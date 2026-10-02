@@ -29,7 +29,7 @@ A report needs the exact command, its full output, and what you expected. If the
 
 ## Make it faster
 
-Performance work here is a loop of about a minute and a half, and it does not touch the deployed Workers. You need a Cloudflare account (`./node_modules/.bin/cf auth login` in the example) and, for CPU figures, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in your environment.
+Performance work here is a loop of about a minute and a half, and it does not touch the deployed Workers. You need a Cloudflare account (`npx cf auth login` in the example) and, for CPU figures, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in your environment.
 
 ```sh
 cd examples/notes-go

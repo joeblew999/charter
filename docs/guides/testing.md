@@ -67,7 +67,7 @@ func TestCreateRefusesAnEmptyBody(t *testing.T) {
 **A Node program that takes a URL,** for what must hold over real HTTP and on Cloudflare. Print a `PASS` or `FAIL` line per check and exit with 1 if one failed. Add it to three tasks in `mise.toml`:
 
 - **`test:native` and `test:workerd`:** another `-run "node test/hello-test.mjs http://localhost:{port}"` at the end. The tool replaces `{port}`.
-- **`live-test`:** `&& node test/hello-test.mjs "$API_URL"` at the end.
+- **`live-test`:** `&& node test/hello-test.mjs` at the end, followed by the URL as the line's other commands have it: mise's template for `API_URL`.
 
 ## What is not tested
 

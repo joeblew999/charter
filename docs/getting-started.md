@@ -10,7 +10,7 @@ One tutorial. You end with a Go API ([Huma](https://huma.rocks)) on Cloudflare W
 You need:
 
 - **[mise](https://mise.jdx.dev), Go and git.** mise installs the rest at pinned versions.
-- **macOS or Linux.** On Windows, use WSL2 (Ubuntu) for now: the tool and the tasks need a Unix shell. Native Windows is [#31](https://github.com/joeblew999/charter/issues/31).
+- **macOS, Linux or Windows.** On Windows the steps up to 4 are checked on every push; generating SDKs there is not ([what is covered](reference/tasks.md#windows)).
 - **Docker,** from step 5 on: Fern generates SDKs in containers.
 - **A Cloudflare account,** from step 5 on. What a request costs there: [Benchmarks](benchmarks.md).
 
@@ -72,7 +72,7 @@ How: [Change the contract](guides/contract.md). To remove the notes: [Make the e
 ## 5. Deploy
 
 ```sh
-./node_modules/.bin/cf auth login    # once per machine
+npx cf auth login     # once per machine
 mise run deploy                      # builds, deploys the Worker, its database and the hub, applies migrations
 mise run live-test                   # SSE, WebSocket, the generated SDK and MCP, against what you deployed
 ```
