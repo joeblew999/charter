@@ -6,8 +6,8 @@
 //
 //   - A runtime serves one request at a time. A request that finds none waiting starts its own,
 //     exactly as workers-go does, so nothing waits for another request.
-//   - A runtime is reused only when its response ended normally: the body was read to its end.
-//     After an error, or when the client went away, it is dropped.
+//   - A runtime is reused only when its response ended normally: Go wrote it to its end. After an
+//     error, or when the client went away, it is dropped.
 //   - A runtime is dropped before Go's collector would run in it: Go says when its heap has no
 //     room for another request (transport.Serve sets the binding's "full"). So a runtime serves
 //     some dozens of requests, not thousands, and what must be shared between requests still goes
@@ -120,7 +120,13 @@ export function goWorker({ createRuntimeContext, loadModule }) {
 		}
 	}
 
+	// fetch gives a request to a Go runtime as two values, and gets the answer in one call when the
+	// handler did not stream (answer in transport_js.go has the protocol): every value that crosses
+	// between JavaScript and Go costs, and so does every call into Go.
 	async function fetch(request, env, ctx) {
+		let head = `${request.method}\n${request.url}`;
+		for (const [name, value] of request.headers) head += `\n${name}\n${value}`;
+		const body = request.body ? new Uint8Array(await request.arrayBuffer()) : null;
 		let runtime = waiting.pop();
 		// For measuring (dev bench -each): which kind of runtime a request got.
 		const kind = runtime ? (runtime.served ? "reused" : runtime.warm ? "warm" : "new") : "new";
@@ -132,30 +138,47 @@ export function goWorker({ createRuntimeContext, loadModule }) {
 			runtime = await start(env, ctx);
 		}
 		runtime.served++;
-		const response = await runtime.binding.handleRequest(request);
-		if (!response.body) {
-			done(runtime);
-			return response;
-		}
-		// The runtime is free when the body has been read to its end. If the client goes away
-		// first, Go is told (transport.Serve cancels the request's context) and the runtime is dropped.
-		const reader = response.body.getReader();
-		let body = new ReadableStream({
-			async pull(controller) {
-				const { value, done: ended } = await reader.read();
-				if (!ended) return controller.enqueue(value);
-				controller.close();
-				done(runtime);
-			},
-			cancel(reason) {
-				runtime.binding.cancel?.();
-				return reader.cancel(reason);
-			},
+		return new Promise(resolve => {
+			const { binding } = runtime;
+			let stream; // the controller of a streamed body, until the client goes away
+			binding.respond = (status, head, body, more) => {
+				const headers = new Headers();
+				const lines = head.split("\n");
+				for (let i = 0; i + 1 < lines.length; i += 2) headers.append(lines[i], lines[i + 1]);
+				if (request.headers.has("x-go-runtime")) headers.set("x-go-runtime", warmFailure ? `${kind}; ${warmFailure}` : kind);
+				// The whole answer: the runtime is free for the next request.
+				if (!more) {
+					const response = new Response(body, { status, headers });
+					done(runtime);
+					return resolve(response);
+				}
+				// A stream: the runtime is free when Go has written the last of it. If the client goes
+				// away first, Go is told (transport.Serve cancels the request's context) and the
+				// runtime is dropped.
+				let readable = new ReadableStream({
+					start(controller) {
+						stream = controller;
+						if (body) controller.enqueue(body);
+					},
+					cancel() {
+						stream = null;
+						binding.cancel?.();
+					},
+				});
+				const length = headers.get("content-length");
+				if (length !== null) readable = readable.pipeThrough(new FixedLengthStream(Number(length)));
+				resolve(new Response(readable, { status, headers }));
+			};
+			binding.write = (body, more) => {
+				if (!stream) return false;
+				if (body) stream.enqueue(body);
+				if (!more) {
+					stream.close();
+					done(runtime);
+				}
+				return true;
+			};
+			binding.serve(head, body);
 		});
-		const length = response.headers.get("content-length");
-		if (length !== null) body = body.pipeThrough(new FixedLengthStream(Number(length)));
-		const answer = new Response(body, response);
-		if (request.headers.has("x-go-runtime")) answer.headers.set("x-go-runtime", warmFailure ? `${kind}; ${warmFailure}` : kind);
-		return answer;
 	}
 }
