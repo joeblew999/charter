@@ -95,7 +95,9 @@ func perf(args []string) error {
 
 func perfClean(args []string) error {
 	var worker string
+	var all bool
 	flags("perf-clean", args, func(f *flag.FlagSet) {
+		f.BoolVar(&all, "all", false, "also delete scratch Workers made in the last 20 minutes: another run may be using one")
 		f.StringVar(&worker, "worker", "", "the Worker whose scratch Workers to delete (default: the first label of API_GO_URL's host)")
 	})
 	if worker == "" {
@@ -111,14 +113,23 @@ func perfClean(args []string) error {
 	if err != nil {
 		return err
 	}
-	var workers []struct{ Name string }
+	var workers []struct {
+		Name      string
+		CreatedOn time.Time `json:"created_on"`
+	}
 	if err := json.Unmarshal([]byte(out), &workers); err != nil {
 		return fmt.Errorf("cf workers list: %w", err)
 	}
+	inUse := map[string]bool{}
 	scratch := regexp.MustCompile(`^` + regexp.QuoteMeta(worker) + `-perf-[a-z0-9-]+$`)
 	found := 0
 	for _, w := range workers {
 		if scratch.MatchString(w.Name) {
+			if !all && time.Since(w.CreatedOn) < 20*time.Minute {
+				fmt.Printf("left %s: made %s ago, a run may be using it (-all deletes it)\n", w.Name, time.Since(w.CreatedOn).Round(time.Second))
+				inUse[w.Name+"-db"] = true
+				continue
+			}
 			found++
 			if err := deleteScratch(dir, w.Name); err != nil {
 				return err
@@ -131,7 +142,7 @@ func perfClean(args []string) error {
 		return err
 	}
 	for _, d := range databases {
-		if name, isDB := strings.CutSuffix(d.Name, "-db"); isDB && scratch.MatchString(name) {
+		if name, isDB := strings.CutSuffix(d.Name, "-db"); isDB && scratch.MatchString(name) && !inUse[d.Name] {
 			found++
 			if err := sh(dir, cf, "d1", "delete", d.UUID, "--force"); err != nil {
 				return err
