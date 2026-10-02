@@ -74,4 +74,4 @@ They do not guarantee: that a new project's full `mise run check` passes, or tha
 
 ## Before the rename
 
-The releases cut while the repository was called orpc-api have other module paths and another layout. `@latest` under `github.com/joeblew999/charter` resolves once a release is tagged from this layout. Until then, make a project from a checkout: `go run ./cmd/charter new -name <name> -into <dir>`.
+The releases up to v0.7.0 were cut while the repository was called orpc-api: they have other module paths and another layout. From v0.8.0 the paths are the ones on this page, and `@latest` under `github.com/joeblew999/charter` resolves to them.

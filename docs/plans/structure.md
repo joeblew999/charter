@@ -24,10 +24,11 @@ The layout, and the one shape every project has, are on the home page ([what is 
 - **`charter new` copies `examples/notes-go/`** and renames it. Nothing is filtered.
 - **One set of workflow templates** serves a repo that is one project and a repo that holds several.
 - **The repository is called charter.** Workers are `charter-notes-go`, `charter-notes-ts`, `charter-showcase-go`, `charter-showcase-ts`; the SDKs are `Notes` and `Showcase`.
+- **A project is ready for other people from the start:** the tool writes issue forms and a labels file beside the workflows ([#19](https://github.com/joeblew999/charter/issues/19)).
+- **Released** from this layout as v0.8.0, and a project made by the released tool from an empty folder passes its own check.
 - **The docs were rewritten once,** against this shape ([#18](https://github.com/joeblew999/charter/issues/18)).
 
 ## Left
 
-- **A release from this layout.** Until one is tagged, `@latest` does not resolve to it ([Releases](../reference/releases.md#before-the-rename)).
 - **`ts/`:** a TypeScript library, when there is one to publish (the AsyncAPI generator, the feed). Today the showcase imports them from `examples/notes-ts/`.
 - **The projects made from earlier releases** move to this shape by hand ([#20](https://github.com/joeblew999/charter/issues/20)).

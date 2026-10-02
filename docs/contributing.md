@@ -19,8 +19,10 @@ The repo is a library (`go/`), a tool (`cmd/charter/`) and four example projects
 
 ## Report a bug or ask for a feature
 
+On GitHub, use the forms: a bug, a feature, or a bug in a project this one is built on. An agent cannot fill a web form, so the tool prints the same headings:
+
 ```sh
-gh issue create --repo joeblew999/charter --title "[bug] ..." --body-file body.md
+charter issue bug > body.md     # or: feature, upstream. Fill it in; its first line is the gh command that files it
 ```
 
 A report needs the exact command, its full output, and what you expected. If the bug is in TinyGo, workers-go, Fern, Huma or oRPC, check [Upstream issues](upstream.md) first: those are fixed there.

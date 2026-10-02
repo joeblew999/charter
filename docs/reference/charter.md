@@ -117,7 +117,9 @@ Without `-tag`, the tag is the one a GitHub workflow runs on. With neither, the 
 
 | Command | Flags | What it does |
 |---|---|---|
-| `workflows` * | `-check`, `-into <repo dir>` | Writes `check`, `deploy`, `sdk-check` and `release` into `.github/workflows/`. A repo with an `examples/` folder gets the variant for several projects |
+| `workflows` * | `-check`, `-into <repo dir>` | Writes a repo's `.github/`: the workflows `check`, `deploy`, `sdk-check` and `release`, the issue forms (a bug, a feature, an upstream bug; blank issues off) and `labels.tsv`. A repo with an `examples/` folder gets the workflows for several projects |
+| `issue` * | `<bug\|feature\|upstream>` | Prints an issue body with that form's headings, for `gh issue create --body-file`: gh and the API ignore forms |
+| `labels` * | | Remote: creates or updates the repo's GitHub labels from the labels file |
 | `docs` * | `-check`, `-into <repo dir>` | Writes the docs site's config, `docs/writing.md` and `docs/llms.txt` |
 | `docs-lint` * | `-into <repo dir>` | Checks `docs/` (below) |
 | `docs-review` * | `-print` | Hands Claude the review prompt with what the lint found |
