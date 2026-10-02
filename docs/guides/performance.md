@@ -6,7 +6,9 @@ parent: Guides
 
 # Measure and improve performance
 
-How to see what each request of your API costs on Cloudflare, and how to try a change in about 70 seconds without touching the deployed Worker. The numbers for the notes example, and what made a Go Worker cost what a TypeScript one does, are in [Benchmarks](../benchmarks.md). To work on charter's own cost: [How to help](../contributing.md#make-it-faster).
+How to see what each request of your API costs on Cloudflare, and how to try a change in about a minute and a half without touching the deployed Worker. The numbers for the notes example, and what made a Go Worker cost what a TypeScript one does, are in [Benchmarks](../benchmarks.md). To work on charter's own cost: [How to help](../contributing.md#make-it-faster).
+
+A bench of a deployed Worker takes about half a minute: the requests themselves a few seconds, the rest waiting for Cloudflare to have their CPU figures.
 
 ## What you need
 
@@ -19,7 +21,7 @@ A deployed Worker and its `API_URL` ([Deploy](deploy.md)). For CPU figures: `CLO
 | `mise run bench` | Times every GET operation of the deployed Worker once it is warm: wall time, CPU median and p99, and the CPU of each request | Read-only |
 | `mise run bench -- -write` | The same with the operations that change data | Writes test data |
 | `mise run perf` | Deploys, then benches the new isolate from its first request: 8 at once, then each operation. About two minutes | Redeploys your Worker |
-| `mise run perf:try -- -name <experiment>` | Builds, deploys to a scratch Worker with a database and hub of its own, benches it, deletes it. About 70 seconds | Nothing of yours |
+| `mise run perf:try -- -name <experiment>` | Builds, deploys to a scratch Worker with a database and hub of its own, benches it, deletes it. About a minute and a half | Nothing of yours |
 | `mise run perf:clean` | Deletes scratch Workers and databases a run left | Scratch only |
 
 `bench` reads the operations from the spec the server gives at `/api/openapi.json` and their inputs from the spec's examples, so it measures your operations, not the notes. It skips streams, and operations without an example for a required input.

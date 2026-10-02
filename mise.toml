@@ -32,7 +32,7 @@ description = "LOCAL: mise run check in every example, one after the other"
 run = "go run ./cmd/charter each check"
 
 [tasks.compare]
-description = "REMOTE, writes test notes: the same bench against the TypeScript notes Worker and then the Go one, with writes and the CPU of each request: are they level? About three minutes"
+description = "REMOTE, writes test notes: the same bench against the TypeScript notes Worker and then the Go one, with writes and the CPU of each request: are they level? About two minutes"
 run = "go run ./cmd/charter each -only notes-ts,notes-go bench -each -write -warm 20s -n 30"
 
 [tasks.doctor]

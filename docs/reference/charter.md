@@ -94,7 +94,7 @@ It calls GET operations whose required inputs have examples in the spec, plus on
 | `-header 'Name: value'` | A header for every request. Repeat | |
 | `-worker <name>` | The Worker's name, for the CPU figures | From the URL |
 
-CPU time comes from Workers Logs: it needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and observability enabled on the Worker, and waits up to two minutes.
+CPU time comes from Workers Logs: it needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and observability enabled on the Worker, and waits for the figures to arrive: usually about 25 seconds, two minutes at most.
 
 ## SDKs and releases
 

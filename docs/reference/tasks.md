@@ -101,7 +101,7 @@ Run at the root.
 | `examples:check` | `check` in every example, one after the other |
 | `charter:check` | The tool: gofmt, vet, tests, the test that holds the two notes examples to one surface, the generated workflows and docs config, the docs lint |
 | `go:check` | `go:lint` and `go:test`: the library, for the host and for Wasm |
-| `compare` | REMOTE, writes test notes. The same bench against the TypeScript notes Worker and the Go one. About three minutes |
+| `compare` | REMOTE, writes test notes. The same bench against the TypeScript notes Worker and the Go one. About two minutes |
 | `upstream:status` | REMOTE, read-only. Every `Upstream:` tag under the repo |
 | `workflows` | Writes this repo's workflows |
 | `charter:release` | GoReleaser on the tool. REMOTE on a version tag; elsewhere a snapshot into `dist/` |

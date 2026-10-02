@@ -40,7 +40,7 @@ type call struct {
 //   - Wall time is the median and the slowest of -n requests, after 3 warm-up ones.
 //   - CPU time is what Workers bills and limits. It comes from Workers Logs through Cloudflare's
 //     API, so it needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (the environment, or fnox)
-//     and observability enabled on the Worker; the events take up to a minute or two to arrive.
+//     and observability enabled on the Worker; the events usually take about 25 seconds to arrive.
 func bench(args []string) error {
 	n, spec, write, cpu, worker, each, burst := 20, "", false, false, "", false, 0
 	var headers, bodies list
@@ -91,6 +91,11 @@ func bench(args []string) error {
 				res.Body.Close()
 			}
 			time.Sleep(200 * time.Millisecond)
+		}
+	}
+	if worker == "" {
+		if u, err := url.Parse(base); err == nil {
+			worker, _, _ = strings.Cut(u.Hostname(), ".")
 		}
 	}
 	started := time.Now()
@@ -162,16 +167,15 @@ func bench(args []string) error {
 		wall[c.trigger] = timing{status, times[len(times)/2], times[len(times)-1]}
 	}
 
+	// One question to Workers Logs answers both the table and the per-request lines: every request
+	// bench made, by its ray id.
 	var cpuOf map[string][2]float64
+	var have map[string]float64
 	if cpu {
-		if worker == "" {
-			if u, err := url.Parse(base); err == nil {
-				worker, _, _ = strings.Cut(u.Hostname(), ".")
-			}
-		}
-		cpuOf, err = workerCPU(worker, started, len(samples))
-		if err != nil {
+		if have, err = requestCPU(worker, started, samples); err != nil {
 			fmt.Println("no CPU time:", err)
+		} else {
+			cpuOf = summarise(samples, have)
 		}
 	}
 	ms := func(d time.Duration) float64 { return float64(d.Microseconds()) / 1000 }
@@ -191,10 +195,8 @@ func bench(args []string) error {
 	for _, why := range skipped {
 		fmt.Println("skipped:", why)
 	}
-	if each {
-		if err := printEach(worker, started, samples); err != nil {
-			fmt.Println("no CPU time per request:", err)
-		}
+	if each && have != nil {
+		printEach(samples, have)
 	}
 	if note != "" {
 		fmt.Println("\nthe Worker says:", note)
@@ -355,20 +357,24 @@ func items(v any) []any { l, _ := v.([]any); return l }
 // id for it, and the kind of Go runtime that served it ("warm", "new", "reused", or nothing).
 type sample struct{ trigger, phase, ray, kind string }
 
-// printEach prints every request's CPU time, in the order sent: Cloudflare's log event of each
-// request (found by its ray id) has it. A median hides what this shows: every second request
-// costing double, the one request in a hundred that starts a Go runtime, the first in an isolate.
-func printEach(worker string, since time.Time, samples []sample) error {
+// requestCPU asks Workers Logs for the CPU time of every request bench made, by ray id. The events
+// take from a few seconds to a minute or two to arrive: it asks every three seconds and stops as
+// soon as it has them all, or after two minutes with what it has.
+func requestCPU(worker string, since time.Time, samples []sample) (map[string]float64, error) {
 	token, account := secret("CLOUDFLARE_API_TOKEN"), secret("CLOUDFLARE_ACCOUNT_ID")
+	if token == "" || account == "" {
+		return nil, errors.New("CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are not set (in the environment, or in fnox)")
+	}
 	query := map[string]any{
-		"queryId": "charter-bench-each", "view": "events", "limit": 2000, "dry": false,
+		"queryId": "charter-bench", "view": "events", "limit": 2000, "dry": false,
 		"parameters": map[string]any{
 			"datasets": []string{"cloudflare-workers"},
 			"filters":  []any{map[string]any{"key": "$metadata.service", "operation": "eq", "type": "string", "value": worker}},
 		},
 	}
+	fmt.Printf("waiting for Cloudflare's CPU figures for %q...\n", worker)
 	cpu := map[string]float64{}
-	for deadline := time.Now().Add(2 * time.Minute); ; time.Sleep(10 * time.Second) {
+	for deadline := time.Now().Add(2 * time.Minute); ; time.Sleep(3 * time.Second) {
 		query["timeframe"] = map[string]int64{"from": since.Add(-2 * time.Second).UnixMilli(), "to": time.Now().UnixMilli()}
 		body, _ := json.Marshal(query)
 		req, _ := http.NewRequest("POST", "https://api.cloudflare.com/client/v4/accounts/"+account+"/workers/observability/telemetry/query", bytes.NewReader(body))
@@ -376,10 +382,11 @@ func printEach(worker string, since time.Time, samples []sample) error {
 		req.Header.Set("Content-Type", "application/json")
 		res, err := benchClient.Do(req)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		var reply struct {
 			Success bool
+			Errors  []struct{ Message string }
 			Result  struct {
 				Events struct {
 					Events []struct {
@@ -392,7 +399,7 @@ func printEach(worker string, since time.Time, samples []sample) error {
 		err = json.NewDecoder(res.Body).Decode(&reply)
 		res.Body.Close()
 		if err != nil || !reply.Success {
-			return fmt.Errorf("Cloudflare's observability API refused (HTTP %d)", res.StatusCode)
+			return nil, fmt.Errorf("Cloudflare's observability API refused (HTTP %d %v): the token needs to read Workers observability, and the Worker needs observability enabled", res.StatusCode, reply.Errors)
 		}
 		for _, event := range reply.Result.Events.Events {
 			if event.Workers.CPUTimeMs != nil {
@@ -406,9 +413,18 @@ func printEach(worker string, since time.Time, samples []sample) error {
 			}
 		}
 		if found == len(samples) || time.Now().After(deadline) {
-			break
+			if found == 0 {
+				return nil, fmt.Errorf("no events for Worker %q: is its name right (-worker), and is observability enabled?", worker)
+			}
+			return cpu, nil
 		}
 	}
+}
+
+// printEach prints every request's CPU time, in the order sent. A median hides what this shows:
+// every second request costing double, the one request in a hundred that starts a Go runtime, the
+// first in an isolate.
+func printEach(samples []sample, cpu map[string]float64) {
 	fmt.Println("\nCPU of each request in ms, in the order sent. w: served by a Go runtime started while the Worker's module loaded;")
 	fmt.Println("n: by one this request had to start; no letter: by one reused; ?: Cloudflare has no figure for it (yet).")
 	line := func(label string, of []sample) {
@@ -441,7 +457,6 @@ func printEach(worker string, since time.Time, samples []sample) error {
 	for _, key := range order {
 		line(key, by[key])
 	}
-	return nil
 }
 
 func countPhase(samples []sample, phase string) (n int) {
@@ -453,77 +468,21 @@ func countPhase(samples []sample, phase string) (n int) {
 	return n
 }
 
-// workerCPU asks Cloudflare (Workers Logs) for the CPU time per operation of a Worker since a
-// moment: median and p99, in milliseconds. It waits for the events to arrive, up to two minutes.
-func workerCPU(worker string, since time.Time, expect int) (map[string][2]float64, error) {
-	token, account := secret("CLOUDFLARE_API_TOKEN"), secret("CLOUDFLARE_ACCOUNT_ID")
-	if token == "" || account == "" {
-		return nil, errors.New("CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are not set (in the environment, or in fnox)")
-	}
-	calculation := func(operator, alias string) map[string]any {
-		return map[string]any{"operator": operator, "key": "$workers.cpuTimeMs", "keyType": "number", "alias": alias}
-	}
-	query := map[string]any{
-		"queryId": "charter-bench", "view": "calculations", "ignoreSeries": true, "dry": false,
-		"parameters": map[string]any{
-			"datasets":     []string{"cloudflare-workers"},
-			"filters":      []any{map[string]any{"key": "$metadata.service", "operation": "eq", "type": "string", "value": worker}},
-			"calculations": []any{map[string]any{"operator": "count", "alias": "n"}, calculation("median", "p50"), calculation("p99", "p99")},
-			"groupBys":     []any{map[string]any{"type": "string", "value": "$metadata.trigger"}},
-			"limit":        200,
-		},
-	}
-	fmt.Printf("waiting for Cloudflare's CPU figures for %q (up to two minutes)...\n", worker)
-	for deadline := time.Now().Add(2 * time.Minute); ; time.Sleep(10 * time.Second) {
-		query["timeframe"] = map[string]int64{"from": since.Add(-2 * time.Second).UnixMilli(), "to": time.Now().UnixMilli()}
-		body, _ := json.Marshal(query)
-		req, _ := http.NewRequest("POST", "https://api.cloudflare.com/client/v4/accounts/"+account+"/workers/observability/telemetry/query", bytes.NewReader(body))
-		req.Header.Set("Authorization", "Bearer "+token)
-		req.Header.Set("Content-Type", "application/json")
-		res, err := benchClient.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		var reply struct {
-			Success bool
-			Errors  []struct{ Message string }
-			Result  struct {
-				Calculations []struct {
-					Alias      string
-					Aggregates []struct {
-						GroupKey string
-						Value    float64
-					}
-				}
-			}
-		}
-		err = json.NewDecoder(res.Body).Decode(&reply)
-		res.Body.Close()
-		if err != nil || !reply.Success {
-			return nil, fmt.Errorf("Cloudflare's observability API refused (HTTP %d %v): the token needs to read Workers observability, and the Worker needs observability enabled", res.StatusCode, reply.Errors)
-		}
-		out, seen := map[string][2]float64{}, 0.0
-		for _, c := range reply.Result.Calculations {
-			for _, a := range c.Aggregates {
-				v := out[a.GroupKey]
-				switch c.Alias {
-				case "n":
-					seen += a.Value
-				case "p50":
-					v[0] = a.Value
-				case "p99":
-					v[1] = a.Value
-				}
-				out[a.GroupKey] = v
-			}
-		}
-		if int(seen) >= expect || time.Now().After(deadline) {
-			if len(out) == 0 {
-				return nil, fmt.Errorf("no events for Worker %q: is its name right (-worker), and is observability enabled?", worker)
-			}
-			return out, nil
+// summarise is the median and the 99th percentile of CPU time per operation, from each request's
+// own figure (the ones Cloudflare has).
+func summarise(samples []sample, cpu map[string]float64) map[string][2]float64 {
+	by := map[string][]float64{}
+	for _, s := range samples {
+		if ms, ok := cpu[s.ray]; ok {
+			by[s.trigger] = append(by[s.trigger], ms)
 		}
 	}
+	out := map[string][2]float64{}
+	for trigger, all := range by {
+		sort.Float64s(all)
+		out[trigger] = [2]float64{all[len(all)/2], all[min(len(all)-1, len(all)*99/100)]}
+	}
+	return out
 }
 
 // secret is an environment variable, or the same name from fnox when the environment has none.

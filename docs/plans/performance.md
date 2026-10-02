@@ -12,7 +12,7 @@ The goal: a Go Worker that fits Workers Free (10 ms of CPU) on every request, wi
 What closed the gap for ordinary requests is listed, step by step with its numbers, in [Benchmarks](../benchmarks.md#what-closed-the-gap). Around it:
 
 - **The tool pins the TinyGo it patches** (2026-10-02), so a project cannot build with another by accident.
-- **A scratch Worker per experiment:** `mise run perf:try`, about 70 seconds, several at once.
+- **A scratch Worker per experiment:** `mise run perf:try`, about a minute and a half, several at once.
 - **One command that gives a verdict:** `mise run perf`, and `mise run compare` for both Workers side by side.
 - **Accepted by the tests:** `mise run check`, the live test, the showcase test and the soak (7 of 7 clients, through a redeploy and a client drop) pass on what is deployed.
 
