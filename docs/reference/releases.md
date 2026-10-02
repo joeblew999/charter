@@ -75,3 +75,22 @@ They do not guarantee: that a new project's full `mise run check` passes, or tha
 ## Before the rename
 
 The releases up to v0.7.0 were cut while the repository was called orpc-api: they have other module paths and another layout. From v0.8.0 the paths are the ones on this page, and `@latest` under `github.com/joeblew999/charter` resolves to them.
+
+### Moving a project made before v0.8.0
+
+Such a project has an `api-go/` folder, copies of the Worker glue in `api-go/worker/`, tasks named `api-go:*`, and imports `github.com/joeblew999/orpc-api/api-go/...`. Too much changed to edit it in place. Make a new project and move what is yours into it:
+
+1. **Make the new project** beside the old one, with the old one's name, module and subdomain:
+
+   ```sh
+   go run github.com/joeblew999/charter/cmd/charter@latest new -name <name> -module <module> -subdomain <yours> -into <new dir>
+   ```
+
+2. **Move your API:** the old `api-go/api/` (contract, handlers, store, tests) replaces the new `api/`. In it, change the imports from `github.com/joeblew999/orpc-api/api-go/<package>` to `github.com/joeblew999/charter/go/<package>`, and your own from `<module>/api-go/api` to `<module>/api`.
+3. **Move your data and bindings:** `migrations/`, and what you added to `platform_js.go`, `platform_other.go` and `cloudflare.config.ts`. Keep the new `worker.mjs` and `main.go`: the glue you had in `api-go/worker/` is now written into `build/` by the build.
+4. **A feed of your own type** uses the library: `hub.DurableObject[T]("HUB", "<name>")` and `hub.Memory[T]`, in place of a copied hub. The Durable Object class is exported as `Hub`; if your deployed Worker declares it under another name, keep that name in `worker.mjs` (`export { Hub as <YourName> }`) and in `cloudflare.config.ts`.
+5. **The store on Cloudflare** is a `D1Store` on the library's `d1` package (`d1.Query[T]`), as in the new `api/store_js.go`: copy its shape for your tables.
+6. **Regenerate and check:** `mise install && mise run setup && mise run spec && mise run check`.
+7. **Deploy and measure:** `mise run deploy`, `mise run live-test`, `mise run bench`. The Worker keeps its name, so it replaces the old deployment and keeps its database.
+
+Then copy over `docs/`, `.github/` settings of your own, and the git history if you want it (move the new files into the old repository instead of the other way round).
