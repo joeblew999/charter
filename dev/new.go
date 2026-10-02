@@ -410,7 +410,7 @@ own API in: [Replace the example with your API](` + replaceGuide + `).
 
 How it works, what Huma needs on workers-go, the real-time design and the measured costs are documented
 once, in [orpc-api's docs](https://joeblew999.github.io/orpc-api/): the Go packages this project imports
-(` + "`humaworkers`, `asyncapi`, `follow`, `hub`, `humamcp`, `transport`, `specfile`" + `) come from there.
+(` + "`humaworkers`, `asyncapi`, `follow`, `hub`, `d1`, `humamcp`, `transport`, `specfile`" + `) come from there.
 `
 }
 
