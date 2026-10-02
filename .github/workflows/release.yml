@@ -1,0 +1,76 @@
+# Written by `charter workflows` from its template (github.com/joeblew999/charter, cmd/charter/workflows/release.yml):
+# change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# On a version tag (vX.Y.Z): the SDK sources, the specs and the Linux CLI go onto the GitHub Release, and
+# the Go modules in subdirectories get their tags.
+# On a pull request or by hand it is a dry run: the same build, kept as workflow artifacts, nothing published.
+name: release
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths: [cmd/**, go/**, examples/**, .goreleaser.yaml, mise.toml, go.mod, .github/workflows/release.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+env:
+  GH_TOKEN: ${{ github.token }}
+jobs:
+  # The tool itself: GoReleaser puts its archives and checksums onto the Release.
+  tool:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0 # GoReleaser writes the changelog from the history
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run charter:release
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: charter
+          path: dist/
+          if-no-files-found: error
+      - run: mise run release:tags
+  sdk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [notes-go, notes-ts]
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run sdk:dist
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: sdk-${{ matrix.example }}
+          path: examples/${{ matrix.example }}/dist/
+          if-no-files-found: error
+      - run: mise run release
+  # amd64 only: the binaryen the tool pins has no linux/arm64 build, so mise can't install it on an arm runner.
+  cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [notes-go, notes-ts]
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run sdk:dist:cli
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: cli-${{ matrix.example }}
+          path: examples/${{ matrix.example }}/dist/
+          if-no-files-found: error
+      - run: mise run release

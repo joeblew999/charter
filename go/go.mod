@@ -1,4 +1,4 @@
-module github.com/joeblew999/orpc-api/go
+module github.com/joeblew999/charter/go
 
 go 1.27.1
 

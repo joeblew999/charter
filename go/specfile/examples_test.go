@@ -7,7 +7,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/orpc-api/go/humaworkers"
+	"github.com/joeblew999/charter/go/humaworkers"
 )
 
 // The reporter's shape: an id with a pattern, and a section with an enum.

@@ -1,0 +1,118 @@
+# The showcase API in Go on Cloudflare Workers: every Fern feature we use, in one small API, from a
+# Go contract (api/contract.go). It has no storage.
+#   mise install && mise run setup     # tools, then npm packages
+#   mise run check                     # every local check (needs Docker, no Cloudflare account)
+#   mise tasks                         # all of them
+# Every task is one line of plain sh (on Linux mise runs dash: no bashisms). Anything longer is a
+# command of the charter tool, which works on the project it is run in (`help` lists its commands).
+
+[tools]
+go = "1.27.1"
+node = "26.10.0"
+# Builds the generated CLI: mise run sdk:cli:build.
+rust = "1.98.1"
+gh = "2.101.0"
+
+[env]
+# The local dev port.
+API_PORT = "{{ get_env(name='API_PORT', default='5175') }}"
+# Where the Worker is deployed (cf deploy prints it; there is no cf command to look it up). Its first
+# label is the Worker's name. On another Cloudflare account, set it in mise.local.toml (gitignored).
+API_URL = "{{ get_env(name='API_URL', default='https://charter-showcase-go.gedw99.workers.dev') }}"
+
+# ---- the project ---------------------------------------------------------------------------------
+
+[tasks.setup]
+description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import"
+run = "npm ci --no-fund --no-audit"
+
+[tasks.check]
+description = "Every LOCAL check (no Cloudflare account; needs Docker): lint, Go tests (the same SDK surface as the oRPC showcase), spec drift, the TinyGo build, and the SDK test natively and under workerd"
+depends = ["lint", "test", "spec:check", "test:native", "test:workerd"]
+
+[tasks.doctor]
+description = "Check what the tasks need: npm packages, Docker, Go, Rust"
+run = "go run ../../cmd/charter doctor"
+
+# ---- the API: run it, build it, test it ----------------------------------------------------------
+
+[tasks.run]
+description = "The API natively on API_PORT: no Cloudflare. WEBHOOK_URL=<url> to get the webhook"
+run = "PORT=$API_PORT go run ."
+
+[tasks.build]
+description = "Build the Worker's Wasm with TinyGo into build/, tuned for Workers, with the library's Worker glue beside it"
+run = "go run ../../cmd/charter wasm-build"
+
+[tasks.dev]
+description = "The API under workerd on API_PORT (cf dev). SHOWCASE_WEBHOOK_URL=<url> to get the webhook. After a Go change: mise run build"
+depends = ["build"]
+run = "PORT=$API_PORT ./node_modules/.bin/cf dev"
+
+[tasks.spec]
+description = "Write both specs from the contract (api/contract.go) into fern/"
+run = 'go run ./cmd/spec fern/openapi.json fern/asyncapi.json "$API_URL"'
+
+[tasks."spec:check"]
+description = "Fail if a committed spec is stale against the contract"
+run = 'go run ./cmd/spec -check fern/openapi.json fern/asyncapi.json "$API_URL"'
+
+[tasks.lint]
+description = "gofmt and go vet, for the host and for Wasm"
+run = 'test -z "$(gofmt -l *.go api cmd)" && go vet ./... && GOOS=js GOARCH=wasm go vet .'
+
+[tasks.test]
+description = "Go tests: the API, and the same SDK surface and overlay as the oRPC showcase (../showcase-ts)"
+run = "go test ./..."
+
+[tasks."test:native"]
+description = "Every Fern feature through the generated TypeScript SDK, against the native build (Docker the first time, for the SDK)"
+depends = ["sdk:ready typescript-dist typescript-public"]
+run = 'go run ../../cmd/charter with-server -url http://localhost:{port}/openapi.json -start "PORT={port} WEBHOOK_URL=http://localhost:{port2}/webhook go run ." -run "node test/showcase-test.mjs http://localhost:{port} --webhook-port {port2}"'
+
+[tasks."test:workerd"]
+description = "The same against the TinyGo Wasm under workerd (go test can't see TinyGo's gaps)"
+depends = ["build", "sdk:ready typescript-dist typescript-public"]
+run = 'go run ../../cmd/charter with-server -url http://localhost:{port}/openapi.json -start "PORT={port} SHOWCASE_WEBHOOK_URL=http://localhost:{port2}/webhook ./node_modules/.bin/cf dev" -run "node test/showcase-test.mjs http://localhost:{port} --webhook-port {port2}"'
+
+[tasks.showcase-test]
+description = "The SDK test against a running mise run run or mise run dev (no webhook check: it needs the server to know the receiver)"
+depends = ["sdk:ready typescript-dist typescript-public"]
+run = 'node test/showcase-test.mjs "http://localhost:$API_PORT"'
+
+# ---- Cloudflare ----------------------------------------------------------------------------------
+
+[tasks.deploy]
+description = "REMOTE: build and deploy the Worker"
+depends = ["build"]
+run = "./node_modules/.bin/cf deploy"
+
+# ---- sdk: what Fern generates from the specs in fern/ (its settings: fern/generators.yml) ---------
+
+[tasks."sdk:list"]
+description = "The SDK groups fern/generators.yml defines"
+run = "go run ../../cmd/charter sdk-list"
+
+[tasks."sdk:check-spec"]
+description = "Validate the specs and Fern's settings with Fern"
+run = "./node_modules/.bin/fern check --warnings"
+
+[tasks."sdk:gen"]
+description = "Generate an SDK with Fern (Docker): mise run sdk:gen <group> -> sdk/out/<group>"
+run = "go run ../../cmd/charter sdk-gen"
+
+[tasks."sdk:check"]
+description = "Prove a generated SDK works (Go: build, vet, tests against WireMock; TypeScript: typecheck): mise run sdk:check <group>"
+run = "go run ../../cmd/charter sdk-check"
+
+[tasks."sdk:ready"]
+description = "Generate and build what the tests use, if missing (TypeScript and Go SDKs, the CLI): mise run sdk:ready [group...]"
+run = "go run ../../cmd/charter sdk-ready"
+
+[tasks."sdk:cli:build"]
+description = "HEAVY: build the generated Rust CLI in sdk/out/cli: mise run sdk:cli:build [-linux]"
+run = "go run ../../cmd/charter cli-build"
+
+[tasks."sdk:clean"]
+description = "Remove generated SDKs (sdk/out) and stop leftover WireMock containers"
+run = "go run ../../cmd/charter sdk-clean"

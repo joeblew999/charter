@@ -7,7 +7,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/orpc-api/go/humaworkers"
+	"github.com/joeblew999/charter/go/humaworkers"
 )
 
 // Examples is what is wrong with the examples in api's contract (Huma's `example:"..."` tag on a
