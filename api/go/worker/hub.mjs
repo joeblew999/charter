@@ -5,25 +5,29 @@
 // can call one, not be one.
 //
 //   GET  /subscribe  (WebSocket upgrade)  every published message arrives as one text frame
-//   POST /publish                         the body is sent to every subscriber as it is
+//   publish(message)                      the message is sent to every subscriber as it is
+//   POST /publish                         the same, with the message as the body
 // Upstream: syumai/workers-go#220 (when fixed: the hub can be a Go Durable Object)
 import { DurableObject } from "cloudflare:workers";
 
 export class NotesHub extends DurableObject {
-	async fetch(request) {
-		if (request.method === "POST") {
-			const message = await request.text();
-			let sent = 0;
-			for (const socket of this.ctx.getWebSockets()) {
-				try {
-					socket.send(message);
-					sent++;
-				} catch {
-					// Closing: the runtime drops it from getWebSockets().
-				}
+	// publish is what the Go hub calls (Workers RPC): a method call costs the caller less CPU than
+	// a fetch, which has a Request and a Response to make.
+	publish(message) {
+		let sent = 0;
+		for (const socket of this.ctx.getWebSockets()) {
+			try {
+				socket.send(message);
+				sent++;
+			} catch {
+				// Closing: the runtime drops it from getWebSockets().
 			}
-			return Response.json({ sent });
 		}
+		return sent;
+	}
+
+	async fetch(request) {
+		if (request.method === "POST") return Response.json({ sent: this.publish(await request.text()) });
 		if (request.headers.get("upgrade") !== "websocket") return new Response("expected a WebSocket upgrade", { status: 426 });
 		const [client, server] = Object.values(new WebSocketPair());
 		this.ctx.acceptWebSocket(server);
