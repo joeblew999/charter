@@ -6,7 +6,7 @@
   },
   "servers": {
     "production": {
-      "host": "orpc-sdk-harness-api.gedw99.workers.dev",
+      "host": "charter-showcase-ts-api.gedw99.workers.dev",
       "pathname": "/api/mock",
       "protocol": "wss"
     }

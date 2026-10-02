@@ -122,7 +122,7 @@
   },
   "servers": {
     "production": {
-      "host": "orpc-showcase-go.gedw99.workers.dev",
+      "host": "charter-showcase-go.gedw99.workers.dev",
       "protocol": "wss"
     }
   }

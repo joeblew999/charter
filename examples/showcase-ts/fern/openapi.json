@@ -6,8 +6,8 @@
   },
   "servers": [
     {
-      "url": "https://orpc-sdk-harness-api.gedw99.workers.dev/api/mock",
-      "description": "The deployed mock of this API (sdk/harness, mode api). Fern's CLI takes its OAuth token URL from here; --base-url doesn't move it."
+      "url": "https://charter-showcase-ts-api.gedw99.workers.dev/api/mock",
+      "description": "The deployed mock of this API (mode api). Fern's CLI takes its OAuth token URL from here; --base-url doesn't move it."
     }
   ],
   "security": [

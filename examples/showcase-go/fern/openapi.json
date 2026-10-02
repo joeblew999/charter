@@ -636,7 +636,7 @@
   ],
   "servers": [
     {
-      "url": "https://orpc-showcase-go.gedw99.workers.dev"
+      "url": "https://charter-showcase-go.gedw99.workers.dev"
     }
   ],
   "webhooks": {
