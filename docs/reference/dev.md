@@ -337,22 +337,6 @@ Generates the `cli` group, builds it as `cli-build` does, and copies the binary 
 - **Needs:** Docker, and `cargo` without `-linux`.
 - **Runs:** project layout.
 
-### cloudflare-spec
-
-```sh
-dev cloudflare-spec [-products d1,kv] [-release <sha>]   # HEAVY: add Cloudflare products as an API for Fern
-```
-
-Downloads Cloudflare's OpenAPI spec of its whole API (26 MB, kept in `.forge/`), keeps the account-level paths of the products named, and writes them as a Fern folder named `cloudflare`.
-
-| Flag | Default | What it is |
-|---|---|---|
-| `-products` | `d1,kv` | Comma-separated: `workers`, `d1`, `kv`, `r2`, `queues`, `workflows` and others |
-| `-release` | a commit of Cloudflare's spec, fixed in the tool | The spec release to download |
-
-- **Needs:** network access.
-- **Runs:** orpc-api only. It copies its `generators.yml` from `sdk/fern/apis/petstore/generators.yml`, which a new project does not have.
-
 ### harness-sync, harness-test, harness-deploy
 
 ```sh
@@ -512,7 +496,6 @@ The same list as `dev help` prints, with where each one runs.
 |---|---|---|
 | `bench` | API and database | Below a `go.work` |
 | `cli-build` | SDKs | Project layout |
-| `cloudflare-spec` | SDKs | orpc-api only |
 | `dist-cli` | SDKs | Project layout |
 | `dist-sdk` | SDKs | Project layout |
 | `docs` | Docs | Anywhere |

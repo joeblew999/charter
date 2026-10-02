@@ -104,7 +104,12 @@ func sdkCheckDir(dir string) error {
 		fmt.Printf("typecheck ok (%s)\n", entry)
 		return nil
 	}
-	return fmt.Errorf("%s: no go.mod or index.ts", dir)
+	if entries, _ := os.ReadDir(dir); len(entries) == 0 {
+		return fmt.Errorf("%s: nothing generated", dir)
+	}
+	// Another language: Fern generated it, and nothing here builds it.
+	fmt.Printf("generated (%s): this tool builds and tests Go and TypeScript SDKs only\n", dir)
+	return nil
 }
 
 func sdkReady(args []string) error {

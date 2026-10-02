@@ -115,7 +115,7 @@ Started without the task (`go run .` in `api/go/`), it listens on `PORT`, or on 
 
 ## Cost
 
-It passes the same tests as the oRPC Worker, and it costs a little more to run: on Cloudflare a read uses 1 to 3 ms of CPU and a write about 4 ms, against about 1 ms for the oRPC Worker. That is with the tuned build (`dev wasm-build`) and the Worker entry that reuses Go runtimes (`api/go/worker/go.mjs`); TinyGo and workers-go as they come cost 40 to 70 ms for a read. The numbers and how to measure your own are in [benchmarks.md](benchmarks.md); why, in [concepts/workers-go.md](concepts/workers-go.md).
+It passes the same tests as the oRPC Worker and costs about the same to run: on Cloudflare a simple read uses under 1 ms of CPU, a database read 1 to 2 ms and a write about 2 ms, against 0, 1 and 1 to 2 ms for the oRPC Worker. That is with the tuned build (`dev wasm-build`), the Worker entry that reuses Go runtimes (`api/go/worker/go.mjs`), the lean request path in `transport`, and direct D1 and hub calls; TinyGo and workers-go as they come cost 40 to 70 ms for a read. The numbers and how to measure your own are in [benchmarks.md](benchmarks.md); why, in [concepts/workers-go.md](concepts/workers-go.md).
 
 ## Differences from the oRPC Worker
 

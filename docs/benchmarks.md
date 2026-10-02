@@ -11,34 +11,31 @@ Measured on 2026-10-01 on Cloudflare, with the two Workers serving the same API 
 
 ## On Cloudflare
 
-CPU time per request, median:
+`mise run compare` runs the same bench against both Workers. CPU time per request, 2026-10-02, 30 requests each, as Cloudflare logged them:
 
-| Operation | oRPC Worker (`orpc-api`) | Go Worker, TinyGo and workers-go as they come | Tuned collector only | And runtimes reused | Go Worker now: and stacks reused |
-|---|---|---|---|---|---|
-| `GET /api/hello` | 1 ms | 55 ms | 6 to 19 ms | 3 ms | 1 ms |
-| `GET /api/notes` (D1) | 1 to 3 ms | 71 ms | 8 to 29 ms | 7 ms | 3 ms |
-| A path that does not exist (404) | not measured | 38 ms | 5 to 17 ms | 2 ms | 1 ms |
-| `POST /api/notes` (D1 write and hub publish) | not measured | about 265 ms | 61 to 66 ms | 10 to 13 ms | 4 ms |
+```
+                      TypeScript (orpc-api)        Go (orpc-api-go)
+GET /api/hello        0 0 0 0 0 1 0 0 0 0 3 1 0    0 0 0 0 0 0 0 1 0 0 1 0 0
+GET /api/notes (D1)   2 1 1 1 1 5 1 1 2 1 1 1 3    2 2 2 2 1 1 2 2 1 2 3 1 1
+POST /api/notes       2 2 2 2 1 1 1 1 2 1 1 1 1    2 2 3 2 2 2 2 4 2 2 3 3 2
+a path not there      no figure                    0 0 1 0 1 0 0 0 0 0 0 0 0
+```
 
-The last column is what a project made by `dev new` gets. `mise run api:go:bench` with writes, right after a deploy:
-
-| Operation | Wall median | Wall slowest | CPU median | CPU p99 |
-|---|---|---|---|---|
-| `GET /api/hello` | 13.7 ms | 15.0 ms | 1 ms | 3 ms |
-| `GET /api/notes` | 51.6 ms | 66.3 ms | 3 ms | 17 ms |
-| `POST /api/notes` | 91.9 ms | 141.8 ms | 4 ms | 19 ms |
-| A path that does not exist | 13.6 ms | 19.3 ms | 1 ms | 2 ms |
-
-The oRPC Worker in the same evening: hello 13.1 ms wall and 1 ms CPU, the list 49.7 ms wall and 1 ms CPU.
-
-The Go showcase Worker (`orpc-showcase-go`: every Fern feature, a bearer token checked with HMAC on every request): a list 1 ms, a create 2 ms, a 404 1 ms. With the tuned collector only they were 14 to 15, 15 to 18 and 7 to 12 ms.
-
-What this means:
-
-- **A read costs 1 to 3 ms and a write about 4 ms:** what the oRPC Worker costs, or close to it. Nothing in the API changed: the same code, the same tests.
-- **A new isolate costs more at first:** about 10 ms for its first request. See [A new isolate](#a-new-isolate) below.
-- **Workers Free's limit is 10 ms of CPU per request.** Ordinary requests are well inside it; the first ones in an isolate are at it or over it. Free is enough to try a project; plan on Workers Paid for production.
+- **A Go Worker costs about what the TypeScript one does:** under 1 ms for a simple read, 1 to 2 ms with a database read, about 2 ms for a write that also notifies the hub.
+- **A new isolate costs more at first:** about 10 ms for its first request. See [A new isolate](#a-new-isolate).
 - **A stream costs CPU for as long as it is open:** 40 to 150 ms over the life of a 15 or 60 second SSE stream.
+
+How the Go Worker got there, median CPU per request:
+
+| Step | hello | list (D1) | create (D1 + hub) |
+|---|---|---|---|
+| TinyGo and workers-go as they come | 55 ms | 71 ms | about 265 ms |
+| The collector tuned (`dev wasm-build`) | 6 to 19 | 8 to 29 | 61 to 66 |
+| Go runtimes reused (`worker/go.mjs`) | 3 | 7 | 10 to 13 |
+| Goroutine stacks reused (second TinyGo patch) | 1 | 3 | 4 |
+| One call in and one call out of Go (`transport`), D1 called directly with rows as one JSON string (`d1`), the hub published to by RPC | 0 | 1 to 2 | 2 |
+
+The last step, measured piece by piece on scratch Workers (mean CPU of one such operation per request): an awaited promise costs about 0.12 ms; a D1 read of 21 rows 3.9 ms through `database/sql`, 3.7 ms read value by value, 2.8 ms as one JSON string; a hub publish 4.3 ms through workers-go's stub and `net/http`, 3.0 to 3.2 ms as a direct fetch, 2.6 to 2.9 ms as an RPC call. The rule: cross between Go and JavaScript as few times as possible.
 
 ## A new isolate
 

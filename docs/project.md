@@ -101,7 +101,6 @@ Things that are easy to mix up:
 - **"Go" means two different things here.** `api/go/` is a Go *server*. A folder `go` under `sdk/out/` is a Go *client SDK* that Fern generated, and it exists for both servers.
 - **The tests and the database schema are shared.** `test/` has one set of test programs for both servers (they take a URL, and `--sdk api-go` picks the SDKs generated from the Go specs), and `migrations/` is the one D1 schema.
 - **What is the product and what is an example.** The `dev` tool and the Go packages in `api/go/` (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`) are what other projects use. `api/ts/` and `api/go/` as Workers are the reference examples they are proven against.
-- **`sdk/fern/apis/` has two more folders,** `petstore` and `modern`: hand-written sample specs with no server, for trying Fern.
 
 ## Starting a project of your own
 

@@ -73,7 +73,16 @@ func distSDK(apis []string) error {
 		return errors.New("dist-sdk needs <api>...: folders in sdk/fern/apis")
 	}
 	for _, api := range apis {
-		for _, group := range []string{"go", "typescript"} {
+		// Every SDK the API defines ships: a language added to generators.yml is released with no
+		// other change. Not the CLI (dist-cli builds it) and not a build made only for the tests.
+		groups, err := sdkGroups(filepath.Join("sdk/fern/apis", api, "generators.yml"))
+		if err != nil {
+			return err
+		}
+		for _, group := range groups {
+			if group == "cli" || strings.HasSuffix(group, "-dist") {
+				continue
+			}
 			dir := sdkOut(api, group)
 			// Fresh, so that what ships is what the committed specs give, and proven before it ships.
 			if err := os.RemoveAll(dir); err != nil {

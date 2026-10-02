@@ -34,7 +34,7 @@ The rules for changing this repo, for developers and agents alike. They are bind
 - **Only verified results** go into [findings.md](findings.md): what ran, where, when, and what came out.
 - **Heavy jobs:**
   - `sdk:gen` needs Docker;
-  - `sdk:cli:build` and `sdk:cloudflare` are heavy;
+  - `sdk:cli:build` is heavy;
   - `api:ts:soak` and `api:go:soak` redeploy their Worker.
   - Stop the containers and dev servers you start.
 

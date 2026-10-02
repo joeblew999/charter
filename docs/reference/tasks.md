@@ -107,9 +107,7 @@ The orpc-api repo has every task above, and these as well. They belong to its se
 | `showcase:go:run`, `showcase:go:build`, `showcase:go:dev`, `showcase:go:spec`, `showcase:go:spec:check`, `showcase:go:lint`, `showcase:go:test`, `showcase:go:test:native`, `showcase:go:test:workerd`, `showcase:go:check`, `showcase:go:deploy` | The Go showcase: a second API that uses every Fern feature |
 | `showcase:ts:spec`, `showcase:ts:spec:check`, `showcase:ts:test`, `showcase:ts:typecheck`, `showcase:ts:check` | The same showcase written with oRPC |
 | `sdk:harness:test`, `sdk:harness:deploy` | The Worker that runs Fern's TypeScript SDK inside workerd |
-| `sdk:demo` | A small end-to-end run of Fern on a sample spec |
 | `sdk:docs` | A local preview of the API docs Fern generates |
-| `sdk:cloudflare` | Adds Cloudflare's own API as an API for Fern |
 | `dev:release` | Publishes the tool itself with GoReleaser ([Releases](releases.md)) |
 
 In that repo `check` runs more (both servers, both showcases, the SDK test Worker) and needs Docker, `setup` installs four npm folders, and `release:tags` also adds `dev/vX.Y.Z`.

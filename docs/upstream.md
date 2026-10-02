@@ -51,5 +51,4 @@ The numbers in the timer row were measured on the deployed Go Worker on 2026-10-
 ## Useful to the workers-go maintainers
 
 - **The cost of finalizers, with a fix a project can apply today.** Told to the maintainer in [syumai/workers-go#240](https://github.com/syumai/workers-go/issues/240): what the collector does per request, the measurements, and the two build settings. Nothing in this repo waits on it.
-- **A typed client for the whole Cloudflare API.** `mise run sdk:cloudflare` slices products (D1, KV, R2, Workers, ...) out of Cloudflare's own OpenAPI spec, and Fern generates a Go or TypeScript SDK from it ([sdk.md](sdk.md#adding-an-api)).
 - **A TypeScript Worker and a Go Worker serving the same API, with the same tests and measured side by side** ([benchmarks.md](benchmarks.md)): a ready place to try a workers-go or TinyGo change and see what it does to CPU time per request.

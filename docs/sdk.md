@@ -7,7 +7,6 @@ parent: This repository
 
 Typed SDKs, a command-line program and a docs site, generated from each API's specs by **[Fern](https://buildwithfern.com)** (the `fern-api` npm package, running its generators locally in Docker). Read this page to generate or check an SDK, to add an API, to see which Fern feature is switched on how, or to work on the oRPC showcase and the harness Worker that runs the TypeScript SDK inside workerd. The Go showcase has its own page ([showcase-go.md](showcase-go.md)).
 
-Fern is also what Cloudflare's own [Forge](https://github.com/cloudflare/forge) builds `cf` on. Forge itself isn't used here, only its spec of the Cloudflare API, in `mise run sdk:cloudflare`.
 
 ## Tasks (from the repo root)
 
@@ -15,14 +14,12 @@ Fern is also what Cloudflare's own [Forge](https://github.com/cloudflare/forge) 
 mise run doctor                           # check the setup: npm installs, Docker, Go, TinyGo, Rust
 mise run setup                            # npm packages, including Fern (fern-api) into sdk/node_modules
 mise run sdk:list                         # the APIs in sdk/fern/apis and the groups each one defines
-mise run sdk:check-spec petstore          # fern check: validate an API's specs and settings
-mise run sdk:gen petstore go              # generate one SDK (Docker) into sdk/out/petstore/go
-mise run sdk:check sdk/out/petstore/go    # prove it works. Go: build, vet, tests against WireMock. TypeScript: typecheck
+mise run sdk:check-spec api-go            # fern check: validate an API's specs and settings
+mise run sdk:gen api-go go                # generate one SDK (Docker) into sdk/out/api-go/go
+mise run sdk:check api-go go              # prove it works. Go: build, vet, tests against WireMock. TypeScript: typecheck
 mise run sdk:ready api-ts                    # generate and build what the tests use, if missing: typescript-dist, go, cli
-mise run sdk:demo                         # LOCAL, small end to end: Go and TypeScript SDKs for petstore, checked
 mise run sdk:cli:build sdk/out/api-ts/cli    # HEAVY: build a generated Fern CLI natively; -linux before the folder builds for Linux in Docker
 mise run sdk:docs                         # preview Fern's API docs site: http://localhost:3030
-mise run sdk:cloudflare                   # HEAVY: add Cloudflare products as an API (below)
 mise run sdk:clean                        # remove sdk/out, stop leftover WireMock containers
 
 mise run showcase:ts:spec                    # the oRPC showcase: write both specs again, after changing its contract
@@ -62,8 +59,6 @@ sdk/
 | `sdk/fern/apis/api-go/` | Generated from the Go contract (`mise run api:go:spec`) | the same four |
 | `sdk/fern/apis/showcase-ts/` | Generated from the oRPC showcase's contract (`mise run showcase:ts:spec`) | `go`, `typescript`, `typescript-public`, `typescript-dist`, `cli` |
 | `sdk/fern/apis/showcase-go/` | Generated from the Go showcase's contract (`mise run showcase:go:spec`) | the same five |
-| `sdk/fern/apis/petstore/` | A hand-written sample with no server | `go`, `typescript`, `python`, `cli` |
-| `sdk/fern/apis/modern/` | A hand-written sample with no server: SSE streaming and cursor pagination | `go`, `typescript` |
 
 - **`typescript-dist`** is the TypeScript SDK compiled to `.js` plus `.d.ts` (`outputSourceFiles: false`), the way an npm package reaches its users. The test programs and the harness Worker import it.
 - **`typescript-public`** is the same spec without the operations not tagged `public` (audiences).
@@ -72,7 +67,7 @@ sdk/
 
 ## Adding an API
 
-Copy `sdk/fern/apis/petstore/` to a new folder, replace `openapi.json`, and adjust `generators.yml`: the output paths, the Go module, and each generator's options. The options for each language are documented at `buildwithfern.com/learn/sdks/generators/<lang>/configuration`. Here we use:
+Copy `sdk/fern/apis/api-go/` to a new folder, replace `openapi.json`, and adjust `generators.yml`: the output paths, the Go module, and each generator's options. The options for each language are documented at `buildwithfern.com/learn/sdks/generators/<lang>/configuration`. Here we use:
 
 - **`namespaceExport`,** which names the TypeScript client (`Petstore` gives `PetstoreClient`);
 - **`module` and `packageName`** for Go;
@@ -81,7 +76,6 @@ Copy `sdk/fern/apis/petstore/` to a new folder, replace `openapi.json`, and adju
 
 For an API of your own, generate the spec from a contract instead ([api.md](api.md), [api-go.md](api-go.md)) and copy that API's Fern folder.
 
-`mise run sdk:cloudflare` makes an API out of Cloudflare's own: it downloads Forge's 26 MB spec into `.forge/` (gitignored), keeps the account-level paths of the chosen products (default `d1,kv`; `-products workers,r2` to choose), and writes `openapi.json` and a `generators.yml` into a folder `cloudflare` beside the other APIs. Then `mise run sdk:gen cloudflare go`.
 
 ## What Fern does, feature by feature
 
@@ -189,9 +183,7 @@ The same with `api-go` in place of `api-ts` gives the SDKs and CLI from the Go c
 
 What the next two lists say was tried by hand on 2026-09-29 and is recorded only here, not in [findings.md](findings.md).
 
-**The petstore CLI, against a local mock.** Generating took 56 s in Docker; the first macOS build took 55 s and gave an 11.7 MB arm64 binary.
 
-- **Commands per resource:** `petstore pets list-pets`, `create-pet --name rex`.
 - **Output and requests:** `--format json|table|yaml|csv|jsonl|http`, `--query` (JMESPath), `--dry-run` (shows the request without sending it), `--base-url`, `--debug`.
 - **For agents:** `--schema` gives the command surface as JSON, and `generate-skills` writes Claude-style `SKILL.md` files for the CLI (one shared file, one per resource).
 - **Also included:** `auth` login, shell completions and a man page.
@@ -213,5 +205,5 @@ Limits of the generator:
 - **Versions are pinned.** `fern-api` 5.140.0 in `sdk/package.json`; in each `generators.yml`, `fern-go-sdk` 1.64.0, `fern-typescript-sdk` 3.98.0, `fern-python-sdk` 5.34.0 and `fern-cli-generator` 0.45.1 for the two notes APIs, 0.44.0 for the others. They were the latest when checked on 2026-09-29; Forge pins older ones.
 - **Licensing is not settled.** Fern's docs call local generation, WebSocket clients, webhook signatures and the CLI generator Enterprise or early access, needing a `FERN_TOKEN`. All of it has run here without one ([plans/next.md](plans/next.md)).
 - **Where output goes:** `sdk/out/`, which is gitignored. The exception is `sdk/go/`, the committed copy of the Go API's Go SDK that another repo fetches with `go get`. Releases attach the SDK sources and the Linux CLIs to the GitHub Release ([dev.md](dev.md#cutting-a-release)). Publishing the SDKs as packages (npm, a repository per SDK) is planned, not done.
-- **The docs site covers two APIs.** `sdk/fern/docs.yml` lists the showcase and petstore; `mise run sdk:docs` previews it locally. No task publishes it.
+- **The docs site covers two APIs.** `sdk/fern/docs.yml` lists the showcase and the notes API; `mise run sdk:docs` previews it locally. No task publishes it.
 - **`mise run sdk:check` on a Go SDK starts a WireMock container** and stops it again. `mise run sdk:clean` stops any that were left behind.

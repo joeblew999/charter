@@ -17,7 +17,7 @@ mise run api:ts:soak              # REMOTE, redeploys orpc-api: the real-time ma
 mise run api:go:soak           # REMOTE, redeploys orpc-api-go: the same, with the SDKs and CLI made from the Go specs
 ```
 
-`mise run check` is `api:ts:check`, `api:go:check`, `showcase:go:check`, `dev:check`, `sdk:demo`, `showcase:ts:check` and `sdk:harness:test`. The checks that start a server pick free ports themselves, so several can run at once.
+`mise run check` is `api:ts:check`, `api:go:check`, `showcase:go:check`, `dev:check`, `showcase:ts:check` and `sdk:harness:test`. The checks that start a server pick free ports themselves, so several can run at once.
 
 The remote tasks write test notes into the deployed Worker's database, and the soak tasks redeploy it. Anything after the task name goes to the program: `mise run api:go:soak --idle 20`.
 

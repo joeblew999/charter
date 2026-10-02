@@ -68,7 +68,7 @@ Expect the same with other libraries: one that leans on `reflect`, on the file s
 
 ## What a request costs
 
-On Cloudflare a read costs 1 to 3 ms of CPU and a write that also notifies the hub 4 to 6 ms. The same API in TypeScript uses about 1 ms. Measured 2026-10-02 on the orpc-api project's Workers; the numbers per operation are in [Benchmarks](../benchmarks.md), and what they mean for choosing a plan is on the home page: [Before you choose Go](../README.md#before-you-choose-go-what-it-costs-to-run).
+On Cloudflare a Go Worker costs about what the TypeScript one does: under 1 ms of CPU for a simple read, 1 to 2 ms with a database read, about 2 ms for a write. Measured 2026-10-02 on the orpc-api project's Workers; the numbers per operation are in [Benchmarks](../benchmarks.md), and what they mean for choosing a plan is on the home page: [Before you choose Go](../README.md#before-you-choose-go-what-it-costs-to-run).
 
 TinyGo and workers-go as they come cost far more: 40 to 70 ms for a read, about 265 ms for a write. Three things in this project make the difference, and a project made by `dev new` has all three:
 

@@ -77,7 +77,7 @@ From the specs on, nothing differs: the same Fern groups, the same `mise run sdk
 
 | | Go | TypeScript (oRPC) |
 |---|---|---|
-| CPU per request on Cloudflare | 1 to 3 ms for a read, 4 to 6 ms for a write; about 10 ms for the first request in a new isolate ([benchmarks](../benchmarks.md)) | About 1 ms |
+| CPU per request on Cloudflare | Under 1 ms for a simple read, 1 to 2 ms with a database read, about 2 ms for a write; about 10 ms for the first request in a new isolate ([benchmarks](../benchmarks.md)) | 0 to 2 ms |
 | Cloudflare plan | Free to try it, Workers Paid for production (the first requests in a new isolate reach Free's 10 ms) | Within the Free plan's 10 ms |
 | Invalid input | 422, with a problem body that names the field (`errors[].location`) | 400, with oRPC's JSON error body |
 | A known path with the wrong method | 405 | 404 |
