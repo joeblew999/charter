@@ -1,11 +1,22 @@
 ---
 title: Findings
-nav_order: 11
-parent: This repository
+nav_order: 4
+parent: How to help
 ---
 # Findings
 
-Verified results only: each entry was run and checked. Newest sections last.
+Verified results only: each entry was run and checked. Newest sections last. An entry is not rewritten after the fact, so it uses the names of its day:
+
+| In an entry | Today |
+|---|---|
+| orpc-api (the repository) | charter |
+| `api/go/`, the Worker `orpc-api-go` | `examples/notes-go/`, `charter-notes-go` |
+| `api/ts/`, the Worker `orpc-api` | `examples/notes-ts/`, `charter-notes-ts` |
+| `api/go/showcase/`, `orpc-showcase-go` | `examples/showcase-go/`, `charter-showcase-go` |
+| `sdk/harness/`, `orpc-sdk-harness` | `examples/showcase-ts/`, `charter-showcase-ts` |
+| `sdk/fern/apis/<api>/` | `fern/` in each example |
+| `dev`, `dev/` (the tool) | `charter`, `cmd/charter/` |
+| tasks with a prefix: `api:go:check`, `sdk:harness:test` | the same task without it, in the example's folder: `check`, `test:workerd` |
 
 ## Fern TypeScript SDK on Cloudflare Workers (sdk/harness)
 - It runs in workerd, both under `cf dev` and deployed with `cf deploy`. All 7 pass:
@@ -160,7 +171,7 @@ Deployed with `mise run api:go:deploy` to https://orpc-api-go.gedw99.workers.dev
 
 ## MCP from the Huma contract (go/humamcp, verified locally 2026-10-01; on Cloudflare: see the section above)
 
-Everything here ran on this machine: natively, and as TinyGo Wasm under workerd (`cf dev`). Nothing ran on Cloudflare itself. The design and its limits are in [mcp.md](mcp.md).
+Everything here ran on this machine: natively, and as TinyGo Wasm under workerd (`cf dev`). Nothing ran on Cloudflare itself. The design and its limits are in [the MCP guide](guides/mcp.md).
 
 - **Versions:** MCP revisions 2026-07-28, 2025-11-25 and 2025-06-18; clients `@modelcontextprotocol/client` 2.2.0, `@modelcontextprotocol/sdk` 1.31.0 and `@modelcontextprotocol/inspector` 2.9.0 (CLI); Huma 2.39.1, TinyGo 0.42.0, Go 1.27.1, workerd through cf 1.0.0-beta.5.
 - **An MCP server needs no MCP SDK.** `go/humamcp` is the Streamable HTTP transport written out: JSON-RPC over one POST, one `application/json` answer, no state. It serves `/api/mcp` from the same Huma operations as REST, in the Worker and in the native build.
@@ -192,7 +203,7 @@ Cut with `git tag v0.1.0 && git push origin v0.1.0` on main, after `api-check`, 
 
 ## The showcase, contract first in oRPC (sdk/harness, verified locally 2026-10-01)
 
-Everything in this list ran on this machine, the Worker under `cf dev`. It was then deployed (`mise run sdk:harness:deploy`), and `mise run sdk:harness:test -remote` passes 9/9 on Cloudflare against the oRPC implementation: SSE, the multipart upload, idempotent create, OAuth client credentials, pagination, the webhook signature, and the WebSocket client inside a Worker and from Node. How it is built is in [sdk.md](sdk.md#the-orpc-showcase).
+Everything in this list ran on this machine, the Worker under `cf dev`. It was then deployed (`mise run sdk:harness:deploy`), and `mise run sdk:harness:test -remote` passes 9/9 on Cloudflare against the oRPC implementation: SSE, the multipart upload, idempotent create, OAuth client credentials, pagination, the webhook signature, and the WebSocket client inside a Worker and from Node. How it is built is in [Fern features](guides/fern-features.md#from-an-orpc-contract).
 
 - **Versions:** oRPC 2.0.0-beta.40, Zod 4.6.5, Fern 5.140.0 (Go SDK 1.64.0, TypeScript SDK 3.98.0, CLI generator 0.44.0), workerd through cf 1.0.0-beta.5.
 - **One oRPC contract now gives the whole showcase:** OAuth client credentials with a form-encoded token endpoint, idempotency, cursor pagination, an SSE stream, a multipart upload, a webhook with an HMAC signature, a WebSocket both ways, and audiences. `openapi.json` and `asyncapi.json` are generated from it, and the hand-written `asyncapi.yml` is deleted.
@@ -213,7 +224,7 @@ Everything in this list ran on this machine, the Worker under `cf dev`. It was t
 
 ## The showcase in Go: every Fern feature from a Huma contract (api/go/showcase, verified locally 2026-10-01; not deployed)
 
-Everything here ran on this machine: natively, and as TinyGo Wasm under workerd (`cf dev`). Nothing ran on Cloudflare. How it is built, feature by feature, is in [showcase-go.md](showcase-go.md).
+Everything here ran on this machine: natively, and as TinyGo Wasm under workerd (`cf dev`). Nothing ran on Cloudflare. How it is built, feature by feature, is in [Fern features](guides/fern-features.md).
 
 - **Versions:** Huma 2.39.1, workers-go 0.36.0, TinyGo 0.42.0, Go 1.27.1, Fern 5.140.0 (Go SDK 1.64.0, TypeScript SDK 3.98.0, CLI generator 0.44.0), workerd through cf 1.0.0-beta.5.
 - **One Go contract gives the whole showcase:** OAuth client credentials with a form-encoded token endpoint, idempotency, cursor pagination, an SSE stream, a multipart upload, a webhook with an HMAC signature, a WebSocket both ways, and audiences. `sdk/fern/apis/showcase-go/openapi.json` and `asyncapi.json` are generated from it, and `fern check` passes.

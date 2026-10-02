@@ -1,30 +1,34 @@
 ---
-title: Structure
-nav_order: 1
-parent: Plans
-grand_parent: This repository
+title: The restructure
+nav_order: 7
+parent: How to help
 ---
-# Plan: one project shape, used everywhere
+# The restructure: one project shape, used everywhere
 
-The repo grew as one example with tools around it, and three things are tangled: the reusable library lives inside the notes example's Go module, the examples are not in the shape a new project has (so `dev new` filters and renames this repo), and `mise.toml` is both this repo's tasks and the template. This plan untangles them. Backward compatibility is not kept.
+A record of what the repository was turned into on 2026-10-02 ([#17](https://github.com/joeblew999/charter/issues/17)), and what is left of it. Backward compatibility was not kept.
 
-## The target
+## Why
+
+The repo grew as one example with tools around it, and three things were tangled: the library lived inside the notes example's Go module, the examples were not in the shape a new project has (so the scaffold filtered and renamed the whole repo), and one `mise.toml` was both the repo's tasks and the template.
+
+## What it is now
 
 ```
-go/         the Go library other repos import: humaworkers, transport, hub, d1, follow,
-            humamcp, asyncapi, specfile, and the Worker glue (worker/*.mjs)
-ts/         the TypeScript library, when there is one to publish (the AsyncAPI generator, follow)
-examples/   notes-go, showcase-go, notes-ts, showcase-ts: each a complete project
-dev/        the tool behind every task
+go.mod, cmd/charter/     the tool: the command charter
+go/                      the library: its packages, and the Worker glue (worker/*.mjs)
+examples/notes-go/       the Go notes API: a complete project
+examples/showcase-go/    every Fern feature, in Go
+examples/notes-ts/       the notes API in TypeScript, on oRPC
+examples/showcase-ts/    every Fern feature in TypeScript, and the SDK inside a Worker
 docs/
+mise.toml                the repo's own tasks
 ```
 
-A project, here and in any repo, has one shape. For Go:
+A project, here and in any repo, has one shape:
 
 ```
-mise.toml               the tool's pin and the tasks: setup, run, dev, build, spec, check, deploy, bench, sdk:gen ...
-go.mod                  the project's module
-main.go, platform_js.go, platform_other.go
+mise.toml               the tool's pin and the tasks
+go.mod, main.go, platform_js.go, platform_other.go
 api/                    the contract, the handlers, the store
 cmd/spec/               writes the specs
 worker.mjs              the Worker's entry: a few lines
@@ -35,12 +39,20 @@ sdk/go/                 the generated Go client, committed
 test/
 ```
 
-- **Tasks have the same names in every project** (`check`, `deploy`, `bench`), and the dev tool works on the project it is run in. The repo's own `mise.toml` only runs each example's.
-- **`dev new` copies `examples/notes-go`** and renames it. No filtering.
-- **The Worker glue is not copied into a project.** It ships with the Go library, and the build writes it into `build/` from the library version the project uses, so the JavaScript and the Go that talk to each other always match.
+## Done
 
-## Steps
+- **The library is a module of its own:** `github.com/joeblew999/charter/go`.
+- **The Worker glue ships with the library.** The build writes it into `build/` from the library version a project uses, so no project keeps a copy that can fall behind.
+- **Each example is a complete project** with its own `mise.toml`, `package.json` and `fern/` folder.
+- **Task names are the same in every project,** with no prefix. The root `mise.toml` only runs each example's (`charter each`).
+- **The tool works on the project it is run in,** and is called `charter`: the repo's root module.
+- **`charter new` copies `examples/notes-go/`** and renames it. Nothing is filtered.
+- **One set of workflow templates** serves a repo that is one project and a repo that holds several.
+- **The repository is called charter.** Workers are `charter-notes-go`, `charter-notes-ts`, `charter-showcase-go`, `charter-showcase-ts`; the SDKs are `Notes` and `Showcase`.
+- **The docs were rewritten once,** against this shape ([#18](https://github.com/joeblew999/charter/issues/18)).
 
-1. **The library on its own:** `go/` as a module, the glue shipped by the build. Done 2026-10-02: `go/` is the module `github.com/joeblew999/orpc-api/go` (the packages and `go/worker/*.mjs`), `api/go/` requires it, `dev wasm-build` writes the glue into `build/`, and each example has one entry file, `worker.mjs`.
-2. **The examples as projects:** `examples/*`, each with its own `mise.toml`; the dev tool works on the current project; `dev new` copies. Not started.
-3. **The docs, once, against the final shape.** Not started.
+## Left
+
+- **A release from this layout.** Until one is tagged, `@latest` does not resolve to it ([Releases](../reference/releases.md#before-the-rename)).
+- **`ts/`:** a TypeScript library, when there is one to publish (the AsyncAPI generator, the feed). Today the showcase imports them from `examples/notes-ts/`.
+- **The projects made from earlier releases** move to this shape by hand ([#20](https://github.com/joeblew999/charter/issues/20)).
