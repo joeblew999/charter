@@ -1,5 +1,5 @@
 {
-  "name": "forge-tools",
+  "name": "sdk-tools",
   "private": true,
   "description": "Fern (buildwithfern.com): SDKs, a CLI and docs from OpenAPI specs. Plus the TypeScript toolchain sdk:check uses.",
   "devDependencies": {
