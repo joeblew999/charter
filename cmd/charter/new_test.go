@@ -24,7 +24,7 @@ func scaffold(t *testing.T, more ...string) (into, repo, said string) {
 }
 
 // A project made from this checkout is the example under its own names, and it builds.
-// (Its full check, with TinyGo and workerd, is run by hand before a release: docs/dev.md.)
+// (Its full check, with TinyGo and workerd, is run by hand before a release: docs/reference/charter.md.)
 func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 	if testing.Short() {
 		t.Skip("scaffolds a project and builds it")

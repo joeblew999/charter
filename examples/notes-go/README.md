@@ -1,3 +1,3 @@
 # examples/notes-go/
 
-Documented in [docs/api-go.md](../../docs/api-go.md). All docs are in [docs/](../../docs/README.md).
+Documented in [docs/concepts/workers-go.md](../../docs/concepts/workers-go.md). All docs are in [docs/](../../docs/README.md).

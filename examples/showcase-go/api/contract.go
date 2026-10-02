@@ -2,7 +2,7 @@
 // counterpart of the oRPC showcase contract (../showcase-ts/src/contract.ts) and its implementation
 // there. Each operation is a Huma operation whose input and output are Go structs; from this one
 // definition come the handlers' validation, the OpenAPI spec and the AsyncAPI spec (spec.go), and
-// from those Fern makes the SDKs. docs/showcase-go.md says, feature by feature, what switches it
+// from those Fern makes the SDKs. docs/guides/fern-features.md says, feature by feature, what switches it
 // on here.
 //
 // The SDK's method names for the two notes operations are not here: the overlay beside the specs

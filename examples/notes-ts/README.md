@@ -1,3 +1,3 @@
 # examples/notes-ts/
 
-Documented in [docs/api.md](../../docs/api.md). All docs are in [docs/](../../docs/README.md).
+Documented in [docs/guides/typescript.md](../../docs/guides/typescript.md). All docs are in [docs/](../../docs/README.md).

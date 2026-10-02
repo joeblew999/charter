@@ -13,7 +13,7 @@ import (
 
 func init() {
 	commands["wasm-build"] = command{"[-heap 8] [-opt z] [-stack 128kb] [-max 3000000] [-plain]",
-		"build the project's Go Worker into build/ with TinyGo, tuned for Workers (see docs: Go on Cloudflare Workers), and write the Go library's Worker glue beside it; -plain: TinyGo as it is", wasmBuild}
+		"build the project's Go Worker into build/ with TinyGo, tuned for Workers (see docs: Huma on Cloudflare Workers), and write the Go library's Worker glue beside it; -plain: TinyGo as it is", wasmBuild}
 }
 
 // The changes made to TinyGo, in its runtime source (read at build time: the compiler is not

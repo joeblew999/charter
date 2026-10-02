@@ -1,6 +1,6 @@
 // oRPC has no AsyncAPI generator, and wants one as a community package first (middleapi/orpc#2115,
 // closed). This file is that generator.
-// AsyncAPI from an oRPC contract, the way @orpc/openapi does OpenAPI (docs/plans/asyncapi.md, issue #4;
+// AsyncAPI from an oRPC contract, the way @orpc/openapi does OpenAPI (docs/plans/next.md, issue #4;
 // offered upstream in middleapi/orpc#2115). Built only on oRPC's public APIs: a meta plugin
 // (`asyncapi()`, like `openapi()`), `walkProcedureContractsAsync`, and the JSON Schema converters.
 //
