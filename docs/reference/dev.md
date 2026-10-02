@@ -65,8 +65,8 @@ Creates a project: the notes API of charter under your project's name, with its 
 
 | Flag | Default | What it is |
 |---|---|---|
-| `-name` | required | The project, its Worker and its database (`<name>-db`). 3 to 42 characters: lower-case letters, digits and hyphens, starting with a letter and not ending in a hyphen. It also gives the SDK's names: `billing-api` gives `BillingApi` and `billingapi` |
-| `-module` | `github.com/<your GitHub login>/<name>` | The Go module path. The module of the API is `<module>/.` |
+| `-name` | required | The project, its Worker and its database (`<name>-db`). 3 to 42 characters: lower-case letters, digits and hyphens, starting with a letter and not ending in a hyphen. The SDK's names stay the example's (`NotesClient`) until changed in `fern/generators.yml` |
+| `-module` | `github.com/<your GitHub login>/<name>` | The project's Go module path |
 | `-into` | `./<name>` | Where to create it. The directory must be empty or absent |
 | `-from` | the tool's own release, cloned from GitHub | A checkout of charter to copy from |
 

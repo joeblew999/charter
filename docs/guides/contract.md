@@ -208,7 +208,7 @@ Without names, the SDKs call the method after the operation (`client.getNote(...
 Extensions: sdk("notes", "get", nil),    // x-fern-sdk-group-name and x-fern-sdk-method-name
 ```
 
-That is `client.notes.get(...)` in TypeScript, `c.Notes.Get(...)` in Go, and `billing-api notes get` in the CLI. Give every operation of one resource the same group.
+That is `client.notes.get(...)` in TypeScript, `c.Notes.Get(...)` in Go, and `notes notes get` in the CLI. Give every operation of one resource the same group.
 
 ## Paginate a list with a cursor
 

@@ -14,7 +14,7 @@ For people and agents changing charter itself. If you are building an API with i
 | [api-go.md](api-go.md) | `examples/notes-go/`: the Go Worker, and what Huma needs to run on workers-go |
 | [api.md](api.md) | `examples/notes-ts/`: the oRPC Worker (TypeScript) |
 | [showcase-go.md](showcase-go.md) | The Go showcase: every Fern feature, feature by feature |
-| [sdk.md](sdk.md) | `sdk/`: the Fern folders, the showcase in oRPC, the SDK test Worker |
+| [sdk.md](sdk.md) | Each example's `fern/` and `sdk/`: the Fern folders, the showcase in oRPC (`examples/showcase-ts/`), the SDK test Worker |
 | [mcp.md](mcp.md) | How the MCP endpoint is built |
 | [testing.md](testing.md) | `examples/notes-go/test/`: the programs both servers must pass |
 | [dev.md](dev.md) | `cmd/charter/`: the tool behind the tasks, the workflows, releases |
@@ -41,7 +41,7 @@ flowchart LR
 
 ### The notes API, twice
 
-There are two contracts for the notes API because there are two servers. They describe the same API, and a test keeps them the same. A real project has one: pick the column for its language.
+There are two contracts for the notes API because there are two servers. They describe the same API, and a test keeps them the same. A real project has one: pick the column for its language. Each column is a project in `examples/` with a `mise.toml` of its own, so the tasks have the same names in both: run them in that example's folder.
 
 | | The oRPC Worker (TypeScript) | The Go Worker |
 |---|---|---|
@@ -64,7 +64,7 @@ There are two contracts for the notes API because there are two servers. They de
 | Test it deployed | `mise run live-test`, `mise run soak` | `mise run live-test`, `mise run soak` |
 | Its page | [api.md](api.md) | [api-go.md](api-go.md) |
 
-Shared by both: `examples/notes-go/test/` (the test programs), `examples/notes-go/migrations/` (the D1 schema), `sdk/` (Fern), `cmd/charter/` (the tool the tasks run).
+Shared by both: `examples/notes-go/test/` (the test programs, which `examples/notes-ts` runs from there) and `cmd/charter/` (the tool the tasks run). Each has its own copy of the one D1 schema (`migrations/`).
 
 ### The showcase, twice
 
@@ -89,7 +89,7 @@ The showcase is a second, smaller API whose only job is to use every Fern featur
 | A Fern folder | `fern/`: an API's specs and `generators.yml`. A group in that file is one SDK to generate |
 | The oRPC Worker, the Go Worker | The two servers of the notes API: `examples/notes-ts/` and `examples/notes-go/` |
 | The feed | `follow()` / `Follow`: the one primitive that gives a client every note once, in order ([realtime.md](realtime.md)) |
-| The hub | The `NotesHub` Durable Object: live fan-out only, stores nothing |
+| The hub | The hub Durable Object (`Hub` in the Go Worker, `NotesHub` in the oRPC one): live fan-out only, stores nothing |
 | The harness Worker | `examples/showcase-ts/`: serves the oRPC showcase and runs Fern's TypeScript SDK inside workerd |
 | The Fern CLI | The command-line program Fern generates for an API (`notes notes list`). It runs on a developer's machine and calls the API over HTTPS, like an SDK |
 | The `charter` tool | `cmd/charter/`: the Go program behind the mise tasks |
@@ -100,7 +100,7 @@ Things that are easy to mix up:
 - **Fern does not write servers.** It reads the two spec files and writes clients: SDKs in Go, TypeScript and more, a command-line program, docs. The server is ours, in either language.
 - **"The CLI" is the Fern CLI.** It never runs on Cloudflare. It is not `cf`, `mise`, or the `charter` tool.
 - **"Go" means two different things here.** `examples/notes-go/` is a Go *server*, and `go/` is the Go library it is built on. A folder `go` under `sdk/out/` is a Go *client SDK* that Fern generated, and it exists for both servers.
-- **The tests and the database schema are shared.** `examples/notes-go/test/` has one set of test programs for both servers (they take a URL, and each project runs them with its own generated SDKs), and `examples/notes-go/migrations/` is the one D1 schema.
+- **The tests are shared.** `examples/notes-go/test/` has one set of test programs for both servers (they take a URL, and each project runs them with its own generated SDKs). The D1 schema is the same file in each project's `migrations/`.
 - **What is the product and what is an example.** The `charter` tool and the Go library in `go/` (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`) are what other projects use. `examples/notes-ts/` and `examples/notes-go/` as Workers are the reference examples they are proven against.
 
 ## Starting a project of your own

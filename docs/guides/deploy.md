@@ -43,7 +43,7 @@ What it does, in order:
    |---|---|---|
    | The Worker | `billing-api` | Runs your Go code as Wasm |
    | A D1 database | `billing-api-db`, bound as `DB` | The notes. It is the log every stream reads from |
-   | A Durable Object class | `NotesHub`, bound as `HUB` | The hub: it wakes the streams that are waiting when a note is created. It stores nothing (the library's `Hub` class, `go/worker/hub.mjs` in charter) |
+   | A Durable Object class | `Hub`, bound as `HUB` | The hub: it wakes the streams that are waiting when a note is created. It stores nothing (the library's `Hub` class, `go/worker/hub.mjs` in charter) |
    | A variable | `APP_NAME` | The name in the greeting of `/api/hello` |
 
    A second deploy updates the Worker and keeps the database.

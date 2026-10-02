@@ -32,8 +32,8 @@ mise run check          # lint, Go tests, spec drift, the Wasm build, the live a
 | `migrations/0001_init.sql` | The `notes` table | A migration is applied once, by its file name. In a project that was never deployed, replace this file's content with your tables. In a deployed one, add a new numbered file |
 | `platform_js.go` | The bindings on Cloudflare: `DB` (D1) as an `SQLStore`, and `HUB` as `hub.DurableObject[api.Note]("HUB", "notes")`, the hub of the notes feed | Keep the `Store` function. Keep the `Hub` line only with a stream (next section), with your type and a name for your feed |
 | `platform_other.go` | The native build: one `MemStore` as both store and hub | Follow your `Env` |
-| `cloudflare.config.ts` | The Worker's bindings: `DB`, `HUB`, and the export of the `NotesHub` class | Keep `DB` while you store anything. Keep `HUB` and `NotesHub` only with a stream |
-| The `NotesHub` line in `worker.mjs` | The export of the Durable Object that sends each published message to every subscriber: the library's `Hub` class, which the build writes to `build/hub.mjs`. Only the exported name says notes | Keep it with a stream, remove it without |
+| `cloudflare.config.ts` | The Worker's bindings: `DB`, `HUB`, and the export of the `Hub` class | Keep `DB` while you store anything. Keep `HUB` and `Hub` only with a stream |
+| The `Hub` line in `worker.mjs` | The export of the Durable Object that sends each published message to every subscriber: the library's `Hub` class, which the build writes to `build/hub.mjs` | Keep it with a stream, remove it without |
 | `api/api_test.go` | The Go tests of the notes routes, the SSE wire format and the specs. Its helpers `server`, `do`, `spec` and `at` are general | Keep the helpers, `TestHello`, `TestUnknownPathAndMethod` and `TestTheWorkerServesBothSpecsWithItsOriginAsServer`. Write the rest for your operations |
 | `api/mcp_test.go` | `tools/list` holds the three notes tools with their exact schemas; tool calls create and list notes; errors name `listNotes` and `createNote` | Keep the helpers `mcp` and `toolCall`, and `TestEveryRouteNamesItsOperation`. Rewrite the three other tests with your tools |
 | `test/mcp-test.mjs` | The same through the official MCP client: the notes tools, their schemas, calls and errors. Run by `test:native`, `test:workerd` and `live-test` | Keep the connection, negotiation and transport checks (the start of the loop, and everything after it). Replace the checks that name `listNotes` and `createNote` with your tools |
@@ -47,8 +47,8 @@ mise run check          # lint, Go tests, spec drift, the Wasm build, the live a
 
 The hub is the Durable Object that `worker.mjs` exports: the library's `Hub` class (`go/worker/hub.mjs` in charter). The notes API uses it for one thing: `create` publishes the new note to it, and every open stream is woken by it. The notes themselves are read from the store, so the hub holds nothing ([realtime.md](../realtime.md)).
 
-- **You need it if your API streams:** an SSE operation or a WebSocket channel where clients receive items as they are created. Keep `Hub` in `Env`, `feed` in `api/handlers.go`, the `Hub` line in `platform_js.go`, and the `HUB` binding and `NotesHub` export.
-- **You don't need it if every operation answers once.** Remove all of those, and the `NotesHub` line in `worker.mjs`.
+- **You need it if your API streams:** an SSE operation or a WebSocket channel where clients receive items as they are created. Keep `Hub` in `Env`, `feed` in `api/handlers.go`, the `Hub` line in `platform_js.go`, and the `HUB` binding and `Hub` export.
+- **You don't need it if every operation answers once.** Remove all of those, and the `Hub` line in `worker.mjs`.
 - **Not tested:** removing the hub from a Worker that was already deployed with it. Cloudflare keeps a deployed Durable Object class until it is told the class is gone, and this page does not cover that step.
 
 ## The names Fern gives the SDK
@@ -62,7 +62,7 @@ The SDK's method names come from the contract, not from Fern's settings. In `api
 | `OperationID: "listNotes"` | The MCP tool's name |
 | `asyncapi.Channel{Name: "liveNotes", ...}` | `client.liveNotes.connect()` |
 
-Give your operations their own group and method names there. The client's own name (`BillingApiClient` for a project named `billing-api`) is in `fern/generators.yml` and was set by `charter new`.
+Give your operations their own group and method names there. The client's own name (`NotesClient`, the example's) is in `fern/generators.yml`: change it there ([Change the names](sdks.md#change-the-names)).
 
 ## When you are done
 
@@ -72,4 +72,4 @@ mise run check                       # must pass
 mise run sdk:gen typescript   # Fern, in Docker: the SDK now has your methods
 ```
 
-Then search the project for what is left of the example: `grep -rni note . test migrations mise.toml`.
+Then search the project for what is left of the example: `grep -rni note api cmd test migrations fern/generators.yml mise.toml *.go *.mjs *.ts`.

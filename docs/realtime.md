@@ -62,7 +62,7 @@ Code comments refer to these by number.
    - Resume is a normal contract input (`after`), so every generated client (SDK, CLI, docs) gets it without `Last-Event-ID` support.
    - A browser's `EventSource` still works: its `Last-Event-ID` header is read as a position. When both are sent (a reconnecting SDK resends its original `after`), the newer wins.
 2. **The hub is disposable.**
-   - The hub (the `NotesHub` Durable Object) is only live fan-out: hibernatable, and allowed to restart at any time.
+   - The hub (a Durable Object: `Hub` in the Go Worker, `NotesHub` in the oRPC one) is only live fan-out: hibernatable, and allowed to restart at any time.
    - It stores nothing that matters and keeps no resume log: D1 replaces it.
 3. **One subscription primitive in the Worker: the feed.**
    - `follow()` in `examples/notes-ts/src/follow.ts` and `Follow` in `go/follow/`, the same design with the same tests.

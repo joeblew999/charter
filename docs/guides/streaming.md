@@ -47,9 +47,9 @@ When both are sent, the larger position wins. Checked with three notes in the st
 TypeScript SDK:
 
 ```ts
-import { BillingApiClient } from "billing-api";   // your generated SDK (sdk/out/typescript)
+import { NotesClient } from "billing-api";   // your generated SDK (sdk/out/typescript)
 
-const client = new BillingApiClient({ baseUrl: "http://localhost:5174" });
+const client = new NotesClient({ baseUrl: "http://localhost:5174" });
 let after: string | undefined;
 for (;;) {
   try {
@@ -71,16 +71,16 @@ import (
 	"fmt"
 	"time"
 
-	billingapi "example.com/billingapi"
-	"example.com/billingapi/client"
-	"example.com/billingapi/option"
+	notes "example.com/billing-api/sdk/go"
+	"example.com/billing-api/sdk/go/client"
+	"example.com/billing-api/sdk/go/option"
 )
 
 func follow(ctx context.Context, base string) {
 	c := client.NewClient(option.WithBaseURL(base))
 	var after *string
 	for ctx.Err() == nil {
-		stream, err := c.Notes.Watch(ctx, &billingapi.WatchNotesRequest{After: after})
+		stream, err := c.Notes.Watch(ctx, &notes.WatchNotesRequest{After: after})
 		if err == nil {
 			for {
 				note, err := stream.Recv()

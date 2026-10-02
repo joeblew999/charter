@@ -19,7 +19,7 @@ cd billing-api && git init
 
 The first line `charter new` prints is the tool's version and what it pinned to it (the tool in `mise.toml`, the Go packages in `go.mod`): minutes after a release `@latest` can still be the previous one, while the release binary or `charter@vX.Y.Z` is exact.
 
-`-name` becomes the Worker's name, its database and the SDK's names (`BillingApiClient`). The Go module defaults to `github.com/<your GitHub login>/billing-api`; pass `-module` to choose.
+`-name` becomes the Worker's name and its database. The SDK's names stay the example's (`NotesClient`) until you change them ([Change the names](guides/sdks.md#change-the-names)). The Go module defaults to `github.com/<your GitHub login>/billing-api`; pass `-module` to choose.
 
 The project starts as a small notes API, so everything works before you change anything.
 

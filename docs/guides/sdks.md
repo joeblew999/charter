@@ -59,13 +59,13 @@ typecheck ok (sdk/out/typescript/index.ts)
 
 `sdk:check` proves the SDK compiles and passes Fern's own tests against a mock. It does not call your server. The tests that do are in [Test locally and on Cloudflare](testing.md).
 
-A `go` command typed inside `sdk/out/go` fails with `directory prefix . does not contain modules listed in go.work`: a folder git ignores cannot be in the workspace file. Put `GOWORK=off` in front of it (`GOWORK=off go test ./...`), which is what `sdk:check` does. The committed copy in `sdk/go` is in `go.work` and needs nothing.
+In a project that has a `go.work` (one made with `charter new -from <checkout>`), a `go` command typed inside `sdk/out/go` fails with `directory prefix . does not contain modules listed in go.work`: the generated module is not in the workspace file. Put `GOWORK=off` in front of it (`GOWORK=off go test ./...`), which is what `sdk:check` does. The committed copy in `sdk/go` is in `go.work` and needs nothing.
 
 ## Build the CLI
 
 ```sh
 mise run sdk:cli:build sdk/out/cli     # HEAVY the first time: compiles every Rust dependency
-sdk/out/cli/target/release/billing-api --base-url http://localhost:5174 notes list --page-all
+sdk/out/cli/target/release/notes --base-url http://localhost:5174 notes list --page-all
 ```
 
 The build took 43 seconds here (an Apple M-series Mac). It needs Rust, which `mise install` provides at the version in `mise.toml`. With `-linux` before the folder it builds a Linux binary inside Docker instead, into `target-linux/`.
@@ -100,9 +100,9 @@ Both snippets were run against `mise run run`. Leave out the base URL and the cl
 TypeScript, importing the compiled SDK from the project's root:
 
 ```ts
-import { BillingApiClient } from "./sdk/out/typescript-dist/esm/index.mjs";
+import { NotesClient } from "./sdk/out/typescript-dist/esm/index.mjs";
 
-const client = new BillingApiClient({ baseUrl: "http://localhost:5174" });
+const client = new NotesClient({ baseUrl: "http://localhost:5174" });
 
 const note = await client.notes.create({ body: "first" });
 
@@ -125,7 +125,7 @@ import (
 	"io"
 	"log"
 
-	billingapi "github.com/acme/billing-api/sdk/go"
+	notes "github.com/acme/billing-api/sdk/go"
 	"github.com/acme/billing-api/sdk/go/client"
 	"github.com/acme/billing-api/sdk/go/option"
 )
@@ -134,13 +134,13 @@ func main() {
 	ctx := context.Background()
 	c := client.NewClient(option.WithBaseURL("http://localhost:5174"))
 
-	note, err := c.Notes.Create(ctx, &billingapi.CreateInputBody{Body: "first"})
+	note, err := c.Notes.Create(ctx, &notes.CreateInputBody{Body: "first"})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// list: the iterator fetches the next page when it needs it
-	page, err := c.Notes.List(ctx, &billingapi.ListNotesRequest{Limit: billingapi.Int(50)})
+	page, err := c.Notes.List(ctx, &notes.ListNotesRequest{Limit: notes.Int(50)})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func main() {
 
 	// watch: notes after a position, as they are created, until the stream ends
 	after := fmt.Sprint(note.ID - 1)
-	stream, err := c.Notes.Watch(ctx, &billingapi.WatchNotesRequest{After: &after, Seconds: billingapi.Int(5)})
+	stream, err := c.Notes.Watch(ctx, &notes.WatchNotesRequest{After: &after, Seconds: notes.Int(5)})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -184,9 +184,9 @@ A program in another repo needs no `replace` line: [Giving the Go SDK to another
 
 ## Change the names
 
-All of them are in `fern/generators.yml`. `charter new -name billing-api` set them from the project's name:
+All of them are in `fern/generators.yml`. `charter new` sets the first from `-module`; the other three are the example's (`notes`, `Notes`, `notes`) until you change them:
 
-| Setting | Group | What it names | In a `billing-api` project |
+| Setting | Group | What it names | For example, in a `billing-api` project |
 |---|---|---|---|
 | `config.module.path` | `go` | The Go module path of the SDK: the project's module (`-module`) with `/sdk/go` added | `github.com/acme/billing-api/sdk/go` |
 | `config.packageName` | `go` | The Go package name | `billingapi` |
@@ -195,7 +195,7 @@ All of them are in `fern/generators.yml`. `charter new -name billing-api` set th
 
 `module.path` must end in `/sdk/go`, the folder the SDK is committed to: that is how `go get` finds it, and `mise run sdk:publish` fails when it does not.
 
-Then generate again. The test programs use these names, so change them there too: `BillingApiClient` in `test/sdk-live-test.mjs` and `test/soak.mjs`, the binary's name in `test/soak.mjs`, and the module path in `test/soak-go/main.go`, `test/soak-go/go.mod` and `test/soak.mjs`.
+Then generate again. The test programs use these names, so change them there too: the client class (`NotesClient`) in `test/sdk-live-test.mjs` and `test/soak.mjs`, the binary's name in `test/soak.mjs`, and the module path in `test/soak-go/main.go`, `test/soak-go/go.mod` and `test/soak.mjs`.
 
 Method names (`client.notes.list`) are not here. They come from the contract: `x-fern-sdk-group-name` and `x-fern-sdk-method-name` on each operation in `api/contract.go`.
 

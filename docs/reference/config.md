@@ -73,7 +73,7 @@ The routes of a new project, on any of those:
 | Binding | What it is | How the Go code reads it |
 |---|---|---|
 | `DB` | The D1 database. On Cloudflare it is named `<name>-db` | `d1.OpenConnector("DB")`, then `sql.OpenDB`: plain `database/sql` |
-| `HUB` | The Durable Object namespace of the hub (the library's class `Hub`, `go/worker/hub.mjs` in charter, which `worker.mjs` exports as `NotesHub`). One object, named `notes` | To publish: `cloudflare.NewDurableObjectNamespace("HUB")` and a fetch to the object. To subscribe: a WebSocket to it through `syscall/js` |
+| `HUB` | The Durable Object namespace of the hub (the library's class `Hub`, `go/worker/hub.mjs` in charter, which `worker.mjs` exports). One object, named `notes` | To publish: `cloudflare.NewDurableObjectNamespace("HUB")` and a fetch to the object. To subscribe: a WebSocket to it through `syscall/js` |
 | `APP_NAME` | A text variable, set to the Worker's name | `cloudflare.Getenv("APP_NAME")` |
 
 All three are read in one file, `platform_js.go`, which hands them to the handlers as an `api.Env` value with three fields: `Var` (a variable by name), `Store` (the database) and `Hub`. The native build has the same value from `platform_other.go`: environment variables, and one in-memory store and hub. The handlers never touch a binding directly. `Store` and `Hub` are opened per request, because a binding belongs to the request's environment.
