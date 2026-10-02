@@ -144,6 +144,9 @@ func distCLI(args []string) error {
 	}
 	// Named after the project, not the binary: two projects' CLIs can have the same binary name.
 	out := filepath.Join(dist, name+"-cli-"+goos+"-"+runtime.GOARCH)
+	if !linux {
+		bin, out = exe(bin), exe(out)
+	}
 	built, err := os.ReadFile(filepath.Join(dir, target, "release", bin))
 	if err != nil {
 		return err

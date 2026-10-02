@@ -4,7 +4,8 @@
 #   mise install && mise run setup     # tools, then npm packages
 #   mise run check                     # every local check (needs Docker, no Cloudflare account)
 #   mise tasks                         # all of them
-# Every task is one line of plain sh (on Linux mise runs dash: no bashisms). Anything longer is a
+# Every task is one line that sh and Windows' cmd.exe both take: programs, "double quotes", &&. A
+# setting is written {{env.NAME}}, which mise fills in itself. Anything else is a
 # command of the charter tool, which works on the project it is run in (`help` lists its commands).
 
 [tools]
@@ -43,21 +44,21 @@ run = "go run ../../cmd/charter doctor"
 
 [tasks.dev]
 description = "The Worker on API_PORT (cf dev): the showcase API at /api/mock, the SDK test at /api/sdk-test"
-run = "PORT=$API_PORT ./node_modules/.bin/cf dev"
+run = "go run ../../cmd/charter exec -env PORT={{env.API_PORT}} cf dev"
 
 [tasks.spec]
 description = "Write both specs from the contract (src/contract.ts) into fern/"
-run = 'node spec.ts fern/openapi.json fern/asyncapi.json "$API_MOCK_URL/api/mock"'
+run = 'node spec.ts fern/openapi.json fern/asyncapi.json {{env.API_MOCK_URL}}/api/mock'
 
 [tasks."spec:check"]
 description = "Fail if a committed spec is stale against the contract"
-run = 'node spec.ts --check fern/openapi.json fern/asyncapi.json "$API_MOCK_URL/api/mock"'
+run = 'node spec.ts --check fern/openapi.json fern/asyncapi.json {{env.API_MOCK_URL}}/api/mock'
 
 [tasks.lint]
 description = "Typecheck the Worker: the contract, its oRPC implementation and the SDK test (copies the SDK in first; Docker if it is stale)"
 # Both copy the SDK into src/client: not at the same time.
 wait_for = ["test:workerd"]
-run = "go run ../../cmd/charter harness-sync && ./node_modules/.bin/cf workers types >/dev/null && ./node_modules/.bin/tsc"
+run = "go run ../../cmd/charter harness-sync && go run ../../cmd/charter exec -quiet cf workers types && go run ../../cmd/charter exec tsc"
 
 [tasks.test]
 description = "The tests in test/, in Node: the server's routes, and its generated specs give Fern the surface the hand-written ones did"
@@ -85,7 +86,7 @@ run = "go run ../../cmd/charter sdk-list"
 
 [tasks."sdk:check-spec"]
 description = "Validate the specs and Fern's settings with Fern"
-run = "./node_modules/.bin/fern check --warnings"
+run = "go run ../../cmd/charter exec fern check --warnings"
 
 [tasks."sdk:gen"]
 description = "Generate an SDK with Fern (Docker): mise run sdk:gen <group> -> sdk/out/<group>"
@@ -107,7 +108,7 @@ run = "go run ../../cmd/charter cli-build"
 description = "Preview the API's reference site locally (fern docs dev): http://localhost:3030"
 # Fern runs its preview app from ~/.fern, outside the project: tell mise's shims which node to use there.
 env = { MISE_NODE_VERSION = "26.10.0" }
-run = "./node_modules/.bin/fern docs dev --port 3030"
+run = "go run ../../cmd/charter exec fern docs dev --port 3030"
 
 [tasks."sdk:clean"]
 description = "Remove generated SDKs (sdk/out) and stop leftover WireMock containers"

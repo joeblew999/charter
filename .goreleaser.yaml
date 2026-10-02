@@ -9,14 +9,16 @@ builds:
     main: ./cmd/charter
     binary: charter
     env: [CGO_ENABLED=0]
-    # No Windows: the tool starts and stops process groups (cmd/charter/server.go), which is Unix-only.
-    goos: [linux, darwin]
+    goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     flags: [-trimpath]
     # built: what `charter new` pins a new project to when the tool is a downloaded binary.
     ldflags: ["-s -w -X main.built=v{{ .Version }}"]
 archives:
   - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
     # No version in the name: releases/latest/download/charter_darwin_arm64.tar.gz is then always the
     # newest one, so nothing that links to it goes stale.
     name_template: "charter_{{ .Os }}_{{ .Arch }}"

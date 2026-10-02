@@ -44,10 +44,47 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: mise run setup
       - run: mise run check
+  # The same tasks on Windows: the tool, the library and the Go notes example. Not the SDKs: Fern
+  # generates in Linux containers, which GitHub's Windows runners do not run.
+  tool-windows:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run charter:check
+  library-windows:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run go:check
+  example-windows:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: examples/notes-go
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run check
   # else
   check:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run check
+  # The same check on Windows. (The SDK tasks are not part of it: Fern generates in Linux containers,
+  # which GitHub's Windows runners do not run.)
+  check-windows:
+    runs-on: windows-2025
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.0.1

@@ -168,11 +168,6 @@ func deployed() (address *url.URL, worker string, err error) {
 	return address, worker, nil
 }
 
-// The project's own installs of Cloudflare's CLI and Fern's (its package.json pins them).
-const (
-	cf   = "./node_modules/.bin/cf"
-	fern = "./node_modules/.bin/fern"
-	tsc  = "./node_modules/.bin/tsc"
-	// The TypeScript a generated SDK is checked with, where the project's own is another (sdk-check).
-	tscForSDKs = "./node_modules/typescript-sdk/bin/tsc"
-)
+// The TypeScript a generated SDK is checked with, where the project's own is another (sdk-check):
+// its program, which node runs.
+const tscForSDKs = "node_modules/typescript-sdk/bin/tsc"

@@ -78,7 +78,7 @@ func harnessTest(args []string) error {
 			return err
 		}
 		base = "http://localhost:" + port
-		stop, err := server("PORT="+port+" "+cf+" dev", base+"/")
+		stop, err := server([]string{"cf", "dev"}, []string{"PORT=" + port}, base+"/")
 		if err != nil {
 			return err
 		}
@@ -133,7 +133,7 @@ func harnessDeploy([]string) error {
 		return err
 	}
 	for _, mode := range []string{"production", "api"} {
-		if err := sh(".", cf, "deploy", "--mode", mode); err != nil {
+		if err := sh(".", npmBin("cf"), "deploy", "--mode", mode); err != nil {
 			return err
 		}
 	}

@@ -49,7 +49,7 @@ func docsLint(args []string) error {
 	}
 	var pages []string
 	err := filepath.WalkDir(docs, func(path string, d fs.DirEntry, err error) error {
-		if err == nil && !d.IsDir() && strings.HasSuffix(path, ".md") && !strings.Contains(path, "/_") {
+		if err == nil && !d.IsDir() && strings.HasSuffix(path, ".md") && !strings.Contains(filepath.ToSlash(path), "/_") {
 			pages = append(pages, path)
 		}
 		return err
@@ -90,7 +90,7 @@ func docsLint(args []string) error {
 	var problems []string
 	say := func(page, format string, a ...any) {
 		rel, _ := filepath.Rel(into, page)
-		problems = append(problems, rel+": "+fmt.Sprintf(format, a...))
+		problems = append(problems, filepath.ToSlash(rel)+": "+fmt.Sprintf(format, a...))
 	}
 	for _, page := range pages {
 		raw, err := os.ReadFile(page)
@@ -108,6 +108,7 @@ func docsLint(args []string) error {
 			say(page, "two curly braces together, or a curly brace and a percent sign: Jekyll reads those as template code")
 		}
 		rel, _ := filepath.Rel(docs, page)
+		rel = filepath.ToSlash(rel)
 		if rel != "README.md" && !linked[page] {
 			say(page, "no other page links to it: add it to its section's table (or the home page's)")
 		}

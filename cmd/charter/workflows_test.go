@@ -84,10 +84,14 @@ func TestWorkflowsFitTheRepo(t *testing.T) {
 			}
 		}
 	}
-	for _, want := range []string{"mise run charter:check", "mise run go:check", "working-directory: examples/${{ matrix.example }}", "mise run check"} {
+	for _, want := range []string{"mise run charter:check", "mise run go:check", "working-directory: examples/${{ matrix.example }}", "mise run check", "  tool-windows:\n    runs-on: windows-2025\n", "  example-windows:\n"} {
 		if !strings.Contains(string(repo["check.yml"]), want) {
 			t.Errorf("check.yml for a repo with examples: no %q", want)
 		}
+	}
+	// Both kinds are also checked on Windows.
+	if !strings.Contains(string(project["check.yml"]), "  check-windows:\n    runs-on: windows-2025\n") {
+		t.Error("check.yml for a project: no check-windows job")
 	}
 	if !strings.Contains(string(project["release.yml"]), "mise run release:tags") || !strings.Contains(string(repo["release.yml"]), "mise run charter:release") {
 		t.Error("release.yml: a project tags its modules after the SDKs, this repo after the tool's release")

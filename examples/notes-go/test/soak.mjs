@@ -20,8 +20,12 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
-import { pathToFileURL } from "node:url";
-const root = `${process.cwd()}/`; // the project
+import { fileURLToPath, pathToFileURL } from "node:url";
+// Paths with forward slashes on every system (Windows takes them, and go.work wants them), and the
+// name a built program has there.
+const slashes = path => path.replaceAll("\\", "/");
+const exe = process.platform === "win32" ? ".exe" : "";
+const root = `${slashes(process.cwd())}/`; // the project
 const WebSocket = createRequire(root)("ws");
 
 const args = process.argv.slice(2);
@@ -72,9 +76,9 @@ function lines(proc, signal, onLine) {
   return new Promise(resolve => proc.on("exit", code => resolve(`exit ${code}${err.trim() ? ` ${err.trim().slice(0, 100)}` : ""}`)));
 }
 const ws = origin.replace(/^http/, "ws");
-const soakGo = new URL("soak-go/", import.meta.url).pathname;
-const goBin = `${soakGo}soak-go`;
-const cliBin = `${root}sdk/out/cli/target/release/notes`;
+const soakGo = slashes(fileURLToPath(new URL("soak-go/", import.meta.url)));
+const goBin = `${soakGo}soak-go${exe}`;
+const cliBin = `${root}sdk/out/cli/target/release/notes${exe}`;
 
 const clients = [
   { name: "SSE raw (after)", run: (after, signal, onNote) =>

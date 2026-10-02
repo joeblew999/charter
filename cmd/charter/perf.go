@@ -59,7 +59,7 @@ func perf(args []string) error {
 			}
 		}()
 	}
-	if err := quiet(".", nil, cf, "deploy", "--mode", mode); err != nil {
+	if err := quiet(".", nil, npmBin("cf"), "deploy", "--mode", mode); err != nil {
 		return err
 	}
 	if err := migrate([]string{"-worker", worker}); err != nil {
@@ -80,7 +80,7 @@ func perf(args []string) error {
 		}
 	}
 	// Deployed again, so that the bench meets a new isolate: the requests above used the first.
-	if err := quiet(".", nil, cf, "deploy", "--mode", mode); err != nil {
+	if err := quiet(".", nil, npmBin("cf"), "deploy", "--mode", mode); err != nil {
 		return err
 	}
 	time.Sleep(5 * time.Second)
@@ -99,7 +99,7 @@ func perfClean(args []string) error {
 	if err != nil {
 		return err
 	}
-	out, err := output(".", cf, "workers", "list", "--per-page", "100")
+	out, err := output(".", npmBin("cf"), "workers", "list", "--per-page", "100")
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func perfClean(args []string) error {
 	for _, d := range databases {
 		if name, isDB := strings.CutSuffix(d.Name, "-db"); isDB && scratch.MatchString(name) && !inUse[d.Name] {
 			found++
-			if err := sh(".", cf, "d1", "delete", d.UUID, "--force"); err != nil {
+			if err := sh(".", npmBin("cf"), "d1", "delete", d.UUID, "--force"); err != nil {
 				return err
 			}
 		}
@@ -148,7 +148,7 @@ func deleteScratch(worker string) error {
 	if !strings.Contains(worker, "-perf-") {
 		return fmt.Errorf("%s is not a scratch Worker", worker)
 	}
-	if err := quiet(".", nil, cf, "workers", "delete", worker, "--force"); err != nil {
+	if err := quiet(".", nil, npmBin("cf"), "workers", "delete", worker, "--force"); err != nil {
 		return err
 	}
 	databases, err := d1Databases()
@@ -157,7 +157,7 @@ func deleteScratch(worker string) error {
 	}
 	for _, d := range databases {
 		if d.Name == worker+"-db" {
-			if err := quiet(".", nil, cf, "d1", "delete", d.UUID, "--force"); err != nil {
+			if err := quiet(".", nil, npmBin("cf"), "d1", "delete", d.UUID, "--force"); err != nil {
 				return err
 			}
 		}
@@ -169,7 +169,7 @@ func deleteScratch(worker string) error {
 type d1Database struct{ Name, UUID string }
 
 func d1Databases() ([]d1Database, error) {
-	out, err := output(".", cf, "d1", "list", "--per-page", "100")
+	out, err := output(".", npmBin("cf"), "d1", "list", "--per-page", "100")
 	if err != nil {
 		return nil, err
 	}

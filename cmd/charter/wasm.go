@@ -5,6 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -173,8 +175,10 @@ func glue(dir string) error {
 	return nil
 }
 
-// tinygoRoot is a TinyGo root whose runtime has the patch: the installed one, with its src/ copied
-// and the one line changed. It is made once per TinyGo version and kept in the user's cache folder.
+// tinygoRoot is a TinyGo root whose runtime has the patches: the installed one, with its src/ copied
+// and the patched files changed. It is made once per TinyGo version and kept in the user's cache
+// folder. What is not src/ is a symbolic link to the installed one; on Windows, where a user may
+// not be allowed those, hard links to its files, or copies.
 func tinygoRoot(system bool) (string, error) {
 	name, args := tinygoCommand(system, "env", "TINYGOROOT")
 	installed, err := output(".", name, args...)
@@ -208,20 +212,18 @@ func tinygoRoot(system bool) (string, error) {
 		return "", err
 	}
 	for _, entry := range entries {
+		from, to := filepath.Join(installed, entry.Name()), filepath.Join(root, entry.Name())
 		if entry.Name() == "src" {
-			continue
+			// TinyGo wants src/ to be real folders, and the patches change files in it.
+			err = copySource(from, to)
+		} else if os.Symlink(from, to) != nil {
+			// Windows lets only some users make symbolic links: the files themselves, then.
+			err = tree(from, to, true)
 		}
-		if err := os.Symlink(filepath.Join(installed, entry.Name()), filepath.Join(root, entry.Name())); err != nil {
+		if err != nil {
+			os.RemoveAll(root)
 			return "", err
 		}
-	}
-	// TinyGo wants src/ to be real folders. On macOS the copy is a clone (no extra disk).
-	copyArgs := []string{"-R", filepath.Join(installed, "src"), filepath.Join(root, "src")}
-	if runtime.GOOS == "darwin" {
-		copyArgs = append([]string{"-c"}, copyArgs...)
-	}
-	if err := quiet(".", nil, "cp", copyArgs...); err != nil {
-		return "", err
 	}
 	for _, patch := range tinygoPatches {
 		file := filepath.Join(root, patch.file)
@@ -229,14 +231,82 @@ func tinygoRoot(system bool) (string, error) {
 		if err == nil && patch.unless != "" && strings.Contains(string(source), patch.unless) {
 			continue // this TinyGo has the fix itself
 		}
-		if err != nil || strings.Count(string(source), patch.old) != 1 {
+		old, new := patch.old, patch.new
+		if strings.Contains(string(source), "\r\n") { // a TinyGo whose source has Windows line ends
+			old, new = strings.ReplaceAll(old, "\n", "\r\n"), strings.ReplaceAll(new, "\n", "\r\n")
+		}
+		if err != nil || strings.Count(string(source), old) != 1 {
 			os.RemoveAll(root)
 			return "", fmt.Errorf("this TinyGo (%s) does not have the text a patch changes (%q in %s): see docs/upstream.md, or build with -plain", version, patch.old, patch.file)
 		}
-		if err := os.WriteFile(file, []byte(strings.Replace(string(source), patch.old, patch.new, 1)), 0o644); err != nil {
+		// A new file, not new content in the old one: on Windows that one is also the installed TinyGo's.
+		if err := os.Remove(file); err != nil {
+			return "", err
+		}
+		if err := os.WriteFile(file, []byte(strings.Replace(string(source), old, new, 1)), 0o644); err != nil {
 			return "", err
 		}
 	}
 	fmt.Printf("TinyGo runtime patched once into %s\n", root)
 	return root, os.WriteFile(filepath.Join(root, ".patched"), []byte(version+"\n"), 0o644)
+}
+
+// copySource copies TinyGo's src/ (900 MB, mostly descriptions of chips) without using that much
+// disk where the system can: on macOS a clone, on Windows hard links, which is also what makes it
+// take seconds there and not minutes. On Linux, and where those fail, a copy.
+func copySource(from, to string) error {
+	if runtime.GOOS == "darwin" && quiet(".", nil, "cp", "-c", "-R", from, to) == nil {
+		return nil
+	}
+	if err := os.RemoveAll(to); err != nil {
+		return err
+	}
+	return tree(from, to, runtime.GOOS == "windows")
+}
+
+// tree makes to a copy of the folder from. With link, a file is a hard link to the one in from
+// (the same file under a second name: no disk, and nothing may write into it) where the system
+// allows one, which it does not across drives.
+func tree(from, to string, link bool) error {
+	return filepath.WalkDir(from, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(from, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(to, rel)
+		if entry.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		if entry.Type()&fs.ModeSymlink != 0 {
+			if points, err := os.Readlink(path); err == nil && os.Symlink(points, target) == nil {
+				return nil
+			}
+		} else if link && os.Link(path, target) == nil {
+			return nil
+		}
+		info, err := os.Stat(path) // what a link points at
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return tree(path, target, link)
+		}
+		in, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer in.Close()
+		out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, info.Mode().Perm())
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(out, in); err != nil {
+			out.Close()
+			return err
+		}
+		return out.Close()
+	})
 }

@@ -5,8 +5,8 @@
 #   mise install && mise run setup     # tools, then every example's npm packages
 #   mise run check                     # every local check (needs Docker, no Cloudflare account)
 #   mise tasks                         # all of them
-# Every task is one line of plain sh (on Linux mise runs dash: no bashisms). Anything longer is a
-# command of the tool: go run ./cmd/charter help.
+# Every task is one line that sh and Windows' cmd.exe both take: programs, "double quotes", &&.
+# Anything else is a command of the tool: go run ./cmd/charter help.
 
 [tools]
 go = "1.27.1"
@@ -51,7 +51,7 @@ run = "go run ./cmd/charter upstream"
 
 [tasks."charter:check"]
 description = "The tool's own checks (gofmt, vet, tests, with the test that holds the two notes examples to one surface), the generated workflows and docs config match their templates, and docs/ passes the lint"
-run = 'test -z "$(gofmt -l cmd examples/*.go)" && go vet ./cmd/... ./examples && go test ./cmd/... ./examples && go run ./cmd/charter workflows -check && go run ./cmd/charter docs -check && go run ./cmd/charter docs-lint'
+run = "go run ./cmd/charter lint -vet ./cmd/...,./examples cmd examples/*.go && go test ./cmd/... ./examples && go run ./cmd/charter workflows -check && go run ./cmd/charter docs -check && go run ./cmd/charter docs-lint"
 
 [tasks.workflows]
 description = "Write .github/workflows/ from the templates in cmd/charter/workflows (edit those, never the copies)"
@@ -70,7 +70,7 @@ run = "go run ./cmd/charter release-tags go examples/notes-go/sdk/go"
 [tasks."go:lint"]
 description = "gofmt and go vet of the Go library, for the host and for Wasm"
 dir = "go"
-run = 'test -z "$(gofmt -l .)" && go vet ./... && GOOS=js GOARCH=wasm go vet ./...'
+run = "go run ../cmd/charter lint -wasm ./... ."
 
 [tasks."go:test"]
 description = "The Go library's tests: humaworkers, transport, hub, follow, humamcp, asyncapi, specfile"
@@ -97,7 +97,7 @@ run = "go run ./cmd/charter docs-review"
 
 [tasks."docs:pages"]
 description = "REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself)"
-run = "gh api -X POST 'repos/{owner}/{repo}/pages' -f 'source[branch]=main' -f 'source[path]=/docs'"
+run = 'gh api -X POST "repos/{owner}/{repo}/pages" -f "source[branch]=main" -f "source[path]=/docs"'
 
 # ---- cloudflare: the credentials a deploy from GitHub needs --------------------------------------
 

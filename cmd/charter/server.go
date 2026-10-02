@@ -14,13 +14,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
 func init() {
-	commands["with-server"] = command{"-url <url> -start <cmd> [-show] -run <cmd>...",
-		"start a server, wait for <url>, run the commands, stop the server ({port} in any of them is a free port, {port2} another). A command's output is shown only if it fails; -show streams it", withServer}
+	commands["with-server"] = command{"-url <url> [-env NAME=VALUE]... -start <cmd> [-show] -run <cmd>...",
+		"start a server with these variables, wait for <url>, run the commands, stop the server and what it started. A command is a program and its arguments, not a shell line. {port} in any of them is a free port, {port2} another. A command's output is shown only if it fails; -show streams it", withServer}
 	commands["migrate-local"] = command{"[-port <port>]",
 		"apply migrations/*.sql to a running dev server's local D1, each once (the port: API_PORT)", migrateLocal}
 	commands["migrate"] = command{"[-worker <name>]",
@@ -34,45 +33,51 @@ type list []string
 func (l *list) String() string     { return strings.Join(*l, "; ") }
 func (l *list) Set(v string) error { *l = append(*l, v); return nil }
 
-// server starts `start` (a shell command) in the current folder and waits until url answers. stop
-// ends it.
-func server(start, url string) (stop func(), err error) {
+// server starts a program (start: its words; env: variables for it) in the current folder and waits
+// until url answers. stop ends it and everything it started.
+func server(start, env []string, url string) (stop func(), err error) {
 	if _, err := http.Get(url); err == nil {
 		return nil, fmt.Errorf("%s already answers: something else is running there", url)
+	}
+	path, err := program(start[0])
+	if err != nil {
+		return nil, err
 	}
 	log, err := os.CreateTemp("", "charter-server-*.log")
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command("bash", "-c", start)
-	cmd.Stdout, cmd.Stderr = log, log
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // so its children stop with it
+	cmd := exec.Command(path, start[1:]...)
+	cmd.Stdout, cmd.Stderr, cmd.Env = log, log, append(os.Environ(), env...)
+	ownGroup(cmd) // so what it starts stops with it
+	forget := func() { log.Close(); os.Remove(log.Name()) }
 	if err := cmd.Start(); err != nil {
+		forget()
 		return nil, err
 	}
 	exited := make(chan struct{})
 	go func() { cmd.Wait(); close(exited) }()
+	stopped := false
 	stop = func() {
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
-		select {
-		case <-exited:
-		case <-time.After(5 * time.Second):
-			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-			<-exited
+		if stopped {
+			return
 		}
-		os.Remove(log.Name())
+		stopped = true
+		stopTree(cmd, exited)
+		forget()
 	}
 	showLog := func() {
 		if out, err := os.ReadFile(log.Name()); err == nil {
 			os.Stderr.Write(out)
 		}
 	}
+	said := strings.Join(start, " ")
 	for deadline := time.Now().Add(90 * time.Second); time.Now().Before(deadline); time.Sleep(500 * time.Millisecond) {
 		select {
 		case <-exited:
 			showLog()
-			os.Remove(log.Name())
-			return nil, fmt.Errorf("the server stopped before %s answered: %s", url, start)
+			forget()
+			return nil, fmt.Errorf("the server stopped before %s answered: %s", url, said)
 		default:
 		}
 		if res, err := http.Get(url); err == nil {
@@ -82,17 +87,18 @@ func server(start, url string) (stop func(), err error) {
 	}
 	showLog()
 	stop()
-	return nil, fmt.Errorf("%s did not answer within 90 s: %s", url, start)
+	return nil, fmt.Errorf("%s did not answer within 90 s: %s", url, said)
 }
 
 func withServer(args []string) error {
 	var url, start string
-	var runs list
+	var runs, env list
 	var show bool
 	flags("with-server", args, func(f *flag.FlagSet) {
 		f.StringVar(&url, "url", "", "what must answer before the commands run")
-		f.StringVar(&start, "start", "", "the server's command (a shell line)")
-		f.Var(&runs, "run", "a command to run while the server is up (a shell line; repeat)")
+		f.StringVar(&start, "start", "", "the server's command: a program and its arguments (no shell)")
+		f.Var(&env, "env", "a variable for the server, NAME=VALUE (repeat)")
+		f.Var(&runs, "run", "a command to run while the server is up: a program and its arguments (no shell; repeat)")
 		f.BoolVar(&show, "show", false, "stream the commands' output (default: shown only when one fails)")
 	})
 	if url == "" || start == "" || len(runs) == 0 {
@@ -107,22 +113,41 @@ func withServer(args []string) error {
 	}
 	fill := strings.NewReplacer("{port}", ports[0], "{port2}", ports[1])
 	url, start = fill.Replace(url), fill.Replace(start)
+	for i := range env {
+		env[i] = fill.Replace(env[i])
+	}
+	if err := settings(env); err != nil {
+		return err
+	}
+	// The commands are words, not shell lines, so they are the same on every system. Every one is
+	// read before the server starts: a mistake in the last is found now, not after the others ran.
+	serve, err := words(start)
+	if err != nil {
+		return err
+	}
+	cmds := make([][]string, len(runs))
 	for i := range runs {
 		runs[i] = fill.Replace(runs[i])
+		if cmds[i], err = words(runs[i]); err != nil {
+			return err
+		}
+		if cmds[i][0], err = program(cmds[i][0]); err != nil {
+			return err
+		}
 	}
-	stop, err := server(start, url)
+	stop, err := server(serve, env, url)
 	if err != nil {
 		return err
 	}
 	defer stop()
-	for _, run := range runs {
-		do := func() error { return quiet(".", nil, "bash", "-c", run) }
+	for i, run := range cmds {
+		do := quiet
 		if show {
-			do = func() error { return sh(".", "bash", "-c", run) }
+			do = func(dir string, _ []string, name string, args ...string) error { return sh(dir, name, args...) }
 		}
-		if err := do(); err != nil {
+		if err := do(".", nil, run[0], run[1:]...); err != nil {
 			stop()
-			return fmt.Errorf("failed: %s", run)
+			return fmt.Errorf("failed: %s", runs[i])
 		}
 	}
 	return nil
@@ -256,7 +281,7 @@ func migrate(args []string) error {
 	if _, err := migrations(); err != nil {
 		return err
 	}
-	out, err := output(".", cf, "d1", "list", "--name", database, "--per-page", "100")
+	out, err := output(".", npmBin("cf"), "d1", "list", "--name", database, "--per-page", "100")
 	if err != nil {
 		return err
 	}
@@ -266,7 +291,7 @@ func migrate(args []string) error {
 	}
 	for _, d := range databases {
 		if d.Name == database {
-			return sh(".", cf, "d1", "migrations", "apply", d.UUID, "--dir", "migrations")
+			return sh(".", npmBin("cf"), "d1", "migrations", "apply", d.UUID, "--dir", "migrations")
 		}
 	}
 	return fmt.Errorf("no D1 database %s yet: deploy its Worker first", database)

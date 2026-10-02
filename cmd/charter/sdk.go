@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
 )
@@ -45,7 +46,7 @@ func sdkGen(args []string) error {
 	if err := docker(); err != nil {
 		return err
 	}
-	return sh(".", fern, "generate", "--local", "--group", args[0], "--force", "--log-level", "warn")
+	return sh(".", npmBin("fern"), "generate", "--local", "--group", args[0], "--force", "--log-level", "warn")
 }
 
 // sdkOut is where Fern puts a group: the output path generators.yml names.
@@ -122,11 +123,11 @@ func sdkCheckDir(dir string) error {
 		if err := os.WriteFile(config, fmt.Appendf(nil, sdkTSConfig, filepath.Base(entry)), 0o644); err != nil {
 			return err
 		}
-		compiler := tsc
+		compiler := []string{npmBin("tsc")}
 		if exists(tscForSDKs) {
-			compiler = tscForSDKs
+			compiler = []string{"node", tscForSDKs}
 		}
-		if err := sh(".", compiler, "-p", config); err != nil {
+		if err := sh(".", compiler[0], append(compiler[1:], "-p", config)...); err != nil {
 			return err
 		}
 		fmt.Printf("typecheck ok (%s)\n", entry)
@@ -170,7 +171,7 @@ func sdkReady(groups []string) error {
 	if err != nil {
 		return err
 	}
-	if !exists(filepath.Join(cli, "target/release", bin)) {
+	if !exists(filepath.Join(cli, "target/release", exe(bin))) {
 		return cliBuildDir(cli, false)
 	}
 	return nil
@@ -225,6 +226,14 @@ func sdkClean([]string) error {
 	return nil
 }
 
+// exe is the file name of a program this system built: on Windows it ends in .exe.
+func exe(name string) string {
+	if runtime.GOOS == "windows" {
+		return name + ".exe"
+	}
+	return name
+}
+
 // cargoBin is the name of the first [[bin]] in a generated CLI's Cargo.toml.
 func cargoBin(dir string) (string, error) {
 	manifest, err := os.ReadFile(filepath.Join(dir, "Cargo.toml"))
@@ -266,7 +275,7 @@ func cliBuildDir(dir string, linux bool) error {
 		if err := sh(dir, "cargo", build...); err != nil {
 			return err
 		}
-		fmt.Printf("built: %s/target/release/%s\n", dir, bin)
+		fmt.Printf("built: %s/target/release/%s\n", dir, exe(bin))
 		return nil
 	}
 	if err := docker(); err != nil {
