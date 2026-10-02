@@ -1,0 +1,114 @@
+# The showcase API in TypeScript on Cloudflare Workers: every Fern feature we use, in one small API,
+# from an oRPC contract (src/contract.ts). The Worker serves that API (/api/mock) and is also the
+# harness that runs the generated TypeScript SDK against it inside workerd (/api/sdk-test).
+#   mise install && mise run setup     # tools, then npm packages
+#   mise run check                     # every local check (needs Docker, no Cloudflare account)
+#   mise tasks                         # all of them
+# Every task is one line of plain sh (on Linux mise runs dash: no bashisms). Anything longer is a
+# command of the charter tool, which works on the project it is run in (`help` lists its commands).
+
+[tools]
+# The charter tool is Go.
+go = "1.27.1"
+node = "26.10.0"
+# Builds the generated CLI: mise run sdk:cli:build.
+rust = "1.98.1"
+gh = "2.101.0"
+
+[env]
+# The local dev port.
+API_PORT = "{{ get_env(name='API_PORT', default='5176') }}"
+# Where the Worker is deployed (cf deploy prints it; there is no cf command to look it up), and the
+# same code as a second Worker, which serves the API the specs describe: on Cloudflare a Worker
+# can't open a WebSocket to itself. On another Cloudflare account, set them in mise.local.toml
+# (gitignored), then: mise run spec.
+API_URL = "{{ get_env(name='API_URL', default='https://charter-showcase-ts.gedw99.workers.dev') }}"
+API_MOCK_URL = "{{ get_env(name='API_MOCK_URL', default='https://charter-showcase-ts-api.gedw99.workers.dev') }}"
+
+# ---- the project ---------------------------------------------------------------------------------
+
+[tasks.setup]
+description = "Install the npm packages: this project's, and those of ../notes-ts, whose spec generators it imports"
+run = "npm ci --no-fund --no-audit && npm ci --no-fund --no-audit --prefix ../notes-ts"
+
+[tasks.check]
+description = "Every LOCAL check (no Cloudflare account; needs Docker): the committed specs match the contract, Fern accepts them, the tests in test/ pass, the Worker typechecks, and the SDK works inside workerd"
+depends = ["spec:check", "sdk:check-spec", "test", "lint", "test:workerd"]
+
+[tasks.doctor]
+description = "Check what the tasks need: npm packages, Docker, Go, Rust"
+run = "go run ../../cmd/charter doctor"
+
+# ---- the API: run it, test it --------------------------------------------------------------------
+
+[tasks.dev]
+description = "The Worker on API_PORT (cf dev): the showcase API at /api/mock, the SDK test at /api/sdk-test"
+run = "PORT=$API_PORT ./node_modules/.bin/cf dev"
+
+[tasks.spec]
+description = "Write both specs from the contract (src/contract.ts) into fern/"
+run = 'node spec.ts fern/openapi.json fern/asyncapi.json "$API_MOCK_URL/api/mock"'
+
+[tasks."spec:check"]
+description = "Fail if a committed spec is stale against the contract"
+run = 'node spec.ts --check fern/openapi.json fern/asyncapi.json "$API_MOCK_URL/api/mock"'
+
+[tasks.lint]
+description = "Typecheck the Worker: the contract, its oRPC implementation and the SDK test (copies the SDK in first; Docker if it is stale)"
+# Both copy the SDK into src/client: not at the same time.
+wait_for = ["test:workerd"]
+run = "go run ../../cmd/charter harness-sync && ./node_modules/.bin/cf workers types >/dev/null && ./node_modules/.bin/tsc"
+
+[tasks.test]
+description = "The tests in test/, in Node: the server's routes, and its generated specs give Fern the surface the hand-written ones did"
+run = "node --test test/*.test.ts"
+
+[tasks."test:workerd"]
+description = "Run Fern's TypeScript SDK inside the Worker, under cf dev: every Fern feature, on Workers"
+run = "go run ../../cmd/charter harness-test"
+
+# ---- Cloudflare ----------------------------------------------------------------------------------
+
+[tasks.deploy]
+description = "REMOTE: deploy the Worker twice (charter-showcase-ts and charter-showcase-ts-api)"
+run = "go run ../../cmd/charter harness-deploy"
+
+[tasks.live-test]
+description = "REMOTE: run Fern's TypeScript SDK inside the deployed Worker"
+run = "go run ../../cmd/charter harness-test -remote"
+
+# ---- sdk: what Fern generates from the specs in fern/ (its settings: fern/generators.yml) ---------
+
+[tasks."sdk:list"]
+description = "The SDK groups fern/generators.yml defines"
+run = "go run ../../cmd/charter sdk-list"
+
+[tasks."sdk:check-spec"]
+description = "Validate the specs and Fern's settings with Fern"
+run = "./node_modules/.bin/fern check --warnings"
+
+[tasks."sdk:gen"]
+description = "Generate an SDK with Fern (Docker): mise run sdk:gen <group> -> sdk/out/<group>"
+run = "go run ../../cmd/charter sdk-gen"
+
+[tasks."sdk:check"]
+description = "Prove a generated SDK works (Go: build, vet, tests against WireMock; TypeScript: typecheck): mise run sdk:check <group>"
+run = "go run ../../cmd/charter sdk-check"
+
+[tasks."sdk:ready"]
+description = "Generate and build what the tests use, if missing (TypeScript and Go SDKs, the CLI): mise run sdk:ready [group...]"
+run = "go run ../../cmd/charter sdk-ready"
+
+[tasks."sdk:cli:build"]
+description = "HEAVY: build the generated Rust CLI in sdk/out/cli: mise run sdk:cli:build [-linux]"
+run = "go run ../../cmd/charter cli-build"
+
+[tasks."sdk:docs"]
+description = "Preview the API's reference site locally (fern docs dev): http://localhost:3030"
+# Fern runs its preview app from ~/.fern, outside the project: tell mise's shims which node to use there.
+env = { MISE_NODE_VERSION = "26.10.0" }
+run = "./node_modules/.bin/fern docs dev --port 3030"
+
+[tasks."sdk:clean"]
+description = "Remove generated SDKs (sdk/out) and stop leftover WireMock containers"
+run = "go run ../../cmd/charter sdk-clean"

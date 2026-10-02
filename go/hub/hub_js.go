@@ -10,7 +10,7 @@ import (
 
 	"github.com/syumai/workers-go/cloudflare"
 
-	"github.com/joeblew999/orpc-api/go/internal/promise"
+	"github.com/joeblew999/charter/go/internal/promise"
 )
 
 // DurableObject is the hub on Cloudflare: the object called name of the Durable Object namespace

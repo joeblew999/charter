@@ -1,0 +1,411 @@
+{
+  "openapi": {
+    "version": "3.1.0",
+    "servers": [
+      "https://charter-showcase-ts-api.gedw99.workers.dev/api/mock"
+    ],
+    "security": [
+      {
+        "OAuth": []
+      }
+    ],
+    "securitySchemes": {
+      "OAuth": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "/oauth/token",
+            "scopes": {}
+          }
+        }
+      }
+    },
+    "extensions": {
+      "x-fern-idempotency-headers": [
+        {
+          "header": "Idempotency-Key",
+          "name": "idempotency_key"
+        }
+      ],
+      "x-fern-webhook-signature": {
+        "type": "hmac",
+        "header": "x-webhook-signature",
+        "algorithm": "sha256",
+        "encoding": "hex"
+      }
+    },
+    "operations": {
+      "POST /oauth/token": {
+        "operationId": "getToken",
+        "tags": [
+          "auth"
+        ],
+        "summary": "OAuth client-credentials token (used by the SDK itself)",
+        "security": [],
+        "extensions": {
+          "x-fern-audiences": [
+            "public",
+            "internal"
+          ]
+        },
+        "parameters": [],
+        "request": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "type": "object",
+              "required": [
+                "client_id",
+                "client_secret"
+              ],
+              "properties": {
+                "client_id": {
+                  "type": "string"
+                },
+                "client_secret": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "application/json": {
+              "type": "object",
+              "required": [
+                "access_token",
+                "expires_in"
+              ],
+              "properties": {
+                "access_token": {
+                  "type": "string"
+                },
+                "expires_in": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "GET /notes": {
+        "operationId": "listNotes",
+        "tags": [
+          "notes"
+        ],
+        "summary": "List notes (cursor pagination)",
+        "extensions": {
+          "x-fern-audiences": [
+            "public",
+            "internal"
+          ],
+          "x-fern-pagination": {
+            "cursor": "$request.cursor",
+            "next_cursor": "$response.next_cursor",
+            "results": "$response.data"
+          }
+        },
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "request": {
+          "required": false,
+          "content": {}
+        },
+        "responses": {
+          "200": {
+            "application/json": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "ref": "Note"
+                  }
+                },
+                "next_cursor": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "POST /notes": {
+        "operationId": "createNote",
+        "tags": [
+          "notes"
+        ],
+        "summary": "Create a note (idempotent: safe to retry with an Idempotency-Key)",
+        "extensions": {
+          "x-fern-audiences": [
+            "public",
+            "internal"
+          ],
+          "x-fern-idempotent": true
+        },
+        "parameters": [],
+        "request": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "type": "object",
+              "required": [
+                "body"
+              ],
+              "properties": {
+                "body": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "application/json": {
+              "ref": "Note"
+            }
+          }
+        }
+      },
+      "POST /files": {
+        "operationId": "uploadFile",
+        "tags": [
+          "files"
+        ],
+        "summary": "Upload a file (multipart)",
+        "extensions": {
+          "x-fern-audiences": [
+            "internal"
+          ]
+        },
+        "parameters": [],
+        "request": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "type": "object",
+              "required": [
+                "file"
+              ],
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "note": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "application/json": {
+              "type": "object",
+              "required": [
+                "id",
+                "size"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "size": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "POST /chat": {
+        "operationId": "chat",
+        "tags": [
+          "chat"
+        ],
+        "summary": "Stream a reply (Server-Sent Events)",
+        "extensions": {
+          "x-fern-audiences": [
+            "public",
+            "internal"
+          ],
+          "x-fern-streaming": {
+            "format": "sse"
+          }
+        },
+        "parameters": [],
+        "request": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "type": "object",
+              "required": [
+                "prompt"
+              ],
+              "properties": {
+                "prompt": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "text/event-stream": {
+              "ref": "Chunk"
+            }
+          }
+        }
+      }
+    },
+    "webhooks": {
+      "POST noteCreated": {
+        "operationId": "noteCreatedWebhook",
+        "tags": [
+          "notes"
+        ],
+        "summary": "Sent to you when a note is created",
+        "extensions": {},
+        "parameters": [],
+        "request": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "type": "object",
+              "required": [
+                "event",
+                "note"
+              ],
+              "properties": {
+                "event": {
+                  "type": "string"
+                },
+                "note": {
+                  "ref": "Note"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "schemas": {
+      "Chunk": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "done": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "Note": {
+        "type": "object",
+        "required": [
+          "body",
+          "id"
+        ],
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "asyncapi": {
+    "servers": {
+      "production": {
+        "host": "api.example.com",
+        "protocol": "wss"
+      }
+    },
+    "channels": {
+      "liveNotes": {
+        "address": "/notes/live",
+        "extensions": {},
+        "messages": {
+          "NoteEvent": {
+            "type": "object",
+            "required": [
+              "event",
+              "id"
+            ],
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "event": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
+            }
+          },
+          "Subscribe": {
+            "type": "object",
+            "required": [
+              "topic"
+            ],
+            "properties": {
+              "topic": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "operations": {
+      "receiveNoteEvent": {
+        "action": "receive",
+        "channel": "liveNotes",
+        "messages": [
+          "NoteEvent"
+        ]
+      },
+      "sendSubscribe": {
+        "action": "send",
+        "channel": "liveNotes",
+        "messages": [
+          "Subscribe"
+        ]
+      }
+    }
+  }
+}

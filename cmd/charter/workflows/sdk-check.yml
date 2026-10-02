@@ -1,0 +1,47 @@
+# Written by `charter workflows` from its template (github.com/joeblew999/charter, cmd/charter/workflows/sdk-check.yml):
+# change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# Fern (in Docker): the Go and TypeScript SDKs generate from the committed specs and work, and the
+# committed Go SDK (sdk/go) is what the specs generate.
+name: sdk-check
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sdk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # if-dir examples
+        example: [notes-go, notes-ts, showcase-go, showcase-ts]
+        # end
+        group: [go, typescript]
+    # if-dir examples
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    # end
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run sdk:gen ${{ matrix.group }}
+      - run: mise run sdk:check ${{ matrix.group }}
+  published:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # if-dir examples
+    defaults:
+      run:
+        working-directory: examples/notes-go
+    # end
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run sdk:publish:check

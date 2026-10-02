@@ -1,0 +1,31 @@
+{
+	"name": "charter-notes-ts",
+	"private": true,
+	"type": "module",
+	"description": "The Worker's packages (oRPC, Zod), and what the tasks run: cf (Cloudflare's CLI) with Vite, Vitest, TypeScript, Fern's CLI, and what the tests import.",
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "beta",
+		"@cloudflare/vitest-pool-workers": "^0.22.0",
+		"@types/node": "^22.12.0",
+		"@types/ws": "^8.5.12",
+		"cf": "1.0.0-beta.5",
+		"fern-api": "5.140.0",
+		"typescript": "^7.0.2",
+		"vite": "^8.3.0",
+		"vitest": "^4.1.11",
+		"ws": "^8.18.0"
+	},
+	"dependencies": {
+		"@orpc/cloudflare": "2.0.0-beta.40",
+		"@orpc/contract": "2.0.0-beta.40",
+		"@orpc/json-schema": "2.0.0-beta.40",
+		"@orpc/openapi": "2.0.0-beta.40",
+		"@orpc/server": "2.0.0-beta.40",
+		"@orpc/zod": "2.0.0-beta.40",
+		"zod": "^4.6.5"
+	},
+	"allowScripts": {
+		"workerd@1.20260815.1": true,
+		"workerd@1.20260926.1": true
+	}
+}

@@ -1,0 +1,66 @@
+# The notes API from the Go contract. openapi.json and asyncapi.json are written by `mise run spec`
+# from api/contract.go (never by hand). What Fern needs (SDK names, x-fern-pagination,
+# x-fern-streaming) is declared there; the WebSocket channel comes from the Go library's asyncapi package.
+api:
+  specs:
+    - openapi: openapi.json
+    - asyncapi: asyncapi.json
+
+# The groups (mise run sdk:list).
+# Generate one: mise run sdk:gen <group>   (output: sdk/out/<group>)
+groups:
+  # The Go SDK.
+  go:
+    generators:
+      - name: fernapi/fern-go-sdk
+        version: 1.64.0
+        output:
+          location: local-file-system
+          path: ../sdk/out/go
+        config:
+          # The project's module with /sdk/go added: the folder `mise run sdk:publish` commits this SDK to,
+          # so another repo can go get it.
+          module:
+            path: github.com/joeblew999/charter/examples/notes-go/sdk/go
+            version: "1.22"
+          packageName: notes
+
+  # The TypeScript SDK as sources (.ts): what a release ships.
+  typescript:
+    generators:
+      - name: fernapi/fern-typescript-sdk
+        version: 3.98.0
+        output:
+          location: local-file-system
+          path: ../sdk/out/typescript
+        config:
+          namespaceExport: Notes
+          generateWebSocketClients: true
+          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
+          guardProcessEnvAccess: true
+
+  # The TypeScript SDK compiled (.js + .d.ts): what a Worker or a Node program imports, and what the tests use.
+  typescript-dist:
+    generators:
+      - name: fernapi/fern-typescript-sdk
+        version: 3.98.0
+        output:
+          location: local-file-system
+          path: ../sdk/out/typescript-dist
+        config:
+          namespaceExport: Notes
+          generateWebSocketClients: true
+          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
+          guardProcessEnvAccess: true
+          outputSourceFiles: false
+
+  # A Rust CLI for the API (Fern's CLI generator, early access).
+  cli:
+    generators:
+      - name: fernapi/fern-cli-generator
+        version: 0.45.1
+        output:
+          location: local-file-system
+          path: ../sdk/out/cli
+        config:
+          binaryName: notes

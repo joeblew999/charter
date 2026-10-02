@@ -1,24 +1,11 @@
-node_modules/
-.cloudflare/
-.wrangler/
-.dev.vars*
-.env*
-.secrets/
-*.log
-*.cpuprofile
+# Each example ignores what its own tasks write (examples/*/.gitignore). Here: what is the repo's.
 .DS_Store
-
-# Generated SDKs, CLIs and docs (mise run sdk:gen), and the SDK copy the harness Worker uses
-sdk/out/
-sdk/.work/
-sdk/harness/src/client/
-target/
+*.log
 go.work.sum
-
 mise.local.toml
 
 # Agent worktrees (Claude Code)
 .claude/worktrees/
 
-# Release builds (mise run dev:release, sdk:dist)
+# Release builds (mise run charter:release)
 dist/

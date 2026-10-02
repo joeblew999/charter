@@ -1,0 +1,19 @@
+{
+	"name": "charter-showcase-go",
+	"private": true,
+	"type": "module",
+	"description": "What the tasks run: cf (Cloudflare's CLI) with Vite, Fern's CLI, TypeScript for checking generated SDKs, and what the test in test/ imports.",
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "beta",
+		"@types/node": "^22.12.0",
+		"@types/ws": "^8.5.12",
+		"cf": "1.0.0-beta.5",
+		"fern-api": "5.140.0",
+		"typescript": "~5.9.3",
+		"vite": "^8.3.0",
+		"ws": "^8.18.0"
+	},
+	"allowScripts": {
+		"workerd@1.20260926.1": true
+	}
+}

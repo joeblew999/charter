@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>charter-notes-ts</title>
+</head>
+<body>
+	<h1 id="hello">charter-notes-ts</h1>
+	<form id="add"><input name="body" placeholder="New note" required> <button>Add</button></form>
+	<ul id="notes"></ul>
+	<script type="module">
+		const list = async () => {
+			const notes = await (await fetch("/api/notes")).json();
+			document.getElementById("notes").replaceChildren(...notes.map(n => Object.assign(document.createElement("li"), { textContent: n.body })));
+		};
+		document.getElementById("hello").textContent = await (await fetch("/api/hello")).text();
+		document.getElementById("add").addEventListener("submit", async event => {
+			event.preventDefault();
+			await fetch("/api/notes", { method: "POST", body: event.target.body.value });
+			event.target.reset();
+			await list();
+		});
+		await list();
+	</script>
+</body>
+</html>
