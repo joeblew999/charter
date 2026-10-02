@@ -31,7 +31,7 @@ const socket = await client.liveNotes.connect({ after, reconnectAttempts: 0 });
 ```go
 // Go SDK
 for {
-	stream, err := c.Notes.Watch(ctx, &orpcapi.WatchNotesRequest{After: after})
+	stream, err := c.Notes.Watch(ctx, &notes.WatchNotesRequest{After: after})
 	if err == nil {
 		for note, err := stream.Recv(); err == nil; note, err = stream.Recv() { handle(note); a := strconv.Itoa(note.ID); after = &a }
 		stream.Close()
@@ -44,14 +44,14 @@ for {
 # The Fern CLI: prints a stream's notes when it ends (json/jsonl), or live with --format raw
 after=""
 while :; do
-  out=$(orpc-api notes watch ${after:+--after "$after"} --seconds 60 --format jsonl)
+  out=$(notes notes watch ${after:+--after "$after"} --seconds 60 --format jsonl)
   [ -n "$out" ] && { echo "$out"; after=$(echo "$out" | tail -1 | jq -r .id); }
 done
 ```
 
 A browser's `EventSource` needs nothing: the SSE id is the note id, so its automatic `Last-Event-ID` is the same position.
 
-The loops above are written from the test clients (`test/soak.mjs`, `test/soak-go/main.go`), which follow the same rule; the snippets themselves are not run by a test.
+The loops above are written from the test clients (`examples/notes-go/test/soak.mjs`, `examples/notes-go/test/soak-go/main.go`), which follow the same rule; the snippets themselves are not run by a test.
 
 ## The five rules
 
@@ -62,10 +62,10 @@ Code comments refer to these by number.
    - Resume is a normal contract input (`after`), so every generated client (SDK, CLI, docs) gets it without `Last-Event-ID` support.
    - A browser's `EventSource` still works: its `Last-Event-ID` header is read as a position. When both are sent (a reconnecting SDK resends its original `after`), the newer wins.
 2. **The hub is disposable.**
-   - The hub (the `NotesHub` Durable Object) is only live fan-out: hibernatable, and allowed to restart at any time.
+   - The hub (a Durable Object: `Hub` in the Go Worker, `NotesHub` in the oRPC one) is only live fan-out: hibernatable, and allowed to restart at any time.
    - It stores nothing that matters and keeps no resume log: D1 replaces it.
 3. **One subscription primitive in the Worker: the feed.**
-   - `follow()` in `api/ts/src/follow.ts` and `Follow` in `go/follow/`, the same design with the same tests.
+   - `follow()` in `examples/notes-ts/src/follow.ts` and `Follow` in `go/follow/`, the same design with the same tests.
    - Given `after`, it yields notes in id order: subscribe to the hub first, catch up from D1 (`id > after`), then stream live, dropping anything already sent (by id).
    - When the hub drops, it resubscribes and catches up from the last id it sent, so clients never see hub restarts or deploys.
    - It only needs a source with `subscribe`, `since` and `latest`, so another project uses it unchanged.
@@ -117,7 +117,7 @@ Not measured here, taken from Cloudflare's documentation when the design was mad
 
 ## How it is tested
 
-The feed is the only code that handles failure, so it has unit tests (`api/ts/test/follow.test.ts`, `go/follow/follow_test.go`). Each transport then needs one live pass, and each client only has to show that it follows the client rule. That keeps the matrix small.
+The feed is the only code that handles failure, so it has unit tests (`examples/notes-ts/test/follow.test.ts`, `go/follow/follow_test.go`). Each transport then needs one live pass, and each client only has to show that it follows the client rule. That keeps the matrix small.
 
 | Scenario | How it's produced | Expected, every client |
 |---|---|---|
@@ -128,7 +128,7 @@ The feed is the only code that handles failure, so it has unit tests (`api/ts/te
 | Long idle | `--idle 20`: 20 minutes with no notes, then one | the note arrives |
 
 - **Clients (7):** raw SSE with `after`, SSE with `Last-Event-ID` (what `EventSource` sends), the TypeScript SDK's `notes.watch()`, the Go SDK's `Notes.Watch()`, the Fern CLI's `notes watch`, a raw WebSocket, and the TypeScript SDK's `liveNotes.connect({ after })`.
-- **Runner:** `mise run api:ts:soak` and `mise run api:go:soak` (`test/soak.mjs`, [testing.md](testing.md)). PASS is every note exactly once, in order. Latency is reported, not judged: the Fern CLI prints json/jsonl only when a stream ends.
+- **Runner:** `mise run soak` in each notes example (`examples/notes-go/test/soak.mjs`, [testing.md](testing.md)). PASS is every note exactly once, in order. Latency is reported, not judged: the Fern CLI prints json/jsonl only when a stream ends.
 
 Results, on the deployed Workers:
 

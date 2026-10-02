@@ -6,7 +6,7 @@ grand_parent: This repository
 ---
 # Plan: one project shape, used everywhere
 
-The repo grew as one example with tools around it, and three things are tangled: the reusable library lives inside the notes example's Go module, the examples are not in the shape a new project has (so `dev new` filters and renames this repo), and `mise.toml` is both this repo's tasks and the template. This plan untangles them. Backward compatibility is not kept.
+The repo grew as one example with tools around it, and three things are tangled: the reusable library lives inside the notes example's Go module, the examples are not in the shape a new project has (so `charter new` filters and renames this repo), and `mise.toml` is both this repo's tasks and the template. This plan untangles them. Backward compatibility is not kept.
 
 ## The target
 
@@ -15,7 +15,7 @@ go/         the Go library other repos import: humaworkers, transport, hub, d1, 
             humamcp, asyncapi, specfile, and the Worker glue (worker/*.mjs)
 ts/         the TypeScript library, when there is one to publish (the AsyncAPI generator, follow)
 examples/   notes-go, showcase-go, notes-ts, showcase-ts: each a complete project
-dev/        the tool behind every task
+cmd/charter/ the tool behind every task (the root module)
 docs/
 ```
 
@@ -35,12 +35,12 @@ sdk/go/                 the generated Go client, committed
 test/
 ```
 
-- **Tasks have the same names in every project** (`check`, `deploy`, `bench`), and the dev tool works on the project it is run in. The repo's own `mise.toml` only runs each example's.
-- **`dev new` copies `examples/notes-go`** and renames it. No filtering.
+- **Tasks have the same names in every project** (`check`, `deploy`, `bench`), and the charter tool works on the project it is run in. The repo's own `mise.toml` only runs each example's.
+- **`charter new` copies `examples/notes-go`** and renames it. No filtering.
 - **The Worker glue is not copied into a project.** It ships with the Go library, and the build writes it into `build/` from the library version the project uses, so the JavaScript and the Go that talk to each other always match.
 
 ## Steps
 
-1. **The library on its own:** `go/` as a module, the glue shipped by the build. Done 2026-10-02: `go/` is the module `github.com/joeblew999/orpc-api/go` (the packages and `go/worker/*.mjs`), `api/go/` requires it, `dev wasm-build` writes the glue into `build/`, and each example has one entry file, `worker.mjs`.
-2. **The examples as projects:** `examples/*`, each with its own `mise.toml`; the dev tool works on the current project; `dev new` copies. Not started.
+1. **The library on its own:** `go/` as a module, the glue shipped by the build. Done 2026-10-02: `go/` is the module `github.com/joeblew999/charter/go` (the packages and `go/worker/*.mjs`), `examples/notes-go/` requires it, `charter wasm-build` writes the glue into `build/`, and each example has one entry file, `worker.mjs`.
+2. **The examples as projects:** `examples/*`, each with its own `mise.toml`; the tool works on the current project; `charter new` copies. Done 2026-10-02, with the rename to charter: the tool is `cmd/charter` in the root module `github.com/joeblew999/charter`, a project is a folder with a `mise.toml` beside a `fern/` folder, `charter new` copies `examples/notes-go`, and the repo's own `mise.toml` runs each example's tasks with `charter each`.
 3. **The docs, once, against the final shape.** Not started.

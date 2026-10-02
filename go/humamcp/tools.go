@@ -13,7 +13,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/orpc-api/go/humaworkers"
+	"github.com/joeblew999/charter/go/humaworkers"
 )
 
 // How an operation becomes a tool:

@@ -1,0 +1,136 @@
+# The notes API in TypeScript on Cloudflare Workers: the same API as ../notes-go, from an oRPC
+# contract (src/contract.ts). The specs (fern/), the SDKs, a CLI and the API docs come from it.
+#   mise install && mise run setup     # tools, then npm packages
+#   mise run check                     # every local check (no Cloudflare account)
+#   mise tasks                         # all of them
+# Every task is one line of plain sh (on Linux mise runs dash: no bashisms). Anything longer is a
+# command of the charter tool, which works on the project it is run in (`help` lists its commands).
+# The tests a deploy must pass are the Go project's (../notes-go/test): one API, one set of tests.
+
+[tools]
+# The charter tool is Go, and so is one client of the soak test.
+go = "1.27.1"
+node = "26.10.0"
+# Builds the generated CLI: mise run sdk:cli:build.
+rust = "1.98.1"
+gh = "2.101.0"
+
+[env]
+# The local dev port.
+API_PORT = "{{ get_env(name='API_PORT', default='5173') }}"
+# Where the Worker is deployed (cf deploy prints it; there is no cf command to look it up). Its first
+# label is the Worker's name. On another Cloudflare account, set it in mise.local.toml (gitignored),
+# then: mise run spec.
+API_URL = "{{ get_env(name='API_URL', default='https://charter-notes-ts.gedw99.workers.dev') }}"
+# Optional: an API token instead of cf's OAuth login (`./node_modules/.bin/cf auth login`).
+# CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+
+# ---- the project ---------------------------------------------------------------------------------
+
+[tasks.setup]
+description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import"
+run = "npm ci --no-fund --no-audit"
+
+[tasks.check]
+description = "Every LOCAL check (no Cloudflare account): typecheck, unit tests, and the committed specs match the contract"
+depends = ["lint", "test", "spec:check"]
+
+[tasks.doctor]
+description = "Check what the tasks need: npm packages, Docker, Go, Rust"
+run = "go run ../../cmd/charter doctor"
+
+# ---- the API: run it, test it --------------------------------------------------------------------
+
+[tasks.dev]
+description = "The API on API_PORT (cf dev). First time, in another shell: mise run migrate:local"
+run = "PORT=$API_PORT ./node_modules/.bin/cf dev"
+
+[tasks."migrate:local"]
+description = "Apply migrations/ to the local D1 of a running mise run dev"
+run = "go run ../../cmd/charter migrate-local"
+
+[tasks.spec]
+description = "Write both specs from the contract (src/contract.ts) into fern/"
+run = 'node spec.ts fern/openapi.json fern/asyncapi.json "$API_URL"'
+
+[tasks."spec:check"]
+description = "Fail if a committed spec is stale against the contract"
+run = 'node spec.ts --check fern/openapi.json fern/asyncapi.json "$API_URL"'
+
+[tasks.lint]
+description = "Typecheck the Worker"
+run = "./node_modules/.bin/cf workers types >/dev/null && ./node_modules/.bin/tsc"
+
+[tasks.test]
+description = "Unit tests (follow(), the one real-time feed)"
+run = "./node_modules/.bin/vitest run"
+
+# ---- Cloudflare: deploy it, test and measure what is deployed ------------------------------------
+
+[tasks.deploy]
+description = "REMOTE: deploy the Worker, then apply pending D1 migrations"
+run = "./node_modules/.bin/cf deploy && go run ../../cmd/charter migrate"
+
+[tasks.migrate]
+description = "REMOTE: apply pending migrations/ to the Worker's D1 database"
+run = "go run ../../cmd/charter migrate"
+
+[tasks.live-test]
+description = "REMOTE, writes test notes: SSE + WebSocket, raw and through the generated TypeScript SDK"
+depends = ["sdk:ready typescript-dist"]
+run = 'node ../notes-go/test/live-test.mjs "$API_URL" && node ../notes-go/test/sdk-live-test.mjs "$API_URL"'
+
+[tasks.soak]
+description = "REMOTE, redeploys the Worker: the real-time matrix, every client x scenario, with the generated SDKs and CLI. --idle <min> for the long-idle case"
+depends = ["sdk:ready"]
+run = 'node ../notes-go/test/soak.mjs "$API_URL"'
+
+[tasks.bench]
+description = "REMOTE, read-only: every GET operation of the deployed Worker, wall time and Cloudflare's CPU time. Add -write to include the ones that change data"
+run = '''go run ../../cmd/charter bench -cpu -warm 30s -spec fern/openapi.json -body 'POST /api/notes={"body":"bench"}' '''
+
+[tasks."cloudflare:token"]
+description = "Fail unless CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set: what a deploy from GitHub needs (locally, cf auth login is enough)"
+run = "go run ../../cmd/charter need-env CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"
+
+# ---- sdk: what Fern generates from the specs in fern/ (its settings: fern/generators.yml) ---------
+
+[tasks."sdk:list"]
+description = "The SDK groups fern/generators.yml defines"
+run = "go run ../../cmd/charter sdk-list"
+
+[tasks."sdk:check-spec"]
+description = "Validate the specs and Fern's settings with Fern"
+run = "./node_modules/.bin/fern check --warnings"
+
+[tasks."sdk:gen"]
+description = "Generate an SDK with Fern (Docker): mise run sdk:gen <group> -> sdk/out/<group>"
+run = "go run ../../cmd/charter sdk-gen"
+
+[tasks."sdk:check"]
+description = "Prove a generated SDK works (Go: build, vet, tests against WireMock; TypeScript: typecheck): mise run sdk:check <group>"
+run = "go run ../../cmd/charter sdk-check"
+
+[tasks."sdk:ready"]
+description = "Generate and build what the tests use, if missing (TypeScript and Go SDKs, the CLI): mise run sdk:ready [group...]"
+run = "go run ../../cmd/charter sdk-ready"
+
+[tasks."sdk:cli:build"]
+description = "HEAVY: build the generated Rust CLI in sdk/out/cli: mise run sdk:cli:build [-linux]"
+run = "go run ../../cmd/charter cli-build"
+
+[tasks."sdk:dist"]
+description = "Generate, check and archive what a release ships into dist/: Go and TypeScript SDK sources, the specs (Docker)"
+run = "go run ../../cmd/charter dist-sdk"
+
+[tasks."sdk:dist:cli"]
+description = "HEAVY: generate and build the CLI into dist/: mise run sdk:dist:cli [-linux]"
+run = "go run ../../cmd/charter dist-cli"
+
+[tasks."sdk:clean"]
+description = "Remove generated SDKs (sdk/out) and stop leftover WireMock containers"
+run = "go run ../../cmd/charter sdk-clean"
+
+[tasks.release]
+description = "REMOTE on a version tag (vX.Y.Z): attach dist/* to its GitHub Release. Anywhere else: a dry run that lists dist/"
+run = "go run ../../cmd/charter release"

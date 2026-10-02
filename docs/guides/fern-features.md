@@ -10,26 +10,26 @@ This page gets you the things a production API needs, written so that the SDKs F
 
 ## The working example
 
-Every feature here exists, working, in a small API in the orpc-api repo: `api/go/showcase/` in [github.com/joeblew999/orpc-api](https://github.com/joeblew999/orpc-api). It is deployed at https://orpc-showcase-go.gedw99.workers.dev. Your project from `dev new` does not contain it: read it in that repo, copy the lines you need.
+Every feature here exists, working, in a small API in the charter repo: `examples/showcase-go/api/` in [github.com/joeblew999/charter](https://github.com/joeblew999/charter). It is deployed at https://charter-showcase-go.gedw99.workers.dev. Your project from `charter new` does not contain it: read it in that repo, copy the lines you need.
 
 Where things go in your project:
 
 | What | File in your project | In the showcase |
 |---|---|---|
-| Operations and their structs | `api/go/api/contract.go` | `api/go/showcase/contract.go` |
-| The document around the operations (security scheme, `x-fern-*` at the top level) | `config()` in `api/go/api/spec.go` | `config()` in `api/go/showcase/spec.go` |
-| Handlers | `api/go/api/handlers.go` | `api/go/showcase/handlers.go` |
-| SDK settings | `sdk/fern/apis/api-go/generators.yml` | `sdk/fern/apis/showcase-go/generators.yml` |
+| Operations and their structs | `api/contract.go` | `examples/showcase-go/api/contract.go` |
+| The document around the operations (security scheme, `x-fern-*` at the top level) | `config()` in `api/spec.go` | `config()` in `examples/showcase-go/api/spec.go` |
+| Handlers | `api/handlers.go` | `examples/showcase-go/api/handlers.go` |
+| SDK settings | `fern/generators.yml` | `examples/showcase-go/fern/generators.yml` |
 
-After each change: `mise run api:go:spec`, then `mise run check`. To see the SDK, `mise run sdk:gen api-go typescript` (Docker).
+After each change: `mise run spec`, then `mise run check`. To see the SDK, `mise run sdk:gen typescript` (Docker).
 
-The showcase's own test generates the TypeScript SDK from its specs and calls the running server with it, from Node. In the orpc-api repo:
+The showcase's own test generates the TypeScript SDK from its specs and calls the running server with it, from Node. In the charter repo:
 
 ```sh
-mise run showcase:go:check   # lint, Go tests, spec check, then the SDK test against the native build and under workerd
+mise run check   # lint, Go tests, spec check, then the SDK test against the native build and under workerd
 ```
 
-and against the deployed Worker, `node test/showcase-test.mjs "$SHOWCASE_GO_URL" showcase-go`. What has run where is in that repo's [findings](../findings.md). The Go tests of the showcase (`go test ./showcase/` in `api/go/`) passed when this page was written, and I ran the server natively and called it with `curl` for the outputs below. I did not run Fern for this page, so what an SDK looks like below is from the repo's own docs and test, not from my run.
+and against the deployed Worker, `node test/showcase-test.mjs "$API_URL" showcase-go`. What has run where is in that repo's [findings](../findings.md). The Go tests of the showcase (`go test ./showcase/` in the project's folder) passed when this page was written, and I ran the server natively and called it with `curl` for the outputs below. I did not run Fern for this page, so what an SDK looks like below is from the repo's own docs and test, not from my run.
 
 ## OAuth client credentials
 
@@ -79,7 +79,7 @@ huma.Register(api, huma.Operation{
 
 The body's schema is written into the operation, not referred to by name, because with a named one the test that Fern's Go generator writes does not compile (the showcase's comment names it).
 
-Tell Fern which operation is the token endpoint, in `sdk/fern/apis/api-go/generators.yml`:
+Tell Fern which operation is the token endpoint, in `fern/generators.yml`:
 
 ```yaml
 auth-schemes:
@@ -103,9 +103,9 @@ api:
 
 (The `*-env` names are the environment variables the SDK reads when no credentials are passed; the showcase uses `SHOWCASE_CLIENT_ID` and `SHOWCASE_CLIENT_SECRET`. The `api:` block sits above the `specs` list that is already in the file.)
 
-**The server must enforce it.** The scheme in the spec only describes. The showcase checks every request in a Huma middleware (`authorize` in `api/go/showcase/handlers.go`, registered with `routes.UseMiddleware(env.authorize(routes))`): an operation whose `Security` is empty passes, any other needs `Authorization: Bearer <token>` and gets 401 with `WWW-Authenticate: Bearer` otherwise. Its token is an expiry signed with HMAC, so any request can check it with no storage, which a Worker needs (every request is a fresh Go runtime). Your project's notes API has no auth: copy `authorize`, `newToken` and `validToken` and set your own secrets.
+**The server must enforce it.** The scheme in the spec only describes. The showcase checks every request in a Huma middleware (`authorize` in `examples/showcase-go/api/handlers.go`, registered with `routes.UseMiddleware(env.authorize(routes))`): an operation whose `Security` is empty passes, any other needs `Authorization: Bearer <token>` and gets 401 with `WWW-Authenticate: Bearer` otherwise. Its token is an expiry signed with HMAC, so any request can check it with no storage, which a Worker needs (every request is a fresh Go runtime). Your project's notes API has no auth: copy `authorize`, `newToken` and `validToken` and set your own secrets.
 
-**Check it.** Run against the showcase natively (`mise run showcase:go:run` in the orpc-api repo, port 5175; the output is from another port):
+**Check it.** Run against the showcase natively (`mise run run` in the charter repo, port 5175; the output is from another port):
 
 ```sh
 curl -si localhost:5175/notes
@@ -199,7 +199,7 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" -F file=@f.txt -F note=x local
 
 **The caller gets** a typed payload (`NoteCreated`) and a helper that checks the signature: `WebhooksHelper.verifySignature(body, header, secret)`.
 
-**Add to the contract.** A webhook is something your server sends, so no route describes it. Huma's document has a `Webhooks` field that nothing fills, so fill it where the spec is made (`document()` in `api/go/showcase/spec.go`):
+**Add to the contract.** A webhook is something your server sends, so no route describes it. Huma's document has a `Webhooks` field that nothing fills, so fill it where the spec is made (`document()` in `examples/showcase-go/api/spec.go`):
 
 ```go
 doc := api.OpenAPI()
@@ -220,9 +220,9 @@ How the signature is made, on the document (`config()`):
 config.Extensions["x-fern-webhook-signature"] = map[string]string{"type": "hmac", "header": SignatureHeader, "algorithm": "sha256", "encoding": "hex"}
 ```
 
-(`SignatureHeader` is `x-webhook-signature`.) Then your handler must send it that way: `notify` in `api/go/showcase/handlers.go` posts the JSON body with the header set to the HMAC-SHA256 of the exact bytes, in hex, under `WEBHOOK_SECRET`. `crypto/hmac` and `crypto/sha256` work under TinyGo. The send is an outgoing request from an `*http.Client`; on Cloudflare that is workers-go's `fetch` client.
+(`SignatureHeader` is `x-webhook-signature`.) Then your handler must send it that way: `notify` in `examples/showcase-go/api/handlers.go` posts the JSON body with the header set to the HMAC-SHA256 of the exact bytes, in hex, under `WEBHOOK_SECRET`. `crypto/hmac` and `crypto/sha256` work under TinyGo. The send is an outgoing request from an `*http.Client`; on Cloudflare that is workers-go's `fetch` client.
 
-**Check it.** The SDK test starts a receiver and checks that the helper accepts the server's delivery and rejects a changed body or another secret; it only runs where the receiver can be reached, so on a deployed Worker the delivery has not been checked. Natively: `mise run showcase:go:test:native` in the orpc-api repo.
+**Check it.** The SDK test starts a receiver and checks that the helper accepts the server's delivery and rejects a changed body or another secret; it only runs where the receiver can be reached, so on a deployed Worker the delivery has not been checked. Natively: `mise run test:native` in the charter repo.
 
 ## A WebSocket the client also sends on
 
@@ -266,7 +266,7 @@ I did not open the socket for this page; the showcase's SDK test does (it sends 
 Extensions: map[string]any{"x-fern-audiences": []string{"public", "internal"}},   // in the SDK for either audience
 ```
 
-An operation with only `[]string{"internal"}` (the showcase's upload) is left out of a group that asks for `public`. In `sdk/fern/apis/api-go/generators.yml`, a group with an `audiences` list:
+An operation with only `[]string{"internal"}` (the showcase's upload) is left out of a group that asks for `public`. In `fern/generators.yml`, a group with an `audiences` list:
 
 ```yaml
 groups:
@@ -280,11 +280,11 @@ groups:
 
 Operations with no `x-fern-audiences` are, as far as I read the showcase, in no audience-filtered group; tag everything you want in the public SDK. I did not run Fern to confirm what an untagged one does.
 
-**Check it.** Generate the group (`mise run sdk:gen api-go typescript-public`) and look for the operation in `sdk/out/api-go/typescript-public`. The showcase's test checks that its public SDK has `notes` and `auth` and no `files`.
+**Check it.** Generate the group (`mise run sdk:gen typescript-public`) and look for the operation in `sdk/out/typescript-public`. The showcase's test checks that its public SDK has `notes` and `auth` and no `files`.
 
 ## Overlays: rename without touching the contract
 
-**The caller gets** the SDK names you choose. When the contract is yours, say them in the contract (`x-fern-sdk-group-name` and `x-fern-sdk-method-name`, [Define your API](contract.md#name-the-sdk-methods)). An overlay is for a spec you do not own, or a rename you want to keep out of the Go code. It is a file named `overlays.yml` beside the specs, in `sdk/fern/apis/api-go/`:
+**The caller gets** the SDK names you choose. When the contract is yours, say them in the contract (`x-fern-sdk-group-name` and `x-fern-sdk-method-name`, [Define your API](contract.md#name-the-sdk-methods)). An overlay is for a spec you do not own, or a rename you want to keep out of the Go code. It is a file named `overlays.yml` beside the specs, in `fern/`:
 
 ```yaml
 overlay: 1.0.0
@@ -308,8 +308,8 @@ api:
     - asyncapi: asyncapi.json
 ```
 
-The showcase's overlay is `sdk/fern/apis/showcase-go/overlays.yml` in the orpc-api repo. Never edit `openapi.json` by hand: `mise run api:go:spec` writes it again from the contract.
+The showcase's overlay is `examples/showcase-go/fern/overlays.yml` in the charter repo. Never edit `openapi.json` by hand: `mise run spec` writes it again from the contract.
 
 ## Where the full table is
 
-The orpc-api repo's [showcase page](../showcase-go.md) has every feature with how the contract switches it on, what the SDK gets and how it is tested; its SDK page has the Fern feature table.
+The charter repo's [showcase page](../showcase-go.md) has every feature with how the contract switches it on, what the SDK gets and how it is tested; its SDK page has the Fern feature table.

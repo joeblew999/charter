@@ -1,10 +1,9 @@
 go 1.27.1
 
-toolchain go1.27.1
-
 use (
-	./api/go
-	./dev
+	.
+	./examples/notes-go
+	./examples/notes-go/sdk/go
+	./examples/showcase-go
 	./go
-	./sdk/go
 )

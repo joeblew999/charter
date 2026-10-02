@@ -6,7 +6,7 @@ permalink: /
 
 # Contract-first APIs on Cloudflare Workers, in Go
 
-[![latest release](https://img.shields.io/github/v/release/joeblew999/orpc-api)](https://github.com/joeblew999/orpc-api/releases/latest)
+[![latest release](https://img.shields.io/github/v/release/joeblew999/charter)](https://github.com/joeblew999/charter/releases/latest)
 
 You write your API once, as Go code: its routes, its inputs and outputs. From that one contract you get:
 
@@ -20,8 +20,8 @@ You write your API once, as Go code: its routes, its inputs and outputs. From th
 ## Start
 
 ```sh
-dev() { go run github.com/joeblew999/orpc-api/dev@latest "$@"; }
-dev new -name billing-api && cd billing-api && git init
+charter() { go run github.com/joeblew999/charter/cmd/charter@latest "$@"; }
+charter new -name billing-api && cd billing-api && git init
 mise install && mise run setup && mise run check      # a working API, checked, in about a minute
 ```
 
@@ -35,10 +35,10 @@ Then follow [Getting started](getting-started.md): run it, change it, deploy it,
 | Do one specific thing | [Guides](guides.md) |
 | Understand why it works this way | [Concepts](concepts.md) |
 | Look something up | [Reference](reference.md) |
-| Change orpc-api itself | [This repository](project.md) |
+| Change charter itself | [This repository](project.md) |
 | Write or review docs | [Writing docs](writing.md) |
 
-For an agent: [llms.txt](https://joeblew999.github.io/orpc-api/llms.txt) lists every page as Markdown.
+For an agent: [llms.txt](https://joeblew999.github.io/charter/llms.txt) lists every page as Markdown.
 
 ## Before you choose Go: what it costs to run
 
@@ -46,9 +46,9 @@ On Cloudflare a Go Worker costs about what the TypeScript one does: under 1 ms o
 
 - **A new isolate costs more at first.** Its first request costs about 10 ms, and the first use of each operation 15 to 30 ms. Requests that arrive together there, beyond the two Go runtimes that wait ready, cost about 100 ms each. Cloudflare starts an isolate when a Worker has been idle, after a deploy, and when traffic spreads to another machine.
 - **Workers Free allows 10 ms of CPU per request.** Ordinary requests are well inside it; those first ones in an isolate are at it or over it. Free is enough to try the project; plan on Workers Paid for production.
-- **This is with the project's build and Worker entry** (`mise run api:go:build`, `go/worker/go.mjs`). TinyGo and workers-go as they come cost 40 to 70 ms for every read and about 265 ms for a write. [Go on Cloudflare Workers](concepts/workers-go.md) says what the difference is.
+- **This is with the project's build and Worker entry** (`mise run build`, `go/worker/go.mjs`). TinyGo and workers-go as they come cost 40 to 70 ms for every read and about 265 ms for a write. [Go on Cloudflare Workers](concepts/workers-go.md) says what the difference is.
 - **If you need the lowest cost per request, use the TypeScript version** ([The same in TypeScript](guides/typescript.md)): the design, the tests and the generated SDKs are the same.
-- **Measure your own API** with `mise run api:go:bench`: it times every operation in your spec and reads the CPU time Cloudflare recorded.
+- **Measure your own API** with `mise run bench`: it times every operation in your spec and reads the CPU time Cloudflare recorded.
 
 Why Go costs more there, and what the build does about it: [Go on Cloudflare Workers](concepts/workers-go.md).
 

@@ -1,0 +1,41 @@
+# Written by `charter workflows` from its template (github.com/joeblew999/charter, cmd/charter/workflows/deploy.yml):
+# change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# By hand only: deploy the Worker to Cloudflare, apply its D1 migrations, then run the live test against
+# what was deployed (some failures only show on Cloudflare itself). Needs the two secrets below.
+name: deploy
+on:
+  workflow_dispatch:
+    # if-dir examples
+    inputs:
+      example:
+        description: The example whose Worker to deploy
+        type: choice
+        options: [notes-go, notes-ts]
+        required: true
+    # end
+permissions:
+  contents: read
+# if-dir examples
+concurrency: deploy-${{ inputs.example }}
+# else
+concurrency: deploy
+# end
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    # if-dir examples
+    defaults:
+      run:
+        working-directory: examples/${{ inputs.example }}
+    # end
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run cloudflare:token
+      - run: mise run setup
+      - run: mise run deploy
+      - run: mise run live-test

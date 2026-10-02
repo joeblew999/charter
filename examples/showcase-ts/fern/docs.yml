@@ -1,0 +1,7 @@
+# The API's reference site, made by Fern from the specs here (preview locally: mise run sdk:docs).
+# Reference: https://buildwithfern.com/learn/docs/getting-started/project-structure
+instances:
+  - url: charter-showcase-ts.docs.buildwithfern.com
+title: Showcase API
+navigation:
+  - api: Showcase API

@@ -6,9 +6,9 @@ parent: Guides
 
 # A docs site for your repo
 
-This page gets the Markdown in your repository's `docs/` folder published as a site on GitHub Pages, with a sidebar, search and an `llms.txt` for agents, and gets it checked. Read it when the project is on GitHub and has something to document. It works for any repository with a `docs/` folder, not only one made by `dev new`.
+This page gets the Markdown in your repository's `docs/` folder published as a site on GitHub Pages, with a sidebar, search and an `llms.txt` for agents, and gets it checked. Read it when the project is on GitHub and has something to document. It works for any repository with a `docs/` folder, not only one made by `charter new`.
 
-What was run for this page, on 2026-10-01: `mise run docs:lint` and `mise run dev:check` in a project made by `dev new`, and the setup command where a GitHub repository is needed, in orpc-api itself, whose site is made this way. `mise run docs:pages` and `mise run docs:review` were not run.
+What was run for this page, on 2026-10-01: `mise run docs:lint` and `mise run charter:check` in a project made by `charter new`, and the setup command where a GitHub repository is needed, in charter itself, whose site is made this way. `mise run docs:pages` and `mise run docs:review` were not run.
 
 ## Set it up
 
@@ -33,7 +33,7 @@ There is no build step and no workflow. GitHub Pages renders the folder itself, 
 In a repository that has no such tasks, the same three steps are:
 
 ```sh
-go run github.com/joeblew999/orpc-api/dev@latest docs -into .
+go run github.com/joeblew999/charter/cmd/charter@latest docs -into .
 git add docs && git commit -m "Docs site" && git push
 gh api -X POST 'repos/{owner}/{repo}/pages' -f 'source[branch]=main' -f 'source[path]=/docs'
 ```
@@ -50,7 +50,7 @@ gh api -X POST 'repos/{owner}/{repo}/pages' -f 'source[branch]=main' -f 'source[
 | `docs/llms.txt` | A template the site fills in: every page in sidebar order, each linked as raw Markdown. Served at the site's address followed by `llms.txt` |
 
 - **Do not edit these four.** They are the same in every repository. Run `mise run docs:setup` again to bring them up to date, for example after `mise up` moved the tool to a newer release.
-- **`mise run dev:check` fails when one differs** from what the tool would write. It asks GitHub too, so it needs `gh` logged in once `docs/_config.yml` exists.
+- **`mise run charter:check` fails when one differs** from what the tool would write. It asks GitHub too, so it needs `gh` logged in once `docs/_config.yml` exists.
 - **Your pages are everything else** in `docs/`. A new project starts with `docs/README.md` (the start page) and `docs/rules.md`.
 
 ## What each page needs
@@ -102,7 +102,7 @@ mise run docs:lint
 docs: 3 pages, nothing a program can fault
 ```
 
-Elsewhere: `go run github.com/joeblew999/orpc-api/dev@latest docs-lint -into .`
+Elsewhere: `go run github.com/joeblew999/charter/cmd/charter@latest docs-lint -into .`
 
 It reads every `.md` file under `docs/`, except in folders whose name starts with an underscore, and reports one line per problem:
 
@@ -112,7 +112,7 @@ It reads every `.md` file under `docs/`, except in folders whose name starts wit
 | Template code | A page contains two opening curly braces together, or a curly brace followed by a percent sign |
 | Reachability | No other page links to a page |
 | Links | A relative link's file does not exist, or its anchor matches no heading in that file |
-| Versions | A page links to one tagged release (a `releases/tag/` or `releases/download/v...` link), or names a version of an orpc-api module after an `@` |
+| Versions | A page links to one tagged release (a `releases/tag/` or `releases/download/v...` link), or names a version of an charter module after an `@` |
 | Tasks | A `mise run` command names a task that is not in `mise.toml` |
 | Paths | A path in a code span starts with one of the repository's top-level folders and does not exist. A path that git ignores passes |
 
@@ -129,10 +129,10 @@ git diff                 # read what it changed before you commit
 
 It hands Claude one prompt: bring `docs/` up to date and into line with `docs/writing.md`. The prompt includes what `docs:lint` found. Claude then checks each page's statements against the repository (the tasks, the paths, the code a page names), corrects what is wrong, and prints a report page by page.
 
-- **It edits files.** It may read and write files and run `mise run docs:lint`, `mise run dev:check`, `mise tasks` and read-only git commands. Nothing else.
+- **It edits files.** It may read and write files and run `mise run docs:lint`, `mise run charter:check`, `mise tasks` and read-only git commands. Nothing else.
 - **It is told not to change code, tasks or specs,** only documentation.
 - **Without `claude` it stops** with `docs-review needs the claude command (Claude Code) on PATH`.
-- **To see the prompt without running anything:** `go run github.com/joeblew999/orpc-api/dev@latest docs-review -print`
+- **To see the prompt without running anything:** `go run github.com/joeblew999/charter/cmd/charter@latest docs-review -print`
 
 ## The rules that keep the site working
 

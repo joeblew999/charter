@@ -1,0 +1,45 @@
+# Written by `charter workflows` from its template (github.com/joeblew999/charter, cmd/charter/workflows/check.yml):
+# change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# The local checks (no Cloudflare account): lint, tests, spec drift, the build, and the live tests natively and under workerd.
+name: check
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  GH_TOKEN: ${{ github.token }} # charter docs -check reads the repo's name and description with gh
+jobs:
+  # A repo that holds several projects: the tool, the Go library, and each example in a job of its
+  # own, so a failure names its part.
+  tool:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run charter:check
+  library:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run go:check
+  examples:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [notes-go, notes-ts, showcase-go, showcase-ts]
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run check
