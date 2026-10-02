@@ -173,4 +173,6 @@ const (
 	cf   = "./node_modules/.bin/cf"
 	fern = "./node_modules/.bin/fern"
 	tsc  = "./node_modules/.bin/tsc"
+	// The TypeScript a generated SDK is checked with, where the project's own is another (sdk-check).
+	tscForSDKs = "./node_modules/typescript-sdk/bin/tsc"
 )

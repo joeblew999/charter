@@ -1,12 +1,12 @@
 {
   "asyncapi": "3.0.0",
   "info": {
-    "title": "orpc-api live",
+    "title": "charter-notes-ts live",
     "version": "1.0.0"
   },
   "servers": {
     "production": {
-      "host": "orpc-api.gedw99.workers.dev",
+      "host": "charter-notes-ts.gedw99.workers.dev",
       "protocol": "wss"
     }
   },

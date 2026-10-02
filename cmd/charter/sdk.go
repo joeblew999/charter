@@ -116,12 +116,17 @@ func sdkCheckDir(dir string) error {
 			continue
 		}
 		// With the project's TypeScript (package.json), which resolves the SDK's imports from the
-		// project's node_modules.
+		// project's node_modules. Fern's SDKs are written for TypeScript 5: a project whose own code
+		// is on a newer one installs 5.9 beside it as typescript-sdk ("npm:typescript@~5.9.3").
 		config := filepath.Join(filepath.Dir(entry), "tsconfig.check.json")
 		if err := os.WriteFile(config, fmt.Appendf(nil, sdkTSConfig, filepath.Base(entry)), 0o644); err != nil {
 			return err
 		}
-		if err := sh(".", tsc, "-p", config); err != nil {
+		compiler := tsc
+		if exists(tscForSDKs) {
+			compiler = tscForSDKs
+		}
+		if err := sh(".", compiler, "-p", config); err != nil {
 			return err
 		}
 		fmt.Printf("typecheck ok (%s)\n", entry)

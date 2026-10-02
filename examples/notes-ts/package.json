@@ -2,7 +2,7 @@
 	"name": "charter-notes-ts",
 	"private": true,
 	"type": "module",
-	"description": "The Worker's packages (oRPC, Zod), and what the tasks run: cf (Cloudflare's CLI) with Vite, Vitest, TypeScript, Fern's CLI, and what the tests import.",
+	"description": "The Worker's packages (oRPC, Zod), and what the tasks run: cf (Cloudflare's CLI) with Vite, Vitest, TypeScript (and, as typescript-sdk, the 5.9 that generated SDKs are checked with), Fern's CLI, and what the tests import.",
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "beta",
 		"@cloudflare/vitest-pool-workers": "^0.22.0",
@@ -11,6 +11,7 @@
 		"cf": "1.0.0-beta.5",
 		"fern-api": "5.140.0",
 		"typescript": "^7.0.2",
+		"typescript-sdk": "npm:typescript@~5.9.3",
 		"vite": "^8.3.0",
 		"vitest": "^4.1.11",
 		"ws": "^8.18.0"

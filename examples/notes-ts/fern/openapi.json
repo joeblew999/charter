@@ -1,12 +1,12 @@
 {
   "info": {
-    "title": "orpc-api",
+    "title": "charter-notes-ts",
     "version": "1.0.0",
     "description": "Notes API: oRPC contract -> OpenAPI -> Fern."
   },
   "servers": [
     {
-      "url": "https://orpc-api.gedw99.workers.dev"
+      "url": "https://charter-notes-ts.gedw99.workers.dev"
     }
   ],
   "openapi": "3.1.1",
