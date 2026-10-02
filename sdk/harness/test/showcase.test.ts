@@ -1,6 +1,6 @@
 // The showcase server (src/showcase.ts) without a Worker: the same fetch function the harness serves,
 // called from Node. What the SDK does with it inside workerd is `mise run sdk:harness:test`.
-//   mise run showcase:test
+//   mise run showcase:ts:test
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { call } from "@orpc/server";

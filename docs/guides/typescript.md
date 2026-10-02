@@ -38,7 +38,7 @@ There is no native run: the Worker only runs under `cf dev` and on Cloudflare.
 | `api/ts/spec.ts`, `api/ts/spec-files.ts` | The command that writes the two spec files, or checks them | The names it imports from your contract |
 | `api/ts/cloudflare.config.ts`, `api/ts/package.json`, `api/ts/tsconfig.json`, `api/ts/vite.config.ts`, `api/ts/vitest.config.ts`, `api/ts/test/` | The Worker's settings, the pinned packages, the unit tests of the feed | The Worker's name |
 | `migrations/` | The D1 schema | Your tables |
-| `sdk/fern/apis/api/` | The Fern folder: the two generated specs and `generators.yml` | The names in `generators.yml` ([Change the names](sdks.md#change-the-names)) |
+| `sdk/fern/apis/api-ts/` | The Fern folder: the two generated specs and `generators.yml` | The names in `generators.yml` ([Change the names](sdks.md#change-the-names)) |
 | `sdk/package.json`, `sdk/package-lock.json`, `sdk/tsconfig.base.json`, `sdk/fern/fern.config.json` | Fern itself, pinned | The organization name |
 | `test/live-test.mjs`, `test/sdk-live-test.mjs`, `test/soak.mjs`, `test/soak-go/` | The test programs. They only know a URL | The SDK's names |
 | From `mise.toml`: the `[tools]` and `[env]` tables, `setup`, every `api:` task and every `sdk:` task | The tasks | See below |
@@ -67,7 +67,7 @@ The left column is a project made by `dev new`; the right is orpc-api's `api/ts/
 | The gap-free feed | The package `follow`, imported | `api/ts/src/follow.ts`, copied |
 | The hub | `api/go/worker/hub.mjs` | `api/ts/src/hub.ts` |
 | Writing the specs | `mise run api:go:spec` (`api/go/cmd/spec/`) | `mise run api:ts:spec` (`api/ts/spec.ts`) |
-| The Fern folder | `sdk/fern/apis/api-go/` | `sdk/fern/apis/api/` |
+| The Fern folder | `sdk/fern/apis/api-go/` | `sdk/fern/apis/api-ts/` |
 | The Worker's settings | `api/go/cloudflare.config.ts` | `api/ts/cloudflare.config.ts` |
 | The check | `mise run api:go:check` | `mise run api:ts:check` |
 

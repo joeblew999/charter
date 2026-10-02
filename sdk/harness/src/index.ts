@@ -1,4 +1,4 @@
-// Does the Fern-generated TypeScript SDK (src/client, from sdk/fern/apis/showcase) work on Cloudflare
+// Does the Fern-generated TypeScript SDK (src/client, from sdk/fern/apis/showcase-ts) work on Cloudflare
 // Workers? This Worker serves the showcase API itself under /api/mock/* (src/showcase.ts: the oRPC
 // contract the SDK's specs are generated from), and /api/sdk-test runs the SDK against it inside
 // workerd, through the SDK's own `fetch` option (no network round trip).

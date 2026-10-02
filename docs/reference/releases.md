@@ -31,7 +31,7 @@ One GitHub Release per version, with these files. No file name carries the versi
 | `api-go-sdk-go.tar.gz`, `api-go-sdk-typescript.tar.gz` | The Go and TypeScript SDK sources that Fern generates for orpc-api's own Go Worker. Generated fresh for the release, then checked |
 | `api-go-specs.tar.gz` | That Worker's `openapi.json` and `asyncapi.json` |
 | `api-go-cli-linux-amd64` | The Fern CLI of that Worker, for Linux on amd64 |
-| `api-sdk-go.tar.gz`, `api-sdk-typescript.tar.gz`, `api-specs.tar.gz`, `api-cli-linux-amd64` | The same four for orpc-api's TypeScript Worker |
+| `api-ts-sdk-go.tar.gz`, `api-ts-sdk-typescript.tar.gz`, `api-ts-specs.tar.gz`, `api-ts-cli-linux-amd64` | The same four for orpc-api's TypeScript Worker |
 
 What a project uses from a release is the tool and the Go packages. The Go packages are not files of the Release: Go fetches them from the repository at the release's tag. The SDK, spec and CLI files are those of orpc-api's own example API, not of yours. Your project's release workflow (`.github/workflows/sdk-release.yml`, written by `mise run dev:workflows`) attaches the same kinds of files for your API to your repository's releases.
 

@@ -17,7 +17,7 @@ mise run api:ts:soak              # REMOTE, redeploys orpc-api: the real-time ma
 mise run api:go:soak           # REMOTE, redeploys orpc-api-go: the same, with the SDKs and CLI made from the Go specs
 ```
 
-`mise run check` is `api:ts:check`, `api:go:check`, `showcase-go:check`, `dev:check`, `sdk:demo`, `showcase:check` and `sdk:harness:test`. The checks that start a server pick free ports themselves, so several can run at once.
+`mise run check` is `api:ts:check`, `api:go:check`, `showcase:go:check`, `dev:check`, `sdk:demo`, `showcase:ts:check` and `sdk:harness:test`. The checks that start a server pick free ports themselves, so several can run at once.
 
 The remote tasks write test notes into the deployed Worker's database, and the soak tasks redeploy it. Anything after the task name goes to the program: `mise run api:go:soak --idle 20`.
 
@@ -28,7 +28,7 @@ The remote tasks write test notes into the deployed Worker's database, and the s
 | `test/live-test.mjs` | Quick check with raw clients: an SSE stream and a WebSocket both receive a new note, then SSE resumes with `Last-Event-ID` after a reconnect (3 checks) | `mise run api:ts:live-test`, `mise run api:go:live-test`; locally inside `mise run api:go:check`, natively and under workerd |
 | `test/sdk-live-test.mjs` | The same through Fern's TypeScript SDK: `notes.watch()` and `liveNotes.connect()` (2 checks) | the two `live-test` tasks |
 | `test/mcp-test.mjs` | The MCP endpoint (`/api/mcp`, the Go server only) with the official TypeScript MCP client, in both protocol eras: the tools are the contract's operations, and a tool call does what the REST route does ([mcp.md](mcp.md)) | `mise run api:go:mcp-test` against a running server; inside `mise run api:go:check`; and `mise run api:go:live-test` |
-| `test/showcase-test.mjs` | A showcase server through Fern's TypeScript SDK, every Fern feature: OAuth, pagination, idempotency, SSE, upload, the signed webhook, the WebSocket both ways, audiences. Unless `--open` is given it also checks that tokens are enforced ([showcase-go.md](showcase-go.md)) | `mise run showcase-go:test` against a running server; inside `mise run showcase-go:check`, natively and under workerd |
+| `test/showcase-test.mjs` | A showcase server through Fern's TypeScript SDK, every Fern feature: OAuth, pagination, idempotency, SSE, upload, the signed webhook, the WebSocket both ways, audiences. Unless `--open` is given it also checks that tokens are enforced ([showcase-go.md](showcase-go.md)) | `mise run showcase:go:test` against a running server; inside `mise run showcase:go:check`, natively and under workerd |
 | `test/soak.mjs` | The real-time matrix: 7 clients through a planned end, a hub restart by redeploy, a client drop and a long idle. PASS is every note exactly once, in order ([realtime.md](realtime.md#how-it-is-tested)) | `mise run api:ts:soak`, `mise run api:go:soak` |
 | `test/soak-go/` | The Go SDK client that `test/soak.mjs` runs: one `Notes.Watch()` call | built by `test/soak.mjs` |
 
@@ -44,7 +44,7 @@ node test/soak.mjs <url> [--sdk api-go] [--deploy-task api:go:deploy] [--no-depl
 
 - **They need the npm packages in `sdk/`** (`mise run setup`): `ws` and the MCP client are imported from there.
 - **The SDK tests need the generated SDKs** in `sdk/out/`. The tasks make them first with `mise run sdk:ready`, which needs Docker the first time; the soak also needs the Fern CLI built (Rust).
-- **`--webhook-port`** makes the showcase test listen for the webhook: start the server with `WEBHOOK_URL=http://localhost:<port>/webhook`. `mise run showcase-go:test` leaves that check out.
+- **`--webhook-port`** makes the showcase test listen for the webhook: start the server with `WEBHOOK_URL=http://localhost:<port>/webhook`. `mise run showcase:go:test` leaves that check out.
 - **`--open`** is for the oRPC showcase, which checks no tokens. Its URL ends in `/api/mock`.
 - **`--no-deploy`** runs the soak without the hub restart; `--idle <minutes>` runs only the long-idle case.
 
@@ -56,7 +56,7 @@ They live with the code.
 |---|---|---|
 | `api/ts/test/` | vitest, in Node: `follow()` | `mise run api:ts:test` |
 | `api/go/` (`*_test.go` in each package) | `go test`: the feed, the API, the MCP endpoint, the Go showcase, and the same SDK surface as the two oRPC contracts | `mise run api:go:test` |
-| `sdk/harness/test/` | Node's test runner: the oRPC showcase server's routes, and its generated specs against the surface of the hand-written ones | `mise run showcase:test` |
+| `sdk/harness/test/` | Node's test runner: the oRPC showcase server's routes, and its generated specs against the surface of the hand-written ones | `mise run showcase:ts:test` |
 | `dev/` (`*_test.go`) | `go test`: the workflow templates, version tags, and a project made by `dev new` | `mise run dev:check` |
 
 ## Local and remote: both, with the same programs

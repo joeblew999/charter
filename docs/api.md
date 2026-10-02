@@ -51,7 +51,7 @@ A note is `{ id, body, created_at }`. How the two streams stay gap-free, and wha
 | `api/ts/src/hub.ts` | The hub (`NotesHub`): oRPC's `DurablePublisherObject`, a hibernating live fan-out |
 | `api/ts/src/asyncapi.ts` | The AsyncAPI generator (oRPC has none), [below](#the-asyncapi-generator) |
 | `api/ts/src/specs.ts` | Both specs from any contract: OpenAPI 3.1.1 without the channels, OpenAPI `webhooks`, AsyncAPI 3.0.0. It knows no contract, so the oRPC showcase (`sdk/harness/`) uses it too |
-| `api/ts/spec.ts` | Writes the two spec files offline, into `sdk/fern/apis/api/` |
+| `api/ts/spec.ts` | Writes the two spec files offline, into `sdk/fern/apis/api-ts/` |
 | `api/ts/spec-files.ts` | The command behind `api/ts/spec.ts` (write, or `--check`), shared with `sdk/harness/spec.ts` |
 | `api/ts/test/follow.test.ts` | The unit tests of `follow()` |
 | `api/ts/cloudflare.config.ts` | The Worker `orpc-api`: D1 (`DB`), the hub (`HUB`), `APP_NAME`, static assets (`ASSETS`) |
@@ -91,7 +91,7 @@ Limits: one message type each way; a channel can't have query parameters and a s
 
 1. Write the contract with `openapi({...})` and `asyncapi({...})` metadata, as in `api/ts/src/contract.ts`. For OAuth, idempotency, file upload, webhooks or a WebSocket the client also sends on, see the oRPC showcase's contract (`sdk/harness/src/contract.ts`, [sdk.md](sdk.md#the-orpc-showcase)).
 2. Copy `api/ts/src/follow.ts`, `api/ts/src/asyncapi.ts`, `api/ts/src/specs.ts` and `api/ts/spec-files.ts` unchanged, and give `follow()` your own source (`subscribe`, `since`, `latest`).
-3. Copy `sdk/fern/apis/api/` as your API's Fern folder, plus the `api:ts:*` and `sdk:*` tasks from `mise.toml`.
+3. Copy `sdk/fern/apis/api-ts/` as your API's Fern folder, plus the `api:ts:*` and `sdk:*` tasks from `mise.toml`.
 4. Have clients follow the client rule in [realtime.md](realtime.md#what-a-client-does).
 5. Get the GitHub workflows from the `dev` tool ([dev.md](dev.md#the-workflows-in-another-repo)).
 

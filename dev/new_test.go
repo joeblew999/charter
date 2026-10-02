@@ -64,7 +64,7 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 			t.Errorf("mise.toml: no %q", want)
 		}
 	}
-	for _, gone := range []string{"api:ts:", "sdk:harness", "sdk:demo", "showcase", "go run ./dev", "go run ../../dev", "dev@", "orpc-api-go", "dev/vX.Y.Z"} {
+	for _, gone := range []string{"api:ts:", "api-ts", "sdk:harness", "sdk:demo", "showcase", "go run ./dev", "go run ../../dev", "dev@", "orpc-api-go", "dev/vX.Y.Z"} {
 		if strings.Contains(string(tasks), gone) {
 			t.Errorf("mise.toml still mentions %q", gone)
 		}

@@ -1,6 +1,6 @@
 // The generated SDK's WebSocket client from Node (it uses the `ws` package there), against the
 // Worker's liveNotes channel over the real network. Usage: node ws-client.mjs <worker origin>
-import { ShowcaseClient } from "../out/showcase/typescript-dist/esm/index.mjs";
+import { ShowcaseClient } from "../out/showcase-ts/typescript-dist/esm/index.mjs";
 
 const origin = process.argv[2];
 const client = new ShowcaseClient({

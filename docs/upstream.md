@@ -44,7 +44,7 @@ The numbers in the timer row were measured on the deployed Go Worker on 2026-10-
 
 ## Not an issue, a setting
 
-**Huma needs a bigger stack than TinyGo's Wasm default.** With the default stack the first Huma request fails with `memory access out of bounds`; 64 KB failed too. `-stack-size=128kb` works, and 96 KB ran the examples. `mise run api:go:build` and `mise run showcase-go:build` pass it.
+**Huma needs a bigger stack than TinyGo's Wasm default.** With the default stack the first Huma request fails with `memory access out of bounds`; 64 KB failed too. `-stack-size=128kb` works, and 96 KB ran the examples. `mise run api:go:build` and `mise run showcase:go:build` pass it.
 
 **Huma's adapter writes uploads over 8 KB to a temporary file, and a Worker has no disk.** A multipart upload then fails with `open /tmp/multipart-...: file does not exist`. `humaworkers` sets `humago.MultipartMaxMemory` to 32 MB, so uploads stay in memory.
 

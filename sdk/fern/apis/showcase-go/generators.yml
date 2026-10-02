@@ -1,10 +1,10 @@
 # The showcase API from a Go contract: openapi.json and asyncapi.json are written by
-# `mise run showcase-go:spec` from api/go/showcase/contract.go (never by hand). Everything the oRPC
-# showcase (../showcase) says is said there, in Go: OAuth client credentials (the security scheme and
+# `mise run showcase:go:spec` from api/go/showcase/contract.go (never by hand). Everything the oRPC
+# showcase (../showcase-ts) says is said there, in Go: OAuth client credentials (the security scheme and
 # a form-encoded token endpoint; auth-schemes below points the SDKs at it), idempotency, cursor
 # pagination, SSE, multipart upload, webhooks with HMAC signatures, the WebSocket both ways, and
-# audiences. The overlay is the same as ../showcase's. See docs/showcase-go.md.
-# Same groups and names as ../showcase, so the same code runs against either SDK.
+# audiences. The overlay is the same as ../showcase-ts's. See docs/showcase-go.md.
+# Same groups and names as ../showcase-ts, so the same code runs against either SDK.
 # Generate: mise run sdk:gen showcase-go <group>   (output: sdk/out/showcase-go/<group>)
 auth-schemes:
   OAuth:

@@ -104,8 +104,8 @@ The orpc-api repo has every task above, and these as well. They belong to its se
 | Tasks | What they are for |
 |---|---|
 | `api:ts:dev`, `api:ts:migrate:local`, `api:ts:spec`, `api:ts:spec:check`, `api:ts:typecheck`, `api:ts:test`, `api:ts:check`, `api:ts:deploy`, `api:ts:migrate`, `api:ts:live-test`, `api:ts:soak`, `api:ts:bench` | The oRPC Worker in TypeScript: the same set as `api:go:*` |
-| `showcase-go:run`, `showcase-go:build`, `showcase-go:dev`, `showcase-go:spec`, `showcase-go:spec:check`, `showcase-go:lint`, `showcase-go:test`, `showcase-go:test:native`, `showcase-go:test:workerd`, `showcase-go:check`, `showcase-go:deploy` | The Go showcase: a second API that uses every Fern feature |
-| `showcase:spec`, `showcase:spec:check`, `showcase:test`, `showcase:typecheck`, `showcase:check` | The same showcase written with oRPC |
+| `showcase:go:run`, `showcase:go:build`, `showcase:go:dev`, `showcase:go:spec`, `showcase:go:spec:check`, `showcase:go:lint`, `showcase:go:test`, `showcase:go:test:native`, `showcase:go:test:workerd`, `showcase:go:check`, `showcase:go:deploy` | The Go showcase: a second API that uses every Fern feature |
+| `showcase:ts:spec`, `showcase:ts:spec:check`, `showcase:ts:test`, `showcase:ts:typecheck`, `showcase:ts:check` | The same showcase written with oRPC |
 | `sdk:harness:test`, `sdk:harness:deploy` | The Worker that runs Fern's TypeScript SDK inside workerd |
 | `sdk:demo` | A small end-to-end run of Fern on a sample spec |
 | `sdk:docs` | A local preview of the API docs Fern generates |
@@ -116,5 +116,4 @@ In that repo `check` runs more (both servers, both showcases, the SDK test Worke
 
 ## Limits
 
-- **Some descriptions in a new project's `mise.toml` describe the orpc-api repo, not the project.** `mise tasks` there says `check` needs Docker, `setup` installs `api/ts/` and `sdk/harness/`, and `sdk:dist` archives "both APIs". The tables above say what the tasks do in a project.
 - **What was run for this page:** `mise tasks`, `api:go:spec:check`, `sdk:list`, `doctor` and `release:tags` (a dry run) were run in a new project on 2026-10-01. The other rows are read from the project's `mise.toml` and the tool's source.

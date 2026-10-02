@@ -57,7 +57,7 @@ func asMap(v any) map[string]any { m, _ := v.(map[string]any); return m }
 // every operation the SDKs see must be the same in both specs, and so must the channels.
 func TestSameSurfaceAsTheORPCContract(t *testing.T) {
 	read := func(name string) map[string]any {
-		raw, err := os.ReadFile("../../../sdk/fern/apis/api/" + name)
+		raw, err := os.ReadFile("../../../sdk/fern/apis/api-ts/" + name)
 		if err != nil {
 			t.Fatal(err)
 		}

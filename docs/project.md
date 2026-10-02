@@ -49,10 +49,10 @@ There are two contracts for the notes API because there are two servers. They de
 | OpenAPI generator | `@orpc/openapi` | Huma |
 | AsyncAPI generator (the WebSocket) | `api/ts/src/asyncapi.ts` (ours) | `api/go/asyncapi/` (ours, the same design) |
 | Write the specs | `mise run api:ts:spec` | `mise run api:go:spec` |
-| **The specs (generated; never edit)** | `sdk/fern/apis/api/*.json` | `sdk/fern/apis/api-go/*.json` |
-| Fern's settings for that API | `sdk/fern/apis/api/generators.yml` | `sdk/fern/apis/api-go/generators.yml` |
-| Generate an SDK | `mise run sdk:gen api <group>` | `mise run sdk:gen api-go <group>` |
-| Fern's output (gitignored) | `sdk/out/api/` | `sdk/out/api-go/` |
+| **The specs (generated; never edit)** | `sdk/fern/apis/api-ts/*.json` | `sdk/fern/apis/api-go/*.json` |
+| Fern's settings for that API | `sdk/fern/apis/api-ts/generators.yml` | `sdk/fern/apis/api-go/generators.yml` |
+| Generate an SDK | `mise run sdk:gen api-ts <group>` | `mise run sdk:gen api-go <group>` |
+| Fern's output (gitignored) | `sdk/out/api-ts/` | `sdk/out/api-go/` |
 | The feed (gap-free real-time) | `follow()` in `api/ts/src/follow.ts` | `Follow` in `api/go/follow/` |
 | The hub (a Durable Object with hibernating WebSockets) | `api/ts/src/hub.ts` (oRPC's) | `api/go/worker/hub.mjs` |
 | The Worker on Cloudflare | `orpc-api` | `orpc-api-go` |
@@ -73,10 +73,10 @@ The showcase is a second, smaller API whose only job is to use every Fern featur
 |---|---|---|
 | **The contract** | `sdk/harness/src/contract.ts` | `api/go/showcase/contract.go` |
 | The server | `sdk/harness/src/showcase.ts`, served by the harness Worker under `/api/mock` | `api/go/showcase/handlers.go`, run by `api/go/cmd/showcase/` |
-| Write the specs | `mise run showcase:spec` | `mise run showcase-go:spec` |
-| **The specs (generated; never edit)** | `sdk/fern/apis/showcase/*.json` | `sdk/fern/apis/showcase-go/*.json` |
+| Write the specs | `mise run showcase:ts:spec` | `mise run showcase:go:spec` |
+| **The specs (generated; never edit)** | `sdk/fern/apis/showcase-ts/*.json` | `sdk/fern/apis/showcase-go/*.json` |
 | The Worker on Cloudflare | `orpc-sdk-harness` and `orpc-sdk-harness-api` | `orpc-showcase-go` |
-| Check it locally | `mise run showcase:check`, `mise run sdk:harness:test` | `mise run showcase-go:check` |
+| Check it locally | `mise run showcase:ts:check`, `mise run sdk:harness:test` | `mise run showcase:go:check` |
 | Its page | [sdk.md](sdk.md#the-orpc-showcase) | [showcase-go.md](showcase-go.md) |
 
 ### The names used in these pages

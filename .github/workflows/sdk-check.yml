@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.0.1
       - run: mise run setup
-      - run: mise run showcase:check
+      - run: mise run showcase:ts:check
       - run: mise run sdk:harness:test
   sdk:
     runs-on: ubuntu-24.04
@@ -35,7 +35,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [api, api-go, showcase, showcase-go]
+        api: [api-ts, api-go, showcase-ts, showcase-go]
         group: [go, typescript]
     steps:
       - uses: actions/checkout@v7.0.1

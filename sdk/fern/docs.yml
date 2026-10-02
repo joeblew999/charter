@@ -5,6 +5,6 @@ instances:
 title: orpc-api APIs
 navigation:
   - api: Showcase API
-    api-name: showcase
+    api-name: showcase-ts
   - api: Petstore API
     api-name: petstore

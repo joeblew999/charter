@@ -184,5 +184,4 @@ The lockfiles (`api/go/go.sum`, `api/go/package-lock.json`, `sdk/package-lock.js
 
 - **A project made from a checkout pins nothing for the first two rows.** Made with `dev new -from <checkout>`, the tool's pin is `latest` and `api/go/go.mod` has a `replace` line that points at the checkout. Remove the `replace` line and run `go get` once you depend on a release.
 - **`api/go/vite.config.ts` and `api/go/package.json` do not pin everything exactly:** `vite` is a range and `@cloudflare/vite-plugin` follows the `beta` tag. `api/go/package-lock.json` holds what was installed.
-- **Some comments in a new project's `mise.toml` describe the orpc-api repo:** the comment on Cloudflare credentials names `api/ts/node_modules/.bin/cf`. In a project the path is `api/go/node_modules/.bin/cf`.
 - **What was checked for this page:** the tree, `mise.toml`, the override through `mise.local.toml` and the installed versions were read from a new project on 2026-10-01. The deployed Worker's database name and URL are read from the source and from orpc-api's own Worker, not from a deploy of the new project.

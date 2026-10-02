@@ -1,7 +1,7 @@
 # The Go Worker in api/go/: openapi.json and asyncapi.json are written by `mise run api:go:spec` from the Go
 # contract, api/go/api/contract.go (never by hand). What Fern needs (SDK names, x-fern-pagination,
 # x-fern-streaming) is declared there; the WebSocket channel comes from api/go/asyncapi. Same groups and
-# names as ../api, so the same test programs run against either SDK.
+# names as ../api-ts, so the same test programs run against either SDK.
 # Generate: mise run sdk:gen api-go <group>
 api:
   specs:

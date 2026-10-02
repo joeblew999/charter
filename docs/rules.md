@@ -24,11 +24,11 @@ The rules for changing this repo, for developers and agents alike. They are bind
   |---|---|---|
   | `api/ts/src/contract.ts` (the oRPC Worker) | `mise run api:ts:spec` | `mise run api:ts:check` |
   | `api/go/api/contract.go` (the Go Worker) | `mise run api:go:spec` | `mise run api:go:check` |
-  | `sdk/harness/src/contract.ts` (the oRPC showcase) | `mise run showcase:spec` | `mise run showcase:check` |
-  | `api/go/showcase/contract.go` (the Go showcase) | `mise run showcase-go:spec` | `mise run showcase-go:check` |
+  | `sdk/harness/src/contract.ts` (the oRPC showcase) | `mise run showcase:ts:spec` | `mise run showcase:ts:check` |
+  | `api/go/showcase/contract.go` (the Go showcase) | `mise run showcase:go:spec` | `mise run showcase:go:check` |
 
 - **The two contracts of an API describe the same API.** Change both together: `TestSameSurfaceAsTheORPCContract` (`api/go/api/`) fails when what Fern sees of the notes API differs, and `TestSameSurfaceAsTheORPCShowcase` (`api/go/showcase/`) does the same for the showcase.
-- **Everything that ships to Workers from `api/go/` builds with TinyGo** (`mise run api:go:build`, `mise run showcase-go:build`). Standard Go is for the native build, `go test` and the spec commands. `go test` can't see TinyGo's gaps, so `api:go:check` and `showcase-go:check` also run the Wasm under workerd.
+- **Everything that ships to Workers from `api/go/` builds with TinyGo** (`mise run api:go:build`, `mise run showcase:go:build`). Standard Go is for the native build, `go test` and the spec commands. `go test` can't see TinyGo's gaps, so `api:go:check` and `showcase:go:check` also run the Wasm under workerd.
 - **Workarounds name their upstream issue.** Tag them in the code as `Upstream: <owner>/<repo>#<n> (when fixed: ...)`, add a row to the table in [upstream.md](upstream.md), and check with `mise run upstream:status`. A workaround without its issue never gets removed.
 - **Test locally and on Cloudflare.** `mise run check` is the local half. After a deploy, the live test must pass against the deployed Worker (the `api-deploy` workflow does it; by hand: `mise run api:ts:live-test` or `mise run api:go:live-test`). Some bugs exist only in production ([testing.md](testing.md)).
 - **Only verified results** go into [findings.md](findings.md): what ran, where, when, and what came out.

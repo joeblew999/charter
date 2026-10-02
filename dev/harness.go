@@ -24,7 +24,7 @@ func init() {
 func harnessSync([]string) error {
 	// Generate when there is no SDK yet, or when a spec or Fern's settings changed after it was made:
 	// the specs come from the contract, so a contract change must reach the SDK the test runs.
-	const sdk, specs = "sdk/out/showcase/typescript-dist/esm/index.mjs", "sdk/fern/apis/showcase"
+	const sdk, specs = "sdk/out/showcase-ts/typescript-dist/esm/index.mjs", "sdk/fern/apis/showcase-ts"
 	stale := !exists(sdk)
 	if made, err := os.Stat(sdk); err == nil {
 		entries, err := os.ReadDir(specs)
@@ -38,14 +38,14 @@ func harnessSync([]string) error {
 		}
 	}
 	if stale {
-		if err := sdkGen([]string{"showcase", "typescript-dist"}); err != nil {
+		if err := sdkGen([]string{"showcase-ts", "typescript-dist"}); err != nil {
 			return err
 		}
 	}
 	if err := os.RemoveAll("sdk/harness/src/client"); err != nil {
 		return err
 	}
-	if err := os.CopyFS("sdk/harness/src/client", os.DirFS("sdk/out/showcase/typescript-dist/esm")); err != nil {
+	if err := os.CopyFS("sdk/harness/src/client", os.DirFS("sdk/out/showcase-ts/typescript-dist/esm")); err != nil {
 		return err
 	}
 	fmt.Println("SDK copied into sdk/harness/src/client")

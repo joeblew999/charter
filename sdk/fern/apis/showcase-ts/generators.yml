@@ -2,10 +2,10 @@
 # endpoint in openapi.json), idempotency (x-fern-idempotent), SSE (x-fern-streaming), cursor pagination
 # (x-fern-pagination), multipart upload, OpenAPI 3.1 webhooks with HMAC signature verification
 # (x-fern-webhook-signature), WebSockets (asyncapi.json), an overlay (overlays.yml) and audiences.
-# openapi.json and asyncapi.json are written by `mise run showcase:spec` from the oRPC contract in
+# openapi.json and asyncapi.json are written by `mise run showcase:ts:spec` from the oRPC contract in
 # sdk/harness/src/contract.ts (never by hand); the harness Worker serves that contract.
 # Docs: https://buildwithfern.com/learn/api-definitions/openapi (Authentication, Webhooks, extensions)
-# Generate: mise run sdk:gen showcase <group>   (output: sdk/out/showcase/<group>)
+# Generate: mise run sdk:gen showcase-ts <group>   (output: sdk/out/showcase-ts/<group>)
 auth-schemes:
   OAuth:
     scheme: oauth
@@ -35,7 +35,7 @@ groups:
         version: 1.64.0
         output:
           location: local-file-system
-          path: ../../../out/showcase/go
+          path: ../../../out/showcase-ts/go
         config:
           module:
             path: example.com/showcase
@@ -48,7 +48,7 @@ groups:
         version: 3.98.0
         output:
           location: local-file-system
-          path: ../../../out/showcase/typescript
+          path: ../../../out/showcase-ts/typescript
         config:
           namespaceExport: Showcase
           generateWebSocketClients: true
@@ -64,7 +64,7 @@ groups:
         version: 3.98.0
         output:
           location: local-file-system
-          path: ../../../out/showcase/typescript-public
+          path: ../../../out/showcase-ts/typescript-public
         config:
           namespaceExport: Showcase
           generateWebSocketClients: true
@@ -78,7 +78,7 @@ groups:
         version: 3.98.0
         output:
           location: local-file-system
-          path: ../../../out/showcase/typescript-dist
+          path: ../../../out/showcase-ts/typescript-dist
         config:
           namespaceExport: Showcase
           generateWebSocketClients: true
@@ -92,6 +92,6 @@ groups:
         version: 0.44.0
         output:
           location: local-file-system
-          path: ../../../out/showcase/cli
+          path: ../../../out/showcase-ts/cli
         config:
           binaryName: showcase
