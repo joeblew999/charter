@@ -1,117 +1,126 @@
 ---
 title: Tasks
-nav_order: 2
+nav_order: 1
 parent: Reference
 ---
 
-# Tasks: every `mise run` task in a project
+# Tasks: every `mise run` task
 
-Every task of a project made by `dev new`: what it does, what it needs, and whether it stays on your machine. Read it to find the task for a job, or to know what a task will touch before you run it. The list is what `mise tasks` printed in a new project on 2026-10-01: 40 tasks.
+Every task of a project, and of this repo. Task names are the same in every project, with no prefix. Each is one line in the project's `mise.toml`; what needs more is a command of the tool ([The charter command](charter.md)).
 
 ```sh
-mise tasks                            # every task, with its description
-mise run check                        # run one
-mise run sdk:gen api-go typescript    # words after the task's name are passed to it
+mise tasks                     # every task, with its description
+mise run check                 # run one, in the project's folder
+mise run sdk:gen typescript    # words after the name are passed to the task
+mise run bench -- -write       # flags go after --
 ```
 
-Every task is one line in `mise.toml`. Most call a command of the tool the tasks run (`dev`): [The dev tool](dev.md) has each command's flags.
+- **Needs:** besides `mise install`. "npm" means `mise run setup` was run. "Cloudflare" is a login (`./node_modules/.bin/cf auth login`) or `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+- **REMOTE** tasks read or change something on Cloudflare or GitHub. The others touch only your machine.
 
-## How to read the tables
+## A Go project
 
-- **Needs** is what must be there besides `mise install`. "npm packages" means `mise run setup` was run.
-- **Local** tasks touch only your machine. **Remote** tasks read or change something on Cloudflare or GitHub. The task's own description starts with `REMOTE` for those.
-- **A Cloudflare login** is `api/go/node_modules/.bin/cf auth login`, or the variables `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` ([Configuration](config.md#environment-variables)).
+What `charter new` makes, and `examples/notes-go/`.
 
-## The whole project
+### The project
 
-| Task | What it does | Needs | Local or remote |
-|---|---|---|---|
-| `setup` | Installs the npm packages of `api/go/` (the Cloudflare CLI, `cf`) and `sdk/` (Fern), from their lockfiles | Network | Local |
-| `check` | Runs `api:go:check` and `dev:check`: every local check | npm packages | Local |
-| `doctor` | Checks what the tasks need: npm packages, Docker, Go, TinyGo, `wasm-opt`, Rust, `gh`. Lists the APIs. Fails if npm packages are missing or Docker is not running | Nothing | Local |
-| `upstream:status` | Lists every `Upstream:` tag in the code with the state of its issue. `CLOSED` means that workaround can go | A git repository, `gh` | Remote: reads issues on GitHub |
+| Task | What it does | Needs |
+|---|---|---|
+| `setup` | Installs the npm packages: `cf`, Fern, what the tests import | Network |
+| `check` | Every local check: `lint`, `test`, `spec:check`, `sdk:publish:fresh`, `test:native`, `test:workerd`, `workflows:check`, `docs:check` | npm |
+| `doctor` | Says what the tasks need and lack: npm packages, Docker, Go, Rust, `gh`, `FERN_TOKEN`, leftover containers | |
+| `upstream:status` | REMOTE, read-only. Every `Upstream:` tag in the code with its issue's state | `gh` |
 
-## The API
+### The API
 
-| Task | What it does | Needs | Local or remote |
-|---|---|---|---|
-| `api:go:run` | Runs the API natively on `API_GO_PORT` (5174), with an in-memory store. Notes are gone when it stops | Nothing | Local |
-| `api:go:build` | Builds the Worker's Wasm into `api/go/build/`, tuned for Workers (`dev wasm-build`: [what it changes](dev.md#wasm-build)). Fails if `api/go/build/app.wasm` is over 3,000,000 bytes gzipped | Nothing | Local |
-| `api:go:dev` | Runs `api:go:build`, then the Worker under workerd (`cf dev`) on `API_GO_PORT`, with a local D1 database and the hub. After a Go change, run `api:go:build` in another shell: `cf dev` reloads | npm packages | Local |
-| `api:go:migrate:local` | Applies `migrations/` to the local D1 database of a running `api:go:dev`, each file once | `api:go:dev` running | Local |
-| `api:go:spec` | Writes `sdk/fern/apis/api-go/openapi.json` and `sdk/fern/apis/api-go/asyncapi.json` from the contract, with `API_GO_URL` as their server | Nothing | Local |
-| `api:go:spec:check` | Fails if a committed spec differs from what the contract gives | Nothing | Local |
-| `api:go:lint` | `gofmt`, and `go vet` for your machine and for Wasm | Nothing | Local |
-| `api:go:test` | `go test ./...` in `api/go/` | Nothing | Local |
-| `api:go:test:native` | Starts the native build on a free port and runs the real-time test (`test/live-test.mjs`) and the MCP test (`test/mcp-test.mjs`) against it | npm packages | Local |
-| `api:go:test:workerd` | Runs `api:go:build`, starts the Wasm under workerd on a free port, applies the migrations, and runs the same two tests | npm packages | Local |
-| `api:go:mcp-test` | Runs the MCP test against a server already running on `API_GO_PORT`. It writes test notes | npm packages, `api:go:run` or `api:go:dev` running | Local |
-| `api:go:check` | Runs `api:go:lint`, `api:go:test`, `api:go:spec:check`, `sdk:publish:fresh`, `api:go:test:native` and `api:go:test:workerd` | npm packages | Local |
-| `api:go:deploy` | Runs `api:go:build`, deploys the Worker (`cf deploy`, which creates its D1 database), then applies pending migrations as `api:go:migrate` does | npm packages, a Cloudflare login | Remote: changes the Worker and its database |
-| `api:go:migrate` | Applies pending files of `migrations/` to the D1 database `<name>-db` | npm packages, a Cloudflare login, the Worker deployed once | Remote: changes the database |
-| `api:go:live-test` | Tests the deployed Worker at `API_GO_URL`: SSE and the WebSocket, raw and through the TypeScript SDK, then MCP. It writes test notes. It generates the `typescript-dist` SDK first when that is missing | npm packages; Docker the first time | Remote: writes notes |
-| `api:go:soak` | Runs every client against every real-time scenario on the deployed Worker, and redeploys it once in the middle. Add `--idle <minutes>` for the long-idle case. It generates the SDKs and builds the Fern CLI first when they are missing | npm packages, a Cloudflare login; Docker and `cargo` the first time | Remote: redeploys the Worker, writes notes |
-| `api:go:bench` | Calls every GET operation of the deployed Worker that the spec has examples for, after 30 s of warm-up, and prints wall time, the CPU time Cloudflare recorded, and the CPU of each request. About a minute and a half | The Worker deployed; `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment or in fnox | Remote: read-only |
-| `api:go:perf` | Runs `api:go:deploy`, then benches the new isolate from its first request: 8 requests at once, then every operation with writes, with the CPU of each request. One command to see what a change costs on Cloudflare. About two minutes | As `api:go:deploy` and `api:go:bench` | Remote: changes the Worker and its database, writes test notes |
-| `api:go:perf:try` | `mise run api:go:perf:try -- -name <experiment>`: builds, deploys to a scratch Worker `<worker>-perf-<experiment>` with a database and hub of its own, benches it as `api:go:perf` does, and deletes it. `-build '<wasm-build flags>'` tries another build, `-keep` leaves the Worker. Several can run at once with different names. About 70 seconds | As `api:go:perf` | Remote: creates and deletes a scratch Worker and database |
-| `api:go:perf:clean` | Deletes every scratch Worker `<worker>-perf-*` and its database that a run left | A Cloudflare login | Remote: deletes scratch Workers and databases only |
+| Task | What it does | Needs |
+|---|---|---|
+| `run` | The API natively on `API_PORT`, in memory | |
+| `build` | The Worker's Wasm and the glue into `build/`. Fails over 3,000,000 bytes gzipped | |
+| `dev` | `build`, then the Worker under workerd (`cf dev`) on `API_PORT`. After a Go change: `build` again | npm |
+| `migrate:local` | Applies `migrations/` to the local D1 of a running `dev`, each file once | `dev` running |
+| `spec` | Writes `fern/openapi.json` and `fern/asyncapi.json` from the contract, with `API_URL` as their server | |
+| `spec:check` | Fails if a committed spec is stale | |
+| `lint` | `gofmt`, `go vet` for the host and for Wasm | |
+| `test` | `go test ./...` | |
+| `test:native` | Starts the native build on a free port; runs `test/live-test.mjs` and `test/mcp-test.mjs` against it | npm |
+| `test:workerd` | `build`, starts the Wasm under workerd on a free port, migrates, runs the same two | npm |
+| `mcp-test` | The MCP test against a server already running on `API_PORT`. Writes test notes | npm, `run` or `dev` running |
 
-## SDKs
+### Cloudflare
 
-An `<api>` is a folder under `sdk/fern/apis/`. A new project has one, `api-go`. A `<group>` is one SDK its `generators.yml` defines: `go`, `typescript`, `typescript-dist` or `cli`.
+| Task | What it does | Needs |
+|---|---|---|
+| `deploy` | REMOTE. `build`, `cf deploy`, then `migrate` | npm, Cloudflare |
+| `migrate` | REMOTE. Applies pending `migrations/` to the database `<worker>-db` | npm, Cloudflare, deployed once |
+| `live-test` | REMOTE, writes test notes. SSE and WebSocket, raw and through the TypeScript SDK, then MCP, against `API_URL` | npm; Docker the first time |
+| `soak` | REMOTE, redeploys the Worker. Every client against every real-time scenario. `--idle <min>` for the long-idle case | npm, Cloudflare; Docker and `cargo` the first time |
+| `bench` | REMOTE, read-only. Every GET operation: wall time, CPU, the CPU of each request. `-write` adds the others | The two `CLOUDFLARE_` variables |
+| `perf` | REMOTE, writes test notes. `deploy`, then the bench of the new isolate from its first request | As `deploy` and `bench` |
+| `perf:try` | REMOTE. `-name <experiment> [-build '<flags>'] [-prebuilt] [-keep]`: a scratch Worker of its own, built, deployed, benched, deleted | As `perf` |
+| `perf:clean` | REMOTE. Deletes the scratch Workers and databases a `perf:try` left | Cloudflare |
+| `cloudflare:token` | Fails unless the two `CLOUDFLARE_` variables are set | |
+| `cloudflare:secrets` | REMOTE, once per repo. Copies the two from fnox into the repo's GitHub secrets | fnox, `gh` |
 
-| Task | What it does | Needs | Local or remote |
-|---|---|---|---|
-| `sdk:list` | Lists the APIs and the groups each defines | Nothing | Local |
-| `sdk:check-spec <api>` | Validates the API's specs and settings with `fern check` | npm packages | Local |
-| `sdk:gen <api> <group>` | Generates one SDK with Fern into `sdk/out/<api>/<group>`, replacing what is there | npm packages, Docker | Local |
-| `sdk:check <dir>` | Proves a generated SDK works. Go: build, vet, and its tests against a WireMock container. TypeScript: a typecheck | The SDK generated; Docker for a Go SDK | Local |
-| `sdk:ready <api> [group...]` | Generates and builds what the tests use, only where it is missing: the `typescript-dist` and `go` SDKs and the Fern CLI, or only the groups named | npm packages; Docker and `cargo` when something is missing | Local |
-| `sdk:publish` | Generates the Go SDK of `api-go` fresh, checks it as `sdk:check` does, and copies its sources into `sdk/go`: the committed Go module another repo fetches with `go get`. Adds `sdk/go` to `go.work`. Commit the result | npm packages, Docker | Local |
-| `sdk:publish:check` | Generates the Go SDK again and fails if `sdk/go` differs. Passes when there is no `sdk/go` yet | npm packages, Docker | Local |
-| `sdk:publish:fresh` | Fails if the specs changed since `sdk/go` was generated from them. It compares a hash, so it is quick and needs no Docker; `api:go:check` runs it. Passes when there is no `sdk/go` yet | Nothing | Local |
-| `sdk:cli:build [-linux] <dir>` | Builds a generated Rust CLI, for example `sdk/out/api-go/cli`. Heavy: the first build takes minutes at full CPU. `-linux` builds for Linux in Docker | The CLI generated, `cargo`; Docker with `-linux` | Local |
-| `sdk:dist` | Generates the Go and TypeScript SDKs of `api-go` fresh, checks them, and archives them and the specs into `dist/` | npm packages, Docker | Local |
-| `sdk:dist:cli [-linux] <api>` | Generates and builds the API's Fern CLI into `dist/`. Heavy | npm packages, Docker, `cargo` | Local |
-| `sdk:clean` | Removes `sdk/out/` and stops leftover WireMock containers | Nothing | Local |
+### SDKs
 
-## Docs
+| Task | What it does | Needs |
+|---|---|---|
+| `sdk:list` | The groups `fern/generators.yml` defines | |
+| `sdk:check-spec` | Fern's validation of the specs and its settings | npm |
+| `sdk:gen <group>` | Generates one SDK into `sdk/out/<group>` | npm, Docker |
+| `sdk:check <group>` | Proves it works. Go: build, vet, Fern's tests against WireMock. TypeScript: typecheck | Generated; Docker for Go |
+| `sdk:ready [group...]` | Generates what the tests use, if missing (`typescript-dist`, `go`, `cli`), and builds the CLI | npm, Docker, `cargo` |
+| `sdk:publish` | Generates and checks the Go SDK, copies its sources into `sdk/go/` | npm, Docker |
+| `sdk:publish:check` | Fails if `sdk/go/` is not what the specs generate now | npm, Docker |
+| `sdk:publish:fresh` | Fails if the specs changed since `sdk/go/` was made. A hash, no Docker | |
+| `sdk:cli:build [-linux]` | HEAVY. Builds the generated Rust CLI in `sdk/out/cli` | Generated, `cargo`; Docker with `-linux` |
+| `sdk:dist` | Generates, checks and archives every SDK and the specs into `dist/` | npm, Docker |
+| `sdk:dist:cli [-linux]` | HEAVY. Generates and builds the CLI into `dist/` | npm, Docker, `cargo` |
+| `sdk:docs` | Previews the API's reference site on port 3030 | npm |
+| `sdk:clean` | Removes `sdk/out` and stops leftover WireMock containers | |
 
-| Task | What it does | Needs | Local or remote |
-|---|---|---|---|
-| `docs:setup` | Writes the docs site's config, style, `docs/writing.md` and `docs/llms.txt`, filled in with the repo's name and description | `gh`, and the repo on GitHub | Remote: reads the repo's name from GitHub |
-| `docs:lint` | Checks `docs/` for what a program can check: front matter, links, tasks and paths that don't exist | A git repository | Local |
-| `docs:review` | Has Claude bring `docs/` into line with `docs/writing.md`. It edits files | The `claude` command | Local |
-| `docs:pages` | Turns on GitHub Pages for `docs/` on `main`. Once per repo | `gh` with admin access to the repo | Remote: changes a GitHub setting |
+### The repo around it
 
-## GitHub workflows, secrets and releases
+| Task | What it does | Needs |
+|---|---|---|
+| `release` | REMOTE on a version tag: attaches `dist/*` to its GitHub Release. Elsewhere: a dry run | `gh` |
+| `release:tags` | REMOTE on a version tag: tags `sdk/go/vX.Y.Z`. Elsewhere: a dry run | `gh` |
+| `workflows` | Writes `.github/workflows/` from the tool's templates | |
+| `workflows:check` | Fails if a workflow differs from its template | |
+| `docs:setup` | Writes the docs site's config, `docs/writing.md` and `docs/llms.txt` | `gh`, a GitHub repo |
+| `docs:lint` | Checks `docs/`: front matter, links, the index, tasks and paths that do not exist | |
+| `docs:check` | Fails if the docs config is stale or the lint fails | `gh` |
+| `docs:review` | Has Claude bring `docs/` into line with `docs/writing.md` | The `claude` command |
+| `docs:pages` | REMOTE, once per repo. Turns GitHub Pages on for `docs/` on main | `gh` |
 
-What a release ships is built by `sdk:dist` and `sdk:dist:cli`, in [SDKs](#sdks) above.
+## The other examples
 
-| Task | What it does | Needs | Local or remote |
-|---|---|---|---|
-| `dev:workflows` | Writes the GitHub workflows into `.github/workflows/`. Never edit the written files | Nothing | Local |
-| `dev:check` | Fails if a workflow or the docs site's config differs from what the tool writes, or if `docs:lint` finds a problem. Before `dev:workflows` and `docs:setup` have been run, those two checks pass | A git repository; `gh` and the repo on GitHub once `docs/_config.yml` exists | Local, then remote: reads the repo's name from GitHub |
-| `cloudflare:token` | Fails unless `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set. The deploy workflow runs it first | Nothing | Local |
-| `cloudflare:secrets` | Copies those two variables from fnox into the repo's GitHub Actions secrets, without printing them. Once per repo | `gh`, the two values stored in fnox | Remote: sets GitHub secrets |
-| `release` | On a version tag in a GitHub workflow: attaches the files in `dist/` to the tag's GitHub Release. Anywhere else: a dry run that lists `dist/` | Files in `dist/`; `gh` for a real run | Remote on a tag; otherwise local |
-| `release:tags` | On a version tag: adds the tags `api/go/vX.Y.Z` and, when `sdk/go` exists, `sdk/go/vX.Y.Z` on the same commit, which Go needs to find a version of those modules. Anywhere else: a dry run | `gh` for a real run | Remote on a tag; otherwise local |
+They have the tasks above, with these main differences. `mise tasks` in each folder is the exact list.
 
-## Tasks that exist only in the orpc-api repo
+| Project | Lacks | Differs or adds |
+|---|---|---|
+| `examples/notes-ts/` | `run`, `build`, the two `test:` tasks, `mcp-test`, the `perf` tasks, `sdk:publish`, the repo tasks but `release` | `lint` typechecks; `test` runs the feed's unit tests; `check` is `lint`, `test`, `spec:check`; `live-test` and `soak` run the programs in `examples/notes-go/test/` |
+| `examples/showcase-go/` | Storage, so no `migrate`; `live-test`, `soak`, `bench`, the `perf` tasks, `sdk:publish`, `sdk:dist`, the repo tasks | `test:native` and `test:workerd` run the SDK test (`test/showcase-test.mjs`) with a webhook receiver; `showcase-test` runs it against a running server |
+| `examples/showcase-ts/` | `run`, `build`, `migrate`, `soak`, `bench`, the `perf` tasks, `sdk:publish`, `sdk:dist`, the repo tasks | `test:workerd` runs Fern's TypeScript SDK inside the Worker under `cf dev`; `live-test` the same on the deployed Worker; `deploy` deploys it twice |
 
-The orpc-api repo has every task above, and these as well. They belong to its second server (TypeScript), its two showcase APIs, its SDK test Worker and the release of the tool itself.
+## This repo
 
-| Tasks | What they are for |
-|---|---|
-| `api:ts:dev`, `api:ts:migrate:local`, `api:ts:spec`, `api:ts:spec:check`, `api:ts:typecheck`, `api:ts:test`, `api:ts:check`, `api:ts:deploy`, `api:ts:migrate`, `api:ts:live-test`, `api:ts:soak`, `api:ts:bench` | The oRPC Worker in TypeScript: the same set as `api:go:*` |
-| `showcase:go:run`, `showcase:go:build`, `showcase:go:dev`, `showcase:go:spec`, `showcase:go:spec:check`, `showcase:go:lint`, `showcase:go:test`, `showcase:go:test:native`, `showcase:go:test:workerd`, `showcase:go:check`, `showcase:go:deploy` | The Go showcase: a second API that uses every Fern feature |
-| `showcase:ts:spec`, `showcase:ts:spec:check`, `showcase:ts:test`, `showcase:ts:typecheck`, `showcase:ts:check` | The same showcase written with oRPC |
-| `sdk:harness:test`, `sdk:harness:deploy` | The Worker that runs Fern's TypeScript SDK inside workerd |
-| `sdk:docs` | A local preview of the API docs Fern generates |
-| `dev:release` | Publishes the tool itself with GoReleaser ([Releases](releases.md)) |
+Run at the root. `mise run check` here runs the tool's and the library's checks, then `check` in every example.
 
-In that repo `check` runs more (both servers, both showcases, the SDK test Worker) and needs Docker, `setup` installs four npm folders, and `release:tags` also adds `dev/vX.Y.Z`.
-
-## Limits
-
-- **What was run for this page:** `mise tasks`, `api:go:spec:check`, `sdk:list`, `doctor` and `release:tags` (a dry run) were run in a new project on 2026-10-01. The other rows are read from the project's `mise.toml` and the tool's source.
+| Task | What it does | Needs |
+|---|---|---|
+| `setup` | `setup` in every example | Network |
+| `check` | `charter:check`, `go:check`, `examples:check` | npm, Docker |
+| `examples:check` | `check` in every example, one after the other | npm, Docker |
+| `charter:check` | The tool: gofmt, vet, tests (with the test that holds the two notes examples to one surface), the generated workflows and docs config match their templates, the docs lint | `gh` |
+| `go:check` | `go:lint` and `go:test`: the library's lint and tests, for the host and for Wasm | |
+| `compare` | REMOTE, writes test notes. The same bench against the TypeScript notes Worker and the Go one. About three minutes | The two `CLOUDFLARE_` variables |
+| `doctor` | `doctor` in every example | |
+| `sdk:clean` | `sdk:clean` in every example | |
+| `upstream:status` | REMOTE, read-only. Every `Upstream:` tag under the repo, with its issue's state | `gh` |
+| `workflows` | Writes this repo's workflows | |
+| `charter:release` | GoReleaser on the tool. REMOTE on a version tag; elsewhere a snapshot into `dist/` | |
+| `release:tags` | REMOTE on a version tag: tags the modules others import, `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` | `gh` |
+| `docs:setup`, `docs:lint`, `docs:review`, `docs:pages` | As in a project | |
+| `cloudflare:secrets` | As in a project | |

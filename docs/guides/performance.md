@@ -70,19 +70,6 @@ In the order that mattered for the notes example:
 
 Then prove it is still right: `mise run check`, and `mise run soak` for anything near a stream.
 
-## The bench's flags
+## The flags
 
-`mise run bench -- <flags>`, or `charter bench <flags> <url>` for any server (a local one gives wall time only).
-
-| Flag | Meaning | Default |
-|---|---|---|
-| `-n` | Requests per operation, after 3 warm-up ones | 20 |
-| `-write` | Also POST, PUT, PATCH and DELETE | off |
-| `-cpu` | Also the CPU time Cloudflare measured | off |
-| `-each` | Also every request's CPU, in the order sent. Implies `-cpu` | off |
-| `-burst <k>` | First send `k` requests at once to the first operation. Use right after a deploy, without `-warm` | 0 |
-| `-warm <duration>` | Send requests for this long first: a Worker just deployed or idle is slower for up to a minute | 0 |
-| `-spec <file or url>` | The OpenAPI spec | `<url>/api/openapi.json` |
-| `-body 'POST /path={...}'` | A JSON body for an operation whose spec has no example. Repeat | none |
-| `-header 'Name: value'` | A header for every request, for an API that needs a token. Repeat | none |
-| `-worker <name>` | The Worker's name, for the CPU figures | The first label of the URL's host |
+Every flag of the bench, the experiment and the build: [The charter command](../reference/charter.md#bench). Pass them after `--`: `mise run bench -- -write -n 30`. For any server, `charter bench <url>`: a local one gives wall time only.
