@@ -13,7 +13,7 @@ cd billing-api && mise install && mise run setup && mise run check   # a working
 mise run deploy                                                       # on Cloudflare
 ```
 
-Needs [mise](https://mise.jdx.dev), Go and git. Then: [Getting started](docs/getting-started.md).
+Needs [mise](https://mise.jdx.dev), Go and git, on macOS or Linux (on Windows: WSL2 for now). Then: [Getting started](docs/getting-started.md).
 
 ## What you get
 
