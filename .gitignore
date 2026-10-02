@@ -15,8 +15,6 @@ sdk/harness/src/client/
 target/
 go.work.sum
 
-# The Forge OpenAPI spec (26 MB; mise run sdk:cloudflare downloads it)
-.forge/
 mise.local.toml
 
 # Agent worktrees (Claude Code)

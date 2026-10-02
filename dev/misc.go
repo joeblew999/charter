@@ -1,12 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,8 +14,6 @@ import (
 func init() {
 	commands["upstream"] = command{"", "the upstream issues our code works around (every `Upstream:` tag) and their state", upstream}
 	commands["doctor"] = command{"", "check what the tasks need: npm installs, Docker, Go, TinyGo, Rust, leftover containers", doctor}
-	commands["cloudflare-spec"] = command{"[-products d1,kv] [-release <sha>]",
-		"HEAVY (26 MB): slice Cloudflare products out of Forge's spec into sdk/fern/apis/cloudflare", cloudflareSpec}
 }
 
 // A tag is a comment line such as:  Upstream: owner/repo#123 (when fixed: what to do then)
@@ -112,98 +106,4 @@ func doctor([]string) error {
 		return errors.New("not ready")
 	}
 	return sdkList(nil)
-}
-
-// cloudflareSpec adds Cloudflare products as an API for Fern, sliced from Forge's spec of the whole
-// Cloudflare API. Then: mise run sdk:gen cloudflare go (or typescript, python).
-func cloudflareSpec(args []string) error {
-	products, release := "d1,kv", "6b0fb3cd63aca815f1667a8fa908114886867dc6"
-	flags("cloudflare-spec", args, func(f *flag.FlagSet) {
-		f.StringVar(&products, "products", products, "comma-separated: workers, d1, kv, r2, queues, workflows, ...")
-		f.StringVar(&release, "release", release, "Forge openapi release")
-	})
-	full, api := filepath.Join(".forge", release+".json"), "sdk/fern/apis/cloudflare"
-	if !exists(full) {
-		res, err := http.Get("https://github.com/cloudflare/forge/releases/download/openapi@" + release + "/openapi.forge.json")
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
-		if res.StatusCode != http.StatusOK {
-			return fmt.Errorf("Forge release %s: HTTP %d", release, res.StatusCode)
-		}
-		body, err := io.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-		if err := os.MkdirAll(".forge", 0o755); err != nil {
-			return err
-		}
-		if err := os.WriteFile(full, body, 0o644); err != nil {
-			return err
-		}
-	}
-	raw, err := os.ReadFile(full)
-	if err != nil {
-		return err
-	}
-	var spec map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &spec); err != nil {
-		return err
-	}
-	var paths map[string]map[string]json.RawMessage
-	if err := json.Unmarshal(spec["paths"], &paths); err != nil {
-		return err
-	}
-	// Keep the account-level paths of the chosen products ("kv" lives under /storage/kv, "r2" under /r2/buckets).
-	var prefixes []string
-	for _, product := range strings.Split(products, ",") {
-		if under, ok := map[string]string{"kv": "storage/kv", "r2": "r2/buckets"}[product]; ok {
-			product = under
-		}
-		prefixes = append(prefixes, "/accounts/{account_id}/"+product)
-	}
-	operations := 0
-	for path, item := range paths {
-		keep := false
-		for _, prefix := range prefixes {
-			keep = keep || strings.HasPrefix(path, prefix)
-		}
-		if !keep {
-			delete(paths, path)
-			continue
-		}
-		for _, method := range []string{"get", "put", "post", "delete", "patch"} {
-			if _, ok := item[method]; ok {
-				operations++
-			}
-		}
-	}
-	if spec["paths"], err = json.Marshal(paths); err != nil {
-		return err
-	}
-	sliced, err := json.MarshalIndent(spec, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(api, 0o755); err != nil {
-		return err
-	}
-	if err := os.WriteFile(filepath.Join(api, "openapi.json"), append(sliced, '\n'), 0o644); err != nil {
-		return err
-	}
-	fmt.Printf("%s/openapi.json: %d operations (%s)\n", api, operations, products)
-	if generators := filepath.Join(api, "generators.yml"); !exists(generators) {
-		petstore, err := os.ReadFile("sdk/fern/apis/petstore/generators.yml")
-		if err != nil {
-			return err
-		}
-		renamed := strings.NewReplacer("/petstore/", "/cloudflare/", "example.com/petstore", "example.com/cloudflare",
-			"packageName: petstore", "packageName: cloudflare", "namespaceExport: Petstore", "namespaceExport: Cloudflare").Replace(string(petstore))
-		if err := os.WriteFile(generators, []byte(renamed), 0o644); err != nil {
-			return err
-		}
-	}
-	fmt.Println("Now: mise run sdk:gen cloudflare go (or typescript, python)")
-	return nil
 }

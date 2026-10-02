@@ -339,7 +339,6 @@ func projectMise(source, name, pin string) string {
 		"and the same SDK surface as the oRPC contract", "and the contract's rules",
 		"what a release ships for both APIs into dist/", "what a release ships into dist/",
 		"`api/ts/node_modules/.bin/cf auth login`", "`api/go/node_modules/.bin/cf auth login`",
-		"e.g. sdk/out/api-ts/cli", "e.g. sdk/out/api-go/cli",
 		"release-tags api/go dev sdk/go", "release-tags api/go sdk/go",
 		"api/go/vX.Y.Z, dev/vX.Y.Z, sdk/go/vX.Y.Z", "api/go/vX.Y.Z, sdk/go/vX.Y.Z",
 		"# Local dev ports.", "# The local dev port.",

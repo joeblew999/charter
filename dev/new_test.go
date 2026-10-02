@@ -64,10 +64,27 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 			t.Errorf("mise.toml: no %q", want)
 		}
 	}
-	for _, gone := range []string{"api:ts:", "api-ts", "sdk:harness", "sdk:demo", "showcase", "go run ./dev", "go run ../../dev", "dev@", "orpc-api-go", "dev/vX.Y.Z"} {
+	for _, gone := range []string{"api:ts:", "api-ts", "sdk:harness", "sdk:docs", "showcase", "go run ./dev", "go run ../../dev", "dev@", "orpc-api-go", "dev/vX.Y.Z"} {
 		if strings.Contains(string(tasks), gone) {
 			t.Errorf("mise.toml still mentions %q", gone)
 		}
+	}
+	// Every sdk task of this repo, apart from the harness's and the preview of Fern's docs site.
+	var sdk []string
+	for _, line := range strings.Split(string(tasks), "\n") {
+		if name, ok := strings.CutPrefix(line, `[tasks."sdk:`); ok {
+			sdk = append(sdk, strings.TrimSuffix(name, `"]`))
+		}
+	}
+	if want := "list check-spec gen check ready publish publish:check publish:fresh cli:build dist dist:cli clean"; strings.Join(sdk, " ") != want {
+		t.Errorf("mise.toml: sdk tasks %q, want %q", strings.Join(sdk, " "), want)
+	}
+	// One Fern API, and its settings name no other.
+	if apis, _ := os.ReadDir(filepath.Join(into, "sdk/fern/apis")); len(apis) != 1 || apis[0].Name() != "api-go" {
+		t.Errorf("sdk/fern/apis: %v, want only api-go", apis)
+	}
+	if strings.Contains(string(generators), "api-ts") {
+		t.Error("generators.yml mentions api-ts")
 	}
 	if exists(filepath.Join(into, "api/go/api/surface_test.go")) {
 		t.Error("the oRPC same-surface test was copied")
