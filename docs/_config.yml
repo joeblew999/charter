@@ -11,14 +11,14 @@
 #   has_children: true        # on that parent page
 #   ---
 # The start page, README.md, also needs `permalink: /` there: it is the site's home page.
-title: orpc-api
-description: "oRPC API on Cloudflare Workers: contract-first REST + SSE + WebSockets that don't lose data, with Fern SDKs, CLI and docs. Driven by mise."
+title: charter
+description: "Write an API contract once, in Go or TypeScript: a server on Cloudflare Workers, OpenAPI and AsyncAPI specs, SDKs in any language, a CLI, MCP and real-time, generated and tested."
 aux_links:
-  "GitHub": ["https://github.com/joeblew999/orpc-api"]
-gh_edit_repository: https://github.com/joeblew999/orpc-api
+  "GitHub": ["https://github.com/joeblew999/charter"]
+gh_edit_repository: https://github.com/joeblew999/charter
 nav_external_links:
   - title: Latest release
-    url: https://github.com/joeblew999/orpc-api/releases/latest
+    url: https://github.com/joeblew999/charter/releases/latest
 
 remote_theme: just-the-docs/just-the-docs@v0.12.0
 plugins: [jekyll-remote-theme]
