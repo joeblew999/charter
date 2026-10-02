@@ -3,42 +3,45 @@ title: Getting started
 nav_order: 2
 ---
 
-# Getting started: from nothing to a deployed API with an SDK
+# Getting started: from `charter new` to a deployed API with an SDK
 
-About fifteen minutes. You end with a Go API running on Cloudflare Workers, tested there, with a generated TypeScript SDK. Every command below was run as written.
+One tutorial. You end with a Go API ([Huma](https://huma.rocks)) on Cloudflare Workers, tested there, with a generated SDK. For TypeScript, read [The TypeScript (oRPC) version](guides/typescript.md) instead.
 
-You need [mise](https://mise.jdx.dev) and Go. For step 5 you need a Cloudflare account; the Free plan is enough to try it ([what it costs](README.md#before-you-choose-go-what-it-costs-to-run)).
+You need:
+
+- **[mise](https://mise.jdx.dev), Go and git.** mise installs the rest at pinned versions.
+- **Docker,** from step 5 on: Fern generates SDKs in containers.
+- **A Cloudflare account,** from step 5 on. What a request costs there: [Benchmarks](benchmarks.md).
 
 ## 1. Create the project
 
 ```sh
-dev() { go run github.com/joeblew999/orpc-api/dev@latest "$@"; }   # the tool, straight from GitHub
-dev new -name billing-api                                            # creates ./billing-api
+go run github.com/joeblew999/charter/cmd/charter@latest new -name billing-api -module github.com/you/billing-api -subdomain you
 cd billing-api && git init
 ```
 
-The first line `dev new` prints is the tool's version and what it pinned to it (the tool in `mise.toml`, the Go packages in `api/go/go.mod`): minutes after a release `@latest` can still be the previous one, while the release binary or `dev@vX.Y.Z` is exact.
+| Flag | What it sets | Default |
+|---|---|---|
+| `-name` | The folder, the Worker and its database (`billing-api-db`) | required |
+| `-module` | The Go module path | `github.com/<your gh login>/<name>` |
+| `-subdomain` | Your account's `workers.dev` subdomain: the Worker's URL is `https://<name>.<subdomain>.workers.dev` | a placeholder, fixed in step 5 |
 
-`-name` becomes the Worker's name, its database and the SDK's names (`BillingApiClient`). The Go module defaults to `github.com/<your GitHub login>/billing-api`; pass `-module` to choose.
-
-The project starts as a small notes API, so everything works before you change anything.
+The project is a copy of the notes example (`examples/notes-go/` in charter), so every check passes before you change anything. The first line `new` prints is the release it pinned: the tool in `mise.toml`, the library in `go.mod`.
 
 ## 2. Install and check
 
 ```sh
-mise install          # Go, TinyGo, Node and the dev tool, at pinned versions
-mise run setup        # npm packages
-mise run check        # lint, tests, spec drift, the Wasm build, and live tests natively and under workerd
+mise install          # Go, Node, Rust, gh and the charter tool
+mise run setup        # npm packages: cf (Cloudflare's CLI), Fern
+mise run check        # lint, tests, spec drift, the TinyGo build, live tests natively and under workerd
 ```
 
-`check` takes about half a minute and must pass. It is the same command CI runs.
-
-`setup` ends with npm's warning that the install scripts of `fsevents` and `@scarf/scarf` are "not yet covered by allowScripts". That is expected: npm skips those scripts, and nothing here needs them.
+`check` is what CI runs. The first build also installs TinyGo, which the tool pins.
 
 ## 3. Run it
 
 ```sh
-mise run api:go:run   # natively, in-memory store: http://localhost:5174
+mise run run          # natively, in memory: http://localhost:5174
 ```
 
 In another shell:
@@ -47,71 +50,68 @@ In another shell:
 curl localhost:5174/api/hello
 curl -X POST localhost:5174/api/notes -H 'content-type: application/json' -d '{"body":"first"}'
 curl 'localhost:5174/api/notes?limit=10'
-curl -N 'localhost:5174/api/notes/watch?after=0&seconds=5'      # the SSE stream: the note, then the end marker
-curl localhost:5174/api/openapi.json                             # the spec, generated from your contract
+curl -N 'localhost:5174/api/notes/watch?after=0&seconds=5'   # the SSE stream: the note, then the end marker
+curl localhost:5174/api/openapi.json                         # the spec, from your contract
 ```
 
-To run it the way Cloudflare does (the real Wasm, a local D1 database and the hub):
+The way Cloudflare runs it (the Wasm, a local D1 database, the hub):
 
 ```sh
-mise run api:go:dev             # in one shell
-mise run api:go:migrate:local   # in another, the first time: creates the tables
+mise run dev              # in one shell: the same port
+mise run migrate:local    # in another, the first time: creates the tables
 ```
 
-## 4. Make it yours
+## 4. Change the contract
 
-The whole API is one file: `api/go/api/contract.go`. Each operation is a few lines: its path, its input struct, its output struct. Struct tags are the validation rules and the schema.
-
-Change it, then:
+The API is `api/contract.go`: one Huma operation per route, with Go structs for input and output. The struct tags are the validation and the schema.
 
 ```sh
-mise run api:go:spec    # regenerates the OpenAPI and AsyncAPI files from the contract
-mise run check          # fails if you forgot the line above, or broke something
+mise run spec         # after every contract change: writes fern/openapi.json and fern/asyncapi.json
+mise run check        # fails if you forgot the line above
 ```
 
-How to add operations, validation and errors: [Define your API](guides/contract.md).
+How: [Change the contract](guides/contract.md). To remove the notes: [Make the example yours](guides/replace-the-example.md).
 
 ## 5. Deploy
 
 ```sh
-api/go/node_modules/.bin/cf auth login   # once: your Cloudflare account
-mise run api:go:deploy                   # the Worker, its D1 database, the migrations
-mise run api:go:live-test                # SSE, WebSocket, the SDK and MCP against what you just deployed
+./node_modules/.bin/cf auth login    # once per machine
+mise run deploy                      # builds, deploys the Worker, its database and the hub, applies migrations
+mise run live-test                   # SSE, WebSocket, the generated SDK and MCP, against what you deployed
 ```
 
-The deploy prints the Worker's URL. The project has a placeholder for it, `https://billing-api.your-subdomain.workers.dev`, in `mise.toml` and in the specs (`dev new -subdomain <yours>` in step 1 writes the real one instead). So before the live test, put the URL the deploy printed in `mise.local.toml`:
+- **If you gave no `-subdomain`:** put the URL the deploy printed into `mise.toml` as the default of `API_URL`, then `mise run spec`. The specs name the server.
+- **Always run the live test after a deploy.** Some failures only exist on Cloudflare.
 
-```toml
-[env]
-API_GO_URL = "https://billing-api.<your-subdomain>.workers.dev"
-```
-
-Then `mise run api:go:spec`, so the specs name the right server. `mise.local.toml` is gitignored: for CI to agree with the specs you commit, make the URL the default of `API_GO_URL` in `mise.toml` instead. Always run the live test after a deploy: some failures only exist on Cloudflare itself. More: [Deploy to Cloudflare](guides/deploy.md).
+More: [Deploy](guides/deploy.md).
 
 ## 6. Generate an SDK
 
 ```sh
-mise run sdk:gen api-go typescript   # Fern, in Docker -> sdk/out/api-go/typescript
-mise run sdk:gen api-go go           # the same for Go; also: cli
+mise run sdk:gen typescript    # Fern, in Docker: sdk/out/typescript
+mise run sdk:gen go            # sdk/out/go
+mise run sdk:publish           # the Go SDK, checked and copied into sdk/go: commit it, and another repo can go get it
 ```
 
-That is a typed client for your API, with pagination, the SSE stream and the WebSocket built in. What to do with it: [Generate SDKs and a CLI](guides/sdks.md).
+Other languages, the CLI and releases: [SDKs and releasing them](guides/sdks.md).
 
 ## 7. Put it on GitHub
 
-With the repo pushed to GitHub:
+`new` already wrote the workflows into `.github/workflows/`. With the repo pushed:
 
 ```sh
-mise run dev:workflows   # GitHub workflows that run the same checks on every push
-mise run docs:setup      # a docs site for docs/, and llms.txt for agents
-mise run docs:pages      # once: turns the site on
+mise run cloudflare:secrets    # once: the two Cloudflare secrets the deploy workflow needs, from fnox
+mise run docs:setup            # the docs site's config for docs/, and llms.txt for agents
+mise run docs:pages            # once: turns GitHub Pages on
 ```
 
-More: [CI and releases](guides/ci-releases.md), [A docs site](guides/docs-site.md).
+More: [Test and CI](guides/testing.md).
 
 ## Where next
 
-- [Real-time: SSE and WebSocket](guides/streaming.md): how the stream you saw in step 3 stays gap-free.
-- [Auth, idempotency, uploads, webhooks](guides/fern-features.md).
-- [Expose the API to AI agents](guides/mcp.md): your API is already an MCP server at `/api/mcp`.
-- [Go on Cloudflare Workers](concepts/workers-go.md): what is different from a normal Go server, including what it costs.
+| You want | Read |
+|---|---|
+| A stream of your own resource | [Streaming and real-time](guides/streaming.md) |
+| OAuth, idempotency, uploads, webhooks | [Fern features](guides/fern-features.md) |
+| Agents calling your API | [MCP](guides/mcp.md): it already serves `/api/mcp` |
+| To know what differs from a Go server | [Huma on Cloudflare Workers](concepts/workers-go.md) |

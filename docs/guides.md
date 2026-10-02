@@ -4,20 +4,21 @@ nav_order: 3
 has_children: true
 ---
 
-# Guides: how to do one thing
+# Guides
 
-Each guide is a task, start to finish, in a project made by `dev new` ([Getting started](getting-started.md)).
+One job per page, for someone who has a project ([Getting started](getting-started.md) makes one).
 
-| Guide | You want to |
+**Paths and tasks in the guides are those of a project.** `api/contract.go` is that file in your project; in this repo it is `examples/notes-go/api/contract.go`. Tasks are run in the project's folder.
+
+| Guide | The job |
 |---|---|
-| [Replace the example with your API](guides/replace-the-example.md) | Put your own operations in the place of the notes: which files hold the example, and what to do with each |
-| [Define your API](guides/contract.md) | Add operations, inputs, outputs, validation and errors to the contract |
-| [Real-time: SSE and WebSocket](guides/streaming.md) | Stream to clients without losing data across deploys and disconnects |
-| [Auth, idempotency, uploads, webhooks](guides/fern-features.md) | Add what a production API needs, so the generated SDKs handle it |
-| [Expose the API to AI agents (MCP)](guides/mcp.md) | Let an agent call your operations as tools |
-| [Generate SDKs and a CLI](guides/sdks.md) | Give other developers a typed client in their language |
-| [Deploy to Cloudflare](guides/deploy.md) | Put the Worker and its database live, and prove it works there |
-| [Test locally and on Cloudflare](guides/testing.md) | Know a change is right before and after it ships |
-| [CI and releases on GitHub](guides/ci-releases.md) | Check every push and publish versions |
-| [A docs site for your repo](guides/docs-site.md) | Publish `docs/` with search, a sidebar and `llms.txt` |
-| [The same in TypeScript (oRPC)](guides/typescript.md) | Build the API with oRPC instead of Go |
+| [Make the example yours](guides/replace-the-example.md) | Put your API in place of the notes |
+| [Change the contract](guides/contract.md) | Add an operation, validate it, name it, store its data |
+| [Streaming and real-time](guides/streaming.md) | An SSE stream and a WebSocket that lose nothing |
+| [Fern features](guides/fern-features.md) | OAuth, idempotency, uploads, webhooks, a two-way WebSocket, audiences, overlays |
+| [MCP](guides/mcp.md) | Give agents your operations as tools |
+| [SDKs and releasing them](guides/sdks.md) | Generate, check, add a language, publish, release |
+| [Deploy](guides/deploy.md) | To Cloudflare, by hand and from GitHub |
+| [Test and CI](guides/testing.md) | Know it works: locally, on Cloudflare, on GitHub |
+| [Measure and improve performance](guides/performance.md) | What a request costs, and how to try a change |
+| [The TypeScript (oRPC) version](guides/typescript.md) | The same design from an oRPC contract |
