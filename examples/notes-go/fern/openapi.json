@@ -91,7 +91,7 @@
         "properties": {
           "message": {
             "examples": [
-              "Hello from orpc-api-go"
+              "Hello from charter-notes-go"
             ],
             "type": "string"
           }
@@ -157,7 +157,7 @@
   },
   "info": {
     "description": "Notes API: Huma contract (Go) -\u003e OpenAPI -\u003e Fern.",
-    "title": "orpc-api-go",
+    "title": "charter-notes-go",
     "version": "1.0.0"
   },
   "openapi": "3.1.0",
@@ -409,7 +409,7 @@
   },
   "servers": [
     {
-      "url": "https://orpc-api-go.gedw99.workers.dev"
+      "url": "https://charter-notes-go.gedw99.workers.dev"
     }
   ]
 }

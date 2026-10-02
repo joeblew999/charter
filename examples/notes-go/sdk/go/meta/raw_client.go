@@ -6,7 +6,7 @@ import (
 	context "context"
 	http "net/http"
 
-	orpcapi "github.com/joeblew999/charter/examples/notes-go/sdk/go"
+	notes "github.com/joeblew999/charter/examples/notes-go/sdk/go"
 	core "github.com/joeblew999/charter/examples/notes-go/sdk/go/core"
 	internal "github.com/joeblew999/charter/examples/notes-go/sdk/go/internal"
 	option "github.com/joeblew999/charter/examples/notes-go/sdk/go/option"
@@ -35,7 +35,7 @@ func NewRawClient(options *core.RequestOptions) *RawClient {
 func (r *RawClient) Hello(
 	ctx context.Context,
 	opts ...option.RequestOption,
-) (*core.Response[*orpcapi.HelloOutputBody], error) {
+) (*core.Response[*notes.HelloOutputBody], error) {
 	options := core.NewRequestOptions(opts...)
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
@@ -48,14 +48,14 @@ func (r *RawClient) Hello(
 			r.options.Environment,
 			"Base",
 		),
-		"https://orpc-api-go.gedw99.workers.dev",
+		"https://charter-notes-go.gedw99.workers.dev",
 	)
 	endpointURL := baseURL + "/api/hello"
 	headers := internal.MergeHeaders(
 		r.options.ToHeader(),
 		options.ToHeader(),
 	)
-	var response *orpcapi.HelloOutputBody
+	var response *notes.HelloOutputBody
 	raw, err := r.caller.Call(
 		ctx,
 		&internal.CallParams{
@@ -73,7 +73,7 @@ func (r *RawClient) Hello(
 	if err != nil {
 		return nil, err
 	}
-	return &core.Response[*orpcapi.HelloOutputBody]{
+	return &core.Response[*notes.HelloOutputBody]{
 		StatusCode: raw.StatusCode,
 		Header:     raw.Header,
 		Body:       response,

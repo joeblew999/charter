@@ -6,7 +6,7 @@ import (
 	context "context"
 	http "net/http"
 
-	orpcapi "github.com/joeblew999/charter/examples/notes-go/sdk/go"
+	notes "github.com/joeblew999/charter/examples/notes-go/sdk/go"
 	core "github.com/joeblew999/charter/examples/notes-go/sdk/go/core"
 	internal "github.com/joeblew999/charter/examples/notes-go/sdk/go/internal"
 	option "github.com/joeblew999/charter/examples/notes-go/sdk/go/option"
@@ -37,11 +37,11 @@ func NewClient(options *core.RequestOptions) *Client {
 
 // Example:
 //
-//	request := &orpcapi.ListNotesRequest{
-//	    Cursor: orpcapi.String(
+//	request := &notes.ListNotesRequest{
+//	    Cursor: notes.String(
 //	        "42",
 //	    ),
-//	    Limit: orpcapi.Int(
+//	    Limit: notes.Int(
 //	        20,
 //	    ),
 //	}
@@ -51,9 +51,9 @@ func NewClient(options *core.RequestOptions) *Client {
 //	)
 func (c *Client) List(
 	ctx context.Context,
-	request *orpcapi.ListNotesRequest,
+	request *notes.ListNotesRequest,
 	opts ...option.RequestOption,
-) (*core.Page[*string, *orpcapi.Note, *orpcapi.ListOutputBody], error) {
+) (*core.Page[*string, *notes.Note, *notes.ListOutputBody], error) {
 	options := core.NewRequestOptions(opts...)
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
@@ -66,7 +66,7 @@ func (c *Client) List(
 			c.options.Environment,
 			"Base",
 		),
-		"https://orpc-api-go.gedw99.workers.dev",
+		"https://charter-notes-go.gedw99.workers.dev",
 	)
 	endpointURL := baseURL + "/api/notes"
 	queryParams, err := internal.QueryValues(request)
@@ -95,14 +95,14 @@ func (c *Client) List(
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
 			Response:        pageRequest.Response,
-			ErrorDecoder:    internal.NewErrorDecoder(orpcapi.ErrorCodes),
+			ErrorDecoder:    internal.NewErrorDecoder(notes.ErrorCodes),
 		}
 	}
-	readPageResponse := func(response *orpcapi.ListOutputBody) *core.PageResponse[*string, *orpcapi.Note, *orpcapi.ListOutputBody] {
+	readPageResponse := func(response *notes.ListOutputBody) *core.PageResponse[*string, *notes.Note, *notes.ListOutputBody] {
 		var zeroValue *string
 		next := response.GetNextCursor()
 		results := response.GetData()
-		return &core.PageResponse[*string, *orpcapi.Note, *orpcapi.ListOutputBody]{
+		return &core.PageResponse[*string, *notes.Note, *notes.ListOutputBody]{
 			Results:  results,
 			Response: response,
 			Next:     next,
@@ -119,7 +119,7 @@ func (c *Client) List(
 
 // Example:
 //
-//	request := &orpcapi.CreateInputBody{
+//	request := &notes.CreateInputBody{
 //	    Body: "Buy milk",
 //	}
 //	client.Notes.Create(
@@ -128,9 +128,9 @@ func (c *Client) List(
 //	)
 func (c *Client) Create(
 	ctx context.Context,
-	request *orpcapi.CreateInputBody,
+	request *notes.CreateInputBody,
 	opts ...option.RequestOption,
-) (*orpcapi.Note, error) {
+) (*notes.Note, error) {
 	response, err := c.WithRawResponse.Create(
 		ctx,
 		request,
@@ -146,11 +146,11 @@ func (c *Client) Create(
 //
 // Example:
 //
-//	request := &orpcapi.WatchNotesRequest{
-//	    After: orpcapi.String(
+//	request := &notes.WatchNotesRequest{
+//	    After: notes.String(
 //	        "42",
 //	    ),
-//	    Seconds: orpcapi.Int(
+//	    Seconds: notes.Int(
 //	        30,
 //	    ),
 //	}
@@ -160,9 +160,9 @@ func (c *Client) Create(
 //	)
 func (c *Client) Watch(
 	ctx context.Context,
-	request *orpcapi.WatchNotesRequest,
+	request *notes.WatchNotesRequest,
 	opts ...option.RequestOption,
-) (*core.Stream[orpcapi.Note], error) {
+) (*core.Stream[notes.Note], error) {
 	options := core.NewRequestOptions(opts...)
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
@@ -175,7 +175,7 @@ func (c *Client) Watch(
 			c.options.Environment,
 			"Base",
 		),
-		"https://orpc-api-go.gedw99.workers.dev",
+		"https://charter-notes-go.gedw99.workers.dev",
 	)
 	endpointURL := baseURL + "/api/notes/watch"
 	queryParams, err := internal.QueryValues(request)
@@ -190,7 +190,7 @@ func (c *Client) Watch(
 		options.ToHeader(),
 	)
 	headers.Add("Accept", "text/event-stream")
-	streamer := internal.NewStreamer[orpcapi.Note](c.caller)
+	streamer := internal.NewStreamer[notes.Note](c.caller)
 	return streamer.StreamWithReconnect(
 		ctx,
 		&internal.StreamParams{
@@ -208,7 +208,7 @@ func (c *Client) Watch(
 			Prefix:                     internal.DefaultSSEDataPrefix,
 			Terminator:                 "[end-of-stream]",
 			Format:                     core.StreamFormatSSE,
-			ErrorDecoder:               internal.NewErrorDecoder(orpcapi.ErrorCodes),
+			ErrorDecoder:               internal.NewErrorDecoder(notes.ErrorCodes),
 		},
 	)
 }

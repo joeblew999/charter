@@ -5,7 +5,7 @@ package meta
 import (
 	context "context"
 
-	orpcapi "github.com/joeblew999/charter/examples/notes-go/sdk/go"
+	notes "github.com/joeblew999/charter/examples/notes-go/sdk/go"
 	core "github.com/joeblew999/charter/examples/notes-go/sdk/go/core"
 	internal "github.com/joeblew999/charter/examples/notes-go/sdk/go/internal"
 	option "github.com/joeblew999/charter/examples/notes-go/sdk/go/option"
@@ -42,7 +42,7 @@ func NewClient(options *core.RequestOptions) *Client {
 func (c *Client) Hello(
 	ctx context.Context,
 	opts ...option.RequestOption,
-) (*orpcapi.HelloOutputBody, error) {
+) (*notes.HelloOutputBody, error) {
 	response, err := c.WithRawResponse.Hello(
 		ctx,
 		opts...,

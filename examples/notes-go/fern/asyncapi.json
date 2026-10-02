@@ -71,7 +71,7 @@
     }
   },
   "info": {
-    "title": "orpc-api-go live",
+    "title": "charter-notes-go live",
     "version": "1.0.0"
   },
   "operations": {
@@ -89,7 +89,7 @@
   },
   "servers": {
     "production": {
-      "host": "orpc-api-go.gedw99.workers.dev",
+      "host": "charter-notes-go.gedw99.workers.dev",
       "protocol": "wss"
     }
   }

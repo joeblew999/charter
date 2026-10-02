@@ -1,6 +1,6 @@
 # Reference
 ## Meta
-<details><summary><code>client.Meta.Hello() -> *orpcapi.HelloOutputBody</code></summary>
+<details><summary><code>client.Meta.Hello() -> *notes.HelloOutputBody</code></summary>
 <dl>
 <dd>
 
@@ -28,7 +28,7 @@ client.Meta.Hello(
 </details>
 
 ## Notes
-<details><summary><code>client.Notes.List() -> *orpcapi.ListOutputBody</code></summary>
+<details><summary><code>client.Notes.List() -> *notes.ListOutputBody</code></summary>
 <dl>
 <dd>
 
@@ -41,11 +41,11 @@ client.Meta.Hello(
 <dd>
 
 ```go
-request := &orpcapi.ListNotesRequest{
-    Cursor: orpcapi.String(
+request := &notes.ListNotesRequest{
+    Cursor: notes.String(
         "42",
     ),
-    Limit: orpcapi.Int(
+    Limit: notes.Int(
         20,
     ),
 }
@@ -87,7 +87,7 @@ client.Notes.List(
 </dl>
 </details>
 
-<details><summary><code>client.Notes.Create(request) -> *orpcapi.Note</code></summary>
+<details><summary><code>client.Notes.Create(request) -> *notes.Note</code></summary>
 <dl>
 <dd>
 
@@ -100,7 +100,7 @@ client.Notes.List(
 <dd>
 
 ```go
-request := &orpcapi.CreateInputBody{
+request := &notes.CreateInputBody{
     Body: "Buy milk",
 }
 client.Notes.Create(
@@ -133,7 +133,7 @@ client.Notes.Create(
 </dl>
 </details>
 
-<details><summary><code>client.Notes.Watch() -> orpcapi.Note</code></summary>
+<details><summary><code>client.Notes.Watch() -> notes.Note</code></summary>
 <dl>
 <dd>
 
@@ -160,11 +160,11 @@ Each event's SSE id is the note id, so a browser EventSource resumes by itself (
 <dd>
 
 ```go
-request := &orpcapi.WatchNotesRequest{
-    After: orpcapi.String(
+request := &notes.WatchNotesRequest{
+    After: notes.String(
         "42",
     ),
-    Seconds: orpcapi.Int(
+    Seconds: notes.Int(
         30,
     ),
 }

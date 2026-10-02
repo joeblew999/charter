@@ -6,7 +6,7 @@ import (
 	context "context"
 	http "net/http"
 
-	orpcapi "github.com/joeblew999/charter/examples/notes-go/sdk/go"
+	notes "github.com/joeblew999/charter/examples/notes-go/sdk/go"
 	core "github.com/joeblew999/charter/examples/notes-go/sdk/go/core"
 	internal "github.com/joeblew999/charter/examples/notes-go/sdk/go/internal"
 	option "github.com/joeblew999/charter/examples/notes-go/sdk/go/option"
@@ -34,9 +34,9 @@ func NewRawClient(options *core.RequestOptions) *RawClient {
 
 func (r *RawClient) Create(
 	ctx context.Context,
-	request *orpcapi.CreateInputBody,
+	request *notes.CreateInputBody,
 	opts ...option.RequestOption,
-) (*core.Response[*orpcapi.Note], error) {
+) (*core.Response[*notes.Note], error) {
 	options := core.NewRequestOptions(opts...)
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
@@ -49,7 +49,7 @@ func (r *RawClient) Create(
 			r.options.Environment,
 			"Base",
 		),
-		"https://orpc-api-go.gedw99.workers.dev",
+		"https://charter-notes-go.gedw99.workers.dev",
 	)
 	endpointURL := baseURL + "/api/notes"
 	headers := internal.MergeHeaders(
@@ -57,7 +57,7 @@ func (r *RawClient) Create(
 		options.ToHeader(),
 	)
 	headers.Add("Content-Type", "application/json")
-	var response *orpcapi.Note
+	var response *notes.Note
 	raw, err := r.caller.Call(
 		ctx,
 		&internal.CallParams{
@@ -71,13 +71,13 @@ func (r *RawClient) Create(
 			Client:          options.HTTPClient,
 			Request:         request,
 			Response:        &response,
-			ErrorDecoder:    internal.NewErrorDecoder(orpcapi.ErrorCodes),
+			ErrorDecoder:    internal.NewErrorDecoder(notes.ErrorCodes),
 		},
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &core.Response[*orpcapi.Note]{
+	return &core.Response[*notes.Note]{
 		StatusCode: raw.StatusCode,
 		Header:     raw.Header,
 		Body:       response,

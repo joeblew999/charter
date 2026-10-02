@@ -1,10 +1,10 @@
-> **Generated code.** Fern generated this Go client from the API's contract (the specs in `sdk/fern/apis/api-go`). Don't edit it: change the contract, then `mise run sdk:publish` writes this folder again.
+> **Generated code.** Fern generated this Go client from the API's contract (the specs in `fern/`). Don't edit it: change the contract, then `mise run sdk:publish` writes this folder again.
 
-# OrpcApi Go Library
+# Notes Go Library
 
-[![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=OrpcApi%2FGo)
+[![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=Notes%2FGo)
 
-The OrpcApi Go library provides convenient access to the OrpcApi APIs from Go.
+The Notes Go library provides convenient access to the Notes APIs from Go.
 
 ## Table of Contents
 
@@ -35,13 +35,13 @@ package example
 import (
     context "context"
 
-    orpcapi "github.com/joeblew999/charter/examples/notes-go/sdk/go"
+    notes "github.com/joeblew999/charter/examples/notes-go/sdk/go"
     client "github.com/joeblew999/charter/examples/notes-go/sdk/go/client"
 )
 
 func do() {
     client := client.NewClient()
-    request := &orpcapi.CreateInputBody{
+    request := &notes.CreateInputBody{
         Body: "Buy milk",
     }
     client.Notes.Create(
@@ -58,7 +58,7 @@ URL, which is particularly useful in test environments.
 
 ```go
 client := client.NewClient(
-    option.WithBaseURL(orpcapi.Environments.Default),
+    option.WithBaseURL(notes.Environments.Default),
 )
 ```
 
