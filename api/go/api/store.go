@@ -9,7 +9,7 @@ import (
 	"github.com/joeblew999/orpc-api/api/go/hub"
 )
 
-// Store is the log: D1 on Cloudflare (SQLStore), memory for `go run .` and the tests (MemStore).
+// Store is the log: D1 on Cloudflare (D1Store, store_js.go), memory for `go run .` and the tests (MemStore).
 type Store interface {
 	Create(ctx context.Context, body string) (Note, error)
 	// Before returns notes with id < before, newest first, at most limit.
@@ -24,7 +24,10 @@ type Store interface {
 // A feed of another type has its own: hub.Hub[T].
 type Hub = hub.Hub[Note]
 
-// SQLStore is the notes table (migrations/ at the repo root) through database/sql: workers-go's d1 driver.
+// SQLStore is the notes table (migrations/ at the repo root) through database/sql: for a native
+// build with a SQLite driver. The Worker does not use it: over workers-go's d1 driver a list of 20
+// notes cost 1 ms of CPU more on Cloudflare than D1Store's, because the driver brings every value
+// of every row from JavaScript to Go on its own.
 type SQLStore struct{ DB *sql.DB }
 
 func (s SQLStore) Create(ctx context.Context, body string) (Note, error) {
