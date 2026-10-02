@@ -36,7 +36,7 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 	for file, want := range map[string]string{
 		"api-go/go.mod":                       "module github.com/zeta/billing-api/api-go",
 		"api-go/main.go":                      `"github.com/zeta/billing-api/api-go/api"`,
-		"api-go/cloudflare.config.ts":         `name: "billing-api"`,
+		"api-go/cloudflare.config.ts":         "`billing-api-${ctx.mode}` : \"billing-api\"",
 		"sdk/fern/apis/api-go/generators.yml": "namespaceExport: BillingApi",
 		"test/soak-go/main.go":                `billingapi "github.com/zeta/billing-api/sdk/go"`,
 		"test/soak-go/go.mod":                 "github.com/zeta/billing-api/sdk/go => ../../sdk/go",
