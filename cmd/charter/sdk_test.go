@@ -160,3 +160,28 @@ func TestAProjectIsAMiseFileBesideAFernFolder(t *testing.T) {
 		t.Error("tasksOf does not find [tasks.check]")
 	}
 }
+
+// Every example sets its own API_URL and API_PORT, which is what `each` keeps apart between them.
+func TestEveryExampleHasItsOwnSettings(t *testing.T) {
+	ports := map[string]string{}
+	for _, name := range examples(t) {
+		file := filepath.Join("../../examples", name, "mise.toml")
+		settings := settingsOf(file)
+		if !settings["API_URL"] || !settings["API_PORT"] || settings["CLOUDFLARE_API_TOKEN"] {
+			t.Errorf("%s: [env] sets %v, want API_URL and API_PORT", name, settings)
+		}
+		content, _ := os.ReadFile(file)
+		if want := "default='https://charter-" + name + ".gedw99.workers.dev'"; !strings.Contains(string(content), want) {
+			t.Errorf("%s: no API_URL with %s", name, want)
+		}
+		port := regexp.MustCompile(`API_PORT', default='(\d+)'`).FindStringSubmatch(string(content))
+		if port == nil {
+			t.Errorf("%s: no default for API_PORT", name)
+			continue
+		}
+		if other := ports[port[1]]; other != "" {
+			t.Errorf("%s: its default port %s is also that of %s", name, port[1], other)
+		}
+		ports[port[1]] = name
+	}
+}

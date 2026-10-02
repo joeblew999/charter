@@ -137,6 +137,26 @@ func tasksOf(file string) map[string]bool {
 	return tasks
 }
 
+var settingDef = regexp.MustCompile(`(?m)^([A-Z][A-Z0-9_]*)\s*=`)
+
+// settingsOf are the environment variables a mise.toml sets under [env].
+func settingsOf(file string) map[string]bool {
+	settings := map[string]bool{}
+	content, err := os.ReadFile(file)
+	if err != nil {
+		return settings
+	}
+	_, table, found := strings.Cut("\n"+string(content), "\n[env]\n")
+	if !found {
+		return settings
+	}
+	table, _, _ = strings.Cut(table, "\n[")
+	for _, m := range settingDef.FindAllStringSubmatch(table, -1) {
+		settings[m[1]] = true
+	}
+	return settings
+}
+
 // each runs one mise task in every project below the current folder that defines it, one after the
 // other, and stops at the first that fails. It is how a repo with several projects keeps its own
 // tasks to one line: `charter each check`.
@@ -182,7 +202,15 @@ func each(args []string) error {
 		}
 		cmd := exec.Command("mise", append([]string{"run"}, rest...)...)
 		cmd.Dir, cmd.Stdout, cmd.Stderr, cmd.Stdin = dir, os.Stdout, os.Stderr, os.Stdin
-		cmd.Env = append(os.Environ(), "MISE_TRUSTED_CONFIG_PATHS="+trusted)
+		// A project's settings are its own: what its mise.toml sets under [env] (API_URL, API_PORT)
+		// is not taken from the environment this was started in, which may be another project's.
+		own := settingsOf(filepath.Join(dir, "mise.toml"))
+		for _, variable := range os.Environ() {
+			if name, _, _ := strings.Cut(variable, "="); !own[name] {
+				cmd.Env = append(cmd.Env, variable)
+			}
+		}
+		cmd.Env = append(cmd.Env, "MISE_TRUSTED_CONFIG_PATHS="+trusted)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("%s: mise run %s failed", dir, rest[0])
 		}
