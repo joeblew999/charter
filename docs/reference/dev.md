@@ -197,7 +197,7 @@ What the changes save is in [Benchmarks](../benchmarks.md). The patches carry th
 ### bench
 
 ```sh
-dev bench [-cpu] [-warm 30s] <url>   # what each operation of an API costs
+dev bench [-each] [-burst 8] [-warm 30s] <url>   # what each operation of an API costs, and each request
 ```
 
 Works on any API with an OpenAPI spec. It reads the spec, calls every operation it can build a request for, and prints one row each: the HTTP status, the median and the slowest wall time as a client sees it, and with `-cpu` the CPU time Cloudflare recorded.
@@ -211,6 +211,8 @@ Works on any API with an OpenAPI spec. It reads the spec, calls every operation 
 | `-spec` | `<url>/api/openapi.json` | The OpenAPI spec, a file or a URL |
 | `-write` | off | Also call operations that change data. They do change it |
 | `-cpu` | off | Also report CPU time from Cloudflare |
+| `-each` | off | Also print the CPU time of every request, in the order sent. For a Go Worker run by `worker/go.mjs` each figure is marked `w` when a Go runtime started at module load served it and `n` when the request had to start one. Implies `-cpu` |
+| `-burst` | `0` | First send this many requests at once to the first operation. Right after a deploy and without `-warm`, it shows what a new isolate does with them |
 | `-warm` | `0` | Send requests for this long first, for example `30s`. A Worker just deployed or idle is slower at first |
 | `-worker` | the first label of the URL's host | The Worker's name, for `-cpu` |
 | `-header` | none | A header for every request, for example `'Authorization: Bearer <token>'`. Repeat it for more |

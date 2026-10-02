@@ -42,7 +42,7 @@ type call struct {
 //     API, so it needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (the environment, or fnox)
 //     and observability enabled on the Worker; the events take up to a minute or two to arrive.
 func bench(args []string) error {
-	n, spec, write, cpu, worker := 20, "", false, false, ""
+	n, spec, write, cpu, worker, each, burst := 20, "", false, false, "", false, 0
 	var headers list
 	var warm time.Duration
 	rest := flags("bench", args, func(f *flag.FlagSet) {
@@ -53,7 +53,10 @@ func bench(args []string) error {
 		f.BoolVar(&write, "write", false, "also call operations that change data (POST, PUT, PATCH, DELETE)")
 		f.BoolVar(&cpu, "cpu", false, "also report CPU time from Cloudflare (a deployed Worker)")
 		f.StringVar(&worker, "worker", "", "the Worker's name, for -cpu (default: the first label of the URL's host)")
+		f.BoolVar(&each, "each", false, "also print every request's CPU time in the order sent, with the kind of Go runtime it got: what a median hides")
+		f.IntVar(&burst, "burst", 0, "first send this many requests at once to the first operation: what a new isolate does with them (use right after a deploy, without -warm)")
 	})
+	cpu = cpu || each
 	if len(rest) != 1 || n < 1 {
 		return errors.New("bench needs <url>, e.g. https://my-api.example.workers.dev or http://localhost:5174")
 	}
@@ -87,32 +90,62 @@ func bench(args []string) error {
 	}
 	wall := map[string]timing{}
 	fmt.Printf("%s: %d operations, %d requests each\n", base, len(calls), n)
+	var samples []sample
+	var note string
+	// send makes one request and records which Cloudflare request it was (cf-ray) and, from a Go
+	// Worker run by worker/go.mjs, the kind of Go runtime that served it (x-go-runtime).
+	send := func(c call, phase string) (int, time.Duration, sample, error) {
+		req, err := http.NewRequest(c.method, base+c.path, bytes.NewReader(c.body))
+		if err != nil {
+			return 0, 0, sample{}, err
+		}
+		if c.body != nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		req.Header.Set("X-Go-Runtime", "?")
+		for _, header := range headers {
+			if name, value, ok := strings.Cut(header, ":"); ok {
+				req.Header.Set(strings.TrimSpace(name), strings.TrimSpace(value))
+			}
+		}
+		start := time.Now()
+		res, err := benchClient.Do(req)
+		if err != nil {
+			return 0, 0, sample{}, err
+		}
+		io.Copy(io.Discard, res.Body)
+		res.Body.Close()
+		ray, _, _ := strings.Cut(res.Header.Get("Cf-Ray"), "-")
+		kind, why, _ := strings.Cut(res.Header.Get("X-Go-Runtime"), ";")
+		if why != "" {
+			note = strings.TrimSpace(why)
+		}
+		return res.StatusCode, time.Since(start), sample{c.trigger, phase, ray, kind}, nil
+	}
+	if burst > 0 {
+		results := make(chan sample, burst)
+		for i := 0; i < burst; i++ {
+			go func() {
+				_, _, s, _ := send(calls[0], "burst")
+				results <- s
+			}()
+		}
+		for i := 0; i < burst; i++ {
+			samples = append(samples, <-results)
+		}
+	}
 	for _, c := range calls {
 		var times []time.Duration
 		status := 0
 		for i := -3; i < n; i++ {
-			req, err := http.NewRequest(c.method, base+c.path, bytes.NewReader(c.body))
+			code, took, s, err := send(c, "")
 			if err != nil {
 				return err
 			}
-			if c.body != nil {
-				req.Header.Set("Content-Type", "application/json")
-			}
-			for _, header := range headers {
-				if name, value, ok := strings.Cut(header, ":"); ok {
-					req.Header.Set(strings.TrimSpace(name), strings.TrimSpace(value))
-				}
-			}
-			start := time.Now()
-			res, err := benchClient.Do(req)
-			if err != nil {
-				return err
-			}
-			io.Copy(io.Discard, res.Body)
-			res.Body.Close()
-			status = res.StatusCode
+			samples = append(samples, s)
+			status = code
 			if i >= 0 {
-				times = append(times, time.Since(start))
+				times = append(times, took)
 			}
 		}
 		sort.Slice(times, func(a, b int) bool { return times[a] < times[b] })
@@ -126,7 +159,7 @@ func bench(args []string) error {
 				worker, _, _ = strings.Cut(u.Hostname(), ".")
 			}
 		}
-		cpuOf, err = workerCPU(worker, started, len(calls)*n)
+		cpuOf, err = workerCPU(worker, started, len(samples))
 		if err != nil {
 			fmt.Println("no CPU time:", err)
 		}
@@ -147,6 +180,14 @@ func bench(args []string) error {
 	}
 	for _, why := range skipped {
 		fmt.Println("skipped:", why)
+	}
+	if each {
+		if err := printEach(worker, started, samples); err != nil {
+			fmt.Println("no CPU time per request:", err)
+		}
+	}
+	if note != "" {
+		fmt.Println("\nthe Worker says:", note)
 	}
 	if cpuOf != nil {
 		fmt.Printf("\nCPU time is Cloudflare's, for Worker %q (Workers Free allows 10 ms per request).\n", worker)
@@ -300,6 +341,108 @@ func dig(v any, keys ...string) any {
 }
 
 func items(v any) []any { l, _ := v.([]any); return l }
+
+// A sample is one request bench made: its operation, "burst" when it was one of -burst, Cloudflare's
+// id for it, and the kind of Go runtime that served it ("warm", "new", "reused", or nothing).
+type sample struct{ trigger, phase, ray, kind string }
+
+// printEach prints every request's CPU time, in the order sent: Cloudflare's log event of each
+// request (found by its ray id) has it. A median hides what this shows: every second request
+// costing double, the one request in a hundred that starts a Go runtime, the first in an isolate.
+func printEach(worker string, since time.Time, samples []sample) error {
+	token, account := secret("CLOUDFLARE_API_TOKEN"), secret("CLOUDFLARE_ACCOUNT_ID")
+	query := map[string]any{
+		"queryId": "dev-bench-each", "view": "events", "limit": 2000, "dry": false,
+		"parameters": map[string]any{
+			"datasets": []string{"cloudflare-workers"},
+			"filters":  []any{map[string]any{"key": "$metadata.service", "operation": "eq", "type": "string", "value": worker}},
+		},
+	}
+	cpu := map[string]float64{}
+	for deadline := time.Now().Add(2 * time.Minute); ; time.Sleep(10 * time.Second) {
+		query["timeframe"] = map[string]int64{"from": since.Add(-2 * time.Second).UnixMilli(), "to": time.Now().UnixMilli()}
+		body, _ := json.Marshal(query)
+		req, _ := http.NewRequest("POST", "https://api.cloudflare.com/client/v4/accounts/"+account+"/workers/observability/telemetry/query", bytes.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		res, err := benchClient.Do(req)
+		if err != nil {
+			return err
+		}
+		var reply struct {
+			Success bool
+			Result  struct {
+				Events struct {
+					Events []struct {
+						Metadata struct{ RayID string }       `json:"$metadata"`
+						Workers  struct{ CPUTimeMs *float64 } `json:"$workers"`
+					}
+				}
+			}
+		}
+		err = json.NewDecoder(res.Body).Decode(&reply)
+		res.Body.Close()
+		if err != nil || !reply.Success {
+			return fmt.Errorf("Cloudflare's observability API refused (HTTP %d)", res.StatusCode)
+		}
+		for _, event := range reply.Result.Events.Events {
+			if event.Workers.CPUTimeMs != nil {
+				cpu[event.Metadata.RayID] = *event.Workers.CPUTimeMs
+			}
+		}
+		found := 0
+		for _, s := range samples {
+			if _, ok := cpu[s.ray]; ok {
+				found++
+			}
+		}
+		if found == len(samples) || time.Now().After(deadline) {
+			break
+		}
+	}
+	fmt.Println("\nCPU of each request in ms, in the order sent. w: served by a Go runtime started while the Worker's module loaded;")
+	fmt.Println("n: by one this request had to start; no letter: by one reused; ?: Cloudflare has no figure for it (yet).")
+	line := func(label string, of []sample) {
+		if len(of) == 0 {
+			return
+		}
+		fmt.Printf("%-44s", label)
+		for _, s := range of {
+			mark := map[string]string{"warm": "w", "new": "n"}[s.kind]
+			if ms, ok := cpu[s.ray]; ok {
+				fmt.Printf(" %.0f%s", ms, mark)
+			} else {
+				fmt.Printf(" ?%s", mark)
+			}
+		}
+		fmt.Println()
+	}
+	var order []string
+	by := map[string][]sample{}
+	for _, s := range samples {
+		key := s.trigger
+		if s.phase != "" {
+			key = fmt.Sprintf("%s, %d at once", s.trigger, countPhase(samples, s.phase))
+		}
+		if _, seen := by[key]; !seen {
+			order = append(order, key)
+		}
+		by[key] = append(by[key], s)
+	}
+	for _, key := range order {
+		line(key, by[key])
+	}
+	return nil
+}
+
+func countPhase(samples []sample, phase string) (n int) {
+	for _, s := range samples {
+		if s.phase == phase {
+			n++
+		}
+	}
+	return n
+}
 
 // workerCPU asks Cloudflare (Workers Logs) for the CPU time per operation of a Worker since a
 // moment: median and p99, in milliseconds. It waits for the events to arrive, up to two minutes.

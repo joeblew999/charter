@@ -216,7 +216,7 @@ What goes around the handler so that Go can serve WebSockets. In both builds Go 
 
 | Name | Signature | What it does |
 |---|---|---|
-| `Run` | `func Run(h http.Handler)` | Serves the handler and never returns: `Serve` around it, then workers-go. On Workers the Go runtime stays alive after a response, so `api-go/worker/go.mjs` can give it the next request. Natively it is a plain HTTP server on `:9900` or `$PORT` |
+| `Run` | `func Run(h http.Handler)` | Serves the handler and never returns: `Serve` around it, then workers-go. On Workers the Go runtime stays alive after a response, so `api-go/worker/go.mjs` can give it the next request. A runtime started while the Worker's module loads first answers a GET of each path `go.warm` names, into nothing: they must be paths whose handlers touch no binding. Natively it is a plain HTTP server on `:9900` or `$PORT` |
 | `Serve` | `func Serve(h http.Handler) http.Handler` | Natively: the WebSocket adapter. Under TinyGo for Workers: it cancels the request's context when the client has gone, and tells `go.mjs` when the runtime's heap has no room for another request; the WebSocket adapter is the JavaScript file |
 | `MessagesHeader` | `const MessagesHeader = "X-Websocket-Messages"` | The header that, on the answer to an upgrade, says how the channel takes what the client sends |
 | `MessagesPost` | `const MessagesPost = "post"` | Its one value: every text frame from the client becomes a `POST` to the upgrade's URL |

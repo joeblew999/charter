@@ -234,12 +234,12 @@ depends = ["sdk:ready api-go"]
 run = 'node test/soak.mjs "$API_GO_URL" --sdk api-go --deploy-task api-go:deploy'
 
 [tasks."api-go:bench"]
-description = "REMOTE, read-only: every GET operation of the deployed Go Worker, wall time and Cloudflare's CPU time. Add -write to include the ones that change data"
-run = 'go run ./dev bench -cpu -warm 30s "$API_GO_URL"'
+description = "REMOTE, read-only: every GET operation of the deployed Go Worker: wall time, Cloudflare's CPU time, and the CPU of each request. Add -write to include the ones that change data"
+run = 'go run ./dev bench -each -warm 30s "$API_GO_URL"'
 
 [tasks."api-go:perf"]
-description = "REMOTE: the quick loop for performance work: build, deploy, then bench with CPU time (about three minutes)"
-run = 'mise run api-go:deploy && go run ./dev bench -cpu -warm 30s "$API_GO_URL"'
+description = "REMOTE, writes test notes: the quick loop for performance work: build, deploy, then bench the new isolate from its first request (8 at once, then each operation), with the CPU of each request. About two minutes"
+run = 'mise run api-go:deploy && go run ./dev bench -each -burst 8 -write "$API_GO_URL"'
 
 [tasks."showcase-go:run"]
 description = "The Go showcase API natively on SHOWCASE_GO_PORT: no Cloudflare. WEBHOOK_URL=<url> to get the webhook"

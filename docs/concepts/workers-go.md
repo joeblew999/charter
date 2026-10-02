@@ -68,11 +68,11 @@ Expect the same with other libraries: one that leans on `reflect`, on the file s
 
 ## What a request costs
 
-On Cloudflare a read costs 1 to 3 ms of CPU and a write that also notifies the hub about 4 ms. The same API in TypeScript uses about 1 ms. Measured 2026-10-01 on the orpc-api project's Workers; the numbers per operation are in [Benchmarks](../benchmarks.md), and what they mean for choosing a plan is on the home page: [Before you choose Go](../README.md#before-you-choose-go-what-it-costs-to-run).
+On Cloudflare a read costs 1 to 3 ms of CPU and a write that also notifies the hub 4 to 6 ms. The same API in TypeScript uses about 1 ms. Measured 2026-10-02 on the orpc-api project's Workers; the numbers per operation are in [Benchmarks](../benchmarks.md), and what they mean for choosing a plan is on the home page: [Before you choose Go](../README.md#before-you-choose-go-what-it-costs-to-run).
 
 TinyGo and workers-go as they come cost far more: 40 to 70 ms for a read, about 265 ms for a write. Three things in this project make the difference, and a project made by `dev new` has all three:
 
-- **Go runtimes are reused** (`api-go/worker/go.mjs`, above). A request that finds a waiting runtime pays nothing for start-up.
+- **Go runtimes are reused, and two are started ahead** (`api-go/worker/go.mjs`, above). A request that finds a waiting runtime pays nothing for start-up, and the first requests in a new isolate find the two that were started while the module loaded.
 - **The collector does not run in an ordinary request.** TinyGo as it is collects garbage each time the program waits, once 32 JavaScript values have been touched, and each time its small starting heap must grow. The build turns the first off and starts with a heap of 8 MB. A stream that lives for hours still fills the heap, and is collected then.
 - **Goroutine stacks are reused.** TinyGo gives every goroutine, and every call from JavaScript into Go, a new stack (128 KB here), and its collector rarely gets one back: a hello allocated 1.7 MB. The build keeps the stack of a finished goroutine for the next one, and a hello allocates 38 KB.
 
@@ -80,7 +80,7 @@ The last two are changes to TinyGo's runtime: two small patches that `dev wasm-b
 
 What still costs:
 
-- **The first request a new isolate serves costs 40 to 100 ms.** The Wasm is not yet optimised there, and Go starts up in it. Cloudflare starts an isolate after a deploy, when a Worker has been idle, and when traffic spreads to another machine, so a rarely used Worker meets this often.
+- **A new isolate costs more at first.** The Wasm is not yet optimised there. Two Go runtimes are started while the Worker's module loads, which no request pays for, so the first request costs about 10 ms. The first use of each operation there costs 15 to 30 ms, and a request that has to start a runtime itself 10 to 30 ms, or about 100 ms when several do at once. Cloudflare starts an isolate after a deploy, when a Worker has been idle, and when traffic spreads to another machine.
 - **Every value that crosses between Go and JavaScript costs.** A request, a header, a D1 row, a call to the hub. A write crosses more often than a read.
 
 These numbers are for the notes example. Measure your own API:
@@ -115,7 +115,7 @@ A good fit:
 
 Not a good fit:
 
-- **You need to stay within Workers Free for certain.** Its limit is 10 ms of CPU per request: ordinary requests fit, the first one in a new isolate does not.
-- **Cold starts matter most.** The first request in a new isolate costs 40 to 100 ms of CPU in Go and a few in TypeScript, and the orpc-api repository has that version, built on the same design ([its page](../api.md)).
+- **You need to stay within Workers Free for certain.** Its limit is 10 ms of CPU per request: ordinary requests fit, the first ones in a new isolate reach it.
+- **Cold starts matter most.** The first requests in a new isolate cost 10 to 30 ms of CPU in Go and a few in TypeScript, and the orpc-api repository has that version, built on the same design ([its page](../api.md)).
 - **You depend on Go libraries TinyGo cannot build,** or on in-process state that must last: caches, pools, background goroutines.
 - **You cannot accept workarounds in the path.** This runs on five small JavaScript files and several open upstream issues. Each is small and tracked, but they are there.

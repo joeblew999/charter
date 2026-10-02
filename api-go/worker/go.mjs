@@ -32,30 +32,98 @@ globalThis.tryCatch = fn => {
 	}
 };
 
+// seedOnly says whether a call for random bytes comes from TinyGo's runtime taking its seed as the
+// program starts: the only Wasm functions on the stack are arc4random, runtime.hardwareRand (when
+// it is not inlined) and _start. Package initialisers and main run in a goroutine, further down.
+function seedOnly(stack) {
+	const frames = stack.split("\n").filter(line => line.includes("wasm://"));
+	return frames.length > 0 && frames.every(line => /\.(arc4random|runtime\.hardwareRand|_start(\.command_export)?) \(/.test(line));
+}
+
 // goWorker is a Worker (its fetch) over a workers-go build: build/runtime.mjs, as a module.
 export function goWorker({ createRuntimeContext, loadModule }) {
 	const waiting = [];
+	let warmFailure = ""; // why no runtime was started while the module loaded, for the x-go-runtime header
+
+	// begin starts a runtime. Go's start-up runs inside go.run, up to workers.Ready(): started says
+	// whether it got there before go.run returned, isReady resolves when it does.
+	function begin(module, env, ctx, warm) {
+		const go = new Go();
+		const binding = warm ? { warm } : {};
+		const context = createRuntimeContext({ env, ctx, binding });
+		const runtime = { go, binding, context, started: false, served: 0, warm: Boolean(warm) };
+		runtime.isReady = new Promise(resolve => {
+			const wasi = go.importObject.wasi_snapshot_preview1;
+			const random = wasi.random_get;
+			wasi.random_get = (pointer, length) => {
+				if (runtime.started || !warm) return random(pointer, length);
+				// While the module loads, Cloudflare gives no crypto randomness. TinyGo's runtime asks for
+				// its seed there (hash maps, fastrand): it gets Math.random's. Anything else that wants
+				// random bytes during start-up fails, and with it the warm start.
+				if (!seedOnly(new Error().stack)) throw new Error("random bytes wanted during start-up, other than the runtime's seed");
+				new Uint8Array(go._inst.exports.memory.buffer, pointer >>> 0, length >>> 0).forEach((_, i, bytes) => (bytes[i] = Math.random() * 256));
+				return 0;
+			};
+			const instance = new WebAssembly.Instance(module, {
+				...go.importObject,
+				workers: {
+					ready: () => {
+						runtime.started = true;
+						resolve();
+					},
+				},
+			});
+			go.run(instance, context).catch(error => {
+				if (warm) warmFailure = `start-up failed while the module loaded: ${String((error && error.stack) || error).replace(/\s+/g, " ").slice(0, 900)}`;
+			});
+		});
+		return runtime;
+	}
 
 	async function start(env, ctx) {
-		const go = new Go();
-		const binding = {};
-		const context = createRuntimeContext({ env, ctx, binding });
-		let ready;
-		const isReady = new Promise(resolve => (ready = resolve));
-		const instance = new WebAssembly.Instance(await loadModule(), { ...go.importObject, workers: { ready: () => ready() } });
-		go.run(instance, context);
-		await isReady;
-		return { go, binding, context };
+		const runtime = begin(await loadModule(), env, ctx);
+		await runtime.isReady;
+		return runtime;
 	}
 
 	function done(runtime) {
 		if (!runtime.go.exited && !runtime.binding.full && waiting.length < MAX_WAITING) waiting.push(runtime);
 	}
 
-	return { fetch };
+	return { fetch, warm };
+
+	// warm starts runtimes before any request, while the Worker's module loads: await it at the top
+	// of the entry. A request that starts its own runtime in a new isolate costs about 100 ms of
+	// CPU; one that finds a warm runtime costs 4 to 19 (docs/benchmarks.md).
+	//
+	//   - runtimes: how many. Each is start-up time for the isolate (Cloudflare allows about a
+	//     second) and 8 MB held. Requests that arrive together beyond that number start their own.
+	//   - paths: each runtime answers a GET of these during start-up, into nothing (transport.Run),
+	//     so the code is compiled and the operations registered. Only paths whose handlers touch
+	//     no binding: a runtime has none until a request gives it its own.
+	//
+	// If Go's start-up can't finish there, requests start runtimes as before, and a request with
+	// the header x-go-runtime is told why in the answer's x-go-runtime.
+	async function warm({ runtimes = 2, paths = [] } = {}) {
+		try {
+			const module = await loadModule();
+			for (let i = 0; i < runtimes && waiting.length < MAX_WAITING; i++) {
+				const runtime = begin(module, {}, undefined, paths);
+				if (!runtime.started) {
+					warmFailure ||= "start-up did not reach workers.Ready() while the module loaded";
+					return;
+				}
+				waiting.push(runtime);
+			}
+		} catch (error) {
+			warmFailure = `start-up failed while the module loaded: ${String(error)}`;
+		}
+	}
 
 	async function fetch(request, env, ctx) {
 		let runtime = waiting.pop();
+		// For measuring (dev bench -each): which kind of runtime a request got.
+		const kind = runtime ? (runtime.served ? "reused" : runtime.warm ? "warm" : "new") : "new";
 		if (runtime) {
 			// The bindings and waitUntil are this request's.
 			runtime.context.env = env;
@@ -63,6 +131,7 @@ export function goWorker({ createRuntimeContext, loadModule }) {
 		} else {
 			runtime = await start(env, ctx);
 		}
+		runtime.served++;
 		const response = await runtime.binding.handleRequest(request);
 		if (!response.body) {
 			done(runtime);
@@ -85,6 +154,8 @@ export function goWorker({ createRuntimeContext, loadModule }) {
 		});
 		const length = response.headers.get("content-length");
 		if (length !== null) body = body.pipeThrough(new FixedLengthStream(Number(length)));
-		return new Response(body, response);
+		const answer = new Response(body, response);
+		if (request.headers.has("x-go-runtime")) answer.headers.set("x-go-runtime", warmFailure ? `${kind}; ${warmFailure}` : kind);
+		return answer;
 	}
 }

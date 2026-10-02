@@ -148,6 +148,13 @@ Deployed with `mise run api-go:deploy` to https://orpc-api-go.gedw99.workers.dev
   - On that build: `mise run check` passes; locally 692 requests 8 at a time with 12 cut-off streams, all 200; on Cloudflare 1,016 requests 8 at a time with 16 cut-off streams, all 200, `mise run api-go:live-test` 34 of 34, `mise run api-go:soak` 7 of 7 with 46 of 46 notes through a redeploy and a client drop, and `test/showcase-test.mjs` passes against the deployed showcase.
   - In the soak's logs 6 WebSocket requests ended as `exception`, as 7 did on the build before: sockets cut by the redeploy and the client drop.
   - `mise run api-go:soak --idle 20` on it: 7 of 7 after 20 quiet minutes.
+- **Starting Go runtimes while the Worker's module loads takes the first request in a new isolate from 54 to 68 ms of CPU to 7 to 11** (2026-10-02, three deploys each; `go.warm` in `api-go/worker/go.mjs`).
+  - Step by step: a runtime started at module load, 32 to 37 ms; answering the OpenAPI route during start-up (`transport.Run`), 19 to 20; and the hello route, 7 to 11.
+  - Cloudflare refuses crypto randomness at module load ("Disallowed operation called within global scope"), and TinyGo's `runtime.hardwareRand` asks for its seed in `_start`. With that one call served from `Math.random`, start-up reaches `workers.Ready()` there. Reading a `Response` body at module load is refused too, which is why the warm-up requests are made inside Go.
+  - Requests of a burst correlated by ray id: one served by a warm runtime cost 4 to 19 ms, one that started its own 89 to 111 when four did so at once. Alone, a start costs 9 to 32 ms.
+  - The first list in a new isolate still costs 18 to 33 ms and the first create 14 to 25.
+  - Under local workerd none of the module-load limits are enforced: a warm start that works there says nothing about Cloudflare.
+  - `mise run check` passes with it, and both Go Workers answer their first request from a warm runtime on Cloudflare (`x-go-runtime: warm`).
 - **`-gc=boehm` hangs on Cloudflare.** Locally it was the fastest build with a real collector; deployed, 48 requests took 11 minutes. The default collector stays.
 - **CI runs it all on Linux:** TinyGo and binaryen install through mise on `ubuntu-24.04`, and `api-go:check` (including the Wasm under workerd) passes there.
 

@@ -114,7 +114,7 @@ A project made before Go runtimes were reused keeps working after an update, at 
    import { goWorker } from "./go.mjs";
    ```
 
-   and, below the imports, `const go = goWorker(build);`. Use `go` where the file used `goWorker`.
+   and, below the imports, `const go = goWorker(build);` and `await go.warm({ paths: ["/api/openapi.json"] });`, which starts two Go runtimes while the module loads. Use `go` where the file used `goWorker`.
 
 3. **`api-go/main.go`:** `transport.Run(api.Handler(env()))` in place of `workers.Serve(transport.Serve(api.Handler(env())))`, so the Go program stays alive after a response.
 

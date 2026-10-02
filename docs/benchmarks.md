@@ -36,9 +36,37 @@ The Go showcase Worker (`orpc-showcase-go`: every Fern feature, a bearer token c
 What this means:
 
 - **A read costs 1 to 3 ms and a write about 4 ms:** what the oRPC Worker costs, or close to it. Nothing in the API changed: the same code, the same tests.
-- **The first request a new isolate serves costs 40 to 100 ms.** In the logs of a run with 8 connections opened at once, the first request of each cost 41 to 77 ms and the rest 1 to 2. It was 90 to 170 ms with TinyGo and workers-go as they come. Cloudflare starts an isolate after a deploy, after idle time, and when traffic spreads to another machine.
-- **Workers Free's limit is 10 ms of CPU per request.** Ordinary requests are well inside it; the first one in an isolate is not. Free is enough to try a project; plan on Workers Paid for production.
+- **A new isolate costs more at first:** about 10 ms for its first request. See [A new isolate](#a-new-isolate) below.
+- **Workers Free's limit is 10 ms of CPU per request.** Ordinary requests are well inside it; the first ones in an isolate are at it or over it. Free is enough to try a project; plan on Workers Paid for production.
 - **A stream costs CPU for as long as it is open:** 40 to 150 ms over the life of a 15 or 60 second SSE stream.
+
+## A new isolate
+
+Cloudflare starts an isolate after a deploy, when a Worker has been idle, and when traffic spreads to another machine. The Wasm is not optimised there yet, and Go has to start. `mise run api-go:perf` shows it: it deploys, sends 8 requests at once, then each operation in turn, and prints the CPU of every request (2026-10-02):
+
+```
+GET /api/hello, 8 at once     3 6n 5w 74n 13w 110n 83n 101n
+GET /api/hello                2 2 2 3 2 3 2 2 2 3 3 2 4 2 3 6 3 2 2 2 1 3 2
+GET /api/notes                18 5 4 4 5 6 7 4 5 5 5 4 8w 5 5 4 4 5 4 6 4 4 7
+POST /api/notes               16 6 7 7 8 6 6 6 9w 7 9 6 6 6 6 5 6 10 7 6 6 7 7
+GET /__bench/not-found        3 2 1 3 3 3 24n 2 2 3 2 2 3 3 2 2 1 1 2 2 2 2 2
+```
+
+`w` is a request served by a Go runtime that was started while the Worker's module loaded, `n` one that had to start a runtime itself, and no letter one served by a reused runtime.
+
+| The first request in a new isolate, a hello | CPU |
+|---|---|
+| TinyGo and workers-go as they come | 90 to 170 ms |
+| Runtimes reused, stacks reused | 54 to 68 ms |
+| And one runtime started while the module loads | 32 to 37 ms |
+| And that runtime answers the OpenAPI route during start-up | 19 to 20 ms |
+| And the hello route too (what is deployed) | 7 to 11 ms |
+
+- **Two runtimes are started while the module loads** (`go.warm` in `api-go/worker/index.mjs`). Cloudflare does not count that time against any request. A request that gets one costs 4 to 19 ms where one that starts its own costs far more.
+- **Each runtime answers two routes during start-up,** into nothing: the OpenAPI route, which registers every operation, and the hello. That compiles the code they use.
+- **The first use of each operation still costs 15 to 30 ms:** the list 18 to 33, a create 14 to 25. Their handlers need the database, which a runtime does not have during start-up.
+- **Requests that arrive together beyond the waiting runtimes start their own,** and cost about 100 ms each in the logs when several do at once. One alone costs 10 to 30 ms (the `24n` above). `go.warm({ runtimes: 4 })` covers a first burst of four; each waiting runtime holds 8 MB and adds to the isolate's start-up time.
+- **Cloudflare gives no crypto randomness while a module loads,** and TinyGo's runtime asks for its seed as it starts. For those runtimes the seed comes from `Math.random`. Anything else that asks for random bytes during start-up stops the warm start, and requests start their runtimes as before; a request with the header `x-go-runtime` is told why.
 
 ## What made it cheaper
 
@@ -109,17 +137,18 @@ What this says:
 ## Measuring it again, and measuring your own API
 
 ```sh
-mise run api-go:bench         # REMOTE, read-only: the deployed Go Worker, wall time and Cloudflare's CPU time
-mise run api-go:perf          # REMOTE: build, deploy, then the same bench: about three minutes
-mise run api:bench            # the same bench against the deployed oRPC Worker
+mise run api-go:perf          # REMOTE: build, deploy, then bench the new isolate from its first request. About two minutes
+mise run api-go:bench         # REMOTE, read-only: the deployed Go Worker once it is warm
+mise run api:bench            # the same against the deployed oRPC Worker
 go run ./dev bench <url>      # any server: a local cf dev, the native build. Wall time only
 ```
 
-`bench` works on any API: it reads the OpenAPI spec the server gives at `/api/openapi.json`, and calls every GET operation whose required inputs have an example in the spec, plus one path that does not exist. So in your own project the same two tasks measure your operations, not the notes example's.
+`bench` works on any API: it reads the OpenAPI spec the server gives at `/api/openapi.json`, and calls every GET operation whose required inputs have an example in the spec, plus one path that does not exist. So in your own project the same tasks measure your operations, not the notes example's.
 
+- **`-each`** prints the CPU of every request in the order sent, as above. A median hides what this shows: every second request costing double, the one request that starts a runtime, the first in an isolate. Every finding on this page came from that view.
+- **`-burst 8`** first sends 8 requests at once: what a new isolate does with them. Use it right after a deploy, without `-warm`.
 - **`-write`** adds the operations that change data, with the example of each request body.
 - **`-header 'Authorization: Bearer <token>'`** sends a header with every request, for an API that needs a token.
-- **`-cpu`** needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (the environment, or fnox) and waits up to two minutes for Cloudflare's logs.
-- **To see each request,** not the median: Workers Logs in the dashboard, the field `$workers.cpuTimeMs`.
+- **CPU time** needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (the environment, or fnox) and waits up to two minutes for Cloudflare's logs.
 
 Every flag is in [the dev tool](reference/dev.md#bench).

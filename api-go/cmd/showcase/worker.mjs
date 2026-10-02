@@ -9,6 +9,7 @@ import "../../worker/tinygo-clock.mjs";
 import { webSocket } from "../../worker/websocket.mjs";
 
 const go = goWorker(build);
+await go.warm({ paths: ["/openapi.json"] });
 
 export default {
 	fetch(request, env, ctx) {

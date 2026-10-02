@@ -12,6 +12,7 @@ import { webSocket } from "./websocket.mjs";
 export { NotesHub } from "./hub.mjs";
 
 const go = goWorker(build);
+await go.warm({ paths: ["/api/openapi.json", "/api/hello"] });
 
 export default {
 	fetch(request, env, ctx) {
