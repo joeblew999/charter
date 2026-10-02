@@ -38,3 +38,7 @@ Generated files are marked as such and never edited by hand: [what is generated]
 ## Status
 
 Used by other projects, released with version tags. TinyGo is used as it ships, with two small runtime patches applied at build time, both reported upstream ([upstream issues](docs/upstream.md)). To help: [How to help](docs/contributing.md).
+
+## License
+
+[MIT](LICENSE).
