@@ -11,23 +11,24 @@ Measured on Cloudflare on 2026-10-01 and 2026-10-02, with the two Workers servin
 
 ## On Cloudflare, side by side
 
-`mise run compare` runs the same bench against both Workers. CPU per request in ms, 2026-10-02, 30 requests each, as Cloudflare logged them:
+`mise run compare` runs the same bench against both Workers. CPU per request in ms, 2026-10-02, 30 requests each, as Cloudflare logged them, on the Workers deployed now (`charter-notes-ts`, `charter-notes-go`):
 
 ```
                       TypeScript                   Go
-GET /api/hello        0 0 0 0 0 1 0 0 0 0 3 1 0    0 0 0 0 0 0 0 1 0 0 1 0 0
-GET /api/notes (D1)   2 1 1 1 1 5 1 1 2 1 1 1 3    2 2 2 2 1 1 2 2 1 2 3 1 1
-POST /api/notes       2 2 2 2 1 1 1 1 2 1 1 1 1    2 2 3 2 2 2 2 4 2 2 3 3 2
-a path not there      no figure                    0 0 1 0 1 0 0 0 0 0 0 0 0
+GET /api/hello        0 0 0 0 0 0 0 0 0 0 0 0 0    0 0 0 0 0 0 0 0 0 0 0 0 2
+GET /api/notes (D1)   0 0 1 1 1 0 1 1 1 3 0 0 1    1 1 1 1 1 1 1 3 1 1 1 1 1
+POST /api/notes       1 1 2 1 1 1 1 1 1 1 1 1 0    2 1 1 1 2 3 2 2 2 1 3 1 1
+a path not there      no figure                    0 0 0 0 0 0 0 0 0 0 0 0 0
 ```
 
 | Operation | TypeScript | Go |
 |---|---|---|
 | hello | 0 ms | 0 ms |
-| list (a D1 read) | 1 ms | 1 to 2 ms |
-| create (a D1 write and a hub publish) | 1 to 2 ms | 2 ms |
+| list (a D1 read) | 0 to 1 ms | 1 ms |
+| create (a D1 write and a hub publish) | 1 ms | 1 to 2 ms |
 
 - **A new isolate costs more at first:** about 10 ms for its first request ([below](#a-new-isolate)).
+- **A newly created Worker reads about 1 ms higher for its first hours.** `charter-notes-go` measured 1 / 3 / 4 ms (hello, list, create) right after it was first deployed, and the figures above a few hours later, with the same code.
 - **A stream costs CPU for as long as it is open:** 40 to 150 ms over the life of a 15 or 60 second SSE stream.
 - **Workers Free allows 10 ms of CPU per request.**
 
