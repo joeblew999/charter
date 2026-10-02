@@ -30,7 +30,6 @@ The plan, in the order of its two milestones. Each item is an issue on GitHub: t
 | [#28](https://github.com/joeblew999/charter/issues/28) | Go client and server on separate Workers | Below |
 | [#29](https://github.com/joeblew999/charter/issues/29) | Fern: file what we found, and settle its licensing | Below |
 | [#30](https://github.com/joeblew999/charter/issues/30) | Integrate with gsx | Not looked at |
-| [#1](https://github.com/joeblew999/charter/issues/1) | Flue: message channels and agents on Cloudflare | Start small |
 
 ## The AsyncAPI generator, as a package
 
