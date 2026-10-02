@@ -284,3 +284,18 @@ Wall clock, mean of 20, with TinyGo as it is: other build options.
 | precise, 32 MB initial memory | 848 KB | 16.6 ms | 14.7 ms | 23.9 ms | |
 | an empty workers-go handler, no Huma | 326 KB | | about 8 ms | | |
 
+
+## Windows, natively: the tool, the library and the Go notes example (GitHub's windows-2025 runner, verified 2026-10-02)
+
+The `check` workflow, [run 37018556487](https://github.com/joeblew999/charter/actions/runs/37018556487) on the branch `windows` at commit `bf11807`. The runner image was `windows-2025-vs2026` 20260925.250.1, with mise 2026.9.18, which runs a task line with cmd.exe. Nothing ran on a Windows machine other than that runner.
+
+- **`mise run charter:check` passes** (the job `tool-windows`): gofmt, vet, the tool's tests, the workflows and docs checks. The tests include one that starts a server which starts a second process, stops it, and finds the second one gone (`TestStoppingAServerStopsWhatItStarted`): on Windows the tree is ended with `taskkill /T /F`.
+- **`mise run go:check` passes** (`library-windows`): the library's lint and tests, for the host and for Wasm.
+- **`mise run setup` and `mise run check` pass in `examples/notes-go/`** (`example-windows`), in 4 minutes:
+  - mise installed TinyGo 0.42.0 and binaryen 133 (`wasm-opt`) for Windows, and the tool patched the runtime into `C:\Users\runneradmin\AppData\Local\charter\`.
+  - `build\app.wasm` is 2,427,767 bytes, 859,789 gzipped: the same two numbers as on macOS. (On the Linux runner it is 2,444,343 and 860,302, as on `main` before this.)
+  - `test:native` passed, and `test:workerd` passed in 11 seconds: `cf dev` (cf 1.0.0-beta.5, Vite, workerd) through npm's `cf.cmd`, the local D1 migrated, the live test and the MCP test.
+  - The runner found no process left over after the job.
+- **The one failure on the way** ([run 37017804105](https://github.com/joeblew999/charter/actions/runs/37017804105)): `charter new -from` wrote the checkout into `go.work` with forward slashes, and Go on Windows then said `directory D:\a\charter\charter\cmd\charter is contained in a module that is not one of the workspace modules listed in go.work`. `go.work` gets the path as the system writes it.
+- **Not run on Windows:** anything with Fern (it generates in Linux containers, which the runner does not have), so `sdk:gen`, `sdk:check`, `sdk:publish`, and the checks of `examples/showcase-go/` and `examples/showcase-ts/`, which need a generated SDK; the check of `examples/notes-ts/`; every REMOTE task; a project made by `charter new` (its `mise run check`); the TinyGo root for a user who may not make symbolic links (`src/` was hard links on the runner; whether its other folders were symbolic links or hard links the log does not say).
+- **On macOS the same commit passes** `mise run check` at the root, and a project made by `charter new -from` passes its `mise run check`.

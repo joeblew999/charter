@@ -10,7 +10,7 @@ One tutorial. You end with a Go API ([Huma](https://huma.rocks)) on Cloudflare W
 You need:
 
 - **[mise](https://mise.jdx.dev), Go and git.** mise installs the rest at pinned versions.
-- **macOS, Linux or Windows.** On Windows the steps up to 4 are checked on every push; generating SDKs there is not ([what is covered](reference/tasks.md#windows)).
+- **macOS, Linux or Windows.** On Windows the tasks run natively, and the check of step 2 is run there on every push for the example a project is a copy of. Generating SDKs is not run there ([what is covered](reference/tasks.md#windows)).
 - **Docker,** from step 5 on: Fern generates SDKs in containers.
 - **A Cloudflare account,** from step 5 on. What a request costs there: [Benchmarks](benchmarks.md).
 
