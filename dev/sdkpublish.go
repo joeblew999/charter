@@ -72,6 +72,8 @@ func sdkPublish(args []string) error {
 	if err != nil {
 		return err
 	}
+	// Said at the top of the copy's README, which is Fern's: nobody wrote this folder by hand.
+	generated["README.md"] = append([]byte(fmt.Sprintf("> **Generated code.** Fern generated this Go client from the API's contract (the specs in `sdk/fern/apis/%s`). Don't edit it: change the contract, then `mise run sdk:publish` writes this folder again.\n\n", api)), generated["README.md"]...)
 	if check {
 		committed, err := sdkSources(into)
 		if err != nil {

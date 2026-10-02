@@ -1,0 +1,11 @@
+# Generated files: nobody edits these by hand. GitHub marks them "generated" and folds them in diffs.
+# What writes each one is in docs/README.md ("What is generated").
+sdk/go/**                              linguist-generated=true
+sdk/fern/apis/api-*/*.json             linguist-generated=true
+sdk/fern/apis/showcase-*/*.json        linguist-generated=true
+.github/workflows/*.yml                linguist-generated=true
+docs/_config.yml                       linguist-generated=true
+docs/writing.md                        linguist-generated=true
+docs/llms.txt                          linguist-generated=true
+docs/_sass/**                          linguist-generated=true
+**/package-lock.json                   linguist-generated=true

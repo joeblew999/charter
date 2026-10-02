@@ -35,7 +35,7 @@ var projectFiles = []string{
 	"migrations/",
 	"sdk/package.json", "sdk/package-lock.json", "sdk/tsconfig.base.json", "sdk/fern/fern.config.json", "sdk/fern/apis/api-go/",
 	"test/live-test.mjs", "test/sdk-live-test.mjs", "test/mcp-test.mjs", "test/soak.mjs", "test/soak-go/",
-	"rust-toolchain.toml", ".gitignore",
+	"rust-toolchain.toml", ".gitignore", ".gitattributes",
 }
 
 // Left behind: what only makes sense beside the oRPC Worker.

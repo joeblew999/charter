@@ -1,3 +1,5 @@
+> **Generated code.** Fern generated this Go client from the API's contract (the specs in `sdk/fern/apis/api-go`). Don't edit it: change the contract, then `mise run sdk:publish` writes this folder again.
+
 # OrpcApi Go Library
 
 [![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=OrpcApi%2FGo)
