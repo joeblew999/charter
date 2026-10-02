@@ -182,12 +182,12 @@ Everything here ran on this machine: natively, and as TinyGo Wasm under workerd 
 Cut with `git tag v0.1.0 && git push origin v0.1.0` on main, after `api-check`, `sdk-check` and `dev-check` passed there. Both release workflows succeeded.
 
 - **The GitHub Release has 12 files:** the `dev` tool for linux and darwin (amd64, arm64); for each API the Go and TypeScript SDK sources and its two specs; and each API's Fern CLI for linux/amd64.
-- **The Go module tags were added by the workflow:** `api/go/v0.1.0` and `dev/v0.1.0`, on the same commit.
+- **The Go module tags were added by the workflow:** `api-go/v0.1.0` and `dev/v0.1.0`, on the same commit.
 - **Checked from outside the repo, in an empty folder:**
   - the downloaded `dev-darwin-arm64` runs;
   - `go run github.com/joeblew999/orpc-api/dev@v0.1.0 help` runs;
   - `... dev@v0.1.0 workflows -into <dir>` writes `api-check.yml`, `api-deploy.yml`, `sdk-check.yml` and `sdk-release.yml` there;
-  - a new module with `go get github.com/joeblew999/orpc-api/api/go@v0.1.0` imports and uses `humaworkers`, `asyncapi`, `follow` and `humamcp`.
+  - a new module with `go get github.com/joeblew999/orpc-api/api-go@v0.1.0` imports and uses `humaworkers`, `asyncapi`, `follow` and `humamcp`.
 - **The two servers are interchangeable to clients, in both directions, on Cloudflare.** The SDKs and CLI generated from the Go specs pass the SDK live test (2/2) and a short soak (7/7, nothing missing, no duplicates, through a client drop) against the deployed *oRPC* Worker; the oRPC-spec ones had passed against the Go server.
 
 ## The showcase, contract first in oRPC (sdk/harness, verified locally 2026-10-01)
