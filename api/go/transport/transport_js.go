@@ -66,17 +66,20 @@ func (d *discard) WriteHeader(int)             {}
 // The WebSocket adapter is JavaScript here: worker/websocket.mjs.
 func Serve(h http.Handler) http.Handler {
 	binding := js.Global().Get("context").Get("binding")
+	// One function for the life of the runtime: it cancels whichever request is running.
+	var cancelRequest context.CancelFunc
+	binding.Set("cancel", js.FuncOf(func(js.Value, []js.Value) any {
+		if cancelRequest != nil {
+			cancelRequest()
+		}
+		return nil
+	}))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithCancel(r.Context())
-		defer cancel()
-		gone := js.FuncOf(func(js.Value, []js.Value) any {
-			cancel()
-			return nil
-		})
-		binding.Set("cancel", gone)
+		cancelRequest = cancel
 		defer func() {
-			binding.Set("cancel", js.Undefined())
-			gone.Release()
+			cancelRequest = nil
+			cancel()
 		}()
 		if served++; served == 1 {
 			go func() {
@@ -89,13 +92,18 @@ func Serve(h http.Handler) http.Handler {
 		}
 		h.ServeHTTP(w, r.WithContext(ctx))
 
+		// Reading the heap's state walks its whole block table, so it is done for the first request
+		// and then for one in eight, with room kept for the eight in between.
+		if served%8 != 1 {
+			return
+		}
 		var stats runtime.MemStats
 		runtime.ReadMemStats(&stats)
-		if request := stats.TotalAlloc - allocated; request > mostRequest {
-			mostRequest = request
+		if since := stats.TotalAlloc - allocated; since > mostRequest {
+			mostRequest = since
 		}
 		allocated = stats.TotalAlloc
-		// Twice the largest request so far: what follows this handler (the body being read) allocates too.
+		// Twice what was allocated since the last look, or by the first request alone.
 		if stats.NumGC > 0 || stats.HeapIdle < 2*mostRequest {
 			binding.Set("full", true)
 		}
