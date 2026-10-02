@@ -138,10 +138,13 @@ What this says:
 
 ```sh
 mise run api-go:perf          # REMOTE: build, deploy, then bench the new isolate from its first request. About two minutes
+mise run api-go:perf:try -- -name stack96 -build '-stack 96kb'   # REMOTE: the same on a scratch Worker of its own, deleted after. 70 s
 mise run api-go:bench         # REMOTE, read-only: the deployed Go Worker once it is warm
 mise run api:bench            # the same against the deployed oRPC Worker
 go run ./dev bench <url>      # any server: a local cf dev, the native build. Wall time only
 ```
+
+`api-go:perf:try` is for trying a change without touching the deployed Worker, and for several people or agents at once: each run has its own Worker, database and hub, named after the experiment. `mise run api-go:perf:clean` deletes any that were left.
 
 `bench` works on any API: it reads the OpenAPI spec the server gives at `/api/openapi.json`, and calls every GET operation whose required inputs have an example in the spec, plus one path that does not exist. So in your own project the same tasks measure your operations, not the notes example's.
 

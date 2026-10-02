@@ -153,6 +153,14 @@ description = "REMOTE, redeploys orpc-api: the real-time matrix, every client x 
 depends = ["sdk:ready api"]
 run = 'node test/soak.mjs "$API_URL"'
 
+[tasks."api-go:perf:try"]
+description = "REMOTE: try a change on a scratch Worker of its own and delete it after: mise run api-go:perf:try -- -name <experiment> [-build '<wasm-build flags>'] [-keep]. Several can run at once"
+run = "go run ./dev perf"
+
+[tasks."api-go:perf:clean"]
+description = "REMOTE: delete the scratch Workers and databases that api-go:perf:try runs left"
+run = "go run ./dev perf-clean"
+
 [tasks."api:bench"]
 description = "REMOTE, read-only: every GET operation of the deployed oRPC Worker, wall time and Cloudflare's CPU time (docs/benchmarks.md)"
 run = 'go run ./dev bench -cpu -warm 30s -worker orpc-api -spec sdk/fern/apis/api/openapi.json "$API_URL"'
