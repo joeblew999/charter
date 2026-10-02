@@ -1,6 +1,6 @@
 # OpenAPI Overlay: change how the SDK looks without editing openapi.json (e.g. a spec you don't own).
 # Kept to show the feature on a spec generated from Go, the same overlay as ../showcase's (a test
-# holds them equal). When the contract is yours, say it there instead, as api-go/api/contract.go does
+# holds them equal). When the contract is yours, say it there instead, as api/go/api/contract.go does
 # (x-fern-sdk-group-name and x-fern-sdk-method-name in Extensions).
 overlay: 1.0.0
 info:

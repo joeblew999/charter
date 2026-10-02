@@ -13,7 +13,7 @@ You need Docker running: Fern runs its generators in containers. Everything here
 ## Generate one
 
 ```sh
-mise run api-go:spec                 # the specs, from the contract (do this after every contract change)
+mise run api:go:spec                 # the specs, from the contract (do this after every contract change)
 mise run sdk:gen api-go typescript   # TypeScript source      -> sdk/out/api-go/typescript
 mise run sdk:gen api-go go           # a Go module            -> sdk/out/api-go/go
 mise run sdk:gen api-go typescript-dist   # TypeScript compiled to .js and .d.ts -> sdk/out/api-go/typescript-dist
@@ -31,14 +31,14 @@ Each took 10 to 25 seconds here, with the generator images already downloaded. A
 
 ```
 sdk/fern/apis/api-go/
-├── openapi.json      written by mise run api-go:spec (never edit)
+├── openapi.json      written by mise run api:go:spec (never edit)
 ├── asyncapi.json     the same, for the WebSocket channel
 └── generators.yml    yours: one group per SDK, with its options
 ```
 
 A group in `sdk/fern/apis/api-go/generators.yml` names a Fern generator, its pinned version, where the output goes, and its options. `sdk/fern/fern.config.json` holds the Fern organization name, and `sdk/package.json` pins Fern itself.
 
-What an SDK contains comes from the contract, not from this folder: the method names (`notes.list`), auto-paging and the SSE stream are declared on each operation in `api-go/api/contract.go`.
+What an SDK contains comes from the contract, not from this folder: the method names (`notes.list`), auto-paging and the SSE stream are declared on each operation in `api/go/api/contract.go`.
 
 ## Check that an SDK works
 
@@ -70,7 +70,7 @@ sdk/out/api-go/cli/target/release/billing-api --base-url http://localhost:5174 n
 
 The build took 43 seconds here (an Apple M-series Mac). It needs Rust, which `mise install` provides at the version in `rust-toolchain.toml`. With `-linux` before the folder it builds a Linux binary inside Docker instead, into `target-linux/`.
 
-Run against `mise run api-go:run`:
+Run against `mise run api:go:run`:
 
 ```
 $ billing-api --base-url http://localhost:5174 meta hello
@@ -95,7 +95,7 @@ Limits of the generated CLI:
 
 ## Use the SDK
 
-Both snippets were run against `mise run api-go:run`. Leave out the base URL and the client calls the server named in the specs.
+Both snippets were run against `mise run api:go:run`. Leave out the base URL and the client calls the server named in the specs.
 
 TypeScript, importing the compiled SDK from the project's root:
 
@@ -197,7 +197,7 @@ All of them are in `sdk/fern/apis/api-go/generators.yml`. `dev new -name billing
 
 Then generate again. The test programs use these names, so change them there too: `BillingApiClient` in `test/sdk-live-test.mjs` and `test/soak.mjs`, the binary's name in `test/soak.mjs`, and the module path in `test/soak-go/main.go`, `test/soak-go/go.mod` and `test/soak.mjs`.
 
-Method names (`client.notes.list`) are not here. They come from the contract: `x-fern-sdk-group-name` and `x-fern-sdk-method-name` on each operation in `api-go/api/contract.go`.
+Method names (`client.notes.list`) are not here. They come from the contract: `x-fern-sdk-group-name` and `x-fern-sdk-method-name` on each operation in `api/go/api/contract.go`.
 
 ## Add a language
 
@@ -226,7 +226,7 @@ Go fetches a module from a git repository, and `sdk/out/` is not in yours. So on
 In the project:
 
 ```sh
-mise run api-go:spec      # after a contract change: the specs
+mise run api:go:spec      # after a contract change: the specs
 mise run sdk:publish      # needs Docker: generates the Go SDK fresh, checks it as sdk:check does, copies its sources into sdk/go
 git add sdk/go go.work    # then commit and push, with the contract change it belongs to
 ```

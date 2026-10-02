@@ -70,9 +70,9 @@ func doctor([]string) error {
 	ok := func(format string, a ...any) { fmt.Printf("  ok    "+format+"\n", a...) }
 	warn := func(format string, a ...any) { fmt.Printf("  WARN  "+format+"\n", a...) }
 	bad := func(format string, a ...any) { fmt.Printf("  FAIL  "+format+"\n", a...); failed = true }
-	for _, dir := range []string{"api", "api-go", "sdk", "sdk/harness"} {
+	for _, dir := range []string{"api/ts", "api/go", "sdk", "sdk/harness"} {
 		if !exists(dir) {
-			continue // a project made by `dev new` has only api-go and sdk
+			continue // a project made by `dev new` has only api/go and sdk
 		}
 		if exists(filepath.Join(dir, "node_modules")) {
 			ok("npm packages in %s", dir)
@@ -86,8 +86,8 @@ func doctor([]string) error {
 		bad("docker not running: start Docker")
 	}
 	for _, tool := range []struct{ name, arg, why string }{
-		{"go", "version", "api-go, dev, sdk:check on Go SDKs"},
-		{"tinygo", "version", "api-go:build"},
+		{"go", "version", "api/go, dev, sdk:check on Go SDKs"},
+		{"tinygo", "version", "api:go:build"},
 		{"wasm-opt", "--version", "tinygo runs it on every Wasm build"},
 		{"cargo", "--version", "the Fern CLI builds"},
 		{"gh", "--version", "upstream:status"},

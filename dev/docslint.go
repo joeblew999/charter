@@ -26,7 +26,7 @@ var (
 	taskDef   = regexp.MustCompile(`(?m)^\[tasks\."?([a-z0-9:-]+)"?\]`)
 	codeSpan  = regexp.MustCompile("`([^`\n]+)`")
 	fenced    = regexp.MustCompile("(?s)```.*?```")
-	gitTag    = regexp.MustCompile(`/v([0-9]|X\.)`) // api-go/v0.1.0 is a tag, not a path
+	gitTag    = regexp.MustCompile(`/v([0-9]|X\.)`) // api/go/v0.1.0 is a tag, not a path
 	// A version of this repo's own releases written into a page: @v1.2.3 after a module of ours, or a
 	// link to one tagged release.
 	pinnedVersion = regexp.MustCompile(`(orpc-api[A-Za-z0-9/_-]*@v[0-9]+\.[0-9]+\.[0-9]+|releases/(tag|download)/v[0-9][0-9A-Za-z.-]*)`)

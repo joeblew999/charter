@@ -27,21 +27,21 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 	if first, _, _ := strings.Cut(said, "\n"); !strings.HasPrefix(first, "dev (not a release: built from a checkout), copying from "+repo+": pins the dev tool to latest in mise.toml") {
 		t.Errorf("first line: %q", first)
 	}
-	for _, want := range []string{"https://billing-api.your-subdomain.workers.dev", "mise.local.toml as API_GO_URL", "mise run api-go:spec", "1 to 3 ms of CPU", replaceGuide} {
+	for _, want := range []string{"https://billing-api.your-subdomain.workers.dev", "mise.local.toml as API_GO_URL", "mise run api:go:spec", "1 to 3 ms of CPU", replaceGuide} {
 		if !strings.Contains(said, want) {
 			t.Errorf("new does not say %q:\n%s", want, said)
 		}
 	}
 	workerURL(t, into, "billing-api.your-subdomain.workers.dev")
 	for file, want := range map[string]string{
-		"api-go/go.mod":                       "module github.com/zeta/billing-api/api-go",
-		"api-go/main.go":                      `"github.com/zeta/billing-api/api-go/api"`,
-		"api-go/cloudflare.config.ts":         "`billing-api-${ctx.mode}` : \"billing-api\"",
+		"api/go/go.mod":                       "module github.com/zeta/billing-api/api/go",
+		"api/go/main.go":                      `"github.com/zeta/billing-api/api/go/api"`,
+		"api/go/cloudflare.config.ts":         "`billing-api-${ctx.mode}` : \"billing-api\"",
 		"sdk/fern/apis/api-go/generators.yml": "namespaceExport: BillingApi",
 		"test/soak-go/main.go":                `billingapi "github.com/zeta/billing-api/sdk/go"`,
 		"test/soak-go/go.mod":                 "github.com/zeta/billing-api/sdk/go => ../../sdk/go",
 		"mise.toml":                           `"go:github.com/joeblew999/orpc-api/dev" = "latest"`,
-		"go.work":                             "use ./api-go",
+		"go.work":                             "use ./api/go",
 		"docs/README.md":                      "# billing-api",
 		"docs/README.md ":                     replaceGuide,
 	} {
@@ -59,26 +59,26 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 		t.Errorf("generators.yml: the Go SDK's module path is not %q", want)
 	}
 	tasks, _ := os.ReadFile(filepath.Join(into, "mise.toml"))
-	for _, want := range []string{`[tasks."sdk:publish"]`, `[tasks."sdk:publish:check"]`, "dev sdk-publish api-go", "dev release-tags api-go sdk/go"} {
+	for _, want := range []string{`[tasks."sdk:publish"]`, `[tasks."sdk:publish:check"]`, "dev sdk-publish api-go", "dev release-tags api/go sdk/go"} {
 		if !strings.Contains(string(tasks), want) {
 			t.Errorf("mise.toml: no %q", want)
 		}
 	}
-	for _, gone := range []string{"api:check", "sdk:harness", "sdk:demo", "showcase", "go run ./dev", "go run ../dev", "dev@", "orpc-api-go", "dev/vX.Y.Z"} {
+	for _, gone := range []string{"api:ts:", "sdk:harness", "sdk:demo", "showcase", "go run ./dev", "go run ../../dev", "dev@", "orpc-api-go", "dev/vX.Y.Z"} {
 		if strings.Contains(string(tasks), gone) {
 			t.Errorf("mise.toml still mentions %q", gone)
 		}
 	}
-	if exists(filepath.Join(into, "api-go/api/surface_test.go")) {
+	if exists(filepath.Join(into, "api/go/api/surface_test.go")) {
 		t.Error("the oRPC same-surface test was copied")
 	}
 	// The module path above sorts after orpc-api's among the imports: the project must still be formatted.
-	if out, err := exec.Command("gofmt", "-l", filepath.Join(into, "api-go"), filepath.Join(into, "test")).Output(); err != nil || len(out) > 0 {
+	if out, err := exec.Command("gofmt", "-l", filepath.Join(into, "api", "go"), filepath.Join(into, "test")).Output(); err != nil || len(out) > 0 {
 		t.Errorf("gofmt -l in the new project: %v\n%s", err, out)
 	}
 	for _, args := range [][]string{{"build", "./..."}, {"vet", "./..."}, {"test", "./api", "-run", "TestHello|TestCreateAndList|TestTheWebSocketChannel"}} {
 		cmd := exec.Command("go", args...)
-		cmd.Dir = filepath.Join(into, "api-go")
+		cmd.Dir = filepath.Join(into, "api", "go")
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("go %s in the new project: %v\n%s", strings.Join(args, " "), err, out)
 		}
@@ -111,8 +111,8 @@ func TestNewProjectOnYourSubdomain(t *testing.T) {
 // What the first line says a release pins, and what a checkout does.
 func TestPinned(t *testing.T) {
 	for want, got := range map[string]string{
-		"dev v1.2.3: pins the dev tool to v1.2.3 in mise.toml and the Go packages to v1.2.3 in api-go/go.mod":                                  pinned("v1.2.3", false, "/tmp/clone"),
-		"dev v1.2.3, copying from /src: pins the dev tool to v1.2.3 in mise.toml; api-go/go.mod builds against that checkout (a replace line)": pinned("v1.2.3", true, "/src"),
+		"dev v1.2.3: pins the dev tool to v1.2.3 in mise.toml and the Go packages to v1.2.3 in api/go/go.mod":                                  pinned("v1.2.3", false, "/tmp/clone"),
+		"dev v1.2.3, copying from /src: pins the dev tool to v1.2.3 in mise.toml; api/go/go.mod builds against that checkout (a replace line)": pinned("v1.2.3", true, "/src"),
 	} {
 		if got != want {
 			t.Errorf("got  %s\nwant %s", got, want)

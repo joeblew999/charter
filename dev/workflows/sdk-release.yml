@@ -40,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # if-dir api
+        # if-dir api/ts
         api: [api, api-go]
         # else
         api: [api-go]

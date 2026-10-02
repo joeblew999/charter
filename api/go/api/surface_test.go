@@ -53,11 +53,11 @@ func surface(t *testing.T, doc map[string]any) map[string]string {
 func asList(v any) []any         { l, _ := v.([]any); return l }
 func asMap(v any) map[string]any { m, _ := v.(map[string]any); return m }
 
-// In this repo the Go contract and the oRPC contract (api/src/contract.ts) describe the same API:
+// In this repo the Go contract and the oRPC contract (api/ts/src/contract.ts) describe the same API:
 // every operation the SDKs see must be the same in both specs, and so must the channels.
 func TestSameSurfaceAsTheORPCContract(t *testing.T) {
 	read := func(name string) map[string]any {
-		raw, err := os.ReadFile("../../sdk/fern/apis/api/" + name)
+		raw, err := os.ReadFile("../../../sdk/fern/apis/api/" + name)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -57,7 +57,7 @@ func workflowTemplates(only []string) (map[string][]byte, error) {
 
 // conditional keeps the lines a repo needs. A template says which with comment lines of its own:
 //
-//	# if-dir api      the lines up to "# else" or "# end" are for a repo that has the folder api/
+//	# if-dir api/ts   the lines up to "# else" or "# end" are for a repo that has the folder api/ts/
 //	# else            the lines up to "# end" are for a repo that doesn't
 //	# end
 //

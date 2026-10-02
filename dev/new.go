@@ -14,7 +14,7 @@ import (
 
 func init() {
 	commands["new"] = command{"-name <name> [-module <go module>] [-subdomain <workers.dev subdomain>] [-into <dir>] [-from <checkout>]",
-		"create a new Go API project: the tested example (api-go/) under your name, with its tasks, Fern folder, tests and docs", newProject}
+		"create a new Go API project: the tested example (api/go/) under your name, with its tasks, Fern folder, tests and docs", newProject}
 	commands["version"] = command{"", "the release this tool is, which is what new pins a project to", func([]string) error {
 		fmt.Println(orCheckout(toolVersion()))
 		return nil
@@ -29,9 +29,9 @@ const (
 
 // What a new project takes from this repo, as it is apart from names. Folders are copied whole.
 var projectFiles = []string{
-	"api-go/main.go", "api-go/platform_js.go", "api-go/platform_other.go", "api-go/cloudflare.config.ts",
-	"api-go/package.json", "api-go/package-lock.json", "api-go/vite.config.ts", "api-go/.gitignore",
-	"api-go/go.mod", "api-go/go.sum", "api-go/api/", "api-go/cmd/spec/", "api-go/worker/",
+	"api/go/main.go", "api/go/platform_js.go", "api/go/platform_other.go", "api/go/cloudflare.config.ts",
+	"api/go/package.json", "api/go/package-lock.json", "api/go/vite.config.ts", "api/go/.gitignore",
+	"api/go/go.mod", "api/go/go.sum", "api/go/api/", "api/go/cmd/spec/", "api/go/worker/",
 	"migrations/",
 	"sdk/package.json", "sdk/package-lock.json", "sdk/tsconfig.base.json", "sdk/fern/fern.config.json", "sdk/fern/apis/api-go/",
 	"test/live-test.mjs", "test/sdk-live-test.mjs", "test/mcp-test.mjs", "test/soak.mjs", "test/soak-go/",
@@ -39,10 +39,10 @@ var projectFiles = []string{
 }
 
 // Left behind: what only makes sense beside the oRPC Worker.
-var projectSkip = map[string]bool{"api-go/api/surface_test.go": true, "test/soak-go/soak-go": true}
+var projectSkip = map[string]bool{"api/go/api/surface_test.go": true, "test/soak-go/soak-go": true}
 
 // The tasks a Go-only project keeps from mise.toml.
-var projectTasks = regexp.MustCompile(`^(setup|check|doctor|upstream:status|dev:check|dev:workflows|docs:.*|api-go:.*|sdk:(list|check-spec|gen|check|ready|publish|publish:check|publish:fresh|cli:build|clean|dist|dist:cli)|cloudflare:.*|release|release:tags)$`)
+var projectTasks = regexp.MustCompile(`^(setup|check|doctor|upstream:status|dev:check|dev:workflows|docs:.*|api:go:.*|sdk:(list|check-spec|gen|check|ready|publish|publish:check|publish:fresh|cli:build|clean|dist|dist:cli)|cloudflare:.*|release|release:tags)$`)
 
 // newProject makes a project that is the Go half of this repo under another name: the notes API as
 // a starting contract, every task, the Fern folder, the tests, a docs folder. The files come from
@@ -106,7 +106,7 @@ func newProject(args []string) error {
 	if err != nil {
 		return err
 	}
-	if !exists(filepath.Join(from, "api-go", "api", "contract.go")) {
+	if !exists(filepath.Join(from, "api", "go", "api", "contract.go")) {
 		return fmt.Errorf("%s is not a checkout of orpc-api", from)
 	}
 	pin := version
@@ -157,7 +157,7 @@ func newProject(args []string) error {
 
 	generated := map[string]string{
 		"mise.toml":       names(projectMise(string(tasks), name, pin)),
-		"go.work":         "go 1.27.1\n\ntoolchain go1.27.1\n\nuse ./api-go\n",
+		"go.work":         "go 1.27.1\n\ntoolchain go1.27.1\n\nuse ./api/go\n",
 		"README.md":       projectReadme(name, pin),
 		"AGENTS.md":       "# For agents\n\nEverything about this project is in [docs/](docs/README.md), the same pages developers read. Read [docs/README.md](docs/README.md), then [docs/rules.md](docs/rules.md): the rules are binding.\n",
 		"CLAUDE.md":       "@AGENTS.md\n",
@@ -174,48 +174,48 @@ func newProject(args []string) error {
 	}
 
 	// The project's own module: its packages are its own, the reusable ones stay imports of orpc-api's.
-	gomod, err := os.ReadFile(filepath.Join(into, "api-go", "go.mod"))
+	gomod, err := os.ReadFile(filepath.Join(into, "api", "go", "go.mod"))
 	if err != nil {
 		return err
 	}
 	lines := strings.SplitN(string(gomod), "\n", 2)
-	mod := "module " + module + "/api-go\n" + lines[1]
-	if err := write(filepath.Join(into, "api-go", "go.mod"), mod); err != nil {
+	mod := "module " + module + "/api/go\n" + lines[1]
+	if err := write(filepath.Join(into, "api", "go", "go.mod"), mod); err != nil {
 		return err
 	}
-	library := repoModule + "/api-go"
+	library := repoModule + "/api/go"
 	if local {
 		// From a checkout: build against that checkout, so unreleased changes work. Remove the
 		// replace line once you depend on a release.
-		if err := quiet(filepath.Join(into, "api-go"), nil, "go", "mod", "edit", "-require="+library+"@v0.0.0", "-replace="+library+"="+filepath.Join(from, "api-go")); err != nil {
+		if err := quiet(filepath.Join(into, "api", "go"), nil, "go", "mod", "edit", "-require="+library+"@v0.0.0", "-replace="+library+"="+filepath.Join(from, "api", "go")); err != nil {
 			return err
 		}
-	} else if err := quiet(filepath.Join(into, "api-go"), nil, "go", "mod", "edit", "-require="+library+"@"+version); err != nil {
+	} else if err := quiet(filepath.Join(into, "api", "go"), nil, "go", "mod", "edit", "-require="+library+"@"+version); err != nil {
 		return err
 	}
-	if err := quiet(filepath.Join(into, "api-go"), []string{"GOWORK=off"}, "go", "mod", "tidy"); err != nil {
+	if err := quiet(filepath.Join(into, "api", "go"), []string{"GOWORK=off"}, "go", "mod", "tidy"); err != nil {
 		return fmt.Errorf("go mod tidy in the new project: %w", err)
 	}
 	// A new module path sorts differently among the imports: format, so the project's own lint passes.
-	if err := quiet(into, nil, "gofmt", "-w", "api-go", "test/soak-go"); err != nil {
+	if err := quiet(into, nil, "gofmt", "-w", "api/go", "test/soak-go"); err != nil {
 		return err
 	}
 
-	fmt.Printf(`created %s (module %s/api-go, Worker %s)
+	fmt.Printf(`created %s (module %s/api/go, Worker %s)
 
   cd %s && git init
   mise install && mise run setup     # tools, then npm packages
   mise run check                     # lint, tests, spec drift, the TinyGo build, the live test natively and under workerd
-  mise run api-go:run                # the API natively: http://localhost:5174/api/hello
-  mise run api-go:deploy             # to Cloudflare, then: mise run api-go:live-test
+  mise run api:go:run                # the API natively: http://localhost:5174/api/hello
+  mise run api:go:deploy             # to Cloudflare, then: mise run api:go:live-test
 
-The API is the notes example: change api-go/api/contract.go, then mise run api-go:spec.
+The API is the notes example: change api/go/api/contract.go, then mise run api:go:spec.
 To put your own API in its place: %s
 With a GitHub repo: mise run dev:workflows, mise run docs:setup, mise run docs:pages.
 
 %s
 Cost: on Cloudflare a read uses 1 to 3 ms of CPU and a write 4 to 6 ms; the first request in a new
-isolate about 10 ms (measured 2026-10-02). mise run api-go:bench measures yours.
+isolate about 10 ms (measured 2026-10-02). mise run api:go:bench measures yours.
 `, into, module, name, into, replaceGuide, afterDeploy(name, subdomain))
 	return nil
 }
@@ -231,24 +231,24 @@ var ownerSubdomain = regexp.MustCompile(`https://orpc-api-go\.([a-z0-9-]+)\.work
 // afterDeploy says where the project thinks its Worker is, and what to do when that is not so.
 func afterDeploy(name, subdomain string) string {
 	url := "https://" + name + "." + subdomain + ".workers.dev"
-	fix := "put the URL it prints into mise.local.toml as API_GO_URL (or make it the default in mise.toml, which CI reads too), then: mise run api-go:spec"
+	fix := "put the URL it prints into mise.local.toml as API_GO_URL (or make it the default in mise.toml, which CI reads too), then: mise run api:go:spec"
 	if subdomain == placeholderSubdomain {
-		return "The Worker's URL is a placeholder (" + url + ") in mise.toml and in the specs: -subdomain was not given.\nAfter the first mise run api-go:deploy, " + fix + "."
+		return "The Worker's URL is a placeholder (" + url + ") in mise.toml and in the specs: -subdomain was not given.\nAfter the first mise run api:go:deploy, " + fix + "."
 	}
-	return "The Worker's URL is " + url + " in mise.toml and in the specs.\nIf mise run api-go:deploy prints another, " + fix + "."
+	return "The Worker's URL is " + url + " in mise.toml and in the specs.\nIf mise run api:go:deploy prints another, " + fix + "."
 }
 
 // pinned is the first line new prints: which release the tool is, and what the project pins to it.
 // (Minutes after a release, dev@latest can still be the one before.)
 func pinned(version string, local bool, from string) string {
 	if !local {
-		return fmt.Sprintf("dev %s: pins the dev tool to %s in mise.toml and the Go packages to %s in api-go/go.mod", version, version, version)
+		return fmt.Sprintf("dev %s: pins the dev tool to %s in mise.toml and the Go packages to %s in api/go/go.mod", version, version, version)
 	}
 	tool := version
 	if tool == "" {
 		tool = "latest"
 	}
-	return fmt.Sprintf("dev %s, copying from %s: pins the dev tool to %s in mise.toml; api-go/go.mod builds against that checkout (a replace line)", orCheckout(version), from, tool)
+	return fmt.Sprintf("dev %s, copying from %s: pins the dev tool to %s in mise.toml; api/go/go.mod builds against that checkout (a replace line)", orCheckout(version), from, tool)
 }
 
 // orCheckout names the tool's version, or says that it has none.
@@ -290,7 +290,7 @@ func renamer(name, module string) func(string) string {
 		}
 	}
 	const library = "\x00library\x00" // keeps the orpc-api module path out of the renaming
-	own := strings.NewReplacer(`"`+repoModule+`/api-go/api"`, `"`+module+`/api-go/api"`, repoModule+"/sdk/go", module+"/sdk/go", repoModule, library)
+	own := strings.NewReplacer(`"`+repoModule+`/api/go/api"`, `"`+module+`/api/go/api"`, repoModule+"/sdk/go", module+"/sdk/go", repoModule, library)
 	rename := strings.NewReplacer("orpc-api-go", name, "orpc-api", name, "OrpcApi", pascal, "orpcapi", flat)
 	return func(s string) string {
 		return strings.ReplaceAll(rename.Replace(own.Replace(s)), library, repoModule)
@@ -307,7 +307,7 @@ func projectMise(source, name, pin string) string {
 	keep, task := true, ""
 	for _, line := range strings.Split(source, "\n") {
 		if task == "check" && strings.HasPrefix(line, "depends =") {
-			line = `depends = ["api-go:check", "dev:check"]` // whatever this repo checks, a Go project checks these
+			line = `depends = ["api:go:check", "dev:check"]` // whatever this repo checks, a Go project checks these
 		}
 		switch {
 		case strings.HasPrefix(line, "# ----"), strings.HasPrefix(line, "# orpc-api:"), strings.HasPrefix(line, "# and docs generated by Fern."):
@@ -328,22 +328,22 @@ func projectMise(source, name, pin string) string {
 	}
 	text := strings.Join(out, "\n")
 	text = strings.NewReplacer(
-		"go run ./dev", tool, "go run ../dev", tool,
-		"for dir in api api-go sdk sdk/harness;", "for dir in api-go sdk;",
+		"go run ./dev", tool, "go run ../../dev", tool,
+		"for dir in api/ts api/go sdk sdk/harness;", "for dir in api/go sdk;",
 		`test -z "$(gofmt -l dev)" && go vet ./dev && go test ./dev && `, "",
 		"dist-sdk api api-go", "dist-sdk api-go",
-		"Install the npm packages: api/, api-go/ (cf), sdk/ (Fern), sdk/harness/", "Install the npm packages: api-go/ (cf), sdk/ (Fern)",
+		"Install the npm packages: api/ts/, api/go/ (cf), sdk/ (Fern), sdk/harness/", "Install the npm packages: api/go/ (cf), sdk/ (Fern)",
 		"# every local check (needs Docker, no Cloudflare account)", "# every local check (no Cloudflare account)",
 		"Every LOCAL check (no Cloudflare account; needs Docker)", "Every LOCAL check (no Cloudflare account)",
 		"The dev tool's own checks (gofmt, vet, tests), the generated workflows", "The generated workflows",
 		"and the same SDK surface as the oRPC contract", "and the contract's rules",
 		"what a release ships for both APIs into dist/", "what a release ships into dist/",
-		"`api/node_modules/.bin/cf auth login`", "`api-go/node_modules/.bin/cf auth login`",
+		"`api/ts/node_modules/.bin/cf auth login`", "`api/go/node_modules/.bin/cf auth login`",
 		"e.g. sdk/out/api/cli", "e.g. sdk/out/api-go/cli",
-		"release-tags api-go dev sdk/go", "release-tags api-go sdk/go",
-		"api-go/vX.Y.Z, dev/vX.Y.Z, sdk/go/vX.Y.Z", "api-go/vX.Y.Z, sdk/go/vX.Y.Z",
+		"release-tags api/go dev sdk/go", "release-tags api/go sdk/go",
+		"api/go/vX.Y.Z, dev/vX.Y.Z, sdk/go/vX.Y.Z", "api/go/vX.Y.Z, sdk/go/vX.Y.Z",
 		"# Local dev ports.", "# The local dev port.",
-		"# Where the Workers are deployed (cf deploy prints it; there is no cf command to look it up). On\n# another Cloudflare account, set these in mise.local.toml (gitignored).", "# Where the Worker is deployed (cf deploy prints it; there is no cf command to look it up). If it is\n# not this, set it in mise.local.toml (gitignored) or change the default here, then: mise run api-go:spec.",
+		"# Where the Workers are deployed (cf deploy prints it; there is no cf command to look it up). On\n# another Cloudflare account, set these in mise.local.toml (gitignored).", "# Where the Worker is deployed (cf deploy prints it; there is no cf command to look it up). If it is\n# not this, set it in mise.local.toml (gitignored) or change the default here, then: mise run api:go:spec.",
 		"# Every task is one line of plain sh", "# "+name+": a Go API on Cloudflare Workers (Huma on workers-go), made with `dev new` from\n# "+repoURL+".\n# Every task is one line of plain sh",
 		"is a command of ./dev (go run ./dev help)", "is a command of the dev tool (`dev help`), pinned under [tools]",
 		"\n[env]", "# The tool every task runs ("+repoModule+"/dev): `mise up` moves to a newer release.\n\"go:"+repoModule+"/dev\" = \""+pinned+"\"\n\n[env]",
@@ -362,13 +362,13 @@ contract, and Fern generates SDKs and a CLI from them. Made with ` + "`dev new`"
 ` + "```sh" + `
 mise install && mise run setup     # tools, then npm packages
 mise run check                     # every local check
-mise run api-go:run                # natively: http://localhost:5174/api/hello
-mise run api-go:dev                # under workerd (first time: mise run api-go:migrate:local)
-mise run api-go:deploy             # to Cloudflare, then: mise run api-go:live-test
+mise run api:go:run                # natively: http://localhost:5174/api/hello
+mise run api:go:dev                # under workerd (first time: mise run api:go:migrate:local)
+mise run api:go:deploy             # to Cloudflare, then: mise run api:go:live-test
 mise tasks                         # everything else: every task is one line
 ` + "```" + `
 
-The contract is ` + "`api-go/api/contract.go`" + `. After changing it: ` + "`mise run api-go:spec`" + `. Docs are in [docs/](docs/README.md).
+The contract is ` + "`api/go/api/contract.go`" + `. After changing it: ` + "`mise run api:go:spec`" + `. Docs are in [docs/](docs/README.md).
 `
 }
 
@@ -395,14 +395,14 @@ You write the contract in Go; everything else is generated from it.
 
 | | |
 |---|---|
-| **The contract (the source; you edit this)** | ` + "`api-go/api/contract.go`" + ` (Huma: Go structs and their tags) |
-| The server | ` + "`api-go/api/handlers.go`" + ` |
-| Write the specs | ` + "`mise run api-go:spec`" + ` |
+| **The contract (the source; you edit this)** | ` + "`api/go/api/contract.go`" + ` (Huma: Go structs and their tags) |
+| The server | ` + "`api/go/api/handlers.go`" + ` |
+| Write the specs | ` + "`mise run api:go:spec`" + ` |
 | **The specs (generated; never edit)** | ` + "`sdk/fern/apis/api-go/*.json`" + ` |
 | Fern's settings | ` + "`sdk/fern/apis/api-go/generators.yml`" + ` |
 | Generate an SDK | ` + "`mise run sdk:gen api-go <group>`" + ` (go, typescript, typescript-dist, cli) into ` + "`sdk/out/`" + ` |
 | The D1 schema | ` + "`migrations/`" + ` |
-| The tests a deploy must pass | ` + "`test/`" + ` (` + "`mise run api-go:live-test`, `mise run api-go:soak`" + `) |
+| The tests a deploy must pass | ` + "`test/`" + ` (` + "`mise run api:go:live-test`, `mise run api:go:soak`" + `) |
 | MCP | ` + "`/api/mcp`" + `: every one-shot operation of the contract is a tool |
 
 The project starts as the notes example. Which files hold it, and what to do with each when you put your
@@ -423,9 +423,9 @@ nav_order: 2
 
 - **` + "`docs/`" + ` is the single source of truth.** Write things down in a page here, following [writing.md](writing.md). ` + "`mise run docs:lint`" + ` checks what a program can, ` + "`mise run docs:review`" + ` has Claude check the rest.
 - **mise drives everything, locally and on GitHub, and every task is one line.** Anything longer belongs in the dev tool the tasks call.
-- **The contract is the source.** After changing ` + "`api-go/api/contract.go`" + `, run ` + "`mise run api-go:spec`" + `. ` + "`mise run check`" + ` fails if a committed spec is stale. Never edit ` + "`sdk/fern/apis/api-go/*.json`" + ` by hand.
-- **Everything that ships to Workers builds with TinyGo** (` + "`mise run api-go:build`" + `). ` + "`go test`" + ` can't see TinyGo's gaps, so the check also runs the Wasm under workerd.
-- **Test locally and on Cloudflare.** After a deploy, ` + "`mise run api-go:live-test`" + ` must pass against the deployed Worker: some bugs exist only in production.
+- **The contract is the source.** After changing ` + "`api/go/api/contract.go`" + `, run ` + "`mise run api:go:spec`" + `. ` + "`mise run check`" + ` fails if a committed spec is stale. Never edit ` + "`sdk/fern/apis/api-go/*.json`" + ` by hand.
+- **Everything that ships to Workers builds with TinyGo** (` + "`mise run api:go:build`" + `). ` + "`go test`" + ` can't see TinyGo's gaps, so the check also runs the Wasm under workerd.
+- **Test locally and on Cloudflare.** After a deploy, ` + "`mise run api:go:live-test`" + ` must pass against the deployed Worker: some bugs exist only in production.
 - **Exact pins.** Tools in ` + "`mise.toml`" + `, Go in ` + "`go.work`" + `, Rust in ` + "`rust-toolchain.toml`" + `. Lockfiles are committed.
 - **Workarounds name their upstream issue:** ` + "`Upstream: <owner>/<repo>#<n> (when fixed: ...)`" + ` in the code; ` + "`mise run upstream:status`" + ` lists them.
 `

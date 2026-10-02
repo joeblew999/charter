@@ -1,6 +1,6 @@
 // Test of a showcase API server with the TypeScript SDK Fern generated from its specs: every Fern
 // feature the showcase has must work over the real network. It runs against the Go server
-// (api-go/cmd/showcase, natively or as Wasm under workerd) with the SDK from the Go contract's specs,
+// (api/go/cmd/showcase, natively or as Wasm under workerd) with the SDK from the Go contract's specs,
 // and against the oRPC one (sdk/harness, <origin>/api/mock) with the SDK from the oRPC contract's.
 //
 // Usage: node showcase-test.mjs <base url> [sdk] [--webhook-port <port>] [--open]

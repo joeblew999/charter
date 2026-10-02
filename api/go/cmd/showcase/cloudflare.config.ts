@@ -2,7 +2,7 @@ import { bindings, defineConfig } from "cf/config";
 import * as entrypoint from "./worker.mjs" with { type: "cf-worker" };
 
 // The showcase Worker: every Fern feature we use, served by Go (../../showcase) on workers-go, built
-// with TinyGo. It has no storage. cf and its packages are api-go's (../../node_modules).
+// with TinyGo. It has no storage. cf and its packages are api/go's (../../node_modules).
 export default defineConfig({
 	worker: {
 		name: "orpc-showcase-go",

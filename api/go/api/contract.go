@@ -1,5 +1,5 @@
-// Package api is the notes API, contract first, in Go: the counterpart of api/src/contract.ts and
-// api/src/index.ts. Every route is a Huma operation whose input and output are Go structs; the
+// Package api is the notes API, contract first, in Go: the counterpart of api/ts/src/contract.ts and
+// api/ts/src/index.ts. Every route is a Huma operation whose input and output are Go structs; the
 // struct tags are the schema (as Zod is for oRPC). From this one definition come the handlers'
 // validation, the OpenAPI spec and the AsyncAPI spec (spec.go), from which Fern makes SDKs, a CLI
 // and docs. Everything the SDKs need is said here too: OperationID and Tags name the SDK methods,

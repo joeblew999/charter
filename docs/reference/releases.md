@@ -14,7 +14,7 @@ The newest release: [github.com/joeblew999/orpc-api/releases/latest](https://git
 
 ```sh
 go run github.com/joeblew999/orpc-api/dev@latest help                 # the tool, no install (needs Go)
-go get github.com/joeblew999/orpc-api/api/go@latest                   # the Go packages, run in api-go/
+go get github.com/joeblew999/orpc-api/api/go@latest                   # the Go packages, run in api/go/
 curl -fsSL https://github.com/joeblew999/orpc-api/releases/latest/download/dev_darwin_arm64.tar.gz | tar xz dev   # the tool as a binary, into ./dev
 ```
 
@@ -58,15 +58,15 @@ A release is four git tags on one commit.
 | Tag | What it is for |
 |---|---|
 | `vX.Y.Z` | The release itself. The maintainer pushes this one; the GitHub Release is made for it |
-| `api-go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/api/go`, which holds the packages |
+| `api/go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/api/go`, which holds the packages |
 | `dev/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/dev`, which is the tool |
 | `sdk/go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/sdk/go`, which is the Go SDK of the notes API |
 
-The three extra tags exist because of a rule of Go: a module that sits in a subdirectory of a repository only has a version under a tag that starts with the directory. Without `api-go/vX.Y.Z`, `go get` would not find the release; without `dev/vX.Y.Z`, `go run ...dev@latest` and mise's `go:` tools would not; without `sdk/go/vX.Y.Z`, another repo could only get the SDK at a branch or a commit. The release workflow adds all three on the commit of `vX.Y.Z`. No release has carried the `sdk/go` tag yet: the releases up to 2026-10-01 were cut before that module existed.
+The three extra tags exist because of a rule of Go: a module that sits in a subdirectory of a repository only has a version under a tag that starts with the directory. Without `api/go/vX.Y.Z`, `go get` would not find the release; without `dev/vX.Y.Z`, `go run ...dev@latest` and mise's `go:` tools would not; without `sdk/go/vX.Y.Z`, another repo could only get the SDK at a branch or a commit. The release workflow adds all three on the commit of `vX.Y.Z`. No release has carried the `sdk/go` tag yet: the releases up to 2026-10-01 were cut before that module existed.
 
 A version is a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release. When `dev release` creates the GitHub Release of a tag with a hyphen, it marks it as a pre-release.
 
-Your own project has one Go module in a subdirectory, `api-go/`, and a second, `sdk/go/`, once you publish its Go SDK ([Giving the Go SDK to another repo](../guides/sdks.md#giving-the-go-sdk-to-another-repo)). Its task `release:tags` adds `api-go/vX.Y.Z` and `sdk/go/vX.Y.Z` to your releases for the same reason.
+Your own project has one Go module in a subdirectory, `api/go/`, and a second, `sdk/go/`, once you publish its Go SDK ([Giving the Go SDK to another repo](../guides/sdks.md#giving-the-go-sdk-to-another-repo)). Its task `release:tags` adds `api/go/vX.Y.Z` and `sdk/go/vX.Y.Z` to your releases for the same reason.
 
 ## How a project picks up a new release
 
@@ -80,10 +80,10 @@ mise up --bump "go:github.com/joeblew999/orpc-api/dev"   # install the newest re
 
 Where the pin is `latest`, `mise up` alone installs the newest release.
 
-**The Go packages**, pinned in `api-go/go.mod`:
+**The Go packages**, pinned in `api/go/go.mod`:
 
 ```sh
-cd api-go && go get -u github.com/joeblew999/orpc-api/api/go && go mod tidy   # the newest release of the packages
+cd api/go && go get -u github.com/joeblew999/orpc-api/api/go && go mod tidy   # the newest release of the packages
 ```
 
 Then prove the project against both:
@@ -93,7 +93,7 @@ mise run dev:workflows   # the workflows, as the new tool writes them
 mise run check           # every local check
 ```
 
-What an update does not touch: the files `dev new` copied into your project. They are yours, and no command updates them: the contract and handlers, `api-go/worker/`, the two `platform_*.go` files, `api-go/cmd/spec/`, the test programs in `test/`, and the tasks in `mise.toml`. A fix to one of those in orpc-api reaches your project only if you copy it. Compare with the [orpc-api repository](https://github.com/joeblew999/orpc-api) when a release's notes mention them.
+What an update does not touch: the files `dev new` copied into your project. They are yours, and no command updates them: the contract and handlers, `api/go/worker/`, the two `platform_*.go` files, `api/go/cmd/spec/`, the test programs in `test/`, and the tasks in `mise.toml`. A fix to one of those in orpc-api reaches your project only if you copy it. Compare with the [orpc-api repository](https://github.com/joeblew999/orpc-api) when a release's notes mention them.
 
 ### Getting the faster Worker in a project made before it
 
@@ -102,11 +102,11 @@ A project made before Go runtimes were reused keeps working after an update, at 
 1. **The build task** in `mise.toml`, if it still calls `tinygo build` itself:
 
    ```toml
-   [tasks."api-go:build"]
-   run = "dev wasm-build -dir api-go"
+   [tasks."api:go:build"]
+   run = "dev wasm-build -dir api/go"
    ```
 
-2. **`api-go/worker/go.mjs`:** copy it from [orpc-api](https://github.com/joeblew999/orpc-api/blob/main/api-go/worker/go.mjs), and in `api-go/worker/index.mjs` replace the import of `../build/worker.mjs` with:
+2. **`api/go/worker/go.mjs`:** copy it from [orpc-api](https://github.com/joeblew999/orpc-api/blob/main/api/go/worker/go.mjs), and in `api/go/worker/index.mjs` replace the import of `../build/worker.mjs` with:
 
    ```js
    import "../build/wasm_exec.js";
@@ -116,9 +116,9 @@ A project made before Go runtimes were reused keeps working after an update, at 
 
    and, below the imports, `const go = goWorker(build);` and `await go.warm({ paths: ["/api/openapi.json"] });`, which starts two Go runtimes while the module loads. Use `go` where the file used `goWorker`.
 
-3. **`api-go/main.go`:** `transport.Run(api.Handler(env()))` in place of `workers.Serve(transport.Serve(api.Handler(env())))`, so the Go program stays alive after a response.
+3. **`api/go/main.go`:** `transport.Run(api.Handler(env()))` in place of `workers.Serve(transport.Serve(api.Handler(env())))`, so the Go program stays alive after a response.
 
-Then `mise run check`, deploy, and `mise run api-go:bench`. One thing to read first: a package variable can now hold what an earlier request left there ([Go on Cloudflare Workers](../concepts/workers-go.md#a-go-runtime-is-not-a-server-process)).
+Then `mise run check`, deploy, and `mise run api:go:bench`. One thing to read first: a package variable can now hold what an earlier request left there ([Go on Cloudflare Workers](../concepts/workers-go.md#a-go-runtime-is-not-a-server-process)).
 
 ## What compatibility is promised
 
@@ -133,5 +133,5 @@ What the checks do guarantee, for the commit a release is built from:
 What they do not guarantee:
 
 - **That a new project's full `mise run check` passes.** That is run by hand before a release, not by a workflow.
-- **That anything works on Cloudflare itself.** The tests against a deployed Worker (`mise run api-go:live-test`, `mise run api-go:soak`) are run by hand. Run `mise run api-go:live-test` after each of your own deploys.
+- **That anything works on Cloudflare itself.** The tests against a deployed Worker (`mise run api:go:live-test`, `mise run api:go:soak`) are run by hand. Run `mise run api:go:live-test` after each of your own deploys.
 - **That a tag was only pushed on a green commit.** Nothing stops a tag on a commit whose checks failed; the release workflows build what is there.

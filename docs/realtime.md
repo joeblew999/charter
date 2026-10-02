@@ -65,7 +65,7 @@ Code comments refer to these by number.
    - The hub (the `NotesHub` Durable Object) is only live fan-out: hibernatable, and allowed to restart at any time.
    - It stores nothing that matters and keeps no resume log: D1 replaces it.
 3. **One subscription primitive in the Worker: the feed.**
-   - `follow()` in `api/src/follow.ts` and `Follow` in `api-go/follow/`, the same design with the same tests.
+   - `follow()` in `api/ts/src/follow.ts` and `Follow` in `api/go/follow/`, the same design with the same tests.
    - Given `after`, it yields notes in id order: subscribe to the hub first, catch up from D1 (`id > after`), then stream live, dropping anything already sent (by id).
    - When the hub drops, it resubscribes and catches up from the last id it sent, so clients never see hub restarts or deploys.
    - It only needs a source with `subscribe`, `since` and `latest`, so another project uses it unchanged.
@@ -117,7 +117,7 @@ Not measured here, taken from Cloudflare's documentation when the design was mad
 
 ## How it is tested
 
-The feed is the only code that handles failure, so it has unit tests (`api/test/follow.test.ts`, `api-go/follow/follow_test.go`). Each transport then needs one live pass, and each client only has to show that it follows the client rule. That keeps the matrix small.
+The feed is the only code that handles failure, so it has unit tests (`api/ts/test/follow.test.ts`, `api/go/follow/follow_test.go`). Each transport then needs one live pass, and each client only has to show that it follows the client rule. That keeps the matrix small.
 
 | Scenario | How it's produced | Expected, every client |
 |---|---|---|
@@ -128,7 +128,7 @@ The feed is the only code that handles failure, so it has unit tests (`api/test/
 | Long idle | `--idle 20`: 20 minutes with no notes, then one | the note arrives |
 
 - **Clients (7):** raw SSE with `after`, SSE with `Last-Event-ID` (what `EventSource` sends), the TypeScript SDK's `notes.watch()`, the Go SDK's `Notes.Watch()`, the Fern CLI's `notes watch`, a raw WebSocket, and the TypeScript SDK's `liveNotes.connect({ after })`.
-- **Runner:** `mise run api:soak` and `mise run api-go:soak` (`test/soak.mjs`, [testing.md](testing.md)). PASS is every note exactly once, in order. Latency is reported, not judged: the Fern CLI prints json/jsonl only when a stream ends.
+- **Runner:** `mise run api:ts:soak` and `mise run api:go:soak` (`test/soak.mjs`, [testing.md](testing.md)). PASS is every note exactly once, in order. Latency is reported, not judged: the Fern CLI prints json/jsonl only when a stream ends.
 
 Results, on the deployed Workers:
 

@@ -150,7 +150,7 @@ type LiveInput struct {
 	Upgrade string `header:"Upgrade" hidden:"true"`
 }
 
-// LiveOutput answers the upgrade: no feed (204), and the channel takes messages (api-go/transport).
+// LiveOutput answers the upgrade: no feed (204), and the channel takes messages (api/go/transport).
 type LiveOutput struct {
 	Messages string `header:"X-Websocket-Messages"`
 }

@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       api:
-        description: The Worker to deploy (api = orpc-api, api-go = orpc-api-go)
+        description: The Worker to deploy (ts = orpc-api, go = orpc-api-go)
         type: choice
-        # if-dir api
-        options: [api, api-go]
+        # if-dir api/ts
+        options: [ts, go]
         # else
-        options: [api-go]
+        options: [go]
         # end
         required: true
 permissions:
@@ -31,5 +31,5 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: mise run cloudflare:token
       - run: mise run setup
-      - run: mise run "$API:deploy"
-      - run: mise run "$API:live-test"
+      - run: mise run "api:$API:deploy"
+      - run: mise run "api:$API:live-test"

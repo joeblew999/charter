@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	commands["wasm-build"] = command{"[-dir api-go] [-heap 8] [-opt z] [-stack 128kb] [-max 3000000] [-plain]",
+	commands["wasm-build"] = command{"[-dir api/go] [-heap 8] [-opt z] [-stack 128kb] [-max 3000000] [-plain]",
 		"build a Go Worker's Wasm with TinyGo, tuned for Workers (see docs: Go on Cloudflare Workers); -plain: TinyGo as it is", wasmBuild}
 }
 
@@ -76,7 +76,7 @@ var (
 //   - with -stack per goroutine (Huma overflows TinyGo's default 64 KB);
 //   - failing over -max bytes gzipped (Workers Free allows 3 MB).
 func wasmBuild(args []string) error {
-	dir, stack, opt, heap, max, plain := "api-go", "128kb", "z", 8, 3000000, false
+	dir, stack, opt, heap, max, plain := "api/go", "128kb", "z", 8, 3000000, false
 	flags("wasm-build", args, func(f *flag.FlagSet) {
 		f.StringVar(&dir, "dir", dir, "the folder of the Go program (its build/ gets the Wasm and workers-go's glue)")
 		f.IntVar(&heap, "heap", heap, "starting heap in MB (0: TinyGo's own, a few pages)")

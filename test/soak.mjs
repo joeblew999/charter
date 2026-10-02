@@ -12,10 +12,10 @@
 //
 //   node soak.mjs <origin> [--no-deploy] [--seconds 100] [--deploy-at 30] [--drop-at 65] [--stream-seconds 15]
 //   node soak.mjs <origin> --idle 20
-//   node soak.mjs <origin> --sdk api-go --deploy-task api-go:deploy     (the Go Worker, with its own SDKs)
+//   node soak.mjs <origin> --sdk api-go --deploy-task api:go:deploy     (the Go Worker, with its own SDKs)
 // Uses `ws` from sdk/node_modules and the SDKs generated for --sdk (a folder in sdk/fern/apis,
 // default api): the TypeScript SDK (sdk/out/<sdk>/typescript-dist), the CLI (sdk/out/<sdk>/cli) and
-// the Go SDK through test/soak-go; the redeploy runs `mise run <--deploy-task>` (default api:deploy).
+// the Go SDK through test/soak-go; the redeploy runs `mise run <--deploy-task>` (default api:ts:deploy).
 import { execFileSync, spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -28,7 +28,7 @@ const origin = args[0];
 const str = (name, def) => { const i = args.indexOf(`--${name}`); return i < 0 ? def : args[i + 1]; };
 const opt = (name, def) => Number(str(name, def));
 const sdk = str("sdk", "api");
-const deployTask = str("deploy-task", "api:deploy");
+const deployTask = str("deploy-task", "api:ts:deploy");
 const idleMinutes = opt("idle", 0);
 const total = (idleMinutes ? idleMinutes * 60 + 15 : opt("seconds", 100)) * 1000;
 const deployAt = idleMinutes || args.includes("--no-deploy") ? Infinity : opt("deploy-at", 30) * 1000;

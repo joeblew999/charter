@@ -11,8 +11,8 @@ For people and agents changing orpc-api itself. If you are building an API with 
 | Page | What it covers |
 |---|---|
 | [rules.md](rules.md) | The working rules. Read them before changing anything |
-| [api-go.md](api-go.md) | `api-go/`: the Go Worker, and what Huma needs to run on workers-go |
-| [api.md](api.md) | `api/`: the oRPC Worker (TypeScript) |
+| [api-go.md](api-go.md) | `api/go/`: the Go Worker, and what Huma needs to run on workers-go |
+| [api.md](api.md) | `api/ts/`: the oRPC Worker (TypeScript) |
 | [showcase-go.md](showcase-go.md) | The Go showcase: every Fern feature, feature by feature |
 | [sdk.md](sdk.md) | `sdk/`: the Fern folders, the showcase in oRPC, the SDK test Worker |
 | [mcp.md](mcp.md) | How the MCP endpoint is built |
@@ -44,23 +44,23 @@ There are two contracts for the notes API because there are two servers. They de
 
 | | The oRPC Worker (TypeScript) | The Go Worker |
 |---|---|---|
-| **The contract (the source; you edit this)** | `api/src/contract.ts` (oRPC + Zod) | `api-go/api/contract.go` (Huma: Go structs and their tags) |
-| The server | `api/src/index.ts` | `api-go/api/handlers.go` |
+| **The contract (the source; you edit this)** | `api/ts/src/contract.ts` (oRPC + Zod) | `api/go/api/contract.go` (Huma: Go structs and their tags) |
+| The server | `api/ts/src/index.ts` | `api/go/api/handlers.go` |
 | OpenAPI generator | `@orpc/openapi` | Huma |
-| AsyncAPI generator (the WebSocket) | `api/src/asyncapi.ts` (ours) | `api-go/asyncapi/` (ours, the same design) |
-| Write the specs | `mise run api:spec` | `mise run api-go:spec` |
+| AsyncAPI generator (the WebSocket) | `api/ts/src/asyncapi.ts` (ours) | `api/go/asyncapi/` (ours, the same design) |
+| Write the specs | `mise run api:ts:spec` | `mise run api:go:spec` |
 | **The specs (generated; never edit)** | `sdk/fern/apis/api/*.json` | `sdk/fern/apis/api-go/*.json` |
 | Fern's settings for that API | `sdk/fern/apis/api/generators.yml` | `sdk/fern/apis/api-go/generators.yml` |
 | Generate an SDK | `mise run sdk:gen api <group>` | `mise run sdk:gen api-go <group>` |
 | Fern's output (gitignored) | `sdk/out/api/` | `sdk/out/api-go/` |
-| The feed (gap-free real-time) | `follow()` in `api/src/follow.ts` | `Follow` in `api-go/follow/` |
-| The hub (a Durable Object with hibernating WebSockets) | `api/src/hub.ts` (oRPC's) | `api-go/worker/hub.mjs` |
+| The feed (gap-free real-time) | `follow()` in `api/ts/src/follow.ts` | `Follow` in `api/go/follow/` |
+| The hub (a Durable Object with hibernating WebSockets) | `api/ts/src/hub.ts` (oRPC's) | `api/go/worker/hub.mjs` |
 | The Worker on Cloudflare | `orpc-api` | `orpc-api-go` |
 | Deployed at | https://orpc-api.gedw99.workers.dev/api/openapi.json | https://orpc-api-go.gedw99.workers.dev/api/openapi.json |
 | MCP endpoint | no | `/api/mcp` |
-| Also runs without Cloudflare | no | yes: `mise run api-go:run` |
-| Check it locally | `mise run api:check` | `mise run api-go:check` |
-| Test it deployed | `mise run api:live-test`, `mise run api:soak` | `mise run api-go:live-test`, `mise run api-go:soak` |
+| Also runs without Cloudflare | no | yes: `mise run api:go:run` |
+| Check it locally | `mise run api:ts:check` | `mise run api:go:check` |
+| Test it deployed | `mise run api:ts:live-test`, `mise run api:ts:soak` | `mise run api:go:live-test`, `mise run api:go:soak` |
 | Its page | [api.md](api.md) | [api-go.md](api-go.md) |
 
 Shared by both: `test/` (the test programs), `migrations/` (the D1 schema), `sdk/` (Fern), `dev/` (the tool the tasks run).
@@ -71,8 +71,8 @@ The showcase is a second, smaller API whose only job is to use every Fern featur
 
 | | The oRPC showcase | The Go showcase |
 |---|---|---|
-| **The contract** | `sdk/harness/src/contract.ts` | `api-go/showcase/contract.go` |
-| The server | `sdk/harness/src/showcase.ts`, served by the harness Worker under `/api/mock` | `api-go/showcase/handlers.go`, run by `api-go/cmd/showcase/` |
+| **The contract** | `sdk/harness/src/contract.ts` | `api/go/showcase/contract.go` |
+| The server | `sdk/harness/src/showcase.ts`, served by the harness Worker under `/api/mock` | `api/go/showcase/handlers.go`, run by `api/go/cmd/showcase/` |
 | Write the specs | `mise run showcase:spec` | `mise run showcase-go:spec` |
 | **The specs (generated; never edit)** | `sdk/fern/apis/showcase/*.json` | `sdk/fern/apis/showcase-go/*.json` |
 | The Worker on Cloudflare | `orpc-sdk-harness` and `orpc-sdk-harness-api` | `orpc-showcase-go` |
@@ -86,7 +86,7 @@ The showcase is a second, smaller API whose only job is to use every Fern featur
 | The contract | The code that defines an API's routes and schemas. The source of everything else |
 | The specs | `openapi.json` and `asyncapi.json`, generated from a contract into a Fern folder |
 | A Fern folder | `sdk/fern/apis/<api>/`: an API's specs and `generators.yml`. A group in that file is one SDK to generate |
-| The oRPC Worker, the Go Worker | The two servers of the notes API: `api/` and `api-go/` |
+| The oRPC Worker, the Go Worker | The two servers of the notes API: `api/ts/` and `api/go/` |
 | The feed | `follow()` / `Follow`: the one primitive that gives a client every note once, in order ([realtime.md](realtime.md)) |
 | The hub | The `NotesHub` Durable Object: live fan-out only, stores nothing |
 | The harness Worker | `sdk/harness/`: serves the oRPC showcase and runs Fern's TypeScript SDK inside workerd |
@@ -98,9 +98,9 @@ Things that are easy to mix up:
 
 - **Fern does not write servers.** It reads the two spec files and writes clients: SDKs in Go, TypeScript and more, a command-line program, docs. The server is ours, in either language.
 - **"The CLI" is the Fern CLI.** It never runs on Cloudflare. It is not `cf`, `mise`, or the `dev` tool.
-- **"Go" means two different things here.** `api-go/` is a Go *server*. A folder `go` under `sdk/out/` is a Go *client SDK* that Fern generated, and it exists for both servers.
+- **"Go" means two different things here.** `api/go/` is a Go *server*. A folder `go` under `sdk/out/` is a Go *client SDK* that Fern generated, and it exists for both servers.
 - **The tests and the database schema are shared.** `test/` has one set of test programs for both servers (they take a URL, and `--sdk api-go` picks the SDKs generated from the Go specs), and `migrations/` is the one D1 schema.
-- **What is the product and what is an example.** The `dev` tool and the Go packages in `api-go/` (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`) are what other projects use. `api/` and `api-go/` as Workers are the reference examples they are proven against.
+- **What is the product and what is an example.** The `dev` tool and the Go packages in `api/go/` (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`) are what other projects use. `api/ts/` and `api/go/` as Workers are the reference examples they are proven against.
 - **`sdk/fern/apis/` has two more folders,** `petstore` and `modern`: hand-written sample specs with no server, for trying Fern.
 
 ## Starting a project of your own

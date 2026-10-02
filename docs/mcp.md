@@ -5,19 +5,19 @@ parent: This repository
 ---
 # MCP: the Go contract as tools
 
-The Go Worker serves its contract a third way, beside REST and the specs: as MCP tools (Model Context Protocol) at `POST /api/mcp`, made from the same Huma operations by the package in `api-go/humamcp/`. Read this page to use the endpoint, to add it to another Huma API, or before changing the package. The oRPC Worker has no MCP endpoint; that and authorization are planned in [plans/mcp.md](plans/mcp.md).
+The Go Worker serves its contract a third way, beside REST and the specs: as MCP tools (Model Context Protocol) at `POST /api/mcp`, made from the same Huma operations by the package in `api/go/humamcp/`. Read this page to use the endpoint, to add it to another Huma API, or before changing the package. The oRPC Worker has no MCP endpoint; that and authorization are planned in [plans/mcp.md](plans/mcp.md).
 
 ## Using it
 
 ```sh
-mise run api-go:run        # the Go API natively on :5174 (or mise run api-go:dev, under workerd)
-mise run api-go:mcp-test   # the official TypeScript MCP client against it, in both protocol eras (test/mcp-test.mjs)
-mise run api-go:live-test  # REMOTE: the real-time tests, then the same MCP test against the deployed Go Worker
+mise run api:go:run        # the Go API natively on :5174 (or mise run api:go:dev, under workerd)
+mise run api:go:mcp-test   # the official TypeScript MCP client against it, in both protocol eras (test/mcp-test.mjs)
+mise run api:go:live-test  # REMOTE: the real-time tests, then the same MCP test against the deployed Go Worker
 ```
 
 By hand, with a tool this repo doesn't pin: `npx @modelcontextprotocol/inspector --cli http://localhost:5174/api/mcp --transport http --method tools/list`.
 
-In another Huma project: `humamcp.Handler(api)` with a `*humaworkers.API`, mounted on one path (`api-go/api/handlers.go` shows it). Give each `humaworkers.Route` its `OperationID`, so a tool call registers only its own operation.
+In another Huma project: `humamcp.Handler(api)` with a `*humaworkers.API`, mounted on one path (`api/go/api/handlers.go` shows it). Give each `humaworkers.Route` its `OperationID`, so a tool call registers only its own operation.
 
 ## What a client sees
 
@@ -38,7 +38,7 @@ In another Huma project: `humamcp.Handler(api)` with a `*humaworkers.API`, mount
 | A tool call builds an `http.Request` and runs it through `humaworkers.API.ServeHTTP` | One code path: Huma's validation, `Resolve`, middleware and the handler are the REST ones. Nothing is validated twice or differently |
 | Both eras are answered | Clients are mid-migration: the TypeScript client 2.x speaks both, and the 1.x SDK opens with `initialize` |
 | Arguments are flat | It is what a model writes most easily, and it is oRPC's input shape, so both servers could expose the same tool schemas. When a parameter and a body property share a name, that one operation keeps its body under `body`, so both values have a place |
-| An operation that cannot be a tool is left out of `tools/list` and logged; `humamcp.Check(api)` returns the reasons | One operation's problem must not take the other tools down, and it should be found before a client lists them: `TestEveryOperationCanBeItsMCPTool` (`api-go/api/contract_test.go`) and the spec command (`mise run api-go:spec`, `api-go:spec:check`) fail on it. Today the one reason is a parameter named `body` beside a body that is the argument `body`; rename it, or `humamcp.Expose(op, false)` |
+| An operation that cannot be a tool is left out of `tools/list` and logged; `humamcp.Check(api)` returns the reasons | One operation's problem must not take the other tools down, and it should be found before a client lists them: `TestEveryOperationCanBeItsMCPTool` (`api/go/api/contract_test.go`) and the spec command (`mise run api:go:spec`, `api:go:spec:check`) fail on it. Today the one reason is a parameter named `body` beside a body that is the argument `body`; rename it, or `humamcp.Expose(op, false)` |
 | `$ref` becomes `#/$defs/...`, with the schemas included per tool | A tool's schema must stand alone. JSON Schema 2020-12 is MCP's default dialect |
 | `outputSchema` and `structuredContent` only for object responses | The handshake-era revisions only allow objects there. The text block always carries the body |
 | Streams are left out by default: an operation that is `Hidden` or answers `text/event-stream` | This server opens no stream for progress. `humamcp.Expose` in `Operation.Metadata` overrides it, as `asyncapi.Operation` marks channels |

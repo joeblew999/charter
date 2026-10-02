@@ -18,11 +18,11 @@ import (
 // experiment, with its own database and hub, and removes them when it is done.
 //
 // It needs the Worker's cloudflare.config.ts to name the Worker after the mode when the mode
-// starts with "perf-" (api-go's does), and API_GO_URL: the scratch Worker's URL is that URL with
+// starts with "perf-" (api/go's does), and API_GO_URL: the scratch Worker's URL is that URL with
 // the scratch name as its first label.
 
 func init() {
-	commands["perf"] = command{"-name <experiment> [-dir api-go] [-build '<wasm-build flags>'] [-keep] [-- <bench flags>]",
+	commands["perf"] = command{"-name <experiment> [-dir api/go] [-build '<wasm-build flags>'] [-keep] [-- <bench flags>]",
 		"REMOTE: build, deploy to a scratch Worker <worker>-perf-<experiment>, bench it from its first request, delete it (-keep: leave it)", perf}
 	commands["perf-clean"] = command{"[-worker <name>]", "REMOTE: delete every scratch Worker <worker>-perf-* and its database that a perf run left", perfClean}
 }
@@ -30,7 +30,7 @@ func init() {
 var experimentName = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,20}[a-z0-9])?$`)
 
 func perf(args []string) error {
-	name, dir, build, keep := "", "api-go", "", false
+	name, dir, build, keep := "", "api/go", "", false
 	rest := flags("perf", args, func(f *flag.FlagSet) {
 		f.StringVar(&name, "name", "", "the experiment: lower-case letters, digits and hyphens, at most 22. Its Worker is <worker>-perf-<name>")
 		f.StringVar(&dir, "dir", dir, "the folder of the Go Worker")
@@ -103,7 +103,7 @@ func perfClean(args []string) error {
 	if worker == "" {
 		return errors.New("perf-clean needs -worker <name> or API_GO_URL")
 	}
-	dir := "api-go"
+	dir := "api/go"
 	out, err := output(dir, cf, "workers", "list", "--per-page", "100")
 	if err != nil {
 		return err

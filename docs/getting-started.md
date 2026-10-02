@@ -17,7 +17,7 @@ dev new -name billing-api                                            # creates .
 cd billing-api && git init
 ```
 
-The first line `dev new` prints is the tool's version and what it pinned to it (the tool in `mise.toml`, the Go packages in `api-go/go.mod`): minutes after a release `@latest` can still be the previous one, while the release binary or `dev@vX.Y.Z` is exact.
+The first line `dev new` prints is the tool's version and what it pinned to it (the tool in `mise.toml`, the Go packages in `api/go/go.mod`): minutes after a release `@latest` can still be the previous one, while the release binary or `dev@vX.Y.Z` is exact.
 
 `-name` becomes the Worker's name, its database and the SDK's names (`BillingApiClient`). The Go module defaults to `github.com/<your GitHub login>/billing-api`; pass `-module` to choose.
 
@@ -38,7 +38,7 @@ mise run check        # lint, tests, spec drift, the Wasm build, and live tests 
 ## 3. Run it
 
 ```sh
-mise run api-go:run   # natively, in-memory store: http://localhost:5174
+mise run api:go:run   # natively, in-memory store: http://localhost:5174
 ```
 
 In another shell:
@@ -54,18 +54,18 @@ curl localhost:5174/api/openapi.json                             # the spec, gen
 To run it the way Cloudflare does (the real Wasm, a local D1 database and the hub):
 
 ```sh
-mise run api-go:dev             # in one shell
-mise run api-go:migrate:local   # in another, the first time: creates the tables
+mise run api:go:dev             # in one shell
+mise run api:go:migrate:local   # in another, the first time: creates the tables
 ```
 
 ## 4. Make it yours
 
-The whole API is one file: `api-go/api/contract.go`. Each operation is a few lines: its path, its input struct, its output struct. Struct tags are the validation rules and the schema.
+The whole API is one file: `api/go/api/contract.go`. Each operation is a few lines: its path, its input struct, its output struct. Struct tags are the validation rules and the schema.
 
 Change it, then:
 
 ```sh
-mise run api-go:spec    # regenerates the OpenAPI and AsyncAPI files from the contract
+mise run api:go:spec    # regenerates the OpenAPI and AsyncAPI files from the contract
 mise run check          # fails if you forgot the line above, or broke something
 ```
 
@@ -74,9 +74,9 @@ How to add operations, validation and errors: [Define your API](guides/contract.
 ## 5. Deploy
 
 ```sh
-api-go/node_modules/.bin/cf auth login   # once: your Cloudflare account
-mise run api-go:deploy                   # the Worker, its D1 database, the migrations
-mise run api-go:live-test                # SSE, WebSocket, the SDK and MCP against what you just deployed
+api/go/node_modules/.bin/cf auth login   # once: your Cloudflare account
+mise run api:go:deploy                   # the Worker, its D1 database, the migrations
+mise run api:go:live-test                # SSE, WebSocket, the SDK and MCP against what you just deployed
 ```
 
 The deploy prints the Worker's URL. The project has a placeholder for it, `https://billing-api.your-subdomain.workers.dev`, in `mise.toml` and in the specs (`dev new -subdomain <yours>` in step 1 writes the real one instead). So before the live test, put the URL the deploy printed in `mise.local.toml`:
@@ -86,7 +86,7 @@ The deploy prints the Worker's URL. The project has a placeholder for it, `https
 API_GO_URL = "https://billing-api.<your-subdomain>.workers.dev"
 ```
 
-Then `mise run api-go:spec`, so the specs name the right server. `mise.local.toml` is gitignored: for CI to agree with the specs you commit, make the URL the default of `API_GO_URL` in `mise.toml` instead. Always run the live test after a deploy: some failures only exist on Cloudflare itself. More: [Deploy to Cloudflare](guides/deploy.md).
+Then `mise run api:go:spec`, so the specs name the right server. `mise.local.toml` is gitignored: for CI to agree with the specs you commit, make the URL the default of `API_GO_URL` in `mise.toml` instead. Always run the live test after a deploy: some failures only exist on Cloudflare itself. More: [Deploy to Cloudflare](guides/deploy.md).
 
 ## 6. Generate an SDK
 

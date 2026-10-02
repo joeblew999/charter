@@ -20,16 +20,16 @@ mise run dev:check           # the tool's own checks: gofmt, vet, tests, and the
 
 | Command | What it does | Task that calls it |
 |---|---|---|
-| `with-server` | Starts a server, waits up to 90 s until a URL answers, runs commands against it, stops it. `{port}` in its arguments is a free port, `{port2}` another. A command's output is shown only if it fails; `-show` streams it | `api-go:test:native`, `api-go:test:workerd`, `showcase-go:test:native`, `showcase-go:test:workerd` |
-| `migrate-local` | Applies `migrations/*.sql` to a running dev server's local D1, each once (cf can't) | `api:migrate:local`, `api-go:migrate:local`, `api-go:test:workerd` |
-| `migrate` | Finds the Worker's D1 database (`<worker>-db`) and applies pending migrations | `api:migrate`, `api-go:migrate`, the two notes `deploy` tasks |
-| `wasm-build` | Builds a Go program into the Wasm a Worker deploys, tuned for Workers (a patched copy of TinyGo's runtime and an 8 MB starting heap: [benchmarks.md](benchmarks.md)), and checks its size. `-plain` builds with TinyGo as it is | `api-go:build`, `showcase-go:build` |
+| `with-server` | Starts a server, waits up to 90 s until a URL answers, runs commands against it, stops it. `{port}` in its arguments is a free port, `{port2}` another. A command's output is shown only if it fails; `-show` streams it | `api:go:test:native`, `api:go:test:workerd`, `showcase-go:test:native`, `showcase-go:test:workerd` |
+| `migrate-local` | Applies `migrations/*.sql` to a running dev server's local D1, each once (cf can't) | `api:ts:migrate:local`, `api:go:migrate:local`, `api:go:test:workerd` |
+| `migrate` | Finds the Worker's D1 database (`<worker>-db`) and applies pending migrations | `api:ts:migrate`, `api:go:migrate`, the two notes `deploy` tasks |
+| `wasm-build` | Builds a Go program into the Wasm a Worker deploys, tuned for Workers (a patched copy of TinyGo's runtime and an 8 MB starting heap: [benchmarks.md](benchmarks.md)), and checks its size. `-plain` builds with TinyGo as it is | `api:go:build`, `showcase-go:build` |
 | `size` | Fails if a file is over a gzipped size | none: `wasm-build` does it |
 | `sdk-gen`, `sdk-check`, `sdk-ready`, `sdk-list`, `sdk-clean` | Fern: generate an SDK, prove it works, make what the tests need | `sdk:gen`, `sdk:check`, `sdk:ready`, `sdk:list`, `sdk:clean`, `sdk:demo` |
 | `sdk-publish` | Copies the Go API's Go SDK, generated fresh and checked, into `sdk/go`: the committed Go module another repo fetches with `go get`. `-check` fails when that copy is stale; `-check -quick` says so from a hash of the specs, with no Docker | `sdk:publish`, `sdk:publish:check`, `sdk:publish:fresh` |
 | `cli-build` | Builds the Fern CLI (Rust), natively or with `-linux` for Linux in Docker | `sdk:cli:build` |
 | `harness-sync`, `harness-test`, `harness-deploy` | Fern's TypeScript SDK inside the harness Worker (`sdk/harness/`). `harness-sync` copies the SDK in, generating it again when a showcase spec is newer than it | `showcase:typecheck`, `sdk:harness:test`, `sdk:harness:deploy` |
-| `bench` | Calls every operation of an API that its OpenAPI spec has examples for and prints wall time; `-cpu` adds the CPU time Cloudflare recorded, `-write` the operations that change data ([benchmarks.md](benchmarks.md)) | `api:bench`, `api-go:bench`, `api-go:perf` |
+| `bench` | Calls every operation of an API that its OpenAPI spec has examples for and prints wall time; `-cpu` adds the CPU time Cloudflare recorded, `-write` the operations that change data ([benchmarks.md](benchmarks.md)) | `api:ts:bench`, `api:go:bench`, `api:go:perf` |
 | `new` | Creates a new Go API project from this repo's example ([below](#a-new-project-dev-new)) | none: run it with `go run ...dev@latest new` |
 | `version` | Prints the release the tool is: what `new` pins a project to | none |
 | `docs` | Writes the docs site's config, `docs/writing.md` and `docs/llms.txt` into a repo; `-check` fails if one differs ([below](#the-docs-site)) | `docs:setup`, `dev:check` |
@@ -60,10 +60,10 @@ Every step that does work is `mise run <task>`, so a failing step is one line yo
 
 | Workflow | When | What it runs | Secrets |
 |---|---|---|---|
-| `api-check` | push to main, pull requests, by hand | `api:check`, `api-go:check` and `showcase-go:check`, one job each | none |
+| `api-check` | push to main, pull requests, by hand | `api:ts:check`, `api:go:check` and `showcase-go:check`, one job each | none |
 | `sdk-check` | push to main, pull requests, by hand | `sdk:demo`; `showcase:check` and `sdk:harness:test`; `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of `api`, `api-go`, `showcase` and `showcase-go`; and `sdk:publish:check` | none |
 | `dev-check` | push to main, pull requests, by hand | `dev:check` | none |
-| `api-deploy` | by hand only (pick `api` or `api-go`) | `cloudflare:token`, `<api>:deploy`, then `<api>:live-test` against the Worker it just deployed | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
+| `api-deploy` | by hand only (pick `ts` or `go`) | `cloudflare:token`, `api:<ts or go>:deploy`, then `api:<ts or go>:live-test` against the Worker it just deployed | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 | `dev-release` | a version tag. A dry run by hand, and on pull requests that touch `dev/`, `.goreleaser.yaml`, `mise.toml` or `go.work` | `dev:release` (GoReleaser), `release:tags` | none (the workflow's own token) |
 | `sdk-release` | a version tag. A dry run by hand, and on pull requests that touch `sdk/`, `dev/`, `mise.toml`, `go.work` or `rust-toolchain.toml` | `sdk:dist`, `sdk:dist:cli <api>`, `release` | none |
 
@@ -110,11 +110,11 @@ The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release
 | `api-specs.tar.gz`, `api-go-specs.tar.gz` | `openapi.json` and `asyncapi.json` of each API |
 | `api-cli-linux-amd64`, `api-go-cli-linux-amd64` | The Fern CLI of each API (the binary calls itself `orpc-api`) |
 
-**Go module versions.** `api-go/`, `dev/` and `sdk/go/` are Go modules in subdirectories, and Go only finds a version of such a module under a tag with the directory in front. So `release:tags` adds `api-go/vX.Y.Z`, `dev/vX.Y.Z` and `sdk/go/vX.Y.Z` on the same commit as `vX.Y.Z`. You push one tag; those three follow. Then `go get github.com/joeblew999/orpc-api/api/go@latest`, `go run github.com/joeblew999/orpc-api/dev@latest help` and `go get github.com/joeblew999/orpc-api/sdk/go@latest` pick it up. Don't push the module tags or upload release files by hand.
+**Go module versions.** `api/go/`, `dev/` and `sdk/go/` are Go modules in subdirectories, and Go only finds a version of such a module under a tag with the directory in front. So `release:tags` adds `api/go/vX.Y.Z`, `dev/vX.Y.Z` and `sdk/go/vX.Y.Z` on the same commit as `vX.Y.Z`. You push one tag; those three follow. Then `go get github.com/joeblew999/orpc-api/api/go@latest`, `go run github.com/joeblew999/orpc-api/dev@latest help` and `go get github.com/joeblew999/orpc-api/sdk/go@latest` pick it up. Don't push the module tags or upload release files by hand.
 
 **A dry run** is the same build without a version tag: GoReleaser makes a snapshot in `dist/`, `release` lists what is in `dist/` and publishes nothing, `release:tags` says which tags it would add, and the files are kept as workflow artifacts. Pull requests do that, and so does `gh workflow run dev-release.yml`. Locally: `mise run dev:release && mise run sdk:dist && mise run release`.
 
-**The Go SDK as a module.** `sdk/go/` is the Go SDK of the Go API, committed so that another repo can `go get github.com/joeblew999/orpc-api/sdk/go`. `mise run sdk:publish` writes it from a fresh generation (after `mise run api-go:spec`, when the contract changed); never edit it. `mise run sdk:publish:check` fails when it is stale, and the `sdk-check` workflow runs that. How a project made by `dev new` does the same for its API: [Giving the Go SDK to another repo](guides/sdks.md#giving-the-go-sdk-to-another-repo).
+**The Go SDK as a module.** `sdk/go/` is the Go SDK of the Go API, committed so that another repo can `go get github.com/joeblew999/orpc-api/sdk/go`. `mise run sdk:publish` writes it from a fresh generation (after `mise run api:go:spec`, when the contract changed); never edit it. `mise run sdk:publish:check` fails when it is stale, and the `sdk-check` workflow runs that. How a project made by `dev new` does the same for its API: [Giving the Go SDK to another repo](guides/sdks.md#giving-the-go-sdk-to-another-repo).
 
 Not released: the TypeScript SDK as an npm package, the Go SDKs of the oRPC API and the showcases as modules, the Fern CLI for macOS and Windows, and anything else of the two showcases ([plans/next.md](plans/next.md)).
 
@@ -125,9 +125,9 @@ go run github.com/joeblew999/orpc-api/dev@latest workflows -into .          # wr
 go run github.com/joeblew999/orpc-api/dev@latest workflows -into . -check   # fails if they differ from the templates
 ```
 
-It writes the `api-` and `sdk-` workflows. `-only api` or `-only sdk` writes one set; the `dev-` ones are only written where there is a `dev/` module, as here. The templates adapt to the repo: one without an `api/` folder (a project made by `dev new`) gets the Go API's jobs only.
+It writes the `api-` and `sdk-` workflows. `-only api` or `-only sdk` writes one set; the `dev-` ones are only written where there is a `dev/` module, as here. The templates adapt to the repo: one without an `api/ts/` folder (a project made by `dev new`) gets the Go API's jobs only.
 
-They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `api:check`, `api-go:check`, `showcase-go:check`, `api:deploy`, `api-go:deploy`, `api:live-test`, `api-go:live-test`, `cloudflare:token`, `sdk:demo`, `showcase:check`, `sdk:harness:test`, `sdk:gen`, `sdk:check`, `sdk:publish:check`, `sdk:dist`, `sdk:dist:cli`, `release` and `release:tags`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
+They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `api:ts:check`, `api:go:check`, `showcase-go:check`, `api:ts:deploy`, `api:go:deploy`, `api:ts:live-test`, `api:go:live-test`, `cloudflare:token`, `sdk:demo`, `showcase:check`, `sdk:harness:test`, `sdk:gen`, `sdk:check`, `sdk:publish:check`, `sdk:dist`, `sdk:dist:cli`, `release` and `release:tags`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
 
 ## A new project: `dev new`
 
@@ -138,8 +138,8 @@ go run github.com/joeblew999/orpc-api/dev@latest new -name billing-api      # in
 cd billing-api && git init
 mise install && mise run setup
 mise run check                 # lint, tests, spec drift, the TinyGo build, the live and MCP tests natively and under workerd
-mise run api-go:run            # natively: http://localhost:5174/api/hello
-mise run api-go:deploy         # to Cloudflare, then: mise run api-go:live-test
+mise run api:go:run            # natively: http://localhost:5174/api/hello
+mise run api:go:deploy         # to Cloudflare, then: mise run api:go:live-test
 ```
 
 | Flag | What | Default |
@@ -150,16 +150,16 @@ mise run api-go:deploy         # to Cloudflare, then: mise run api-go:live-test
 | `-into` | Where to create it; the folder must be empty | `./<name>` |
 | `-from` | A checkout of this repo to copy from | the tool's own version, cloned from GitHub |
 
-- **Its first line is the tool's version and what it pinned to it:** the dev tool in the project's `mise.toml`, the Go packages in `api-go/go.mod`. `dev version` prints the version alone. Minutes after a release, `dev@latest` can still be the release before (Go's module proxy caches it); the release binary and `dev@vX.Y.Z` are exact.
-- **It copies the example** from this repo at the tool's own version: the notes API in `api-go/` (contract, handlers, Worker entry, hub, platform files, spec command), `migrations/`, the notes test programs from `test/`, and the Fern folder `sdk/fern/apis/api-go/`. There is no separate template, so a new project starts from code that passed this repo's checks. The Go showcase and the test that compares with the oRPC contract are left out.
+- **Its first line is the tool's version and what it pinned to it:** the dev tool in the project's `mise.toml`, the Go packages in `api/go/go.mod`. `dev version` prints the version alone. Minutes after a release, `dev@latest` can still be the release before (Go's module proxy caches it); the release binary and `dev@vX.Y.Z` are exact.
+- **It copies the example** from this repo at the tool's own version: the notes API in `api/go/` (contract, handlers, Worker entry, hub, platform files, spec command), `migrations/`, the notes test programs from `test/`, and the Fern folder `sdk/fern/apis/api-go/`. There is no separate template, so a new project starts from code that passed this repo's checks. The Go showcase and the test that compares with the oRPC contract are left out.
 - **It renames:** the Worker and its D1 database (`-name`), the Go module (`-module`), the SDK's names (`billing-api` gives `BillingApiClient`), and the Go SDK's module path (`<module>/sdk/go`, so another repo can `go get` it once `mise run sdk:publish` has committed it).
-- **It sets the Worker's URL** to `https://<name>.<subdomain>.workers.dev`, as the default of `API_GO_URL` in the project's `mise.toml` and in the two copied specs, which must agree for `mise run check` to pass. Without `-subdomain` that is a placeholder, and the closing message says what to do after the first deploy: put the URL the deploy prints in `mise.local.toml` as `API_GO_URL` (or make it the default in `mise.toml`, which CI reads too), then `mise run api-go:spec`. Nothing in a project names this repo's own subdomain.
+- **It sets the Worker's URL** to `https://<name>.<subdomain>.workers.dev`, as the default of `API_GO_URL` in the project's `mise.toml` and in the two copied specs, which must agree for `mise run check` to pass. Without `-subdomain` that is a placeholder, and the closing message says what to do after the first deploy: put the URL the deploy prints in `mise.local.toml` as `API_GO_URL` (or make it the default in `mise.toml`, which CI reads too), then `mise run api:go:spec`. Nothing in a project names this repo's own subdomain.
 - **Its closing message also says what the Go Worker costs to run** ([api-go.md](api-go.md#cost)), and links the guide to putting your own API in the example's place ([guides/replace-the-example.md](guides/replace-the-example.md)).
 - **It keeps as imports** the reusable packages (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`), pinned to the same version, so fixes arrive with `go get -u`. Made with `-from`, the project builds against that checkout through a `replace` line in its `go.mod`; remove it once you depend on a release.
 - **It writes** a `mise.toml` with the Go and SDK tasks (the dev tool is one of its mise tools, pinned to the release, so tasks call `dev <command>`), `go.work`, a README, `AGENTS.md`, and a `docs/` folder with a start page, rules and the writing rules.
 - **Then, with a GitHub repo:** `mise run dev:workflows` (the workflows come out for one Go API), `mise run docs:setup` and `mise run docs:pages`.
 
-The project starts as the notes API. Change `api-go/api/contract.go`, run `mise run api-go:spec`, and go from there ([api-go.md](api-go.md#starting-a-go-workers-go-project-from-it)).
+The project starts as the notes API. Change `api/go/api/contract.go`, run `mise run api:go:spec`, and go from there ([api-go.md](api-go.md#starting-a-go-workers-go-project-from-it)).
 
 Before a release, the scaffold is proven by hand: `go run ./dev new -name trial -into /tmp/trial -from .`, then that project's `mise run setup` and `mise run check`. `go test ./dev` covers the copy, the renaming, the Worker's URL with and without `-subdomain`, the first line and a build.
 
@@ -179,7 +179,7 @@ mise run docs:review     # has Claude bring docs/ into line with docs/writing.md
 
   ```
   ---
-  title: Go Worker (api-go/)
+  title: Go Worker (api/go/)
   nav_order: 4
   ---
   ```
@@ -203,6 +203,6 @@ The module path is real, so another repo can run it without copying it:
 go run github.com/joeblew999/orpc-api/dev@latest help
 ```
 
-`new`, `workflows`, `docs`, `docs-lint` and `docs-review` run anywhere. Every other command expects this repo's layout, or that of a project made by `dev new` (a `go.work` at the root, `api-go/`, `sdk/`, `migrations/`).
+`new`, `workflows`, `docs`, `docs-lint` and `docs-review` run anywhere. Every other command expects this repo's layout, or that of a project made by `dev new` (a `go.work` at the root, `api/go/`, `sdk/`, `migrations/`).
 
 Each release also has the tool as a binary (`dev_<os>_<arch>.tar.gz`, with checksums), for a repo that doesn't want Go only to run it.

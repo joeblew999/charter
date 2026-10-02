@@ -23,7 +23,7 @@ Not planned unless something needs them: resources and prompts (tools already co
 
 oRPC has no official MCP package (none on npm under `@orpc/`; `@orpc/ai-sdk` makes AI SDK tools, not an MCP server). There is a third-party `orpc-mcp` 0.1.3 (peer `@orpc/* ^2.0.0-beta.16`, "serve an oRPC router as an MCP server"), not tried.
 
-The equivalent of `humamcp` would be a file `mcp.ts` beside `api/src/asyncapi.ts`, built like it on oRPC's public APIs:
+The equivalent of `humamcp` would be a file `mcp.ts` beside `api/ts/src/asyncapi.ts`, built like it on oRPC's public APIs:
 
 - **Walk the contract's procedures.** A tool per procedure that isn't an event iterator (so not `watch`, not `live`), named by its OpenAPI `operationId`, so the names match the Go server's (`hello`, `listNotes`, `createNote`).
 - **Schemas from Zod:** `inputSchema` and `outputSchema` through `ZodToJsonSchemaConverter`, which is already flat because oRPC's input is one object.

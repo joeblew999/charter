@@ -10,18 +10,18 @@ This page gets you the things a production API needs, written so that the SDKs F
 
 ## The working example
 
-Every feature here exists, working, in a small API in the orpc-api repo: `api-go/showcase/` in [github.com/joeblew999/orpc-api](https://github.com/joeblew999/orpc-api). It is deployed at https://orpc-showcase-go.gedw99.workers.dev. Your project from `dev new` does not contain it: read it in that repo, copy the lines you need.
+Every feature here exists, working, in a small API in the orpc-api repo: `api/go/showcase/` in [github.com/joeblew999/orpc-api](https://github.com/joeblew999/orpc-api). It is deployed at https://orpc-showcase-go.gedw99.workers.dev. Your project from `dev new` does not contain it: read it in that repo, copy the lines you need.
 
 Where things go in your project:
 
 | What | File in your project | In the showcase |
 |---|---|---|
-| Operations and their structs | `api-go/api/contract.go` | `api-go/showcase/contract.go` |
-| The document around the operations (security scheme, `x-fern-*` at the top level) | `config()` in `api-go/api/spec.go` | `config()` in `api-go/showcase/spec.go` |
-| Handlers | `api-go/api/handlers.go` | `api-go/showcase/handlers.go` |
+| Operations and their structs | `api/go/api/contract.go` | `api/go/showcase/contract.go` |
+| The document around the operations (security scheme, `x-fern-*` at the top level) | `config()` in `api/go/api/spec.go` | `config()` in `api/go/showcase/spec.go` |
+| Handlers | `api/go/api/handlers.go` | `api/go/showcase/handlers.go` |
 | SDK settings | `sdk/fern/apis/api-go/generators.yml` | `sdk/fern/apis/showcase-go/generators.yml` |
 
-After each change: `mise run api-go:spec`, then `mise run check`. To see the SDK, `mise run sdk:gen api-go typescript` (Docker).
+After each change: `mise run api:go:spec`, then `mise run check`. To see the SDK, `mise run sdk:gen api-go typescript` (Docker).
 
 The showcase's own test generates the TypeScript SDK from its specs and calls the running server with it, from Node. In the orpc-api repo:
 
@@ -29,7 +29,7 @@ The showcase's own test generates the TypeScript SDK from its specs and calls th
 mise run showcase-go:check   # lint, Go tests, spec check, then the SDK test against the native build and under workerd
 ```
 
-and against the deployed Worker, `node test/showcase-test.mjs "$SHOWCASE_GO_URL" showcase-go`. What has run where is in that repo's [findings](../findings.md). The Go tests of the showcase (`go test ./showcase/` in `api-go/`) passed when this page was written, and I ran the server natively and called it with `curl` for the outputs below. I did not run Fern for this page, so what an SDK looks like below is from the repo's own docs and test, not from my run.
+and against the deployed Worker, `node test/showcase-test.mjs "$SHOWCASE_GO_URL" showcase-go`. What has run where is in that repo's [findings](../findings.md). The Go tests of the showcase (`go test ./showcase/` in `api/go/`) passed when this page was written, and I ran the server natively and called it with `curl` for the outputs below. I did not run Fern for this page, so what an SDK looks like below is from the repo's own docs and test, not from my run.
 
 ## OAuth client credentials
 
@@ -103,7 +103,7 @@ api:
 
 (The `*-env` names are the environment variables the SDK reads when no credentials are passed; the showcase uses `SHOWCASE_CLIENT_ID` and `SHOWCASE_CLIENT_SECRET`. The `api:` block sits above the `specs` list that is already in the file.)
 
-**The server must enforce it.** The scheme in the spec only describes. The showcase checks every request in a Huma middleware (`authorize` in `api-go/showcase/handlers.go`, registered with `routes.UseMiddleware(env.authorize(routes))`): an operation whose `Security` is empty passes, any other needs `Authorization: Bearer <token>` and gets 401 with `WWW-Authenticate: Bearer` otherwise. Its token is an expiry signed with HMAC, so any request can check it with no storage, which a Worker needs (every request is a fresh Go runtime). Your project's notes API has no auth: copy `authorize`, `newToken` and `validToken` and set your own secrets.
+**The server must enforce it.** The scheme in the spec only describes. The showcase checks every request in a Huma middleware (`authorize` in `api/go/showcase/handlers.go`, registered with `routes.UseMiddleware(env.authorize(routes))`): an operation whose `Security` is empty passes, any other needs `Authorization: Bearer <token>` and gets 401 with `WWW-Authenticate: Bearer` otherwise. Its token is an expiry signed with HMAC, so any request can check it with no storage, which a Worker needs (every request is a fresh Go runtime). Your project's notes API has no auth: copy `authorize`, `newToken` and `validToken` and set your own secrets.
 
 **Check it.** Run against the showcase natively (`mise run showcase-go:run` in the orpc-api repo, port 5175; the output is from another port):
 
@@ -199,7 +199,7 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" -F file=@f.txt -F note=x local
 
 **The caller gets** a typed payload (`NoteCreated`) and a helper that checks the signature: `WebhooksHelper.verifySignature(body, header, secret)`.
 
-**Add to the contract.** A webhook is something your server sends, so no route describes it. Huma's document has a `Webhooks` field that nothing fills, so fill it where the spec is made (`document()` in `api-go/showcase/spec.go`):
+**Add to the contract.** A webhook is something your server sends, so no route describes it. Huma's document has a `Webhooks` field that nothing fills, so fill it where the spec is made (`document()` in `api/go/showcase/spec.go`):
 
 ```go
 doc := api.OpenAPI()
@@ -220,7 +220,7 @@ How the signature is made, on the document (`config()`):
 config.Extensions["x-fern-webhook-signature"] = map[string]string{"type": "hmac", "header": SignatureHeader, "algorithm": "sha256", "encoding": "hex"}
 ```
 
-(`SignatureHeader` is `x-webhook-signature`.) Then your handler must send it that way: `notify` in `api-go/showcase/handlers.go` posts the JSON body with the header set to the HMAC-SHA256 of the exact bytes, in hex, under `WEBHOOK_SECRET`. `crypto/hmac` and `crypto/sha256` work under TinyGo. The send is an outgoing request from an `*http.Client`; on Cloudflare that is workers-go's `fetch` client.
+(`SignatureHeader` is `x-webhook-signature`.) Then your handler must send it that way: `notify` in `api/go/showcase/handlers.go` posts the JSON body with the header set to the HMAC-SHA256 of the exact bytes, in hex, under `WEBHOOK_SECRET`. `crypto/hmac` and `crypto/sha256` work under TinyGo. The send is an outgoing request from an `*http.Client`; on Cloudflare that is workers-go's `fetch` client.
 
 **Check it.** The SDK test starts a receiver and checks that the helper accepts the server's delivery and rejects a changed body or another secret; it only runs where the receiver can be reached, so on a deployed Worker the delivery has not been checked. Natively: `mise run showcase-go:test:native` in the orpc-api repo.
 
@@ -308,7 +308,7 @@ api:
     - asyncapi: asyncapi.json
 ```
 
-The showcase's overlay is `sdk/fern/apis/showcase-go/overlays.yml` in the orpc-api repo. Never edit `openapi.json` by hand: `mise run api-go:spec` writes it again from the contract.
+The showcase's overlay is `sdk/fern/apis/showcase-go/overlays.yml` in the orpc-api repo. Never edit `openapi.json` by hand: `mise run api:go:spec` writes it again from the contract.
 
 ## Where the full table is
 

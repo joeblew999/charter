@@ -28,9 +28,9 @@ Commit them. A project gets these four:
 
 | Workflow | Runs on | What it runs | Secrets |
 |---|---|---|---|
-| `api-check` | A push to `main`, every pull request, by hand | `mise run setup`, then `mise run api-go:check`: lint, Go tests, spec drift, the Wasm build, and the live and MCP tests natively and under workerd | none |
+| `api-check` | A push to `main`, every pull request, by hand | `mise run setup`, then `mise run api:go:check`: lint, Go tests, spec drift, the Wasm build, and the live and MCP tests natively and under workerd | none |
 | `sdk-check` | A push to `main`, every pull request, by hand | Two jobs, one per SDK (Go, TypeScript): `mise run sdk:gen api-go` for that group, then `mise run sdk:check` on the result. A third, `published`: `mise run sdk:publish:check`, which fails when the committed Go SDK in `sdk/go` is stale ([Giving the Go SDK to another repo](sdks.md#giving-the-go-sdk-to-another-repo)) | none |
-| `api-deploy` | By hand only | `cloudflare:token`, `setup`, `api-go:deploy`, `api-go:live-test` ([Deploy from GitHub](deploy.md#deploy-from-github)) | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
+| `api-deploy` | By hand only | `cloudflare:token`, `setup`, `api:go:deploy`, `api:go:live-test` ([Deploy from GitHub](deploy.md#deploy-from-github)) | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 | `sdk-release` | A version tag. As a dry run: by hand, and on pull requests that change `sdk/`, `mise.toml`, `go.work`, `rust-toolchain.toml` or the workflow itself | Two jobs. `sdk`: `mise run sdk:dist`, `mise run release`, then `mise run release:tags`. `cli`: `mise run sdk:dist:cli api-go`, then `mise run release` | none: it uses the token GitHub gives the workflow |
 
 Start one by hand with `gh workflow run api-check.yml`.
@@ -39,7 +39,7 @@ Start one by hand with `gh workflow run api-check.yml`.
 
 Every step that does work is `mise run` and a task. The rest is checking out the code, installing the tools with mise, and keeping build output as a workflow artifact. So:
 
-- **A failing step is one line you can run on your machine.** `api-check` failed? Run `mise run api-go:check`.
+- **A failing step is one line you can run on your machine.** `api-check` failed? Run `mise run api:go:check`.
 - **To change what CI does, change the task** in `mise.toml`. The workflow follows.
 - **The tools are the same versions as yours:** GitHub installs them from `mise.toml`, `go.work` and `rust-toolchain.toml`, as `mise install` does.
 - **Each workflow runs on a pinned runner (`ubuntu-24.04`) with pinned versions of the actions.**
@@ -87,9 +87,9 @@ The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release
 
 The `sdk-release` workflow then builds everything again from that commit and attaches it to the tag's GitHub Release. It creates the Release if there is none, with notes GitHub generates from the commits. A tag with a hyphen becomes a pre-release.
 
-The same workflow then runs `mise run release:tags`, which gives the project's Go modules their versions. A Go module in a subfolder is only found under a tag that starts with the folder, so it adds `api-go/vX.Y.Z` and, when the Go SDK has been published into `sdk/go`, `sdk/go/vX.Y.Z`, on the commit of `vX.Y.Z`. Outside a tag's workflow run the task is a dry run that prints the tags. This step has not run on GitHub in a project yet.
+The same workflow then runs `mise run release:tags`, which gives the project's Go modules their versions. A Go module in a subfolder is only found under a tag that starts with the folder, so it adds `api/go/vX.Y.Z` and, when the Go SDK has been published into `sdk/go`, `sdk/go/vX.Y.Z`, on the commit of `vX.Y.Z`. Outside a tag's workflow run the task is a dry run that prints the tags. This step has not run on GitHub in a project yet.
 
-A release does not deploy. Deploying is `api-deploy`, or `mise run api-go:deploy`.
+A release does not deploy. Deploying is `api-deploy`, or `mise run api:go:deploy`.
 
 ## What a release contains
 

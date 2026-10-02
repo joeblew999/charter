@@ -58,8 +58,8 @@ sdk/
 
 | API folder | Its specs | Groups |
 |---|---|---|
-| `sdk/fern/apis/api/` | Generated from the oRPC contract (`mise run api:spec`) | `go`, `typescript`, `typescript-dist`, `cli` |
-| `sdk/fern/apis/api-go/` | Generated from the Go contract (`mise run api-go:spec`) | the same four |
+| `sdk/fern/apis/api/` | Generated from the oRPC contract (`mise run api:ts:spec`) | `go`, `typescript`, `typescript-dist`, `cli` |
+| `sdk/fern/apis/api-go/` | Generated from the Go contract (`mise run api:go:spec`) | the same four |
 | `sdk/fern/apis/showcase/` | Generated from the oRPC showcase's contract (`mise run showcase:spec`) | `go`, `typescript`, `typescript-public`, `typescript-dist`, `cli` |
 | `sdk/fern/apis/showcase-go/` | Generated from the Go showcase's contract (`mise run showcase-go:spec`) | the same five |
 | `sdk/fern/apis/petstore/` | A hand-written sample with no server | `go`, `typescript`, `python`, `cli` |
@@ -105,17 +105,17 @@ The right-hand column was read from the SDKs generated on 2026-09-29. The TypeSc
 
 ## The oRPC showcase
 
-The showcase is one small API with every Fern feature in the table. Its `openapi.json` and `asyncapi.json` are generated from an oRPC contract, like `api/`'s, and the harness Worker serves that contract.
+The showcase is one small API with every Fern feature in the table. Its `openapi.json` and `asyncapi.json` are generated from an oRPC contract, like `api/ts/`'s, and the harness Worker serves that contract.
 
 | Path | What it is |
 |---|---|
 | `sdk/harness/src/contract.ts` | **The contract (edit this):** every operation, the WebSocket channel, the webhooks, and the document-level settings (`document`) |
 | `sdk/harness/src/showcase.ts` | The contract implemented with oRPC, served by the harness Worker under `/api/mock/*` |
-| `sdk/harness/src/specs.ts`, `sdk/harness/spec.ts` | Both specs from the contract, with `api/`'s generators (`api/src/specs.ts`, `api/src/asyncapi.ts`, `api/spec-files.ts`), imported, not copied |
+| `sdk/harness/src/specs.ts`, `sdk/harness/spec.ts` | Both specs from the contract, with `api/ts/`'s generators (`api/ts/src/specs.ts`, `api/ts/src/asyncapi.ts`, `api/ts/spec-files.ts`), imported, not copied |
 | `sdk/harness/test/showcase.test.ts` | Run in Node, no Worker: the server's routes and its channel |
 | `sdk/harness/test/surface.test.ts`, `sdk/harness/test/handwritten-surface.json` | The generated specs give Fern the surface the last hand-written specs had, but for the differences the test names |
 
-The contract lives in the harness because the harness Worker is what serves it and tests it. `api/` and `sdk/harness/` each install the same pinned oRPC and Zod; keep the two pins equal.
+The contract lives in the harness because the harness Worker is what serves it and tests it. `api/ts/` and `sdk/harness/` each install the same pinned oRPC and Zod; keep the two pins equal.
 
 After a contract change, run `mise run showcase:spec`. `mise run sdk:harness:test` generates the SDK again when a spec is newer than it.
 
@@ -126,9 +126,9 @@ After a contract change, run `mise run showcase:spec`. `mise run sdk:harness:tes
 | A form-encoded request body (the OAuth token endpoint) | The handler reads `application/x-www-form-urlencoded`, but the generator always writes the body as `application/json` | The operation's `spec` hook renames the media type |
 | `security: []` on one operation; `x-fern-*` on an operation | No field for them | The operation's `spec` hook |
 | `security`, `components.securitySchemes`, `x-fern-idempotency-headers`, `x-fern-webhook-signature` | The contract has no document level. The generator takes them as `base` | `document` in the contract, passed as `base` by `openapiSpec` |
-| OpenAPI 3.1 `webhooks` | Not generated | `openapiSpec({ webhooks })` in `api/src/specs.ts` writes one from a contract of webhook procedures |
-| An SSE response whose schema is the event's data | Describes its own envelope (`event: message` / `close` / `error`) | The operation's `spec` hook (the same as `api/`'s `notes.watch`) |
-| AsyncAPI, with messages both ways | No AsyncAPI generator (middleapi/orpc#2115) | `api/src/asyncapi.ts` ([api.md](api.md#the-asyncapi-generator)) |
+| OpenAPI 3.1 `webhooks` | Not generated | `openapiSpec({ webhooks })` in `api/ts/src/specs.ts` writes one from a contract of webhook procedures |
+| An SSE response whose schema is the event's data | Describes its own envelope (`event: message` / `close` / `error`) | The operation's `spec` hook (the same as `api/ts/`'s `notes.watch`) |
+| AsyncAPI, with messages both ways | No AsyncAPI generator (middleapi/orpc#2115) | `api/ts/src/asyncapi.ts` ([api.md](api.md#the-asyncapi-generator)) |
 
 Multipart is not on the list: a `z.file()` in the input is enough.
 
@@ -170,11 +170,11 @@ What it takes:
 ## SDKs and a CLI for the notes API
 
 ```sh
-mise run api:spec                         # contract -> sdk/fern/apis/api/{openapi,asyncapi}.json (offline; the server is API_URL)
+mise run api:ts:spec                         # contract -> sdk/fern/apis/api/{openapi,asyncapi}.json (offline; the server is API_URL)
 mise run sdk:gen api go                   # the other groups: typescript, typescript-dist, cli
 mise run sdk:check sdk/out/api/go
 mise run sdk:cli:build sdk/out/api/cli    # then: sdk/out/api/cli/target/release/orpc-api notes list --page-all
-mise run api:live-test                    # SSE and WebSocket, raw and through the SDK
+mise run api:ts:live-test                    # SSE and WebSocket, raw and through the SDK
 ```
 
 The same with `api-go` in place of `api` gives the SDKs and CLI from the Go contract's specs. The two Fern folders have the same groups and names, so the same test programs run against either SDK, and the SDKs from one server's specs work against the other server (2026-10-01, [findings.md](findings.md)).

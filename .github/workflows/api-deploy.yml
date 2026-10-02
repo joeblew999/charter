@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       api:
-        description: The Worker to deploy (api = orpc-api, api-go = orpc-api-go)
+        description: The Worker to deploy (ts = orpc-api, go = orpc-api-go)
         type: choice
-        options: [api, api-go]
+        options: [ts, go]
         required: true
 permissions:
   contents: read
@@ -27,5 +27,5 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: mise run cloudflare:token
       - run: mise run setup
-      - run: mise run "$API:deploy"
-      - run: mise run "$API:live-test"
+      - run: mise run "api:$API:deploy"
+      - run: mise run "api:$API:live-test"

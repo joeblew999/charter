@@ -12,7 +12,7 @@ This page gets an AI agent (Claude Code, an IDE, your own program) calling your 
 
 One URL that speaks MCP over HTTP: a client POSTs JSON-RPC messages and gets JSON answers. It lists your operations as tools, and a tool call runs the same operation as the REST route, with the same validation and the same handler. There is nothing to add to your handlers.
 
-It is mounted in `api-go/api/handlers.go` (`humamcp.Handler(routes)`), next to the specs. Try it against the API running natively (`mise run api-go:run`, port 5174). These are real answers, from a project with the notes API plus the `getNote` operation of [Define your API](contract.md):
+It is mounted in `api/go/api/handlers.go` (`humamcp.Handler(routes)`), next to the specs. Try it against the API running natively (`mise run api:go:run`, port 5174). These are real answers, from a project with the notes API plus the `getNote` operation of [Define your API](contract.md):
 
 ```sh
 curl -s -X POST localhost:5174/api/mcp -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
@@ -34,7 +34,7 @@ An operation marked `Hidden`, or one that answers `text/event-stream`, is left o
 
 ### Opt one in or out: `humamcp.Expose`
 
-Wrap the operation in `humamcp.Expose(op, true)` or `humamcp.Expose(op, false)`. To keep `hello` from agents, in `api-go/api/contract.go` (add `github.com/joeblew999/orpc-api/api/go/humamcp` to the imports, next to `humaworkers`):
+Wrap the operation in `humamcp.Expose(op, true)` or `humamcp.Expose(op, false)`. To keep `hello` from agents, in `api/go/api/contract.go` (add `github.com/joeblew999/orpc-api/api/go/humamcp` to the imports, next to `humaworkers`):
 
 ```go
 huma.Register(api, humamcp.Expose(huma.Operation{
@@ -68,7 +68,7 @@ When the input is refused, the tool result has `isError` set and Huma's problem 
 
 ## Connect a client
 
-The address is `http://localhost:5174/api/mcp` natively, and `https://billing-api.<your-subdomain>.workers.dev/api/mcp` (the URL `mise run api-go:deploy` printed) once deployed.
+The address is `http://localhost:5174/api/mcp` natively, and `https://billing-api.<your-subdomain>.workers.dev/api/mcp` (the URL `mise run api:go:deploy` printed) once deployed.
 
 **Claude Code**, a remote HTTP server:
 
@@ -113,11 +113,11 @@ The endpoint speaks two protocol revisions on the one URL: the stateless 2026-07
 ## Check it
 
 ```sh
-mise run api-go:run        # in one shell
-mise run api-go:mcp-test   # in another: the official client against it; it creates test notes
+mise run api:go:run        # in one shell
+mise run api:go:mcp-test   # in another: the official client against it; it creates test notes
 ```
 
-`api-go:mcp-test` runs `test/mcp-test.mjs` in both protocol eras. It checks the tool list, that each schema comes from the contract, that a tool call answers what the REST route answers, that refused input is an `isError` result with its location, and that a stream (`watchNotes`) is not a tool. It lists the tools it expects by name (`hello,listNotes,createNote`), so after you add, hide or expose an operation, update that list in `test/mcp-test.mjs` and the one in `api-go/api/mcp_test.go`. I did not run `api-go:mcp-test` for this page; the repo's findings record it passing 29 of 29 against the native build, under workerd and on a deployed Worker (2026-10-01). Against the deployed Worker, `mise run api-go:live-test` runs it with the real-time tests.
+`api:go:mcp-test` runs `test/mcp-test.mjs` in both protocol eras. It checks the tool list, that each schema comes from the contract, that a tool call answers what the REST route answers, that refused input is an `isError` result with its location, and that a stream (`watchNotes`) is not a tool. It lists the tools it expects by name (`hello,listNotes,createNote`), so after you add, hide or expose an operation, update that list in `test/mcp-test.mjs` and the one in `api/go/api/mcp_test.go`. I did not run `api:go:mcp-test` for this page; the repo's findings record it passing 29 of 29 against the native build, under workerd and on a deployed Worker (2026-10-01). Against the deployed Worker, `mise run api:go:live-test` runs it with the real-time tests.
 
 ## What it does not do
 
@@ -125,6 +125,6 @@ mise run api-go:mcp-test   # in another: the official client against it; it crea
 - **No streaming tools.** Answers are one JSON document: no progress messages, no long-running calls.
 - **No resources and no prompts.** Tools only.
 - **No file bodies.** A call carries JSON: multipart uploads are not tools, and response headers are dropped.
-- **Only a `*humaworkers.API`** can be served. `api-go/api/handlers.go` does it for you.
+- **Only a `*humaworkers.API`** can be served. `api/go/api/handlers.go` does it for you.
 
 The package, its decisions and the full list of limits are in the orpc-api repo's [MCP page](../mcp.md).

@@ -10,7 +10,7 @@ on:
 permissions:
   contents: read
 jobs:
-  # if-dir api
+  # if-dir api/ts
   api:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.0.1
       - run: mise run setup
-      - run: mise run api:check
+      - run: mise run api:ts:check
   # end
   api-go:
     runs-on: ubuntu-24.04
@@ -27,8 +27,8 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.0.1
       - run: mise run setup
-      - run: mise run api-go:check
-  # if-dir api-go/showcase
+      - run: mise run api:go:check
+  # if-dir api/go/showcase
   showcase-go:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

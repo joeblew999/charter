@@ -20,7 +20,7 @@ CPU time per request, median:
 | A path that does not exist (404) | not measured | 38 ms | 5 to 17 ms | 2 ms | 1 ms |
 | `POST /api/notes` (D1 write and hub publish) | not measured | about 265 ms | 61 to 66 ms | 10 to 13 ms | 4 ms |
 
-The last column is what a project made by `dev new` gets. `mise run api-go:bench` with writes, right after a deploy:
+The last column is what a project made by `dev new` gets. `mise run api:go:bench` with writes, right after a deploy:
 
 | Operation | Wall median | Wall slowest | CPU median | CPU p99 |
 |---|---|---|---|---|
@@ -42,7 +42,7 @@ What this means:
 
 ## A new isolate
 
-Cloudflare starts an isolate after a deploy, when a Worker has been idle, and when traffic spreads to another machine. The Wasm is not optimised there yet, and Go has to start. `mise run api-go:perf` shows it: it deploys, sends 8 requests at once, then each operation in turn, and prints the CPU of every request (2026-10-02):
+Cloudflare starts an isolate after a deploy, when a Worker has been idle, and when traffic spreads to another machine. The Wasm is not optimised there yet, and Go has to start. `mise run api:go:perf` shows it: it deploys, sends 8 requests at once, then each operation in turn, and prints the CPU of every request (2026-10-02):
 
 ```
 GET /api/hello, 8 at once     3 6n 5w 74n 13w 110n 83n 101n
@@ -62,7 +62,7 @@ GET /__bench/not-found        3 2 1 3 3 3 24n 2 2 3 2 2 3 3 2 2 1 1 2 2 2 2 2
 | And that runtime answers the OpenAPI route during start-up | 19 to 20 ms |
 | And the hello route too (what is deployed) | 7 to 11 ms |
 
-- **Two runtimes are started while the module loads** (`go.warm` in `api-go/worker/index.mjs`). Cloudflare does not count that time against any request. A request that gets one costs 4 to 19 ms where one that starts its own costs far more.
+- **Two runtimes are started while the module loads** (`go.warm` in `api/go/worker/index.mjs`). Cloudflare does not count that time against any request. A request that gets one costs 4 to 19 ms where one that starts its own costs far more.
 - **Each runtime answers two routes during start-up,** into nothing: the OpenAPI route, which registers every operation, and the hello. That compiles the code they use.
 - **The first use of each operation still costs 15 to 30 ms:** the list 18 to 33, a create 14 to 25. Their handlers need the database, which a runtime does not have during start-up.
 - **Requests that arrive together beyond the waiting runtimes start their own,** and cost about 100 ms each in the logs when several do at once. One alone costs 10 to 30 ms (the `24n` above). `go.warm({ runtimes: 4 })` covers a first burst of four; each waiting runtime holds 8 MB and adds to the isolate's start-up time.
@@ -84,7 +84,7 @@ Four things, in the order they were found:
 
 1. **TinyGo's collector ran at every pause.** TinyGo collects whenever the program waits and 32 objects with finalizers were made since the last time. workers-go makes one for every JavaScript value it touches, and a request waits many times: for its body, for D1, for the hub. It also collects each time its small starting heap must grow. `dev wasm-build` builds against a copy of TinyGo's runtime with that threshold at 0 and with a starting heap of 8 MB ([the dev tool](reference/dev.md#wasm-build)). Reported as [tinygo-org/tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800). That is the second and third line.
 2. **Every second request cost double, and a new isolate cost double again.** workers-go starts a Go runtime for each request and drops it. The JavaScript engine then has an 8 MB memory to clear away per request, and the Wasm is not yet optimised in an isolate that has just started.
-3. **Reusing a runtime removes both,** and the start-up of Go with them. `api-go/worker/go.mjs` keeps a runtime that has finished a request for the next one. That is the fourth line: the higher values are the requests that start a new runtime, one in three.
+3. **Reusing a runtime removes both,** and the start-up of Go with them. `api/go/worker/go.mjs` keeps a runtime that has finished a request for the next one. That is the fourth line: the higher values are the requests that start a new runtime, one in three.
 4. **A runtime could serve only three requests because of goroutine stacks.** TinyGo allocates a stack for every goroutine and for every call from JavaScript into Go, and its collector rarely frees one. `dev wasm-build` now also makes TinyGo's runtime keep the stack of a finished goroutine for the next one. That is the last line.
 
 What a request allocates, measured under `cf dev` with `runtime.ReadMemStats`:
@@ -137,14 +137,14 @@ What this says:
 ## Measuring it again, and measuring your own API
 
 ```sh
-mise run api-go:perf          # REMOTE: build, deploy, then bench the new isolate from its first request. About two minutes
-mise run api-go:perf:try -- -name stack96 -build '-stack 96kb'   # REMOTE: the same on a scratch Worker of its own, deleted after. 70 s
-mise run api-go:bench         # REMOTE, read-only: the deployed Go Worker once it is warm
-mise run api:bench            # the same against the deployed oRPC Worker
+mise run api:go:perf          # REMOTE: build, deploy, then bench the new isolate from its first request. About two minutes
+mise run api:go:perf:try -- -name stack96 -build '-stack 96kb'   # REMOTE: the same on a scratch Worker of its own, deleted after. 70 s
+mise run api:go:bench         # REMOTE, read-only: the deployed Go Worker once it is warm
+mise run api:ts:bench            # the same against the deployed oRPC Worker
 go run ./dev bench <url>      # any server: a local cf dev, the native build. Wall time only
 ```
 
-`api-go:perf:try` is for trying a change without touching the deployed Worker, and for several people or agents at once: each run has its own Worker, database and hub, named after the experiment. `mise run api-go:perf:clean` deletes any that were left.
+`api:go:perf:try` is for trying a change without touching the deployed Worker, and for several people or agents at once: each run has its own Worker, database and hub, named after the experiment. `mise run api:go:perf:clean` deletes any that were left.
 
 `bench` works on any API: it reads the OpenAPI spec the server gives at `/api/openapi.json`, and calls every GET operation whose required inputs have an example in the spec, plus one path that does not exist. So in your own project the same tasks measure your operations, not the notes example's.
 

@@ -10,7 +10,7 @@ import (
 
 // The oRPC showcase's Fern folder: its specs are generated from sdk/harness/src/contract.ts
 // (mise run showcase:spec). What the Go contract must say too.
-const reference = "../../sdk/fern/apis/showcase/"
+const reference = "../../../sdk/fern/apis/showcase/"
 
 func read(t *testing.T, path string) []byte {
 	t.Helper()
@@ -268,7 +268,7 @@ func TestSameOverlayAsTheORPCShowcase(t *testing.T) {
 		}
 		return strings.TrimSpace(strings.Join(lines, "\n"))
 	}
-	want, got := actions(reference+"overlays.yml"), actions("../../sdk/fern/apis/showcase-go/overlays.yml")
+	want, got := actions(reference+"overlays.yml"), actions("../../../sdk/fern/apis/showcase-go/overlays.yml")
 	if want != got || !strings.Contains(got, "x-fern-sdk-method-name: list") {
 		t.Errorf("the overlays differ (comments apart)\n  oRPC:\n%s\n  Go:\n%s", want, got)
 	}

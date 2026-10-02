@@ -49,7 +49,7 @@ A command looks for a `go.work` file in the directory it was started in, then in
 | `new`, `workflows`, `docs`, `docs-lint`, `docs-review` | In any directory, with or without a `go.work` |
 | Every other command | Only below a `go.work`. Without one it fails: `not inside the repo (no go.work above here)` |
 
-"Project layout" below means what `dev new` creates: `api-go/`, `sdk/`, `migrations/` and `test/` beside the `go.work` ([Configuration](config.md#the-files-of-a-project)). "orpc-api only" means the command reads folders that exist only in the orpc-api repo itself.
+"Project layout" below means what `dev new` creates: `api/go/`, `sdk/`, `migrations/` and `test/` beside the `go.work` ([Configuration](config.md#the-files-of-a-project)). "orpc-api only" means the command reads folders that exist only in the orpc-api repo itself.
 
 A flag is written `-name value`. Flags come before arguments.
 
@@ -66,13 +66,13 @@ Creates a project: the notes API of orpc-api under your project's name, with its
 | Flag | Default | What it is |
 |---|---|---|
 | `-name` | required | The project, its Worker and its database (`<name>-db`). 3 to 42 characters: lower-case letters, digits and hyphens, starting with a letter and not ending in a hyphen. It also gives the SDK's names: `billing-api` gives `BillingApi` and `billingapi` |
-| `-module` | `github.com/<your GitHub login>/<name>` | The Go module path. The module of the API is `<module>/api-go` |
+| `-module` | `github.com/<your GitHub login>/<name>` | The Go module path. The module of the API is `<module>/api/go` |
 | `-into` | `./<name>` | Where to create it. The directory must be empty or absent |
 | `-from` | the tool's own release, cloned from GitHub | A checkout of orpc-api to copy from |
 
 - **Needs:** Go (it runs `go mod tidy` and `gofmt`), git and network access (it clones orpc-api at the tool's version). `gh`, logged in, only when `-module` is left out.
 - **Runs:** anywhere.
-- **Which version the project pins:** run as a release (`@latest`, or a downloaded binary), the project's `mise.toml` and `api-go/go.mod` name that release. Run with `-from`, or from a checkout of orpc-api, the tool is pinned as `latest` and `api-go/go.mod` gets a `replace` line that points at the checkout. Remove that line once you depend on a release.
+- **Which version the project pins:** run as a release (`@latest`, or a downloaded binary), the project's `mise.toml` and `api/go/go.mod` name that release. Run with `-from`, or from a checkout of orpc-api, the tool is pinned as `latest` and `api/go/go.mod` gets a `replace` line that points at the checkout. Remove that line once you depend on a release.
 
 ### doctor
 
@@ -80,7 +80,7 @@ Creates a project: the notes API of orpc-api under your project's name, with its
 dev doctor     # check what the tasks need
 ```
 
-Prints one line per check: npm packages installed in `api-go/` and `sdk/`, Docker running, `go`, `tinygo`, `wasm-opt`, `cargo` and `gh` on the path, `FERN_TOKEN` set, no leftover WireMock containers. Then it lists the APIs, as `sdk-list` does. It fails only for missing npm packages or Docker not running. The others are warnings.
+Prints one line per check: npm packages installed in `api/go/` and `sdk/`, Docker running, `go`, `tinygo`, `wasm-opt`, `cargo` and `gh` on the path, `FERN_TOKEN` set, no leftover WireMock containers. Then it lists the APIs, as `sdk-list` does. It fails only for missing npm packages or Docker not running. The others are warnings.
 
 - **Needs:** nothing.
 - **Runs:** project layout.
@@ -128,10 +128,10 @@ Applies each file in `migrations/*.sql`, in name order, to the local D1 database
 
 | Flag | Default | What it is |
 |---|---|---|
-| `-worker` | `orpc-api` | The Worker's name, as in `api-go/cloudflare.config.ts`. The tasks of a project pass the project's name |
+| `-worker` | `orpc-api` | The Worker's name, as in `api/go/cloudflare.config.ts`. The tasks of a project pass the project's name |
 | `-port` | the value of `API_GO_PORT` (of `PORT` when the Worker is `orpc-api`) | The dev server's port |
 
-- **Needs:** the dev server running (`mise run api-go:dev`).
+- **Needs:** the dev server running (`mise run api:go:dev`).
 - **Runs:** project layout.
 
 ### migrate
@@ -147,7 +147,7 @@ Finds the D1 database named `<worker>-db` on your Cloudflare account and applies
 | `-worker` | `orpc-api` | The Worker's name. The database is `<worker>-db` |
 
 - **Needs:** npm packages installed (`mise run setup`) and a Cloudflare login (`cf auth login`, or `CLOUDFLARE_API_TOKEN`).
-- **Runs:** project layout. It runs `cf` from `api-go/` (from `api/` in orpc-api, which has both).
+- **Runs:** project layout. It runs `cf` from `api/go/` (from `api/ts/` in orpc-api, which has both).
 
 ### size
 
@@ -182,7 +182,7 @@ The first two are patches to TinyGo's runtime, which is Go source that TinyGo co
 
 | Flag | Default | What it is |
 |---|---|---|
-| `-dir` | `api-go` | The folder of the Go program. Its `build/` gets the Wasm and workers-go's glue |
+| `-dir` | `api/go` | The folder of the Go program. Its `build/` gets the Wasm and workers-go's glue |
 | `-heap` | `8` | Starting heap in MB. `0` keeps TinyGo's own |
 | `-stack` | `128kb` | Stack per goroutine |
 | `-opt` | `z` | TinyGo's optimisation level. Measured on Cloudflare, `2` was no faster than `z` and is larger |

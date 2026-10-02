@@ -1,6 +1,6 @@
-# The oRPC Worker in api/: openapi.json and asyncapi.json are written by `mise run api:spec` from the
+# The oRPC Worker in api/ts/: openapi.json and asyncapi.json are written by `mise run api:ts:spec` from the
 # contract (never by hand). What Fern needs (SDK names, x-fern-pagination, x-fern-streaming) is
-# declared in the contract; the WebSocket channel comes from api/src/asyncapi.ts.
+# declared in the contract; the WebSocket channel comes from api/ts/src/asyncapi.ts.
 # Generate: mise run sdk:gen api <group>
 api:
   specs:

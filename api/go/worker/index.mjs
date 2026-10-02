@@ -1,5 +1,5 @@
 // The Worker's entry: everything goes to the Go Worker (TinyGo Wasm in build/, made by
-// `mise run api-go:build`), run by go.mjs, which keeps Go runtimes alive between requests. Three
+// `mise run api:go:build`), run by go.mjs, which keeps Go runtimes alive between requests. Three
 // more things are JavaScript because Go can't do them here: the hub Durable Object class (hub.mjs),
 // carrying a stream over a WebSocket (websocket.mjs), and making Go's timers fire on Cloudflare
 // (tinygo-clock.mjs).

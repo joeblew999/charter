@@ -1,6 +1,6 @@
-// The showcase's two specs from its contract, with the generators api/ uses (api/src/specs.ts).
+// The showcase's two specs from its contract, with the generators api/ts/ uses (api/ts/src/specs.ts).
 // `server` is where the API is served: the deployed harness, .../api/mock.
-import { asyncapiSpec, openapiSpec } from "../../../api/src/specs.ts";
+import { asyncapiSpec, openapiSpec } from "../../../api/ts/src/specs.ts";
 import { asyncInfo, contract, document, info, webhooks } from "./contract.ts";
 
 export const specs = {

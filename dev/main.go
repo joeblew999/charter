@@ -136,6 +136,6 @@ func env(name string) (string, error) {
 }
 
 const (
-	cf   = "./node_modules/.bin/cf" // in api/, api-go/ and sdk/harness/
+	cf   = "./node_modules/.bin/cf" // in api/ts/, api/go/ and sdk/harness/
 	fern = "./node_modules/.bin/fern"
 )

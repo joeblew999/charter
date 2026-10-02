@@ -1,5 +1,5 @@
 // Package asyncapi generates an AsyncAPI 3.0.0 document from a Huma API, the way Huma itself
-// generates OpenAPI: the Go port of api/src/asyncapi.ts.
+// generates OpenAPI: the Go port of api/ts/src/asyncapi.ts.
 //
 // An operation marked with Channel is a WebSocket channel:
 //   - its query parameters (the input struct's `query:"..."` fields) become the channel's
@@ -8,7 +8,7 @@
 //
 // An operation marked with SendOperation is a message the client sends on a channel: its JSON
 // request body becomes the payload of a `send` operation (Fern's TypeScript client then has a typed
-// send<Message>() on the socket). It is `send: { message, operationId }` of api/src/asyncapi.ts, and
+// send<Message>() on the socket). It is `send: { message, operationId }` of api/ts/src/asyncapi.ts, and
 // the document comes out the same. There the message is the channel procedure's input stream; a
 // Huma operation takes one request, so here it is an operation of its own, the one that handles
 // the message. A channel can so have query parameters and a send side together.
@@ -66,7 +66,7 @@ func Operation(op huma.Operation, channel Channel) huma.Operation {
 
 // SendOperation marks op as a message the client sends on a channel: its JSON request body (the
 // input struct's Body) is the message's payload. How the message reaches the operation is the
-// transport's business (api-go/transport gives each frame to a POST on the channel's path).
+// transport's business (api/go/transport gives each frame to a POST on the channel's path).
 func SendOperation(op huma.Operation, send Send) huma.Operation {
 	op.Hidden = true
 	if op.Metadata == nil {
