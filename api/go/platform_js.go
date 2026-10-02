@@ -3,13 +3,10 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
-
 	"github.com/syumai/workers-go/cloudflare"
-	"github.com/syumai/workers-go/cloudflare/d1"
 
 	"github.com/joeblew999/orpc-api/api/go/api"
+	"github.com/joeblew999/orpc-api/api/go/d1"
 	"github.com/joeblew999/orpc-api/api/go/hub"
 )
 
@@ -18,11 +15,11 @@ func env() api.Env {
 	return api.Env{
 		Var: cloudflare.Getenv,
 		Store: func() (api.Store, error) {
-			connector, err := d1.OpenConnector("DB")
+			db, err := d1.Open("DB")
 			if err != nil {
-				return nil, fmt.Errorf("DB is not bound (cloudflare.config.ts): %w", err)
+				return nil, err
 			}
-			return api.SQLStore{DB: sql.OpenDB(connector)}, nil
+			return api.D1Store{DB: db}, nil
 		},
 		Hub: func() (api.Hub, error) { return hub.DurableObject[api.Note]("HUB", "notes") },
 	}
