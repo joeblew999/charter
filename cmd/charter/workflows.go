@@ -20,9 +20,29 @@ import (
 //go:embed workflows/*.yml
 var workflowFiles embed.FS
 
+// Beside the workflows go the files that make a repo ready for other people and agents: issue
+// forms (a bug, a feature, a bug in a project this one is built on), blank issues turned off, and
+// the labels the forms use. The same for every repo, so they carry no repo's name.
+//
+//go:embed github/ISSUE_TEMPLATE/*.yml github/labels.tsv
+var collaborationFiles embed.FS
+
+// collaboration are those files, by their path below .github.
+func collaboration() (map[string][]byte, error) {
+	files := map[string][]byte{}
+	err := fs.WalkDir(collaborationFiles, "github", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return err
+		}
+		files[strings.TrimPrefix(path, "github/")], err = collaborationFiles.ReadFile(path)
+		return err
+	})
+	return files, err
+}
+
 func init() {
 	commands["workflows"] = command{"[-check] [-into <repo dir>]",
-		"write the GitHub workflows (check, deploy, sdk-check, release) into <dir>/.github/workflows; -check fails if they differ", workflows}
+		"write a repo's .github: the workflows (check, deploy, sdk-check, release), the issue forms and the labels file; -check fails if they differ", workflows}
 	anywhere["workflows"] = true
 }
 
@@ -91,6 +111,15 @@ func writeWorkflows(dir string) error {
 			return err
 		}
 	}
+	files, err := collaboration()
+	if err != nil {
+		return err
+	}
+	for name, content := range files {
+		if err := write(filepath.Join(dir, ".github", name), string(content)); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -110,12 +139,19 @@ func workflows(args []string) error {
 	if !exists(into) {
 		return fmt.Errorf("%s does not exist", into)
 	}
-	templates, err := workflowsFor(into)
+	found, err := workflowsFor(into)
 	if err != nil {
 		return err
 	}
-	dir := filepath.Join(into, ".github", "workflows")
-	if check && !exists(dir) {
+	templates, err := collaboration() // by path below .github: the workflows join them there
+	if err != nil {
+		return err
+	}
+	for name, content := range found {
+		templates[filepath.Join("workflows", name)] = content
+	}
+	dir := filepath.Join(into, ".github")
+	if check && !exists(filepath.Join(dir, "workflows")) {
 		fmt.Println("no .github/workflows here: mise run workflows writes them (GitHub reads them at a repo's root)")
 		return nil
 	}
@@ -131,19 +167,19 @@ func workflows(args []string) error {
 			return fmt.Errorf("%s: %s differ from the tool's templates (cmd/charter/workflows in the charter repo): mise run workflows writes them again",
 				dir, strings.Join(stale, ", "))
 		}
-		fmt.Printf("%s: %d workflows match their templates\n", dir, len(templates))
+		fmt.Printf("%s: %d workflows, issue forms and labels match their templates\n", dir, len(templates))
 		return nil
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
 	for _, name := range stale {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755); err != nil {
+			return err
+		}
 		if err := os.WriteFile(filepath.Join(dir, name), templates[name], 0o644); err != nil {
 			return err
 		}
 		fmt.Println("wrote", filepath.Join(dir, name))
 	}
-	fmt.Printf("%s: %d workflows, %d written\n", dir, len(templates), len(stale))
+	fmt.Printf("%s: %d workflows, issue forms and labels, %d written\n", dir, len(templates), len(stale))
 	if len(stale) > 0 && !exists(filepath.Join(into, "mise.toml")) {
 		fmt.Println("note: the workflows only call mise tasks, and there is no mise.toml here: they are for a project (charter new makes one)")
 	}

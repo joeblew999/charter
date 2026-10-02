@@ -8,3 +8,5 @@ docs/_config.yml                       linguist-generated=true
 docs/writing.md                        linguist-generated=true
 docs/llms.txt                          linguist-generated=true
 docs/_sass/**                          linguist-generated=true
+.github/ISSUE_TEMPLATE/*.yml            linguist-generated=true
+.github/labels.tsv                     linguist-generated=true

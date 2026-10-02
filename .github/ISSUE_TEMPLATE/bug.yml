@@ -1,0 +1,76 @@
+# Written by `charter workflows` from its template (in the charter tool): change the template, not this file.
+# Each field's label is a heading in the issue body; `charter issue bug` prints the same headings.
+name: Bug report
+description: It did the wrong thing. Not for bugs in the projects it is built on.
+title: "[bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Is it ours?** A bug in a project this one is built on is fixed there. Check
+        [docs/upstream.md](../blob/main/docs/upstream.md) first, and use the
+        *Upstream bug* form if it is theirs.
+
+        **Agents:** forms are web-only. Run `charter issue bug > body.md`, fill it in, and file
+        with `gh issue create --body-file body.md`.
+  - type: input
+    id: reporter
+    attributes:
+      label: Reporting repo and agent
+      description: The repository you were working in, and who hit this. "owner/repo, Claude Code (agent)" or "me, by hand".
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command
+      description: As run, with every flag. For a request, the method, URL and body.
+      render: sh
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Full output
+      description: Everything it printed and the exit code or HTTP status. Not a summary.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: What happened instead, if the output does not already say.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: From a known state, for example a project just made with `charter new`.
+    validations:
+      required: false
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: The output of `charter version` and `charter doctor`.
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: It is not already in docs/upstream.md or an open issue.
+          required: true
+        - label: What I pasted holds no secret, token or personal path.
+          required: true

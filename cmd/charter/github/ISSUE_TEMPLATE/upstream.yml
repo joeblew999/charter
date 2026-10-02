@@ -1,0 +1,42 @@
+# Written by `charter workflows` from its template (in the charter tool): change the template, not this file.
+# Each field's label is a heading in the issue body; `charter issue upstream` prints the same headings.
+name: Upstream bug
+description: A bug that looks like it is in a project this one is built on, to be recorded in docs/upstream.md and fixed there.
+title: "[upstream] "
+labels: ["upstream", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        [docs/upstream.md](../blob/main/docs/upstream.md) is the ledger: if your bug is
+        already in it, add what you found to that entry's issue instead of filing. It is upstream
+        only if a correct caller, reading only that project's public documentation, would hit it.
+  - type: input
+    id: project
+    attributes:
+      label: Project
+      description: The project and version the bug is in, for example "tinygo 0.42.0".
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Smallest program that shows it
+      description: Without this repository if possible: a maintainer there must be able to run it.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: measured
+    attributes:
+      label: What was measured
+      description: Numbers, and the command that produced them.
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround here
+      description: The file that works around it, if there is one, and what to do when it is fixed.
+    validations:
+      required: false

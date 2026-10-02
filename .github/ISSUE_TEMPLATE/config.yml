@@ -1,0 +1,4 @@
+# Written by `charter workflows` from its template (in the charter tool): change the template, not this file.
+# A blank issue skips every required field, so the web offers only the forms. gh and the API ignore
+# forms: `charter issue <kind>` prints the same headings as a body for them.
+blank_issues_enabled: false

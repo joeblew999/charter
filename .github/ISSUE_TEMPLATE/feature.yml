@@ -1,0 +1,41 @@
+# Written by `charter workflows` from its template (in the charter tool): change the template, not this file.
+# Each field's label is a heading in the issue body; `charter issue feature` prints the same headings.
+name: Feature request
+description: Your repository needs this project to do something it does not.
+title: "[feature] "
+labels: ["feature", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Say what your repository is trying to get done, not only the flag you want: the right
+        change is often a different one. **Agents:** `charter issue feature > body.md`, then
+        `gh issue create --body-file body.md`.
+  - type: input
+    id: reporter
+    attributes:
+      label: Reporting repo and agent
+      description: The repository that needs this, and who is asking.
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What the calling repo is trying to do
+      description: The outcome, in a sentence or two.
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: The workflow today
+      description: The commands you run now, in order, and where it stops working or needs a workaround.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What you would run, and what it should print or do, for this to be done.
+    validations:
+      required: true
