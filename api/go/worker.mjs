@@ -5,8 +5,8 @@
 // Durable Object class, which has to be JavaScript.
 import { goWorker } from "./build/go.mjs";
 
-// The class is the library's Hub. This Worker was deployed with it under the name NotesHub, and
-// renaming a deployed Durable Object class is a migration (cloudflare.config.ts).
+// The class is the library's Hub, exported under the name cloudflare.config.ts declares. That
+// name stays NotesHub: renaming the class of a deployed Durable Object is a migration there.
 export { Hub as NotesHub } from "./build/hub.mjs";
 
 const go = goWorker();
