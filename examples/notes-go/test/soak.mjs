@@ -147,7 +147,7 @@ function redeploy() {
 // one its go.mod declares, which soak-go imports) at it.
 const work = `${mkdtempSync(`${tmpdir()}/soak-go-`)}/go.work`;
 const goModule = /^module\s+(\S+)/m.exec(readFileSync(`${root}sdk/out/go/go.mod`, "utf8"))[1];
-writeFileSync(work, `go 1.27.1\n\nuse ${soakGo}\n\nreplace ${goModule} => ${root}sdk/out/go\n`);
+writeFileSync(work, `go 1.27.1\n\nuse ${soakGo.replace(/\/$/, "")}\n\nreplace ${goModule} => ${root}sdk/out/go\n`);
 execFileSync("go", ["build", "-o", goBin, "."], { cwd: soakGo, env: { ...process.env, GOWORK: work } });
 console.log(`baseline note ${baseline}; ${clients.length} clients; SSE streams end every ${streamSeconds}s`);
 const driving = clients.map(drive);
