@@ -1,103 +1,57 @@
 ---
-title: Expose the API to AI agents (MCP)
-nav_order: 4
+title: MCP
+nav_order: 5
 parent: Guides
 ---
 
-# Expose the API to AI agents (MCP)
+# MCP: your operations as tools for agents
 
-This page gets an AI agent (Claude Code, an IDE, your own program) calling your API's operations as tools, and shows how to choose which operations it sees. Your project from `dev new` needs no setup for this: the API already serves [MCP](https://modelcontextprotocol.io) (Model Context Protocol) at `/api/mcp`.
+How an agent (Claude Code, an IDE, your own program) calls your [Huma](https://huma.rocks) API's operations as tools, and how to choose which it sees. A Go project needs no setup: it already serves [MCP](https://modelcontextprotocol.io) (Model Context Protocol) at `/api/mcp`. The TypeScript example has no MCP endpoint.
 
 ## What `/api/mcp` is
 
-One URL that speaks MCP over HTTP: a client POSTs JSON-RPC messages and gets JSON answers. It lists your operations as tools, and a tool call runs the same operation as the REST route, with the same validation and the same handler. There is nothing to add to your handlers.
-
-It is mounted in `api/go/api/handlers.go` (`humamcp.Handler(routes)`), next to the specs. Try it against the API running natively (`mise run api:go:run`, port 5174). These are real answers, from a project with the notes API plus the `getNote` operation of [Define your API](contract.md):
+One URL that speaks MCP over HTTP: a client POSTs JSON-RPC and gets JSON back. A tool call runs the same operation as the REST route: the same validation, middleware and handler. It is mounted in `api/handlers.go` (`humamcp.Handler(routes)`).
 
 ```sh
+mise run run     # natively: http://localhost:5174
 curl -s -X POST localhost:5174/api/mcp -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"getNote","arguments":{"id":1}}}'
-# {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"id\":1,\"body\":\"first\",\"created_at\":\"2026-10-01 10:38:01\"}","type":"text"}],"structuredContent":{"id":1,"body":"first","created_at":"2026-10-01 10:38:01"}}}
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"createNote","arguments":{"body":"from an agent"}}}'
 ```
 
-## Which operations become tools
+## Which operations are tools
 
-By default, every operation that has an `OperationID` and answers once. The tool's name is the `OperationID`; its description is the `Summary`, then the `Description`. In the notes API:
+| Rule | In the notes API |
+|---|---|
+| Every operation with an `OperationID` that answers once is a tool | `hello`, `listNotes`, `createNote` |
+| A stream is not: an operation that is `Hidden` or answers `text/event-stream` | `watchNotes` (SSE), `liveNotes` (the WebSocket) |
+| `humamcp.Expose(op, false)` hides one; `humamcp.Expose(op, true)` makes a stream a tool, which must then end by itself | none |
 
-| Operation | Tool? | Why |
-|---|---|---|
-| `hello`, `listNotes`, `createNote` | yes | One request, one answer |
-| `watchNotes` (SSE) | no | A stream is not one answer |
-| `liveNotes` (WebSocket) | no | The same |
+Hidden from agents is not hidden from callers: the REST route stays.
 
-An operation marked `Hidden`, or one that answers `text/event-stream`, is left out.
+## What a tool looks like
 
-### Opt one in or out: `humamcp.Expose`
+| Part | Where it comes from |
+|---|---|
+| Name | The `OperationID` |
+| Description | The `Summary`, then the `Description` |
+| `inputSchema` | The input struct, flat: path, query, header and cookie parameters and the properties of a JSON object body, side by side, with their validation tags. `createNote` takes `{"body": "..."}` |
+| `outputSchema` | The 2xx response's schema, when it is an object |
+| Result | The body as text, and as `structuredContent` when it is a JSON object |
+| Annotations | From the method: GET is `readOnlyHint`; the others say `destructiveHint` (all but POST) and `idempotentHint` (PUT, DELETE) |
+| A refused input | A tool result with `isError` and Huma's problem as its text (`errors[].location`), so a model can correct itself |
 
-Wrap the operation in `humamcp.Expose(op, true)` or `humamcp.Expose(op, false)`. To keep `hello` from agents, in `api/go/api/contract.go` (add `github.com/joeblew999/orpc-api/go/humamcp` to the imports, next to `humaworkers`):
+So write `doc` and `example` tags on your fields: they are what the model reads.
 
-```go
-huma.Register(api, humamcp.Expose(huma.Operation{
-	OperationID: "hello", Method: http.MethodGet, Path: "/api/hello",
-	Summary: "Say hello", Tags: []string{"meta"},
-	Extensions: sdk("meta", "hello", nil),
-}, false), env.hello)
-```
-
-After that, `tools/list` answered `['listNotes', 'getNote', 'createNote']` (a real run: `hello` gone, `getNote` there by default). `Expose(op, true)` on a streaming operation makes it a tool; it must then end by itself, because the whole response becomes the result.
-
-Hidden from agents is not hidden from callers: `Expose(false)` only changes the tool list. The REST route is still there.
-
-## How a tool's input comes from the operation
-
-The tool's `inputSchema` is the operation's input struct, flattened into one object: path, query, header and cookie parameters, and the properties of a JSON object body, side by side. The validation tags go with them. For `getNote`, with `GetInput` as in the [contract guide](contract.md) (a real `tools/list` answer):
-
-```json
-{"additionalProperties": false, "properties": {"X-Trace-Id": {"description": "Your id for this call", "pattern": "^[a-z0-9-]+$", "type": "string"}, "format": {"default": "short", "description": "How much of the note to return", "enum": ["short", "full"], "type": "string"}, "id": {"description": "The note's id", "examples": [42], "format": "int64", "minimum": 1, "type": "integer"}}, "required": ["id"], "type": "object"}
-```
-
-`createNote` takes `{"body": "..."}`: the body's properties, not a nested `body` object. A parameter and a body property with the same name is an error at `tools/list`. The 2xx response's schema is the tool's `outputSchema`, and the result comes back as text and as `structuredContent`.
-
-So write `doc` tags and `example` tags on your fields: they are what the model reads to decide how to call the tool.
-
-When the input is refused, the tool result has `isError` set and Huma's problem as its text, so a model can correct itself (a real answer for `id: 0`):
-
-```
-{"id":3,"jsonrpc":"2.0","result":{"content":[{"text":"{\"title\":\"Unprocessable Entity\",\"status\":422,\"detail\":\"validation failed\",\"errors\":[{\"message\":\"expected number \\u003e= 1\",\"location\":\"path.id\",\"value\":0}]}","type":"text"}],"isError":true}}
-```
+When a parameter and a body property share a name, that operation keeps its body under the argument `body`. An operation that cannot be a tool is left out and logged, and `mise run spec`, `mise run spec:check` and `TestEveryOperationCanBeItsMCPTool` fail on it, saying why.
 
 ## Connect a client
 
-The address is `http://localhost:5174/api/mcp` natively, and `https://billing-api.<your-subdomain>.workers.dev/api/mcp` (the URL `mise run api:go:deploy` printed) once deployed.
-
-**Claude Code**, a remote HTTP server:
+The address is `http://localhost:5174/api/mcp` natively and `<your Worker's URL>/api/mcp` once deployed.
 
 ```sh
 claude mcp add --transport http billing-api https://billing-api.<your-subdomain>.workers.dev/api/mcp
-```
-
-or in a `.mcp.json` file at the root of the project that should use it:
-
-```json
-{
-  "mcpServers": {
-    "billing-api": {
-      "type": "http",
-      "url": "https://billing-api.<your-subdomain>.workers.dev/api/mcp"
-    }
-  }
-}
-```
-
-I did not run this with Claude Code or any model for this page; the endpoint is only tested with the clients below.
-
-**The MCP Inspector, from the command line** (a tool the repo does not pin; it is fetched when run):
-
-```sh
 npx @modelcontextprotocol/inspector --cli http://localhost:5174/api/mcp --transport http --method tools/list
 ```
-
-**The official TypeScript client**, as `test/mcp-test.mjs` in your project uses it (the package `@modelcontextprotocol/client`, which it loads from the packages installed in the `sdk/` folder):
 
 ```js
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
@@ -108,23 +62,26 @@ const { tools } = await client.listTools();
 const result = await client.callTool({ name: "createNote", arguments: { body: "from an agent" } });
 ```
 
-The endpoint speaks two protocol revisions on the one URL: the stateless 2026-07-28 and the handshake ones (2025-11-25 and 2025-06-18), with no session id in either. A client picks the one it knows. The snippet above is the shape of what `test/mcp-test.mjs` does, which takes the package from the `sdk/` folder's packages; the snippet itself was not run.
+The endpoint speaks two protocol eras on the one URL: the stateless revision 2026-07-28, and the handshake revisions 2025-11-25 and 2025-06-18. No session id in either.
+
+Not run for this page: the `curl` call above as written (the same call with another tool was), the `claude` and inspector commands, and the snippet, which is the shape of what `test/mcp-test.mjs` does. No model has used the tools yet: only test clients have.
 
 ## Check it
 
 ```sh
-mise run api:go:run        # in one shell
-mise run api:go:mcp-test   # in another: the official client against it; it creates test notes
+mise run run         # in one shell
+mise run mcp-test    # in another: the official TypeScript client, in both eras. It writes test notes
 ```
 
-`api:go:mcp-test` runs `test/mcp-test.mjs` in both protocol eras. It checks the tool list, that each schema comes from the contract, that a tool call answers what the REST route answers, that refused input is an `isError` result with its location, and that a stream (`watchNotes`) is not a tool. It lists the tools it expects by name (`hello,listNotes,createNote`), so after you add, hide or expose an operation, update that list in `test/mcp-test.mjs` and the one in `api/go/api/mcp_test.go`. I did not run `api:go:mcp-test` for this page; the repo's findings record it passing 29 of 29 against the native build, under workerd and on a deployed Worker (2026-10-01). Against the deployed Worker, `mise run api:go:live-test` runs it with the real-time tests.
+`mise run check` runs the same program natively and under workerd, and `mise run live-test` against the deployed Worker. It passed 29 of 29 in all three places on 2026-10-01 ([Findings](../findings.md)). After you add, hide or rename an operation, update the tool names it expects in `test/mcp-test.mjs` and `api/mcp_test.go`.
 
 ## What it does not do
 
-- **No authorization of its own.** The endpoint is as open as the REST API, and `tools/list` is always open. The `Authorization` header is passed on to the operation, so an operation that checks a bearer token checks it for a tool call too, but MCP's own scheme (OAuth metadata, a 401 with `WWW-Authenticate`) is not implemented. Do not put an endpoint on the internet that gives an agent a tool you would not give a stranger.
-- **No streaming tools.** Answers are one JSON document: no progress messages, no long-running calls.
+- **No authorization of its own.** The endpoint is as open as the REST API, and `tools/list` is always open. The `Authorization` header is passed on, so an operation that checks a bearer token checks it for a tool call too. MCP's own scheme (OAuth metadata, a 401 with `WWW-Authenticate`) is not implemented. Do not publish a tool you would not give a stranger.
+- **`Origin`:** only the host the request came to is accepted. That is not a `Host` allowlist, which a native server reachable from a browser needs.
+- **No stream:** no progress notifications, no long-running calls, no list-changed subscriptions.
 - **No resources and no prompts.** Tools only.
-- **No file bodies.** A call carries JSON: multipart uploads are not tools, and response headers are dropped.
-- **Only a `*humaworkers.API`** can be served. `api/go/api/handlers.go` does it for you.
+- **No file bodies:** a call carries JSON. Response headers are dropped.
+- **Only a `*humaworkers.API`** can be served, not a plain Huma API.
 
-The package, its decisions and the full list of limits are in the orpc-api repo's [MCP page](../mcp.md).
+The package, its functions and why it uses no MCP SDK: [Go packages](../reference/packages.md#humamcp). What is planned: [What is next](../plans/next.md).

@@ -1,315 +1,104 @@
 ---
-title: Auth, idempotency, uploads, webhooks
-nav_order: 3
+title: Fern features
+nav_order: 4
 parent: Guides
 ---
 
-# Auth, idempotency, uploads, webhooks
+# Fern features: OAuth, idempotency, uploads, webhooks and more
 
-This page gets you the things a production API needs, written so that the SDKs Fern generates handle them for the caller: OAuth tokens fetched and sent by themselves, idempotency keys, file uploads, signed webhooks, a WebSocket the client also sends on, a public SDK that leaves out internal operations, and renamed SDK methods. Each section says what the caller gets, the lines to add to your contract, and how to check.
+How to switch on what a production API needs so that the SDKs [Fern](https://buildwithfern.com) generates handle it for the caller. Every feature here works in one small API, the showcase, in Go ([Huma](https://huma.rocks)) and in TypeScript ([oRPC](https://orpc.dev)). A new project does not contain it: read it in this repo and copy the lines you need.
 
-## The working example
-
-Every feature here exists, working, in a small API in the orpc-api repo: `api/go/showcase/` in [github.com/joeblew999/orpc-api](https://github.com/joeblew999/orpc-api). It is deployed at https://orpc-showcase-go.gedw99.workers.dev. Your project from `dev new` does not contain it: read it in that repo, copy the lines you need.
-
-Where things go in your project:
-
-| What | File in your project | In the showcase |
+| | Go | TypeScript |
 |---|---|---|
-| Operations and their structs | `api/go/api/contract.go` | `api/go/showcase/contract.go` |
-| The document around the operations (security scheme, `x-fern-*` at the top level) | `config()` in `api/go/api/spec.go` | `config()` in `api/go/showcase/spec.go` |
-| Handlers | `api/go/api/handlers.go` | `api/go/showcase/handlers.go` |
-| SDK settings | `sdk/fern/apis/api-go/generators.yml` | `sdk/fern/apis/showcase-go/generators.yml` |
+| The showcase | `examples/showcase-go/` | `examples/showcase-ts/` |
+| The contract | `examples/showcase-go/api/contract.go` | `examples/showcase-ts/src/contract.ts` |
+| The document around the operations | `config()` and `document()` in `examples/showcase-go/api/spec.go` | `document` in the contract |
+| The handlers | `examples/showcase-go/api/handlers.go` | `examples/showcase-ts/src/showcase.ts` |
+| Fern's settings | `examples/showcase-go/fern/generators.yml` | `examples/showcase-ts/fern/generators.yml` |
 
-After each change: `mise run api:go:spec`, then `mise run check`. To see the SDK, `mise run sdk:gen api-go typescript` (Docker).
+Everything is switched on through standard options: OpenAPI, `x-fern-*` extensions and `generators.yml`. Nothing is patched into the JSON. After each change: `mise run spec`, then `mise run check`.
 
-The showcase's own test generates the TypeScript SDK from its specs and calls the running server with it, from Node. In the orpc-api repo:
+## Feature by feature, from a Huma contract
 
-```sh
-mise run showcase:go:check   # lint, Go tests, spec check, then the SDK test against the native build and under workerd
-```
+| Feature | In the Go contract | What the caller gets |
+|---|---|---|
+| OAuth client credentials | The security scheme and `Security` in `config()`. On the token operation: `Security: []map[string][]string{}`, and a body tagged `contentType:"application/x-www-form-urlencoded"`, decoded by `humaworkers.WithForm`. `auth-schemes` in `generators.yml` names the token operation | `new ShowcaseClient({ clientId, clientSecret })`: the token is fetched once and sent as a bearer |
+| Idempotency | `x-fern-idempotency-headers` in `config()`; `"x-fern-idempotent": true` on the operation; a `hidden:"true"` header field reads the key | `notes.create(body, { idempotencyKey })` |
+| Cursor pagination | `x-fern-pagination` on the operation ([Change the contract](contract.md#paginate-a-list)) | `for await (const note of await client.notes.list())` |
+| SSE streaming | `x-fern-streaming` on the operation; the 200 response declared as `text/event-stream`; the handler returns a `huma.StreamResponse` ([Streaming](streaming.md)) | `for await (const chunk of await client.chat({ prompt }))` |
+| Multipart upload | `RawBody multipart.Form` in the input, and the form's schema on the operation (`uploadForm()`) | `files.uploadFile({ file, note })` |
+| Webhooks | `doc.Webhooks` filled in `document()`, with the payload's schema from the struct the server sends | The `NoteCreated` type |
+| Webhook signatures | `x-fern-webhook-signature` in `config()`; the handler signs the body with `crypto/hmac` | `WebhooksHelper.verifySignature(body, header, secret)` |
+| A WebSocket, both ways | `asyncapi.Operation` on the upgrade, `asyncapi.SendOperation` on the operation that takes a client message ([below](#a-websocket-the-client-also-sends-on)) | TypeScript: `liveNotes.connect()`, a typed `sendSubscribe()`, `on("message")`. Go: the message types only |
+| Audiences | `x-fern-audiences` on each operation; a group with `audiences: [public]` in `generators.yml` | A public SDK without the internal operations |
+| Overlays | `overlays.yml` beside the specs, named in `generators.yml` | Other SDK names without touching the contract. Only for a spec you do not own: your own contract says the names itself |
+| Retries | Nothing: built in | Go: `option.WithMaxAttempts` |
 
-and against the deployed Worker, `node test/showcase-test.mjs "$SHOWCASE_GO_URL" showcase-go`. What has run where is in that repo's [findings](../findings.md). The Go tests of the showcase (`go test ./showcase/` in `api/go/`) passed when this page was written, and I ran the server natively and called it with `curl` for the outputs below. I did not run Fern for this page, so what an SDK looks like below is from the repo's own docs and test, not from my run.
+## What to know before you copy
 
-## OAuth client credentials
-
-**The caller gets** an SDK that takes `clientId` and `clientSecret`, fetches a token once, sends it as a bearer on every call, and fetches another when it expires:
-
-```ts
-const client = new ShowcaseClient({ clientId, clientSecret });
-```
-
-**Add to the contract.** The security scheme and its requirement, on the document (`config()`):
-
-```go
-config := humaworkers.WithForm(humaworkers.Config(Title, Version))
-config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{OAuth: {
-	Type:  "oauth2",
-	Flows: &huma.OAuthFlows{ClientCredentials: &huma.OAuthFlow{TokenURL: "/oauth/token", Scopes: map[string]string{}}},
-}}
-requirement := map[string][]string{OAuth: {}}
-config.Security = []map[string][]string{requirement}
-```
-
-`humaworkers.WithForm` is there because the token request is a form (`application/x-www-form-urlencoded`, RFC 6749) and Huma has no decoder for it. It makes a body tagged with that content type decode like a JSON one. Every form value is a string, so the body's fields must be strings.
-
-The token operation, whose body is a form and which needs no token itself (`Security` empty):
-
-```go
-type TokenRequest struct {
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-}
-
-type TokenInput struct {
-	Body TokenRequest `contentType:"application/x-www-form-urlencoded"`
-}
-```
-
-```go
-huma.Register(api, huma.Operation{
-	OperationID: "getToken", Method: http.MethodPost, Path: "/oauth/token",
-	Summary: "OAuth client-credentials token (used by the SDK itself)", Tags: []string{"auth"},
-	Security: []map[string][]string{},
-	RequestBody: &huma.RequestBody{Content: map[string]*huma.MediaType{humaworkers.FormContentType: {
-		Schema: api.OpenAPI().Components.Schemas.Schema(reflect.TypeFor[TokenRequest](), false, ""),
-	}}},
-}, env.token)
-```
-
-The body's schema is written into the operation, not referred to by name, because with a named one the test that Fern's Go generator writes does not compile (the showcase's comment names it).
-
-Tell Fern which operation is the token endpoint, in `sdk/fern/apis/api-go/generators.yml`:
-
-```yaml
-auth-schemes:
-  OAuth:
-    scheme: oauth
-    type: client-credentials
-    client-id-env: BILLING_CLIENT_ID
-    client-secret-env: BILLING_CLIENT_SECRET
-    get-token:
-      endpoint: "POST /oauth/token"
-      request-properties:
-        client-id: $request.client_id
-        client-secret: $request.client_secret
-      response-properties:
-        access-token: $response.access_token
-        expires-in: $response.expires_in
-
-api:
-  auth: OAuth
-```
-
-(The `*-env` names are the environment variables the SDK reads when no credentials are passed; the showcase uses `SHOWCASE_CLIENT_ID` and `SHOWCASE_CLIENT_SECRET`. The `api:` block sits above the `specs` list that is already in the file.)
-
-**The server must enforce it.** The scheme in the spec only describes. The showcase checks every request in a Huma middleware (`authorize` in `api/go/showcase/handlers.go`, registered with `routes.UseMiddleware(env.authorize(routes))`): an operation whose `Security` is empty passes, any other needs `Authorization: Bearer <token>` and gets 401 with `WWW-Authenticate: Bearer` otherwise. Its token is an expiry signed with HMAC, so any request can check it with no storage, which a Worker needs (every request is a fresh Go runtime). Your project's notes API has no auth: copy `authorize`, `newToken` and `validToken` and set your own secrets.
-
-**Check it.** Run against the showcase natively (`mise run showcase:go:run` in the orpc-api repo, port 5175; the output is from another port):
-
-```sh
-curl -si localhost:5175/notes
-# HTTP/1.1 401 Unauthorized
-# Www-Authenticate: Bearer
-# {"title":"Unauthorized","status":401,"detail":"a valid access token is required: get one from POST /oauth/token"}
-
-curl -s -X POST localhost:5175/oauth/token -d 'client_id=id-1&client_secret=secret-1'
-# {"access_token":"1790854911.9a1e5c6e...","expires_in":3600}
-
-curl -s -X POST localhost:5175/oauth/token -d 'client_id=x&client_secret=y'
-# {"title":"Unauthorized","status":401,"detail":"bad client"}
-```
-
-The showcase's defaults (`id-1`, `secret-1`) are for trying it out: a real deployment sets `CLIENT_ID`, `CLIENT_SECRET`, `TOKEN_SECRET` and `WEBHOOK_SECRET` as secrets (`mise run cloudflare:secrets` is the task your project has for secrets).
-
-## Idempotency
-
-**The caller gets** an option on the operations you mark: `client.notes.create(body, { idempotencyKey })`. The SDK sends it as the `Idempotency-Key` header, and a retry with the same key must give the same answer.
-
-**Add to the contract.** The header, declared once on the document:
-
-```go
-idempotency := map[string]string{"header": "Idempotency-Key", "name": "idempotency_key"}
-config.Extensions = map[string]any{
-	"x-fern-idempotency-headers": []map[string]string{idempotency},
-}
-```
-
-On each operation, the marker, and a hidden field in the input that reads the header (hidden so it is not a parameter in the spec; Huma still reads it):
-
-```go
-Extensions: map[string]any{"x-fern-idempotent": true},
-```
-
-```go
-type CreateInput struct {
-	IdempotencyKey string `header:"Idempotency-Key" hidden:"true"`
-	Body           struct {
-		Body string `json:"body"`
-	}
-}
-```
-
-The spec only says the header exists. Making the operation idempotent is your handler's job: with a store, keep the first answer under the key and return it again. The showcase has no store, so its note's id is the key: the same key gives the same note.
-
-**Check it.**
-
-```sh
-curl -s -X POST -H "Authorization: Bearer $TOKEN" -H 'Idempotency-Key: k-1' -H 'content-type: application/json' -d '{"body":"hi"}' localhost:5175/notes
-# {"id":"k-1","body":"hi"}
-```
-
-## Multipart file upload
-
-**The caller gets** `files.uploadFile({ file, note })` with a file and a text field.
-
-**Add to the contract.** Take the form as `multipart.Form` and write its schema on the operation:
-
-```go
-type UploadInput struct {
-	RawBody multipart.Form
-}
-```
-
-```go
-RequestBody: &huma.RequestBody{Required: true, Content: map[string]*huma.MediaType{"multipart/form-data": {
-	Schema: &huma.Schema{
-		Type: "object",
-		Properties: map[string]*huma.Schema{
-			"file": {Type: "string", Format: "binary"},
-			"note": {Type: "string"},
-		},
-		Required: []string{"file"},
-	},
-}}},
-```
-
-The handler reads `in.RawBody.File["file"]` and `in.RawBody.Value["note"]`.
-
-**The limits, from the showcase's measurements under local workerd.** Huma's typed multipart (`huma.MultipartFormFiles`) panics under TinyGo, so use `RawBody` as above (`tinygo-org/tinygo#3862`). A Worker has no disk, so `humaworkers` keeps uploads in memory with a 32 MB limit; a 5 MB upload took 2.4 s there. A Worker's own request limits apply on top. The file is a whole value in memory, not a stream.
-
-**Check it.**
-
-```sh
-curl -s -X POST -H "Authorization: Bearer $TOKEN" -F file=@f.txt -F note=x localhost:5175/files
-# {"id":"f.txt:x","size":5}
-```
-
-## Webhooks with a signature
-
-**The caller gets** a typed payload (`NoteCreated`) and a helper that checks the signature: `WebhooksHelper.verifySignature(body, header, secret)`.
-
-**Add to the contract.** A webhook is something your server sends, so no route describes it. Huma's document has a `Webhooks` field that nothing fills, so fill it where the spec is made (`document()` in `api/go/showcase/spec.go`):
-
-```go
-doc := api.OpenAPI()
-doc.Webhooks = map[string]*huma.PathItem{"noteCreated": {Post: &huma.Operation{
-	OperationID: "noteCreatedWebhook",
-	Summary:     "Sent to you when a note is created",
-	Tags:        []string{"notes"},
-	RequestBody: &huma.RequestBody{Content: map[string]*huma.MediaType{
-		"application/json": {Schema: doc.Components.Schemas.Schema(reflect.TypeFor[NoteCreated](), true, "")},
-	}},
-	Responses: map[string]*huma.Response{"200": {Description: "received"}},
-}}}
-```
-
-How the signature is made, on the document (`config()`):
-
-```go
-config.Extensions["x-fern-webhook-signature"] = map[string]string{"type": "hmac", "header": SignatureHeader, "algorithm": "sha256", "encoding": "hex"}
-```
-
-(`SignatureHeader` is `x-webhook-signature`.) Then your handler must send it that way: `notify` in `api/go/showcase/handlers.go` posts the JSON body with the header set to the HMAC-SHA256 of the exact bytes, in hex, under `WEBHOOK_SECRET`. `crypto/hmac` and `crypto/sha256` work under TinyGo. The send is an outgoing request from an `*http.Client`; on Cloudflare that is workers-go's `fetch` client.
-
-**Check it.** The SDK test starts a receiver and checks that the helper accepts the server's delivery and rejects a changed body or another secret; it only runs where the receiver can be reached, so on a deployed Worker the delivery has not been checked. Natively: `mise run showcase:go:test:native` in the orpc-api repo.
+- **The spec only describes: the server must enforce.** The showcase checks every request in a Huma middleware (`authorize`, registered with `UseMiddleware`). An operation whose `Security` is empty passes; any other needs `Authorization: Bearer <token>` and gets 401 otherwise.
+- **Tokens need no storage:** the showcase's token is an expiry signed with HMAC, so any request can check it. A Worker keeps no memory between requests.
+- **Set real secrets.** The defaults (`CLIENT_ID` `id-1`, `CLIENT_SECRET` `secret-1`, `TOKEN_SECRET`, `WEBHOOK_SECRET`) are for trying it out.
+- **Idempotency is your handler's job.** The spec says the header exists; with a store, keep the first answer under the key and return it again.
+- **A form's values are strings,** so the fields of a form-encoded body must be strings.
+- **The token request's schema is written into the operation,** not referred to by name: with a named one, the test Fern's Go generator writes does not compile ([Upstream issues](../upstream.md#found-not-filed)).
+- **An upload is a whole value in memory,** up to 32 MB. A 5 MB upload took 2.4 s under local workerd (2026-10-01). `huma.MultipartFormFiles[T]` does not run under TinyGo.
+- **A webhook is an outgoing request** from an `*http.Client`: on Cloudflare, workers-go's `fetch` client (`examples/showcase-go/platform_js.go`).
+- **Keep SDK methods in a group.** A paginated method on the root client broke the Rust build of the CLI (seen 2026-09-29, not filed).
 
 ## A WebSocket the client also sends on
 
-**The caller gets** `liveNotes.connect()`, a typed `sendSubscribe(...)` and `on("message")`. The feed-only socket of [Real-time](streaming.md) is `asyncapi.Operation`; this adds the client's side with `asyncapi.SendOperation`.
-
-**Add to the contract.** Two operations on one path: the GET is the upgrade and the POST is one message from the client. The POST's body is the message, so Huma validates it:
+Two operations on one path. The GET is the upgrade; the POST is one message from the client, so Huma validates it and the middleware authorizes it.
 
 ```go
 huma.Register(api, asyncapi.Operation(huma.Operation{
 	OperationID: "liveNotes", Method: http.MethodGet, Path: livePath,
-	Summary:       "Note events over a WebSocket: send `subscribe` with a topic, receive that topic's events",
 	DefaultStatus: http.StatusNoContent,
 }, asyncapi.Channel{Name: "liveNotes", OperationID: "receiveNoteEvent", Payload: NoteEvent{}}), env.live)
 
 huma.Register(api, asyncapi.SendOperation(huma.Operation{
 	OperationID: "subscribe", Method: http.MethodPost, Path: livePath,
-	Summary: "Subscribe to a topic's events (a message on the liveNotes WebSocket)",
 }, asyncapi.Send{Channel: "liveNotes"}), env.subscribe)
 ```
 
-The upgrade handler answers 204 with the header `X-Websocket-Messages: post` (`transport.MessagesPost`), which tells the Worker's adapter that the channel takes messages. Each text frame from the client then becomes a POST to the same path, with the upgrade's headers, and the lines of the answer go back as frames. Anything but 2xx to a message closes the socket with 1008.
+- **The upgrade handler answers 204** with the header `X-Websocket-Messages: post` (`transport.MessagesPost`). Each text frame from the client then becomes a POST to the same path, with the upgrade's headers, and the lines of the answer go back as frames.
+- **Anything but 2xx to a message closes the socket with 1008.**
+- **A message cannot change what a feed sends through memory:** on Cloudflare each may run in a Go runtime of its own. Share state through a binding.
+- **A client that cannot set handshake headers** (a browser, a Worker) sends the token as `?access_token=`: the showcase accepts either.
 
-Two limits. On Cloudflare every call to Go may be in a Go runtime of its own, so a message cannot change what a feed in another call sends; share state through a binding (a database, a Durable Object). Messages are handled one at a time, in order. Details: the repo's [showcase page](../showcase-go.md#the-websocket-both-ways).
+The protocol is in [Go packages](../reference/packages.md#transport).
 
-**Check it.** The two operations are in the AsyncAPI spec, and neither is in OpenAPI (a run of the showcase):
+## From an oRPC contract
 
-```sh
-curl -s localhost:5175/asyncapi.json | python3 -c "import sys,json; print({k:v['action'] for k,v in json.load(sys.stdin)['operations'].items()})"
-# {'receiveNoteEvent': 'receive', 'sendSubscribe': 'send'}
-```
+The same features, from `examples/showcase-ts/src/contract.ts`. What oRPC's generators (`2.0.0-beta.40`) cannot say is added in code:
 
-I did not open the socket for this page; the showcase's SDK test does (it sends `subscribe` and gets three events back).
+| Fern needs | Where it is added |
+|---|---|
+| `x-fern-*`, or `security: []`, on one operation | The operation's `spec` hook in `openapi({...})` |
+| A form-encoded request body | The same hook renames the media type |
+| `security`, `securitySchemes`, `x-fern-idempotency-headers`, `x-fern-webhook-signature` | `document` in the contract, passed to the generator as `base` |
+| OpenAPI `webhooks` | `openapiSpec({ webhooks })` in `examples/notes-ts/src/specs.ts`: one procedure per webhook |
+| An SSE response whose schema is the event's data | The operation's `spec` hook |
+| AsyncAPI | `examples/notes-ts/src/asyncapi.ts` ([The TypeScript version](typescript.md#the-asyncapi-generator)) |
 
-## Audiences: a public SDK without the internal operations
+A multipart upload needs nothing: `z.file()` in the input is enough. The oRPC showcase server checks no tokens and sends no webhook.
 
-**The caller gets** an SDK that has only what you tagged public; the internal operations are not in it.
+## How it is tested
 
-**Add to the contract.** Tag each operation with who may see it:
+| Test | What it proves | Result |
+|---|---|---|
+| `mise run check` in `examples/showcase-go/` | The TypeScript SDK made from the Go specs, from Node, against the native build and the Wasm under workerd (`test/showcase-test.mjs`) | 12 of 12, 2026-10-01 |
+| The same program against the deployed Go showcase | Every check but the webhook delivery, which needs a receiver the Worker can reach | passed, 2026-10-01 |
+| `mise run check` in `examples/showcase-ts/` | The compiled TypeScript SDK inside a Worker under workerd: pagination, OAuth, idempotency, SSE, upload, webhook signatures, the WebSocket client | 9 checks pass, also deployed, 2026-10-01 |
+| `TestSameSurfaceAsTheORPCShowcase` | Fern sees the same API from the Go and the oRPC contract | in `examples/showcase-go/api/surface_test.go` |
 
-```go
-Extensions: map[string]any{"x-fern-audiences": []string{"public", "internal"}},   // in the SDK for either audience
-```
+Not done: the Go SDK has not called the showcase server, its CLI is not built, and no webhook was received from the deployed Worker.
 
-An operation with only `[]string{"internal"}` (the showcase's upload) is left out of a group that asks for `public`. In `sdk/fern/apis/api-go/generators.yml`, a group with an `audiences` list:
+## Running the TypeScript SDK inside a Worker
 
-```yaml
-groups:
-  typescript-public:
-    audiences:
-      - public
-    generators:
-      - name: fernapi/fern-typescript-sdk
-        # version, output and config as in your typescript group
-```
+`examples/showcase-ts/` does it. What it takes:
 
-Operations with no `x-fern-audiences` are, as far as I read the showcase, in no audience-filtered group; tag everything you want in the public SDK. I did not run Fern to confirm what an untagged one does.
-
-**Check it.** Generate the group (`mise run sdk:gen api-go typescript-public`) and look for the operation in `sdk/out/api-go/typescript-public`. The showcase's test checks that its public SDK has `notes` and `auth` and no `files`.
-
-## Overlays: rename without touching the contract
-
-**The caller gets** the SDK names you choose. When the contract is yours, say them in the contract (`x-fern-sdk-group-name` and `x-fern-sdk-method-name`, [Define your API](contract.md#name-the-sdk-methods)). An overlay is for a spec you do not own, or a rename you want to keep out of the Go code. It is a file named `overlays.yml` beside the specs, in `sdk/fern/apis/api-go/`:
-
-```yaml
-overlay: 1.0.0
-info:
-  title: SDK naming
-  version: 1.0.0
-actions:
-  - target: $.paths['/api/notes'].get
-    update:
-      x-fern-sdk-group-name: notes
-      x-fern-sdk-method-name: list
-```
-
-and `generators.yml` says which spec it applies to:
-
-```yaml
-api:
-  specs:
-    - openapi: openapi.json
-      overlays: overlays.yml
-    - asyncapi: asyncapi.json
-```
-
-The showcase's overlay is `sdk/fern/apis/showcase-go/overlays.yml` in the orpc-api repo. Never edit `openapi.json` by hand: `mise run api:go:spec` writes it again from the contract.
-
-## Where the full table is
-
-The orpc-api repo's [showcase page](../showcase-go.md) has every feature with how the contract switches it on, what the SDK gets and how it is tested; its SDK page has the Fern feature table.
+- **`guardProcessEnvAccess: true`** in the generator's config: Workers have no `process`.
+- **The compiled SDK** (the group `typescript-dist`, `outputSourceFiles: false`): the `.ts` sources clash with Cloudflare's Worker types.
+- **The WebSocket token as a query parameter,** as above.
+- **Two Workers for the WebSocket test:** a Worker cannot call its own URL (Cloudflare error 1042), and calling another on the same `workers.dev` zone needs the `global_fetch_strictly_public` compatibility flag.
