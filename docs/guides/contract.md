@@ -8,7 +8,7 @@ parent: Guides
 
 How to add an operation to a Go project: its route, input and output, validation, errors, SDK names, pagination and storage. The worked example is `GET /api/notes/{id}`. Why the contract is the source: [Contract first](../concepts/contract-first.md).
 
-The route, the handler and `MemStore.Get` below were run natively on 2026-10-01, with the outputs shown. Not run for this page: the route's `Errors` line, and `D1Store.Get`, which follows the methods beside it.
+The route and the handler below were run natively on 2026-10-01, with the outputs shown, but for the route's `Errors` line.
 
 ## The loop
 
@@ -56,8 +56,7 @@ type GetInput struct {
 }},
 ```
 
-- **`OperationID`** is said twice: on the route, so one operation can be found without registering the others, and on the operation. It is the MCP tool's name.
-- **`Summary`** is the line in the docs and the tool's description.
+- **`OperationID`** is said on the route too, so one operation can be found without registering the others. It is the MCP tool's name; `Summary` is its description.
 - **`Errors`** lists the statuses the handler itself answers with. 422 and 401 are declared for you.
 - **`sdk("notes", "get", nil)`** names the SDK method: `client.notes.get()`, `notes get` in the CLI. The third argument carries other `x-fern-*` extensions.
 
@@ -80,7 +79,7 @@ func (env Env) get(ctx context.Context, in *GetInput) (*NoteOutput, error) {
 }
 ```
 
-**4. The storage** ([below](#store-the-data)), then the loop above.
+**4. The storage:** `Get` on the store, returning `ErrNotFound` ([below](#store-the-data)). Then the loop above.
 
 ```sh
 curl -si localhost:5174/api/notes/2
@@ -122,38 +121,12 @@ The SDK then fetches the next page itself: `for await (const note of await clien
 
 ## Store the data
 
-A handler asks `env.Store()` for a `Store` and calls its methods. Add the method to the interface in `api/store.go`, and to both implementations.
+A handler asks `env.Store()` for a `Store` and calls its methods. Add the method to the interface in `api/store.go` and to both implementations, as the methods beside it are written:
 
 | Implementation | Runs | File |
 |---|---|---|
-| `D1Store` | On Cloudflare and under `mise run dev`: D1 through the library's `d1` package | `api/store_js.go` |
+| `D1Store` | On Cloudflare and under `mise run dev`: D1, through the library's `d1` package | `api/store_js.go` |
 | `MemStore` | `mise run run` and `go test`: memory | `api/store.go` |
-
-```go
-// api/store.go
-var ErrNotFound = errors.New("not found")
-
-func (m *MemStore) Get(_ context.Context, id int64) (Note, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if id < 1 || id > int64(len(m.notes)) {
-		return Note{}, ErrNotFound
-	}
-	return m.notes[id-1], nil
-}
-
-// api/store_js.go
-func (s D1Store) Get(_ context.Context, id int64) (Note, error) {
-	notes, err := d1.Query[Note](s.DB, "SELECT id, body, created_at FROM notes WHERE id = ?", id)
-	if err != nil {
-		return Note{}, err
-	}
-	if len(notes) == 0 {
-		return Note{}, ErrNotFound
-	}
-	return notes[0], nil
-}
-```
 
 `d1.Query` decodes each row from JSON, so the struct's `json` tags name the columns ([Go packages](../reference/packages.md#d1)). `SQLStore` is the same statements through `database/sql`, for a native build with a SQLite driver; the Worker does not use it.
 
@@ -164,8 +137,3 @@ mise run migrate:local    # to the local D1 of a running mise run dev
 mise run migrate          # REMOTE: to the deployed database (mise run deploy does this too)
 ```
 
-## What to read next
-
-- **A stream:** [Streaming and real-time](streaming.md).
-- **OAuth, idempotency, uploads, webhooks:** [Fern features](fern-features.md).
-- **The client for it:** [SDKs and releasing them](sdks.md).

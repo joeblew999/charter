@@ -8,7 +8,7 @@ parent: Guides
 
 How to put a project on Cloudflare Workers with its database, and test it there: from your machine, and from GitHub. You need a Cloudflare account and a project that passes `mise run check`.
 
-What is recorded as run is the notes example's own deploy ([Findings](../findings.md)). A deploy of a freshly made project is not in the findings.
+What is recorded as run is the notes example's own deploy ([Findings](../findings.md)), not a deploy of a freshly made project.
 
 ## Log in
 
@@ -56,13 +56,7 @@ mise run migrate:local    # the same for the local database of a running mise ru
 
 ## The Worker's URL
 
-`cf deploy` prints it: `https://<name>.<your-subdomain>.workers.dev`. The tasks take it from `API_URL`, whose default is in `mise.toml`.
-
-| Uses `API_URL` | For |
-|---|---|
-| `spec`, `spec:check` | The server the specs name, which the SDKs call by default |
-| `live-test`, `soak`, `bench`, `perf` | The Worker they call |
-| `migrate`, `perf:try`, `perf:clean` | The Worker's name: the first label of the URL's host |
+`cf deploy` prints it: `https://<name>.<your-subdomain>.workers.dev`. The tasks take it from `API_URL`, whose default is in `mise.toml`: the specs name it as their server, the remote tests call it, and its first label is the Worker's name ([who reads it](../reference/config.md#environment-variables)).
 
 - **To change it for everyone:** change the default in `mise.toml`, run `mise run spec`, and commit both.
 - **`mise.local.toml`** overrides it on one machine, and is not committed. Use it to point the tests at another deployment. Do not run `mise run spec` while it is set: the committed specs would then fail `mise run check` everywhere else.
@@ -89,7 +83,6 @@ Whether the workflow has run on GitHub was not checked: the recorded deploys wer
 
 ## Limits
 
-- **It must build with TinyGo.** Not every Go package does ([Huma on Cloudflare Workers](../concepts/workers-go.md)).
 - **One Worker, one database, no staging.** A second environment is a second project name, or a change to `cloudflare.config.ts` that no page covers.
 - **No custom domain** is set: the Worker is on its `workers.dev` address.
-- **What a request costs:** [Benchmarks](../benchmarks.md). Measure yours: [Measure and improve performance](performance.md).
+- **What a request costs:** [Benchmarks](../benchmarks.md).

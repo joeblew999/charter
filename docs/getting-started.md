@@ -20,11 +20,7 @@ go run github.com/joeblew999/charter/cmd/charter@latest new -name billing-api -m
 cd billing-api && git init
 ```
 
-| Flag | What it sets | Default |
-|---|---|---|
-| `-name` | The folder, the Worker and its database (`billing-api-db`) | required |
-| `-module` | The Go module path | `github.com/<your gh login>/<name>` |
-| `-subdomain` | Your account's `workers.dev` subdomain: the Worker's URL is `https://<name>.<subdomain>.workers.dev` | a placeholder, fixed in step 5 |
+`-name` is the folder, the Worker and its database. `-module` is the Go module path. `-subdomain` is your account's `workers.dev` subdomain: without it the Worker's URL is a placeholder, fixed in step 5 ([every flag](reference/charter.md#make-a-project)).
 
 The project is a copy of the notes example (`examples/notes-go/` in charter), so every check passes before you change anything. The first line `new` prints is the release it pinned: the tool in `mise.toml`, the library in `go.mod`.
 

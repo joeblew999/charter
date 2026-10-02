@@ -98,27 +98,8 @@ GET /__bench/not-found        3 2 1 3 3 3 24n 2 2 3 2 2 3 3 2 2 1 1 2 2 2 2 2
 - **Requests that arrive together beyond the waiting runtimes start their own:** about 100 ms each when several do at once, 10 to 30 ms for one alone.
 - **Cloudflare gives no crypto randomness while a module loads.** For those runtimes TinyGo's seed comes from `Math.random`; anything else that asks for random bytes during start-up stops the warm start.
 
-## What the patch and the heap each do
+## The patch and the heap are both needed
 
-The same Wasm under `cf dev` on an Apple M-series Mac: time inside the Worker per request (4 requests each, 2026-10-01, runtimes not reused, 256 KB stacks).
+Under `cf dev` on an Apple M-series Mac (2026-10-01, runtimes not reused), a create took 37 to 44 ms with TinyGo as it is, 11 to 16 ms with the patched runtime and a 4 MB heap, and 5 to 10 ms with 8 MB, which is what is built. The patch alone helped only the D1 read. 16 MB measured the same as 8. The tables are in [Findings](findings.md).
 
-| Build | 404 | hello | list 20 (D1) | openapi.json | create |
-|---|---|---|---|---|---|
-| TinyGo as it is | 8 ms | 8 ms | 14 to 16 ms | 10 to 11 ms | 37 to 44 ms |
-| Patched runtime, TinyGo's own starting heap | 8 ms | 8 to 9 ms | 9 to 10 ms | 10 to 11 ms | not measured |
-| Patched runtime, 2 MB heap | 4 to 5 ms | 4 to 5 ms | 5 to 6 ms | 7 ms | 13 to 20 ms |
-| Patched runtime, 4 MB heap | 1 to 2 ms | 1 to 2 ms | 3 ms | 3 to 4 ms | 11 to 16 ms |
-| **Patched runtime, 8 MB heap (what is built)** | 1 ms | 1 to 2 ms | 2 to 3 ms | 3 to 4 ms | 5 to 10 ms |
-| Patched runtime, 16 MB heap | 1 to 2 ms | 1 to 2 ms | 3 ms | 3 ms | 4 to 11 ms |
-| No collector (`-gc=leaking`) | 1 to 3 ms | 1 to 4 ms | 3 to 5 ms | 2 to 5 ms | not measured |
-
-Both changes are needed: the patch alone helps only the D1 read. 8 MB is enough: 16 MB measured the same.
-
-## What does not help
-
-Measured before the fix, under `cf dev` and on Cloudflare:
-
-- **The optimisation level is not the cost:** `-opt=2` and `-opt=s` were no faster than `-opt=z`, and larger. The collector was the cost.
-- **`-gc=boehm` is not usable:** fast locally; deployed to Cloudflare, its requests hung (48 requests took 11 minutes).
-- **`-gc=leaking` is not safe:** a stream the Worker holds can live for hours, and its memory would only grow.
-- **A bigger heap than 8 MB does not help:** 16 MB measured the same, 32 MB slower.
+What was tried and dropped (other collectors, optimisation levels, bigger heaps): [the performance plan](plans/performance.md#tried-and-dropped).

@@ -93,13 +93,11 @@ Limits: one message type each way; a channel cannot have query parameters and a 
 `charter new` makes Go projects only. For TypeScript, copy `examples/notes-ts/` and change it. This was not run for this page: the steps are read from the code.
 
 1. **Copy the folder,** and the test programs its tasks use from `examples/notes-go/test/`.
-2. **Pin the tool** in `mise.toml`, under `[tools]`: `"go:github.com/joeblew999/charter/cmd/charter" = "latest"`. Write `charter` where the tasks say `go run ../../cmd/charter`, and your own paths where they say `../notes-go/test/`.
+2. **Pin the tool** in `mise.toml`, under `[tools]`: `"go:github.com/joeblew999/charter/cmd/charter" = "latest"`. Write `charter` where the tasks say `go run ../../cmd/charter`.
 3. **Rename the Worker** in `cloudflare.config.ts`, `package.json` and the default of `API_URL`.
-4. **Write your contract** in `src/contract.ts` and your handlers in `src/index.ts`. Leave `follow.ts`, `asyncapi.ts`, `specs.ts` and `spec-files.ts` as they are.
-5. **Run `charter workflows`** for the GitHub workflows, then `mise run spec` and `mise run check`.
+4. **Write your contract and handlers.** Leave `follow.ts`, `asyncapi.ts`, `specs.ts` and `spec-files.ts` as they are.
+5. **Run `charter workflows`,** then `mise run spec` and `mise run check`.
 
 ## Limits
 
-- **Only the feed has unit tests.** The Worker is tested live, against a deployed server.
-- **The static page** (`examples/notes-ts/public/index.html`) reads `GET /api/notes` as a plain array, which the API does not answer. No test covers it.
-- **oRPC is a beta** (`2.0.0-beta.40`). Moving to 2.0.0 final is [planned](../plans/next.md).
+Only the feed has unit tests: the Worker is tested live, against a deployed server. oRPC is a beta (`2.0.0-beta.40`); moving to 2.0.0 final is [planned](../plans/next.md).

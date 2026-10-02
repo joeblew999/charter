@@ -105,8 +105,4 @@ A release is a version tag. Push `vX.Y.Z` and the `release` workflow runs these;
 | `mise run release` | Attaches every file in `dist/` to the tag's GitHub Release |
 | `mise run release:tags` | Tags `sdk/go/vX.Y.Z` on the tag's commit, so `@latest` works |
 
-Not set up:
-
-- **Packages.** Nothing publishes to npm or to a repository per SDK. Fern can; not tried here.
-- **The CLI for macOS and Windows.** Build it on the machine that needs it.
-- **Fern's licence.** Fern's documentation describes local generation and the CLI generator as needing a `FERN_TOKEN`. Everything here ran without one.
+Not set up: packages (nothing publishes to npm or to a repository per SDK), and the CLI for macOS and Windows ([What is next](../plans/next.md)). Fern's documentation describes local generation and the CLI generator as needing a `FERN_TOKEN`; everything here ran without one.

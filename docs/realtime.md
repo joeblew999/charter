@@ -35,14 +35,7 @@ A client that says where it got to never misses an item and never sits on a dead
 
 ## How the feed works
 
-| Setting | Go (`follow.Options`) | TypeScript (`follow()` options) | Default |
-|---|---|---|---|
-| Resume position | `After` | `after` | absent: only items newer than now |
-| Read the log when nothing arrived for this long | `Recheck` | `recheckMs` | 30 s |
-| Wait between resubscribes after a hub failure | `Retry` | `retryMs` | 1 s |
-| Failed subscribes in a row before giving up | `MaxFailures` | `maxFailures` | 5 |
-| Page size for log reads | `PageSize` | `pageSize` | 100 |
-| Called when the subscription breaks, for logs | `OnBroken` | `onBroken` | none |
+Its settings and their defaults (recheck 30 s, retry 1 s, 5 failures, pages of 100) are `follow.Options` in Go ([Go packages](reference/packages.md#follow)) and the options of `follow()` in TypeScript.
 
 - **A live item is only a wake-up.** The feed emits it directly only when its id is the next one; otherwise it reads the log. One SQLite writer means a visible id implies all lower ones, so this is gap-free.
 - **A silent hub costs a delay, never an item.** After the recheck time the feed reads the log anyway.
@@ -59,14 +52,7 @@ The Worker holds each client's SSE response or WebSocket, and subscribes to the 
 
 ## What the platform does
 
-Measured here ([Findings](findings.md)):
-
-- **A deploy restarts every Durable Object and drops its sockets,** 5 s and 36 s after the deploy finished in two runs. Subscribers saw close code 1006.
-- **Nothing buffers a stream:** the first byte arrived in about 0.1 s.
-- **The hub hibernates:** in an hour that held a soak and a 20-minute idle run, the Go Worker's hub was active for 5.7 s.
-- **Go timers stall on Cloudflare without the fix** in the library's glue ([tinygo-org/tinygo#5798](upstream.md)).
-
-From Cloudflare's documentation, not measured: runtime updates end long requests after 30 s, a few times a week. The client rule covers it.
+Measured here ([Findings](findings.md)): a deploy restarts every Durable Object and drops its sockets (close code 1006), within about half a minute; nothing buffers a stream; the hub hibernates (active for 5.7 s in an hour that held a soak and a 20-minute idle run). From Cloudflare's documentation, not measured: runtime updates end long requests after 30 s, a few times a week. The client rule covers all of it.
 
 ## How it is tested
 

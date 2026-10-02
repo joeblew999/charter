@@ -90,7 +90,4 @@ The handlers do not know they are on Cloudflare. They get the database and the h
 
 ## When it fits
 
-- **A good fit:** your team writes Go and wants one language for the API, its types and its tests; the API is request and response plus streams, with its state in D1 or a Durable Object; you want the same code to run off Cloudflare too.
-- **Not a good fit:** you must stay within Workers Free for certain; you depend on Go libraries TinyGo cannot build, or on in-process state (caches, pools, background goroutines); you cannot accept a few JavaScript files and open upstream issues in the path.
-
-For TypeScript, the same design exists on oRPC: [The TypeScript (oRPC) version](../guides/typescript.md).
+A good fit: your team writes Go, the API is request and response plus streams with its state in D1 or a Durable Object, and you want the same code to run off Cloudflare too. Not a good fit: you must stay within Workers Free for certain, or you depend on Go libraries TinyGo cannot build, or on in-process state (caches, pools, background goroutines). For TypeScript the same design exists on oRPC: [The TypeScript (oRPC) version](../guides/typescript.md).

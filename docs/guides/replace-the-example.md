@@ -65,9 +65,4 @@ The test programs import the SDK by those names: `NotesClient` in `test/sdk-live
 
 ## When you are done
 
-```sh
-mise run spec                  # the specs, from your contract
-mise run check                 # must pass
-mise run sdk:gen typescript    # Docker: the SDK now has your methods
-grep -rni note api test migrations fern/generators.yml mise.toml   # what is left of the example
-```
+`mise run spec`, `mise run check`, then search for what is left of the example: `grep -rni note api test migrations fern/generators.yml mise.toml`.

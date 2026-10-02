@@ -5,7 +5,7 @@ parent: How to help
 ---
 # Upstream issues: every workaround, and the issue it waits for
 
-Every gap in TinyGo, workers-go, Huma, oRPC and Fern that charter works around: what the workaround is, where it lives, and what to do when the gap closes. Read it when you meet an `Upstream:` tag in the code, when an issue closes, or before you file a new one.
+Every gap in TinyGo, workers-go, Huma, oRPC and Fern that charter works around: the workaround, where it lives, and what to do when the gap closes. Read it when you meet an `Upstream:` tag in the code, or before you file a new issue.
 
 ```sh
 mise run upstream:status    # every Upstream: tag in the code, with its issue's state (needs gh)
@@ -34,18 +34,16 @@ Every workaround carries a tag `Upstream: <owner>/<repo>#<n> (when fixed: ...)`.
 
 ## Found, not filed
 
-- **Fern's Go generator writes a test that does not compile** when the OAuth token endpoint is form-encoded and its request schema is a named one: `undefined: showcase.Request` (fern-go-sdk 1.64.0). With the schema written inline it passes. Huma names every body schema, so the Go showcase writes this one into the operation (`examples/showcase-go/api/contract.go`). When fixed: drop that `RequestBody`.
-- **Huma documents `application/octet-stream` for a `RawBody` beside a typed `Body`, and Fern's Go generator then takes an `io.Reader`** (Huma 2.39.1, fern-go-sdk 1.64.0). `humaworkers` takes the binary content out of every operation that also has another content type (`jsonOnly` in `go/humaworkers/humaworkers.go`). When fixed: delete `jsonOnly`.
+- **Fern's Go generator writes a test that does not compile** when the OAuth token endpoint is form-encoded and its request schema is a named one (fern-go-sdk 1.64.0). The Go showcase writes the schema into the operation instead (`examples/showcase-go/api/contract.go`). When fixed: drop that `RequestBody`.
+- **Huma documents `application/octet-stream` for a `RawBody` beside a typed `Body`, and Fern's Go generator then takes an `io.Reader`** (Huma 2.39.1). `humaworkers` takes the binary content out (`jsonOnly` in `go/humaworkers/humaworkers.go`). When fixed: delete `jsonOnly`.
 - **Fern ignores an AsyncAPI server's `pathname`.** The default WebSocket URL of every generated client lacks it. Nothing works around it in the specs: the oRPC showcase's tests pass `baseUrl`.
 - **What oRPC's generators cannot say:** a form-encoded request body, `security` on one operation, document-level settings, OpenAPI `webhooks`. Each is added in code ([the table](guides/fern-features.md#from-an-orpc-contract)).
 - **`cf dev` drops a WebSocket upgrade that the Worker refuses.** Natively the client sees the 401; under `cf dev` the connection just closes. The showcase test accepts either.
 
 ## Not an issue, a setting
 
-- **Huma needs a bigger stack than TinyGo's Wasm default.** The first request fails with `memory access out of bounds`; 64 KB failed too. The build passes 128 KB.
-- **Huma's adapter writes uploads over 8 KB to a temporary file, and a Worker has no disk.** `humaworkers` raises the limit to 32 MB, so uploads stay in memory.
+Huma needs a bigger stack than TinyGo's Wasm default (the build passes 128 KB; 64 KB failed), and its adapter writes uploads over 8 KB to a temporary file, which a Worker does not have (`humaworkers` keeps up to 32 MB in memory).
 
 ## Told to the maintainers
 
-- **What made a Go Worker cost what a TypeScript one does** was told to workers-go's maintainer in [syumai/workers-go#240](https://github.com/syumai/workers-go/issues/240), closed by us: nothing in workers-go needs to change. The runtime-reusing entry was offered as a small pull request.
-- **A place to try a TinyGo or workers-go change:** the two notes examples serve the same API with the same tests, measured side by side by `mise run compare` ([Benchmarks](benchmarks.md)).
+What made a Go Worker cost what a TypeScript one does was told to workers-go's maintainer in [syumai/workers-go#240](https://github.com/syumai/workers-go/issues/240), closed by us: nothing in workers-go needs to change. The two notes examples are a ready place to try a TinyGo or workers-go change: the same API, the same tests, measured side by side by `mise run compare`.

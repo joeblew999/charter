@@ -13,36 +13,11 @@ The repo grew as one example with tools around it, and three things were tangled
 
 ## What it is now
 
-```
-go.mod, cmd/charter/     the tool: the command charter
-go/                      the library: its packages, and the Worker glue (worker/*.mjs)
-examples/notes-go/       the Go notes API: a complete project
-examples/showcase-go/    every Fern feature, in Go
-examples/notes-ts/       the notes API in TypeScript, on oRPC
-examples/showcase-ts/    every Fern feature in TypeScript, and the SDK inside a Worker
-docs/
-mise.toml                the repo's own tasks
-```
-
-A project, here and in any repo, has one shape:
-
-```
-mise.toml               the tool's pin and the tasks
-go.mod, main.go, platform_js.go, platform_other.go
-api/                    the contract, the handlers, the store
-cmd/spec/               writes the specs
-worker.mjs              the Worker's entry: a few lines
-cloudflare.config.ts, package.json
-migrations/
-fern/                   generators.yml and the generated specs
-sdk/go/                 the generated Go client, committed
-test/
-```
+The layout, and the one shape every project has, are on the home page ([what is what](../README.md#what-is-what)) and in [Configuration](../reference/config.md#the-files-of-a-project).
 
 ## Done
 
-- **The library is a module of its own:** `github.com/joeblew999/charter/go`.
-- **The Worker glue ships with the library.** The build writes it into `build/` from the library version a project uses, so no project keeps a copy that can fall behind.
+- **The library is a module of its own,** and the Worker glue ships with it: the build writes it into `build/`, so no project keeps a copy that can fall behind.
 - **Each example is a complete project** with its own `mise.toml`, `package.json` and `fern/` folder.
 - **Task names are the same in every project,** with no prefix. The root `mise.toml` only runs each example's (`charter each`).
 - **The tool works on the project it is run in,** and is called `charter`: the repo's root module.

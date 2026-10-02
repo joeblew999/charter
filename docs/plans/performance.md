@@ -9,11 +9,8 @@ The goal: a Go Worker that fits Workers Free (10 ms of CPU) on every request, wi
 
 ## Done
 
-- **The collector no longer runs in an ordinary request** (2026-10-01): a patch to a copy of TinyGo's runtime and an 8 MB starting heap. Reported as tinygo-org/tinygo#5800.
-- **Go runtimes are reused** (2026-10-01): `go/worker/go.mjs`, `transport.Run`. Told to workers-go in syumai/workers-go#240.
-- **Goroutine stacks are reused,** and are 128 KB (2026-10-01): a second patch. Reported as tinygo-org/tinygo#5801, since fixed on TinyGo's dev branch.
-- **Two Go runtimes are started while the Worker's module loads** (2026-10-02), each answering the OpenAPI and hello routes during start-up.
-- **One call into Go and one out; D1 rows as one JSON string; the hub published to by RPC** (2026-10-02): `transport`, `d1`, `hub`.
+What closed the gap for ordinary requests is listed, step by step with its numbers, in [Benchmarks](../benchmarks.md#what-closed-the-gap). Around it:
+
 - **The tool pins the TinyGo it patches** (2026-10-02), so a project cannot build with another by accident.
 - **A scratch Worker per experiment:** `mise run perf:try`, about 70 seconds, several at once.
 - **One command that gives a verdict:** `mise run perf`, and `mise run compare` for both Workers side by side.

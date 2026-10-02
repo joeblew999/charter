@@ -30,11 +30,7 @@ The rules for changing charter, for developers and agents alike. They are bindin
 
 ## A fresh checkout or worktree
 
-```sh
-mise install && mise run setup    # tools, then every example's npm packages
-mise run doctor                   # what is missing
-mise run check                    # every local check: needs Docker, no Cloudflare account
-```
+Set up as in [How to help](contributing.md#set-up).
 
 - **The local checks pick free ports,** so several can run at once: two worktrees, two agents.
 - **Give a server you start by hand a port of your own** (`API_PORT`), and stop it when you are done.

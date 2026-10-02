@@ -141,7 +141,7 @@ Deployed with `mise run api:go:deploy` to https://orpc-api-go.gedw99.workers.dev
   - invalid input comes back through the CLI as Huma's 422 with its details.
 - **MCP works on Cloudflare.** `node test/mcp-test.mjs https://orpc-api-go.gedw99.workers.dev`: 29/29, twice, with the official TypeScript client (`@modelcontextprotocol/client` 2.2.0), in both the stateless (2026-07-28) and the handshake (2025-11-25) mode. Run it a few seconds after a deploy: the first try hit the previous version, which had no `/api/mcp`.
 - **CPU time per request was 40 to 70 ms with TinyGo as it is, against 1 to 3 ms for the oRPC Worker** (Workers Logs, median): hello 55 ms, a D1 list 71 ms, a 404 38 ms, a create about 265 ms; oRPC hello 1 ms, list 3 ms.
-- **The cause was TinyGo's collector, and a build setting removes most of it.** TinyGo runs a full collection whenever the scheduler is idle and 32 objects with finalizers were made (`finalizerGCThreshold` in `src/runtime/gc_finalizer.go`); workers-go makes one per JavaScript value. With that threshold at 0 in a copy of the runtime and an 8 MB starting heap (`dev wasm-build`), the same Worker measured, per run of 20 requests: hello 6 to 8 ms or 14 to 19 ms, the list 8 to 11 or 22 to 29, a 404 5 to 7 or 12 to 17, a create 61 to 66. A whole run is in the lower or the higher range; why is not established. `mise run api:go:check`, the live test and the soak pass on that build. Filed as tinygo-org/tinygo#5800. The tables are in [benchmarks.md](benchmarks.md).
+- **The cause was TinyGo's collector, and a build setting removes most of it.** TinyGo runs a full collection whenever the scheduler is idle and 32 objects with finalizers were made (`finalizerGCThreshold` in `src/runtime/gc_finalizer.go`); workers-go makes one per JavaScript value. With that threshold at 0 in a copy of the runtime and an 8 MB starting heap (`dev wasm-build`), the same Worker measured, per run of 20 requests: hello 6 to 8 ms or 14 to 19 ms, the list 8 to 11 or 22 to 29, a 404 5 to 7 or 12 to 17, a create 61 to 66. A whole run is in the lower or the higher range; why is not established. `mise run api:go:check`, the live test and the soak pass on that build. Filed as tinygo-org/tinygo#5800. The tables are in [benchmarks.md](benchmarks.md), and the local ones at the end of this page.
 - **`-opt=2` is no faster than `-opt=z` on Cloudflare** with the tuned build, and the Wasm is larger.
 - **Reusing a Go runtime for the next request takes a hello to 3 ms of CPU, the list to 7, a create to 10 to 13 and a 404 to 2** (medians of 20, two runs, each right after a deploy; p99 9 to 20 ms). `go/worker/go.mjs` keeps a runtime that has finished a response; `transport.Run` keeps the Go program alive.
   - Per request the CPU time is 2 to 3 ms, and 5 to 13 ms for the one in three that starts a runtime.
@@ -253,3 +253,34 @@ Everything here ran on this machine: natively, and as TinyGo Wasm under workerd 
 ## The Go showcase on Cloudflare (orpc-showcase-go, verified 2026-10-01)
 
 Deployed with `mise run showcase:go:deploy` to https://orpc-showcase-go.gedw99.workers.dev. `node test/showcase-test.mjs https://orpc-showcase-go.gedw99.workers.dev showcase-go` (the TypeScript SDK Fern generated from the Go specs, run from Node) passes every check it runs there: pagination, idempotent create, OAuth client credentials, the SSE stream, the multipart upload, the webhook signature helper, the WebSocket both ways (the token as a header and as `?access_token=`), audiences, 401 without a token or with a forged one, and a refused or rejected WebSocket. The one check not run on Cloudflare is the server posting a webhook to the test's own receiver, which only exists on the machine running the test.
+
+## Build options under cf dev (measured 2026-10-01; kept here since Benchmarks holds only what is built)
+
+Both on an Apple M-series Mac, before Go runtimes were reused, with 256 KB stacks.
+
+Time inside the Worker per request, 4 requests each: what the runtime patch and the starting heap each do.
+
+| Build | 404 | hello | list 20 (D1) | openapi.json | create |
+|---|---|---|---|---|---|
+| TinyGo as it is | 8 ms | 8 ms | 14 to 16 ms | 10 to 11 ms | 37 to 44 ms |
+| Patched runtime, TinyGo's own starting heap | 8 ms | 8 to 9 ms | 9 to 10 ms | 10 to 11 ms | not measured |
+| Patched runtime, 2 MB heap | 4 to 5 ms | 4 to 5 ms | 5 to 6 ms | 7 ms | 13 to 20 ms |
+| Patched runtime, 4 MB heap | 1 to 2 ms | 1 to 2 ms | 3 ms | 3 to 4 ms | 11 to 16 ms |
+| Patched runtime, 8 MB heap (what is built) | 1 ms | 1 to 2 ms | 2 to 3 ms | 3 to 4 ms | 5 to 10 ms |
+| Patched runtime, 16 MB heap | 1 to 2 ms | 1 to 2 ms | 3 ms | 3 ms | 4 to 11 ms |
+| No collector (`-gc=leaking`) | 1 to 3 ms | 1 to 4 ms | 3 to 5 ms | 2 to 5 ms | not measured |
+
+Wall clock, mean of 20, with TinyGo as it is: other build options.
+
+| Build (`tinygo build ...`) | Wasm gzipped | 404 | hello | list 20 (D1) | openapi.json |
+|---|---|---|---|---|---|
+| default (`-gc=precise`) | 848 KB | 13.2 ms | 13.4 ms | 27.1 ms | 20.2 ms |
+| `-opt=2` | 1037 KB | 13.6 ms | 14.3 ms | 33.3 ms | |
+| `-opt=s` | 879 KB | 14.2 ms | 14.3 ms | 29.7 ms | |
+| `-gc=conservative` | 840 KB | 13.3 ms | 14.1 ms | 27.3 ms | |
+| `-gc=boehm` | 862 KB | 10.7 ms | 11.5 ms | 13.1 ms | 11.8 ms |
+| `-gc=leaking` (no collector) | 698 KB | 6.4 ms | 6.6 ms | 7.2 ms | 7.1 ms |
+| precise, 8 MB initial memory | 848 KB | 11.0 ms | 12.7 ms | 18.8 ms | |
+| precise, 32 MB initial memory | 848 KB | 16.6 ms | 14.7 ms | 23.9 ms | |
+| an empty workers-go handler, no Huma | 326 KB | | about 8 ms | | |
+

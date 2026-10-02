@@ -23,12 +23,7 @@ The tool the tasks run (`charter`, in `cmd/charter/`). Every task in a project's
 | `new` * | `-name <name>` (required), `-module <go module>`, `-subdomain <workers.dev subdomain>`, `-into <dir>`, `-from <checkout>` | Creates a Go project: a copy of `examples/notes-go/` under your name |
 | `version` * | | The release the tool is, which is what `new` pins a project to |
 
-What `new` does:
-
-- **Copies the example's files,** without `sdk/go/`, from the tool's own release, or from `-from`, or from the checkout it is run in.
-- **Renames** the Worker, its URL, the Go module and Fern's organisation.
-- **Adds** `README.md`, `AGENTS.md`, `CLAUDE.md`, three pages in `docs/` and the four GitHub workflows.
-- **Pins** the tool in `mise.toml` and the library in `go.mod` to the tool's release. From a checkout, both point at the checkout instead.
+It copies the example's files (without `sdk/go/`) from the tool's own release, or from `-from`, or from the checkout it is run in. It renames the Worker, its URL, the Go module and Fern's organisation; adds `README.md`, `AGENTS.md`, `CLAUDE.md`, three pages in `docs/` and the four GitHub workflows; and pins the tool in `mise.toml` and the library in `go.mod` to the tool's release (from a checkout, both point at the checkout).
 
 Defaults: `-module` is `github.com/<gh login>/<name>`, `-subdomain` a placeholder, `-into` is `./<name>` and must be empty.
 

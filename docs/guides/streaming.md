@@ -80,19 +80,7 @@ for ctx.Err() == nil {
 
 ## The four parts of a stream
 
-**1. The SSE operation** (`api/contract.go`). `Responses` says each event's `data:` is a `Note`; `x-fern-streaming` makes the SDK return a stream:
-
-```go
-Responses: map[string]*huma.Response{"200": {
-	Description: "OK",
-	Content:     map[string]*huma.MediaType{"text/event-stream": {Schema: api.OpenAPI().Components.Schemas.Schema(reflect.TypeFor[Note](), true, "")}},
-}},
-Extensions: sdk("notes", "watch", map[string]any{
-	"x-fern-streaming": map[string]any{"format": "sse", "terminator": END, "resumable": true},
-}),
-```
-
-The input has `After` (digits only), `Seconds`, and a hidden `LastEventID` (`header:"Last-Event-ID" hidden:"true"`). No item may contain the terminator `END`: `CreateInput.Resolve` refuses it.
+**1. The SSE operation** (`watchNotes` in `api/contract.go`). Its `Responses` say each event's `data:` is a `Note`, and its `x-fern-streaming` extension (`format: sse`, a `terminator`, `resumable: true`) makes the SDK return a stream. The input has `After` (digits only), `Seconds`, and a hidden `LastEventID` header field. No item may contain the terminator `END`: `CreateInput.Resolve` refuses it.
 
 **2. The handler** (`watch` in `api/handlers.go`) returns a `huma.StreamResponse` and writes the frames itself: `event: message`, `retry: 1000`, `id: <id>`, `data: <JSON>`, and after `seconds` the `event: close`. Write through the `flushing` helper: `net/http` buffers.
 

@@ -80,14 +80,10 @@ A multipart upload needs nothing: `z.file()` in the input is enough. The oRPC sh
 
 ## How it is tested
 
-| Test | What it proves | Result |
-|---|---|---|
-| `mise run check` in `examples/showcase-go/` | The TypeScript SDK made from the Go specs, from Node, against the native build and the Wasm under workerd | 12 of 12, 2026-10-01 |
-| The same program against the deployed Go showcase | Every check but the webhook delivery, which needs a receiver the Worker can reach | passed, 2026-10-01 |
-| `mise run check` in `examples/showcase-ts/` | The compiled TypeScript SDK inside a Worker under workerd | 9 checks pass, also deployed, 2026-10-01 |
-| `TestSameSurfaceAsTheORPCShowcase` | Fern sees the same API from the Go and the oRPC contract | |
-
-Not done: the Go SDK has not called the showcase server, its CLI is not built, and no webhook was received from the deployed Worker.
+- **`mise run check` in `examples/showcase-go/`:** the TypeScript SDK made from the Go specs, from Node, against the native build and the Wasm under workerd. 12 of 12 on 2026-10-01; the same program passed against the deployed Worker, but for the webhook delivery, which needs a receiver the Worker can reach.
+- **`mise run check` in `examples/showcase-ts/`:** the compiled SDK inside a Worker under workerd. 9 checks pass, also deployed (2026-10-01).
+- **`TestSameSurfaceAsTheORPCShowcase`:** Fern sees the same API from the Go and the oRPC contract.
+- **Not done:** the Go SDK has not called the showcase server, and its CLI is not built.
 
 ## The TypeScript SDK inside a Worker
 

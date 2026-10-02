@@ -71,4 +71,4 @@ func TestCreateRefusesAnEmptyBody(t *testing.T) {
 
 ## What is not tested
 
-The Go SDK and the CLI against your server, except in the soak. Load: `bench` sends requests one after another. A pull request's deploy: no workflow deploys a branch.
+The Go SDK and the CLI against your server, except in the soak. Load. A pull request's deploy.
