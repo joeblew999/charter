@@ -11,18 +11,18 @@ The six Go packages a project made by `dev new` imports: what each is for, every
 All six are in one Go module, which the project's `api/go/go.mod` requires:
 
 ```sh
-cd api/go && go get github.com/joeblew999/orpc-api/api/go@latest   # add or update the module
+cd api/go && go get github.com/joeblew999/orpc-api/go@latest   # add or update the module
 ```
 
 | Package | Import path | What it is for | Under TinyGo |
 |---|---|---|---|
-| `humaworkers` | `github.com/joeblew999/orpc-api/api/go/humaworkers` | Runs a [Huma](https://huma.rocks) API on Cloudflare Workers | Yes |
-| `asyncapi` | `github.com/joeblew999/orpc-api/api/go/asyncapi` | Writes the AsyncAPI spec of the API's WebSocket channels | Yes |
-| `follow` | `github.com/joeblew999/orpc-api/api/go/follow` | Gives a client every item of a log once, in order, live | Yes |
-| `hub` | `github.com/joeblew999/orpc-api/api/go/hub` | The live signal of a feed: publish an item, every subscriber gets it. A Durable Object on Cloudflare, memory natively | Yes |
-| `humamcp` | `github.com/joeblew999/orpc-api/api/go/humamcp` | Serves the API's operations as MCP tools | Yes |
-| `transport` | `github.com/joeblew999/orpc-api/api/go/transport` | Lets the Go handler serve WebSockets, on Workers and natively | Yes, with a different body |
-| `specfile` | `github.com/joeblew999/orpc-api/api/go/specfile` | The body of the command that writes the spec files | Not used there: it runs on your machine |
+| `humaworkers` | `github.com/joeblew999/orpc-api/go/humaworkers` | Runs a [Huma](https://huma.rocks) API on Cloudflare Workers | Yes |
+| `asyncapi` | `github.com/joeblew999/orpc-api/go/asyncapi` | Writes the AsyncAPI spec of the API's WebSocket channels | Yes |
+| `follow` | `github.com/joeblew999/orpc-api/go/follow` | Gives a client every item of a log once, in order, live | Yes |
+| `hub` | `github.com/joeblew999/orpc-api/go/hub` | The live signal of a feed: publish an item, every subscriber gets it. A Durable Object on Cloudflare, memory natively | Yes |
+| `humamcp` | `github.com/joeblew999/orpc-api/go/humamcp` | Serves the API's operations as MCP tools | Yes |
+| `transport` | `github.com/joeblew999/orpc-api/go/transport` | Lets the Go handler serve WebSockets, on Workers and natively | Yes, with a different body |
+| `specfile` | `github.com/joeblew999/orpc-api/go/specfile` | The body of the command that writes the spec files | Not used there: it runs on your machine |
 
 "Under TinyGo" means the package is part of the Wasm that `mise run api:go:build` makes and that the checks run under workerd. All of them also build with standard Go.
 
@@ -163,7 +163,7 @@ func DurableObject[T any](binding, name string) (Hub[T], error)   // on Cloudfla
 type Memory[T any] struct{ /* ... */ }                             // natively and in tests; the zero value is ready
 ```
 
-- **`DurableObject`** is the object called `name` of the Durable Object namespace bound as `binding` in `cloudflare.config.ts`. The class is the example's `api/go/worker/hub.mjs`, which sends each published body to every subscriber and knows nothing of the type. Open it per request.
+- **`DurableObject`** is the object called `name` of the Durable Object namespace bound as `binding` in `cloudflare.config.ts`. The class is `Hub` in the library's `go/worker/hub.mjs` (the build writes it into `api/go/build/`), which sends each published body to every subscriber and knows nothing of the type. Open it per request.
 - **One class serves every feed.** Each name is its own object with its own subscribers, so a second feed needs no second class and no second binding:
 
 ```go
@@ -212,11 +212,11 @@ Limits:
 
 ## transport
 
-What goes around the handler so that Go can serve WebSockets. In both builds Go answers the upgrade request with plain HTTP, and an adapter carries the answer over the socket: `api/go/worker/websocket.mjs` on Cloudflare, `Serve` natively. Which paths are WebSockets, their input and what they send stay in the Go handler, and so in the contract.
+What goes around the handler so that Go can serve WebSockets. In both builds Go answers the upgrade request with plain HTTP, and an adapter carries the answer over the socket: `go/worker/websocket.mjs` on Cloudflare, `Serve` natively. Which paths are WebSockets, their input and what they send stay in the Go handler, and so in the contract.
 
 | Name | Signature | What it does |
 |---|---|---|
-| `Run` | `func Run(h http.Handler)` | Serves the handler and never returns: `Serve` around it, then workers-go. On Workers the Go runtime stays alive after a response, so `api/go/worker/go.mjs` can give it the next request. A runtime started while the Worker's module loads first answers a GET of each path `go.warm` names, into nothing: they must be paths whose handlers touch no binding. Natively it is a plain HTTP server on `:9900` or `$PORT` |
+| `Run` | `func Run(h http.Handler)` | Serves the handler and never returns: `Serve` around it, then workers-go. On Workers the Go runtime stays alive after a response, so `go/worker/go.mjs` can give it the next request. A runtime started while the Worker's module loads first answers a GET of each path `go.warm` names, into nothing: they must be paths whose handlers touch no binding. Natively it is a plain HTTP server on `:9900` or `$PORT` |
 | `Serve` | `func Serve(h http.Handler) http.Handler` | Natively: the WebSocket adapter. Under TinyGo for Workers: it cancels the request's context when the client has gone, and tells `go.mjs` when the runtime's heap has no room for another request; the WebSocket adapter is the JavaScript file |
 | `MessagesHeader` | `const MessagesHeader = "X-Websocket-Messages"` | The header that, on the answer to an upgrade, says how the channel takes what the client sends |
 | `MessagesPost` | `const MessagesPost = "post"` | Its one value: every text frame from the client becomes a `POST` to the upgrade's URL |

@@ -1,6 +1,6 @@
 # The notes API from the Go contract. openapi.json and asyncapi.json are written by `mise run api:go:spec`
 # from api/go/api/contract.go (never by hand). What Fern needs (SDK names, x-fern-pagination,
-# x-fern-streaming) is declared there; the WebSocket channel comes from api/go/asyncapi.
+# x-fern-streaming) is declared there; the WebSocket channel comes from the Go library's asyncapi package.
 api:
   specs:
     - openapi: openapi.json

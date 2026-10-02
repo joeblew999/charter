@@ -170,7 +170,7 @@ Prints the file's size and its size gzipped (best compression), and fails over t
 dev wasm-build [-dir <folder>]   # build a Go program into <folder>/build/app.wasm for workers-go
 ```
 
-Builds the Wasm a Go Worker deploys, tuned for Cloudflare Workers, and fails if it is too large. It does five things TinyGo's own `tinygo build` does not:
+Builds the Wasm a Go Worker deploys, tuned for Cloudflare Workers, and fails if it is too large. It also writes the JavaScript that runs the Wasm into `<folder>/build/`: workers-go's `wasm_exec.js` and `runtime.mjs`, and the Go library's glue (`go.mjs`, `websocket.mjs`, `hub.mjs`, `tinygo-clock.mjs`), taken from the module `github.com/joeblew999/orpc-api/go` at the version the project's `go.mod` requires (`go list -m`), so the JavaScript always matches the Go it talks to. For the Wasm it does five things TinyGo's own `tinygo build` does not:
 
 - **Turns off one collector run per pause.** TinyGo runs a full garbage collection whenever the program waits and 32 objects with finalizers were made since the last one. workers-go makes one such object for every JavaScript value, so a request collected many times over. The build sets that one constant to 0.
 - **Reuses goroutine stacks.** TinyGo allocates a stack for every goroutine and for every call from JavaScript into Go, and its collector rarely frees one. The build makes TinyGo's scheduler keep the stack of a finished goroutine, which it has just cleared, for the next goroutine: about 20 lines in one file.
@@ -182,7 +182,7 @@ The first two are patches to TinyGo's runtime, which is Go source that TinyGo co
 
 | Flag | Default | What it is |
 |---|---|---|
-| `-dir` | `api/go` | The folder of the Go program. Its `build/` gets the Wasm and workers-go's glue |
+| `-dir` | `api/go` | The folder of the Go program. Its `build/` gets the Wasm, workers-go's glue and the Go library's |
 | `-heap` | `8` | Starting heap in MB. `0` keeps TinyGo's own |
 | `-stack` | `128kb` | Stack per goroutine |
 | `-opt` | `z` | TinyGo's optimisation level. Measured on Cloudflare, `2` was no faster than `z` and is larger |
@@ -211,7 +211,7 @@ Works on any API with an OpenAPI spec. It reads the spec, calls every operation 
 | `-spec` | `<url>/api/openapi.json` | The OpenAPI spec, a file or a URL |
 | `-write` | off | Also call operations that change data. They do change it |
 | `-cpu` | off | Also report CPU time from Cloudflare |
-| `-each` | off | Also print the CPU time of every request, in the order sent. For a Go Worker run by `worker/go.mjs` each figure is marked `w` when a Go runtime started at module load served it and `n` when the request had to start one. Implies `-cpu` |
+| `-each` | off | Also print the CPU time of every request, in the order sent. For a Go Worker run by the library's `go.mjs` each figure is marked `w` when a Go runtime started at module load served it and `n` when the request had to start one. Implies `-cpu` |
 | `-burst` | `0` | First send this many requests at once to the first operation. Right after a deploy and without `-warm`, it shows what a new isolate does with them |
 | `-warm` | `0` | Send requests for this long first, for example `30s`. A Worker just deployed or idle is slower at first |
 | `-worker` | the first label of the URL's host | The Worker's name, for `-cpu` |

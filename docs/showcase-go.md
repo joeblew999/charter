@@ -44,8 +44,8 @@ It lives inside the `api/go` module, beside the notes API, so it imports `humawo
 | `api/go/showcase/showcase_test.go`, `api/go/showcase/surface_test.go` | The handlers, and the same surface as the oRPC showcase |
 | `api/go/cmd/showcase/` | The server: `main.go` and two `platform_*.go` files; `worker.mjs`, `cloudflare.config.ts`, `package.json` and `vite.config.ts` make it a Worker (`orpc-showcase-go`). cf and its packages are `api/go/`'s |
 | `api/go/cmd/showcase-spec/` | Writes the two spec files, or checks them (`specfile`, as `api/go/cmd/spec/` does for the notes API) |
-| `api/go/transport/` | The WebSocket adapter for the native build, and the rules both adapters follow |
-| `api/go/worker/websocket.mjs` | The same adapter for Cloudflare, used by both Workers' entries |
+| `go/transport/` | The WebSocket adapter for the native build, and the rules both adapters follow |
+| `go/worker/websocket.mjs` | The same adapter for Cloudflare, used by both Workers' entries |
 | `sdk/fern/apis/showcase-go/` | The generated specs, `generators.yml` (the same groups as `sdk/fern/apis/showcase-ts/`) and the overlay |
 | `test/showcase-test.mjs` | The SDK test: the TypeScript SDK against a running server ([testing.md](testing.md)) |
 
@@ -95,13 +95,13 @@ All of it is Go code. Nothing is patched into the JSON.
 | A multipart body | `huma.MultipartFormFiles[T]` writes the schema and decodes the form from a struct, but TinyGo can't run it ([below](#tinygo-what-it-took)) | `RawBody multipart.Form`, and the schema on the operation |
 | OpenAPI 3.1 `webhooks` | The field exists (`OpenAPI.Webhooks`); nothing fills it | `document()` |
 | An SSE response whose schema is the event's data | No tag | `Responses` on the operation, as the notes API's `watch` |
-| AsyncAPI, with messages both ways | Not in Huma | `api/go/asyncapi/`: `Operation` and `SendOperation` |
+| AsyncAPI, with messages both ways | Not in Huma | `go/asyncapi/`: `Operation` and `SendOperation` |
 
 One more, for Fern rather than Huma: the token request's schema is written into the operation instead of referred to by name (`Schema(type, false, "")`). With a named schema, the test Fern's Go generator writes for a form-encoded token endpoint does not compile ([upstream.md](upstream.md#found-not-filed)).
 
 ## The WebSocket, both ways
 
-workers-go can't answer a WebSocket upgrade, so Go answers it with plain HTTP and an adapter carries that over the socket: `api/go/worker/websocket.mjs` on Cloudflare, `transport.Serve` natively. For a feed like the notes one the adapter only sends. The showcase's client also sends, and for that the adapter has one more rule:
+workers-go can't answer a WebSocket upgrade, so Go answers it with plain HTTP and an adapter carries that over the socket: `go/worker/websocket.mjs` on Cloudflare, `transport.Serve` natively. For a feed like the notes one the adapter only sends. The showcase's client also sends, and for that the adapter has one more rule:
 
 - **Each text frame from the client becomes a `POST` to the same URL,** with the upgrade request's headers and the frame as the JSON body. The lines of the answer are sent back as frames.
 - **Go asks for it** with the header `X-Websocket-Messages: post` on its answer to the upgrade. Without the header, what the client sends is ignored: the notes channel.

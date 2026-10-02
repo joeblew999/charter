@@ -41,6 +41,6 @@ test/
 
 ## Steps
 
-1. **The library on its own:** `go/` as a module, the glue shipped by the build. Not started.
+1. **The library on its own:** `go/` as a module, the glue shipped by the build. Done 2026-10-02: `go/` is the module `github.com/joeblew999/orpc-api/go` (the packages and `go/worker/*.mjs`), `api/go/` requires it, `dev wasm-build` writes the glue into `build/`, and each example has one entry file, `worker.mjs`.
 2. **The examples as projects:** `examples/*`, each with its own `mise.toml`; the dev tool works on the current project; `dev new` copies. Not started.
 3. **The docs, once, against the final shape.** Not started.

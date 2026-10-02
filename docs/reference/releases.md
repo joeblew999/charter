@@ -58,11 +58,11 @@ A release is four git tags on one commit.
 | Tag | What it is for |
 |---|---|
 | `vX.Y.Z` | The release itself. The maintainer pushes this one; the GitHub Release is made for it |
-| `api/go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/api/go`, which holds the packages |
+| `go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/go`, which holds the packages and the Worker glue |
 | `dev/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/dev`, which is the tool |
 | `sdk/go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/orpc-api/sdk/go`, which is the Go SDK of the notes API |
 
-The three extra tags exist because of a rule of Go: a module that sits in a subdirectory of a repository only has a version under a tag that starts with the directory. Without `api/go/vX.Y.Z`, `go get` would not find the release; without `dev/vX.Y.Z`, `go run ...dev@latest` and mise's `go:` tools would not; without `sdk/go/vX.Y.Z`, another repo could only get the SDK at a branch or a commit. The release workflow adds all three on the commit of `vX.Y.Z`. No release has carried the `sdk/go` tag yet: the releases up to 2026-10-01 were cut before that module existed.
+The three extra tags exist because of a rule of Go: a module that sits in a subdirectory of a repository only has a version under a tag that starts with the directory. Without `go/vX.Y.Z`, `go get` would not find the release; without `dev/vX.Y.Z`, `go run ...dev@latest` and mise's `go:` tools would not; without `sdk/go/vX.Y.Z`, another repo could only get the SDK at a branch or a commit. The release workflow adds all three on the commit of `vX.Y.Z`. No release has carried the `sdk/go` tag yet: the releases up to 2026-10-01 were cut before that module existed.
 
 A version is a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release. When `dev release` creates the GitHub Release of a tag with a hyphen, it marks it as a pre-release.
 
@@ -93,7 +93,7 @@ mise run dev:workflows   # the workflows, as the new tool writes them
 mise run check           # every local check
 ```
 
-What an update does not touch: the files `dev new` copied into your project. They are yours, and no command updates them: the contract and handlers, `api/go/worker/`, the two `platform_*.go` files, `api/go/cmd/spec/`, the test programs in `test/`, and the tasks in `mise.toml`. A fix to one of those in orpc-api reaches your project only if you copy it. Compare with the [orpc-api repository](https://github.com/joeblew999/orpc-api) when a release's notes mention them.
+What an update does not touch: the files `dev new` copied into your project. They are yours, and no command updates them: the contract and handlers, `api/go/worker.mjs`, the two `platform_*.go` files, `api/go/cmd/spec/`, the test programs in `test/`, and the tasks in `mise.toml`. A fix to one of those in orpc-api reaches your project only if you copy it. Compare with the [orpc-api repository](https://github.com/joeblew999/orpc-api) when a release's notes mention them.
 
 ### Getting the faster Worker in a project made before it
 
@@ -106,15 +106,7 @@ A project made before Go runtimes were reused keeps working after an update, at 
    run = "dev wasm-build -dir api/go"
    ```
 
-2. **`api/go/worker/go.mjs`:** copy it from [orpc-api](https://github.com/joeblew999/orpc-api/blob/main/api/go/worker/go.mjs), and in `api/go/worker/index.mjs` replace the import of `../build/worker.mjs` with:
-
-   ```js
-   import "../build/wasm_exec.js";
-   import * as build from "../build/runtime.mjs";
-   import { goWorker } from "./go.mjs";
-   ```
-
-   and, below the imports, `const go = goWorker(build);` and `await go.warm({ paths: ["/api/openapi.json"] });`, which starts two Go runtimes while the module loads. Use `go` where the file used `goWorker`.
+2. **The Worker's entry:** replace the project's own copies of the Worker's JavaScript (the folder beside `api/go/main.go`) with one file, `api/go/worker.mjs`, as [orpc-api's](https://github.com/joeblew999/orpc-api/blob/main/api/go/worker.mjs), and name it in `api/go/cloudflare.config.ts`. It imports `./build/go.mjs`, which the build now writes from the Go library, and `await go.warm({ paths: ["/api/openapi.json"] })` starts two Go runtimes while the module loads.
 
 3. **`api/go/main.go`:** `transport.Run(api.Handler(env()))` in place of `workers.Serve(transport.Serve(api.Handler(env())))`, so the Go program stays alive after a response.
 

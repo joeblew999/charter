@@ -5,7 +5,7 @@ parent: This repository
 ---
 # MCP: the Go contract as tools
 
-The Go Worker serves its contract a third way, beside REST and the specs: as MCP tools (Model Context Protocol) at `POST /api/mcp`, made from the same Huma operations by the package in `api/go/humamcp/`. Read this page to use the endpoint, to add it to another Huma API, or before changing the package. The oRPC Worker has no MCP endpoint; that and authorization are planned in [plans/mcp.md](plans/mcp.md).
+The Go Worker serves its contract a third way, beside REST and the specs: as MCP tools (Model Context Protocol) at `POST /api/mcp`, made from the same Huma operations by the package in `go/humamcp/`. Read this page to use the endpoint, to add it to another Huma API, or before changing the package. The oRPC Worker has no MCP endpoint; that and authorization are planned in [plans/mcp.md](plans/mcp.md).
 
 ## Using it
 

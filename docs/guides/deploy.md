@@ -43,7 +43,7 @@ What it does, in order:
    |---|---|---|
    | The Worker | `billing-api` | Runs your Go code as Wasm |
    | A D1 database | `billing-api-db`, bound as `DB` | The notes. It is the log every stream reads from |
-   | A Durable Object class | `NotesHub`, bound as `HUB` | The hub: it wakes the streams that are waiting when a note is created. It stores nothing (`api/go/worker/hub.mjs`) |
+   | A Durable Object class | `NotesHub`, bound as `HUB` | The hub: it wakes the streams that are waiting when a note is created. It stores nothing (the library's `Hub` class, `go/worker/hub.mjs` in orpc-api) |
    | A variable | `APP_NAME` | The name in the greeting of `/api/hello` |
 
    A second deploy updates the Worker and keeps the database.
@@ -87,7 +87,7 @@ Run it after every deploy. It needs Docker the first time, to generate the TypeS
 
 It runs three programs against `API_GO_URL`: an SSE stream and a WebSocket both receive a new note, and a stream resumes after a reconnect (`test/live-test.mjs`); the same through the generated TypeScript SDK (`test/sdk-live-test.mjs`); and the MCP endpoint with a real MCP client (`test/mcp-test.mjs`). Every line it prints starts with `PASS` or `FAIL`.
 
-Why, when `mise run check` already ran the same programs locally: **some bugs exist only in production.** Go timers hung on Cloudflare and nowhere else. A stream asked to end after 2 seconds was still open after 40, because Cloudflare's clock only moves in whole milliseconds and the local runtime's clock is real. Every local check was green. The fix is in your project (`api/go/worker/tinygo-clock.mjs`), and the next such bug will again only show there.
+Why, when `mise run check` already ran the same programs locally: **some bugs exist only in production.** Go timers hung on Cloudflare and nowhere else. A stream asked to end after 2 seconds was still open after 40, because Cloudflare's clock only moves in whole milliseconds and the local runtime's clock is real. Every local check was green. The fix is in your project's build (the library's `go/worker/tinygo-clock.mjs`), and the next such bug will again only show there.
 
 Run it a few seconds after the deploy: a request right after it can still reach the previous version.
 

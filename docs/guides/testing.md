@@ -110,7 +110,7 @@ Anything after the task's name goes to the program: `--seconds`, `--deploy-at`, 
 
 At this commit the redeploy inside the soak ends with an error in a new project, because its migration step fails ([Deploy to Cloudflare](deploy.md#migrations)). Read from the code, not run: the Worker is redeployed before that step, and the soak prints `redeploy exited 1` and goes on.
 
-The soak is not in any GitHub workflow: it redeploys and takes minutes. Run it by hand after changing anything about streams, the hub, or the Worker's entry in `api/go/worker/`.
+The soak is not in any GitHub workflow: it redeploys and takes minutes. Run it by hand after changing anything about streams, the hub, or the Worker's JavaScript (`api/go/worker.mjs`, and the library's `go/worker/`).
 
 ## Why both local and remote
 

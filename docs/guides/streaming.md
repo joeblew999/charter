@@ -164,7 +164,7 @@ huma.Register(api, huma.Operation{
 
 ### 3. The feed: `follow.Follow`
 
-Both the SSE and the WebSocket handler call `follow.Follow` (package `github.com/joeblew999/orpc-api/api/go/follow`, imported by your project; you do not copy it):
+Both the SSE and the WebSocket handler call `follow.Follow` (package `github.com/joeblew999/orpc-api/go/follow`, imported by your project; you do not copy it):
 
 ```go
 err := follow.Follow(ctx, source, options, func(note Note) error { /* write one event */ return nil })
@@ -185,7 +185,7 @@ The positions must come from one ordered log with no gaps that appear later. The
 
 ### 4. The hub
 
-The hub is the live fan-out: when a handler creates a note it calls `hub.Publish`, and every open stream is woken. In Go it is the `hub` package ([reference](../reference/packages.md#hub)). On Cloudflare it is a Durable Object class, `NotesHub`, in `api/go/worker/hub.mjs`: JavaScript, because a Durable Object class has to be. It stores nothing and sleeps between notes, so it may restart at any time without losing data: the database is the log.
+The hub is the live fan-out: when a handler creates a note it calls `hub.Publish`, and every open stream is woken. In Go it is the `hub` package ([reference](../reference/packages.md#hub)). On Cloudflare it is a Durable Object class, the library's `Hub` (`go/worker/hub.mjs` in orpc-api, exported by `api/go/worker.mjs` as `NotesHub`): JavaScript, because a Durable Object class has to be. It stores nothing and sleeps between notes, so it may restart at any time without losing data: the database is the log.
 
 Natively (`mise run api:go:run`) the in-memory store plays both parts (`MemStore` is a `Store` and embeds `hub.Memory[Note]`), so no Durable Object is needed to try a stream.
 
@@ -202,20 +202,20 @@ huma.Register(api, asyncapi.Operation(huma.Operation{
 
 `asyncapi.Operation` marks the operation as a channel: it is left out of the OpenAPI spec and written into `asyncapi.json`, with `Payload` as the type of every message. The channel's `Name` is what the SDK is named after (`client.liveNotes.connect()`), and the operation's query inputs (`after`) become the connect options.
 
-Go on Cloudflare cannot answer a WebSocket upgrade itself. So the handler answers with plain HTTP: one JSON note per line (`application/x-ndjson`), and the Worker's entry (`api/go/worker/index.mjs`, with `api/go/worker/websocket.mjs`) calls Go for any request with `Upgrade: websocket` and sends each line as one frame. If the feed gives up, the entry closes the socket with 1011. A plain `GET` with no upgrade is refused (checked):
+Go on Cloudflare cannot answer a WebSocket upgrade itself. So the handler answers with plain HTTP: one JSON note per line (`application/x-ndjson`), and the Worker's entry (`api/go/worker.mjs`, with the library's `websocket.mjs`) calls Go for any request with `Upgrade: websocket` and sends each line as one frame. If the feed gives up, the entry closes the socket with 1011. A plain `GET` with no upgrade is refused (checked):
 
 ```sh
 curl -s localhost:5174/api/notes/live
 # {"title":"Upgrade Required","status":426,"detail":"expected a WebSocket upgrade"}
 ```
 
-Running natively, `api/go/transport` does the same job in Go. I did not open a WebSocket for this page; the repo's `api:go:live-test` does, natively and against a deployment.
+Running natively, `go/transport` does the same job in Go. I did not open a WebSocket for this page; the repo's `api:go:live-test` does, natively and against a deployment.
 
 ## Add a stream of your own resource
 
 The SSE and WebSocket operations, `Follow` and the `Source` are yours to reuse by writing them again for your type: copy `watch`, `live`, `feed` and their input structs, rename, give your item type `Position()`, and add the `Since` and `Latest` methods to your store.
 
-**The hub needs no copying.** A second feed is a second name on the same binding: `hub.DurableObject[Device]("HUB", "devices")` in `api/go/platform_js.go`, and `hub.Memory[Device]` in `api/go/platform_other.go`. The class in `api/go/worker/hub.mjs` and the `HUB` binding stay as they are: each name is its own object with its own subscribers. Add a function for it to `Env` beside `Hub`. Why the hub is built this way: [How real-time works](../realtime.md).
+**The hub needs no copying.** A second feed is a second name on the same binding: `hub.DurableObject[Device]("HUB", "devices")` in `api/go/platform_js.go`, and `hub.Memory[Device]` in `api/go/platform_other.go`. The library's class (`hub.mjs`) and the `HUB` binding stay as they are: each name is its own object with its own subscribers. Add a function for it to `Env` beside `Hub`. Why the hub is built this way: [How real-time works](../realtime.md).
 
 ## Check it
 

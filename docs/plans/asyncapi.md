@@ -21,4 +21,4 @@ Posting upstream is outward-facing and needs a go-ahead first.
 - **Which AsyncAPI versions Fern accepts.** 3.0.0 works; 3.1 is not checked.
 - **Whether Fern needs extensions on channels** (group or method names), the way it does on OpenAPI operations.
 - **Whether SSE should also be described in AsyncAPI.** AsyncAPI 3 lists `sse` as a protocol, but Fern gets SSE from OpenAPI already. Leave it out unless something needs it.
-- **Query parameters and a send side on one channel.** The Go generator (`api/go/asyncapi/`) allows both; this one doesn't yet.
+- **Query parameters and a send side on one channel.** The Go generator (`go/asyncapi/`) allows both; this one doesn't yet.

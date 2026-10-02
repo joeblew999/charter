@@ -46,7 +46,7 @@ On Cloudflare a Go Worker costs about what the TypeScript one does: under 1 ms o
 
 - **A new isolate costs more at first.** Its first request costs about 10 ms, and the first use of each operation 15 to 30 ms. Requests that arrive together there, beyond the two Go runtimes that wait ready, cost about 100 ms each. Cloudflare starts an isolate when a Worker has been idle, after a deploy, and when traffic spreads to another machine.
 - **Workers Free allows 10 ms of CPU per request.** Ordinary requests are well inside it; those first ones in an isolate are at it or over it. Free is enough to try the project; plan on Workers Paid for production.
-- **This is with the project's build and Worker entry** (`mise run api:go:build`, `api/go/worker/go.mjs`). TinyGo and workers-go as they come cost 40 to 70 ms for every read and about 265 ms for a write. [Go on Cloudflare Workers](concepts/workers-go.md) says what the difference is.
+- **This is with the project's build and Worker entry** (`mise run api:go:build`, `go/worker/go.mjs`). TinyGo and workers-go as they come cost 40 to 70 ms for every read and about 265 ms for a write. [Go on Cloudflare Workers](concepts/workers-go.md) says what the difference is.
 - **If you need the lowest cost per request, use the TypeScript version** ([The same in TypeScript](guides/typescript.md)): the design, the tests and the generated SDKs are the same.
 - **Measure your own API** with `mise run api:go:bench`: it times every operation in your spec and reads the CPU time Cloudflare recorded.
 

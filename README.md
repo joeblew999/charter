@@ -76,7 +76,8 @@ A project made by `new` has that tool line and all of these as one-line tasks al
 | Path | What | Docs |
 |---|---|---|
 | `api/ts/` | The oRPC Worker (TypeScript): a reference example | [docs/api.md](docs/api.md) |
-| `api/go/` | The Go Worker, and the Go packages other projects import | [docs/api-go.md](docs/api-go.md) |
+| `go/` | The Go library other projects import (its own module): the packages, and the Worker glue the build writes into a project | [docs/reference/packages.md](docs/reference/packages.md) |
+| `api/go/` | The Go Worker, built on `go/` | [docs/api-go.md](docs/api-go.md) |
 | `api/go/showcase/`, `api/go/cmd/showcase/` | Every Fern feature we use (OAuth, idempotency, upload, webhooks, a WebSocket both ways, ...) from a Go contract, with its server | [docs/showcase-go.md](docs/showcase-go.md) |
 | `sdk/` | Fern: each API's specs and generator settings, the SDK test Worker | [docs/sdk.md](docs/sdk.md) |
 | `test/` | The tests both servers must pass | [docs/testing.md](docs/testing.md) |

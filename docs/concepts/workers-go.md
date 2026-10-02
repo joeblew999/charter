@@ -14,7 +14,7 @@ A Worker runs JavaScript and WebAssembly, not native programs. So the Go code is
 
 ```mermaid
 flowchart LR
-    R["Request"] --> J["api/go/worker/index.mjs<br/>(JavaScript entry)"]
+    R["Request"] --> J["api/go/worker.mjs<br/>(JavaScript entry)"]
     J --> G["A Go runtime<br/>(TinyGo Wasm)"]
     G --> H["Your handler<br/>(Huma)"]
     H --> D["D1: the database"]
@@ -36,18 +36,18 @@ What follows from that:
 - **Start-up is paid more often than in a server.** Everything a Go program does before `main` serves, it does each time a runtime starts. This is why the `humaworkers` package registers an operation only when a request first matches it ([Go packages](../reference/packages.md#humaworkers)).
 - **A stream is one long request.** An SSE stream or a WebSocket feed keeps its runtime for as long as it is open. A WebSocket's feed and each message the client sends on it run in runtimes of their own, so they share nothing through memory.
 
-Why a runtime is replaced at all: it is dropped before Go's collector would have to run in it. The Go side says when its heap has no room for another request (`transport.Serve`), and `api/go/worker/go.mjs` then starts a new one for the request after. With the 8 MB heap the build gives it, that is after about 80 hellos. A collection in a full heap costs far more than starting a runtime. workers-go on its own starts a runtime for every request.
+Why a runtime is replaced at all: it is dropped before Go's collector would have to run in it. The Go side says when its heap has no room for another request (`transport.Serve`), and `go/worker/go.mjs` then starts a new one for the request after. With the 8 MB heap the build gives it, that is after about 80 hellos. A collection in a full heap costs far more than starting a runtime. workers-go on its own starts a runtime for every request.
 
 ## What Go cannot do there, and what does it instead
 
-Four things are JavaScript because Go cannot do them on Workers. They are five small files in `api/go/worker/`, copied into your project, and you rarely touch them.
+Four things are JavaScript because Go cannot do them on Workers. They are five small files. One is your project's entry, `api/go/worker.mjs`. The other four are the Go library's (`go/worker/` in orpc-api): the build writes them into `api/go/build/` from the version of the library your project requires, so you never edit them.
 
 | Go cannot | What does it instead | File |
 |---|---|---|
-| Be the Worker's entry | A few lines of JavaScript receive each request and hand it to a Go runtime: one that is waiting, or a new one | `api/go/worker/index.mjs`, `api/go/worker/go.mjs` |
-| Answer a WebSocket upgrade | Go answers the upgrade with a plain stream of lines, one JSON message per line. The adapter opens the socket and sends each line as a frame. What the client sends reaches Go as a `POST` | `api/go/worker/websocket.mjs` |
-| Be a Durable Object class | The hub is a small JavaScript class with hibernating WebSockets. It stores nothing. Go calls it to publish, and subscribes to it over a WebSocket | `api/go/worker/hub.mjs` |
-| Rely on its timers | On Cloudflare (not under the local runtime) Go timers stalled about half the time: `time.Sleep`, timers and context deadlines hung. The fix rounds every sleep TinyGo asks for up to a whole millisecond | `api/go/worker/tinygo-clock.mjs` |
+| Be the Worker's entry | A few lines of JavaScript receive each request and hand it to a Go runtime: one that is waiting, or a new one | `api/go/worker.mjs`, `go/worker/go.mjs` |
+| Answer a WebSocket upgrade | Go answers the upgrade with a plain stream of lines, one JSON message per line. The adapter opens the socket and sends each line as a frame. What the client sends reaches Go as a `POST` | `go/worker/websocket.mjs` |
+| Be a Durable Object class | The hub is a small JavaScript class with hibernating WebSockets. It stores nothing. Go calls it to publish, and subscribes to it over a WebSocket | `go/worker/hub.mjs` |
+| Rely on its timers | On Cloudflare (not under the local runtime) Go timers stalled about half the time: `time.Sleep`, timers and context deadlines hung. The fix rounds every sleep TinyGo asks for up to a whole millisecond | `go/worker/tinygo-clock.mjs` |
 
 The rule that keeps this small: which paths are WebSockets, what they take and what they send all stay in the Go contract. The JavaScript only carries bytes. The exact protocol between the two is in [Go packages](../reference/packages.md#transport), and how the feed stays gap-free in [How real-time works](../realtime.md).
 
@@ -72,7 +72,7 @@ On Cloudflare a Go Worker costs about what the TypeScript one does: under 1 ms o
 
 TinyGo and workers-go as they come cost far more: 40 to 70 ms for a read, about 265 ms for a write. Three things in this project make the difference, and a project made by `dev new` has all three:
 
-- **Go runtimes are reused, and two are started ahead** (`api/go/worker/go.mjs`, above). A request that finds a waiting runtime pays nothing for start-up, and the first requests in a new isolate find the two that were started while the module loaded.
+- **Go runtimes are reused, and two are started ahead** (`go/worker/go.mjs`, above). A request that finds a waiting runtime pays nothing for start-up, and the first requests in a new isolate find the two that were started while the module loaded.
 - **The collector does not run in an ordinary request.** TinyGo as it is collects garbage each time the program waits, once 32 JavaScript values have been touched, and each time its small starting heap must grow. The build turns the first off and starts with a heap of 8 MB. A stream that lives for hours still fills the heap, and is collected then.
 - **Goroutine stacks are reused.** TinyGo gives every goroutine, and every call from JavaScript into Go, a new stack (128 KB here), and its collector rarely gets one back: a hello allocated 1.7 MB. The build keeps the stack of a finished goroutine for the next one, and a hello allocates 38 KB.
 

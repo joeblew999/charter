@@ -48,14 +48,14 @@ There are two contracts for the notes API because there are two servers. They de
 | **The contract (the source; you edit this)** | `api/ts/src/contract.ts` (oRPC + Zod) | `api/go/api/contract.go` (Huma: Go structs and their tags) |
 | The server | `api/ts/src/index.ts` | `api/go/api/handlers.go` |
 | OpenAPI generator | `@orpc/openapi` | Huma |
-| AsyncAPI generator (the WebSocket) | `api/ts/src/asyncapi.ts` (ours) | `api/go/asyncapi/` (ours, the same design) |
+| AsyncAPI generator (the WebSocket) | `api/ts/src/asyncapi.ts` (ours) | `go/asyncapi/` (ours, the same design) |
 | Write the specs | `mise run api:ts:spec` | `mise run api:go:spec` |
 | **The specs (generated; never edit)** | `sdk/fern/apis/api-ts/*.json` | `sdk/fern/apis/api-go/*.json` |
 | Fern's settings for that API | `sdk/fern/apis/api-ts/generators.yml` | `sdk/fern/apis/api-go/generators.yml` |
 | Generate an SDK | `mise run sdk:gen api-ts <group>` | `mise run sdk:gen api-go <group>` |
 | Fern's output (gitignored) | `sdk/out/api-ts/` | `sdk/out/api-go/` |
-| The feed (gap-free real-time) | `follow()` in `api/ts/src/follow.ts` | `Follow` in `api/go/follow/` |
-| The hub (a Durable Object with hibernating WebSockets) | `api/ts/src/hub.ts` (oRPC's) | `api/go/worker/hub.mjs` |
+| The feed (gap-free real-time) | `follow()` in `api/ts/src/follow.ts` | `Follow` in `go/follow/` |
+| The hub (a Durable Object with hibernating WebSockets) | `api/ts/src/hub.ts` (oRPC's) | `go/worker/hub.mjs` |
 | The Worker on Cloudflare | `orpc-api` | `orpc-api-go` |
 | Deployed at | https://orpc-api.gedw99.workers.dev/api/openapi.json | https://orpc-api-go.gedw99.workers.dev/api/openapi.json |
 | MCP endpoint | no | `/api/mcp` |
@@ -99,9 +99,9 @@ Things that are easy to mix up:
 
 - **Fern does not write servers.** It reads the two spec files and writes clients: SDKs in Go, TypeScript and more, a command-line program, docs. The server is ours, in either language.
 - **"The CLI" is the Fern CLI.** It never runs on Cloudflare. It is not `cf`, `mise`, or the `dev` tool.
-- **"Go" means two different things here.** `api/go/` is a Go *server*. A folder `go` under `sdk/out/` is a Go *client SDK* that Fern generated, and it exists for both servers.
+- **"Go" means two different things here.** `api/go/` is a Go *server*, and `go/` is the Go library it is built on. A folder `go` under `sdk/out/` is a Go *client SDK* that Fern generated, and it exists for both servers.
 - **The tests and the database schema are shared.** `test/` has one set of test programs for both servers (they take a URL, and `--sdk api-go` picks the SDKs generated from the Go specs), and `migrations/` is the one D1 schema.
-- **What is the product and what is an example.** The `dev` tool and the Go packages in `api/go/` (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`) are what other projects use. `api/ts/` and `api/go/` as Workers are the reference examples they are proven against.
+- **What is the product and what is an example.** The `dev` tool and the Go library in `go/` (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`) are what other projects use. `api/ts/` and `api/go/` as Workers are the reference examples they are proven against.
 
 ## Starting a project of your own
 

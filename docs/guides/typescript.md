@@ -65,7 +65,7 @@ The left column is a project made by `dev new`; the right is orpc-api's `api/ts/
 | The WebSocket channel | `asyncapi.Operation(...)` around the operation | `.meta(asyncapi({...}))` on the procedure |
 | The handlers | `api/go/api/handlers.go` | `api/ts/src/index.ts` |
 | The gap-free feed | The package `follow`, imported | `api/ts/src/follow.ts`, copied |
-| The hub | `api/go/worker/hub.mjs` | `api/ts/src/hub.ts` |
+| The hub | `go/worker/hub.mjs` | `api/ts/src/hub.ts` |
 | Writing the specs | `mise run api:go:spec` (`api/go/cmd/spec/`) | `mise run api:ts:spec` (`api/ts/spec.ts`) |
 | The Fern folder | `sdk/fern/apis/api-go/` | `sdk/fern/apis/api-ts/` |
 | The Worker's settings | `api/go/cloudflare.config.ts` | `api/ts/cloudflare.config.ts` |
