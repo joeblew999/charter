@@ -81,8 +81,6 @@ func doctor([]string) error {
 	}
 	for _, tool := range []struct{ name, arg, why string }{
 		{"go", "version", "go, api/go, dev, sdk:check on Go SDKs"},
-		{"tinygo", "version", "api:go:build"},
-		{"wasm-opt", "--version", "tinygo runs it on every Wasm build"},
 		{"cargo", "--version", "the Fern CLI builds"},
 		{"gh", "--version", "upstream:status"},
 	} {

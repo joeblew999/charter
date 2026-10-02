@@ -14,9 +14,6 @@ idiomatic_version_file_enable_tools = ["rust", "go"]
 node = "26.10.0"
 jq = "1.8.2"
 gh = "2.101.0"
-# api/go/: TinyGo builds the Go Worker's Wasm (workers-go needs >= 0.42.0), and runs wasm-opt (binaryen) doing it.
-tinygo = "0.42.0"
-"aqua:WebAssembly/binaryen" = "133"
 # Builds and publishes the dev tool (.goreleaser.yaml): mise run dev:release.
 goreleaser = "2.18.2"
 # Holds the Cloudflare credentials (the keychain, through fnox): mise run cloudflare:secrets.

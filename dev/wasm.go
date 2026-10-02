@@ -32,9 +32,30 @@ func init() {
 // stack, which TinyGo has just cleared, now goes on a list, and the next goroutine takes it.
 //
 // Upstream: tinygo-org/tinygo#5800 (when fixed: drop the first patch)
-// Upstream: tinygo-org/tinygo#5801 (when fixed: drop the stack patches)
-var tinygoPatches = []struct{ file, old, new string }{
-	{"src/runtime/gc_finalizer.go", "const finalizerGCThreshold = 32", "const finalizerGCThreshold = 0"},
+// Upstream: tinygo-org/tinygo#5801 (closed: fixed on TinyGo's dev branch. The stack patches leave
+// themselves out with a TinyGo that has the fix; delete them when this tool pins one)
+// The TinyGo this tool builds with, and the wasm-opt TinyGo runs: the compiler and the patches for
+// it are one thing, so they are pinned here together, not in a project's mise.toml. wasm-build asks
+// mise for exactly these (it installs them the first time). Moving to another TinyGo is a change
+// to this tool, tested with its patches, and projects get it by updating the tool.
+const (
+	tinygoVersion   = "0.42.0"
+	binaryenVersion = "133"
+)
+
+// tinygoCommand is "tinygo <args>" as mise runs it at the pinned versions; with -tinygo system,
+// the tinygo on the path.
+func tinygoCommand(system bool, args ...string) (string, []string) {
+	if system {
+		return "tinygo", args
+	}
+	return "mise", append([]string{"exec", "tinygo@" + tinygoVersion, "aqua:WebAssembly/binaryen@" + binaryenVersion, "--", "tinygo"}, args...)
+}
+
+// A patch replaces old with new in a file of TinyGo's runtime. It is left out when the file
+// contains unless: the text of TinyGo's own fix, in a version that has one.
+var tinygoPatches = []struct{ file, old, new, unless string }{
+	{"src/runtime/gc_finalizer.go", "const finalizerGCThreshold = 32", "const finalizerGCThreshold = 0", ""},
 	{"src/internal/task/task_asyncify.go", `	// Create a stack.
 	stack := runtime_alloc(stackSize, nil)
 `, `	// Take the stack of a finished goroutine (Resume keeps them), or create one.
@@ -45,7 +66,7 @@ var tinygoPatches = []struct{ file, old, new string }{
 	} else {
 		stack = runtime_alloc(stackSize, nil)
 	}
-`},
+`, tinygoFreesStacks},
 	{"src/internal/task/task_asyncify.go", `		t.clearStack()
 		t.state.args = nil
 `, `		t.clearStack()
@@ -57,7 +78,7 @@ var tinygoPatches = []struct{ file, old, new string }{
 			freeStack, freeStackSize = base, size
 			t.state.stackState = stackState{}
 		}
-`},
+`, tinygoFreesStacks},
 	{"src/internal/task/task_asyncify.go", `// currentTask is the current running task, or nil if currently in the scheduler.
 `, `// freeStack is a list of the stacks of finished goroutines, all of freeStackSize bytes.
 var (
@@ -66,8 +87,12 @@ var (
 )
 
 // currentTask is the current running task, or nil if currently in the scheduler.
-`},
+`, tinygoFreesStacks},
 }
+
+// tinygoFreesStacks is in task_asyncify.go from the TinyGo that frees a finished goroutine's stack
+// itself (tinygo-org/tinygo#5801, fixed on its dev branch after 0.42.0).
+const tinygoFreesStacks = "runtime_freeTaskStack"
 
 // wasmBuild builds dir's Go program into dir/build/app.wasm for workers-go, and fills dir/build
 // with the JavaScript that runs it: workers-go's (wasm_exec.js, runtime.mjs) and the Go library's
@@ -78,13 +103,14 @@ var (
 //   - with -stack per goroutine (Huma overflows TinyGo's default 64 KB);
 //   - failing over -max bytes gzipped (Workers Free allows 3 MB).
 func wasmBuild(args []string) error {
-	dir, stack, opt, heap, max, plain := "api/go", "128kb", "z", 8, 3000000, false
+	dir, stack, opt, heap, max, plain, compiler := "api/go", "128kb", "z", 8, 3000000, false, "pinned"
 	flags("wasm-build", args, func(f *flag.FlagSet) {
 		f.StringVar(&dir, "dir", dir, "the folder of the Go program (its build/ gets the Wasm, workers-go's glue and the library's)")
 		f.IntVar(&heap, "heap", heap, "starting heap in MB (0: TinyGo's own, a few pages)")
 		f.StringVar(&stack, "stack", stack, "stack per goroutine")
 		f.StringVar(&opt, "opt", opt, "TinyGo's optimisation level: z and s for size, 1 and 2 for speed")
 		f.IntVar(&max, "max", max, "fail if the Wasm, gzipped, is larger than this many bytes")
+		f.StringVar(&compiler, "tinygo", compiler, "pinned: the TinyGo this tool was tested with ("+tinygoVersion+", installed by mise); system: the tinygo on the path, untested")
 		f.BoolVar(&plain, "plain", false, "build with TinyGo as it is: no runtime patch, no starting heap (to compare)")
 	})
 	if err := sh(dir, "go", "run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=tinygo"); err != nil {
@@ -95,7 +121,7 @@ func wasmBuild(args []string) error {
 	}
 	target, env := "wasm", os.Environ()
 	if !plain {
-		root, err := tinygoRoot()
+		root, err := tinygoRoot(compiler == "system")
 		if err != nil {
 			return err
 		}
@@ -108,7 +134,11 @@ func wasmBuild(args []string) error {
 			}
 		}
 	}
-	if err := quiet(dir, env[len(os.Environ()):], "tinygo", "build", "-o", "build/app.wasm", "-target", target, "-no-debug", "-opt="+opt, "-stack-size="+stack, "."); err != nil {
+	if compiler == "system" {
+		fmt.Println("building with the tinygo on the path: this tool is tested with TinyGo " + tinygoVersion)
+	}
+	name, build := tinygoCommand(compiler == "system", "build", "-o", "build/app.wasm", "-target", target, "-no-debug", "-opt="+opt, "-stack-size="+stack, ".")
+	if err := quiet(dir, env[len(os.Environ()):], name, build...); err != nil {
 		return err
 	}
 	return size([]string{"-max", fmt.Sprint(max), filepath.Join(dir, "build", "app.wasm")})
@@ -146,12 +176,15 @@ func glue(dir string) error {
 
 // tinygoRoot is a TinyGo root whose runtime has the patch: the installed one, with its src/ copied
 // and the one line changed. It is made once per TinyGo version and kept in the user's cache folder.
-func tinygoRoot() (string, error) {
-	installed, err := output(".", "tinygo", "env", "TINYGOROOT")
+func tinygoRoot(system bool) (string, error) {
+	name, args := tinygoCommand(system, "env", "TINYGOROOT")
+	installed, err := output(".", name, args...)
 	if err != nil {
-		return "", errors.New("wasm-build needs tinygo (mise install)")
+		return "", errors.New("wasm-build needs mise, to run TinyGo " + tinygoVersion + " (or -tinygo system and a tinygo on the path)")
 	}
-	version, _ := output(".", "tinygo", "version")
+	installed = strings.TrimSpace(installed[strings.LastIndex(strings.TrimSpace(installed), "\n")+1:])
+	name, args = tinygoCommand(system, "version")
+	version, _ := output(".", name, args...)
 	text := version
 	for _, patch := range tinygoPatches {
 		text += patch.file + patch.old + patch.new
@@ -194,6 +227,9 @@ func tinygoRoot() (string, error) {
 	for _, patch := range tinygoPatches {
 		file := filepath.Join(root, patch.file)
 		source, err := os.ReadFile(file)
+		if err == nil && patch.unless != "" && strings.Contains(string(source), patch.unless) {
+			continue // this TinyGo has the fix itself
+		}
 		if err != nil || strings.Count(string(source), patch.old) != 1 {
 			os.RemoveAll(root)
 			return "", fmt.Errorf("this TinyGo (%s) does not have the text a patch changes (%q in %s): see docs/upstream.md, or build with -plain", version, patch.old, patch.file)

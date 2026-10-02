@@ -160,8 +160,8 @@ Every tool has an exact version in one file. `mise install` and `mise run setup`
 | The tool the tasks run (`dev`) | the release the project was made from | `mise.toml`, the line `"go:github.com/joeblew999/orpc-api/dev"` under `[tools]` |
 | The orpc-api Go packages | the same release | `api/go/go.mod`, the line `github.com/joeblew999/orpc-api/go` |
 | Go | 1.27.1 | `go.work`, the `toolchain` line |
-| TinyGo | 0.42.0 | `mise.toml` |
-| binaryen (`wasm-opt`, which TinyGo runs) | 133 | `mise.toml` |
+| TinyGo | 0.42.0 | The dev tool (`dev/wasm.go`): it moves with the tool's release |
+| binaryen (`wasm-opt`, which TinyGo runs) | 133 | The dev tool, beside TinyGo |
 | Node | 26.10.0 | `mise.toml` |
 | jq | 1.8.2 | `mise.toml` |
 | gh | 2.101.0 | `mise.toml` |
