@@ -20,15 +20,15 @@ mise run dev:check           # the tool's own checks: gofmt, vet, tests, and the
 
 | Command | What it does | Task that calls it |
 |---|---|---|
-| `with-server` | Starts a server, waits up to 90 s until a URL answers, runs commands against it, stops it. `{port}` in its arguments is a free port, `{port2}` another. A command's output is shown only if it fails; `-show` streams it | `api:go:test:native`, `api:go:test:workerd`, `showcase-go:test:native`, `showcase-go:test:workerd` |
+| `with-server` | Starts a server, waits up to 90 s until a URL answers, runs commands against it, stops it. `{port}` in its arguments is a free port, `{port2}` another. A command's output is shown only if it fails; `-show` streams it | `api:go:test:native`, `api:go:test:workerd`, `showcase:go:test:native`, `showcase:go:test:workerd` |
 | `migrate-local` | Applies `migrations/*.sql` to a running dev server's local D1, each once (cf can't) | `api:ts:migrate:local`, `api:go:migrate:local`, `api:go:test:workerd` |
 | `migrate` | Finds the Worker's D1 database (`<worker>-db`) and applies pending migrations | `api:ts:migrate`, `api:go:migrate`, the two notes `deploy` tasks |
-| `wasm-build` | Builds a Go program into the Wasm a Worker deploys, tuned for Workers (a patched copy of TinyGo's runtime and an 8 MB starting heap: [benchmarks.md](benchmarks.md)), and checks its size. `-plain` builds with TinyGo as it is | `api:go:build`, `showcase-go:build` |
+| `wasm-build` | Builds a Go program into the Wasm a Worker deploys, tuned for Workers (a patched copy of TinyGo's runtime and an 8 MB starting heap: [benchmarks.md](benchmarks.md)), and checks its size. `-plain` builds with TinyGo as it is | `api:go:build`, `showcase:go:build` |
 | `size` | Fails if a file is over a gzipped size | none: `wasm-build` does it |
 | `sdk-gen`, `sdk-check`, `sdk-ready`, `sdk-list`, `sdk-clean` | Fern: generate an SDK, prove it works, make what the tests need | `sdk:gen`, `sdk:check`, `sdk:ready`, `sdk:list`, `sdk:clean`, `sdk:demo` |
 | `sdk-publish` | Copies the Go API's Go SDK, generated fresh and checked, into `sdk/go`: the committed Go module another repo fetches with `go get`. `-check` fails when that copy is stale; `-check -quick` says so from a hash of the specs, with no Docker | `sdk:publish`, `sdk:publish:check`, `sdk:publish:fresh` |
 | `cli-build` | Builds the Fern CLI (Rust), natively or with `-linux` for Linux in Docker | `sdk:cli:build` |
-| `harness-sync`, `harness-test`, `harness-deploy` | Fern's TypeScript SDK inside the harness Worker (`sdk/harness/`). `harness-sync` copies the SDK in, generating it again when a showcase spec is newer than it | `showcase:typecheck`, `sdk:harness:test`, `sdk:harness:deploy` |
+| `harness-sync`, `harness-test`, `harness-deploy` | Fern's TypeScript SDK inside the harness Worker (`sdk/harness/`). `harness-sync` copies the SDK in, generating it again when a showcase spec is newer than it | `showcase:ts:typecheck`, `sdk:harness:test`, `sdk:harness:deploy` |
 | `bench` | Calls every operation of an API that its OpenAPI spec has examples for and prints wall time; `-cpu` adds the CPU time Cloudflare recorded, `-write` the operations that change data ([benchmarks.md](benchmarks.md)) | `api:ts:bench`, `api:go:bench`, `api:go:perf` |
 | `new` | Creates a new Go API project from this repo's example ([below](#a-new-project-dev-new)) | none: run it with `go run ...dev@latest new` |
 | `version` | Prints the release the tool is: what `new` pins a project to | none |
@@ -60,14 +60,14 @@ Every step that does work is `mise run <task>`, so a failing step is one line yo
 
 | Workflow | When | What it runs | Secrets |
 |---|---|---|---|
-| `api-check` | push to main, pull requests, by hand | `api:ts:check`, `api:go:check` and `showcase-go:check`, one job each | none |
-| `sdk-check` | push to main, pull requests, by hand | `sdk:demo`; `showcase:check` and `sdk:harness:test`; `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of `api`, `api-go`, `showcase` and `showcase-go`; and `sdk:publish:check` | none |
+| `api-check` | push to main, pull requests, by hand | `api:ts:check`, `api:go:check` and `showcase:go:check`, one job each | none |
+| `sdk-check` | push to main, pull requests, by hand | `sdk:demo`; `showcase:ts:check` and `sdk:harness:test`; `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of `api-ts`, `api-go`, `showcase-ts` and `showcase-go`; and `sdk:publish:check` | none |
 | `dev-check` | push to main, pull requests, by hand | `dev:check` | none |
 | `api-deploy` | by hand only (pick `ts` or `go`) | `cloudflare:token`, `api:<ts or go>:deploy`, then `api:<ts or go>:live-test` against the Worker it just deployed | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
 | `dev-release` | a version tag. A dry run by hand, and on pull requests that touch `dev/`, `.goreleaser.yaml`, `mise.toml` or `go.work` | `dev:release` (GoReleaser), `release:tags` | none (the workflow's own token) |
 | `sdk-release` | a version tag. A dry run by hand, and on pull requests that touch `sdk/`, `dev/`, `mise.toml`, `go.work` or `rust-toolchain.toml` | `sdk:dist`, `sdk:dist:cli <api>`, `release` | none |
 
-`api-deploy` fails at its first step, naming the secrets, when they are missing. Set them once per repo with `mise run cloudflare:secrets`: it copies both values from fnox (the keychain) into the repo's GitHub secrets, without printing them. Whether this repo's secrets are set, and whether `api-deploy` has run, was not checked for this page; the recorded deploys were made from a machine ([findings.md](findings.md)). The Go showcase's Worker is not among the workflow's choices: deploy it with `mise run showcase-go:deploy`.
+`api-deploy` fails at its first step, naming the secrets, when they are missing. Set them once per repo with `mise run cloudflare:secrets`: it copies both values from fnox (the keychain) into the repo's GitHub secrets, without printing them. Whether this repo's secrets are set, and whether `api-deploy` has run, was not checked for this page; the recorded deploys were made from a machine ([findings.md](findings.md)). The Go showcase's Worker is not among the workflow's choices: deploy it with `mise run showcase:go:deploy`.
 
 ### Getting the latest release
 
@@ -105,10 +105,10 @@ The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release
 | File | What |
 |---|---|
 | `dev_linux_amd64.tar.gz`, `dev_linux_arm64.tar.gz`, `dev_darwin_arm64.tar.gz`, `dev_darwin_amd64.tar.gz`, `checksums.txt` | This tool, and the SHA-256 of each archive. No Windows build: the tool manages process groups, which is Unix-only |
-| `api-sdk-go.tar.gz`, `api-sdk-typescript.tar.gz` | The SDK sources Fern generates from the oRPC specs: generated fresh, then checked (`sdk:check`) |
+| `api-ts-sdk-go.tar.gz`, `api-ts-sdk-typescript.tar.gz` | The SDK sources Fern generates from the oRPC specs: generated fresh, then checked (`sdk:check`) |
 | `api-go-sdk-go.tar.gz`, `api-go-sdk-typescript.tar.gz` | The same from the Go Worker's specs |
-| `api-specs.tar.gz`, `api-go-specs.tar.gz` | `openapi.json` and `asyncapi.json` of each API |
-| `api-cli-linux-amd64`, `api-go-cli-linux-amd64` | The Fern CLI of each API (the binary calls itself `orpc-api`) |
+| `api-ts-specs.tar.gz`, `api-go-specs.tar.gz` | `openapi.json` and `asyncapi.json` of each API |
+| `api-ts-cli-linux-amd64`, `api-go-cli-linux-amd64` | The Fern CLI of each API (the binary calls itself `orpc-api`) |
 
 **Go module versions.** `api/go/`, `dev/` and `sdk/go/` are Go modules in subdirectories, and Go only finds a version of such a module under a tag with the directory in front. So `release:tags` adds `api/go/vX.Y.Z`, `dev/vX.Y.Z` and `sdk/go/vX.Y.Z` on the same commit as `vX.Y.Z`. You push one tag; those three follow. Then `go get github.com/joeblew999/orpc-api/api/go@latest`, `go run github.com/joeblew999/orpc-api/dev@latest help` and `go get github.com/joeblew999/orpc-api/sdk/go@latest` pick it up. Don't push the module tags or upload release files by hand.
 
@@ -127,7 +127,7 @@ go run github.com/joeblew999/orpc-api/dev@latest workflows -into . -check   # fa
 
 It writes the `api-` and `sdk-` workflows. `-only api` or `-only sdk` writes one set; the `dev-` ones are only written where there is a `dev/` module, as here. The templates adapt to the repo: one without an `api/ts/` folder (a project made by `dev new`) gets the Go API's jobs only.
 
-They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `api:ts:check`, `api:go:check`, `showcase-go:check`, `api:ts:deploy`, `api:go:deploy`, `api:ts:live-test`, `api:go:live-test`, `cloudflare:token`, `sdk:demo`, `showcase:check`, `sdk:harness:test`, `sdk:gen`, `sdk:check`, `sdk:publish:check`, `sdk:dist`, `sdk:dist:cli`, `release` and `release:tags`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
+They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `api:ts:check`, `api:go:check`, `showcase:go:check`, `api:ts:deploy`, `api:go:deploy`, `api:ts:live-test`, `api:go:live-test`, `cloudflare:token`, `sdk:demo`, `showcase:ts:check`, `sdk:harness:test`, `sdk:gen`, `sdk:check`, `sdk:publish:check`, `sdk:dist`, `sdk:dist:cli`, `release` and `release:tags`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
 
 ## A new project: `dev new`
 

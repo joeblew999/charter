@@ -10,7 +10,7 @@ on:
 permissions:
   contents: read
 jobs:
-  api:
+  api-ts:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -33,4 +33,4 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.0.1
       - run: mise run setup
-      - run: mise run showcase-go:check
+      - run: mise run showcase:go:check

@@ -15,19 +15,19 @@ The showcase is one small API with every Fern feature we use. It exists twice, l
 ## Tasks (from the repo root)
 
 ```sh
-mise run showcase-go:run            # natively on :5175 (SHOWCASE_GO_PORT). WEBHOOK_URL=<url> to get the webhook
-mise run showcase-go:dev            # under workerd on :5175: the TinyGo build, then cf dev. SHOWCASE_WEBHOOK_URL=<url> to get the webhook
-mise run showcase-go:build          # the Wasm into api/go/cmd/showcase/build (fails over 3 MB gzipped)
-mise run showcase-go:spec           # write both specs again, after changing the contract
-mise run showcase-go:check          # LOCAL: lint, Go tests, spec:check, test:native and test:workerd
-mise run showcase-go:lint           # go vet of the server for Wasm (api:go:lint covers gofmt and the host)
-mise run showcase-go:spec:check     # fail if a committed spec is stale against the contract
-mise run showcase-go:test:native    # the SDK test against the native build, with the webhook
-mise run showcase-go:test:workerd   # the same against the TinyGo Wasm under workerd
-mise run showcase-go:test           # the SDK test against a running showcase-go:run or showcase-go:dev (no webhook check)
+mise run showcase:go:run            # natively on :5175 (SHOWCASE_GO_PORT). WEBHOOK_URL=<url> to get the webhook
+mise run showcase:go:dev            # under workerd on :5175: the TinyGo build, then cf dev. SHOWCASE_WEBHOOK_URL=<url> to get the webhook
+mise run showcase:go:build          # the Wasm into api/go/cmd/showcase/build (fails over 3 MB gzipped)
+mise run showcase:go:spec           # write both specs again, after changing the contract
+mise run showcase:go:check          # LOCAL: lint, Go tests, spec:check, test:native and test:workerd
+mise run showcase:go:lint           # go vet of the server for Wasm (api:go:lint covers gofmt and the host)
+mise run showcase:go:spec:check     # fail if a committed spec is stale against the contract
+mise run showcase:go:test:native    # the SDK test against the native build, with the webhook
+mise run showcase:go:test:workerd   # the same against the TinyGo Wasm under workerd
+mise run showcase:go:test           # the SDK test against a running showcase:go:run or showcase:go:dev (no webhook check)
 mise run sdk:check-spec showcase-go # fern check
 mise run sdk:gen showcase-go go     # Fern (Docker); the other groups: typescript, typescript-public, typescript-dist, cli
-mise run showcase-go:deploy         # REMOTE: build and deploy orpc-showcase-go. It has no storage
+mise run showcase:go:deploy         # REMOTE: build and deploy orpc-showcase-go. It has no storage
 ```
 
 The test tasks generate the TypeScript SDK they use the first time, which needs Docker. There is no task for the test against the deployed Worker: `node test/showcase-test.mjs "$SHOWCASE_GO_URL" showcase-go` (the variable is set by mise; it defaults to this repo's deployed Worker).
@@ -46,7 +46,7 @@ It lives inside the `api/go` module, beside the notes API, so it imports `humawo
 | `api/go/cmd/showcase-spec/` | Writes the two spec files, or checks them (`specfile`, as `api/go/cmd/spec/` does for the notes API) |
 | `api/go/transport/` | The WebSocket adapter for the native build, and the rules both adapters follow |
 | `api/go/worker/websocket.mjs` | The same adapter for Cloudflare, used by both Workers' entries |
-| `sdk/fern/apis/showcase-go/` | The generated specs, `generators.yml` (the same groups as `sdk/fern/apis/showcase/`) and the overlay |
+| `sdk/fern/apis/showcase-go/` | The generated specs, `generators.yml` (the same groups as `sdk/fern/apis/showcase-ts/`) and the overlay |
 | `test/showcase-test.mjs` | The SDK test: the TypeScript SDK against a running server ([testing.md](testing.md)) |
 
 ## The routes
@@ -65,7 +65,7 @@ Paths start at the root. Every route but the token one needs a valid bearer toke
 
 ## Feature by feature
 
-"The SDK test" is `test/showcase-test.mjs`: the TypeScript SDK that Fern generates from the Go specs, from Node, over the network. `mise run showcase-go:check` runs it against the native build and against the Wasm under workerd. "Go tests" are the two test files in `api/go/showcase/`. In the table, `config()` and `document()` are in `api/go/showcase/spec.go`.
+"The SDK test" is `test/showcase-test.mjs`: the TypeScript SDK that Fern generates from the Go specs, from Node, over the network. `mise run showcase:go:check` runs it against the native build and against the Wasm under workerd. "Go tests" are the two test files in `api/go/showcase/`. In the table, `config()` and `document()` are in `api/go/showcase/spec.go`.
 
 | Fern feature | How the Go contract switches it on | What the SDK gets | How it is tested |
 |---|---|---|---|

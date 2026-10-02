@@ -5,7 +5,7 @@ import { asyncapi } from "../../../api/ts/src/asyncapi.ts";
 
 // The showcase API, contract first: one API with every Fern feature we use (docs/sdk.md). The harness
 // Worker implements it (src/showcase.ts, under /api/mock) and both specs are generated from it
-// (spec.ts -> sdk/fern/apis/showcase/{openapi,asyncapi}.json). Each feature is switched on here:
+// (spec.ts -> sdk/fern/apis/showcase-ts/{openapi,asyncapi}.json). Each feature is switched on here:
 // - on an operation, by `openapi({ operationId, tags, spec })`: the SDK names and Fern's x-fern-*;
 // - for the whole document, by `document` below: oRPC's contract has no place for those;
 // - the WebSocket by `asyncapi({...})` (api/ts/src/asyncapi.ts), and the webhooks by `webhooks` below.

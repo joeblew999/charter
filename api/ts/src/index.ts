@@ -105,7 +105,7 @@ async function live(request: Request): Promise<Response> {
 export default {
 	async fetch(request) {
 		const url = new URL(request.url);
-		// The specs, generated from the same router as sdk/fern/apis/api/{openapi,asyncapi}.json.
+		// The specs, generated from the same router as sdk/fern/apis/api-ts/{openapi,asyncapi}.json.
 		if (url.pathname === "/api/openapi.json") return Response.json(await openapiSpec(router, { info, server: url.origin }));
 		if (url.pathname === "/api/asyncapi.json") return Response.json(await asyncapiSpec(router, { info: asyncInfo, server: url.origin }));
 		if (url.pathname === "/api/notes/live") return live(request);

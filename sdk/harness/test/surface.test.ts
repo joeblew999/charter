@@ -3,7 +3,7 @@
 // asyncapi.yml (commit c6093ae), so this test is the claim "same SDK surface", checkable. Every
 // difference is named below, with why. If the contract changes on purpose, change this list too
 // (and the Go server of the same API, sdk/fern/apis/showcase-go, once it is here).
-//   mise run showcase:test
+//   mise run showcase:ts:test
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -30,6 +30,6 @@ test("the contract's specs have the hand-written specs' surface, but for the nam
 });
 
 test("so do the committed specs, which Fern reads", () => {
-	const committed = (file: string) => json(new URL(`../../fern/apis/showcase/${file}`, import.meta.url));
+	const committed = (file: string) => json(new URL(`../../fern/apis/showcase-ts/${file}`, import.meta.url));
 	assert.deepStrictEqual(plain(surface(committed("openapi.json"), committed("asyncapi.json"))), expected);
 });

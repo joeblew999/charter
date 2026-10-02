@@ -119,7 +119,7 @@ It passes the same tests as the oRPC Worker, and it costs a little more to run: 
 
 ## Differences from the oRPC Worker
 
-Fern sees the same API: the same operations, parameters, constraints, `x-fern-*` extensions and WebSocket channel. `TestSameSurfaceAsTheORPCContract` (`api/go/api/surface_test.go`) checks this against the committed oRPC specs in `sdk/fern/apis/api/`. What differs:
+Fern sees the same API: the same operations, parameters, constraints, `x-fern-*` extensions and WebSocket channel. `TestSameSurfaceAsTheORPCContract` (`api/go/api/surface_test.go`) checks this against the committed oRPC specs in `sdk/fern/apis/api-ts/`. What differs:
 
 - **Invalid input is 422** with Huma's `application/problem+json` body (`errors[].location`, e.g. `query.limit`), where oRPC answers 400. The spec declares it by status, so the Go SDK gets a typed error ([above](#how-it-fits-together)).
 - **A known path with the wrong method is 405,** where the oRPC Worker answers 404.

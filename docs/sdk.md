@@ -18,17 +18,17 @@ mise run sdk:list                         # the APIs in sdk/fern/apis and the gr
 mise run sdk:check-spec petstore          # fern check: validate an API's specs and settings
 mise run sdk:gen petstore go              # generate one SDK (Docker) into sdk/out/petstore/go
 mise run sdk:check sdk/out/petstore/go    # prove it works. Go: build, vet, tests against WireMock. TypeScript: typecheck
-mise run sdk:ready api                    # generate and build what the tests use, if missing: typescript-dist, go, cli
+mise run sdk:ready api-ts                    # generate and build what the tests use, if missing: typescript-dist, go, cli
 mise run sdk:demo                         # LOCAL, small end to end: Go and TypeScript SDKs for petstore, checked
-mise run sdk:cli:build sdk/out/api/cli    # HEAVY: build a generated Fern CLI natively; -linux before the folder builds for Linux in Docker
+mise run sdk:cli:build sdk/out/api-ts/cli    # HEAVY: build a generated Fern CLI natively; -linux before the folder builds for Linux in Docker
 mise run sdk:docs                         # preview Fern's API docs site: http://localhost:3030
 mise run sdk:cloudflare                   # HEAVY: add Cloudflare products as an API (below)
 mise run sdk:clean                        # remove sdk/out, stop leftover WireMock containers
 
-mise run showcase:spec                    # the oRPC showcase: write both specs again, after changing its contract
-mise run showcase:check                   # LOCAL: showcase:spec:check, fern check, showcase:test, showcase:typecheck
-mise run showcase:test                    # sdk/harness/test, in Node: the server's routes, and the specs' surface
-mise run showcase:typecheck               # typecheck the harness Worker (copies the SDK in first)
+mise run showcase:ts:spec                    # the oRPC showcase: write both specs again, after changing its contract
+mise run showcase:ts:check                   # LOCAL: showcase:ts:spec:check, fern check, showcase:ts:test, showcase:ts:typecheck
+mise run showcase:ts:test                    # sdk/harness/test, in Node: the server's routes, and the specs' surface
+mise run showcase:ts:typecheck               # typecheck the harness Worker (copies the SDK in first)
 mise run sdk:harness:test                 # LOCAL: the TypeScript SDK inside a Worker, under cf dev
 mise run sdk:harness:test -remote         # REMOTE: the same on the deployed harness Worker
 mise run sdk:harness:deploy               # REMOTE: deploy the harness Worker twice
@@ -58,10 +58,10 @@ sdk/
 
 | API folder | Its specs | Groups |
 |---|---|---|
-| `sdk/fern/apis/api/` | Generated from the oRPC contract (`mise run api:ts:spec`) | `go`, `typescript`, `typescript-dist`, `cli` |
+| `sdk/fern/apis/api-ts/` | Generated from the oRPC contract (`mise run api:ts:spec`) | `go`, `typescript`, `typescript-dist`, `cli` |
 | `sdk/fern/apis/api-go/` | Generated from the Go contract (`mise run api:go:spec`) | the same four |
-| `sdk/fern/apis/showcase/` | Generated from the oRPC showcase's contract (`mise run showcase:spec`) | `go`, `typescript`, `typescript-public`, `typescript-dist`, `cli` |
-| `sdk/fern/apis/showcase-go/` | Generated from the Go showcase's contract (`mise run showcase-go:spec`) | the same five |
+| `sdk/fern/apis/showcase-ts/` | Generated from the oRPC showcase's contract (`mise run showcase:ts:spec`) | `go`, `typescript`, `typescript-public`, `typescript-dist`, `cli` |
+| `sdk/fern/apis/showcase-go/` | Generated from the Go showcase's contract (`mise run showcase:go:spec`) | the same five |
 | `sdk/fern/apis/petstore/` | A hand-written sample with no server | `go`, `typescript`, `python`, `cli` |
 | `sdk/fern/apis/modern/` | A hand-written sample with no server: SSE streaming and cursor pagination | `go`, `typescript` |
 
@@ -117,7 +117,7 @@ The showcase is one small API with every Fern feature in the table. Its `openapi
 
 The contract lives in the harness because the harness Worker is what serves it and tests it. `api/ts/` and `sdk/harness/` each install the same pinned oRPC and Zod; keep the two pins equal.
 
-After a contract change, run `mise run showcase:spec`. `mise run sdk:harness:test` generates the SDK again when a spec is newer than it.
+After a contract change, run `mise run showcase:ts:spec`. `mise run sdk:harness:test` generates the SDK again when a spec is newer than it.
 
 **What oRPC's generators can't say, and where it is added in code.** None of it is patched into the JSON. Only the last row has an upstream issue; nothing is filed for the others.
 
@@ -170,14 +170,14 @@ What it takes:
 ## SDKs and a CLI for the notes API
 
 ```sh
-mise run api:ts:spec                         # contract -> sdk/fern/apis/api/{openapi,asyncapi}.json (offline; the server is API_URL)
-mise run sdk:gen api go                   # the other groups: typescript, typescript-dist, cli
-mise run sdk:check sdk/out/api/go
-mise run sdk:cli:build sdk/out/api/cli    # then: sdk/out/api/cli/target/release/orpc-api notes list --page-all
+mise run api:ts:spec                         # contract -> sdk/fern/apis/api-ts/{openapi,asyncapi}.json (offline; the server is API_URL)
+mise run sdk:gen api-ts go                   # the other groups: typescript, typescript-dist, cli
+mise run sdk:check sdk/out/api-ts/go
+mise run sdk:cli:build sdk/out/api-ts/cli    # then: sdk/out/api-ts/cli/target/release/orpc-api notes list --page-all
 mise run api:ts:live-test                    # SSE and WebSocket, raw and through the SDK
 ```
 
-The same with `api-go` in place of `api` gives the SDKs and CLI from the Go contract's specs. The two Fern folders have the same groups and names, so the same test programs run against either SDK, and the SDKs from one server's specs work against the other server (2026-10-01, [findings.md](findings.md)).
+The same with `api-go` in place of `api-ts` gives the SDKs and CLI from the Go contract's specs. The two Fern folders have the same groups and names, so the same test programs run against either SDK, and the SDKs from one server's specs work against the other server (2026-10-01, [findings.md](findings.md)).
 
 - **What works** (2026-09-30 for the oRPC specs, 2026-10-01 for the Go ones): the Go SDK builds, vets and passes its tests; the TypeScript SDK typechecks; the CLI runs against the deployed Worker: `meta hello`, `notes create`, `notes list --page-all` across pages, and `notes watch --after`.
 - **The one difference between the two:** Huma names its schemas (`components.schemas.Note`), so the SDKs from the Go specs have a shared `Note` type where the oRPC spec gives one type per response.

@@ -4,4 +4,4 @@
 import { specFiles } from "../../api/ts/spec-files.ts";
 import { specs } from "./src/specs.ts";
 
-await specFiles("showcase:spec", specs);
+await specFiles("showcase:ts:spec", specs);

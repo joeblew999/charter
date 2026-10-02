@@ -202,7 +202,7 @@ func cliBuild(args []string) error {
 		f.BoolVar(&linux, "linux", false, "build for Linux inside Docker (the container's arch)")
 	})
 	if len(rest) != 1 {
-		return errors.New("cli-build needs <dir>, e.g. sdk/out/api/cli")
+		return errors.New("cli-build needs <dir>, e.g. sdk/out/api-ts/cli")
 	}
 	dir := rest[0]
 	bin, err := cargoBin(dir)

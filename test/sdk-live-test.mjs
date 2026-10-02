@@ -1,8 +1,8 @@
 // The generated TypeScript SDK (sdk/out/<sdk>/typescript-dist) against the live API, real-time paths
 // only: notes.watch() (SSE) and liveNotes.connect() (WebSocket, NotesHub Durable Object) must both
 // receive a note created with notes.create(). Usage: node sdk-live-test.mjs <origin> [sdk]
-// (sdk: a folder in sdk/fern/apis, default api; api-go for the Go Worker)
-const [origin, sdk = "api"] = process.argv.slice(2);
+// (sdk: a folder in sdk/fern/apis, default api-ts; api-go for the Go Worker)
+const [origin, sdk = "api-ts"] = process.argv.slice(2);
 const { OrpcApiClient } = await import(`../sdk/out/${sdk}/typescript-dist/esm/index.mjs`);
 
 const client = new OrpcApiClient({ baseUrl: origin });

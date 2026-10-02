@@ -6,7 +6,7 @@ grand_parent: This repository
 ---
 # Plan: the AsyncAPI generator, upstream
 
-Tracked in issue #3 (the comment at the top of `api/ts/src/asyncapi.ts` says #4; which is right was not checked). The generator itself is built: `api/ts/src/asyncapi.ts` writes `sdk/fern/apis/api/asyncapi.json` from the oRPC contract, the WebSocket is served from the contract procedure, and `mise run api:ts:check` fails on spec drift. How it works and its limits are in [../api.md](../api.md#the-asyncapi-generator). This page keeps what is left: getting it out of this repo.
+Tracked in issue #3 (the comment at the top of `api/ts/src/asyncapi.ts` says #4; which is right was not checked). The generator itself is built: `api/ts/src/asyncapi.ts` writes `sdk/fern/apis/api-ts/asyncapi.json` from the oRPC contract, the WebSocket is served from the contract procedure, and `mise run api:ts:check` fails on spec drift. How it works and its limits are in [../api.md](../api.md#the-asyncapi-generator). This page keeps what is left: getting it out of this repo.
 
 ## Left
 

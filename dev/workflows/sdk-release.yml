@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         # if-dir api/ts
-        api: [api, api-go]
+        api: [api-ts, api-go]
         # else
         api: [api-go]
         # end

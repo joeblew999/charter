@@ -1,7 +1,7 @@
 # The oRPC Worker in api/ts/: openapi.json and asyncapi.json are written by `mise run api:ts:spec` from the
 # contract (never by hand). What Fern needs (SDK names, x-fern-pagination, x-fern-streaming) is
 # declared in the contract; the WebSocket channel comes from api/ts/src/asyncapi.ts.
-# Generate: mise run sdk:gen api <group>
+# Generate: mise run sdk:gen api-ts <group>
 api:
   specs:
     - openapi: openapi.json
@@ -14,7 +14,7 @@ groups:
         version: 1.64.0
         output:
           location: local-file-system
-          path: ../../../out/api/go
+          path: ../../../out/api-ts/go
         config:
           # The same module path as the Go API's SDK (../api-go, the one committed to sdk/go): the two APIs
           # have the same surface, and test/soak-go builds against either SDK under this one import path.
@@ -29,7 +29,7 @@ groups:
         version: 3.98.0
         output:
           location: local-file-system
-          path: ../../../out/api/typescript
+          path: ../../../out/api-ts/typescript
         config:
           namespaceExport: OrpcApi
           guardProcessEnvAccess: true
@@ -41,7 +41,7 @@ groups:
         version: 0.45.1
         output:
           location: local-file-system
-          path: ../../../out/api/cli
+          path: ../../../out/api-ts/cli
         config:
           binaryName: orpc-api
 
@@ -52,7 +52,7 @@ groups:
         version: 3.98.0
         output:
           location: local-file-system
-          path: ../../../out/api/typescript-dist
+          path: ../../../out/api-ts/typescript-dist
         config:
           namespaceExport: OrpcApi
           guardProcessEnvAccess: true

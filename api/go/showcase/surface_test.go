@@ -9,8 +9,8 @@ import (
 )
 
 // The oRPC showcase's Fern folder: its specs are generated from sdk/harness/src/contract.ts
-// (mise run showcase:spec). What the Go contract must say too.
-const reference = "../../../sdk/fern/apis/showcase/"
+// (mise run showcase:ts:spec). What the Go contract must say too.
+const reference = "../../../sdk/fern/apis/showcase-ts/"
 
 func read(t *testing.T, path string) []byte {
 	t.Helper()

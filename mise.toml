@@ -37,7 +37,7 @@ HARNESS_API_URL = "{{ get_env(name='HARNESS_API_URL', default='https://orpc-sdk-
 # Optional: an API token instead of cf's OAuth login (`api/ts/node_modules/.bin/cf auth login`).
 # CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
 
-# ---- everything -----------------------------------------------------------------------------------
+# ---- general: what every part uses ---------------------------------------------------------------
 
 [tasks.setup]
 description = "Install the npm packages: api/ts/, api/go/ (cf), sdk/ (Fern), sdk/harness/"
@@ -45,7 +45,7 @@ run = "for dir in api/ts api/go sdk sdk/harness; do npm ci --prefix $dir --no-fu
 
 [tasks.check]
 description = "Every LOCAL check (no Cloudflare account; needs Docker)"
-depends = ["api:ts:check", "api:go:check", "showcase-go:check", "dev:check", "sdk:demo", "showcase:check", "sdk:harness:test"]
+depends = ["api:ts:check", "api:go:check", "showcase:go:check", "dev:check", "sdk:demo", "showcase:ts:check", "sdk:harness:test"]
 
 [tasks.doctor]
 description = "Check what the tasks need: npm installs, Docker, Go, TinyGo, Rust"
@@ -54,6 +54,8 @@ run = "go run ./dev doctor"
 [tasks."upstream:status"]
 description = "The upstream issues our code works around (every `Upstream:` tag): CLOSED means that workaround can go"
 run = "go run ./dev upstream"
+
+# ---- docs: the docs site in docs/ ----------------------------------------------------------------
 
 [tasks."docs:setup"]
 description = "Write the docs site's config and docs/writing.md (the same for every repo; GitHub Pages renders the folder)"
@@ -71,6 +73,8 @@ run = "go run ./dev docs-review"
 description = "REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself)"
 run = "gh api -X POST 'repos/{owner}/{repo}/pages' -f 'source[branch]=main' -f 'source[path]=/docs'"
 
+# ---- dev: the dev tool (dev/) and what it writes -------------------------------------------------
+
 [tasks."dev:check"]
 description = "The dev tool's own checks (gofmt, vet, tests), the generated workflows and docs config match their templates, and docs/ passes the lint"
 run = 'test -z "$(gofmt -l dev)" && go vet ./dev && go test ./dev && go run ./dev workflows -check && go run ./dev docs -check && go run ./dev docs-lint'
@@ -83,6 +87,8 @@ run = "go run ./dev workflows"
 description = "GoReleaser on the dev tool (.goreleaser.yaml). REMOTE on a version tag (vX.Y.Z): archives and checksums go to its GitHub Release. Anywhere else: a snapshot into dist/"
 run = "go run ./dev release-dev"
 
+# ---- release: what a version tag ships -----------------------------------------------------------
+
 [tasks.release]
 description = "REMOTE on a version tag (vX.Y.Z): attach dist/* to its GitHub Release. Anywhere else: a dry run that lists dist/"
 run = "go run ./dev release"
@@ -90,6 +96,8 @@ run = "go run ./dev release"
 [tasks."release:tags"]
 description = "REMOTE on a version tag (vX.Y.Z): tag the Go modules in subdirectories (api/go/vX.Y.Z, dev/vX.Y.Z, sdk/go/vX.Y.Z). Anywhere else: a dry run"
 run = "go run ./dev release-tags api/go dev sdk/go"
+
+# ---- cloudflare: the credentials a deploy from GitHub needs --------------------------------------
 
 [tasks."cloudflare:secrets"]
 description = "REMOTE, once per repo: copy CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from fnox into this repo's GitHub secrets, for the api-deploy workflow"
@@ -99,7 +107,7 @@ run = "fnox exec -- go run ./dev github-secrets CLOUDFLARE_API_TOKEN CLOUDFLARE_
 description = "Fail unless CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set: what a deploy from GitHub needs (locally, cf auth login is enough)"
 run = "go run ./dev need-env CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"
 
-# ---- api/ts/: the oRPC Worker (TypeScript) -------------------------------------------------------------
+# ---- api:ts: the notes API in TypeScript (api/ts/, oRPC) -----------------------------------------
 
 [tasks."api:ts:dev"]
 description = "The oRPC API on PORT (cf dev). First time, in another shell: mise run api:ts:migrate:local"
@@ -111,14 +119,14 @@ description = "Apply migrations/ to the local D1 of a running api:ts:dev"
 run = "go run ./dev migrate-local -worker orpc-api"
 
 [tasks."api:ts:spec"]
-description = "Write both specs from the contract (api/ts/src/contract.ts) into sdk/fern/apis/api/"
+description = "Write both specs from the contract (api/ts/src/contract.ts) into sdk/fern/apis/api-ts/"
 dir = "api/ts"
-run = 'node spec.ts ../../sdk/fern/apis/api/openapi.json ../../sdk/fern/apis/api/asyncapi.json "$API_URL"'
+run = 'node spec.ts ../../sdk/fern/apis/api-ts/openapi.json ../../sdk/fern/apis/api-ts/asyncapi.json "$API_URL"'
 
 [tasks."api:ts:spec:check"]
 description = "Fail if a committed spec is stale against the contract"
 dir = "api/ts"
-run = 'node spec.ts --check ../../sdk/fern/apis/api/openapi.json ../../sdk/fern/apis/api/asyncapi.json "$API_URL"'
+run = 'node spec.ts --check ../../sdk/fern/apis/api-ts/openapi.json ../../sdk/fern/apis/api-ts/asyncapi.json "$API_URL"'
 
 [tasks."api:ts:typecheck"]
 description = "Typecheck the oRPC Worker"
@@ -145,25 +153,19 @@ run = "go run ./dev migrate -worker orpc-api"
 
 [tasks."api:ts:live-test"]
 description = "REMOTE, writes test notes: SSE + WebSocket, raw and through the TypeScript SDK"
-depends = ["sdk:ready api typescript-dist"]
-run = 'node test/live-test.mjs "$API_URL" && node test/sdk-live-test.mjs "$API_URL" api'
+depends = ["sdk:ready api-ts typescript-dist"]
+run = 'node test/live-test.mjs "$API_URL" && node test/sdk-live-test.mjs "$API_URL" api-ts'
 
 [tasks."api:ts:soak"]
 description = "REMOTE, redeploys orpc-api: the real-time matrix, every client x scenario. --idle <min> for the long-idle case"
-depends = ["sdk:ready api"]
+depends = ["sdk:ready api-ts"]
 run = 'node test/soak.mjs "$API_URL"'
-
-[tasks."api:go:perf:try"]
-description = "REMOTE: try a change on a scratch Worker of its own and delete it after: mise run api:go:perf:try -- -name <experiment> [-build '<wasm-build flags>'] [-keep]. Several can run at once"
-run = "go run ./dev perf"
-
-[tasks."api:go:perf:clean"]
-description = "REMOTE: delete the scratch Workers and databases that api:go:perf:try runs left"
-run = "go run ./dev perf-clean"
 
 [tasks."api:ts:bench"]
 description = "REMOTE, read-only: every GET operation of the deployed oRPC Worker, wall time and Cloudflare's CPU time (docs/benchmarks.md)"
-run = 'go run ./dev bench -cpu -warm 30s -worker orpc-api -spec sdk/fern/apis/api/openapi.json "$API_URL"'
+run = 'go run ./dev bench -cpu -warm 30s -worker orpc-api -spec sdk/fern/apis/api-ts/openapi.json "$API_URL"'
+
+# ---- api:go: the notes API in Go (api/go/) -------------------------------------------------------
 
 [tasks."api:go:run"]
 description = "The Go API natively on API_GO_PORT: no Cloudflare, an in-memory store"
@@ -249,62 +251,99 @@ run = 'go run ./dev bench -each -warm 30s "$API_GO_URL"'
 description = "REMOTE, writes test notes: the quick loop for performance work: build, deploy, then bench the new isolate from its first request (8 at once, then each operation), with the CPU of each request. About two minutes"
 run = 'mise run api:go:deploy && go run ./dev bench -each -burst 8 -write "$API_GO_URL"'
 
-[tasks."showcase-go:run"]
+[tasks."api:go:perf:try"]
+description = "REMOTE: try a change on a scratch Worker of its own and delete it after: mise run api:go:perf:try -- -name <experiment> [-build '<wasm-build flags>'] [-keep]. Several can run at once"
+run = "go run ./dev perf"
+
+[tasks."api:go:perf:clean"]
+description = "REMOTE: delete the scratch Workers and databases that api:go:perf:try runs left"
+run = "go run ./dev perf-clean"
+
+# ---- showcase:ts: the showcase API in TypeScript (sdk/harness/, oRPC), every Fern feature in one contract ----
+
+[tasks."showcase:ts:spec"]
+description = "Write both specs from the showcase contract (sdk/harness/src/contract.ts) into sdk/fern/apis/showcase-ts/"
+dir = "sdk/harness"
+run = 'node spec.ts ../fern/apis/showcase-ts/openapi.json ../fern/apis/showcase-ts/asyncapi.json "$HARNESS_API_URL/api/mock"'
+
+[tasks."showcase:ts:spec:check"]
+description = "Fail if a committed showcase spec is stale against its contract"
+dir = "sdk/harness"
+run = 'node spec.ts --check ../fern/apis/showcase-ts/openapi.json ../fern/apis/showcase-ts/asyncapi.json "$HARNESS_API_URL/api/mock"'
+
+[tasks."showcase:ts:test"]
+description = "sdk/harness/test, in Node: the showcase server's routes, and its generated specs give Fern the surface the hand-written ones did"
+dir = "sdk/harness"
+run = "node --test test/*.test.ts"
+
+[tasks."showcase:ts:typecheck"]
+description = "Typecheck the harness Worker: the showcase contract, its oRPC implementation and the SDK test (copies the SDK in first; Docker if it is stale)"
+# Both copy the SDK into sdk/harness/src/client: not at the same time.
+wait_for = ["sdk:harness:test"]
+run = "go run ./dev harness-sync && cd sdk/harness && ./node_modules/.bin/cf workers types >/dev/null && ./node_modules/.bin/tsc"
+
+[tasks."showcase:ts:check"]
+description = "LOCAL: the committed showcase specs match the contract, Fern accepts them, the tests in sdk/harness/test pass, and the Worker typechecks"
+depends = ["showcase:ts:spec:check", "sdk:check-spec showcase-ts", "showcase:ts:test", "showcase:ts:typecheck"]
+
+# ---- showcase:go: the showcase API in Go (api/go/showcase/, api/go/cmd/showcase/) ----------------
+
+[tasks."showcase:go:run"]
 description = "The Go showcase API natively on SHOWCASE_GO_PORT: no Cloudflare. WEBHOOK_URL=<url> to get the webhook"
 dir = "api/go"
 run = "PORT=$SHOWCASE_GO_PORT go run ./cmd/showcase"
 
-[tasks."showcase-go:build"]
+[tasks."showcase:go:build"]
 description = "Build the Go showcase's Wasm with TinyGo into api/go/cmd/showcase/build, tuned for Workers"
 run = "go run ./dev wasm-build -dir api/go/cmd/showcase"
 
-[tasks."showcase-go:dev"]
+[tasks."showcase:go:dev"]
 description = "The Go showcase API under workerd on SHOWCASE_GO_PORT (cf dev). SHOWCASE_WEBHOOK_URL=<url> to get the webhook"
-depends = ["showcase-go:build"]
+depends = ["showcase:go:build"]
 dir = "api/go/cmd/showcase"
 run = "PORT=$SHOWCASE_GO_PORT ../../node_modules/.bin/cf dev"
 
-[tasks."showcase-go:spec"]
+[tasks."showcase:go:spec"]
 description = "Write both specs from the Go contract (api/go/showcase/contract.go) into sdk/fern/apis/showcase-go/"
 dir = "api/go"
 run = 'go run ./cmd/showcase-spec ../../sdk/fern/apis/showcase-go/openapi.json ../../sdk/fern/apis/showcase-go/asyncapi.json "$SHOWCASE_GO_URL"'
 
-[tasks."showcase-go:spec:check"]
+[tasks."showcase:go:spec:check"]
 description = "Fail if a committed showcase-go spec is stale against the Go contract"
 dir = "api/go"
 run = 'go run ./cmd/showcase-spec -check ../../sdk/fern/apis/showcase-go/openapi.json ../../sdk/fern/apis/showcase-go/asyncapi.json "$SHOWCASE_GO_URL"'
 
-[tasks."showcase-go:test:native"]
+[tasks."showcase:go:test:native"]
 description = "Every Fern feature through the TypeScript SDK made from the Go specs, against the native build (Docker the first time, for the SDK)"
 depends = ["sdk:ready showcase-go typescript-dist typescript-public"]
 run = 'go run ./dev with-server -dir api/go -url http://localhost:{port}/openapi.json -start "PORT={port} WEBHOOK_URL=http://localhost:{port2}/webhook go run ./cmd/showcase" -run "node ../../test/showcase-test.mjs http://localhost:{port} showcase-go --webhook-port {port2}"'
 
-[tasks."showcase-go:test:workerd"]
+[tasks."showcase:go:test:workerd"]
 description = "The same against the TinyGo Wasm under workerd (go test can't see TinyGo's gaps)"
-depends = ["showcase-go:build", "sdk:ready showcase-go typescript-dist typescript-public"]
+depends = ["showcase:go:build", "sdk:ready showcase-go typescript-dist typescript-public"]
 run = 'go run ./dev with-server -dir api/go/cmd/showcase -url http://localhost:{port}/openapi.json -start "PORT={port} SHOWCASE_WEBHOOK_URL=http://localhost:{port2}/webhook ../../node_modules/.bin/cf dev" -run "node ../../../../test/showcase-test.mjs http://localhost:{port} showcase-go --webhook-port {port2}"'
 
-[tasks."showcase-go:test"]
-description = "The showcase test against a running showcase-go:run or showcase-go:dev (no webhook check: it needs the server to know the receiver)"
+[tasks."showcase:go:test"]
+description = "The showcase test against a running showcase:go:run or showcase:go:dev (no webhook check: it needs the server to know the receiver)"
 depends = ["sdk:ready showcase-go typescript-dist typescript-public"]
 run = 'node test/showcase-test.mjs "http://localhost:$SHOWCASE_GO_PORT" showcase-go'
 
-[tasks."showcase-go:lint"]
+[tasks."showcase:go:lint"]
 description = "go vet of the showcase server for Wasm (api:go:lint does gofmt and the host's vet for the whole module)"
 dir = "api/go"
 run = "GOOS=js GOARCH=wasm go vet ./cmd/showcase"
 
-[tasks."showcase-go:check"]
+[tasks."showcase:go:check"]
 description = "LOCAL: lint, Go tests (the same SDK surface as the oRPC showcase), spec drift, the TinyGo build, and the SDK test natively and under workerd"
-depends = ["api:go:lint", "showcase-go:lint", "api:go:test", "showcase-go:spec:check", "showcase-go:test:native", "showcase-go:test:workerd"]
+depends = ["api:go:lint", "showcase:go:lint", "api:go:test", "showcase:go:spec:check", "showcase:go:test:native", "showcase:go:test:workerd"]
 
-[tasks."showcase-go:deploy"]
+[tasks."showcase:go:deploy"]
 description = "REMOTE: build and deploy the showcase Worker (orpc-showcase-go). It has no storage"
-depends = ["showcase-go:build"]
+depends = ["showcase:go:build"]
 dir = "api/go/cmd/showcase"
 run = "../../node_modules/.bin/cf deploy"
 
-# ---- sdk/: Fern (each API is sdk/fern/apis/<api>/ with its specs and a generators.yml) --------------
+# ---- sdk: Fern (each API is sdk/fern/apis/<api>/ with its specs and a generators.yml), and the harness Worker ----
 
 [tasks."sdk:list"]
 description = "The APIs in sdk/fern/apis and the SDK groups each one defines"
@@ -344,12 +383,12 @@ description = "Small end-to-end run: Go + TypeScript SDKs for the petstore API, 
 run = "for group in go typescript; do go run ./dev sdk-gen petstore $group && go run ./dev sdk-check sdk/out/petstore/$group; done"
 
 [tasks."sdk:cli:build"]
-description = "HEAVY: build a Fern-generated Rust CLI: mise run sdk:cli:build [-linux] <dir>, e.g. sdk/out/api/cli"
+description = "HEAVY: build a Fern-generated Rust CLI: mise run sdk:cli:build [-linux] <dir>, e.g. sdk/out/api-ts/cli"
 run = "go run ./dev cli-build"
 
 [tasks."sdk:dist"]
 description = "Generate, check and archive what a release ships for both APIs into dist/: Go and TypeScript SDK sources, the specs (Docker)"
-run = "go run ./dev dist-sdk api api-go"
+run = "go run ./dev dist-sdk api-ts api-go"
 
 [tasks."sdk:dist:cli"]
 description = "HEAVY: generate and build an API's Fern CLI into dist/: mise run sdk:dist:cli [-linux] <api>"
@@ -369,33 +408,6 @@ run = "go run ./dev cloudflare-spec"
 [tasks."sdk:clean"]
 description = "Remove generated SDKs (sdk/out) and stop leftover WireMock containers"
 run = "go run ./dev sdk-clean"
-
-# ---- sdk/harness/: the showcase API (oRPC), every Fern feature in one contract -----------------------
-
-[tasks."showcase:spec"]
-description = "Write both specs from the showcase contract (sdk/harness/src/contract.ts) into sdk/fern/apis/showcase/"
-dir = "sdk/harness"
-run = 'node spec.ts ../fern/apis/showcase/openapi.json ../fern/apis/showcase/asyncapi.json "$HARNESS_API_URL/api/mock"'
-
-[tasks."showcase:spec:check"]
-description = "Fail if a committed showcase spec is stale against its contract"
-dir = "sdk/harness"
-run = 'node spec.ts --check ../fern/apis/showcase/openapi.json ../fern/apis/showcase/asyncapi.json "$HARNESS_API_URL/api/mock"'
-
-[tasks."showcase:test"]
-description = "sdk/harness/test, in Node: the showcase server's routes, and its generated specs give Fern the surface the hand-written ones did"
-dir = "sdk/harness"
-run = "node --test test/*.test.ts"
-
-[tasks."showcase:typecheck"]
-description = "Typecheck the harness Worker: the showcase contract, its oRPC implementation and the SDK test (copies the SDK in first; Docker if it is stale)"
-# Both copy the SDK into sdk/harness/src/client: not at the same time.
-wait_for = ["sdk:harness:test"]
-run = "go run ./dev harness-sync && cd sdk/harness && ./node_modules/.bin/cf workers types >/dev/null && ./node_modules/.bin/tsc"
-
-[tasks."showcase:check"]
-description = "LOCAL: the committed showcase specs match the contract, Fern accepts them, the tests in sdk/harness/test pass, and the Worker typechecks"
-depends = ["showcase:spec:check", "sdk:check-spec showcase", "showcase:test", "showcase:typecheck"]
 
 [tasks."sdk:harness:test"]
 description = "Run Fern's TypeScript SDK inside a Worker (sdk/harness): under cf dev, or with -remote the deployed one"

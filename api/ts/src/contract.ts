@@ -5,7 +5,7 @@ import { z } from "zod";
 
 // The API, contract first: every route with its method, path, input and output as Zod 4 schemas.
 // The Worker implements it (src/index.ts) and the OpenAPI spec is generated from it (spec.ts ->
-// sdk/fern/apis/api/openapi.json), from which Fern makes SDKs, a CLI and docs. Everything the SDKs
+// sdk/fern/apis/api-ts/openapi.json), from which Fern makes SDKs, a CLI and docs. Everything the SDKs
 // need is said here too: operationId/tags name the SDK methods, and `spec` adds Fern's extensions
 // (x-fern-*) to the generated operation, so nothing is patched afterwards.
 

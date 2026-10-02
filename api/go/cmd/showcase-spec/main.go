@@ -4,7 +4,7 @@
 //	go run ./cmd/showcase-spec [-check] <openapi.json> <asyncapi.json> [server-url]
 //
 // With -check it writes nothing and fails if either file differs from what the contract gives:
-// someone changed the contract and didn't run `mise run showcase-go:spec`. The same functions the
+// someone changed the contract and didn't run `mise run showcase:go:spec`. The same functions the
 // server gives /openapi.json and /asyncapi.json with (showcase/spec.go).
 package main
 

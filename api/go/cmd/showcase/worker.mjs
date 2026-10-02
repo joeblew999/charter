@@ -1,5 +1,5 @@
 // The showcase Worker's entry: everything goes to the Go server (TinyGo Wasm in build/, made by
-// `mise run showcase-go:build`). The glue is the notes Worker's (../../worker): running Go with
+// `mise run showcase:go:build`). The glue is the notes Worker's (../../worker): running Go with
 // its runtimes kept between requests, carrying a WebSocket, here both ways, and making Go's timers
 // fire on Cloudflare.
 import "./build/wasm_exec.js";
