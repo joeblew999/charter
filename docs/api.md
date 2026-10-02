@@ -9,8 +9,10 @@ The oRPC Worker: the notes API as an oRPC 2.0 (`2.0.0-beta.40`) Worker on D1, co
 
 ## Tasks (from the repo root)
 
+Each example is a project with its own tasks: run these in `examples/notes-ts/`.
+
 ```sh
-mise run dev               # the API under cf dev on http://localhost:5173 (PORT)
+mise run dev               # the API under cf dev on http://localhost:5173 (API_PORT)
 mise run migrate:local     # first time, in another shell while dev runs: the D1 schema
 mise run spec              # write both specs again, after changing the contract
 mise run check             # LOCAL: lint, test and spec:check

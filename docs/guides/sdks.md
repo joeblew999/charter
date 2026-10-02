@@ -43,8 +43,8 @@ What an SDK contains comes from the contract, not from this folder: the method n
 ## Check that an SDK works
 
 ```sh
-mise run sdk:check sdk/out/go           # go build, go vet, and Fern's generated tests against a WireMock container
-mise run sdk:check sdk/out/typescript   # a typecheck against standard fetch, without Node's types
+mise run sdk:check go           # go build, go vet, and Fern's generated tests against a WireMock container
+mise run sdk:check typescript   # a typecheck against standard fetch, without Node's types
 mise run sdk:check-spec                 # Fern's own validation of the specs and generators.yml
 ```
 

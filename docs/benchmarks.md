@@ -136,8 +136,7 @@ What this says:
 ```sh
 mise run perf          # REMOTE: build, deploy, then bench the new isolate from its first request. About two minutes
 mise run perf:try -- -name stack96 -build '-stack 96kb'   # REMOTE: the same on a scratch Worker of its own, deleted after. 70 s
-mise run bench         # REMOTE, read-only: the deployed Go Worker once it is warm
-mise run bench            # the same against the deployed oRPC Worker
+mise run bench         # REMOTE, read-only: the deployed Go Worker once it is warm (in examples/notes-ts: the oRPC Worker)
 go run ./cmd/charter bench <url>      # any server: a local cf dev, the native build. Wall time only
 ```
 

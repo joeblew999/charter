@@ -3,7 +3,7 @@ title: The charter tool, workflows, releases
 nav_order: 8
 parent: This repository
 ---
-# dev/: the tool the tasks run
+# cmd/charter/: the tool the tasks run
 
 Every task in `mise.toml` is one line. Anything that needs more than one line is a command of the `charter` tool: a Go program in `cmd/charter/` (standard library only), so the logic is real code that can be read, tested and reused, not shell inside TOML. Read this page to add a task, to change a GitHub workflow, to cut a release, to start a new project, or to set up the docs site.
 
@@ -20,23 +20,24 @@ mise run charter:check           # the tool's own checks: gofmt, vet, tests, and
 
 | Command | What it does | Task that calls it |
 |---|---|---|
-| `with-server` | Starts a server, waits up to 90 s until a URL answers, runs commands against it, stops it. `{port}` in its arguments is a free port, `{port2}` another. A command's output is shown only if it fails; `-show` streams it | `test:native`, `test:workerd`, `test:native`, `test:workerd` |
-| `migrate-local` | Applies `examples/notes-go/migrations/*.sql` to a running dev server's local D1, each once (cf can't) | `migrate:local`, `migrate:local`, `test:workerd` |
-| `migrate` | Finds the Worker's D1 database (`<worker>-db`) and applies pending migrations | `migrate`, `migrate`, the two notes `deploy` tasks |
-| `wasm-build` | Builds a Go program into the Wasm a Worker deploys, tuned for Workers (a patched copy of TinyGo's runtime and an 8 MB starting heap: [benchmarks.md](benchmarks.md)), and checks its size. It also writes the Go library's Worker glue (`go/worker/*.mjs`) into the program's `build/`, from the library module as the program's `go.mod` resolves it. `-plain` builds with TinyGo as it is | `build`, `build` |
+| `with-server` | Starts a server, waits up to 90 s until a URL answers, runs commands against it, stops it. `{port}` in its arguments is a free port, `{port2}` another. A command's output is shown only if it fails; `-show` streams it | `test:native`, `test:workerd` (the Go examples) |
+| `migrate-local` | Applies `examples/notes-go/migrations/*.sql` to a running dev server's local D1, each once (cf can't) | `migrate:local`, `test:workerd` (the notes examples) |
+| `migrate` | Finds the Worker's D1 database (`<worker>-db`) and applies pending migrations | `migrate`, `deploy` (the notes examples) |
+| `wasm-build` | Builds a Go program into the Wasm a Worker deploys, tuned for Workers (a patched copy of TinyGo's runtime and an 8 MB starting heap: [benchmarks.md](benchmarks.md)), and checks its size. It also writes the Go library's Worker glue (`go/worker/*.mjs`) into the program's `build/`, from the library module as the program's `go.mod` resolves it. `-plain` builds with TinyGo as it is | `build` (the Go examples) |
 | `size` | Fails if a file is over a gzipped size | none: `wasm-build` does it |
 | `sdk-gen`, `sdk-check`, `sdk-ready`, `sdk-list`, `sdk-clean` | Fern: generate an SDK, prove it works, make what the tests need | `sdk:gen`, `sdk:check`, `sdk:ready`, `sdk:list`, `sdk:clean` |
 | `sdk-publish` | Copies the Go API's Go SDK, generated fresh and checked, into `examples/notes-go/sdk/go`: the committed Go module another repo fetches with `go get`. `-check` fails when that copy is stale; `-check -quick` says so from a hash of the specs, with no Docker | `sdk:publish`, `sdk:publish:check`, `sdk:publish:fresh` |
 | `cli-build` | Builds the Fern CLI (Rust), natively or with `-linux` for Linux in Docker | `sdk:cli:build` |
 | `harness-sync`, `harness-test`, `harness-deploy` | Fern's TypeScript SDK inside the harness Worker (`examples/showcase-ts/`). `harness-sync` copies the SDK in, generating it again when a showcase spec is newer than it | `lint`, `test:workerd`, `deploy` |
-| `bench` | Calls every operation of an API that its OpenAPI spec has examples for and prints wall time; `-cpu` adds the CPU time Cloudflare recorded, `-write` the operations that change data ([benchmarks.md](benchmarks.md)) | `bench`, `bench`, `perf` |
+| `bench` | Calls every operation of an API that its OpenAPI spec has examples for and prints wall time; `-cpu` adds the CPU time Cloudflare recorded, `-write` the operations that change data ([benchmarks.md](benchmarks.md)) | `bench`, `perf`, and the repo's `compare` |
 | `new` | Creates a new Go API project from this repo's example ([below](#a-new-project-charter-new)) | none: run it with `go run ...charter@latest new` |
 | `version` | Prints the release the tool is: what `new` pins a project to | none |
 | `docs` | Writes the docs site's config, `docs/writing.md` and `docs/llms.txt` into a repo; `-check` fails if one differs ([below](#the-docs-site)) | `docs:setup`, `charter:check` |
 | `docs-lint` | Checks `docs/` for what a program can check | `docs:lint` |
 | `docs-review` | Hands Claude the review prompt with what `docs-lint` found; `-print` only shows the prompt | `docs:review` |
 | `upstream` | Lists every `Upstream: owner/repo#n` tag in the code with the issue's state | `upstream:status` |
-| `doctor` | Checks the tools and installs the tasks need, and lists the APIs | `doctor` |
+| `doctor` | Checks the tools and installs the project's tasks need, and lists its SDK groups | `doctor` |
+| `each` | Runs one mise task in every project below the folder (the examples) that defines it, one after the other; `-only notes-ts,notes-go` picks and orders them | the repo's `setup`, `examples:check`, `compare`, `doctor`, `sdk:clean` |
 | `workflows` | Writes the GitHub workflows from the templates in `cmd/charter/workflows/`; `-check` fails if a committed one differs | `workflows`, `charter:check` |
 | `release-tool` | Builds this tool for Linux and macOS and publishes it to the tag's GitHub release, with GoReleaser (`.goreleaser.yaml`) | `charter:release` |
 | `dist-sdk`, `dist-cli` | Build what an SDK release ships into `dist/`: the SDK sources and specs, the Fern CLI | `sdk:dist`, `sdk:dist:cli` |
@@ -44,7 +45,7 @@ mise run charter:check           # the tool's own checks: gofmt, vet, tests, and
 | `need-env` | Fails, naming them, unless the given environment variables are set | `cloudflare:token` |
 | `github-secrets` | Copies the given environment variables into the repo's GitHub Actions secrets, without printing them | `cloudflare:secrets` |
 
-A command runs from the repo's root, which it finds by the `go.work` above where it was started. Six also run outside this repo's layout, in any repo: `new`, `version`, `workflows`, `docs`, `docs-lint` and `docs-review`.
+A command works on the project it is run in: the nearest folder, from where it was started upwards, that has a `mise.toml` beside a `fern/` folder. Each example is one, and so is what `charter new` makes. Some also run outside a project, in the folder they are started in (`charter help` marks them): `new`, `version`, `each`, `workflows`, `docs`, `docs-lint`, `docs-review`, `upstream`, `bench`, `with-server`, `size`, `release-tool`, `release-tags`, `need-env` and `github-secrets`. The repo's own tasks call the tool as `go run ./cmd/charter`, an example's as `go run ../../cmd/charter` (the root `go.work` lets Go run it from there), and a project made by `charter new` as `charter`, which mise installs at the pinned release.
 
 ## Adding a task
 
@@ -55,18 +56,18 @@ A command runs from the repo's root, which it finds by the `go.work` above where
 
 The workflows are templates in `cmd/charter/workflows/`, compiled into the tool. `mise run workflows` writes them to `.github/workflows/`, and `mise run charter:check` fails if a committed one differs. Edit the template, never the copy.
 
-Every step that does work is `mise run <task>`, so a failing step is one line you can run locally. A test (`cmd/charter/workflows_test.go`) holds the templates to that, and to exact versions of the actions and runners. The prefix says what a workflow is for: `api-`, `sdk-`, or `dev-` (this tool).
+Every step that does work is `mise run <task>`, so a failing step is one line you can run locally. A test (`cmd/charter/workflows_test.go`) holds the templates to that, to exact versions of the actions and runners, and to tasks that exist. One set of templates serves two kinds of repo: lines between `# if-dir examples` and `# end` are written only into a repo that has an `examples/` folder (this one), the lines after `# else` only into one that doesn't (a project).
+
+In this repo:
 
 | Workflow | When | What it runs | Secrets |
 |---|---|---|---|
-| `check` | push to main, pull requests, by hand | `check`, `check` and `check`, one job each | none |
-| `sdk-check` | push to main, pull requests, by hand | `check` and `test:workerd`; `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of `api-ts`, `api-go`, `showcase-ts` and `showcase-go`; and `sdk:publish:check` | none |
-| `check` | push to main, pull requests, by hand | `charter:check` | none |
-| `deploy` | by hand only (pick `ts` or `go`) | `cloudflare:token`, `api:<ts or go>:deploy`, then `api:<ts or go>:live-test` against the Worker it just deployed | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
-| `release` | a version tag. A dry run by hand, and on pull requests that touch `cmd/charter/`, `.goreleaser.yaml`, `mise.toml` or `go.work` | `charter:release` (GoReleaser), `release:tags` | none (the workflow's own token) |
-| `release` | a version tag. A dry run by hand, and on pull requests that touch `sdk/`, `cmd/charter/`, `mise.toml` or `go.mod` | `sdk:dist`, `sdk:dist:cli`, `release` | none |
+| `check` | push to main, pull requests, by hand | `charter:check`, `go:check`, and `setup` then `check` in each example, one job each | none |
+| `sdk-check` | push to main, pull requests, by hand | `sdk:gen` + `sdk:check` for the Go and TypeScript SDKs of each example; and `sdk:publish:check` in `examples/notes-go` | none |
+| `deploy` | by hand only (pick `notes-go` or `notes-ts`) | in that example: `cloudflare:token`, `setup`, `deploy`, then `live-test` against the Worker it just deployed | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
+| `release` | a version tag. A dry run by hand, and on pull requests that touch `cmd/`, `go/`, `examples/`, `.goreleaser.yaml`, `mise.toml` or `go.mod` | `charter:release` (GoReleaser), `release:tags`; and in `examples/notes-go` and `examples/notes-ts`: `sdk:dist`, `sdk:dist:cli`, `release` | none (the workflow's own token) |
 
-`deploy` fails at its first step, naming the secrets, when they are missing. Set them once per repo with `mise run cloudflare:secrets`: it copies both values from fnox (the keychain) into the repo's GitHub secrets, without printing them. Whether this repo's secrets are set, and whether `deploy` has run, was not checked for this page; the recorded deploys were made from a machine ([findings.md](findings.md)). The Go showcase's Worker is not among the workflow's choices: deploy it with `mise run deploy`.
+`deploy` fails at its first step, naming the secrets, when they are missing. Set them once per repo with `mise run cloudflare:secrets`: it copies both values from fnox (the keychain) into the repo's GitHub secrets, without printing them. Whether this repo's secrets are set, and whether `deploy` has run, was not checked for this page; the recorded deploys were made from a machine ([findings.md](findings.md)). The showcases' Workers are not among the workflow's choices: deploy them with `mise run deploy` in their folders.
 
 ### Getting the latest release
 
@@ -99,7 +100,7 @@ A project made by `charter new` has the first line already, with the release it 
 git tag vX.Y.Z && git push origin vX.Y.Z        # on the commit to release, once its checks are green
 ```
 
-The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release. The two release workflows build everything again from that commit and put it on the tag's GitHub Release (the first job to finish creates it). [GoReleaser](https://goreleaser.com) builds and publishes this tool (`.goreleaser.yaml`, `mise run charter:release`); the SDK jobs add their files with `gh`:
+The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release. The release workflow builds everything again from that commit and put it on the tag's GitHub Release (the first job to finish creates it). [GoReleaser](https://goreleaser.com) builds and publishes this tool (`.goreleaser.yaml`, `mise run charter:release`); the SDK jobs add their files with `gh`:
 
 | File | What |
 |---|---|
@@ -109,9 +110,9 @@ The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release
 | `notes-ts-specs.tar.gz`, `notes-go-specs.tar.gz` | `openapi.json` and `asyncapi.json` of each API |
 | `notes-ts-cli-linux-amd64`, `notes-go-cli-linux-amd64` | The Fern CLI of each API (the binary calls itself `notes`) |
 
-**Go module versions.** `go/`, `cmd/charter/` and `examples/notes-go/sdk/go/` are Go modules in subdirectories that other repos use, and Go only finds a version of such a module under a tag with the directory in front. So `release:tags` adds `go/vX.Y.Z`, `cmd/charter/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` on the same commit as `vX.Y.Z`. You push one tag; those three follow. Then `go get github.com/joeblew999/charter/go@latest`, `go run github.com/joeblew999/charter/cmd/charter@latest help` and `go get github.com/joeblew999/charter/examples/notes-go/sdk/go@latest` pick it up. Don't push the module tags or upload release files by hand.
+**Go module versions.** The tool is in the repo's root module, so `vX.Y.Z` is its version. `go/` and `examples/notes-go/sdk/go/` are Go modules in subdirectories that other repos use, and Go only finds a version of such a module under a tag with the directory in front. So `release:tags` adds `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` on the same commit as `vX.Y.Z`. You push one tag; those two follow. Then `go get github.com/joeblew999/charter/go@latest`, `go run github.com/joeblew999/charter/cmd/charter@latest help` and `go get github.com/joeblew999/charter/examples/notes-go/sdk/go@latest` pick it up. Don't push the module tags or upload release files by hand.
 
-**A dry run** is the same build without a version tag: GoReleaser makes a snapshot in `dist/`, `release` lists what is in `dist/` and publishes nothing, `release:tags` says which tags it would add, and the files are kept as workflow artifacts. Pull requests do that, and so does `gh workflow run release.yml`. Locally: `mise run charter:release && mise run sdk:dist && mise run release`.
+**A dry run** is the same build without a version tag: GoReleaser makes a snapshot in `dist/`, `release` lists what is in `dist/` and publishes nothing, `release:tags` says which tags it would add, and the files are kept as workflow artifacts. Pull requests do that, and so does `gh workflow run release.yml`. Locally: `mise run charter:release` at the root, and `mise run sdk:dist && mise run release` in `examples/notes-go`.
 
 **The Go SDK as a module.** `examples/notes-go/sdk/go/` is the Go SDK of the Go API, committed so that another repo can `go get github.com/joeblew999/charter/examples/notes-go/sdk/go`. `mise run sdk:publish` writes it from a fresh generation (after `mise run spec`, when the contract changed); never edit it. `mise run sdk:publish:check` fails when it is stale, and the `sdk-check` workflow runs that. How a project made by `charter new` does the same for its API: [Giving the Go SDK to another repo](guides/sdks.md#giving-the-go-sdk-to-another-repo).
 
@@ -120,17 +121,17 @@ Not released: the TypeScript SDK as an npm package, the Go SDKs of the oRPC API 
 ### The workflows in another repo
 
 ```sh
-go run github.com/joeblew999/charter/cmd/charter@latest workflows -into .          # writes .github/workflows/api-*.yml and sdk-*.yml
+go run github.com/joeblew999/charter/cmd/charter@latest workflows -into .          # writes .github/workflows/: check, deploy, sdk-check, release
 go run github.com/joeblew999/charter/cmd/charter@latest workflows -into . -check   # fails if they differ from the templates
 ```
 
-It writes the `api-` and `sdk-` workflows. `-only api` or `-only sdk` writes one set; the `dev-` ones are only written where there is a `cmd/charter/` module, as here. The templates adapt to the repo: one without an `examples/notes-ts/` folder (a project made by `charter new`) gets the Go API's jobs only.
+The templates adapt to the repo: one with an `examples/` folder gets this repo's jobs (the tool, the library, each example in its folder), any other gets a project's (its tasks at the root). `charter new` writes them into a new project.
 
-They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `check`, `check`, `check`, `deploy`, `deploy`, `live-test`, `live-test`, `cloudflare:token`, `check`, `test:workerd`, `sdk:gen`, `sdk:check`, `sdk:publish:check`, `sdk:dist`, `sdk:dist:cli`, `release` and `release:tags`. Copy them from this repo's `mise.toml`. A project with one API deletes the other API's job from the copy.
+They only call mise tasks, so the repo needs a `mise.toml` with the tasks they name: `setup`, `check`, `deploy`, `live-test`, `cloudflare:token`, `sdk:gen`, `sdk:check`, `sdk:publish:check`, `sdk:dist`, `sdk:dist:cli`, `release` and `release:tags`. A project made by `charter new` has them.
 
 ## A new project: `charter new`
 
-One command makes a working Go API project: the Go half of this repo under your project's name.
+One command makes a working Go API project: `examples/notes-go` under your project's name.
 
 ```sh
 go run github.com/joeblew999/charter/cmd/charter@latest new -name billing-api      # into ./billing-api
@@ -149,18 +150,19 @@ mise run deploy         # to Cloudflare, then: mise run live-test
 | `-into` | Where to create it; the folder must be empty | `./<name>` |
 | `-from` | A checkout of this repo to copy from | the tool's own version, cloned from GitHub |
 
-- **Its first line is the tool's version and what it pinned to it:** the charter tool in the project's `mise.toml`, the Go packages in `examples/notes-go/go.mod`. `charter version` prints the version alone. Minutes after a release, `charter@latest` can still be the release before (Go's module proxy caches it); the release binary and `charter@vX.Y.Z` are exact.
-- **It copies the example** from this repo at the tool's own version: the notes API in `examples/notes-go/` (contract, handlers, Worker entry, hub, platform files, spec command), `examples/notes-go/migrations/`, the notes test programs from `examples/notes-go/test/`, and the Fern folder `examples/notes-go/fern/`. There is no separate template, so a new project starts from code that passed this repo's checks. The Go showcase and the test that compares with the oRPC contract are left out.
-- **It renames:** the Worker and its D1 database (`-name`), the Go module (`-module`), the SDK's names (`billing-api` gives `BillingApiClient`), and the Go SDK's module path (`<module>/sdk/go`, so another repo can `go get` it once `mise run sdk:publish` has committed it).
+- **Its first line is the tool's version and what it pinned to it:** the charter tool in the project's `mise.toml`, the Go library in its `go.mod`. `charter version` prints the version alone. Minutes after a release, `charter@latest` can still be the release before (Go's module proxy caches it); the release binary and `charter@vX.Y.Z` are exact.
+- **It copies the example** from this repo at the tool's own version: every file of `examples/notes-go/` that is tracked or would be (the contract and handlers, the Worker entry, the platform files, the spec command, `mise.toml`, `package.json`, the Fern folder `fern/`, `migrations/`, `test/`), as it is. There is no separate template, no list of files and no filtering of tasks, so a new project starts from code that passed this repo's checks. One folder is left out: the committed Go SDK (`sdk/go/`), which is generated from specs that now name another Worker; `mise run sdk:publish` writes the project's own.
+- **It renames:** the Worker and its D1 database (`-name`), the Go module (`-module`, and with it the Go SDK's module path `<module>/sdk/go`), and Fern's organisation (`fern/fern.config.json`). The SDK's names (`NotesClient`, the Go package `notes`, the CLI `notes`) stay the example's until you change them in `fern/generators.yml`.
 - **It sets the Worker's URL** to `https://<name>.<subdomain>.workers.dev`, as the default of `API_URL` in the project's `mise.toml` and in the two copied specs, which must agree for `mise run check` to pass. Without `-subdomain` that is a placeholder, and the closing message says what to do after the first deploy: put the URL the deploy prints in `mise.local.toml` as `API_URL` (or make it the default in `mise.toml`, which CI reads too), then `mise run spec`. Nothing in a project names this repo's own subdomain.
 - **Its closing message also says what the Go Worker costs to run** ([api-go.md](api-go.md#cost)), and links the guide to putting your own API in the example's place ([guides/replace-the-example.md](guides/replace-the-example.md)).
-- **It keeps as imports** the reusable packages (`humaworkers`, `asyncapi`, `follow`, `humamcp`, `transport`, `specfile`), pinned to the same version, so fixes arrive with `go get -u`. Made with `-from`, the project builds against that checkout through a `replace` line in its `go.mod`; remove it once you depend on a release.
-- **It writes** a `mise.toml` with the Go and SDK tasks (the charter tool is one of its mise tools, pinned to the release, so tasks call `charter <command>`), `go.work`, a README, `AGENTS.md`, and a `docs/` folder with a start page, rules and the writing rules.
-- **Then, with a GitHub repo:** `mise run workflows` (the workflows come out for one Go API), `mise run docs:setup` and `mise run docs:pages`.
+- **It makes the tool the project's own.** The example's tasks run the tool from this checkout (`go run ../../cmd/charter`). In the project they run `charter`, and `mise.toml` pins the release under `[tools]` (`"go:github.com/joeblew999/charter/cmd/charter"`), so `mise install` builds it. The Go library is a requirement in `go.mod` at the same release, so fixes arrive with `go get -u`.
+- **Made with `-from <checkout>`, nothing is pinned:** the newest release can be older than the checkout. The tasks run `go run $CHARTER/cmd/charter`, where `CHARTER` in the project's `mise.toml` is the checkout; a `go.work` in the project lets Go run it from there; and `go.mod` builds against the checkout's library through a `replace` line. Remove all three once you depend on a release.
+- **It writes** a README, `AGENTS.md`, a `docs/` folder with a start page, rules and the writing rules, and the GitHub workflows (`.github/workflows/`).
+- **Then, with a GitHub repo:** `mise run docs:setup` and `mise run docs:pages`.
 
-The project starts as the notes API. Change `examples/notes-go/api/contract.go`, run `mise run spec`, and go from there ([api-go.md](api-go.md#starting-a-go-workers-go-project-from-it)).
+The project starts as the notes API. Change `api/contract.go` in it, run `mise run spec`, and go from there ([api-go.md](api-go.md#starting-a-go-workers-go-project-from-it)).
 
-Before a release, the scaffold is proven by hand: `go run ./cmd/charter new -name trial -into /tmp/trial -from .`, then that project's `mise run setup` and `mise run check`. `go test ./cmd/...` covers the copy, the renaming, the Worker's URL with and without `-subdomain`, the first line and a build.
+Before a release, the scaffold is proven by hand: `go run ./cmd/charter new -name trial -into /tmp/trial -from "$PWD"`, then that project's `mise run setup` and `mise run check`. `go test ./cmd/...` covers the copy, the renaming, the Worker's URL with and without `-subdomain`, the first line and a build.
 
 ## The docs site
 

@@ -14,17 +14,20 @@ The showcase is one small API with every Fern feature we use. It exists twice, l
 
 ## Tasks (from the repo root)
 
+Each example is a project with its own tasks: run these in `examples/showcase-go/`.
+
 ```sh
 mise run run            # natively on :5175 (API_PORT). WEBHOOK_URL=<url> to get the webhook
 mise run dev            # under workerd on :5175: the TinyGo build, then cf dev. SHOWCASE_WEBHOOK_URL=<url> to get the webhook
 mise run build          # the Wasm into examples/showcase-go/build (fails over 3 MB gzipped)
 mise run spec           # write both specs again, after changing the contract
 mise run check          # LOCAL: lint, Go tests, spec:check, test:native and test:workerd
-mise run lint           # go vet of the server for Wasm (lint covers gofmt and the host)
+mise run lint           # gofmt, and go vet for the host and for Wasm
 mise run spec:check     # fail if a committed spec is stale against the contract
 mise run test:native    # the SDK test against the native build, with the webhook
 mise run test:workerd   # the same against the TinyGo Wasm under workerd
-mise run test           # the SDK test against a running run or dev (no webhook check)
+mise run test           # go test ./...: the API, and the same SDK surface as the oRPC showcase
+mise run showcase-test  # the SDK test against a running run or dev (no webhook check)
 mise run sdk:check-spec # fern check
 mise run sdk:gen go     # Fern (Docker); the other groups: typescript, typescript-public, typescript-dist, cli
 mise run deploy         # REMOTE: build and deploy charter-showcase-go. It has no storage

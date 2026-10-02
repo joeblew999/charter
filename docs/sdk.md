@@ -1,59 +1,58 @@
 ---
-title: Fern folder internals (sdk/)
+title: Fern folder internals (fern/, sdk/)
 nav_order: 5
 parent: This repository
 ---
-# sdk/: Fern, the SDKs it generates, and the Fern CLI
+# fern/ and sdk/ in each example: Fern, the SDKs it generates, and the Fern CLI
 
 Typed SDKs, a command-line program and a docs site, generated from each API's specs by **[Fern](https://buildwithfern.com)** (the `fern-api` npm package, running its generators locally in Docker). Read this page to generate or check an SDK, to add an API, to see which Fern feature is switched on how, or to work on the oRPC showcase and the harness Worker that runs the TypeScript SDK inside workerd. The Go showcase has its own page ([showcase-go.md](showcase-go.md)).
 
 
-## Tasks (from the repo root)
+## Tasks (in an example's folder)
 
 ```sh
-mise run doctor                           # check the setup: npm installs, Docker, Go, TinyGo, Rust
-mise run setup                            # npm packages, including Fern (fern-api) into sdk/node_modules
-mise run sdk:list                         # the APIs in sdk/fern/apis and the groups each one defines
-mise run sdk:check-spec            # fern check: validate an API's specs and settings
-mise run sdk:gen go                # generate one SDK (Docker) into examples/notes-go/sdk/out/go
-mise run sdk:check go              # prove it works. Go: build, vet, tests against WireMock. TypeScript: typecheck
-mise run sdk:ready                    # generate and build what the tests use, if missing: typescript-dist, go, cli
-mise run sdk:cli:build examples/notes-ts/sdk/out/cli    # HEAVY: build a generated Fern CLI natively; -linux before the folder builds for Linux in Docker
-mise run sdk:docs                         # preview Fern's API docs site: http://localhost:3030
+mise run doctor                           # check the setup: npm packages, Docker, Go, Rust
+mise run setup                            # npm packages, including Fern (fern-api)
+mise run sdk:list                         # the groups fern/generators.yml defines
+mise run sdk:check-spec                   # fern check: validate the specs and settings
+mise run sdk:gen go                       # generate one SDK (Docker) into sdk/out/go
+mise run sdk:check go                     # prove it works. Go: build, vet, tests against WireMock. TypeScript: typecheck
+mise run sdk:ready                        # generate and build what the tests use, if missing: typescript-dist, go, cli
+mise run sdk:cli:build                    # HEAVY: build the generated Fern CLI (sdk/out/cli) natively; -linux builds for Linux in Docker
+mise run sdk:docs                         # examples/notes-go and examples/showcase-ts: preview Fern's API docs site: http://localhost:3030
 mise run sdk:clean                        # remove sdk/out, stop leftover WireMock containers
 
-mise run spec                    # the oRPC showcase: write both specs again, after changing its contract
-mise run check                   # LOCAL: spec:check, fern check, test, lint
-mise run test                    # examples/showcase-ts/test, in Node: the server's routes, and the specs' surface
-mise run lint               # typecheck the harness Worker (copies the SDK in first)
-mise run test:workerd                 # LOCAL: the TypeScript SDK inside a Worker, under cf dev
-mise run test:workerd -remote         # REMOTE: the same on the deployed harness Worker
-mise run deploy               # REMOTE: deploy the harness Worker twice
+# in examples/showcase-ts, the oRPC showcase and the harness Worker:
+mise run spec                    # write both specs again, after changing its contract
+mise run check                   # LOCAL: spec:check, fern check, test, lint, test:workerd
+mise run test                    # test/, in Node: the server's routes, and the specs' surface
+mise run lint                    # typecheck the harness Worker (copies the SDK in first)
+mise run test:workerd            # LOCAL: the TypeScript SDK inside a Worker, under cf dev
+mise run live-test               # REMOTE: the same on the deployed harness Worker
+mise run deploy                  # REMOTE: deploy the harness Worker twice
 ```
 
 `mise run sdk:ready <group>...` takes the groups wanted; with none it makes the three above and builds the CLI. `mise run sdk:dist` and `mise run sdk:dist:cli` build what a release ships ([dev.md](dev.md#cutting-a-release)).
 
 ## Layout
 
-`sdk/fern/` is a **standard Fern project**, so Fern's own docs apply as they are.
+Each example's `fern/` is a **standard Fern project** with one API, so Fern's own docs apply as they are.
 
 ```
-sdk/
-├── package.json                  fern-api (pinned), TypeScript for sdk:check, and what the test programs import (ws, the MCP client)
-├── tsconfig.base.json            what sdk:check typechecks a TypeScript SDK against: standard fetch, no Node types
+examples/<example>/
+├── package.json                  fern-api (pinned), TypeScript for sdk:check, and what the test programs import (ws, the MCP client), beside what the Worker needs
 ├── fern/
 │   ├── fern.config.json          organization, and the CLI version ("*" = the local CLI)
-│   ├── docs.yml                  the docs site (mise run sdk:docs)
-│   └── apis/
-│       └── <api>/                one folder per API
-│           ├── openapi.json      the spec; asyncapi.json beside it where the API has a WebSocket
-│           ├── generators.yml    one group per SDK, options under config:
-│           └── overlays.yml      the two showcases only: an OpenAPI Overlay applied to the spec
-├── harness/                      the harness Worker: the oRPC showcase, and the TypeScript SDK inside workerd
-└── out/<api>/<group>/            Fern's output (gitignored)
+│   ├── openapi.json              the spec; asyncapi.json beside it
+│   ├── generators.yml            one group per SDK, options under config:
+│   ├── overlays.yml              the two showcases only: an OpenAPI Overlay applied to the spec
+│   └── docs.yml                  notes-go and showcase-ts: the docs site (mise run sdk:docs)
+└── sdk/
+    ├── go/                       notes-go only: the committed Go SDK (mise run sdk:publish)
+    └── out/<group>/              Fern's output (gitignored)
 ```
 
-| API folder | Its specs | Groups |
+| Fern folder | Its specs | Groups |
 |---|---|---|
 | `examples/notes-ts/fern/` | Generated from the oRPC contract (`mise run spec`) | `go`, `typescript`, `typescript-dist`, `cli` |
 | `examples/notes-go/fern/` | Generated from the Go contract (`mise run spec`) | the same four |
@@ -163,15 +162,17 @@ What it takes:
 
 ## SDKs and a CLI for the notes API
 
+In `examples/notes-ts`:
+
 ```sh
-mise run spec                         # contract -> examples/notes-ts/fern/{openapi,asyncapi}.json (offline; the server is API_URL)
+mise run spec                         # contract -> fern/{openapi,asyncapi}.json (offline; the server is API_URL)
 mise run sdk:gen go                   # the other groups: typescript, typescript-dist, cli
-mise run sdk:check examples/notes-ts/sdk/out/go
-mise run sdk:cli:build examples/notes-ts/sdk/out/cli    # then: examples/notes-ts/sdk/out/cli/target/release/notes notes list --page-all
+mise run sdk:check go
+mise run sdk:gen cli && mise run sdk:cli:build    # then: sdk/out/cli/target/release/notes notes list --page-all
 mise run live-test                    # SSE and WebSocket, raw and through the SDK
 ```
 
-The same with `api-go` in place of `api-ts` gives the SDKs and CLI from the Go contract's specs. The two Fern folders have the same groups and names, so the same test programs run against either SDK, and the SDKs from one server's specs work against the other server (2026-10-01, [findings.md](findings.md)).
+The same in `examples/notes-go` gives the SDKs and CLI from the Go contract's specs. The two Fern folders have the same groups and names, so the same test programs run against either SDK, and the SDKs from one server's specs work against the other server (2026-10-01, [findings.md](findings.md)).
 
 - **What works** (2026-09-30 for the oRPC specs, 2026-10-01 for the Go ones): the Go SDK builds, vets and passes its tests; the TypeScript SDK typechecks; the CLI runs against the deployed Worker: `meta hello`, `notes create`, `notes list --page-all` across pages, and `notes watch --after`.
 - **The one difference between the two:** Huma names its schemas (`components.schemas.Note`), so the SDKs from the Go specs have a shared `Note` type where the oRPC spec gives one type per response.
@@ -202,8 +203,8 @@ Limits of the generator:
 
 ## Good to know
 
-- **Versions are pinned.** `fern-api` 5.140.0 in `examples/notes-go/package.json`; in each `generators.yml`, `fern-go-sdk` 1.64.0, `fern-typescript-sdk` 3.98.0, `fern-python-sdk` 5.34.0 and `fern-cli-generator` 0.45.1 for the two notes APIs, 0.44.0 for the others. They were the latest when checked on 2026-09-29; Forge pins older ones.
+- **Versions are pinned.** `fern-api` 5.140.0 in each example's `package.json`; in each `generators.yml`, `fern-go-sdk` 1.64.0, `fern-typescript-sdk` 3.98.0, `fern-python-sdk` 5.34.0 and `fern-cli-generator` 0.45.1 for the two notes APIs, 0.44.0 for the others. They were the latest when checked on 2026-09-29; Forge pins older ones.
 - **Licensing is not settled.** Fern's docs call local generation, WebSocket clients, webhook signatures and the CLI generator Enterprise or early access, needing a `FERN_TOKEN`. All of it has run here without one ([plans/next.md](plans/next.md)).
-- **Where output goes:** `sdk/out/`, which is gitignored. The exception is `examples/notes-go/sdk/go/`, the committed copy of the Go API's Go SDK that another repo fetches with `go get`. Releases attach the SDK sources and the Linux CLIs to the GitHub Release ([dev.md](dev.md#cutting-a-release)). Publishing the SDKs as packages (npm, a repository per SDK) is planned, not done.
-- **The docs site covers two APIs.** `examples/notes-go/fern/docs.yml` lists the showcase and the notes API; `mise run sdk:docs` previews it locally. No task publishes it.
+- **Where output goes:** each example's `sdk/out/`, which is gitignored. The exception is `examples/notes-go/sdk/go/`, the committed copy of the Go API's Go SDK that another repo fetches with `go get`. Releases attach the SDK sources and the Linux CLIs to the GitHub Release ([dev.md](dev.md#cutting-a-release)). Publishing the SDKs as packages (npm, a repository per SDK) is planned, not done.
+- **Two examples have a docs site.** `examples/notes-go/fern/docs.yml` is the notes API's and `examples/showcase-ts/fern/docs.yml` the showcase's; `mise run sdk:docs` in either previews it locally. No task publishes it.
 - **`mise run sdk:check` on a Go SDK starts a WireMock container** and stops it again. `mise run sdk:clean` stops any that were left behind.

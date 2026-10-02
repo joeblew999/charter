@@ -57,16 +57,15 @@ A release is four git tags on one commit.
 
 | Tag | What it is for |
 |---|---|
-| `vX.Y.Z` | The release itself. The maintainer pushes this one; the GitHub Release is made for it |
+| `vX.Y.Z` | The release itself, and the version of the root Go module `github.com/joeblew999/charter`, which holds the tool (`cmd/charter`). The maintainer pushes this one; the GitHub Release is made for it |
 | `go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/charter/go`, which holds the packages and the Worker glue |
-| `cmd/charter/vX.Y.Z` | The version of the Go module `github.com/joeblew999/charter/cmd/charter`, which is the tool |
-| `sdk/go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/charter/examples/notes-go/sdk/go`, which is the Go SDK of the notes API |
+| `examples/notes-go/sdk/go/vX.Y.Z` | The version of the Go module `github.com/joeblew999/charter/examples/notes-go/sdk/go`, which is the Go SDK of the notes API |
 
-The three extra tags exist because of a rule of Go: a module that sits in a subdirectory of a repository only has a version under a tag that starts with the directory. Without `go/vX.Y.Z`, `go get` would not find the release; without `cmd/charter/vX.Y.Z`, `go run ...charter@latest` and mise's `go:` tools would not; without `sdk/go/vX.Y.Z`, another repo could only get the SDK at a branch or a commit. The release workflow adds all three on the commit of `vX.Y.Z`. No release has carried the `sdk/go` tag yet: the releases up to 2026-10-01 were cut before that module existed.
+The two extra tags exist because of a rule of Go: a module that sits in a subdirectory of a repository only has a version under a tag that starts with the directory. Without `go/vX.Y.Z`, `go get` would not find the release; without `examples/notes-go/sdk/go/vX.Y.Z`, another repo could only get the SDK at a branch or a commit. The release workflow adds all three on the commit of `vX.Y.Z`. No release has carried the `sdk/go` tag yet: the releases up to 2026-10-01 were cut before that module existed.
 
 A version is a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release. When `charter release` creates the GitHub Release of a tag with a hyphen, it marks it as a pre-release.
 
-Your own project has one Go module in a subdirectory, the project's folder, and a second, `sdk/go/`, once you publish its Go SDK ([Giving the Go SDK to another repo](../guides/sdks.md#giving-the-go-sdk-to-another-repo)). Its task `release:tags` adds `vX.Y.Z` and `sdk/go/vX.Y.Z` to your releases for the same reason.
+Your own project's Go module is at its root, so `vX.Y.Z` is its version. It has one Go module in a subdirectory, `sdk/go/`, once you publish its Go SDK ([Giving the Go SDK to another repo](../guides/sdks.md#giving-the-go-sdk-to-another-repo)). Its task `release:tags` adds `sdk/go/vX.Y.Z` to your releases for the same reason.
 
 ## How a project picks up a new release
 
@@ -103,7 +102,7 @@ A project made before Go runtimes were reused keeps working after an update, at 
 
    ```toml
    [tasks."build"]
-   run = "dev wasm-build -dir ."
+   run = "charter wasm-build"
    ```
 
 2. **The Worker's entry:** replace the project's own copies of the Worker's JavaScript (the folder beside `main.go`) with one file, `worker.mjs`, as [charter's](https://github.com/joeblew999/charter/blob/main/examples/notes-go/worker.mjs), and name it in `cloudflare.config.ts`. It imports `./build/go.mjs`, which the build now writes from the Go library, and `await go.warm({ paths: ["/api/openapi.json"] })` starts two Go runtimes while the module loads.

@@ -170,7 +170,20 @@ func each(args []string) error {
 			continue
 		}
 		fmt.Printf("== %s: mise run %s\n", dir, strings.Join(rest, " "))
-		if err := sh(dir, "mise", append([]string{"run"}, rest...)...); err != nil {
+		// Asking for a project's task is trusting its mise.toml: say so to mise, which otherwise
+		// stops at each project's file the first time, in a fresh checkout or on CI.
+		abs, err := filepath.Abs(dir)
+		if err != nil {
+			return err
+		}
+		trusted := abs
+		if already := os.Getenv("MISE_TRUSTED_CONFIG_PATHS"); already != "" {
+			trusted = already + string(os.PathListSeparator) + abs
+		}
+		cmd := exec.Command("mise", append([]string{"run"}, rest...)...)
+		cmd.Dir, cmd.Stdout, cmd.Stderr, cmd.Stdin = dir, os.Stdout, os.Stderr, os.Stdin
+		cmd.Env = append(os.Environ(), "MISE_TRUSTED_CONFIG_PATHS="+trusted)
+		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("%s: mise run %s failed", dir, rest[0])
 		}
 		ran++

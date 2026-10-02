@@ -29,9 +29,9 @@ Commit them. A project gets these four:
 | Workflow | Runs on | What it runs | Secrets |
 |---|---|---|---|
 | `check` | A push to `main`, every pull request, by hand | `mise run setup`, then `mise run check`: lint, Go tests, spec drift, the Wasm build, and the live and MCP tests natively and under workerd | none |
-| `sdk-check` | A push to `main`, every pull request, by hand | Two jobs, one per SDK (Go, TypeScript): `mise run sdk:gen api-go` for that group, then `mise run sdk:check` on the result. A third, `published`: `mise run sdk:publish:check`, which fails when the committed Go SDK in `sdk/go` is stale ([Giving the Go SDK to another repo](sdks.md#giving-the-go-sdk-to-another-repo)) | none |
+| `sdk-check` | A push to `main`, every pull request, by hand | Two jobs, one per SDK (Go, TypeScript): `mise run sdk:gen <group>`, then `mise run sdk:check <group>`. A third, `published`: `mise run sdk:publish:check`, which fails when the committed Go SDK in `sdk/go` is stale ([Giving the Go SDK to another repo](sdks.md#giving-the-go-sdk-to-another-repo)) | none |
 | `deploy` | By hand only | `cloudflare:token`, `setup`, `deploy`, `live-test` ([Deploy from GitHub](deploy.md#deploy-from-github)) | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
-| `release` | A version tag. As a dry run: by hand, and on pull requests that change `sdk/`, `mise.toml`, `go.mod` or the workflow itself | Two jobs. `sdk`: `mise run sdk:dist`, `mise run release`, then `mise run release:tags`. `cli`: `mise run sdk:dist:cli`, then `mise run release` | none: it uses the token GitHub gives the workflow |
+| `release` | A version tag. As a dry run: by hand, and on pull requests that change `fern/`, `sdk/`, `mise.toml`, `go.mod` or the workflow itself | Two jobs. `sdk`: `mise run sdk:dist`, `mise run release`, then `mise run release:tags`. `cli`: `mise run sdk:dist:cli`, then `mise run release` | none: it uses the token GitHub gives the workflow |
 
 Start one by hand with `gh workflow run check.yml`.
 
@@ -87,7 +87,7 @@ The tag must be a semantic version: `v1.2.3`, or `v1.2.3-rc.1` for a pre-release
 
 The `release` workflow then builds everything again from that commit and attaches it to the tag's GitHub Release. It creates the Release if there is none, with notes GitHub generates from the commits. A tag with a hyphen becomes a pre-release.
 
-The same workflow then runs `mise run release:tags`, which gives the project's Go modules their versions. A Go module in a subfolder is only found under a tag that starts with the folder, so it adds `vX.Y.Z` and, when the Go SDK has been published into `sdk/go`, `sdk/go/vX.Y.Z`, on the commit of `vX.Y.Z`. Outside a tag's workflow run the task is a dry run that prints the tags. This step has not run on GitHub in a project yet.
+The same workflow then runs `mise run release:tags`, which gives the project's Go modules their versions. A Go module in a subfolder is only found under a tag that starts with the folder, so, when the Go SDK has been published into `sdk/go`, it adds `sdk/go/vX.Y.Z` on the commit of `vX.Y.Z` (the project's own module is at the root: `vX.Y.Z` is its version). Outside a tag's workflow run the task is a dry run that prints the tags. This step has not run on GitHub in a project yet.
 
 A release does not deploy. Deploying is `deploy`, or `mise run deploy`.
 
@@ -122,7 +122,7 @@ A pull request that changes `sdk/` or `mise.toml` runs the same build as a dry r
 
 A project made by `charter new` uses the `charter` tool but has no `cmd/charter/` folder. That decides what it gets:
 
-- **No `check` and no `release` workflow.** Those two are written only into a repository that holds the tool's source: charter, or a fork of it.
+- **No jobs for the tool or the Go library.** The same four workflows are written into the charter repo with those jobs added, and with a job per example.
 - **No GoReleaser step.** GoReleaser builds the `charter` tool for charter's own releases. Your release has no binaries of the tool, and your `mise.toml` has no `charter:release` task.
 - **No packages.** Nothing is published to npm, the Go SDK is a module in the project's own repository (`sdk/go`) and not in one of its own, and there is no CLI for macOS or Windows ([Hand the SDKs to others](sdks.md#hand-the-sdks-to-others)).
 - **No deploy on push.** `deploy` runs by hand.

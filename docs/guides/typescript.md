@@ -14,7 +14,7 @@ That repository's own TypeScript Worker is checked on every push and was tested 
 
 ## See it run first
 
-In a checkout of charter:
+In `examples/notes-ts` of a checkout of charter:
 
 ```sh
 mise install && mise run setup
@@ -37,18 +37,18 @@ There is no native run: the Worker only runs under `cf dev` and on Cloudflare.
 | `examples/notes-ts/src/specs.ts` | Both specs from any contract | Nothing |
 | `examples/notes-ts/spec.ts`, `examples/notes-ts/spec-files.ts` | The command that writes the two spec files, or checks them | The names it imports from your contract |
 | `examples/notes-ts/cloudflare.config.ts`, `examples/notes-ts/package.json`, `examples/notes-ts/tsconfig.json`, `examples/notes-ts/vite.config.ts`, `examples/notes-ts/vitest.config.ts`, `examples/notes-ts/test/` | The Worker's settings, the pinned packages, the unit tests of the feed | The Worker's name |
-| `examples/notes-go/migrations/` | The D1 schema | Your tables |
+| `examples/notes-ts/migrations/` | The D1 schema | Your tables |
 | `examples/notes-ts/fern/` | The Fern folder: the two generated specs and `generators.yml` | The names in `generators.yml` ([Change the names](sdks.md#change-the-names)) |
-| `examples/notes-go/package.json`, `examples/notes-go/package-lock.json`, `sdk/tsconfig.base.json`, `examples/notes-go/fern/fern.config.json` | Fern itself, pinned | The organization name |
+| `examples/notes-ts/package.json`, `examples/notes-ts/package-lock.json`, `examples/notes-ts/fern/fern.config.json` | The Worker's packages, and Fern itself, pinned | The organization name |
 | `examples/notes-go/test/live-test.mjs`, `examples/notes-go/test/sdk-live-test.mjs`, `examples/notes-go/test/soak.mjs`, `examples/notes-go/test/soak-go/` | The test programs. They only know a URL | The SDK's names |
-| From `mise.toml`: the `[tools]` and `[env]` tables, `setup`, every `api:` task and every `sdk:` task | The tasks | See below |
+| `examples/notes-ts/mise.toml` | The tools and the tasks | See below |
 
 What needs care in the tasks:
 
-- **The tasks call the `charter` tool as `go run ./cmd/charter`.** In your repository, add the tool to `[tools]` as `"go:github.com/joeblew999/charter/cmd/charter" = "latest"` and write `charter` in place of `go run ./cmd/charter` and `go run ../../dev`.
-- **The tool finds the repository by a `go.work` file at its root** and stops without one. Keep the folder names `examples/notes-ts/`, `sdk/`, `examples/notes-go/migrations/` and `examples/notes-go/test/`: the tool looks for them.
-- **`migrate` and `migrate:local` take `-worker` with the Worker's name.** The database is that name followed by `-db`. With a name other than `charter`, `migrate:local` also needs `-port "$PORT"`.
-- **`charter workflows -into .` writes the Go API's jobs too.** In a repository with `examples/notes-ts/` and no Go API, remove those jobs from the written files by hand.
+- **The tasks call the `charter` tool as `go run ../../cmd/charter`.** In your repository, add the tool to `[tools]` as `"go:github.com/joeblew999/charter/cmd/charter" = "latest"` and write `charter` in place of `go run ../../cmd/charter`.
+- **The tool finds the project by its `mise.toml` beside a `fern/` folder** and stops without one. Keep the folder names `fern/`, `sdk/` and `migrations/`: the tool looks for them. The live tests are run from `examples/notes-go/test/` by relative path: copy that folder too, and change the paths in the `live-test` and `soak` tasks.
+- **`migrate` and `migrate:local` take the Worker's name from `API_URL`:** the first label of its host. The database is that name followed by `-db`.
+- **`charter workflows -into .` writes a project's four workflows.** They name tasks a Go project has (`sdk:publish:check`, `release:tags`, `cloudflare:token`): add those you want to your `mise.toml`, or remove the steps from the written files by hand.
 
 ## Where each thing lives, in Go and in TypeScript
 

@@ -128,7 +128,7 @@ The feed is the only code that handles failure, so it has unit tests (`examples/
 | Long idle | `--idle 20`: 20 minutes with no notes, then one | the note arrives |
 
 - **Clients (7):** raw SSE with `after`, SSE with `Last-Event-ID` (what `EventSource` sends), the TypeScript SDK's `notes.watch()`, the Go SDK's `Notes.Watch()`, the Fern CLI's `notes watch`, a raw WebSocket, and the TypeScript SDK's `liveNotes.connect({ after })`.
-- **Runner:** `mise run soak` and `mise run soak` (`examples/notes-go/test/soak.mjs`, [testing.md](testing.md)). PASS is every note exactly once, in order. Latency is reported, not judged: the Fern CLI prints json/jsonl only when a stream ends.
+- **Runner:** `mise run soak` in each notes example (`examples/notes-go/test/soak.mjs`, [testing.md](testing.md)). PASS is every note exactly once, in order. Latency is reported, not judged: the Fern CLI prints json/jsonl only when a stream ends.
 
 Results, on the deployed Workers:
 

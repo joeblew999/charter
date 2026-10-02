@@ -7,9 +7,11 @@ parent: This repository
 
 The Go Worker: the notes API of [api.md](api.md#the-notes-api), written in Go. [Huma](https://huma.rocks) is the contract, [workers-go](https://github.com/syumai/workers-go) runs it on Cloudflare Workers, and TinyGo builds the Wasm. From the one Go contract come the handlers' validation, both specs (which Fern turns into SDKs, a CLI and docs, as for the oRPC Worker: [sdk.md](sdk.md)) and MCP tools ([mcp.md](mcp.md)). Read this page to run or change the Go Worker, to learn what Huma needs on workers-go, or to start a Go project from it.
 
-`examples/notes-go/` is also a Go module that other projects import: the packages marked "Import it" below. A second API lives in the same module, the Go showcase ([showcase-go.md](showcase-go.md)).
+The packages marked "Import it" below are the Go library in `go/`, a module of its own that this project requires. A second API in Go, the Go showcase, is a project of its own in `examples/showcase-go/` ([showcase-go.md](showcase-go.md)).
 
 ## Tasks (from the repo root)
+
+Each example is a project with its own tasks: run these in `examples/notes-go/`.
 
 ```sh
 mise run run            # natively on :5174 (API_PORT): no Cloudflare, an in-memory store
@@ -19,8 +21,8 @@ mise run build          # the Wasm into examples/notes-go/build; run it after a 
 mise run spec           # write both specs again, after changing the contract
 mise run check          # LOCAL: lint, test, spec:check, test:native and test:workerd (the five below)
 mise run lint           # gofmt, and go vet for the host and for Wasm
-mise run test           # go test ./... (the whole module, the Go showcase included)
-mise run go:check              # the library in go/ (its own module): gofmt, go vet for the host and for Wasm, go test
+mise run test           # go test ./...
+mise run go:check       # at the repo's root: the library in go/ (its own module): gofmt, go vet for the host and for Wasm, go test
 mise run spec:check     # fail if a committed spec is stale against the contract
 mise run test:native    # the live test and the MCP test against the native build
 mise run test:workerd   # the same against the TinyGo Wasm under workerd
@@ -120,7 +122,7 @@ It passes the same tests as the oRPC Worker and costs about the same to run: on 
 
 ## Differences from the oRPC Worker
 
-Fern sees the same API: the same operations, parameters, constraints, `x-fern-*` extensions and WebSocket channel. `TestTheNotesExamplesHaveTheSameSurface` (`examples/surface_test.go`) checks this against the committed oRPC specs in `examples/notes-ts/fern/`. What differs:
+Fern sees the same API: the same operations, parameters, constraints, `x-fern-*` extensions and WebSocket channel. `TestTheNotesExamplesHaveTheSameSurface` (`examples/surface_test.go`, in `mise run charter:check`) checks this, the committed Go specs against the committed oRPC specs in `examples/notes-ts/fern/`. What differs:
 
 - **Invalid input is 422** with Huma's `application/problem+json` body (`errors[].location`, e.g. `query.limit`), where oRPC answers 400. The spec declares it by status, so the Go SDK gets a typed error ([above](#how-it-fits-together)).
 - **A known path with the wrong method is 405,** where the oRPC Worker answers 404.

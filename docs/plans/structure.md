@@ -15,7 +15,7 @@ go/         the Go library other repos import: humaworkers, transport, hub, d1, 
             humamcp, asyncapi, specfile, and the Worker glue (worker/*.mjs)
 ts/         the TypeScript library, when there is one to publish (the AsyncAPI generator, follow)
 examples/   notes-go, showcase-go, notes-ts, showcase-ts: each a complete project
-dev/        the tool behind every task
+cmd/charter/ the tool behind every task (the root module)
 docs/
 ```
 
@@ -42,5 +42,5 @@ test/
 ## Steps
 
 1. **The library on its own:** `go/` as a module, the glue shipped by the build. Done 2026-10-02: `go/` is the module `github.com/joeblew999/charter/go` (the packages and `go/worker/*.mjs`), `examples/notes-go/` requires it, `charter wasm-build` writes the glue into `build/`, and each example has one entry file, `worker.mjs`.
-2. **The examples as projects:** `examples/*`, each with its own `mise.toml`; the charter tool works on the current project; `charter new` copies. Not started.
+2. **The examples as projects:** `examples/*`, each with its own `mise.toml`; the tool works on the current project; `charter new` copies. Done 2026-10-02, with the rename to charter: the tool is `cmd/charter` in the root module `github.com/joeblew999/charter`, a project is a folder with a `mise.toml` beside a `fern/` folder, `charter new` copies `examples/notes-go`, and the repo's own `mise.toml` runs each example's tasks with `charter each`.
 3. **The docs, once, against the final shape.** Not started.
