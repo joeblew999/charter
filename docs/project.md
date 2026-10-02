@@ -21,6 +21,7 @@ For people and agents changing orpc-api itself. If you are building an API with 
 | [benchmarks.md](benchmarks.md) | What a request costs on each Worker |
 | [upstream.md](upstream.md) | Every upstream issue worked around |
 | [findings.md](findings.md) | Verified results only, newest last |
+| [plans/structure.md](plans/structure.md) | One project shape for the library, the examples and new projects: the restructure under way |
 | [plans/next.md](plans/next.md) | What is not built yet |
 
 ## What is what
