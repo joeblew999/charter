@@ -4,7 +4,7 @@ instances:
   - url: orpc-api.docs.buildwithfern.com
 title: orpc-api APIs
 navigation:
+  - api: Notes API
+    api-name: api-go
   - api: Showcase API
     api-name: showcase-ts
-  - api: Petstore API
-    api-name: petstore

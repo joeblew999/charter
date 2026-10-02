@@ -34,7 +34,7 @@ func sdkPublish(args []string) error {
 	if len(rest) != 1 {
 		return errors.New("sdk-publish needs <api>: a folder in sdk/fern/apis with a go group")
 	}
-	api, out := rest[0], filepath.Join("sdk/out", rest[0], "go")
+	api, out := rest[0], sdkOut(rest[0], "go")
 	into = filepath.Clean(into)
 	if check && !exists(into) {
 		fmt.Printf("%s: not published yet (mise run sdk:publish writes it)\n", into)
@@ -100,7 +100,7 @@ func sdkPublish(args []string) error {
 		return nil
 	}
 	// Proven before it is committed: build, vet, and Fern's tests against WireMock.
-	if err := sdkCheck([]string{out}); err != nil {
+	if err := sdkCheckDir(out); err != nil {
 		return err
 	}
 	if err := os.RemoveAll(into); err != nil {

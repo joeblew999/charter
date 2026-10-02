@@ -15,11 +15,11 @@ import (
 
 func init() {
 	commands["sdk-gen"] = command{"<api> <group>", "generate one SDK with Fern (Docker) into sdk/out/<api>/<group>", sdkGen}
-	commands["sdk-check"] = command{"<dir>", "prove a generated SDK works: Go = build, vet, tests against WireMock; TypeScript = typecheck", sdkCheck}
+	commands["sdk-check"] = command{"<api> <group>", "prove a generated SDK works (sdk/out/<api>/<group>): Go = build, vet, tests against WireMock; TypeScript = typecheck", sdkCheck}
 	commands["sdk-ready"] = command{"<api> [group...]", "generate and build what the tests use, if missing: TypeScript and Go SDKs, the Fern CLI (or only the groups named, any of the API's)", sdkReady}
 	commands["sdk-list"] = command{"", "the APIs in sdk/fern/apis and the SDK groups each one defines", sdkList}
 	commands["sdk-clean"] = command{"", "remove generated SDKs (sdk/out) and stop leftover WireMock containers", sdkClean}
-	commands["cli-build"] = command{"[-linux] <dir>", "HEAVY: build a Fern-generated Rust CLI, natively or for Linux in Docker", cliBuild}
+	commands["cli-build"] = command{"[-linux] <api>", "HEAVY: build an API's generated Rust CLI (sdk/out/<api>/cli), natively or for Linux in Docker", cliBuild}
 }
 
 const wiremock = "ancestor=wiremock/wiremock:3.9.1"
@@ -41,11 +41,23 @@ func sdkGen(args []string) error {
 	return sh("sdk", fern, "generate", "--local", "--api", args[0], "--group", args[1], "--force", "--log-level", "warn")
 }
 
+// sdkOut is where Fern puts a group of an API: the output path every generators.yml names.
+func sdkOut(api, group string) string {
+	return filepath.Join("sdk/out", api, group)
+}
+
 func sdkCheck(args []string) error {
-	if len(args) != 1 {
-		return errors.New("sdk-check needs <dir>, e.g. sdk/out/petstore/go")
+	if len(args) != 2 {
+		return errors.New("sdk-check needs <api> <group>, as sdk-gen does: it checks sdk/out/<api>/<group>")
 	}
-	dir := args[0]
+	dir := sdkOut(args[0], args[1])
+	if !exists(dir) {
+		return fmt.Errorf("no %s: mise run sdk:gen %s %s", dir, args[0], args[1])
+	}
+	return sdkCheckDir(dir)
+}
+
+func sdkCheckDir(dir string) error {
 	if exists(filepath.Join(dir, "go.mod")) {
 		// Generated modules aren't in go.work: build them on their own.
 		off := []string{"GOWORK=off"}
@@ -135,7 +147,7 @@ func sdkReady(args []string) error {
 		return err
 	}
 	if !exists(filepath.Join(cli, "target/release", bin)) {
-		return cliBuild([]string{cli})
+		return cliBuildDir(cli, false)
 	}
 	return nil
 }
@@ -145,25 +157,37 @@ func sdkList([]string) error {
 	if err != nil {
 		return err
 	}
-	group := regexp.MustCompile(`^  ([A-Za-z0-9_-]+):`)
 	for _, file := range apis {
-		f, err := os.Open(file)
+		groups, err := sdkGroups(file)
 		if err != nil {
 			return err
 		}
-		var groups []string
-		in := false
-		for scanner := bufio.NewScanner(f); scanner.Scan(); {
-			if strings.HasPrefix(scanner.Text(), "groups:") {
-				in = true
-			} else if m := group.FindStringSubmatch(scanner.Text()); in && m != nil {
-				groups = append(groups, m[1])
-			}
-		}
-		f.Close()
 		fmt.Printf("%s: %s\n", filepath.Base(filepath.Dir(file)), strings.Join(groups, " "))
 	}
 	return nil
+}
+
+// sdkCommon are the groups every API's generators.yml defines, in this order (a test holds them to it).
+var sdkCommon = []string{"go", "typescript", "typescript-dist", "cli"}
+
+// sdkGroups are the groups a generators.yml defines, in the file's order.
+func sdkGroups(file string) ([]string, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	group := regexp.MustCompile(`^  ([A-Za-z0-9_-]+):`)
+	var groups []string
+	in := false
+	for scanner := bufio.NewScanner(f); scanner.Scan(); {
+		if strings.HasPrefix(scanner.Text(), "groups:") {
+			in = true
+		} else if m := group.FindStringSubmatch(scanner.Text()); in && m != nil {
+			groups = append(groups, m[1])
+		}
+	}
+	return groups, nil
 }
 
 func sdkClean([]string) error {
@@ -195,16 +219,23 @@ func cargoBin(dir string) (string, error) {
 	return "", fmt.Errorf("%s/Cargo.toml has no [[bin]] name", dir)
 }
 
-// cliBuild compiles every Rust dependency the first time: minutes at full CPU.
 func cliBuild(args []string) error {
 	var linux bool
 	rest := flags("cli-build", args, func(f *flag.FlagSet) {
 		f.BoolVar(&linux, "linux", false, "build for Linux inside Docker (the container's arch)")
 	})
 	if len(rest) != 1 {
-		return errors.New("cli-build needs <dir>, e.g. sdk/out/api-ts/cli")
+		return errors.New("cli-build needs <api>: it builds sdk/out/<api>/cli")
 	}
-	dir := rest[0]
+	dir := sdkOut(rest[0], "cli")
+	if !exists(dir) {
+		return fmt.Errorf("no %s: mise run sdk:gen %s cli", dir, rest[0])
+	}
+	return cliBuildDir(dir, linux)
+}
+
+// cliBuildDir compiles every Rust dependency the first time: minutes at full CPU.
+func cliBuildDir(dir string, linux bool) error {
 	bin, err := cargoBin(dir)
 	if err != nil {
 		return err

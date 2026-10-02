@@ -1,11 +1,10 @@
-# The showcase API from a Go contract: openapi.json and asyncapi.json are written by
-# `mise run showcase:go:spec` from api/go/showcase/contract.go (never by hand). Everything the oRPC
-# showcase (../showcase-ts) says is said there, in Go: OAuth client credentials (the security scheme and
-# a form-encoded token endpoint; auth-schemes below points the SDKs at it), idempotency, cursor
-# pagination, SSE, multipart upload, webhooks with HMAC signatures, the WebSocket both ways, and
-# audiences. The overlay is the same as ../showcase-ts's. See docs/showcase-go.md.
-# Same groups and names as ../showcase-ts, so the same code runs against either SDK.
-# Generate: mise run sdk:gen showcase-go <group>   (output: sdk/out/showcase-go/<group>)
+# The showcase API from the Go contract. openapi.json and asyncapi.json are written by
+# `mise run showcase:go:spec` from api/go/showcase/contract.go (never by hand).
+# Every Fern feature we use, through standard options only: OAuth client credentials (auth-schemes
+# below, the token endpoint in openapi.json), idempotency (x-fern-idempotent), SSE (x-fern-streaming),
+# cursor pagination (x-fern-pagination), multipart upload, OpenAPI 3.1 webhooks with HMAC signatures
+# (x-fern-webhook-signature), the WebSocket both ways (asyncapi.json), an overlay (overlays.yml) and
+# audiences (the typescript-public group).
 auth-schemes:
   OAuth:
     scheme: oauth
@@ -28,7 +27,10 @@ api:
       overlays: overlays.yml
     - asyncapi: asyncapi.json
 
+# The same groups, in the same order, in every API (mise run sdk:list).
+# Generate one: mise run sdk:gen showcase-go <group>   (output: sdk/out/showcase-go/<group>)
 groups:
+  # The Go SDK.
   go:
     generators:
       - name: fernapi/fern-go-sdk
@@ -42,6 +44,7 @@ groups:
             version: "1.22"
           packageName: showcase
 
+  # The TypeScript SDK as sources (.ts): what a release ships.
   typescript:
     generators:
       - name: fernapi/fern-typescript-sdk
@@ -55,7 +58,33 @@ groups:
           # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
           guardProcessEnvAccess: true
 
-  # Audiences: the same spec, minus everything not tagged "public" (here: the internal file upload).
+  # The TypeScript SDK compiled (.js + .d.ts): what a Worker or a Node program imports, and what the tests use.
+  typescript-dist:
+    generators:
+      - name: fernapi/fern-typescript-sdk
+        version: 3.98.0
+        output:
+          location: local-file-system
+          path: ../../../out/showcase-go/typescript-dist
+        config:
+          namespaceExport: Showcase
+          generateWebSocketClients: true
+          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
+          guardProcessEnvAccess: true
+          outputSourceFiles: false
+
+  # A Rust CLI for the API (Fern's CLI generator, early access).
+  cli:
+    generators:
+      - name: fernapi/fern-cli-generator
+        version: 0.44.0
+        output:
+          location: local-file-system
+          path: ../../../out/showcase-go/cli
+        config:
+          binaryName: showcase
+
+  # Only the showcases. Audiences: the same spec, minus everything not tagged "public" (here: the internal file upload).
   typescript-public:
     audiences:
       - public
@@ -68,29 +97,5 @@ groups:
         config:
           namespaceExport: Showcase
           generateWebSocketClients: true
+          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
           guardProcessEnvAccess: true
-
-  # Compiled (.js + .d.ts), the way an npm package reaches its users: what test/showcase-test.mjs uses.
-  typescript-dist:
-    generators:
-      - name: fernapi/fern-typescript-sdk
-        version: 3.98.0
-        output:
-          location: local-file-system
-          path: ../../../out/showcase-go/typescript-dist
-        config:
-          namespaceExport: Showcase
-          generateWebSocketClients: true
-          guardProcessEnvAccess: true
-          outputSourceFiles: false
-
-  # Fern's CLI generator (early access): a Rust CLI for this API.
-  cli:
-    generators:
-      - name: fernapi/fern-cli-generator
-        version: 0.44.0
-        output:
-          location: local-file-system
-          path: ../../../out/showcase-go/cli
-        config:
-          binaryName: showcase

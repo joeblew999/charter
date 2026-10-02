@@ -74,7 +74,7 @@ func distSDK(apis []string) error {
 	}
 	for _, api := range apis {
 		for _, group := range []string{"go", "typescript"} {
-			dir := filepath.Join("sdk/out", api, group)
+			dir := sdkOut(api, group)
 			// Fresh, so that what ships is what the committed specs give, and proven before it ships.
 			if err := os.RemoveAll(dir); err != nil {
 				return err
@@ -82,7 +82,7 @@ func distSDK(apis []string) error {
 			if err := sdkGen([]string{api, group}); err != nil {
 				return err
 			}
-			if err := sdkCheck([]string{dir}); err != nil {
+			if err := sdkCheckDir(dir); err != nil {
 				return err
 			}
 			if err := archive(api+"-sdk-"+group, dir, nil); err != nil {
@@ -108,7 +108,7 @@ func distCLI(args []string) error {
 		return err
 	}
 	for _, api := range apis {
-		dir := filepath.Join("sdk/out", api, "cli")
+		dir := sdkOut(api, "cli")
 		if err := sdkGen([]string{api, "cli"}); err != nil {
 			return err
 		}
@@ -116,11 +116,11 @@ func distCLI(args []string) error {
 		if err != nil {
 			return err
 		}
-		build, target, goos := []string{dir}, "target", runtime.GOOS
+		target, goos := "target", runtime.GOOS
 		if linux {
-			build, target, goos = []string{"-linux", dir}, "target-linux", "linux"
+			target, goos = "target-linux", "linux"
 		}
-		if err := cliBuild(build); err != nil {
+		if err := cliBuildDir(dir, linux); err != nil {
 			return err
 		}
 		// Both APIs' CLIs have the same binary name, so the file is named after its API.

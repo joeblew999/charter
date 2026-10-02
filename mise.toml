@@ -45,7 +45,7 @@ run = "for dir in api/ts api/go sdk sdk/harness; do npm ci --prefix $dir --no-fu
 
 [tasks.check]
 description = "Every LOCAL check (no Cloudflare account; needs Docker)"
-depends = ["api:ts:check", "api:go:check", "showcase:go:check", "dev:check", "sdk:demo", "showcase:ts:check", "sdk:harness:test"]
+depends = ["api:ts:check", "api:go:check", "showcase:go:check", "dev:check", "showcase:ts:check", "sdk:harness:test"]
 
 [tasks.compare]
 description = "REMOTE, writes test notes: the same bench against the TypeScript Worker and then the Go Worker, with writes and the CPU of each request: are they level? About three minutes"
@@ -363,7 +363,7 @@ description = "Generate an SDK with Fern (Docker): mise run sdk:gen <api> <group
 run = "go run ./dev sdk-gen"
 
 [tasks."sdk:check"]
-description = "Prove a generated SDK works (Go: build, vet, tests against WireMock; TypeScript: typecheck): mise run sdk:check <dir>"
+description = "Prove a generated SDK works (Go: build, vet, tests against WireMock; TypeScript: typecheck): mise run sdk:check <api> <group>"
 run = "go run ./dev sdk-check"
 
 [tasks."sdk:ready"]
@@ -382,12 +382,8 @@ run = "go run ./dev sdk-publish -check api-go"
 description = "Fail if the specs changed since sdk/go was made from them (no Docker: it compares a hash). sdk:publish:check proves the content"
 run = "go run ./dev sdk-publish -check -quick api-go"
 
-[tasks."sdk:demo"]
-description = "Small end-to-end run: Go + TypeScript SDKs for the petstore API, checked"
-run = "for group in go typescript; do go run ./dev sdk-gen petstore $group && go run ./dev sdk-check sdk/out/petstore/$group; done"
-
 [tasks."sdk:cli:build"]
-description = "HEAVY: build a Fern-generated Rust CLI: mise run sdk:cli:build [-linux] <dir>, e.g. sdk/out/api-ts/cli"
+description = "HEAVY: build an API's generated Rust CLI in sdk/out/<api>/cli: mise run sdk:cli:build [-linux] <api>"
 run = "go run ./dev cli-build"
 
 [tasks."sdk:dist"]
@@ -404,10 +400,6 @@ dir = "sdk"
 # Fern runs its preview app from ~/.fern, outside this repo: tell mise's shims which node to use there.
 env = { MISE_NODE_VERSION = "26.10.0" }
 run = "./node_modules/.bin/fern docs dev --port 3030"
-
-[tasks."sdk:cloudflare"]
-description = "HEAVY (26 MB spec): add Cloudflare products as an API, sliced from Forge's spec: mise run sdk:cloudflare [-products d1,kv]"
-run = "go run ./dev cloudflare-spec"
 
 [tasks."sdk:clean"]
 description = "Remove generated SDKs (sdk/out) and stop leftover WireMock containers"

@@ -1,8 +1,7 @@
 # Written by `dev workflows` from its template (github.com/joeblew999/orpc-api/dev, dev/workflows/sdk-check.yml):
 # change the template, not this file. Every step that does work is a mise task, so it runs locally too.
-# Fern (in Docker): the petstore demo, the showcase (its specs match its contract; the TypeScript SDK inside
-# workerd), the Go and TypeScript SDKs of both APIs and both showcases, and the committed Go SDK (sdk/go) is
-# what the specs generate.
+# Fern (in Docker): the showcase (its specs match its contract; the TypeScript SDK inside workerd), the Go and
+# TypeScript SDKs of both APIs and both showcases, and the committed Go SDK (sdk/go) is what the specs generate.
 name: sdk-check
 on:
   push:
@@ -12,14 +11,6 @@ on:
 permissions:
   contents: read
 jobs:
-  demo:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: jdx/mise-action@v5.0.1
-      - run: mise run setup
-      - run: mise run sdk:demo
   harness:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -42,7 +33,7 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: mise run setup
       - run: mise run sdk:gen ${{ matrix.api }} ${{ matrix.group }}
-      - run: mise run sdk:check sdk/out/${{ matrix.api }}/${{ matrix.group }}
+      - run: mise run sdk:check ${{ matrix.api }} ${{ matrix.group }}
   published:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
