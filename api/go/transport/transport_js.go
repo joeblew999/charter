@@ -132,7 +132,7 @@ type response struct {
 	status    int
 	body      []byte
 	streaming bool // the status and headers have gone to JavaScript
-	gone      bool // and the client has gone
+	closed    bool // nothing more can be sent: the handler has returned, or the client has gone
 }
 
 func (w *response) Header() http.Header { return w.header }
@@ -144,7 +144,7 @@ func (w *response) WriteHeader(status int) {
 }
 
 func (w *response) Write(p []byte) (int, error) {
-	if w.gone {
+	if w.closed {
 		return 0, io.ErrClosedPipe
 	}
 	w.WriteHeader(http.StatusOK)
@@ -158,8 +158,11 @@ func (w *response) Write(p []byte) (int, error) {
 func (w *response) Flush() { w.send(true) }
 
 // send gives JavaScript what was written since the last send. more says whether the handler is
-// still running.
+// still running: after the last send the binding's functions are the next request's.
 func (w *response) send(more bool) {
+	if w.closed {
+		return
+	}
 	body := js.Null()
 	if len(w.body) > 0 {
 		body = uint8Array.New(len(w.body))
@@ -167,10 +170,10 @@ func (w *response) send(more bool) {
 		w.body = w.body[:0]
 	}
 	if w.streaming {
-		w.gone = !binding.Call("write", body, more).Bool()
+		w.closed = !binding.Call("write", body, more).Bool() || !more
 		return
 	}
-	w.streaming = true
+	w.streaming, w.closed = true, !more
 	w.WriteHeader(http.StatusOK)
 	var head []byte
 	for name, values := range w.header {

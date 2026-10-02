@@ -148,8 +148,9 @@ export function goWorker({ createRuntimeContext, loadModule }) {
 				if (request.headers.has("x-go-runtime")) headers.set("x-go-runtime", warmFailure ? `${kind}; ${warmFailure}` : kind);
 				// The whole answer: the runtime is free for the next request.
 				if (!more) {
+					const response = new Response(body, { status, headers });
 					done(runtime);
-					return resolve(new Response(body, { status, headers }));
+					return resolve(response);
 				}
 				// A stream: the runtime is free when Go has written the last of it. If the client goes
 				// away first, Go is told (transport.Serve cancels the request's context) and the
