@@ -14,8 +14,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/orpc-api/api/go/asyncapi"
-	"github.com/joeblew999/orpc-api/api/go/humaworkers"
+	"github.com/joeblew999/orpc-api/go/asyncapi"
+	"github.com/joeblew999/orpc-api/go/humaworkers"
 )
 
 // What the specs say about the API as a whole.
@@ -77,7 +77,7 @@ type WatchInput struct {
 
 type LiveInput struct {
 	After string `query:"after" pattern:"^\\d+$" example:"42" doc:"Resume after this note id (the id of the last note you received). Absent: only notes created from now on"`
-	// The Worker's entry (worker/index.mjs) passes the upgrade request on; a plain GET is refused.
+	// The Worker's entry (worker.mjs) passes the upgrade request on; a plain GET is refused.
 	Upgrade string `header:"Upgrade" hidden:"true"`
 }
 

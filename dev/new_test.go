@@ -35,6 +35,9 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 	workerURL(t, into, "billing-api.your-subdomain.workers.dev")
 	for file, want := range map[string]string{
 		"api/go/go.mod":                       "module github.com/zeta/billing-api/api/go",
+		"api/go/go.mod ":                      "replace " + libraryModule + " => " + filepath.Join(repo, "go"),
+		"api/go/worker.mjs":                   `import { goWorker } from "./build/go.mjs";`,
+		"api/go/api/handlers.go":              `"` + libraryModule + `/humaworkers"`,
 		"api/go/main.go":                      `"github.com/zeta/billing-api/api/go/api"`,
 		"api/go/cloudflare.config.ts":         "`billing-api-${ctx.mode}` : \"billing-api\"",
 		"sdk/fern/apis/api-go/generators.yml": "namespaceExport: BillingApi",
@@ -86,6 +89,12 @@ func TestNewProjectBuildsUnderItsOwnName(t *testing.T) {
 	if strings.Contains(string(generators), "api-ts") {
 		t.Error("generators.yml mentions api-ts")
 	}
+	// The library and its Worker glue are required, not copied.
+	for _, gone := range []string{"go", "api/go/worker", "api/go/humaworkers", "api/go/transport"} {
+		if exists(filepath.Join(into, gone)) {
+			t.Errorf("%s was copied: it is the library's", gone)
+		}
+	}
 	if exists(filepath.Join(into, "api/go/api/surface_test.go")) {
 		t.Error("the oRPC same-surface test was copied")
 	}
@@ -128,7 +137,7 @@ func TestNewProjectOnYourSubdomain(t *testing.T) {
 // What the first line says a release pins, and what a checkout does.
 func TestPinned(t *testing.T) {
 	for want, got := range map[string]string{
-		"dev v1.2.3: pins the dev tool to v1.2.3 in mise.toml and the Go packages to v1.2.3 in api/go/go.mod":                                  pinned("v1.2.3", false, "/tmp/clone"),
+		"dev v1.2.3: pins the dev tool to v1.2.3 in mise.toml and the Go library to v1.2.3 in api/go/go.mod":                                   pinned("v1.2.3", false, "/tmp/clone"),
 		"dev v1.2.3, copying from /src: pins the dev tool to v1.2.3 in mise.toml; api/go/go.mod builds against that checkout (a replace line)": pinned("v1.2.3", true, "/src"),
 	} {
 		if got != want {

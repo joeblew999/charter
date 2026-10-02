@@ -10,7 +10,7 @@ package main
 
 import (
 	"github.com/joeblew999/orpc-api/api/go/showcase"
-	"github.com/joeblew999/orpc-api/api/go/specfile"
+	"github.com/joeblew999/orpc-api/go/specfile"
 )
 
 func main() {

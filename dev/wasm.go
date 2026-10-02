@@ -13,7 +13,7 @@ import (
 
 func init() {
 	commands["wasm-build"] = command{"[-dir api/go] [-heap 8] [-opt z] [-stack 128kb] [-max 3000000] [-plain]",
-		"build a Go Worker's Wasm with TinyGo, tuned for Workers (see docs: Go on Cloudflare Workers); -plain: TinyGo as it is", wasmBuild}
+		"build a Go Worker's Wasm with TinyGo, tuned for Workers (see docs: Go on Cloudflare Workers), and write the Go library's Worker glue beside it; -plain: TinyGo as it is", wasmBuild}
 }
 
 // The changes made to TinyGo, in its runtime source (read at build time: the compiler is not
@@ -69,7 +69,9 @@ var (
 `},
 }
 
-// wasmBuild builds dir's Go program into dir/build/app.wasm for workers-go:
+// wasmBuild builds dir's Go program into dir/build/app.wasm for workers-go, and fills dir/build
+// with the JavaScript that runs it: workers-go's (wasm_exec.js, runtime.mjs) and the Go library's
+// (glue). The Wasm is built:
 //   - with the runtime patch above;
 //   - with a starting heap of -heap MB, so the collector does not run at all in an ordinary request
 //     (TinyGo starts with a heap of a few pages and collects every time it has to grow);
@@ -78,7 +80,7 @@ var (
 func wasmBuild(args []string) error {
 	dir, stack, opt, heap, max, plain := "api/go", "128kb", "z", 8, 3000000, false
 	flags("wasm-build", args, func(f *flag.FlagSet) {
-		f.StringVar(&dir, "dir", dir, "the folder of the Go program (its build/ gets the Wasm and workers-go's glue)")
+		f.StringVar(&dir, "dir", dir, "the folder of the Go program (its build/ gets the Wasm, workers-go's glue and the library's)")
 		f.IntVar(&heap, "heap", heap, "starting heap in MB (0: TinyGo's own, a few pages)")
 		f.StringVar(&stack, "stack", stack, "stack per goroutine")
 		f.StringVar(&opt, "opt", opt, "TinyGo's optimisation level: z and s for size, 1 and 2 for speed")
@@ -86,6 +88,9 @@ func wasmBuild(args []string) error {
 		f.BoolVar(&plain, "plain", false, "build with TinyGo as it is: no runtime patch, no starting heap (to compare)")
 	})
 	if err := sh(dir, "go", "run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=tinygo"); err != nil {
+		return err
+	}
+	if err := glue(dir); err != nil {
 		return err
 	}
 	target, env := "wasm", os.Environ()
@@ -107,6 +112,36 @@ func wasmBuild(args []string) error {
 		return err
 	}
 	return size([]string{"-max", fmt.Sprint(max), filepath.Join(dir, "build", "app.wasm")})
+}
+
+// libraryModule is the Go library a Go Worker is built on (go/ in this repo): its packages, and in
+// worker/ the JavaScript that the packages transport and hub talk to.
+const libraryModule = repoModule + "/go"
+
+// glue writes the library's Worker glue (worker/*.mjs: go.mjs, hub.mjs, websocket.mjs,
+// tinygo-clock.mjs) into dir/build, where the project's entry imports it. It is taken from the
+// library module as the project in dir resolves it: this repo's go/ through go.work, the module
+// cache at the version go.mod pins anywhere else. So the JavaScript is always the one written for
+// the Go the project builds against, and no project keeps a copy that can fall behind.
+func glue(dir string) error {
+	library, err := output(dir, "go", "list", "-m", "-f", "{{.Dir}}", libraryModule)
+	if err != nil || library == "" {
+		return fmt.Errorf("wasm-build: the Go module in %s does not require %s, which has the Worker glue (go get %s)", dir, libraryModule, libraryModule)
+	}
+	files, err := filepath.Glob(filepath.Join(library, "worker", "*.mjs"))
+	if err != nil || len(files) == 0 {
+		return fmt.Errorf("wasm-build: no Worker glue (worker/*.mjs) in %s", library)
+	}
+	for _, file := range files {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			return err
+		}
+		if err := write(filepath.Join(dir, "build", filepath.Base(file)), string(content)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // tinygoRoot is a TinyGo root whose runtime has the patch: the installed one, with its src/ copied

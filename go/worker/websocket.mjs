@@ -1,6 +1,6 @@
 // Upstream: syumai/workers-go#97 (when fixed: answer the upgrade in Go and delete this adapter)
 // The WebSocket adapter, for any Worker whose Go answers upgrades the way ../transport describes
-// (Serve in transport_other.go is the same adapter for the native build). Go answers a WebSocket
+// (Serve in ../transport/transport_other.go is the same adapter for the native build). Go answers a WebSocket
 // upgrade with plain HTTP, and this carries it over the socket:
 //
 //   - anything but 2xx is a refusal (401, 422, 426), returned as it is;

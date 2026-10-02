@@ -1,22 +1,15 @@
 // The Worker's entry: everything goes to the Go Worker (TinyGo Wasm in build/, made by
-// `mise run api:go:build`), run by go.mjs, which keeps Go runtimes alive between requests. Three
-// more things are JavaScript because Go can't do them here: the hub Durable Object class (hub.mjs),
-// carrying a stream over a WebSocket (websocket.mjs), and making Go's timers fire on Cloudflare
-// (tinygo-clock.mjs).
-import "../build/wasm_exec.js";
-import * as build from "../build/runtime.mjs";
-import { goWorker } from "./go.mjs";
-import "./tinygo-clock.mjs";
-import { webSocket } from "./websocket.mjs";
+// `mise run api:go:build`). The build also writes the Go library's glue into build/, from the
+// version of github.com/joeblew999/orpc-api/go that go.mod requires (its worker/ folder): go.mjs
+// runs Go, keeping its runtimes alive between requests, and carries WebSockets; hub.mjs is the hub
+// Durable Object class, which has to be JavaScript.
+import { goWorker } from "./build/go.mjs";
 
-export { NotesHub } from "./hub.mjs";
+// The class is the library's Hub. This Worker was deployed with it under the name NotesHub, and
+// renaming a deployed Durable Object class is a migration (cloudflare.config.ts).
+export { Hub as NotesHub } from "./build/hub.mjs";
 
-const go = goWorker(build);
+const go = goWorker();
 await go.warm({ paths: ["/api/openapi.json", "/api/hello"] });
 
-export default {
-	fetch(request, env, ctx) {
-		if (request.headers.get("upgrade") === "websocket") return webSocket(go, request, env, ctx);
-		return go.fetch(request, env, ctx);
-	},
-};
+export default { fetch: go.fetch };

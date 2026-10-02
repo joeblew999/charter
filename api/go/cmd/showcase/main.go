@@ -6,7 +6,7 @@ package main
 
 import (
 	"github.com/joeblew999/orpc-api/api/go/showcase"
-	"github.com/joeblew999/orpc-api/api/go/transport"
+	"github.com/joeblew999/orpc-api/go/transport"
 )
 
 func main() {

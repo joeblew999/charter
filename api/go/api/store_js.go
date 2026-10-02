@@ -6,7 +6,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/joeblew999/orpc-api/api/go/d1"
+	"github.com/joeblew999/orpc-api/go/d1"
 )
 
 // D1Store is the notes table (migrations/ at the repo root) on the D1 binding itself: one awaited

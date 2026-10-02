@@ -14,7 +14,7 @@ import (
 
 func init() {
 	commands["new"] = command{"-name <name> [-module <go module>] [-subdomain <workers.dev subdomain>] [-into <dir>] [-from <checkout>]",
-		"create a new Go API project: the tested example (api/go/) under your name, with its tasks, Fern folder, tests and docs", newProject}
+		"create a new Go API project: the tested example (api/go/) under your name, on the Go library (go/), with its tasks, Fern folder, tests and docs", newProject}
 	commands["version"] = command{"", "the release this tool is, which is what new pins a project to", func([]string) error {
 		fmt.Println(orCheckout(toolVersion()))
 		return nil
@@ -31,7 +31,7 @@ const (
 var projectFiles = []string{
 	"api/go/main.go", "api/go/platform_js.go", "api/go/platform_other.go", "api/go/cloudflare.config.ts",
 	"api/go/package.json", "api/go/package-lock.json", "api/go/vite.config.ts", "api/go/.gitignore",
-	"api/go/go.mod", "api/go/go.sum", "api/go/api/", "api/go/cmd/spec/", "api/go/worker/",
+	"api/go/go.mod", "api/go/go.sum", "api/go/api/", "api/go/cmd/spec/", "api/go/worker.mjs",
 	"migrations/",
 	"sdk/package.json", "sdk/package-lock.json", "sdk/tsconfig.base.json", "sdk/fern/fern.config.json", "sdk/fern/apis/api-go/",
 	"test/live-test.mjs", "test/sdk-live-test.mjs", "test/mcp-test.mjs", "test/soak.mjs", "test/soak-go/",
@@ -45,7 +45,9 @@ var projectSkip = map[string]bool{"api/go/api/surface_test.go": true, "test/soak
 var projectTasks = regexp.MustCompile(`^(setup|check|doctor|upstream:status|dev:check|dev:workflows|docs:.*|api:go:.*|sdk:(list|check-spec|gen|check|ready|publish|publish:check|publish:fresh|cli:build|clean|dist|dist:cli)|cloudflare:.*|release|release:tags)$`)
 
 // newProject makes a project that is the Go half of this repo under another name: the notes API as
-// a starting contract, every task, the Fern folder, the tests, a docs folder. The files come from
+// a starting contract, every task, the Fern folder, the tests, a docs folder. The Go library (go/)
+// and its Worker glue are not copied: the project requires the library, and its build writes the
+// glue from it (wasm-build). The files come from
 // this repo at the tool's own version (a tag, cloned), or from -from, or from the checkout the tool
 // is run in, so a new project starts from code that passed this repo's checks, not from a template
 // kept beside it.
@@ -173,7 +175,8 @@ func newProject(args []string) error {
 		}
 	}
 
-	// The project's own module: its packages are its own, the reusable ones stay imports of orpc-api's.
+	// The project's own module: its packages are its own, the reusable ones are the library's
+	// (orpc-api's go/), which the project requires instead of this repo's ../../go.
 	gomod, err := os.ReadFile(filepath.Join(into, "api", "go", "go.mod"))
 	if err != nil {
 		return err
@@ -183,14 +186,14 @@ func newProject(args []string) error {
 	if err := write(filepath.Join(into, "api", "go", "go.mod"), mod); err != nil {
 		return err
 	}
-	library := repoModule + "/api/go"
+	const library = libraryModule
 	if local {
 		// From a checkout: build against that checkout, so unreleased changes work. Remove the
 		// replace line once you depend on a release.
-		if err := quiet(filepath.Join(into, "api", "go"), nil, "go", "mod", "edit", "-require="+library+"@v0.0.0", "-replace="+library+"="+filepath.Join(from, "api", "go")); err != nil {
+		if err := quiet(filepath.Join(into, "api", "go"), nil, "go", "mod", "edit", "-require="+library+"@v0.0.0", "-replace="+library+"="+filepath.Join(from, "go")); err != nil {
 			return err
 		}
-	} else if err := quiet(filepath.Join(into, "api", "go"), nil, "go", "mod", "edit", "-require="+library+"@"+version); err != nil {
+	} else if err := quiet(filepath.Join(into, "api", "go"), nil, "go", "mod", "edit", "-dropreplace="+library, "-require="+library+"@"+version); err != nil {
 		return err
 	}
 	if err := quiet(filepath.Join(into, "api", "go"), []string{"GOWORK=off"}, "go", "mod", "tidy"); err != nil {
@@ -210,6 +213,8 @@ func newProject(args []string) error {
   mise run api:go:deploy             # to Cloudflare, then: mise run api:go:live-test
 
 The API is the notes example: change api/go/api/contract.go, then mise run api:go:spec.
+The Go library (`+libraryModule+`) is a requirement in api/go/go.mod. Its Worker glue is not in
+the project: mise run api:go:build writes it into api/go/build/ from the version the project requires.
 To put your own API in its place: %s
 With a GitHub repo: mise run dev:workflows, mise run docs:setup, mise run docs:pages.
 
@@ -242,7 +247,7 @@ func afterDeploy(name, subdomain string) string {
 // (Minutes after a release, dev@latest can still be the one before.)
 func pinned(version string, local bool, from string) string {
 	if !local {
-		return fmt.Sprintf("dev %s: pins the dev tool to %s in mise.toml and the Go packages to %s in api/go/go.mod", version, version, version)
+		return fmt.Sprintf("dev %s: pins the dev tool to %s in mise.toml and the Go library to %s in api/go/go.mod", version, version, version)
 	}
 	tool := version
 	if tool == "" {
@@ -281,7 +286,7 @@ func write(path, content string) error {
 // renamer turns this repo's names into the project's: the Worker (orpc-api-go), the project
 // (orpc-api), the SDK's names (OrpcApi, orpcapi), and the import paths of what is the project's own:
 // the example's package and the Go SDK's module (<module>/sdk/go, so another repo can go get it).
-// The reusable packages keep their orpc-api import path: the project imports them.
+// The library (orpc-api's go/) keeps its orpc-api module path: the project imports it.
 func renamer(name, module string) func(string) string {
 	pascal, flat := "", strings.ReplaceAll(name, "-", "")
 	for _, part := range strings.Split(name, "-") {
@@ -339,8 +344,8 @@ func projectMise(source, name, pin string) string {
 		"and the same SDK surface as the oRPC contract", "and the contract's rules",
 		"what a release ships for both APIs into dist/", "what a release ships into dist/",
 		"`api/ts/node_modules/.bin/cf auth login`", "`api/go/node_modules/.bin/cf auth login`",
-		"release-tags api/go dev sdk/go", "release-tags api/go sdk/go",
-		"api/go/vX.Y.Z, dev/vX.Y.Z, sdk/go/vX.Y.Z", "api/go/vX.Y.Z, sdk/go/vX.Y.Z",
+		"release-tags go dev sdk/go", "release-tags api/go sdk/go",
+		"go/vX.Y.Z, dev/vX.Y.Z, sdk/go/vX.Y.Z", "api/go/vX.Y.Z, sdk/go/vX.Y.Z",
 		"# Local dev ports.", "# The local dev port.",
 		"# Where the Workers are deployed (cf deploy prints it; there is no cf command to look it up). On\n# another Cloudflare account, set these in mise.local.toml (gitignored).", "# Where the Worker is deployed (cf deploy prints it; there is no cf command to look it up). If it is\n# not this, set it in mise.local.toml (gitignored) or change the default here, then: mise run api:go:spec.",
 		"# Every task is one line of plain sh", "# "+name+": a Go API on Cloudflare Workers (Huma on workers-go), made with `dev new` from\n# "+repoURL+".\n# Every task is one line of plain sh",
@@ -396,6 +401,7 @@ You write the contract in Go; everything else is generated from it.
 |---|---|
 | **The contract (the source; you edit this)** | ` + "`api/go/api/contract.go`" + ` (Huma: Go structs and their tags) |
 | The server | ` + "`api/go/api/handlers.go`" + ` |
+| The Worker's entry | ` + "`api/go/worker.mjs`" + `. The rest of the JavaScript is the Go library's: the build writes it into ` + "`api/go/build/`" + ` |
 | Write the specs | ` + "`mise run api:go:spec`" + ` |
 | **The specs (generated; never edit)** | ` + "`sdk/fern/apis/api-go/*.json`" + ` |
 | Fern's settings | ` + "`sdk/fern/apis/api-go/generators.yml`" + ` |
@@ -408,8 +414,9 @@ The project starts as the notes example. Which files hold it, and what to do wit
 own API in: [Replace the example with your API](` + replaceGuide + `).
 
 How it works, what Huma needs on workers-go, the real-time design and the measured costs are documented
-once, in [orpc-api's docs](https://joeblew999.github.io/orpc-api/): the Go packages this project imports
-(` + "`humaworkers`, `asyncapi`, `follow`, `hub`, `d1`, `humamcp`, `transport`, `specfile`" + `) come from there.
+once, in [orpc-api's docs](https://joeblew999.github.io/orpc-api/): the Go library this project requires
+(` + "`" + libraryModule + "`: `humaworkers`, `asyncapi`, `follow`, `hub`, `d1`, `humamcp`, `transport`, `specfile`" + `, and the Worker
+glue the build writes into ` + "`api/go/build/`" + `) comes from there.
 `
 }
 

@@ -14,9 +14,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/orpc-api/api/go/follow"
-	"github.com/joeblew999/orpc-api/api/go/humamcp"
-	"github.com/joeblew999/orpc-api/api/go/humaworkers"
+	"github.com/joeblew999/orpc-api/go/follow"
+	"github.com/joeblew999/orpc-api/go/humamcp"
+	"github.com/joeblew999/orpc-api/go/humaworkers"
 )
 
 // Env is what the platform supplies: bindings on Cloudflare (platform_js.go), memory elsewhere.
@@ -208,7 +208,7 @@ func (env Env) watch(_ context.Context, in *WatchInput) (*huma.StreamResponse, e
 
 // live is the WebSocket channel's feed (AsyncAPI channel liveNotes). workers-go can't answer a
 // WebSocket upgrade itself, so it answers with lines, one JSON note each, and the Worker's entry
-// (worker/index.mjs) sends each line as a frame. The stream only ends when Follow gives up (hub
+// (worker.mjs) sends each line as a frame. The stream only ends when Follow gives up (hub
 // down); the entry then closes the socket with 1011, so the client reconnects with `after`.
 func (env Env) live(_ context.Context, in *LiveInput) (*huma.StreamResponse, error) {
 	if !strings.EqualFold(in.Upgrade, "websocket") {

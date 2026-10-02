@@ -100,7 +100,7 @@ func bench(args []string) error {
 	var samples []sample
 	var note string
 	// send makes one request and records which Cloudflare request it was (cf-ray) and, from a Go
-	// Worker run by worker/go.mjs, the kind of Go runtime that served it (x-go-runtime).
+	// Worker run by go/worker/go.mjs, the kind of Go runtime that served it (x-go-runtime).
 	send := func(c call, phase string) (int, time.Duration, sample, error) {
 		req, err := http.NewRequest(c.method, base+c.path, bytes.NewReader(c.body))
 		if err != nil {

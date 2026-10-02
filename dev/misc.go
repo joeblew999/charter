@@ -80,7 +80,7 @@ func doctor([]string) error {
 		bad("docker not running: start Docker")
 	}
 	for _, tool := range []struct{ name, arg, why string }{
-		{"go", "version", "api/go, dev, sdk:check on Go SDKs"},
+		{"go", "version", "go, api/go, dev, sdk:check on Go SDKs"},
 		{"tinygo", "version", "api:go:build"},
 		{"wasm-opt", "--version", "tinygo runs it on every Wasm build"},
 		{"cargo", "--version", "the Fern CLI builds"},

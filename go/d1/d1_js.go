@@ -18,7 +18,7 @@ import (
 
 	"github.com/syumai/workers-go/cloudflare"
 
-	"github.com/joeblew999/orpc-api/api/go/internal/promise"
+	"github.com/joeblew999/orpc-api/go/internal/promise"
 )
 
 // DB is a D1 database: the binding itself. There is no connection to open or close.

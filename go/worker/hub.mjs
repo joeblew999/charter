@@ -1,8 +1,14 @@
-// NotesHub: the live fan-out for new notes, the Go Worker's counterpart of api/ts/src/hub.ts. Subscribers
-// (the Go Worker's Follow loops) are hibernatable WebSockets, so the hub sleeps between notes. It
-// stores nothing: D1 is the log and Follow catches up from it, so the hub may restart at any time
-// (docs/realtime.md, rule 2). It is JavaScript because a Durable Object class has to be: workers-go
-// can call one, not be one.
+// Hub: a live fan-out as a Durable Object, what the Go package hub publishes to and subscribes
+// from (the counterpart of api/ts/src/hub.ts). Subscribers (a Go Worker's Follow loops) are
+// hibernatable WebSockets, so the hub sleeps between messages. It stores nothing and relays any
+// message as it is: the log is the Worker's own (D1 in the notes example) and Follow catches up
+// from it, so the hub may restart at any time (docs/realtime.md, rule 2). One class serves every
+// feed: each feed is an object of it, by name. It is JavaScript because a Durable Object class has
+// to be: workers-go can call one, not be one.
+//
+// A project's entry exports it under the name its cloudflare.config.ts declares:
+//
+//	export { Hub } from "./build/hub.mjs";
 //
 //   GET  /subscribe  (WebSocket upgrade)  every published message arrives as one text frame
 //   publish(message)                      the message is sent to every subscriber as it is
@@ -10,7 +16,7 @@
 // Upstream: syumai/workers-go#220 (when fixed: the hub can be a Go Durable Object)
 import { DurableObject } from "cloudflare:workers";
 
-export class NotesHub extends DurableObject {
+export class Hub extends DurableObject {
 	// publish is what the Go hub calls (Workers RPC): a method call costs the caller less CPU than
 	// a fetch, which has a Request and a Response to make.
 	publish(message) {

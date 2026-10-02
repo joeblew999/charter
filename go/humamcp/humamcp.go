@@ -34,7 +34,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/orpc-api/api/go/humaworkers"
+	"github.com/joeblew999/orpc-api/go/humaworkers"
 )
 
 // The protocol revisions served: Modern ones say their version on every request, Legacy ones open

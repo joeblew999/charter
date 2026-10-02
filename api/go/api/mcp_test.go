@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/joeblew999/orpc-api/api/go/humaworkers"
+	"github.com/joeblew999/orpc-api/go/humaworkers"
 )
 
 // mcp POSTs one JSON-RPC request to /api/mcp and returns the HTTP status and the decoded answer.

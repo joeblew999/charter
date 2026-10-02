@@ -1,5 +1,5 @@
-// Upstream: tinygo-org/tinygo#5798 (when fixed: delete this file and its import in index.mjs)
-// Makes Go timers fire on Cloudflare. Import it before anything creates a Go runtime (index.mjs does).
+// Upstream: tinygo-org/tinygo#5798 (when fixed: delete this file and its import in go.mjs)
+// Makes Go timers fire on Cloudflare. Import it before anything creates a Go runtime (go.mjs does).
 //
 // On Cloudflare (not under local workerd) the clock only moves on I/O, and after a setTimeout(d)
 // it has moved by exactly d rounded DOWN to a whole millisecond: setTimeout(1999.7) advances it
@@ -10,8 +10,10 @@
 // millisecond clock near 1.8e18 ns, float rounding alone leaves such a remainder about half the time.
 //
 // So every sleep TinyGo asks for is rounded UP to a whole millisecond.
+import "./wasm_exec.js";
+
 const TinyGo = globalThis.Go;
-if (!TinyGo) throw new Error("tinygo-clock.mjs: import build/wasm_exec.js first");
+if (!TinyGo) throw new Error("tinygo-clock.mjs: wasm_exec.js did not define Go");
 
 globalThis.Go = class extends TinyGo {
 	constructor() {

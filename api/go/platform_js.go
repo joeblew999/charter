@@ -6,11 +6,11 @@ import (
 	"github.com/syumai/workers-go/cloudflare"
 
 	"github.com/joeblew999/orpc-api/api/go/api"
-	"github.com/joeblew999/orpc-api/api/go/d1"
-	"github.com/joeblew999/orpc-api/api/go/hub"
+	"github.com/joeblew999/orpc-api/go/d1"
+	"github.com/joeblew999/orpc-api/go/hub"
 )
 
-// env binds the API to the Worker's bindings (cloudflare.config.ts): APP_NAME, DB (D1), HUB (the hub Durable Object, worker/hub.mjs).
+// env binds the API to the Worker's bindings (cloudflare.config.ts): APP_NAME, DB (D1), HUB (the hub Durable Object, build/hub.mjs).
 func env() api.Env {
 	return api.Env{
 		Var: cloudflare.Getenv,

@@ -1,4 +1,10 @@
-// Runs the Go Worker (TinyGo Wasm in build/), keeping Go runtimes alive between requests.
+// Runs a Go Worker (the TinyGo Wasm in build/), keeping Go runtimes alive between requests.
+//
+// This file and the others in this folder ship with the Go library and are not copied into a
+// project: `dev wasm-build` writes them into the project's build/ folder, beside the Wasm and
+// workers-go's wasm_exec.js and runtime.mjs, from the version of the library the project builds
+// against. So the JavaScript here and the Go it talks to (transport, hub) always match, and the
+// imports below are of files in build/.
 //
 // workers-go's own entry (build/worker.mjs) starts a Go runtime for every request and drops it
 // afterwards: every request pays for Go's start-up, and the engine then has the runtime's whole
@@ -15,11 +21,16 @@
 //
 // The Go side must stay alive after a response: transport.Run instead of workers.Serve.
 //
-// The entry gives it the build (TinyGo's wasm_exec.js is imported there, for its global Go class):
+// A project's entry (worker.mjs) is then:
 //
-//	import "../build/wasm_exec.js";
-//	import * as build from "../build/runtime.mjs";
-//	const go = goWorker(build);
+//	import { goWorker } from "./build/go.mjs";
+//	const go = goWorker();
+//	await go.warm({ paths: ["/api/hello"] });
+//	export default { fetch: go.fetch };
+import "./wasm_exec.js"; // TinyGo's, for its global Go class
+import "./tinygo-clock.mjs"; // before anything creates a Go runtime
+import * as build from "./runtime.mjs";
+import { webSocket } from "./websocket.mjs";
 
 const MAX_WAITING = 4; // runtimes kept for the next request; each holds its Go heap (8 MB)
 
@@ -40,8 +51,8 @@ function seedOnly(stack) {
 	return frames.length > 0 && frames.every(line => /\.(arc4random|runtime\.hardwareRand|_start(\.command_export)?) \(/.test(line));
 }
 
-// goWorker is a Worker (its fetch) over a workers-go build: build/runtime.mjs, as a module.
-export function goWorker({ createRuntimeContext, loadModule }) {
+// goWorker is a Worker (its fetch) over the workers-go build beside this file (runtime.mjs).
+export function goWorker({ createRuntimeContext, loadModule } = build) {
 	const waiting = [];
 	let warmFailure = ""; // why no runtime was started while the module loaded, for the x-go-runtime header
 
@@ -92,6 +103,13 @@ export function goWorker({ createRuntimeContext, loadModule }) {
 
 	return { fetch, warm };
 
+	// fetch is the Worker's: a WebSocket upgrade is carried by websocket.mjs (which gives it to Go
+	// as plain HTTP), everything else goes to Go as it is.
+	function fetch(request, env, ctx) {
+		if (request.headers.get("upgrade") === "websocket") return webSocket({ fetch: serve }, request, env, ctx);
+		return serve(request, env, ctx);
+	}
+
 	// warm starts runtimes before any request, while the Worker's module loads: await it at the top
 	// of the entry. A request that starts its own runtime in a new isolate costs about 100 ms of
 	// CPU; one that finds a warm runtime costs 4 to 19 (docs/benchmarks.md).
@@ -120,10 +138,10 @@ export function goWorker({ createRuntimeContext, loadModule }) {
 		}
 	}
 
-	// fetch gives a request to a Go runtime as two values, and gets the answer in one call when the
+	// serve gives a request to a Go runtime as two values, and gets the answer in one call when the
 	// handler did not stream (answer in transport_js.go has the protocol): every value that crosses
 	// between JavaScript and Go costs, and so does every call into Go.
-	async function fetch(request, env, ctx) {
+	async function serve(request, env, ctx) {
 		let head = `${request.method}\n${request.url}`;
 		for (const [name, value] of request.headers) head += `\n${name}\n${value}`;
 		const body = request.body ? new Uint8Array(await request.arrayBuffer()) : null;

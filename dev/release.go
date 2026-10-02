@@ -57,7 +57,7 @@ func releaseDev(args []string) error {
 	if tag == "" {
 		return sh(".", "goreleaser", "release", "--snapshot", "--clean")
 	}
-	// Several tags sit on a release's commit (vX.Y.Z, and the modules' api/go/vX.Y.Z, dev/vX.Y.Z):
+	// Several tags sit on a release's commit (vX.Y.Z, and the modules' go/vX.Y.Z, dev/vX.Y.Z):
 	// say which one this is. GoReleaser reads the token as GITHUB_TOKEN; the workflows set GH_TOKEN.
 	env := []string{"GORELEASER_CURRENT_TAG=" + tag}
 	if os.Getenv("GITHUB_TOKEN") == "" && os.Getenv("GH_TOKEN") != "" {
@@ -269,7 +269,7 @@ func releaseTags(args []string) error {
 		return err
 	}
 	if len(dirs) == 0 {
-		return errors.New("release-tags needs <module dir>..., e.g. api/go dev sdk/go")
+		return errors.New("release-tags needs <module dir>..., e.g. go dev sdk/go")
 	}
 	var modules []string
 	for _, dir := range dirs {
