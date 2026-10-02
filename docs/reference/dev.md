@@ -189,7 +189,7 @@ The first two are patches to TinyGo's runtime, which is Go source that TinyGo co
 | `-max` | `3000000` | Fail if the Wasm, gzipped, is larger than this many bytes |
 | `-plain` | off | Build with TinyGo as it is, with no patches and no starting heap: to compare |
 
-- **Needs:** mise. The tool pins the TinyGo and the binaryen it was tested with and has mise run exactly those, installing them the first time; a project does not pin TinyGo itself. `-tinygo system` builds with the `tinygo` on the path instead, untested.
+- **Needs:** mise. The tool pins the TinyGo and the binaryen it was tested with and asks mise for exactly those, which installs them the first time; a project does not pin TinyGo itself. `-tinygo system` builds with the `tinygo` on the path instead, untested.
 - **Runs:** project layout.
 
 What the changes save is in [Benchmarks](../benchmarks.md). The patches carry the tags `Upstream: tinygo-org/tinygo#5800` and `#5801`; when TinyGo has them, they go and the flags stay.
