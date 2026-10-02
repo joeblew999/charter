@@ -29,17 +29,7 @@ There is no native run: the Worker runs under `cf dev` and on Cloudflare.
 
 ## The files
 
-| File in `examples/notes-ts/` | What it is |
-|---|---|
-| `src/contract.ts` | **The contract:** every route, its input and output as Zod schemas, and what Fern needs (`openapi({...})`, `asyncapi({...})`) |
-| `src/index.ts` | The Worker: the contract implemented on D1, the SSE stream, the WebSocket, the two spec routes |
-| `src/follow.ts` | The feed both transports use |
-| `src/hub.ts` | The hub: oRPC's `DurablePublisherObject`, a hibernating fan-out |
-| `src/asyncapi.ts` | The AsyncAPI generator |
-| `src/specs.ts` | Both specs from any contract: OpenAPI 3.1.1 without the channels, OpenAPI `webhooks`, AsyncAPI 3.0.0 |
-| `spec.ts`, `spec-files.ts` | The command behind `mise run spec` and `mise run spec:check` |
-| `fern/` | The generated specs and `generators.yml` |
-| `mise.toml` | The tasks, with the names a Go project has |
+In `examples/notes-ts/`: `src/contract.ts` is **the contract**; `src/index.ts` the Worker (the contract implemented on D1, the SSE stream, the WebSocket, the two spec routes); `src/follow.ts` the feed; `src/hub.ts` the hub (oRPC's `DurablePublisherObject`); `src/asyncapi.ts` the AsyncAPI generator; `src/specs.ts` both specs from any contract; `spec.ts` the command behind `mise run spec`; `fern/` the generated specs and Fern's settings.
 
 ## Go and TypeScript, side by side
 
@@ -54,7 +44,7 @@ There is no native run: the Worker runs under `cf dev` and on Cloudflare.
 | The feed | The package `follow`, imported | `src/follow.ts` |
 | Writing the specs | `mise run spec` (`./cmd/spec`) | `mise run spec` (`spec.ts`) |
 
-From the specs on, nothing differs: the same Fern groups, the same `mise run sdk:gen`, the same test programs. The SDKs made from one server's specs pass the tests against the other server ([Findings](../findings.md)), and a test holds the two specs to one surface (`examples/surface_test.go`).
+From the specs on, nothing differs: the same Fern groups, tasks and test programs. The SDKs made from one server's specs pass the tests against the other ([Findings](../findings.md)), and a test holds the two specs to one surface (`examples/surface_test.go`).
 
 ## The differences that matter
 
@@ -67,9 +57,8 @@ From the specs on, nothing differs: the same Fern groups, the same `mise run sdk
 | MCP endpoint | `/api/mcp` | None |
 | Types in the SDKs | One shared `Note` type | One type per response: oRPC writes the schema inline |
 | Starting a project | `charter new` | Copy the example (below) |
-| CPU per request | The same, measured side by side ([Benchmarks](../benchmarks.md)) | |
 
-A client that checks for a validation error must know which server it talks to.
+The cost per request is the same, measured side by side ([Benchmarks](../benchmarks.md)). A client that checks for a validation error must know which server it talks to.
 
 ## The AsyncAPI generator
 
@@ -92,13 +81,12 @@ live: oc
 
 Limits: one message type each way; a channel cannot have query parameters and a send side together; a procedure with more than one `.input()` or `.output()` is refused. oRPC asked for it as a community package first ([middleapi/orpc#2115](https://github.com/middleapi/orpc/issues/2115)); that is [planned](../plans/next.md).
 
-## Other things the contract does for Fern
+## What else the contract does for Fern
 
 - **`openapi({ operationId, tags, spec })`** names the SDK method and adds Fern's `x-fern-*` extensions.
-- **OpenAPI is 3.1.1,** asked for in `src/specs.ts`: oRPC 2.0 defaults to 3.2.0, which Fern rejects ([fern-api/fern#9559](../upstream.md)).
-- **The SSE response's schema is the note,** set by the `spec` hook: oRPC describes its own event envelope there, and Fern's clients ignore the SSE `event:` field.
-- **Cursors are strings:** the generated CLI's `--page-all` stops on numeric ones.
-- **OAuth, idempotency, uploads, webhooks, a two-way WebSocket:** [Fern features](fern-features.md#from-an-orpc-contract).
+- **OpenAPI is 3.1.1,** asked for in `src/specs.ts`: oRPC 2.0 defaults to 3.2.0, which Fern rejects.
+- **The SSE response's schema is the note,** set by the `spec` hook: oRPC describes its own event envelope there.
+- **The rest** (OAuth, idempotency, uploads, webhooks, a two-way WebSocket): [Fern features](fern-features.md#from-an-orpc-contract).
 
 ## Start a TypeScript project
 

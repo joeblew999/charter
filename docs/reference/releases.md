@@ -10,16 +10,6 @@ What a release of charter is, its files and tags, how a project moves to a new o
 
 The newest release: [github.com/joeblew999/charter/releases/latest](https://github.com/joeblew999/charter/releases/latest)
 
-## Get the latest
-
-```sh
-go run github.com/joeblew999/charter/cmd/charter@latest help    # the tool, no install (needs Go)
-go get github.com/joeblew999/charter/go@latest                  # the library, in a project
-curl -fsSL https://github.com/joeblew999/charter/releases/latest/download/charter_darwin_arm64.tar.gz | tar xz charter   # the tool as a binary
-```
-
-Write `@latest` and `releases/latest` in anything you keep: a link with a version in it is out of date after the next release.
-
 ## What a release contains
 
 One GitHub Release per version tag. No file name carries the version.
@@ -31,9 +21,10 @@ One GitHub Release per version tag. No file name carries the version.
 | `notes-go-sdk-go.tar.gz`, `notes-go-sdk-typescript.tar.gz`, `notes-go-specs.tar.gz`, `notes-go-cli-linux-amd64` | The Go notes example's SDK sources, specs and CLI, generated fresh and checked |
 | `notes-ts-sdk-go.tar.gz`, `notes-ts-sdk-typescript.tar.gz`, `notes-ts-specs.tar.gz`, `notes-ts-cli-linux-amd64` | The same for the TypeScript notes example |
 
-A project uses the tool and the library. The library is not a file of the Release: Go fetches it from the repository at the release's tag. The example files show what your own project's `release` workflow attaches for your API ([Release](../guides/sdks.md#release)).
-
-Not in a release: a Windows build of the tool (it manages process groups, which is Unix-only), SDK packages, the CLI for anything but Linux on amd64.
+- **A project uses the tool and the library.** The library is not a file of the Release: Go fetches it from the repository at the release's tag.
+- **The example files** are what your own project's `release` workflow attaches for your API ([Release](../guides/sdks.md#release)).
+- **Not in a release:** a Windows build of the tool, SDK packages, the CLI for anything but Linux on amd64.
+- **Write `@latest` and `releases/latest`** in anything you keep: a version in a link is out of date after the next release.
 
 ## The tags
 
@@ -77,12 +68,9 @@ A fix to a copied file reaches your project only if you copy it: compare with `e
 
 **No compatibility.** The releases are `v0`: exported names, commands, flags, tasks and templates can change between two of them. The release notes are generated from the commits. Pin exact versions, update on purpose, run `mise run check` after.
 
-| The checks guarantee, for a release's commit | They do not |
-|---|---|
-| The library passes its tests and vets for Wasm | That a new project's full `mise run check` passes: that is run by hand |
-| Each example passes its local check: TinyGo build, live and MCP tests natively and under workerd | That anything works on Cloudflare: the live tests and the soak are run by hand |
-| The SDKs in the release were generated from that commit's specs and passed their checks | That the tag is on a green commit: the workflow builds what is there |
-| A project scaffolded by `charter new` builds under its own name (a test of the tool) | |
+The checks guarantee, for a release's commit: the library passes its tests; each example passes its local check (the TinyGo build, the live and MCP tests natively and under workerd); the SDKs in the release were generated from that commit's specs and passed their checks; a project scaffolded by `charter new` builds under its own name.
+
+They do not guarantee: that a new project's full `mise run check` passes, or that anything works on Cloudflare (both are run by hand), or that the tag is on a green commit.
 
 ## Before the rename
 

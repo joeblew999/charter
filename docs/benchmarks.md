@@ -55,10 +55,10 @@ and stacks reused                     1  2  2  2  1  2  1  1  2  1  1  2 ...
 
 What each step found:
 
-1. **TinyGo's collector ran at every pause.** TinyGo collects whenever the program waits and 32 objects with finalizers were made since the last time. workers-go makes one for every JavaScript value it touches, and a request waits many times. It also collects each time its small starting heap must grow. Reported as [tinygo-org/tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800).
-2. **Every second request cost double, and a new isolate double again.** workers-go starts a Go runtime per request and drops it: the engine then has an 8 MB memory to clear per request. A runtime that waits for the next request removes that, and Go's start-up with it. The higher values in the fourth line are the requests that start a runtime: one in three.
-3. **A runtime could serve only three requests because of goroutine stacks.** TinyGo allocates a stack for every goroutine and every call from JavaScript into Go, and its collector rarely frees one. Reported as [tinygo-org/tinygo#5801](https://github.com/tinygo-org/tinygo/issues/5801), since fixed on TinyGo's dev branch.
-4. **Every crossing between Go and JavaScript costs.** Measured piece by piece on scratch Workers (mean CPU of one such operation per request): an awaited promise about 0.12 ms; a D1 read of 21 rows 3.9 ms through `database/sql`, 3.7 ms read value by value, 2.8 ms as one JSON string; a hub publish 4.3 ms through workers-go's stub and `net/http`, 3.0 to 3.2 ms as a direct fetch, 2.6 to 2.9 ms as an RPC call.
+1. **TinyGo's collector ran at every pause.** It collects whenever the program waits and 32 objects with finalizers were made, and workers-go makes one per JavaScript value. It also collects each time its small starting heap must grow ([tinygo-org/tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800)).
+2. **Every second request cost double, and a new isolate double again.** workers-go starts a Go runtime per request and drops it: the engine then has 8 MB to clear per request. In the fourth line the higher values are the requests that start a runtime: one in three.
+3. **A runtime could serve only three requests because of goroutine stacks.** TinyGo allocates one for every goroutine and every call from JavaScript, and rarely frees one ([tinygo-org/tinygo#5801](https://github.com/tinygo-org/tinygo/issues/5801), since fixed on its dev branch).
+4. **Every crossing between Go and JavaScript costs.** On scratch Workers, mean CPU of one such operation per request: an awaited promise about 0.12 ms; a D1 read of 21 rows 3.9 ms through `database/sql`, 3.7 ms value by value, 2.8 ms as one JSON string; a hub publish 4.3 ms through workers-go's stub, 3.0 to 3.2 ms as a direct fetch, 2.6 to 2.9 ms as an RPC call.
 
 What a request allocates, under `cf dev` with `runtime.ReadMemStats`:
 
@@ -68,11 +68,11 @@ What a request allocates, under `cf dev` with `runtime.ReadMemStats`:
 | 128 KB stacks | 1.7 MB | 4 MB |
 | 128 KB stacks, reused | 38 KB | about 100 KB |
 
-Without stack reuse the memory was not freed either: 9 hellos left 23 MB in use after 14 collections, and a runtime reused without limit had collections of 65, 148, 175 and 293 ms of CPU and then ran out of memory. So the Go side still says when its heap has no room for another request (`transport.Serve`), and the runtime is dropped before the collector runs: after about 80 hellos with stacks reused, not 3.
+Without stack reuse, 9 hellos left 23 MB in use after 14 collections, and a runtime reused without limit had collections of 65 to 293 ms of CPU and then ran out of memory. So the Go side says when its heap has no room for another request (`transport.Serve`), and the runtime is dropped before the collector runs: after about 80 hellos, not 3.
 
 ## A new isolate
 
-Cloudflare starts an isolate after a deploy, when a Worker has been idle, and when traffic spreads to another machine. The Wasm is not optimised there yet, and Go has to start. `mise run perf` in `examples/notes-go/` shows it: it deploys, sends 8 requests at once, then each operation in turn (2026-10-02, CPU in ms):
+Cloudflare starts an isolate after a deploy, when a Worker has been idle, and when traffic spreads. The Wasm is not optimised there yet, and Go has to start. `mise run perf` in `examples/notes-go/` deploys, sends 8 requests at once, then each operation in turn (2026-10-02, CPU in ms):
 
 ```
 GET /api/hello, 8 at once     3 6n 5w 74n 13w 110n 83n 101n
@@ -96,7 +96,7 @@ GET /__bench/not-found        3 2 1 3 3 3 24n 2 2 3 2 2 3 3 2 2 1 1 2 2 2 2 2
 - **Each answers two routes during start-up,** into nothing: the OpenAPI route, which registers every operation, and the hello.
 - **The first use of each operation still costs 15 to 30 ms:** the list 18 to 33, a create 14 to 25. Their handlers need the database, which a runtime does not have during start-up.
 - **Requests that arrive together beyond the waiting runtimes start their own:** about 100 ms each when several do at once, 10 to 30 ms for one alone.
-- **Cloudflare gives no crypto randomness while a module loads,** and TinyGo's runtime asks for its seed as it starts. For those runtimes the seed comes from `Math.random`. Anything else that asks for random bytes during start-up stops the warm start; a request with the header `x-go-runtime` is told why.
+- **Cloudflare gives no crypto randomness while a module loads.** For those runtimes TinyGo's seed comes from `Math.random`; anything else that asks for random bytes during start-up stops the warm start.
 
 ## What the patch and the heap each do
 
@@ -116,20 +116,9 @@ Both changes are needed: the patch alone helps only the D1 read. 8 MB is enough:
 
 ## What does not help
 
-Wall clock under `cf dev`, mean of 20, with TinyGo as it is, before the fix. The tuned build is 876 KB gzipped.
+Measured before the fix, under `cf dev` and on Cloudflare:
 
-| Build (`tinygo build ...`) | Wasm gzipped | 404 | hello | list 20 (D1) | openapi.json |
-|---|---|---|---|---|---|
-| default (`-gc=precise`) | 848 KB | 13.2 ms | 13.4 ms | 27.1 ms | 20.2 ms |
-| `-opt=2` | 1037 KB | 13.6 ms | 14.3 ms | 33.3 ms | |
-| `-opt=s` | 879 KB | 14.2 ms | 14.3 ms | 29.7 ms | |
-| `-gc=conservative` | 840 KB | 13.3 ms | 14.1 ms | 27.3 ms | |
-| `-gc=boehm` | 862 KB | 10.7 ms | 11.5 ms | 13.1 ms | 11.8 ms |
-| `-gc=leaking` (no collector) | 698 KB | 6.4 ms | 6.6 ms | 7.2 ms | 7.1 ms |
-| precise, 8 MB initial memory | 848 KB | 11.0 ms | 12.7 ms | 18.8 ms | |
-| precise, 32 MB initial memory | 848 KB | 16.6 ms | 14.7 ms | 23.9 ms | |
-| an empty workers-go handler, no Huma | 326 KB | | about 8 ms | | |
-
-- **The optimisation level is not the cost.** The collector was.
-- **`-gc=boehm` is not usable:** deployed to Cloudflare, its requests hung (48 requests took 11 minutes).
+- **The optimisation level is not the cost:** `-opt=2` and `-opt=s` were no faster than `-opt=z`, and larger. The collector was the cost.
+- **`-gc=boehm` is not usable:** fast locally; deployed to Cloudflare, its requests hung (48 requests took 11 minutes).
 - **`-gc=leaking` is not safe:** a stream the Worker holds can live for hours, and its memory would only grow.
+- **A bigger heap than 8 MB does not help:** 16 MB measured the same, 32 MB slower.

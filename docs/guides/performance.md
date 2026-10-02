@@ -10,8 +10,7 @@ How to see what each request of your API costs on Cloudflare, and how to try a c
 
 ## What you need
 
-- **A deployed Worker** and its `API_URL` ([Deploy](deploy.md)).
-- **For CPU figures:** `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment, and `observability: { enabled: true }` in `cloudflare.config.ts` (the example has it). CPU time is Cloudflare's own figure from Workers Logs: what Workers bills and limits. It takes up to two minutes to arrive.
+A deployed Worker and its `API_URL` ([Deploy](deploy.md)). For CPU figures: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment, and observability enabled in `cloudflare.config.ts` (the example has it). CPU time is Cloudflare's own figure, what Workers bills and limits. It takes up to two minutes to arrive.
 
 ## The tasks
 
@@ -35,14 +34,7 @@ GET /api/notes                18 5 4 4 5 6 7 4 5 5 5 4 8w 5 5 4 4 5 4 6 4 4 7
 
 Milliseconds of CPU per request, in the order sent (a `mise run perf` of the notes example, 2026-10-02).
 
-| Mark | The request was served by |
-|---|---|
-| none | A Go runtime that had served before |
-| `w` | A runtime started ahead, while the Worker's module loaded |
-| `n` | A runtime the request had to start itself |
-| `?` | Cloudflare has no figure for it yet |
-
-A median hides what this shows: one request in a few starting a runtime, the first use of an operation, the first request in a new isolate.
+No letter: served by a Go runtime that had served before. `w`: by one started ahead, while the Worker's module loaded. `n`: by one the request had to start. `?`: Cloudflare has no figure yet. A median hides what this shows: the request that starts a runtime, the first use of an operation, the first request in a new isolate.
 
 ## Try a change
 

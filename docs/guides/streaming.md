@@ -70,15 +70,13 @@ for ctx.Err() == nil {
 ```
 
 - **A browser's `EventSource` needs no loop:** the SSE id is the item's id.
-- **The generated SDKs reconnect by themselves** after a clean end without the end marker. The loop covers what they do not: the planned end, and a network reset ([fern-api/fern#17937](../upstream.md)).
-- **These loops are those of the soak's clients** (`test/soak.mjs`, `test/soak-go/main.go`). The snippets themselves are not run by a test.
+- **The generated SDKs reconnect by themselves** after a clean end without the end marker. The loop covers the planned end and a network reset ([fern-api/fern#17937](../upstream.md)).
+- **These are the loops of the soak's clients** (`test/soak.mjs`, `test/soak-go/main.go`). The snippets themselves are not run by a test.
 
 ## What is guaranteed
 
 - **Guaranteed:** a client that follows the rule receives every item once, in order. The soak proved it on the deployed notes Workers for seven kinds of client ([results](../realtime.md#how-it-is-tested)). Prove it on yours: `mise run soak`.
-- **Not guaranteed: delivery time.** A missed wake-up costs up to 30 seconds, never an item.
-- **Not guaranteed: that a stream stays open.** It ends by design after `seconds` (1 to 300, default 30).
-- **No error events.** If the feed gives up, SSE ends without the end marker and the WebSocket closes with 1011.
+- **Not guaranteed:** delivery time (a missed wake-up costs up to 30 seconds, never an item), or that a stream stays open (it ends by design after `seconds`).
 
 ## The four parts of a stream
 
@@ -135,9 +133,4 @@ huma.Register(api, asyncapi.Operation(huma.Operation{
 
 ## Check it
 
-```sh
-mise run test:native     # the live test against the native build
-mise run test:workerd    # the same on the Wasm under workerd
-mise run live-test       # REMOTE: against the deployed Worker
-mise run soak            # REMOTE, redeploys the Worker: every client, every scenario
-```
+`mise run test:native` and `mise run test:workerd` run the live test locally; `mise run live-test` and `mise run soak` on the deployed Worker ([Test and CI](testing.md)).

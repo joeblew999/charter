@@ -77,11 +77,9 @@ mise run mcp-test    # in another: the official TypeScript client, in both eras.
 
 ## What it does not do
 
-- **No authorization of its own.** The endpoint is as open as the REST API, and `tools/list` is always open. The `Authorization` header is passed on, so an operation that checks a bearer token checks it for a tool call too. MCP's own scheme (OAuth metadata, a 401 with `WWW-Authenticate`) is not implemented. Do not publish a tool you would not give a stranger.
-- **`Origin`:** only the host the request came to is accepted. That is not a `Host` allowlist, which a native server reachable from a browser needs.
-- **No stream:** no progress notifications, no long-running calls, no list-changed subscriptions.
-- **No resources and no prompts.** Tools only.
-- **No file bodies:** a call carries JSON. Response headers are dropped.
+- **No authorization of its own.** The endpoint is as open as the REST API, and `tools/list` is always open. The `Authorization` header is passed on, so an operation that checks a bearer token checks it for a tool call too. MCP's own scheme is not implemented. Do not publish a tool you would not give a stranger.
+- **Tools only:** no resources, no prompts, no stream, no progress notifications.
+- **JSON only:** no file bodies. Response headers are dropped.
 - **Only a `*humaworkers.API`** can be served, not a plain Huma API.
 
 The package, its functions and why it uses no MCP SDK: [Go packages](../reference/packages.md#humamcp). What is planned: [What is next](../plans/next.md).

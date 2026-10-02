@@ -43,12 +43,7 @@ type ListInput struct {
 
 Huma reads those tags twice: at run time, to validate each request before the handler sees it, and when the specs are written. A request with `limit=500` gets a 422 that names `query.limit`, and the spec says `maximum: 100`. Neither was written separately.
 
-Four more things live in the contract, so they too have one source:
-
-- **A rule the tags cannot say:** the input's `Resolve` method.
-- **What the generated clients need:** the operation's id and tags, and Fern's `x-fern-*` extensions for names, pagination and streaming.
-- **The WebSocket:** an operation marked as a channel goes into the AsyncAPI spec instead of the OpenAPI one.
-- **The document's own facts:** title, version, description.
+The contract also holds what the tags cannot say (the input's `Resolve` method), what the generated clients need (ids, tags, Fern's `x-fern-*` extensions), the WebSocket (an operation marked as a channel goes into the AsyncAPI spec), and the document's title, version and description.
 
 ## What is derived
 
@@ -73,18 +68,12 @@ mise run spec          # the fix: write them again
 
 ## Where Fern fits
 
-[Fern](https://buildwithfern.com) reads the two spec files and writes clients. It runs on your machine, in Docker, when you ask.
-
-- **Fern does not write servers.** It never sees your code, and nothing it generates runs on Cloudflare.
-- **The direction is one way:** contract, specs, clients. Nothing flows back.
-- **Fern can be replaced.** The specs are plain OpenAPI and AsyncAPI. Only the `x-fern-*` extensions in the contract and `fern/generators.yml` are specific to it.
+[Fern](https://buildwithfern.com) reads the two spec files and writes clients, on your machine, in Docker. It does not write servers and never sees your code. The direction is one way: contract, specs, clients. It can be replaced: the specs are plain OpenAPI and AsyncAPI, and only the `x-fern-*` extensions and `fern/generators.yml` are specific to it.
 
 ## What it buys, and what it costs
 
-| It buys | It costs |
-|---|---|
-| One change in one place: a field is one line, and validation, spec, SDK type and tool schema follow | The contract can only say what Huma or oRPC and the two spec formats can express. A rule outside them lives in code and reaches the spec only as prose |
-| The reference cannot lie: it describes what the server enforces | Two tasks to remember: `mise run spec`, which the check catches, and regenerating the clients, which only the committed Go SDK's check catches |
-| A client breaks at build time, not in production | Generators have gaps, and the contract is then written around them ([Upstream issues](../upstream.md)) |
-| Review sees the API: the spec's diff is the change your users get | |
-| Agents get the same operations, with the same validation | |
+- **One change in one place.** A field is one line; validation, spec, SDK type and tool schema follow.
+- **The reference cannot lie,** and a client breaks at build time, not in production.
+- **Review sees the API:** the spec's diff is the change your users get.
+- **The cost:** the contract can only say what Huma or oRPC and the two spec formats can express. A rule outside them lives in code and reaches the spec only as prose.
+- **The cost:** generators have gaps, and the contract is then written around them ([Upstream issues](../upstream.md)).

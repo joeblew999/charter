@@ -48,27 +48,25 @@ A client that says where it got to never misses an item and never sits on a dead
 - **A silent hub costs a delay, never an item.** After the recheck time the feed reads the log anyway.
 - **It gives up** after that many failed subscribes in a row, or when the log fails. The adapter then ends the stream as rule 5 says. A cancelled context ends it quietly.
 
-Who holds what: the Worker holds each client's SSE response or WebSocket, and subscribes to the hub with a WebSocket of its own. The hub accepts subscribers with the hibernatable WebSocket API, so it sleeps between items.
+The Worker holds each client's SSE response or WebSocket, and subscribes to the hub with a WebSocket of its own. The hub accepts subscribers with the hibernatable WebSocket API, so it sleeps between items.
 
 ## Why it is built this way
 
 - **Resume from the database, not from a log in the hub.** A short log in the hub cannot cover a phone that slept, and it is one more store.
 - **Resume with the `after` input, not only `Last-Event-ID`.** Generated SDKs and the CLI cannot send the header or see event ids.
-- **The Worker holds client connections, not the hub.** The hub then stays generic and hibernates. The limit to watch is the hub's 32,768 subscriber sockets (Cloudflare's figure, not reached or tested here).
-- **Dedupe by item id in the feed,** not by the hub's event ids, which change when it restarts.
-- **Use Fern's options before writing client code.** `x-fern-streaming` has `terminator` and `resumable: true`; an AsyncAPI channel's query parameters give `connect({ after })`.
-- **The terminator is `[end-of-stream]`, plain text.** Fern matches it as a substring of each event's data, so no item may contain it: note bodies reject it. Fern's Rust generator pastes it into source unescaped, so it has no quotes or backslashes ([upstream](upstream.md)).
+- **The Worker holds client connections, not the hub.** The hub then stays generic and hibernates. The limit to watch is its 32,768 subscriber sockets (Cloudflare's figure, not tested here).
+- **The terminator is `[end-of-stream]`, plain text.** Fern matches it as a substring of each event's data, so no item may contain it, and its Rust generator pastes it into source unescaped ([upstream](upstream.md)).
 
 ## What the platform does
 
 Measured here ([Findings](findings.md)):
 
-- **A deploy restarts every Durable Object and drops its sockets.** The restart came 5 s and 36 s after the deploy finished, in two runs. Subscribers saw close code 1006.
-- **Nothing buffers a stream.** Cloudflare does not compress or buffer `text/event-stream`; the first byte arrived in about 0.1 s.
-- **The hub hibernates.** In an hour that held a soak and a 20-minute idle run, the Go Worker's hub was active for 5.7 s.
-- **Go timers stall on Cloudflare without a fix,** and streams then do not end at their deadline. The library's glue has it (`go/worker/tinygo-clock.mjs`, [tinygo-org/tinygo#5798](upstream.md)).
+- **A deploy restarts every Durable Object and drops its sockets,** 5 s and 36 s after the deploy finished in two runs. Subscribers saw close code 1006.
+- **Nothing buffers a stream:** the first byte arrived in about 0.1 s.
+- **The hub hibernates:** in an hour that held a soak and a 20-minute idle run, the Go Worker's hub was active for 5.7 s.
+- **Go timers stall on Cloudflare without the fix** in the library's glue ([tinygo-org/tinygo#5798](upstream.md)).
 
-Not measured, taken from Cloudflare's documentation: runtime updates end long requests after 30 s, a few times a week, and an evicted Worker loses the sockets it holds. The client rule covers both.
+From Cloudflare's documentation, not measured: runtime updates end long requests after 30 s, a few times a week. The client rule covers it.
 
 ## How it is tested
 

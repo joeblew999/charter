@@ -36,14 +36,12 @@ Everything is switched on through standard options: OpenAPI, `x-fern-*` extensio
 
 ## What to know before you copy
 
-- **The spec only describes: the server must enforce.** The showcase checks every request in a Huma middleware (`authorize`, registered with `UseMiddleware`). An operation whose `Security` is empty passes; any other needs `Authorization: Bearer <token>` and gets 401 otherwise.
-- **Tokens need no storage:** the showcase's token is an expiry signed with HMAC, so any request can check it. A Worker keeps no memory between requests.
-- **Set real secrets.** The defaults (`CLIENT_ID` `id-1`, `CLIENT_SECRET` `secret-1`, `TOKEN_SECRET`, `WEBHOOK_SECRET`) are for trying it out.
-- **Idempotency is your handler's job.** The spec says the header exists; with a store, keep the first answer under the key and return it again.
-- **A form's values are strings,** so the fields of a form-encoded body must be strings.
+- **The spec only describes: the server must enforce.** The showcase checks every request in a Huma middleware (`authorize`): an operation whose `Security` is empty passes, any other needs a valid bearer token and gets 401 otherwise.
+- **Tokens need no storage:** the showcase's is an expiry signed with HMAC, which any request can check. Set real secrets: its defaults (`id-1`, `secret-1`) are for trying it out.
+- **Idempotency is your handler's job.** The spec says the header exists; with a store, keep the first answer under the key.
 - **The token request's schema is written into the operation,** not referred to by name: with a named one, the test Fern's Go generator writes does not compile ([Upstream issues](../upstream.md#found-not-filed)).
-- **An upload is a whole value in memory,** up to 32 MB. A 5 MB upload took 2.4 s under local workerd (2026-10-01). `huma.MultipartFormFiles[T]` does not run under TinyGo.
-- **A webhook is an outgoing request** from an `*http.Client`: on Cloudflare, workers-go's `fetch` client (`examples/showcase-go/platform_js.go`).
+- **An upload is a whole value in memory,** up to 32 MB. `huma.MultipartFormFiles[T]` does not run under TinyGo.
+- **A webhook is an outgoing request:** on Cloudflare, workers-go's `fetch` client (`examples/showcase-go/platform_js.go`).
 - **Keep SDK methods in a group.** A paginated method on the root client broke the Rust build of the CLI (seen 2026-09-29, not filed).
 
 ## A WebSocket the client also sends on
@@ -61,12 +59,9 @@ huma.Register(api, asyncapi.SendOperation(huma.Operation{
 }, asyncapi.Send{Channel: "liveNotes"}), env.subscribe)
 ```
 
-- **The upgrade handler answers 204** with the header `X-Websocket-Messages: post` (`transport.MessagesPost`). Each text frame from the client then becomes a POST to the same path, with the upgrade's headers, and the lines of the answer go back as frames.
-- **Anything but 2xx to a message closes the socket with 1008.**
-- **A message cannot change what a feed sends through memory:** on Cloudflare each may run in a Go runtime of its own. Share state through a binding.
+- **The upgrade handler answers 204** with the header `X-Websocket-Messages: post`. Each text frame from the client then becomes a POST to the same path, and the lines of the answer go back as frames ([the protocol](../reference/packages.md#transport)).
+- **A message cannot change what a feed sends through memory:** share state through a binding.
 - **A client that cannot set handshake headers** (a browser, a Worker) sends the token as `?access_token=`: the showcase accepts either.
-
-The protocol is in [Go packages](../reference/packages.md#transport).
 
 ## From an oRPC contract
 
@@ -87,18 +82,13 @@ A multipart upload needs nothing: `z.file()` in the input is enough. The oRPC sh
 
 | Test | What it proves | Result |
 |---|---|---|
-| `mise run check` in `examples/showcase-go/` | The TypeScript SDK made from the Go specs, from Node, against the native build and the Wasm under workerd (`test/showcase-test.mjs`) | 12 of 12, 2026-10-01 |
+| `mise run check` in `examples/showcase-go/` | The TypeScript SDK made from the Go specs, from Node, against the native build and the Wasm under workerd | 12 of 12, 2026-10-01 |
 | The same program against the deployed Go showcase | Every check but the webhook delivery, which needs a receiver the Worker can reach | passed, 2026-10-01 |
-| `mise run check` in `examples/showcase-ts/` | The compiled TypeScript SDK inside a Worker under workerd: pagination, OAuth, idempotency, SSE, upload, webhook signatures, the WebSocket client | 9 checks pass, also deployed, 2026-10-01 |
-| `TestSameSurfaceAsTheORPCShowcase` | Fern sees the same API from the Go and the oRPC contract | in `examples/showcase-go/api/surface_test.go` |
+| `mise run check` in `examples/showcase-ts/` | The compiled TypeScript SDK inside a Worker under workerd | 9 checks pass, also deployed, 2026-10-01 |
+| `TestSameSurfaceAsTheORPCShowcase` | Fern sees the same API from the Go and the oRPC contract | |
 
 Not done: the Go SDK has not called the showcase server, its CLI is not built, and no webhook was received from the deployed Worker.
 
-## Running the TypeScript SDK inside a Worker
+## The TypeScript SDK inside a Worker
 
-`examples/showcase-ts/` does it. What it takes:
-
-- **`guardProcessEnvAccess: true`** in the generator's config: Workers have no `process`.
-- **The compiled SDK** (the group `typescript-dist`, `outputSourceFiles: false`): the `.ts` sources clash with Cloudflare's Worker types.
-- **The WebSocket token as a query parameter,** as above.
-- **Two Workers for the WebSocket test:** a Worker cannot call its own URL (Cloudflare error 1042), and calling another on the same `workers.dev` zone needs the `global_fetch_strictly_public` compatibility flag.
+`examples/showcase-ts/` runs it there. It takes `guardProcessEnvAccess: true` (Workers have no `process`); the compiled SDK (the group `typescript-dist`), because the `.ts` sources clash with Cloudflare's Worker types; the WebSocket token as a query parameter; and two Workers for the WebSocket test, because a Worker cannot call its own URL (Cloudflare error 1042).

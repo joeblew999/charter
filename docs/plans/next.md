@@ -34,51 +34,34 @@ The plan, in the order of its two milestones. Each item is an issue on GitHub: t
 
 ## The AsyncAPI generator, as a package
 
-Built: `examples/notes-ts/src/asyncapi.ts` writes AsyncAPI from an oRPC contract ([how it works](../guides/typescript.md#the-asyncapi-generator)). Left:
-
-1. **Publish it as a community package,** as promised on middleapi/orpc#2115: `asyncapi()` and `AsyncAPIGenerator`, API-compatible with `openapi()` and `OpenAPIGenerator`. The `send` side and the OpenAPI `webhooks` writer in `examples/notes-ts/src/specs.ts` belong in it. An MCP generator for oRPC, built the same way, was offered too.
-2. **If oRPC wants it as `@orpc/asyncapi`:** port it to their repo style. **If oRPC ships its own:** switch to it and delete the file.
-
-Open: which AsyncAPI versions Fern accepts (3.0.0 works; 3.1 is not checked); query parameters and a send side on one channel, which the Go generator allows and this one does not.
+Built: `examples/notes-ts/src/asyncapi.ts` ([how it works](../guides/typescript.md#the-asyncapi-generator)). Left: publish it as a community package, as promised on middleapi/orpc#2115 (`asyncapi()` and `AsyncAPIGenerator`, API-compatible with `openapi()` and `OpenAPIGenerator`), with the `send` side and the OpenAPI `webhooks` writer. If oRPC wants it as `@orpc/asyncapi`, port it; if oRPC ships its own, switch to it. Open: which AsyncAPI versions Fern accepts (3.0.0 works); query parameters and a send side on one channel.
 
 ## SDKs as packages
 
-A release attaches SDK sources and the Linux CLI to the GitHub Release. Nothing is published as a package.
-
-- **TypeScript SDK to npm, Go SDK to a module repo of its own:** Fern's `output: location: github` per group would open a pull request in each SDK repo. Not tried.
-- **The CLI for all platforms:** Fern's output has a cargo-dist config for 7 targets. It needs one native runner per OS on GitHub Actions.
+A release attaches SDK sources and the Linux CLI to the GitHub Release; nothing is published as a package. Fern's `output: location: github` per group would open a pull request in a repo per SDK (not tried). The CLI for all platforms needs cargo-dist on GitHub Actions, one native runner per OS.
 
 ## MCP
 
 Built for the Go server ([MCP](../guides/mcp.md)). Left:
 
 1. **Connect a real host** (Claude, an IDE) to a deployed Worker and watch a model use the tools.
-2. **Authorization:** MCP's own scheme (OAuth protected-resource metadata, a 401 with `WWW-Authenticate`). Needed before the endpoint fronts anything private.
+2. **Authorization:** MCP's own scheme. Needed before the endpoint fronts anything private.
 3. **A `Host` allowlist** for a native server reachable from a browser.
-4. **The oRPC side:** a file `mcp.ts` beside the AsyncAPI generator, a tool per procedure that is not an event iterator, schemas from Zod. `test/mcp-test.mjs` takes a URL, so it would run against both. oRPC has no official MCP package; a third-party `orpc-mcp` exists, not tried.
+4. **The oRPC side:** a tool per procedure that is not an event iterator, schemas from Zod. oRPC has no official MCP package.
 5. **A plain Huma API as input:** `humamcp` needs a `*humaworkers.API` today.
-
-Not planned unless something needs them: resources, prompts, sessions.
 
 ## Go client and server on separate Workers
 
-An idea. Nothing is built. Small Go Workers that talk to each other: one serves a Huma contract, another is its client. They would already have a typed contract between them, real-time that loses nothing, and the tooling. It needs:
-
-1. **A Go client that runs inside a Worker:** Fern's Go SDK under TinyGo (does it compile?), or [humaclient](https://github.com/danielgtaylor/humaclient), generated from the Huma API with no spec in between.
-2. **Service bindings instead of public URLs:** the client's transport takes the binding's `fetch`. Not tested, in Go or TypeScript.
-3. **Streams between Workers:** `follow` again, with the server's SSE or WebSocket as the live source.
-4. **A second example** with a soak across the pair.
-
-Open: how a Worker authenticates another, and whether that belongs in the contract.
+An idea; nothing is built. Small Go Workers that talk to each other: one serves a Huma contract, another is its client. It needs a Go client that runs inside a Worker (Fern's Go SDK under TinyGo, or [humaclient](https://github.com/danielgtaylor/humaclient)), service bindings instead of public URLs, streams between Workers (`follow` again), and a second example with a soak across the pair. Open: how a Worker authenticates another.
 
 ## Fern
 
-- **File what was found and not filed** ([the list](../upstream.md#found-not-filed)): the Go generator's test that does not compile, the ignored AsyncAPI `pathname`. Tell oRPC what its generators cannot say. Offer Huma the form format (`humaworkers.WithForm`).
+- **File what was found and not filed** ([the list](../upstream.md#found-not-filed)), tell oRPC what its generators cannot say, and offer Huma the form format (`humaworkers.WithForm`).
 - **Settle the licence.** Fern's docs call local generation, WebSocket clients, webhook signatures and the CLI generator Enterprise or early access, needing a `FERN_TOKEN`. All of it ran here without one.
 
 ## Smaller things
 
-- **The showcase:** receive the webhook from the deployed Go showcase; run the Go SDK against it and build its CLI; check tokens in the oRPC showcase too, so `--open` can go from the test.
-- **Real-time:** a long-idle soak against the TypeScript Worker; if the hub's subscriber sockets become a limit, one hub socket per isolate or a hub per topic.
+- **The showcase:** receive the webhook from the deployed Go showcase; run the Go SDK against it; check tokens in the oRPC showcase too.
+- **Real-time:** a long-idle soak against the TypeScript Worker.
 - **CI:** run the `deploy` workflow from GitHub (not checked so far); pin mise itself in CI.
 - **oRPC 2.0.0 final,** when it ships.

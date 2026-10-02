@@ -62,14 +62,4 @@ Issues follow the plan ([What is next](plans/next.md)), under two milestones: "0
 
 [The working rules](rules.md) are short and binding: mise drives everything, every task is one line, the contract is the source, workarounds name their upstream issue, and only verified results go into the findings.
 
-## The pages for working here
-
-| Page | What it is |
-|---|---|
-| [Rules](rules.md) | The working rules |
-| [Upstream issues](upstream.md) | Every workaround, and the issue it waits for |
-| [Benchmarks](benchmarks.md) | What a request costs, and what made it cheaper |
-| [Findings](findings.md) | The log of verified results, newest last |
-| [What is next](plans/next.md) | What is not built yet |
-| [Performance plan](plans/performance.md) | What is left to make cheaper |
-| [The restructure](plans/structure.md) | One project shape: what was done |
+The other pages for working here: [Upstream issues](upstream.md), [Benchmarks](benchmarks.md), [Findings](findings.md), [What is next](plans/next.md), [Performance plan](plans/performance.md), [The restructure](plans/structure.md).
