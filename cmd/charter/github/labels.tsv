@@ -10,3 +10,5 @@ agent-filed	1d76db	filed by an AI agent for a calling repository
 good first issue	7057ff	small, self-contained, and the fix is described
 duplicate	cfd3d7	already filed; a comment links the original
 wontfix	ffffff	will not be changed; a comment says why
+help wanted	008672	open for anyone to pick up
+windows	0052cc	only on Windows, or about Windows support
