@@ -5,6 +5,29 @@ api:
   specs:
     - openapi: openapi.json
     - asyncapi: asyncapi.json
+  # How the SDKs authenticate: a bearer token (one of the API's, or an OpenID Connect access token:
+  # the same header, so the spec's oidc scheme is not restated) and a Cloudflare Access service token,
+  # any of them, each sent on every request when given (Access wants its token on every request, even
+  # one the contract calls public). They restate the contract's schemes (@charter/ts/auth's), which Fern needs
+  # here or it keeps only the first; examples/surface_test.go keeps the two the same.
+  auth-schemes:
+    bearer:
+      scheme: bearer
+      token:
+        name: token
+    accessClientId:
+      header: CF-Access-Client-Id
+      name: accessClientId
+      env: CHARTER_NOTES_TS_ACCESS_CLIENT_ID
+    accessClientSecret:
+      header: CF-Access-Client-Secret
+      name: accessClientSecret
+      env: CHARTER_NOTES_TS_ACCESS_CLIENT_SECRET
+  auth:
+    any:
+      - bearer
+      - accessClientId
+      - accessClientSecret
 
 # The same groups, in the same order, in every API (mise run sdk:list).
 # Generate one: mise run sdk:gen api-ts <group>   (output: sdk/out/api-ts/<group>)

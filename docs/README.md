@@ -26,7 +26,7 @@ Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go
 | A project | a folder with `mise.toml` beside `fern/` | One API. `charter new` makes one |
 | The contract | `api/contract.go` (Go), `src/contract.ts` (TypeScript) | The source |
 | The library | `go/` | What a Go project imports ([Go packages](reference/packages.md)) |
-| The TypeScript library | `ts/` | `@charter/ts`: the AsyncAPI generator for oRPC, both specs from one contract, `follow()`, bearer tokens with scopes (`auth`). The TypeScript examples take it as a local package; elsewhere it is installed from a release |
+| The TypeScript library | `ts/` | `@charter/ts`: the AsyncAPI generator for oRPC, both specs from one contract, `follow()`, and `auth`: bearer tokens, Cloudflare Access and an OpenID Connect issuer, with scopes. The TypeScript examples take it as a local package; elsewhere it is installed from a release |
 | The Worker glue | `go/worker/` | The JavaScript the library needs; the build copies it into `build/` |
 | The shared tasks | `tasks/shared/`, `tasks/go/`, `tasks/ts/` | The tasks every project includes, at the release it pins; its `mise.toml` holds only its own |
 | The tool | `cmd/charter/` | The command behind every task ([The charter command](reference/charter.md)) |
@@ -55,7 +55,7 @@ Never edit these: change the source and run the task.
 | Section | Pages |
 |---|---|
 | Start | [Getting started](getting-started.md) |
-| [Guides](guides.md) | [Your API](guides/replace-the-example.md) (the contract, MCP, TypeScript), [Streaming](guides/streaming.md), [SDKs](guides/sdks.md) (Fern features, languages, releases), [Deploy and CI](guides/deploy.md), [Release](guides/release.md) (from your machine, the CLI for every OS), [Performance](guides/performance.md), [Repos that use each other](guides/repos.md) (who pins what, breaking changes, Renovate), [Server-rendered pages](guides/pages.md) (gsx, htmx 4, Datastar) |
+| [Guides](guides.md) | [Your API](guides/replace-the-example.md) (the contract, MCP, TypeScript), [Streaming](guides/streaming.md), [SDKs](guides/sdks.md) (Fern features, languages, releases), [Deploy and CI](guides/deploy.md), [Auth](guides/auth.md) (tokens, Cloudflare Access, OpenID Connect), [Release](guides/release.md) (from your machine, the CLI for every OS), [Performance](guides/performance.md), [Repos that use each other](guides/repos.md) (who pins what, breaking changes, Renovate), [Server-rendered pages](guides/pages.md) (gsx, htmx 4, Datastar) |
 | [Reference](reference.md) | [Tasks](reference/tasks.md), [The charter command](reference/charter.md), [Go packages](reference/packages.md) |
 | [How to help](contributing.md) | [Rules](rules.md), [Benchmarks](benchmarks.md), [Upstream issues](upstream.md), [Writing docs](writing.md) |
 

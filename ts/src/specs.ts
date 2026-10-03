@@ -7,6 +7,7 @@ import { DelegatingJsonSchemaConverter, mapJsonSchemaRefs, type JsonSchema } fro
 import { walkProcedureContractsAsync, type AnyRouter } from "@orpc/server";
 import { ZodToJsonSchemaConverter } from "@orpc/zod";
 import { AsyncAPIGenerator, getAsyncAPIMeta } from "./asyncapi.ts";
+import { expand } from "./auth.ts";
 
 const converters = [new ZodToJsonSchemaConverter()];
 
@@ -34,8 +35,24 @@ export const openapiSpec = async (router: RouterContract | AnyRouter, { info, se
 		base: { info, servers: [{ url: server }], ...base },
 		filter: procedure => !getAsyncAPIMeta(procedure as any),
 	});
+	withEveryScheme(doc);
 	return webhooks ? addWebhooks(doc, webhooks) : doc;
 };
+
+// Each operation's security names every scheme the document declares (@charter/ts/auth's expand), and
+// an operation that is public says so.
+function withEveryScheme(doc: OpenAPIV3_1.OpenAPIObject) {
+	const declared = doc.components?.securitySchemes;
+	doc.security = expand(declared, doc.security);
+	for (const item of Object.values(doc.paths ?? {})) {
+		for (const op of Object.values(item ?? {})) {
+			if (!op || typeof op !== "object" || !("responses" in op)) continue;
+			const operation = op as OpenAPIV3_1.OperationObject;
+			// Public, said so: generated SDKs then send nothing it does not need.
+			operation.security = expand(declared, operation.security) ?? (declared && !doc.security?.length ? [] : undefined);
+		}
+	}
+}
 
 // Each webhook is a POST the API sends. Its payload is converted as output (the API produces it), so
 // it shares its named schemas (components.schemas) with the responses.

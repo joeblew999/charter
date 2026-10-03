@@ -14,6 +14,31 @@
       "bearer": {
         "type": "http",
         "scheme": "bearer"
+      },
+      "accessClientId": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "CF-Access-Client-Id",
+        "description": "A Cloudflare Access service token's Client ID: a machine's own (charter access token create)",
+        "x-fern-header": {
+          "name": "accessClientId",
+          "env": "CHARTER_NOTES_TS_ACCESS_CLIENT_ID"
+        }
+      },
+      "accessClientSecret": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "CF-Access-Client-Secret",
+        "description": "The service token's Client Secret",
+        "x-fern-header": {
+          "name": "accessClientSecret",
+          "env": "CHARTER_NOTES_TS_ACCESS_CLIENT_SECRET"
+        }
+      },
+      "oidc": {
+        "type": "openIdConnect",
+        "openIdConnectUrl": "/.well-known/openid-configuration",
+        "description": "An access token from the OpenID Connect issuer the deployment trusts (OIDC_ISSUER), with the operation's scopes"
       }
     }
   },
@@ -48,7 +73,8 @@
           }
         },
         "x-fern-sdk-group-name": "meta",
-        "x-fern-sdk-method-name": "hello"
+        "x-fern-sdk-method-name": "hello",
+        "security": []
       }
     },
     "/api/notes": {
@@ -135,7 +161,8 @@
           "cursor": "$request.cursor",
           "next_cursor": "$response.next_cursor",
           "results": "$response.data"
-        }
+        },
+        "security": []
       },
       "post": {
         "operationId": "createNote",
@@ -198,6 +225,17 @@
         "security": [
           {
             "bearer": [
+              "write"
+            ]
+          },
+          {
+            "accessClientId": [
+              "write"
+            ],
+            "accessClientSecret": []
+          },
+          {
+            "oidc": [
               "write"
             ]
           }
@@ -276,7 +314,8 @@
           "format": "sse",
           "terminator": "[end-of-stream]",
           "resumable": true
-        }
+        },
+        "security": []
       }
     }
   }

@@ -145,3 +145,58 @@ func at(doc any, path ...string) any {
 	}
 	return doc
 }
+
+// Fern sends only the credentials fern/generators.yml restates (auth-schemes, auth: any), so each
+// notes example's restates its spec's bearer and Access schemes, with the same headers and
+// variables (an OIDC token goes as the bearer token), and the two examples declare the same schemes
+// and security.
+func TestFernRestatesTheSchemes(t *testing.T) {
+	security := map[string]string{}
+	for _, project := range []string{"notes-go", "notes-ts"} {
+		raw, err := os.ReadFile(project + "/fern/openapi.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		yml, err := os.ReadFile(project + "/fern/generators.yml")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var doc map[string]any
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			t.Fatal(err)
+		}
+		schemes := asMap(at(doc, "components", "securitySchemes"))
+		if len(schemes) != 4 || schemes["oidc"] == nil {
+			t.Errorf("%s: %d security schemes, want bearer, Access's two and oidc", project, len(schemes))
+		}
+		for name, raw := range schemes {
+			if name == "oidc" {
+				continue
+			}
+			scheme := raw.(map[string]any)
+			want := []string{"    " + name + ":\n", "      - " + name + "\n"}
+			if scheme["type"] == "apiKey" {
+				fern := asMap(scheme["x-fern-header"])
+				want = append(want, "header: "+scheme["name"].(string)+"\n", "name: "+fern["name"].(string)+"\n", "env: "+fern["env"].(string)+"\n")
+			}
+			for _, w := range want {
+				if !strings.Contains(string(yml), w) {
+					t.Errorf("%s/fern/generators.yml: the scheme %s has no %q", project, name, strings.TrimSpace(w))
+				}
+			}
+		}
+		if !strings.Contains(string(yml), "  auth:\n    any:\n") {
+			t.Errorf("%s/fern/generators.yml: auth is not any", project)
+		}
+		names := make([]string, 0, len(schemes))
+		for name := range schemes {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		create, _ := json.Marshal(at(doc, "paths", "/api/notes", "post", "security"))
+		security[project] = strings.Join(names, " ") + " " + string(create)
+	}
+	if security["notes-go"] != security["notes-ts"] {
+		t.Errorf("the schemes and createNote's security differ:\n  Go: %s\n  TS: %s", security["notes-go"], security["notes-ts"])
+	}
+}

@@ -245,6 +245,9 @@ func copyExample(from, into, name, module, subdomain, version, checkout string, 
 		exampleWorker + "." + string(owner[1]) + ".workers.dev", name + "." + subdomain + ".workers.dev",
 		worker, name,
 		exampleWorker, name,
+		// The variables the SDKs read (go/auth's AccessScheme, restated in fern/generators.yml).
+		envPrefix(worker) + "_", envPrefix(name) + "_",
+		envPrefix(exampleWorker) + "_", envPrefix(name) + "_",
 		exampleTool, tool,
 	}
 	// The tasks the project shares with every other: charter's tasks/ folders, from GitHub at the

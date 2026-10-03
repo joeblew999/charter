@@ -28,23 +28,33 @@ type Env struct {
 	Hub   func() (Hub, error)
 }
 
-// Tokens are who may do what: the Worker's secrets (WORKER_SECRETS in mise.toml), each with its
-// scopes. Writing needs write; READ_TOKEN is a token that may not (reads are public). An unset
-// secret matches no token.
-var Tokens = []auth.Token{
-	{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}},
-	{Secret: "READ_TOKEN", Scopes: []string{"read"}},
+// Trusted is who may do what (reads are public, writing needs write):
+//   - the Worker's secrets (WORKER_SECRETS in mise.toml), each with its scopes: READ_TOKEN may not write;
+//   - Cloudflare Access, once mise run access:setup has put it in front of the Worker: a person who
+//     logged in writes, a machine's service token reads (and writes with the write token beside it);
+//   - an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): what each token's scope claim says.
+//
+// An unset secret or setting trusts no one.
+var Trusted = []auth.Trusted{
+	auth.Token{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}},
+	auth.Token{Secret: "READ_TOKEN", Scopes: []string{"read"}},
+	auth.Access{People: []string{"read", "write"}, Machines: []string{"read"}},
+	auth.OIDC{},
 }
 
 // Handler serves the contract on env, plus the two specs with the request's origin as their server,
 // plus the contract as MCP tools (/api/mcp: a tool call runs the same operation as the REST route).
 func Handler(env Env) http.Handler {
 	routes := humaworkers.New(config(), Routes(env))
-	routes.UseMiddleware(auth.Middleware(routes, env.Var, Tokens...))
+	routes.UseMiddleware(auth.Middleware(routes, env.Var, Trusted...))
 	mcp := humamcp.Handler(routes)
+	discovery := auth.Discovery(env.Var)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var spec func(server string) ([]byte, error)
 		switch r.URL.Path {
+		case "/.well-known/openid-configuration":
+			discovery.ServeHTTP(w, r)
+			return
 		case "/api/openapi.json":
 			spec = OpenAPI
 		case "/api/asyncapi.json":

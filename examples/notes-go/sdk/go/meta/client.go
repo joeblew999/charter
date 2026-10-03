@@ -4,6 +4,7 @@ package meta
 
 import (
 	context "context"
+	os "os"
 
 	notes "github.com/joeblew999/charter/examples/notes-go/sdk/go"
 	core "github.com/joeblew999/charter/examples/notes-go/sdk/go/core"
@@ -20,6 +21,12 @@ type Client struct {
 }
 
 func NewClient(options *core.RequestOptions) *Client {
+	if options.AccessClientID == "" {
+		options.AccessClientID = os.Getenv("CHARTER_NOTES_GO_ACCESS_CLIENT_ID")
+	}
+	if options.AccessClientSecret == "" {
+		options.AccessClientSecret = os.Getenv("CHARTER_NOTES_GO_ACCESS_CLIENT_SECRET")
+	}
 	return &Client{
 		WithRawResponse: NewRawClient(options),
 		options:         options,

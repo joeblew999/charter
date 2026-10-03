@@ -139,7 +139,8 @@ func TestSpecDiffOpenAPI(t *testing.T) {
 			at(d, "paths", "/api/notes", "get")["security"] = []any{map[string]any{"bearer": []any{"read"}}}
 		}, want: "GET /api/notes: security tightened: bearer[read], was anyone", breaking: true},
 		{name: "another way in added", after: func(d map[string]any) {
-			at(d, "paths", "/api/notes", "post")["security"] = []any{map[string]any{"bearer": []any{"write"}}, map[string]any{"oidc": []any{"write"}}}
+			op := at(d, "paths", "/api/notes", "post")
+			op["security"] = append(anyList(op["security"]), map[string]any{"partner": []any{"write"}})
 		}, want: "security loosened"},
 		{name: "a token no longer needed", after: func(d map[string]any) { delete(at(d, "paths", "/api/notes", "post"), "security") },
 			want: "security loosened: anyone, was bearer[write]"},

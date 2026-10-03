@@ -10,6 +10,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/joeblew999/charter/go/auth"
+	"github.com/joeblew999/charter/go/auth/authtest"
 )
 
 // A real HTTP server over the in-memory store and hub: the handlers as `go run .` serves them.
@@ -94,6 +97,42 @@ func TestTokens(t *testing.T) {
 		if status == 401 && header.Get("WWW-Authenticate") != "Bearer" {
 			t.Errorf("%s %s: a 401 without WWW-Authenticate: Bearer", c.method, c.path)
 		}
+	}
+}
+
+// Cloudflare Access and an OIDC issuer (a test one, as both): a person writes, a machine's service
+// token only reads, an OIDC token does what its scope says; one that does not verify is 401.
+func TestAccessAndOIDC(t *testing.T) {
+	issuer := authtest.New()
+	defer issuer.Close()
+	memory := &MemStore{}
+	vars := map[string]string{"APP_NAME": "test", auth.AccessTeam: issuer.URL, auth.AccessAUD: "aud", auth.OIDCIssuer: issuer.URL, auth.OIDCAudience: "https://notes.test"}
+	srv := httptest.NewServer(Handler(Env{
+		Var:   func(name string) string { return vars[name] },
+		Store: func() (Store, error) { return memory, nil },
+		Hub:   func() (Hub, error) { return memory, nil },
+	}))
+	defer srv.Close()
+	for _, c := range []struct {
+		name, header, value string
+		want                int
+	}{
+		{"a person", auth.AccessHeader, issuer.Access("aud", "dev@example.com", ""), 200},
+		{"a machine", auth.AccessHeader, issuer.Access("aud", "", "ci.access"), 403},
+		{"another application's", auth.AccessHeader, issuer.Access("other", "dev@example.com", ""), 401},
+		{"an OIDC token with write", "Authorization", "Bearer " + issuer.OIDC("https://notes.test", "u1", "write"), 200},
+		{"an OIDC token without", "Authorization", "Bearer " + issuer.OIDC("https://notes.test", "u1", "read"), 403},
+		{"an OIDC token for another API", "Authorization", "Bearer " + issuer.OIDC("https://elsewhere.test", "u1", "write"), 401},
+	} {
+		status, out, _ := do(t, "POST", srv.URL+"/api/notes", `{"body":"x"}`, "Authorization", "", c.header, c.value)
+		if status != c.want {
+			t.Errorf("%s: %d, want %d: %s", c.name, status, c.want, out)
+		}
+	}
+	// The spec's openIdConnectUrl sends a client on to the issuer.
+	res, err := (&http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}).Get(srv.URL + "/.well-known/openid-configuration")
+	if err != nil || res.StatusCode != 302 || res.Header.Get("Location") != issuer.URL+"/.well-known/openid-configuration" {
+		t.Errorf("discovery: %v %v", res, err)
 	}
 }
 

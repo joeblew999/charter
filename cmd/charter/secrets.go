@@ -14,7 +14,7 @@ func init() {
 		"copy environment variables into this repo's GitHub Actions secrets (values are never printed)", githubSecrets}
 	anywhere["github-secrets"] = true
 	commands["deploy"] = command{"[cf deploy flags]",
-		"deploy the Worker with the secrets WORKER_SECRETS names, from the environment (values are never printed), then apply pending migrations", deploy}
+		"deploy the Worker with the secrets WORKER_SECRETS names, and those of WORKER_OPTIONAL_SECRETS that are set, from the environment (values are never printed), then apply pending migrations", deploy}
 }
 
 // githubSecrets sets each named variable as a repository secret. The value goes to `gh secret set`
@@ -22,6 +22,11 @@ func init() {
 // values: mise run cloudflare:secrets wraps it in `fnox exec`.
 func githubSecrets(names []string) error {
 	names = append(names, workerSecretNames()...) // the deploy workflow passes them to mise run deploy
+	for _, name := range optionalSecretNames() {
+		if os.Getenv(name) != "" {
+			names = append(names, name)
+		}
+	}
 	if len(names) == 0 {
 		return errors.New("github-secrets needs the names of the variables to copy")
 	}
@@ -42,6 +47,10 @@ func githubSecrets(names []string) error {
 
 // The Worker's secrets: the names WORKER_SECRETS (in mise.toml) lists, e.g. READ_TOKEN WRITE_TOKEN.
 func workerSecretNames() []string { return strings.Fields(os.Getenv("WORKER_SECRETS")) }
+
+// The Worker's optional secrets (WORKER_OPTIONAL_SECRETS), e.g. ACCESS_AUD: set when the environment
+// has them, left alone when it has not.
+func optionalSecretNames() []string { return strings.Fields(os.Getenv("WORKER_OPTIONAL_SECRETS")) }
 
 // secretsFile writes the secrets, by name, to a file only this user can read, for cf deploy
 // --secrets-file. The caller removes it. "" when there are none.
@@ -64,12 +73,18 @@ func secretsFile(values map[string]string) (string, error) {
 // deploy deploys the Worker with its secrets, then applies pending migrations. The secrets come
 // from the environment (mise run deploy takes them from fnox, or from GitHub's secrets in CI) and go
 // through a file, so they are in no command line and no output; a new Worker is created with them,
-// and a changed token is set by the next deploy.
+// and a changed token is set by the next deploy. An optional secret goes with them when it is set
+// (the project's cloudflare.config.ts declares it then).
 func deploy(args []string) error {
 	values := map[string]string{}
 	for _, name := range workerSecretNames() {
 		if values[name] = os.Getenv(name); values[name] == "" {
 			return fmt.Errorf("%s is not set here: the Worker needs it (WORKER_SECRETS); mise run deploy takes it from fnox, CI from the repo's GitHub secrets", name)
+		}
+	}
+	for _, name := range optionalSecretNames() {
+		if value := os.Getenv(name); value != "" {
+			values[name] = value
 		}
 	}
 	file, err := secretsFile(values)

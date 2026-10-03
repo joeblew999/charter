@@ -18,8 +18,12 @@ func init() {
 func config() huma.Config {
 	config := humaworkers.Config(Title, Version)
 	config.Info.Description = Description
-	// Bearer tokens; an operation that needs one says which scopes (reads are public).
+	// Who may call: bearer tokens, Cloudflare Access (a person's login or a machine's service token)
+	// and an OpenID Connect issuer's tokens. An operation that needs a scope says which, by any of
+	// them (reads are public).
 	auth.Scheme(config.OpenAPI)
+	auth.AccessScheme(config.OpenAPI, Title)
+	auth.OIDCScheme(config.OpenAPI)
 	return config
 }
 

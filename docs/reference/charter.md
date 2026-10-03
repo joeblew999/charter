@@ -54,8 +54,9 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 | `exec` * | `-env NAME=VALUE`, `-quiet`, `-secrets`, then `<program> [args]` | Runs a program with those variables; `-quiet` shows its output only if it fails; `-secrets` adds the secrets `WORKER_SECRETS` names, from fnox unless already set |
 | `lint` * | `-vet <packages>`, `-wasm <packages>`, then `<file or folder>...` | Fails if `gofmt` would change a file, then `go vet` for the host and for Wasm |
 | `migrate-local` | `-port <port>`, `-worker <name>` | Applies `migrations/*.sql` to a running dev server's local D1 |
-| `deploy` | `cf deploy` flags | REMOTE. Deploys the Worker with the secrets `WORKER_SECRETS` names, from the environment through a private file (never printed), then `migrate` |
+| `deploy` | `cf deploy` flags | REMOTE. Deploys the Worker with the secrets `WORKER_SECRETS` names, and those of `WORKER_OPTIONAL_SECRETS` that are set, from the environment through a private file (never printed), then `migrate` |
 | `migrate` | `-worker <name>` | REMOTE. Applies pending migrations to `<worker>-db` |
+| `access` | `setup [email...]`, `token create <machine> <file\|fnox>`, `token list`, `token revoke <machine>`, `delete` | REMOTE. Cloudflare Access in front of the Worker (`API_URL`): people log in with GitHub, each machine has a service token of its own; the Worker's `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`, and the IDs in fnox ([Auth](../guides/auth.md#cloudflare-access)). Needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_GITHUB_IDP_ID` |
 | `doctor` | | Says what the project's tasks need and lack |
 | `harness-sync`, `harness-test`, `harness-deploy` | `harness-test -remote` | For a Worker that imports its own generated SDK (`conformance/showcase-ts/`): copy it in, test it under `cf dev` or deployed, deploy it twice |
 

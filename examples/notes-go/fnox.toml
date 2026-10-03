@@ -1,7 +1,8 @@
 # Where this project's secrets are: the macOS keychain (service "fnox"), never a file. This file only
 # maps each name to its keychain item, so it is safe to commit; the Cloudflare credentials come from
 # the global fnox config. A task that needs them runs them through `charter exec -secrets`. Make
-# them once (docs/guides/tokens.md):
+# them once (https://joeblew999.github.io/charter/guides/auth.html); mise run access:setup and
+# access:token add the names they keep here:
 #   openssl rand -hex 32 | fnox set WRITE_TOKEN -k "charter-notes-go WRITE_TOKEN" -p keychain
 #   openssl rand -hex 32 | fnox set READ_TOKEN -k "charter-notes-go READ_TOKEN" -p keychain
 

@@ -3,6 +3,8 @@
 package client
 
 import (
+	os "os"
+
 	core "github.com/joeblew999/charter/examples/notes-go/sdk/go/core"
 	internal "github.com/joeblew999/charter/examples/notes-go/sdk/go/internal"
 	meta "github.com/joeblew999/charter/examples/notes-go/sdk/go/meta"
@@ -21,6 +23,12 @@ type Client struct {
 
 func NewClient(opts ...option.RequestOption) *Client {
 	options := core.NewRequestOptions(opts...)
+	if options.AccessClientID == "" {
+		options.AccessClientID = os.Getenv("CHARTER_NOTES_GO_ACCESS_CLIENT_ID")
+	}
+	if options.AccessClientSecret == "" {
+		options.AccessClientSecret = os.Getenv("CHARTER_NOTES_GO_ACCESS_CLIENT_SECRET")
+	}
 	return &Client{
 		Meta:    meta.NewClient(options),
 		Notes:   notes.NewClient(options),

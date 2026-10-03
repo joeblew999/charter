@@ -4,9 +4,12 @@
 import { asyncInfo, contract, info } from "./src/contract.ts";
 import { specFiles } from "@charter/ts/spec-files";
 import { asyncapiSpec, openapiSpec } from "@charter/ts/specs";
-import { scheme } from "@charter/ts/auth";
+import { accessScheme, oidcScheme, scheme } from "@charter/ts/auth";
+
+// Who may call: bearer tokens, Cloudflare Access and an OpenID Connect issuer (src/index.ts).
+const base = oidcScheme(accessScheme(info.title, scheme()));
 
 await specFiles("spec", {
-	openapi: server => openapiSpec(contract, { info, server, base: scheme() }),
+	openapi: server => openapiSpec(contract, { info, server, base }),
 	asyncapi: server => asyncapiSpec(contract, { info: asyncInfo, server }),
 });

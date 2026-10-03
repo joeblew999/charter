@@ -6,7 +6,7 @@ import type { z } from "zod";
 import { asyncInfo, contract, END, info, type note } from "./contract.ts";
 import { asyncapiSpec, openapiSpec } from "@charter/ts/specs";
 import { follow, type FollowSource } from "@charter/ts/follow";
-import { authorize, scheme, securityOf } from "@charter/ts/auth";
+import { accessScheme, authorize, discoveryURL, oidcScheme, scheme, securityOf, type Caller } from "@charter/ts/auth";
 export { NotesHub } from "./hub.ts";
 
 type Note = z.infer<typeof note>;
@@ -26,22 +26,35 @@ const notes: FollowSource<Note> = {
 const followNotes = (after: string | undefined, signal: AbortSignal | undefined) =>
 	follow(notes, { after: after === undefined ? undefined : Number(after), signal, onBroken: error => console.warn("follow: hub subscription broken, resubscribing", String(error)) });
 
-// Who may do what (the contract says what each operation needs): the Worker's secrets, each with its
-// scopes. Writing needs write; READ_TOKEN may not (reads are public). An unset secret matches nothing.
-const tokens = () => [
-	{ value: env.WRITE_TOKEN, scopes: ["read", "write"] },
-	{ value: env.READ_TOKEN, scopes: ["read"] },
-];
+// Who may do what (the contract says what each operation needs; reads are public, writing needs write):
+//   - the Worker's secrets, each with its scopes: READ_TOKEN may not write;
+//   - Cloudflare Access, once mise run access:setup has put it in front of the Worker: a person who
+//     logged in writes, a machine's service token reads (and writes with the write token beside it);
+//   - an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): what each token's scope claim says.
+// An unset secret or setting trusts no one. The four settings are optional secrets
+// (cloudflare.config.ts), so the generated Env may not name them.
+const settings = env as typeof env & Partial<Record<"ACCESS_TEAM_DOMAIN" | "ACCESS_AUD" | "OIDC_ISSUER" | "OIDC_AUDIENCE", string>>;
+const trusted = () => ({
+	tokens: [
+		{ value: env.WRITE_TOKEN, scopes: ["read", "write"] },
+		{ value: env.READ_TOKEN, scopes: ["read"] },
+	],
+	access: { team: settings.ACCESS_TEAM_DOMAIN, aud: settings.ACCESS_AUD, people: ["read", "write"], machines: ["read"] },
+	oidc: { issuer: settings.OIDC_ISSUER, audience: settings.OIDC_AUDIENCE },
+});
+
+// The specs' security schemes (spec.ts writes the same).
+const base = oidcScheme(accessScheme(info.title, scheme()));
 
 // The contract (src/contract.ts) implemented on D1, served by oRPC's OpenAPIHandler as plain REST,
-// each call allowed by the token in its Authorization header (401 without one it knows, 403 without
-// the scope).
+// each call allowed by the credentials it carries (401 without any it knows, 403 without the scope);
+// the handler finds its caller in the context.
 const api = implement(contract)
-	.$context<{ authorization?: string | null }>()
-	.use(({ context, procedure, next }) => {
-		const denied = authorize(context.authorization, securityOf(procedure), tokens());
-		if (denied) throw new ORPCError(denied.status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", { message: denied.message });
-		return next();
+	.$context<{ headers?: Headers; caller?: Caller }>()
+	.use(async ({ context, procedure, next }) => {
+		const decision = await authorize(context.headers ?? new Headers(), securityOf(procedure), trusted());
+		if (decision.status !== 200) throw new ORPCError(decision.status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", { message: decision.message });
+		return next({ context: { caller: decision.caller } });
 	});
 
 export const router = api.router({
@@ -122,10 +135,15 @@ export default {
 	async fetch(request) {
 		const url = new URL(request.url);
 		// The specs, generated from the same router as fern/{openapi,asyncapi}.json.
-		if (url.pathname === "/api/openapi.json") return Response.json(await openapiSpec(router, { info, server: url.origin, base: scheme() }));
+		if (url.pathname === "/api/openapi.json") return Response.json(await openapiSpec(router, { info, server: url.origin, base }));
 		if (url.pathname === "/api/asyncapi.json") return Response.json(await asyncapiSpec(router, { info: asyncInfo, server: url.origin }));
+		// The specs' openIdConnectUrl: on to the issuer's discovery document.
+		if (url.pathname === "/.well-known/openid-configuration") {
+			const to = discoveryURL(settings.OIDC_ISSUER);
+			return to ? Response.redirect(to, 302) : new Response("this API trusts no OpenID Connect issuer", { status: 404 });
+		}
 		if (url.pathname === "/api/notes/live") return live(request);
-		const { matched, response } = await handler.handle(request, { context: { authorization: request.headers.get("authorization") } });
+		const { matched, response } = await handler.handle(request, { context: { headers: request.headers } });
 		return matched ? response : new Response("not found", { status: 404 });
 	},
 } satisfies ExportedHandler;
