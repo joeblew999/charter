@@ -10,7 +10,7 @@ on:
       example:
         description: The example whose Worker to deploy
         type: choice
-        options: [notes-go, notes-ts]
+        options: [notes-go, notes-ts, start-go, start-ts]
         required: true
 permissions:
   contents: read

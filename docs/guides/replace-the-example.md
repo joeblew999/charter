@@ -6,7 +6,7 @@ parent: Guides
 
 # Your API: change the contract, then take the notes out
 
-A new project is the notes API. Add your operations beside the notes, then take the notes out. The contract, `api/contract.go`, is the source of the validation, specs, SDKs and MCP tools.
+A new project is the notes API. Add your operations beside the notes, then take the notes out. A project made with `charter new -empty` has only `hello`: add your operations, with nothing to take out. The contract, `api/contract.go`, is the source of the validation, specs, SDKs and MCP tools.
 
 ```sh
 mise run spec     # after every contract change
@@ -25,7 +25,7 @@ mise run check    # fails on a stale spec, a failing test or a TinyGo gap
 
 2. **The route** in `Routes`: `Method`, `Path`, `OperationID` (the MCP tool's name), and a `huma.Register` call with `Summary`, `Errors` and `Extensions: sdk("notes", "get", nil)`, which names `client.notes.get()`. Copy `listNotes` for a paginated list.
 3. **The handler** in `api/handlers.go` gets `in` validated; return `huma.Error404NotFound("...")` to refuse.
-4. **The storage:** the method on `Store` in `api/store.go`, for `D1Store` (`api/store_js.go`, on Cloudflare) and `MemStore` (natively and in `go test`). A table change is the next numbered file in `migrations/`.
+4. **The storage:** the method on `Store` in `api/store.go`, for `D1Store` (`api/store_js.go`, on Cloudflare) and `MemStore` (natively and in `go test`); a `-empty` project has none yet, so copy the three from `examples/notes-go/api/`. A table change is the next numbered file in `migrations/`.
 
 For the generated clients: every constrained request field has a valid `example`; numbers are `int32`; a cursor is a string.
 

@@ -19,7 +19,7 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 
 | Command | Flags | What it does |
 |---|---|---|
-| `new` * | `-name <name>` (required), `-lang go` or `ts` (default `go`), `-module <go module>` (default `github.com/<gh login>/<name>`), `-subdomain <workers.dev subdomain>` (default a placeholder), `-into <empty dir>` (default `./<name>`), `-from <checkout>` | Copies `examples/notes-go/` (without `sdk/go/`), or with `-lang ts` `examples/notes-ts/` and the tests it shares, under your name; adds docs and workflows; pins the tool and the library to its own release (with `-from`, to the checkout). `-lang ts` needs Node |
+| `new` * | `-name <name>` (required), `-lang go` or `ts` (default `go`), `-empty`, `-module <go module>` (default `github.com/<gh login>/<name>`), `-subdomain <workers.dev subdomain>` (default a placeholder), `-into <empty dir>` (default `./<name>`), `-from <checkout>` | Copies `examples/notes-go/` (without `sdk/go/`), or with `-lang ts` `examples/notes-ts/` and the tests it shares, under your name; with `-empty`, `examples/start-go/` or `examples/start-ts/` (one route, `GET /api/hello`); adds docs and workflows; pins the tool and the library to its own release (with `-from`, to the checkout). `-lang ts` needs Node |
 | `version` * | | The release the tool is |
 
 ## Build

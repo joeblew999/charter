@@ -146,7 +146,12 @@ func tasksOf(file string) map[string]bool {
 				}
 				continue
 			}
-			files, _ := filepath.Glob(filepath.Join(filepath.Dir(file), filepath.FromSlash(include[1]), "*.toml"))
+			// Relative in this repo's projects; absolute (the checkout's) in one made by new -from.
+			folder := filepath.FromSlash(include[1])
+			if !filepath.IsAbs(folder) {
+				folder = filepath.Join(filepath.Dir(file), folder)
+			}
+			files, _ := filepath.Glob(filepath.Join(folder, "*.toml"))
 			for _, included := range files {
 				if content, err := os.ReadFile(included); err == nil {
 					for _, m := range includedTaskDef.FindAllStringSubmatch(string(content), -1) {

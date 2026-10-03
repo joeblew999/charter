@@ -45,7 +45,7 @@ func TestEveryCommandIsInTheReference(t *testing.T) {
 
 func TestEveryTaskIsInTheReference(t *testing.T) {
 	documented := rows(t, "../../docs/reference/tasks.md")
-	for _, file := range []string{"../../mise.toml", "../../examples/notes-go/mise.toml", "../../examples/notes-ts/mise.toml", "../../conformance/showcase-go/mise.toml", "../../conformance/showcase-ts/mise.toml"} {
+	for _, file := range []string{"../../mise.toml", "../../examples/notes-go/mise.toml", "../../examples/notes-ts/mise.toml", "../../examples/start-go/mise.toml", "../../examples/start-ts/mise.toml", "../../conformance/showcase-go/mise.toml", "../../conformance/showcase-ts/mise.toml"} {
 		var missing []string
 		for task := range tasksOf(file) {
 			if !documented[task] {

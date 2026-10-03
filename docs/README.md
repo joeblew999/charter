@@ -30,6 +30,7 @@ Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go
 | The shared tasks | `tasks/shared/`, `tasks/go/`, `tasks/ts/` | The tasks every project includes, at the release it pins; its `mise.toml` holds only its own |
 | The tool | `cmd/charter/` | The command behind every task ([The charter command](reference/charter.md)) |
 | The examples | `examples/notes-go/` (what `charter new` copies), `examples/notes-ts/` | The notes API, in Go and in TypeScript |
+| The start projects | `examples/start-go/`, `examples/start-ts/` (what `charter new -empty` copies) | One route, `GET /api/hello`, with the same tasks, specs, SDKs, tests and workflows |
 | The conformance projects | `conformance/showcase-go/`, `conformance/showcase-ts/` | Every Fern feature end to end, in Go and in TypeScript: the proof that the generated SDKs work |
 
 ## What is generated

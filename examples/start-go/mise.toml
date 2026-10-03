@@ -1,0 +1,74 @@
+# A Go API on Cloudflare Workers, contract first: the contract (api/contract.go) is the source, and
+# the server, the specs (fern/), the SDKs, a CLI and the API docs come from it.
+#   mise install && mise run setup     # tools, then npm packages
+#   mise run check                     # every local check (no Cloudflare account)
+#   mise tasks                         # all of them
+# Every task is one line that sh and Windows' cmd.exe both take: programs, "double quotes", &&. A
+# setting is written {{env.NAME}}, which mise fills in itself. Anything else is a
+# command of the charter tool, which works on the project it is run in (`help` lists its commands).
+
+[tools]
+go = "1.27.1"
+node = "26.10.0"
+# Builds the generated CLI: mise run sdk:cli:build.
+rust = "1.98.1"
+gh = "2.101.0"
+# Holds the Cloudflare credentials (the keychain, through fnox): mise run cloudflare:secrets.
+fnox = "1.35.2"
+
+[env]
+# How the tasks run the charter tool.
+CHARTER_TOOL = "go run ../../cmd/charter"
+# The local dev port.
+API_PORT = "{{ get_env(name='API_PORT', default='5177') }}"
+# Where the Worker is deployed (cf deploy prints it; there is no cf command to look it up). Its first
+# label is the Worker's name. If it is not this, set it in mise.local.toml (gitignored) or change
+# the default here, then: mise run spec.
+API_URL = "{{ get_env(name='API_URL', default='https://charter-start-go.gedw99.workers.dev') }}"
+# Optional: an API token instead of cf's OAuth login (`npx cf auth login`).
+# CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+
+[task_config]
+# The tasks every project shares, and those of its language: charter's tasks/ folder (a project
+# includes it from GitHub, by tag). A task defined below takes the place of the shared one.
+includes = ["../../tasks/shared", "../../tasks/go"]
+
+# ---- the project ---------------------------------------------------------------------------------
+
+[tasks.check]
+description = "Every LOCAL check (no Cloudflare account): lint, tests, spec drift, the TinyGo build, the live and MCP tests natively and under workerd, and what is generated matches"
+depends = ["lint", "test", "spec:check", "sdk:publish:fresh", "test:native", "test:workerd", "workflows:check", "docs:check"]
+
+# ---- the API: run it, build it, test it ----------------------------------------------------------
+
+[tasks.lint]
+description = "gofmt and go vet, for the host and for Wasm"
+run = "{{env.CHARTER_TOOL}} lint -wasm . *.go api cmd"
+
+[tasks."test:native"]
+description = "The live test and the MCP client test against the native build"
+run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -env PORT={port} -start "go run ." -run "node test/live-test.mjs http://localhost:{port}" -run "node test/mcp-test.mjs http://localhost:{port}"'
+
+[tasks."test:workerd"]
+description = "The same against the TinyGo Wasm under workerd (go test can't see TinyGo's gaps)"
+depends = ["build"]
+run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -env PORT={port} -start "cf dev" -run "{{env.CHARTER_TOOL}} migrate-local -port {port}" -run "node test/live-test.mjs http://localhost:{port}" -run "node test/mcp-test.mjs http://localhost:{port}"'
+
+[tasks.mcp-test]
+description = "The MCP client test (/api/mcp, official TypeScript client) against a running mise run run or mise run dev"
+run = 'node test/mcp-test.mjs http://localhost:{{env.API_PORT}}'
+
+# ---- Cloudflare: deploy it, test and measure what is deployed ------------------------------------
+
+[tasks.deploy]
+description = "REMOTE: build and deploy the Worker, then apply pending D1 migrations"
+depends = ["build"]
+run = "{{env.CHARTER_TOOL}} exec cf deploy && {{env.CHARTER_TOOL}} migrate"
+
+[tasks.live-test]
+description = "REMOTE: the live test, then MCP, against the deployed Worker"
+run = 'node test/live-test.mjs {{env.API_URL}} && node test/mcp-test.mjs {{env.API_URL}}'
+
+[tasks.bench]
+description = "REMOTE, read-only: every GET operation of the deployed Worker: wall time, Cloudflare's CPU time, and the CPU of each request"
+run = "{{env.CHARTER_TOOL}} bench -each -warm 30s"
