@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"os/exec"
@@ -205,7 +206,17 @@ func (a accessApp) put(existing *app, emails []string) (*app, error) {
 	}
 	var result app
 	if existing != nil {
-		err = a.cf.call("PUT", "/access/apps/"+existing.ID, body, &result)
+		// What charter doesn't set stays as it was (the MCP login, oauth_configuration, and anything
+		// set in the dashboard): a PUT replaces the whole application.
+		var current map[string]any
+		if err := a.cf.call("GET", "/access/apps/"+existing.ID, nil, &current); err != nil {
+			return nil, err
+		}
+		for _, readOnly := range []string{"id", "uid", "aud", "created_at", "updated_at"} {
+			delete(current, readOnly)
+		}
+		maps.Copy(current, body)
+		err = a.cf.call("PUT", "/access/apps/"+existing.ID, current, &result)
 	} else {
 		err = a.cf.call("POST", "/access/apps", body, &result)
 	}

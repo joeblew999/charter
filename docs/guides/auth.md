@@ -59,7 +59,7 @@ mise run access:token -- revoke <machine>        # Access refuses it from then o
 mise run access:delete                           # the application and every token
 ```
 
-- `access:setup` makes the Access application for `API_URL`'s host: each machine's token passes (Service Auth), the people named log in with GitHub. It sets the Worker's `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` at once, and keeps them in fnox with `ACCESS_APP_ID`, so every deploy sets them too (`WORKER_OPTIONAL_SECRETS`).
+- `access:setup` makes the Access application for `API_URL`'s host: each machine's token passes (Service Auth), the people named log in with GitHub. It sets the Worker's `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` at once, and keeps them in fnox with `ACCESS_APP_ID`, so every deploy sets them too (`WORKER_OPTIONAL_SECRETS`). Run again, it changes only what it sets: the policies, the login and the session; the rest of the application stays as it was, such as the MCP login (`oauth_configuration`) turned on in the dashboard. Machines' tokens are those named `<worker>:<machine>`; a token named otherwise is not let in by the policy it writes.
 - A token is named `<worker>:<machine>` and lasts a year. With `fnox`, it is kept as `<WORKER>_ACCESS_CLIENT_ID` and `_SECRET`, what the SDKs and `mise run live-test` read.
 - Behind Access every request needs the token, even one the contract calls public. Without it, Access answers 302 to the login, and the Worker never sees the request.
 

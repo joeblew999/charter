@@ -30,6 +30,7 @@ type getInput struct {
 	Fields  []string `query:"fields"`
 	Trace   string   `header:"X-Trace"`
 	Auth    string   `header:"Authorization" hidden:"true"`
+	Access  string   `header:"Cf-Access-Jwt-Assertion" hidden:"true"`
 }
 
 type createInput struct {
@@ -43,6 +44,14 @@ type createInput struct {
 
 type listInput struct {
 	Body []string
+}
+
+// credentials is what the operation was shown: a bearer token, or Access's JWT.
+func credentials(authorization, access string) string {
+	if authorization == "" && access != "" {
+		return "access " + access
+	}
+	return authorization
 }
 
 type thingOutput struct{ Body thing }
@@ -65,7 +74,7 @@ func testAPI(registered map[string]int) *humaworkers.API {
 		if in.Verbose {
 			name = "a verbose thing"
 		}
-		return &thingOutput{Body: thing{ID: in.ID, Name: name, Tags: in.Fields, Trace: in.Trace, Auth: in.Auth}}, nil
+		return &thingOutput{Body: thing{ID: in.ID, Name: name, Tags: in.Fields, Trace: in.Trace, Auth: credentials(in.Auth, in.Access)}}, nil
 	}
 	stream := func(context.Context, *struct{}) (*huma.StreamResponse, error) {
 		return &huma.StreamResponse{Body: func(hc huma.Context) { hc.BodyWriter().Write([]byte("data: 1\n\n")) }}, nil
@@ -276,6 +285,10 @@ func TestACallRunsTheOperation(t *testing.T) {
 		t.Fatalf("getThing: %v", result)
 	}
 	same(t, "structuredContent", result["structuredContent"], want)
+	// A caller Cloudflare Access let in: its JWT is passed on too.
+	if got := textOf(t, call(t, h, "getThing", `{"id": 1}`, "Cf-Access-Jwt-Assertion", "eyJ.a.b")); !strings.Contains(got, `"auth":"access eyJ.a.b"`) {
+		t.Fatalf("getThing through Access: %s", got)
+	}
 
 	// The body's properties, flat, with the query parameter beside them. A 64-bit id comes back whole.
 	result = call(t, h, "createThing", `{"name": "new", "tags": ["x"], "dry": true}`)
