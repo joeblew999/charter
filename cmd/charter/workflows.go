@@ -100,18 +100,26 @@ func workflowsFor(dir string) (map[string][]byte, error) {
 	return templates, nil
 }
 
-// writeWorkflows writes every workflow into dir/.github/workflows.
-func writeWorkflows(dir string) error {
-	templates, err := workflowsFor(dir)
-	if err != nil {
-		return err
-	}
-	for name, content := range templates {
-		if err := write(filepath.Join(dir, ".github", "workflows", name), string(content)); err != nil {
-			return err
-		}
-	}
+// githubFiles are the files of a repo's .github folder, by their path below it: the issue forms and
+// the labels file, and with workflows the workflows as the repo in dir needs them.
+func githubFiles(dir string, workflows bool) (map[string][]byte, error) {
 	files, err := collaboration()
+	if err != nil || !workflows {
+		return files, err
+	}
+	found, err := workflowsFor(dir)
+	if err != nil {
+		return nil, err
+	}
+	for name, content := range found {
+		files[filepath.Join("workflows", name)] = content
+	}
+	return files, nil
+}
+
+// writeWorkflows writes the workflows, the issue forms and the labels file into dir/.github.
+func writeWorkflows(dir string) error {
+	files, err := githubFiles(dir, true)
 	if err != nil {
 		return err
 	}
@@ -139,16 +147,9 @@ func workflows(args []string) error {
 	if !exists(into) {
 		return fmt.Errorf("%s does not exist", into)
 	}
-	found, err := workflowsFor(into)
+	templates, err := githubFiles(into, true) // by path below .github
 	if err != nil {
 		return err
-	}
-	templates, err := collaboration() // by path below .github: the workflows join them there
-	if err != nil {
-		return err
-	}
-	for name, content := range found {
-		templates[filepath.Join("workflows", name)] = content
 	}
 	dir := filepath.Join(into, ".github")
 	if check && !exists(filepath.Join(dir, "workflows")) {

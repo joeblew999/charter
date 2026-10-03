@@ -64,7 +64,7 @@ run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -
 
 [tasks.deploy]
 description = "REMOTE: deploy the Worker, then apply pending D1 migrations"
-run = "{{env.CHARTER_TOOL}} exec cf deploy && {{env.CHARTER_TOOL}} migrate"
+run = "{{env.CHARTER_TOOL}} exec -secrets {{env.CHARTER_TOOL}} deploy"
 
 [tasks.live-test]
 description = "REMOTE: the live test against the deployed Worker"

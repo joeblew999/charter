@@ -63,7 +63,7 @@ run = 'node test/mcp-test.mjs http://localhost:{{env.API_PORT}}'
 [tasks.deploy]
 description = "REMOTE: build and deploy the Worker, then apply pending D1 migrations"
 depends = ["build"]
-run = "{{env.CHARTER_TOOL}} exec cf deploy && {{env.CHARTER_TOOL}} migrate"
+run = "{{env.CHARTER_TOOL}} exec -secrets {{env.CHARTER_TOOL}} deploy"
 
 [tasks.live-test]
 description = "REMOTE: the live test, then MCP, against the deployed Worker"

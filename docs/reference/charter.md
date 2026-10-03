@@ -103,9 +103,10 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 
 | Command | Flags | What it does |
 |---|---|---|
+| `repo` * | `-check` | REMOTE. At the repo's root, from its `charter.toml`: the docs site, the issue forms and `labels.tsv`, the workflows (if it lists `projects`), the labels, the description, homepage and topics, GitHub Pages. Prints `ok` or `changed` per item; `-check` changes nothing and fails on drift ([how](../guides/deploy.md#keep-the-repo-in-shape)) |
 | `workflows` * | `-check`, `-into <repo dir>` | Writes `.github/`: the workflows `check`, `deploy`, `sdk-check`, `release`, the issue forms and `labels.tsv` |
 | `issue` * | `<bug\|feature\|upstream>` | Prints an issue body with that form's headings, for `gh issue create --body-file` |
-| `labels` * | | REMOTE. Creates or updates the repo's labels from the labels file |
+| `labels` * | | REMOTE. Creates or updates the repo's labels from the labels file; removes GitHub's default labels it lacks that nothing uses |
 | `docs` * | `-check`, `-into <repo dir>` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt` |
 | `docs-lint` * | `-into <repo dir>` | Fails on missing front matter, an unlinked page, a dead link or anchor, an unknown task, a missing path, a release version |
 | `docs-review` * | `-print` | Hands Claude the review prompt with what the lint found |

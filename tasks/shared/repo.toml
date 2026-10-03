@@ -12,6 +12,16 @@ description = "REMOTE on a version tag (vX.Y.Z): tag the committed Go SDK, a mod
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} release-tags sdk/go"
 
+["repo"]
+description = "REMOTE: keep the repo in shape from charter.toml at its root: docs site, issue forms, labels, workflows, description, homepage, topics, GitHub Pages"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} repo"
+
+["repo:check"]
+description = "REMOTE, read-only: fail if the repo differs from charter.toml and the tool's templates (charter repo -check)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} repo -check"
+
 ["workflows"]
 description = "Write .github/workflows/ from the tool's templates (never edit the copies)"
 dir = "{{config_root}}"

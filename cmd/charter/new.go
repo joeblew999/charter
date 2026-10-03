@@ -145,6 +145,7 @@ func newProject(args []string) error {
 		"docs/README.md":  projectDocs(name, ts, empty),
 		"docs/rules.md":   projectRules(ts),
 		"docs/writing.md": docsWriting,
+		"charter.toml":    charterTomlFor(name + ": a contract-first API on Cloudflare Workers"),
 	} {
 		if err := write(filepath.Join(into, path), content); err != nil {
 			return err
@@ -190,7 +191,7 @@ func newProject(args []string) error {
 %s
 The Go library (`+libraryModule+`) is a requirement in go.mod. Its Worker glue is not in the
 project: mise run build writes it into build/ from the version the project requires.
-With a GitHub repo: mise run docs:setup, mise run docs:pages. The workflows are in .github/workflows.
+With a GitHub repo: mise run repo (charter.toml: its description, topics, docs site, labels, Pages). The workflows are in .github/workflows.
 
 %s
 Cost: on Cloudflare a simple read uses under 1 ms of CPU, a database read 1 to 2 ms, a write about 2 ms;
@@ -443,7 +444,7 @@ func finishTS(into, name, subdomain, version, checkout string, tasks []byte, emp
 
 %s
 The TypeScript library (@charter/ts) is a dependency in package.json.
-With a GitHub repo: mise run docs:setup, mise run docs:pages. The workflows are in .github/workflows.
+With a GitHub repo: mise run repo (charter.toml: its description, topics, docs site, labels, Pages). The workflows are in .github/workflows.
 
 %s
 `, into, name, into, apiPort(tasks), startsAs("src/contract.ts", empty), afterDeploy(name, subdomain))
