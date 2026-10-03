@@ -15,6 +15,9 @@ go = "1.27.1"
 node = "26.10.0"
 # Builds the generated CLI: mise run sdk:cli:build.
 rust = "1.98.1"
+# Link the CLI for the other systems a release ships it for: mise run sdk:dist:cli.
+zig = "0.16.0"
+"aqua:rust-cross/cargo-zigbuild" = "0.23.4"
 gh = "2.101.0"
 # Holds the Cloudflare credentials (the keychain, through fnox): mise run cloudflare:secrets.
 fnox = "1.35.2"
