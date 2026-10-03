@@ -199,3 +199,27 @@ func TestEveryExampleHasItsOwnSettings(t *testing.T) {
 		ports[port[1]] = name
 	}
 }
+
+// sdk-ready generates a group again when the Fern folder changed since it was generated (#41).
+func TestAGeneratedSDKIsStaleWhenItsSpecsChange(t *testing.T) {
+	t.Chdir(t.TempDir())
+	for _, dir := range []string{fernDir, "sdk/out/go"} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	spec := filepath.Join(fernDir, "openapi.json")
+	os.WriteFile(spec, []byte(`{"a":1}`), 0o644)
+	if sdkFresh("go") {
+		t.Error("fresh without a note of what it was made from")
+	}
+	source, _ := sdkSourceHash()
+	os.WriteFile(sdkStamp("go"), []byte(source+"\n"), 0o644)
+	if !sdkFresh("go") {
+		t.Error("stale right after it was made")
+	}
+	os.WriteFile(spec, []byte(`{"a":2}`), 0o644)
+	if sdkFresh("go") {
+		t.Error("fresh after the spec changed")
+	}
+}

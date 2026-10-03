@@ -45,7 +45,7 @@ What `charter new` makes, and `examples/notes-go/`.
 | `sdk:check-spec` | Fern's validation of the specs and its settings |
 | `sdk:gen <group>` | Generates one SDK into `sdk/out/<group>` (Docker) |
 | `sdk:check <group>` | Go: build, vet, tests against WireMock. TypeScript: typecheck |
-| `sdk:ready [group...]` | Generates what the tests use, if missing, and builds the CLI |
+| `sdk:ready [group...]` | Generates what the tests use, if missing or made from specs or settings that have changed since, and builds the CLI |
 | `sdk:publish` | Generates and checks the Go SDK, copies it into `sdk/go/` |
 | `sdk:publish:check` | Fails if `sdk/go/` is not what the specs generate now |
 | `sdk:publish:fresh` | Fails if the specs changed since `sdk/go/` was made (a hash, no Docker) |

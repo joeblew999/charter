@@ -23,7 +23,7 @@ dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} sdk-check"
 
 ["sdk:ready"]
-description = "Generate and build what the tests use, if missing (TypeScript and Go SDKs, the CLI): mise run sdk:ready [group...]"
+description = "Generate and build what the tests use, if missing or made from other specs (TypeScript and Go SDKs, the CLI): mise run sdk:ready [group...]"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} sdk-ready"
 

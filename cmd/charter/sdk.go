@@ -46,7 +46,26 @@ func sdkGen(args []string) error {
 	if err := docker(); err != nil {
 		return err
 	}
-	return sh(".", npmBin("fern"), "generate", "--local", "--group", args[0], "--force", "--log-level", "warn")
+	source, err := sdkSourceHash()
+	if err != nil {
+		return err
+	}
+	if err := sh(".", npmBin("fern"), "generate", "--local", "--group", args[0], "--force", "--log-level", "warn"); err != nil {
+		return err
+	}
+	// What it was made from, so sdk-ready knows when it is stale.
+	return os.WriteFile(sdkStamp(args[0]), []byte(source+"\n"), 0o644)
+}
+
+// sdkStamp is where sdk-gen notes what a group was generated from (beside sdk/out/<group>, which
+// Fern replaces whole).
+func sdkStamp(group string) string { return filepath.Join("sdk/out", "."+group+sdkMadeFrom) }
+
+// sdkFresh reports whether sdk/out/<group> was generated from the Fern folder as it is now.
+func sdkFresh(group string) bool {
+	made, err := os.ReadFile(sdkStamp(group))
+	source, err2 := sdkSourceHash()
+	return err == nil && err2 == nil && strings.TrimSpace(string(made)) == source
 }
 
 // sdkOut is where Fern puts a group: the output path generators.yml names.
@@ -157,7 +176,8 @@ func sdkReady(groups []string) error {
 		}
 	}
 	for _, need := range needs {
-		if wanted(need.group) && !exists(filepath.Join("sdk/out", need.file)) {
+		// Missing, or generated from other specs or settings: generate it (again).
+		if wanted(need.group) && (!exists(filepath.Join("sdk/out", need.file)) || !sdkFresh(need.group)) {
 			if err := sdkGen([]string{need.group}); err != nil {
 				return err
 			}
@@ -171,7 +191,8 @@ func sdkReady(groups []string) error {
 	if err != nil {
 		return err
 	}
-	if !exists(filepath.Join(cli, "target/release", exe(bin))) {
+	// The binary is older than its sources when they were generated again.
+	if built, err := os.Stat(filepath.Join(cli, "target/release", exe(bin))); err != nil || olderThan(built, sdkStamp("cli")) {
 		return cliBuildDir(cli, false)
 	}
 	return nil
@@ -299,4 +320,10 @@ func cliBuildDir(dir string, linux bool) error {
 	}
 	fmt.Printf("built: %s/target-linux/release/%s (Linux)\n", dir, bin)
 	return nil
+}
+
+// olderThan reports whether info was modified before file (false if file is missing).
+func olderThan(info os.FileInfo, file string) bool {
+	other, err := os.Stat(file)
+	return err == nil && info.ModTime().Before(other.ModTime())
 }
