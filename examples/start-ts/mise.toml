@@ -1,0 +1,75 @@
+# A TypeScript API on Cloudflare Workers, from an oRPC contract (src/contract.ts).
+# The specs (fern/), the SDKs, a CLI and the API docs come from it.
+#   mise install && mise run setup     # tools, then npm packages
+#   mise run check                     # every local check (no Cloudflare account)
+#   mise tasks                         # all of them
+# Every task is one line that sh and Windows' cmd.exe both take: programs, "double quotes", &&. A
+# setting is written {{env.NAME}}, which mise fills in itself. Anything else is a
+# command of the charter tool, which works on the project it is run in (`help` lists its commands).
+
+[tools]
+# The charter tool is Go.
+go = "1.27.1"
+node = "26.10.0"
+# Builds the generated CLI: mise run sdk:cli:build.
+rust = "1.98.1"
+gh = "2.101.0"
+
+[env]
+# How the tasks run the charter tool.
+CHARTER_TOOL = "go run ../../cmd/charter"
+# The local dev port.
+API_PORT = "{{ get_env(name='API_PORT', default='5178') }}"
+# Where the Worker is deployed (cf deploy prints it; there is no cf command to look it up). Its first
+# label is the Worker's name. On another Cloudflare account, set it in mise.local.toml (gitignored),
+# then: mise run spec.
+API_URL = "{{ get_env(name='API_URL', default='https://charter-start-ts.gedw99.workers.dev') }}"
+# Optional: an API token instead of cf's OAuth login (`npx cf auth login`).
+# CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+
+[task_config]
+# The tasks every project shares, and those of its language: charter's tasks/ folder (a project
+# includes it from GitHub, by tag). A task defined below takes the place of the shared one.
+includes = ["../../tasks/shared", "../../tasks/ts"]
+
+# ---- the project ---------------------------------------------------------------------------------
+
+[tasks.setup]
+description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import, and @charter/ts (the TypeScript library)"
+run = "npm ci --no-fund --no-audit --prefix ../../ts && npm run build --prefix ../../ts && npm ci --no-fund --no-audit"
+
+[tasks.check]
+description = "Every LOCAL check (no Cloudflare account): typecheck, the committed specs match the contract, the live test under workerd, and what is generated matches"
+depends = ["lint", "spec:check", "sdk:publish:fresh", "test:workerd", "workflows:check", "docs:check"]
+
+# ---- the API: run it, test it --------------------------------------------------------------------
+
+[tasks.spec]
+description = "Write both specs from the contract (src/contract.ts) into fern/"
+run = 'node spec.ts fern/openapi.json fern/asyncapi.json {{env.API_URL}}'
+
+[tasks."spec:check"]
+description = "Fail if a committed spec is stale against the contract"
+run = 'node spec.ts --check fern/openapi.json fern/asyncapi.json {{env.API_URL}}'
+
+[tasks.lint]
+description = "Typecheck the Worker"
+run = "{{env.CHARTER_TOOL}} exec -quiet cf workers types && {{env.CHARTER_TOOL}} exec tsc"
+
+[tasks."test:workerd"]
+description = "The live test against the Worker under workerd (cf dev)"
+run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -env PORT={port} -start "cf dev" -run "{{env.CHARTER_TOOL}} migrate-local -port {port}" -run "node test/live-test.mjs http://localhost:{port}"'
+
+# ---- Cloudflare: deploy it, test and measure what is deployed ------------------------------------
+
+[tasks.deploy]
+description = "REMOTE: deploy the Worker, then apply pending D1 migrations"
+run = "{{env.CHARTER_TOOL}} exec cf deploy && {{env.CHARTER_TOOL}} migrate"
+
+[tasks.live-test]
+description = "REMOTE: the live test against the deployed Worker"
+run = 'node test/live-test.mjs {{env.API_URL}}'
+
+[tasks.bench]
+description = "REMOTE, read-only: every GET operation of the deployed Worker, wall time and Cloudflare's CPU time"
+run = '{{env.CHARTER_TOOL}} bench -cpu -warm 30s -spec fern/openapi.json'

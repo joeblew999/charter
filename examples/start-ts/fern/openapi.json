@@ -1,0 +1,47 @@
+{
+  "info": {
+    "title": "charter-start-ts",
+    "version": "1.0.0",
+    "description": "charter-start-ts: oRPC contract -> OpenAPI -> Fern."
+  },
+  "servers": [
+    {
+      "url": "https://charter-start-ts.gedw99.workers.dev"
+    }
+  ],
+  "openapi": "3.1.1",
+  "paths": {
+    "/api/hello": {
+      "get": {
+        "operationId": "hello",
+        "summary": "Say hello",
+        "tags": [
+          "meta"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-fern-sdk-group-name": "meta",
+        "x-fern-sdk-method-name": "hello"
+      }
+    }
+  }
+}

@@ -126,6 +126,121 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 	}
 }
 
+// -empty: the start project (one route) under the project's names, with nothing of the notes
+// example in it, and it builds and passes its tests.
+func TestNewEmptyProject(t *testing.T) {
+	if testing.Short() {
+		t.Skip("scaffolds a project and builds it")
+	}
+	into, repo, said := scaffold(t, "-empty")
+	for _, want := range []string{"The API is one route, GET /api/hello", "http://localhost:5177/api/hello", replaceGuide} {
+		if !strings.Contains(said, want) {
+			t.Errorf("new does not say %q:\n%s", want, said)
+		}
+	}
+	workerURL(t, into, "billing-api.your-subdomain.workers.dev")
+	for file, want := range map[string]string{
+		"go.mod":                   "module github.com/zeta/billing-api\n",
+		"main.go":                  `"github.com/zeta/billing-api/api"`,
+		"cloudflare.config.ts":     "`billing-api-${ctx.mode}` : \"billing-api\"",
+		"fern/generators.yml":      "path: github.com/zeta/billing-api/sdk/go\n",
+		"fern/generators.yml ":     "binaryName: billing-api\n",
+		"mise.toml":                `includes = ["` + filepath.ToSlash(repo) + `/tasks/shared", "` + filepath.ToSlash(repo) + `/tasks/go"]`,
+		"test/live-test.mjs":       "/api/hello",
+		"test/mcp-test.mjs":        `"billing-api"`,
+		"docs/README.md":           "one route, `GET /api/hello`",
+		"README.md":                "`charter new -empty`",
+		"migrations/0001_init.sql": "",
+	} {
+		content, err := os.ReadFile(filepath.Join(into, strings.TrimSpace(file)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(content), want) {
+			t.Errorf("%s: no %q", file, want)
+		}
+	}
+	listed, err := output(repo, "git", "ls-files", "--cached", "--others", "--exclude-standard", "--", startDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range strings.Split(listed, "\n") {
+		if rel := strings.TrimPrefix(file, startDir+"/"); !exists(filepath.Join(into, rel)) {
+			t.Errorf("%s was not copied", rel)
+		}
+	}
+	notMentioned(t, into, "notes", "charter-start", startDir, exampleTool)
+	// The tool sees the tasks the project includes from the checkout (docs-lint asks it).
+	if tasks := tasksOf(filepath.Join(into, "mise.toml")); !tasks["spec"] || !tasks["sdk:gen"] {
+		t.Errorf("tasksOf does not find the included tasks: %v", tasks)
+	}
+	for _, args := range [][]string{{"build", "./..."}, {"vet", "./..."}, {"test", "./..."}} {
+		cmd := exec.Command("go", args...)
+		cmd.Dir = into
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("go %s in the new project: %v\n%s", strings.Join(args, " "), err, out)
+		}
+	}
+}
+
+// -empty -lang ts: the TypeScript start project, with its own tests (none of the Go example's).
+func TestNewEmptyTypeScriptProject(t *testing.T) {
+	if testing.Short() {
+		t.Skip("scaffolds a project and locks its npm packages")
+	}
+	into, repo, said := scaffold(t, "-empty", "-lang", "ts", "-subdomain", "acme")
+	if !strings.Contains(said, "The API is one route, GET /api/hello: add yours to src/contract.ts") || !strings.Contains(said, "http://localhost:5178/api/hello") {
+		t.Errorf("new says:\n%s", said)
+	}
+	workerURL(t, into, "billing-api.acme.workers.dev")
+	for file, want := range map[string]string{
+		"src/contract.ts":    `path: "/api/hello"`,
+		"package.json":       `"@charter/ts": "file:` + filepath.ToSlash(filepath.Join(repo, "ts")) + `"`,
+		"package-lock.json":  `"name": "billing-api"`,
+		"mise.toml":          `run = "npm ci --no-fund --no-audit --prefix {{env.CHARTER}}/ts && npm run build --prefix {{env.CHARTER}}/ts && npm ci --no-fund --no-audit"`,
+		"mise.toml ":         `run = 'node test/live-test.mjs {{env.API_URL}}'`,
+		"test/live-test.mjs": "/api/hello",
+		"docs/README.md":     "| The server | `src/index.ts` |",
+		"README.md":          "`charter new -empty -lang ts`",
+	} {
+		content, err := os.ReadFile(filepath.Join(into, strings.TrimSpace(file)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(content), want) {
+			t.Errorf("%s: no %q", file, want)
+		}
+	}
+	entries, _ := os.ReadDir(filepath.Join(into, "test"))
+	if len(entries) != 1 {
+		t.Errorf("test/ has %d files, want only live-test.mjs", len(entries))
+	}
+	for _, file := range []string{"go.mod", "api", "worker.mjs", "src/hub.ts", "public"} {
+		if exists(filepath.Join(into, file)) {
+			t.Errorf("%s is in the project", file)
+		}
+	}
+	notMentioned(t, into, "notes", "charter-start", startDirTS)
+}
+
+// notMentioned fails for every file of the project (but the lockfile, which holds the relative path
+// to this checkout's library) that mentions one of gone, in any case.
+func notMentioned(t *testing.T, into string, gone ...string) {
+	t.Helper()
+	filepath.WalkDir(into, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || filepath.Base(path) == "package-lock.json" {
+			return err
+		}
+		content, _ := os.ReadFile(path)
+		for _, word := range gone {
+			if strings.Contains(strings.ToLower(string(content)), strings.ToLower(word)) {
+				t.Errorf("%s mentions %q", path, word)
+			}
+		}
+		return nil
+	})
+}
+
 // With -subdomain the project's Worker is on that workers.dev subdomain, everywhere it is named.
 func TestNewProjectOnYourSubdomain(t *testing.T) {
 	if testing.Short() {
@@ -149,7 +264,7 @@ func TestNewProjectFromAReleasePinsTheTool(t *testing.T) {
 		t.Fatal(err)
 	}
 	into := t.TempDir()
-	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", "", false); err != nil {
+	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", "", false, false); err != nil {
 		t.Fatal(err)
 	}
 	tasks, _ := os.ReadFile(filepath.Join(into, "mise.toml"))
@@ -232,7 +347,7 @@ func TestNewTypeScriptProjectFromARelease(t *testing.T) {
 		t.Fatal(err)
 	}
 	into := t.TempDir()
-	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", "", true); err != nil {
+	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", "", true, false); err != nil {
 		t.Fatal(err)
 	}
 	for file, want := range map[string]string{

@@ -23,7 +23,7 @@ func examples(t *testing.T) []string {
 			names = append(names, parent+"/"+filepath.Base(dir))
 		}
 	}
-	if want := []string{"examples/notes-go", "examples/notes-ts", "conformance/showcase-go", "conformance/showcase-ts"}; !slices.Equal(names, want) {
+	if want := []string{"examples/notes-go", "examples/notes-ts", "examples/start-go", "examples/start-ts", "conformance/showcase-go", "conformance/showcase-ts"}; !slices.Equal(names, want) {
 		t.Fatalf("the repo has the projects %v, want %v", names, want)
 	}
 	return names

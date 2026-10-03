@@ -1,0 +1,21 @@
+# npm packages, and what cf writes
+node_modules/
+.cloudflare/
+.wrangler/
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
+.secrets/
+*.log
+*.cpuprofile
+.DS_Store
+
+# Generated SDKs and the CLI (mise run sdk:gen), and release builds (mise run sdk:dist)
+sdk/out/
+sdk/.work/
+target/
+dist/
+
+# Your own settings: another Worker URL, another port
+mise.local.toml

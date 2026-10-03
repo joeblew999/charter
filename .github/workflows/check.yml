@@ -42,7 +42,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [examples/notes-go, examples/notes-ts, conformance/showcase-go, conformance/showcase-ts]
+        project: [examples/notes-go, examples/notes-ts, examples/start-go, examples/start-ts, conformance/showcase-go, conformance/showcase-ts]
     defaults:
       run:
         working-directory: ${{ matrix.project }}
@@ -51,7 +51,7 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: mise run setup
       - run: mise run check
-  # The same tasks on Windows: the tool, both libraries and the Go notes example. Not the SDKs: Fern
+  # The same tasks on Windows: the tool, both libraries and the examples. Not the SDKs: Fern
   # generates in Linux containers, which GitHub's Windows runners do not run.
   tool-windows:
     runs-on: windows-2025
@@ -81,7 +81,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [examples/notes-go, examples/notes-ts]
+        project: [examples/notes-go, examples/notes-ts, examples/start-go, examples/start-ts]
     defaults:
       run:
         working-directory: ${{ matrix.project }}
@@ -119,7 +119,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [examples/notes-go, examples/notes-ts]
+        project: [examples/notes-go, examples/notes-ts, examples/start-go, examples/start-ts]
     defaults:
       run:
         working-directory: ${{ matrix.project }}

@@ -2,8 +2,9 @@ go 1.27.1
 
 use (
 	.
+	./conformance/showcase-go
 	./examples/notes-go
 	./examples/notes-go/sdk/go
-	./conformance/showcase-go
+	./examples/start-go
 	./go
 )
