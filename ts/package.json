@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"version": "0.0.0",
-	"description": "charter's TypeScript library, the counterpart of go/: the AsyncAPI generator for oRPC, both specs from one contract, the command behind a spec.ts, and follow(), the gap-free feed. It ships compiled (dist/, written by npm run build: Node won't strip the types of a package in node_modules). A project brings oRPC and Zod itself (peerDependencies) and takes the library as the package attached to each GitHub release (mise run ts:dist writes it; the version is the release's), or in this repo as \"file:../../ts\"; devDependencies are what the library's own build and checks use.",
+	"description": "charter's TypeScript library, the counterpart of go/: the AsyncAPI generator for oRPC, both specs from one contract, the command behind a spec.ts, follow(), the gap-free feed, and auth: bearer tokens, Cloudflare Access and an OpenID Connect issuer, verified with jose. It ships compiled (dist/, written by npm run build: Node won't strip the types of a package in node_modules). A project brings oRPC and Zod itself (peerDependencies; jose comes with the library) and takes the library as the package attached to each GitHub release (mise run ts:dist writes it; the version is the release's), or in this repo as \"file:../../ts\"; devDependencies are what the library's own build and checks use.",
 	"files": [
 		"dist"
 	],
@@ -50,5 +50,8 @@
 		"typescript": "^7.0.2",
 		"vitest": "^4.1.11",
 		"zod": "^4.6.5"
+	},
+	"dependencies": {
+		"jose": "6.2.12"
 	}
 }

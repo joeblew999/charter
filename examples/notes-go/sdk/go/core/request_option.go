@@ -3,6 +3,7 @@
 package core
 
 import (
+	fmt "fmt"
 	http "net/http"
 	url "net/url"
 )
@@ -30,6 +31,8 @@ type RequestOptions struct {
 	DisableRetries             bool
 	Token                      string
 	TokenFunc                  func() (string, error)
+	AccessClientID             string
+	AccessClientSecret         string
 }
 
 // NewRequestOptions returns a new *RequestOptions value.
@@ -58,6 +61,12 @@ func (r *RequestOptions) ToHeader() http.Header {
 		if token, err := r.TokenFunc(); err == nil && token != "" {
 			header.Set("Authorization", "Bearer "+token)
 		}
+	}
+	if r.AccessClientID != "" {
+		header.Set("CF-Access-Client-Id", fmt.Sprintf("%v", r.AccessClientID))
+	}
+	if r.AccessClientSecret != "" {
+		header.Set("CF-Access-Client-Secret", fmt.Sprintf("%v", r.AccessClientSecret))
 	}
 	return header
 }
@@ -177,4 +186,22 @@ type TokenFuncOption struct {
 
 func (t *TokenFuncOption) applyRequestOptions(opts *RequestOptions) {
 	opts.TokenFunc = t.TokenFunc
+}
+
+// AccessClientIDOption implements the RequestOption interface.
+type AccessClientIDOption struct {
+	AccessClientID string
+}
+
+func (a *AccessClientIDOption) applyRequestOptions(opts *RequestOptions) {
+	opts.AccessClientID = a.AccessClientID
+}
+
+// AccessClientSecretOption implements the RequestOption interface.
+type AccessClientSecretOption struct {
+	AccessClientSecret string
+}
+
+func (a *AccessClientSecretOption) applyRequestOptions(opts *RequestOptions) {
+	opts.AccessClientSecret = a.AccessClientSecret
 }

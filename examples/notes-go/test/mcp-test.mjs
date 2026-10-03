@@ -5,6 +5,7 @@
 // route does. Usage, from the project's folder (@modelcontextprotocol/client comes from its
 // node_modules): node test/mcp-test.mjs <origin>
 import { createRequire } from "node:module";
+import { accessHeaders } from "./access.mjs";
 const { Client, StreamableHTTPClientTransport } = createRequire(`${process.cwd()}/`)("@modelcontextprotocol/client");
 
 const origin = process.argv[2];
@@ -19,7 +20,7 @@ const text = result => result.content.map(block => block.text).join("");
 for (const [era, mode, version] of [["stateless", { pin: "2026-07-28" }, "2026-07-28"], ["handshake", "legacy", "2025-11-25"]]) {
   const client = new Client({ name: "mcp-test", version: "1.0.0" }, { versionNegotiation: { mode } });
   // A tool call runs the REST operation with this Authorization: createNote needs the write token.
-  await client.connect(new StreamableHTTPClientTransport(new URL(endpoint), { requestInit: { headers: { authorization: `Bearer ${process.env.WRITE_TOKEN}` } } }));
+  await client.connect(new StreamableHTTPClientTransport(new URL(endpoint), { requestInit: { headers: { authorization: `Bearer ${process.env.WRITE_TOKEN}`, ...accessHeaders(origin) } } }));
   const label = name => `${era} (${client.getNegotiatedProtocolVersion()}): ${name}`;
   check(label("connects"), client.getNegotiatedProtocolVersion() === version && client.getServerVersion()?.name === "charter-notes-go", [client.getNegotiatedProtocolVersion(), client.getServerVersion()]);
 
@@ -44,7 +45,7 @@ for (const [era, mode, version] of [["stateless", { pin: "2026-07-28" }, "2026-0
   check(label("createNote"), !created.isError && note?.body === body && Number.isInteger(note?.id) && text(created) === JSON.stringify(note), created);
 
   // The note is the REST API's note, and the tool's answer is the REST route's answer.
-  const rest = await (await fetch(`${origin}/api/notes?limit=3`)).json();
+  const rest = await (await fetch(`${origin}/api/notes?limit=3`, { headers: accessHeaders(origin) })).json();
   const listed = await client.callTool({ name: "listNotes", arguments: { limit: 3 } });
   check(label("listNotes answers what GET /api/notes answers"), !listed.isError && rest.data[0]?.id === note?.id && JSON.stringify(listed.structuredContent) === JSON.stringify(rest), { listed, rest });
 
@@ -65,13 +66,13 @@ for (const [era, mode, version] of [["stateless", { pin: "2026-07-28" }, "2026-0
 
 // Left to itself, the client finds the stateless era (it probes with server/discover).
 const auto = new Client({ name: "mcp-test", version: "1.0.0" }, { versionNegotiation: { mode: "auto" } });
-await auto.connect(new StreamableHTTPClientTransport(new URL(endpoint)));
+await auto.connect(new StreamableHTTPClientTransport(new URL(endpoint), { requestInit: { headers: accessHeaders(origin) } }));
 check("auto negotiation picks 2026-07-28", auto.getNegotiatedProtocolVersion() === "2026-07-28" && auto.getProtocolEra() === "modern", [auto.getNegotiatedProtocolVersion(), auto.getProtocolEra()]);
 await auto.close();
 
 // The transport's edges, raw: no stream to GET, and JSON-RPC's own errors.
-const post = body => fetch(endpoint, { method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream" }, body });
-const get = await fetch(endpoint, { headers: { accept: "text/event-stream" } });
+const post = body => fetch(endpoint, { method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream", ...accessHeaders(origin) }, body });
+const get = await fetch(endpoint, { headers: { accept: "text/event-stream", ...accessHeaders(origin) } });
 check("GET is 405 (no stream)", get.status === 405 && get.headers.get("allow") === "POST", get.status);
 const malformed = await post('{"jsonrpc":"2.0","id":1,"method":');
 check("malformed JSON is error -32700", malformed.status === 400 && (await malformed.json()).error?.code === -32700, malformed.status);

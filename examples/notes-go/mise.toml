@@ -23,6 +23,10 @@ fnox = "1.35.2"
 # The Worker's secrets: every mise run deploy sets them, from fnox (fnox.toml) or, in CI, from the
 # repo's GitHub secrets. The local runs and tests use throwaway ones.
 WORKER_SECRETS = "READ_TOKEN WRITE_TOKEN"
+# The Worker's optional secrets: who else it trusts (Cloudflare Access, an OpenID Connect issuer).
+# A deploy sets those the environment has (mise run access:setup puts Access's in fnox); the rest
+# stay unset, and the Worker trusts no one that way.
+WORKER_OPTIONAL_SECRETS = "ACCESS_TEAM_DOMAIN ACCESS_AUD OIDC_ISSUER OIDC_AUDIENCE"
 # How the tasks run the charter tool.
 CHARTER_TOOL = "go run ../../cmd/charter"
 # The local dev port.
@@ -52,15 +56,15 @@ description = "gofmt and go vet, for the host and for Wasm"
 run = "{{env.CHARTER_TOOL}} lint -wasm . *.go api cmd test"
 
 [tasks."test:native"]
-description = "The real-time live test and the MCP client test against the native build"
+description = "The real-time live test, the MCP client test and the auth test (Access and OIDC, from a test issuer it serves) against the native build"
 env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
-run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -env PORT={port} -start "go run ." -run "node test/live-test.mjs http://localhost:{port}" -run "node test/mcp-test.mjs http://localhost:{port}"'
+run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -env PORT={port} -env ACCESS_TEAM_DOMAIN=http://localhost:{port2} -env ACCESS_AUD=test-aud -env OIDC_ISSUER=http://localhost:{port2} -env OIDC_AUDIENCE=https://notes.test -start "go run ." -run "node test/live-test.mjs http://localhost:{port}" -run "node test/mcp-test.mjs http://localhost:{port}" -run "node test/auth-test.mjs http://localhost:{port} {port2}"'
 
 [tasks."test:workerd"]
-description = "The same against the TinyGo Wasm under workerd (go test can't see TinyGo's gaps)"
+description = "The same against the TinyGo Wasm under workerd (go test can't see TinyGo's gaps, such as its crypto)"
 env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
 depends = ["build"]
-run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -env PORT={port} -start "cf dev" -run "{{env.CHARTER_TOOL}} migrate-local -port {port}" -run "node test/live-test.mjs http://localhost:{port}" -run "node test/mcp-test.mjs http://localhost:{port}"'
+run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -env PORT={port} -env ACCESS_TEAM_DOMAIN=http://localhost:{port2} -env ACCESS_AUD=test-aud -env OIDC_ISSUER=http://localhost:{port2} -env OIDC_AUDIENCE=https://notes.test -start "cf dev" -run "{{env.CHARTER_TOOL}} migrate-local -port {port}" -run "node test/live-test.mjs http://localhost:{port}" -run "node test/mcp-test.mjs http://localhost:{port}" -run "node test/auth-test.mjs http://localhost:{port} {port2}"'
 
 [tasks.mcp-test]
 description = "The MCP client test (/api/mcp, official TypeScript client) against a running mise run run or mise run dev; writes test notes"

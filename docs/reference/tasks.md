@@ -28,7 +28,7 @@ What `charter new` makes, and `examples/notes-go/`.
 | `spec:diff` | The specs against the previous release's: fails on a breaking change unless `-- -tag vX.Y.Z` is a major release ([Repos that use each other](../guides/repos.md#catch-a-breaking-change)) |
 | `lint` | `gofmt`, `go vet` for the host and for Wasm |
 | `test` | `go test ./...` |
-| `test:native` | The live and MCP tests against the native build, on a free port |
+| `test:native` | The live, MCP and auth tests against the native build, on a free port; the auth test serves a test issuer as Access and as an OpenID Connect issuer |
 | `test:workerd` | The same against the Wasm under workerd |
 | `mcp-test` | The MCP test against a running `run` or `dev` |
 | `deploy` | REMOTE. `build`, `cf deploy`, `migrate` |
@@ -41,6 +41,9 @@ What `charter new` makes, and `examples/notes-go/`.
 | `perf:clean` | REMOTE. Deletes what a `perf:try` left |
 | `cloudflare:token` | Fails unless `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set |
 | `cloudflare:secrets` | REMOTE. Copies those two from fnox into the repo's GitHub secrets |
+| `access:setup -- <email>...` | REMOTE. Cloudflare Access in front of the Worker: these people log in with GitHub; the Worker's `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`, also in fnox. Again to change who ([Auth](../guides/auth.md#cloudflare-access)) |
+| `access:token -- create <machine> <file\|fnox>`, `list`, `revoke <machine>` | REMOTE. A machine's own Access service token: made, listed, revoked |
+| `access:delete` | REMOTE. Deletes the Access application and its machines' tokens |
 | `upstream:status` | REMOTE, read-only. Every `Upstream:` tag in the code, with its issue's state |
 | `sdk:list` | The groups in `fern/generators.yml` |
 | `sdk:check-spec` | Fern's validation of the specs and its settings |
@@ -71,7 +74,7 @@ What `charter new` makes, and `examples/notes-go/`.
 
 | Project | Differences |
 |---|---|
-| `examples/notes-ts/` | No `run`, `build`, `test:native`, `test:workerd`, `perf`. `lint` typechecks, `test` runs the feed's tests |
+| `examples/notes-ts/` | No `run`, `build`, `test:native`, `perf`. `lint` typechecks, `test` runs the feed's tests, `test:workerd` runs the live and auth tests under workerd |
 | `examples/start-go/` | No `soak`. `live-test` checks `/api/hello`, the spec and MCP |
 | `examples/start-htmx/` | As `examples/start-go/`, with the pages: `check` adds `ui:check`; `live-test` writes test messages and checks the pages and their stream too |
 | `examples/start-datastar/` | As `examples/start-htmx/` |

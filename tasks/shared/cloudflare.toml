@@ -1,6 +1,6 @@
 # Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
 # and its tasks run in the project (dir), calling the tool as CHARTER_TOOL (its mise.toml sets it).
-# Cloudflare: the database's migrations, and the secrets a deploy from GitHub needs.
+# Cloudflare: the database's migrations, the secrets a deploy from GitHub needs, and Access in front of the Worker.
 
 ["migrate"]
 description = "REMOTE: apply pending migrations/ to the Worker's D1 database"
@@ -21,3 +21,18 @@ run = "fnox exec -- {{env.CHARTER_TOOL}} github-secrets CLOUDFLARE_API_TOKEN CLO
 description = "Fail unless CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set: what a deploy from GitHub needs (locally, cf auth login is enough)"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} need-env CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"
+
+["access:setup"]
+description = "REMOTE, once and after changing who may log in: Cloudflare Access in front of the Worker (people log in with GitHub: mise run access:setup -- <email>...), and the Worker's ACCESS_TEAM_DOMAIN and ACCESS_AUD; the IDs in fnox. Idempotent"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} access setup"
+
+["access:token"]
+description = "REMOTE: a machine's own Access service token: mise run access:token -- create <machine> <file|fnox>, list, revoke <machine>"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} access token"
+
+["access:delete"]
+description = "REMOTE: delete the Worker's Access application and its machines' service tokens"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} access delete"

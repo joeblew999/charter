@@ -23,6 +23,10 @@ gh = "2.101.0"
 # The Worker's secrets: every mise run deploy sets them, from fnox (fnox.toml) or, in CI, from the
 # repo's GitHub secrets. The local runs and tests use throwaway ones.
 WORKER_SECRETS = "READ_TOKEN WRITE_TOKEN"
+# The Worker's optional secrets: who else it trusts (Cloudflare Access, an OpenID Connect issuer).
+# A deploy sets those the environment has (mise run access:setup puts Access's in fnox); the rest
+# stay unset, and the Worker trusts no one that way.
+WORKER_OPTIONAL_SECRETS = "ACCESS_TEAM_DOMAIN ACCESS_AUD OIDC_ISSUER OIDC_AUDIENCE"
 # How the tasks run the charter tool.
 CHARTER_TOOL = "go run ../../cmd/charter"
 # The local dev port.
@@ -46,8 +50,8 @@ description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what
 run = "npm ci --no-fund --no-audit --prefix ../../ts && npm run build --prefix ../../ts && npm ci --no-fund --no-audit"
 
 [tasks.check]
-description = "Every LOCAL check (no Cloudflare account): typecheck, the committed specs match the contract, and what is generated matches. (The unit tests of follow() are the library's: mise run ts:check at the repo root)"
-depends = ["lint", "spec:check", "sdk:publish:fresh", "workflows:check", "docs:check"]
+description = "Every LOCAL check (no Cloudflare account): typecheck, the committed specs match the contract, the live and auth tests under workerd, and what is generated matches. (The unit tests of follow() and auth are the library's: mise run ts:check at the repo root)"
+depends = ["lint", "spec:check", "sdk:publish:fresh", "test:workerd", "workflows:check", "docs:check"]
 
 # ---- the API: run it, test it --------------------------------------------------------------------
 
@@ -62,6 +66,11 @@ run = 'node spec.ts --check fern/openapi.json fern/asyncapi.json {{env.API_URL}}
 [tasks.lint]
 description = "Typecheck the Worker"
 run = "{{env.CHARTER_TOOL}} exec -quiet cf workers types && {{env.CHARTER_TOOL}} exec tsc"
+
+[tasks."test:workerd"]
+description = "The live test and the auth test (Access and OIDC, from a test issuer it serves) against the Worker under workerd (cf dev)"
+env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
+run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -env PORT={port} -env ACCESS_TEAM_DOMAIN=http://localhost:{port2} -env ACCESS_AUD=test-aud -env OIDC_ISSUER=http://localhost:{port2} -env OIDC_AUDIENCE=https://notes.test -start "cf dev" -run "{{env.CHARTER_TOOL}} migrate-local -port {port}" -run "node ../notes-go/test/live-test.mjs http://localhost:{port}" -run "node ../notes-go/test/auth-test.mjs http://localhost:{port} {port2}"'
 
 # ---- Cloudflare: deploy it, test and measure what is deployed ------------------------------------
 

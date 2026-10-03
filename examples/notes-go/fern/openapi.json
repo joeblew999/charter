@@ -155,9 +155,34 @@
       }
     },
     "securitySchemes": {
+      "accessClientId": {
+        "description": "A Cloudflare Access service token's Client ID: a machine's own (charter access token create)",
+        "in": "header",
+        "name": "CF-Access-Client-Id",
+        "type": "apiKey",
+        "x-fern-header": {
+          "env": "CHARTER_NOTES_GO_ACCESS_CLIENT_ID",
+          "name": "accessClientId"
+        }
+      },
+      "accessClientSecret": {
+        "description": "The service token's Client Secret",
+        "in": "header",
+        "name": "CF-Access-Client-Secret",
+        "type": "apiKey",
+        "x-fern-header": {
+          "env": "CHARTER_NOTES_GO_ACCESS_CLIENT_SECRET",
+          "name": "accessClientSecret"
+        }
+      },
       "bearer": {
         "scheme": "bearer",
         "type": "http"
+      },
+      "oidc": {
+        "description": "An access token from the OpenID Connect issuer the deployment trusts (OIDC_ISSUER), with the operation's scopes",
+        "openIdConnectUrl": "/.well-known/openid-configuration",
+        "type": "openIdConnect"
       }
     }
   },
@@ -193,6 +218,7 @@
             "description": "Error"
           }
         },
+        "security": [],
         "summary": "Say hello",
         "tags": [
           "meta"
@@ -266,6 +292,7 @@
             "description": "Error"
           }
         },
+        "security": [],
         "summary": "List notes, newest first (cursor pagination)",
         "tags": [
           "notes"
@@ -335,6 +362,17 @@
         "security": [
           {
             "bearer": [
+              "write"
+            ]
+          },
+          {
+            "accessClientId": [
+              "write"
+            ],
+            "accessClientSecret": []
+          },
+          {
+            "oidc": [
               "write"
             ]
           }
@@ -416,6 +454,7 @@
             "description": "Error"
           }
         },
+        "security": [],
         "summary": "Stream notes as they are created (Server-Sent Events). The stream ends after `seconds`; call again with `after` = the last note id to continue without gaps",
         "tags": [
           "notes"

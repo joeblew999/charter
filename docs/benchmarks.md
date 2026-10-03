@@ -23,6 +23,18 @@ The only page with the numbers: CPU per request on Cloudflare, from Workers Logs
 
 The showcase Workers (every Fern feature, a bearer token checked on every request), 2026-10-03: Go list about 1 ms, create about 1 ms, 404 0 ms. The TypeScript one keeps its notes in memory (no database), so it is not a like-for-like comparison: list and create 0 ms. Its API is at `/api/mock`; the Worker's other paths are a web page.
 
+## The Wasm's size
+
+The notes Worker's `build/app.wasm`, gzipped, TinyGo 0.42, 2026-10-03 (the limit is 3,000,000 bytes):
+
+| Build | Gzipped |
+|---|---|
+| Bearer tokens only (before Access and OIDC) | 862,587 B |
+| With Access and OIDC, JWTs verified by go-jose v4.1.5 (what is used) | 1,198,297 B |
+| The same with golang-jwt v5.3.1, keyfunc v3.8.2 and jwkset v0.11.3 instead (tried) | 1,273,945 B |
+
+Both libraries passed the same tests under workerd. go-jose was kept: smaller, no dependencies of its own, keys fetched only in a request (keyfunc keeps them fresh from a goroutine of its own, which a Worker cannot run between requests; without it, they are never fetched again).
+
 ## What closed the gap
 
 The Go Worker's median CPU, 2026-10-01 and 2026-10-02:
