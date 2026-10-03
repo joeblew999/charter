@@ -89,10 +89,10 @@ What `charter new` makes, and `examples/notes-go/`.
 | `release:tags` | REMOTE on a version tag: tags `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` |
 | `setup`, `doctor`, `sdk:clean`, `workflows`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:review`, `docs:pages`, `cloudflare:secrets` | As in a project, for the whole repo |
 
-## Windows
+## Windows and macOS
 
-| | On Windows |
+| | On Windows (`windows-2025`) and macOS (`macos-15`), on every push |
 |---|---|
-| Checked on every push (`windows-2025`) | `charter:check`, `go:check`; in `examples/notes-go/`, `setup` and `check`. A project made by `charter new` gets the same job |
-| Not checked | Fern's tasks and those that need a generated SDK (Fern generates in Linux containers), `examples/notes-ts/`, the REMOTE tasks |
-| Different | A stopped server is ended by force with what it started (`taskkill`); git must check out LF line ends (`.gitattributes` says so) |
+| Checked | `charter:check`, `go:check`, `ts:check`; in `examples/notes-go/` and `examples/notes-ts/`, `setup` and `check`. A project made by `charter new` gets the same two jobs |
+| Not checked | Fern's tasks and those that need a generated SDK: Fern generates in Linux containers, which GitHub's Windows and macOS runners do not run. The REMOTE tasks |
+| Different on Windows | A stopped server is ended by force with what it started (`taskkill`); git must check out LF line ends (`.gitattributes` says so) |
