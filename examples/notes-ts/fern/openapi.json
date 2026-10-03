@@ -218,10 +218,44 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Too Many Requests: more than 100 calls in 60 s by this caller",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before calling again",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "x-fern-sdk-group-name": "notes",
         "x-fern-sdk-method-name": "create",
+        "x-rate-limit": {
+          "binding": "WRITE_LIMIT",
+          "limit": 100,
+          "period": 60
+        },
         "security": [
           {
             "bearer": [

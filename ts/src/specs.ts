@@ -7,7 +7,8 @@ import { DelegatingJsonSchemaConverter, mapJsonSchemaRefs, type JsonSchema } fro
 import { walkProcedureContractsAsync, type AnyRouter } from "@orpc/server";
 import { ZodToJsonSchemaConverter } from "@orpc/zod";
 import { AsyncAPIGenerator, getAsyncAPIMeta } from "./asyncapi.ts";
-import { expand } from "./auth.ts";
+import { expand, type Security } from "./auth.ts";
+import { EXTENSION, needsScope, withLimit, type Limit } from "./ratelimit.ts";
 
 const converters = [new ZodToJsonSchemaConverter()];
 
@@ -25,16 +26,19 @@ export interface OpenAPISpecOptions {
 	 * makes to its users. Each procedure is one webhook, named by its key; its input is the payload.
 	 */
 	webhooks?: RouterContract;
+	/** Rate limits per scope (@charter/ts/ratelimit): every operation that needs one's scope has it, unless it has its own. */
+	rateLimits?: Limit[];
 }
 
 /** OpenAPI 3.1.1 (oRPC 2.0 defaults to 3.2.0, which Fern rejects), without the WebSocket channels. */
 // Upstream: fern-api/fern#9559 (when fixed: drop `version` and use oRPC's 3.2.0 default)
-export const openapiSpec = async (router: RouterContract | AnyRouter, { info, server, base, webhooks }: OpenAPISpecOptions): Promise<OpenAPIV3_1.OpenAPIObject> => {
+export const openapiSpec = async (router: RouterContract | AnyRouter, { info, server, base, webhooks, rateLimits = [] }: OpenAPISpecOptions): Promise<OpenAPIV3_1.OpenAPIObject> => {
 	const doc = await new OpenAPIGenerator({ converters }).generate(router, {
 		version: "3.1.1",
 		base: { info, servers: [{ url: server }], ...base },
 		filter: procedure => !getAsyncAPIMeta(procedure as any),
 	});
+	withScopeLimits(doc, rateLimits);
 	withEveryScheme(doc);
 	return webhooks ? addWebhooks(doc, webhooks) : doc;
 };
@@ -50,6 +54,19 @@ function withEveryScheme(doc: OpenAPIV3_1.OpenAPIObject) {
 			const operation = op as OpenAPIV3_1.OperationObject;
 			// Public, said so: generated SDKs then send nothing it does not need.
 			operation.security = expand(declared, operation.security) ?? (declared && !doc.security?.length ? [] : undefined);
+		}
+	}
+}
+
+// Each operation that needs a limited scope, and has no limit of its own, has the scope's.
+function withScopeLimits(doc: OpenAPIV3_1.OpenAPIObject, limits: Limit[]) {
+	if (!limits.length) return;
+	for (const item of Object.values(doc.paths ?? {}) as Record<string, unknown>[]) {
+		for (const [method, op] of Object.entries(item ?? {})) {
+			if (!op || typeof op !== "object" || !("responses" in op) || EXTENSION in op) continue;
+			const security = ((op as { security?: Security }).security ?? doc.security) as Security | undefined;
+			const limit = limits.find(l => needsScope(security, l.scope));
+			if (limit) item[method] = withLimit(op as OpenAPIV3_2.OperationObject, limit);
 		}
 	}
 }

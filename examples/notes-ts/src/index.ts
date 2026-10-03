@@ -2,11 +2,13 @@ import { env } from "cloudflare:workers";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { DurablePublisher } from "@orpc/cloudflare";
 import { call, implement, ORPCError, withEventMeta } from "@orpc/server";
+import { ResponseHeadersPlugin } from "@orpc/server/plugins";
 import type { z } from "zod";
 import { asyncInfo, contract, END, info, type note } from "./contract.ts";
 import { asyncapiSpec, openapiSpec } from "@charter/ts/specs";
 import { follow, type FollowSource } from "@charter/ts/follow";
 import { accessScheme, authorize, discoveryURL, oidcScheme, scheme, securityOf, type Caller } from "@charter/ts/auth";
+import { keyOf, limitOf, rateLimit } from "@charter/ts/ratelimit";
 export { NotesHub } from "./hub.ts";
 
 type Note = z.infer<typeof note>;
@@ -36,8 +38,8 @@ const followNotes = (after: string | undefined, signal: AbortSignal | undefined)
 const settings = env as typeof env & Partial<Record<"ACCESS_TEAM_DOMAIN" | "ACCESS_AUD" | "OIDC_ISSUER" | "OIDC_AUDIENCE", string>>;
 const trusted = () => ({
 	tokens: [
-		{ value: env.WRITE_TOKEN, scopes: ["read", "write"] },
-		{ value: env.READ_TOKEN, scopes: ["read"] },
+		{ secret: "WRITE_TOKEN", value: env.WRITE_TOKEN, scopes: ["read", "write"] },
+		{ secret: "READ_TOKEN", value: env.READ_TOKEN, scopes: ["read"] },
 	],
 	access: { team: settings.ACCESS_TEAM_DOMAIN, aud: settings.ACCESS_AUD, people: ["read", "write"], machines: ["read"] },
 	oidc: { issuer: settings.OIDC_ISSUER, audience: settings.OIDC_AUDIENCE },
@@ -47,17 +49,25 @@ const trusted = () => ({
 const base = oidcScheme(accessScheme(info.title, scheme()));
 
 // The contract (src/contract.ts) implemented on D1, served by oRPC's OpenAPIHandler as plain REST,
-// each call allowed by the credentials it carries (401 without any it knows, 403 without the scope);
-// the handler finds its caller in the context.
-const api = implement(contract)
-	.$context<{ headers?: Headers; caller?: Caller }>()
+// each call allowed by the credentials it carries (401 without any it knows, 403 without the scope),
+// then limited as its contract says, per caller (429 with Retry-After: writeLimit); the handler finds
+// its caller in the context. The router is built from `os`, without the middleware: oRPC would
+// otherwise run it twice per call, once for the router and once for the procedure.
+const os = implement(contract).$context<{ headers?: Headers; resHeaders?: Headers; caller?: Caller }>();
+const api = os
 	.use(async ({ context, procedure, next }) => {
-		const decision = await authorize(context.headers ?? new Headers(), securityOf(procedure), trusted());
+		const headers = context.headers ?? new Headers();
+		const decision = await authorize(headers, securityOf(procedure), trusted());
 		if (decision.status !== 200) throw new ORPCError(decision.status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", { message: decision.message });
+		const verdict = await rateLimit(limitOf(procedure), keyOf(decision.caller, headers), env);
+		if (verdict.status === 429) {
+			context.resHeaders?.set("Retry-After", String(verdict.retryAfter));
+			throw new ORPCError("TOO_MANY_REQUESTS", { message: verdict.message });
+		}
 		return next({ context: { caller: decision.caller } });
 	});
 
-export const router = api.router({
+export const router = os.router({
 	hello: api.hello.handler(() => ({ message: `Hello from ${env.APP_NAME}` })),
 	notes: {
 		list: api.notes.list.handler(async ({ input }) => {
@@ -99,7 +109,8 @@ export const router = api.router({
 	},
 });
 
-const handler = new OpenAPIHandler(router);
+// ResponseHeadersPlugin: a 429's Retry-After.
+const handler = new OpenAPIHandler(router, { plugins: [new ResponseHeadersPlugin()] });
 
 // WebSocket transport for the contract's notes.live (AsyncAPI channel liveNotes): the procedure is
 // called with the query as its input (validated by the contract, 400 before upgrading), and each

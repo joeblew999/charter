@@ -2,6 +2,7 @@ import { asyncIteratorObject, oc } from "@orpc/contract";
 import { openapi, type OpenAPIV3_2 } from "@orpc/openapi";
 import { asyncapi } from "@charter/ts/asyncapi";
 import { needs } from "@charter/ts/auth";
+import { limited, type Limit } from "@charter/ts/ratelimit";
 import { z } from "zod";
 
 // The API, contract first: every route with its method, path, input and output as Zod 4 schemas.
@@ -32,6 +33,12 @@ export const after = z.string().regex(/^\d+$/).optional()
 // Upstream: fern-api/fern#17936 (when fixed: terminators match whole data values, so the body rule can go)
 // Upstream: fern-api/fern#17939 (when fixed: the Rust generator escapes it, so any text would do)
 export const END = "[end-of-stream]";
+
+/**
+ * How often one caller may create notes: the Worker's WRITE_LIMIT binding, which
+ * cloudflare.config.ts declares from the spec. Over it: 429.
+ */
+export const writeLimit: Limit = { binding: "WRITE_LIMIT", limit: 100, period: 60 };
 
 /** Fern's names for the SDK method: client.<group>.<method>() and `cli <group> <method>`. */
 const sdk = (group: string, method: string, extra: Record<string, unknown> = {}) =>
@@ -84,7 +91,7 @@ export const contract = {
 			.input(z.object({ after }))
 			.output(asyncIteratorObject(note)),
 		create: oc
-			.meta(openapi({ method: "POST", path: "/api/notes", summary: "Create a note", tags: ["notes"], operationId: "createNote", spec: needs(["write"], sdk("notes", "create")) }))
+			.meta(openapi({ method: "POST", path: "/api/notes", summary: "Create a note", tags: ["notes"], operationId: "createNote", spec: needs(["write"], limited(writeLimit, sdk("notes", "create"))) }))
 			.input(z.object({ body: z.string().min(1).refine(body => !body.includes(END), `must not contain ${END}`) }))
 			.output(note),
 	},

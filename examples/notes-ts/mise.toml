@@ -50,7 +50,7 @@ description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what
 run = "npm ci --no-fund --no-audit --prefix ../../ts && npm run build --prefix ../../ts && npm ci --no-fund --no-audit"
 
 [tasks.check]
-description = "Every LOCAL check (no Cloudflare account): typecheck, the committed specs match the contract, the live and auth tests under workerd, and what is generated matches. (The unit tests of follow() and auth are the library's: mise run ts:check at the repo root)"
+description = "Every LOCAL check (no Cloudflare account): typecheck, the committed specs match the contract, the live and auth tests under workerd, and what is generated matches. (The unit tests of follow(), auth and ratelimit are the library's: mise run ts:check at the repo root)"
 depends = ["lint", "spec:check", "sdk:publish:fresh", "test:workerd", "workflows:check", "docs:check"]
 
 # ---- the API: run it, test it --------------------------------------------------------------------
@@ -68,7 +68,7 @@ description = "Typecheck the Worker"
 run = "{{env.CHARTER_TOOL}} exec -quiet cf workers types && {{env.CHARTER_TOOL}} exec tsc"
 
 [tasks."test:workerd"]
-description = "The live test and the auth test (Access and OIDC, from a test issuer it serves) against the Worker under workerd (cf dev)"
+description = "The live test and the auth test (Access and OIDC, from a test issuer it serves, and the rate limit: 429 over it) against the Worker under workerd (cf dev)"
 env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
 run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -env PORT={port} -env ACCESS_TEAM_DOMAIN=http://localhost:{port2} -env ACCESS_AUD=test-aud -env OIDC_ISSUER=http://localhost:{port2} -env OIDC_AUDIENCE=https://notes.test -start "cf dev" -run "{{env.CHARTER_TOOL}} migrate-local -port {port}" -run "node ../notes-go/test/live-test.mjs http://localhost:{port}" -run "node ../notes-go/test/auth-test.mjs http://localhost:{port} {port2}"'
 

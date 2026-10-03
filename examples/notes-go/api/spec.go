@@ -8,6 +8,7 @@ import (
 	"github.com/joeblew999/charter/go/asyncapi"
 	"github.com/joeblew999/charter/go/auth"
 	"github.com/joeblew999/charter/go/humaworkers"
+	"github.com/joeblew999/charter/go/ratelimit"
 )
 
 func init() {
@@ -24,6 +25,8 @@ func config() huma.Config {
 	auth.Scheme(config.OpenAPI)
 	auth.AccessScheme(config.OpenAPI, Title)
 	auth.OIDCScheme(config.OpenAPI)
+	// How often a caller may call: each limited operation says so, with its 429.
+	ratelimit.Declare(config.OpenAPI)
 	return config
 }
 

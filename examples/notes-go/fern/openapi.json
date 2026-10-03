@@ -348,6 +348,24 @@
             },
             "description": "Unprocessable Entity"
           },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Too Many Requests: more than 100 calls in 60 s by this caller",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before calling again",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
           "default": {
             "content": {
               "application/problem+json": {
@@ -382,7 +400,12 @@
           "notes"
         ],
         "x-fern-sdk-group-name": "notes",
-        "x-fern-sdk-method-name": "create"
+        "x-fern-sdk-method-name": "create",
+        "x-rate-limit": {
+          "binding": "WRITE_LIMIT",
+          "limit": 100,
+          "period": 60
+        }
       }
     },
     "/api/notes/watch": {
