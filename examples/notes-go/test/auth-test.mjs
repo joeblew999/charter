@@ -53,12 +53,20 @@ try {
   // The rate limit, per caller: each a subject of its own, so the other tests' writes do not count.
   const { limit, period } = (await (await fetch(`${origin}/api/openapi.json`)).json()).paths["/api/notes"].post["x-rate-limit"];
   const write = async (sub, n) => fetch(`${origin}/api/notes`, { method: "POST", headers: { "content-type": "application/json", ...(await oidc({ sub, scope: "write" })) }, body: JSON.stringify({ body: `rate limit test ${n}` }) });
+  // The window is fixed: writes that cross its end start a new count. So write until the first
+  // refusal, at most two windows' worth: before it, at least limit writes went through, and none was
+  // refused.
   const sub = `rate-limit-${Date.now()}`, statuses = [];
-  for (let n = 0; n < limit; n++) statuses.push((await write(sub, n)).status);
-  const over = await write(sub, limit), other = await write(`${sub}-other`, 0);
+  let over;
+  for (let n = 0; n <= 2 * limit; n++) {
+    const res = await write(sub, n);
+    if (res.status !== 200) { over = res; break; }
+    statuses.push(res.status);
+  }
+  const other = await write(`${sub}-other`, 0);
   const checks = [
-    [`${limit} writes in ${period} s by one caller`, statuses.every(s => s === 200), statuses.filter(s => s !== 200).join(" ")],
-    ["one more is 429, with Retry-After", over.status === 429 && over.headers.get("retry-after") === String(period), `${over.status} ${over.headers.get("retry-after")} ${await over.text()}`],
+    [`at least ${limit} writes in ${period} s by one caller`, statuses.length >= limit, `${statuses.length} went through`],
+    ["then a 429, with Retry-After", over?.status === 429 && over.headers.get("retry-after") === String(period), over ? `${over.status} ${over.headers.get("retry-after")} ${await over.text()}` : `none in ${statuses.length} writes`],
     ["another caller still writes", other.status === 200, other.status],
   ];
   for (const [name, pass, got] of checks) {
