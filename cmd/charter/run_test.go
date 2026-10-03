@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -205,6 +206,9 @@ func TestHelpNeverRuns(t *testing.T) {
 		t.Skip("builds the tool")
 	}
 	tool := filepath.Join(t.TempDir(), "charter")
+	if runtime.GOOS == "windows" {
+		tool += ".exe"
+	}
 	if out, err := exec.Command("go", "build", "-o", tool, ".").CombinedOutput(); err != nil {
 		t.Fatalf("go build: %v\n%s", err, out)
 	}
