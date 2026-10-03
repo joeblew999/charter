@@ -313,9 +313,12 @@ func run(api *humaworkers.API, r *http.Request, op *huma.Operation, arguments ma
 		return toolError(err.Error())
 	}
 	path, query, header := op.Path, url.Values{}, http.Header{}
-	// The operation sees the caller's credentials, as it would over REST.
-	if authorization := r.Header.Get("Authorization"); authorization != "" {
-		header.Set("Authorization", authorization)
+	// The operation sees the caller's credentials, as it would over REST: a bearer token, and the JWT
+	// Cloudflare Access adds for a caller it let in (go/auth reads it, auth.AccessHeader).
+	for _, name := range []string{"Authorization", "Cf-Access-Jwt-Assertion"} {
+		if value := r.Header.Get(name); value != "" {
+			header.Set(name, value)
+		}
 	}
 	for _, param := range in.params {
 		value, given := arguments[param.Name]

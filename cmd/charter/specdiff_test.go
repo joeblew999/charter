@@ -134,7 +134,7 @@ func TestSpecDiffOpenAPI(t *testing.T) {
 			want: "GET /api/hello: response 200 removed", breaking: true},
 		{name: "a scope added", after: func(d map[string]any) {
 			at(d, "paths", "/api/notes", "post")["security"] = []any{map[string]any{"bearer": []any{"write", "admin"}}}
-		}, want: "POST /api/notes: security tightened: bearer[write,admin], was bearer[write]", breaking: true},
+		}, want: "POST /api/notes: security tightened: bearer[write,admin], was accessClientId[write]+accessClientSecret[] or bearer[write] or oidc[write]", breaking: true},
 		{name: "an open operation closed", after: func(d map[string]any) {
 			at(d, "paths", "/api/notes", "get")["security"] = []any{map[string]any{"bearer": []any{"read"}}}
 		}, want: "GET /api/notes: security tightened: bearer[read], was anyone", breaking: true},
@@ -173,8 +173,17 @@ func TestSpecDiffOpenAPI(t *testing.T) {
 			delete(at(d, "components", "schemas", "HelloOutputBody", "properties"), "message")
 		},
 			want: "field response.owner(HelloOutputBody).message removed", breaking: true},
+		{name: "the ways in listed in another order", before: func(d map[string]any) {
+			op := at(d, "paths", "/api/notes", "post")
+			op["security"] = append(anyList(op["security"]), map[string]any{"partner": []any{"write"}})
+		}, after: func(d map[string]any) {
+			op := at(d, "paths", "/api/notes", "post")
+			ways := anyList(op["security"])
+			op["security"] = []any{ways[len(ways)-1], ways[0]}
+			op["security"] = append(op["security"].([]any), ways[1:len(ways)-1]...)
+		}, want: ""},
 		{name: "a token no longer needed", after: func(d map[string]any) { delete(at(d, "paths", "/api/notes", "post"), "security") },
-			want: "security loosened: anyone, was bearer[write]"},
+			want: "security loosened: anyone, was accessClientId[write]+accessClientSecret[] or bearer[write] or oidc[write]"},
 	})
 }
 

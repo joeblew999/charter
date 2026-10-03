@@ -684,6 +684,7 @@ func describeWays(ways []map[string][]string) string {
 		}
 		out = append(out, strings.Join(parts, "+"))
 	}
+	slices.Sort(out) // the ways in, not their order: listing them differently changes nothing
 	return strings.Join(out, " or ")
 }
 
