@@ -1,0 +1,70 @@
+# Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
+# and its tasks run in the project (dir), calling the tool as CHARTER_TOOL (its mise.toml sets it).
+# The SDKs, the CLI and the API docs Fern generates from the specs in fern/ (its settings: fern/generators.yml).
+
+["sdk:list"]
+description = "The SDK groups fern/generators.yml defines"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-list"
+
+["sdk:check-spec"]
+description = "Validate the specs and Fern's settings with Fern"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} exec fern check --warnings"
+
+["sdk:gen"]
+description = "Generate an SDK with Fern (Docker): mise run sdk:gen <group> -> sdk/out/<group>"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-gen"
+
+["sdk:check"]
+description = "Prove a generated SDK works (Go: build, vet, tests against WireMock; TypeScript: typecheck): mise run sdk:check <group>"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-check"
+
+["sdk:ready"]
+description = "Generate and build what the tests use, if missing (TypeScript and Go SDKs, the CLI): mise run sdk:ready [group...]"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-ready"
+
+["sdk:publish"]
+description = "Generate and check the Go SDK, then copy its sources into sdk/go, the committed module another repo can go get (Docker). Commit the result"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-publish"
+
+["sdk:publish:check"]
+description = "Fail if sdk/go is not what the committed specs generate now (Docker)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-publish -check"
+
+["sdk:publish:fresh"]
+description = "Fail if the specs changed since sdk/go was made from them (no Docker: it compares a hash). sdk:publish:check proves the content"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-publish -check -quick"
+
+["sdk:cli:build"]
+description = "HEAVY: build the generated Rust CLI in sdk/out/cli: mise run sdk:cli:build [-linux]"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} cli-build"
+
+["sdk:dist"]
+description = "Generate, check and archive what a release ships into dist/: Go and TypeScript SDK sources, the specs (Docker)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} dist-sdk"
+
+["sdk:dist:cli"]
+description = "HEAVY: generate and build the CLI into dist/: mise run sdk:dist:cli [-linux]"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} dist-cli"
+
+["sdk:docs"]
+description = "Preview the API's reference site locally (fern docs dev): http://localhost:3030"
+dir = "{{config_root}}"
+# Fern runs its preview app from ~/.fern, outside the project: tell mise's shims which node to use there.
+env = { MISE_NODE_VERSION = "26.10.0" }
+run = "{{env.CHARTER_TOOL}} exec fern docs dev --port 3030"
+
+["sdk:clean"]
+description = "Remove generated SDKs (sdk/out) and stop leftover WireMock containers"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-clean"

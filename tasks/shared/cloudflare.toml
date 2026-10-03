@@ -1,0 +1,23 @@
+# Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
+# and its tasks run in the project (dir), calling the tool as CHARTER_TOOL (its mise.toml sets it).
+# Cloudflare: the database's migrations, and the secrets a deploy from GitHub needs.
+
+["migrate"]
+description = "REMOTE: apply pending migrations/ to the Worker's D1 database"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} migrate"
+
+["migrate:local"]
+description = "Apply migrations/ to the local D1 of a running mise run dev"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} migrate-local"
+
+["cloudflare:secrets"]
+description = "REMOTE, once per repo: copy CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from fnox into the repo's GitHub secrets, for the deploy workflow"
+dir = "{{config_root}}"
+run = "fnox exec -- {{env.CHARTER_TOOL}} github-secrets CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"
+
+["cloudflare:token"]
+description = "Fail unless CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set: what a deploy from GitHub needs (locally, cf auth login is enough)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} need-env CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"

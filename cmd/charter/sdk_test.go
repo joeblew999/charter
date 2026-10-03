@@ -77,50 +77,53 @@ func TestTheExamplesPinTheSameTools(t *testing.T) {
 	}
 }
 
-// A task that every project has is the same line in each, so what is learned in one holds in the
-// others. (The lines that differ by nature, a Go build against a TypeScript one, are not listed.)
-func TestTheExamplesShareTheirTaskLines(t *testing.T) {
-	same := []string{"setup", "sdk:list", "sdk:check-spec", "sdk:gen", "sdk:check", "sdk:ready", "sdk:cli:build", "sdk:clean", "doctor"}
-	// And what the two examples share as the projects charter new makes from them.
-	shared := []string{"upstream:status", "cloudflare:secrets", "sdk:publish", "sdk:publish:check", "sdk:publish:fresh", "sdk:docs", "release", "release:tags", "workflows", "workflows:check", "docs:setup", "docs:lint", "docs:check", "docs:review", "docs:pages"}
-	task := func(file, name string) string {
-		content, err := os.ReadFile(file)
-		if err != nil {
-			t.Fatal(err)
-		}
-		header := "[tasks." + name + "]\n"
-		if strings.Contains(name, ":") {
-			header = `[tasks."` + name + "\"]\n"
-		}
-		_, body, ok := strings.Cut(string(content), header)
-		if !ok {
-			return ""
-		}
-		body, _, _ = strings.Cut(body, "\n[")
-		for _, line := range strings.Split(body, "\n") {
-			if run, ok := strings.CutPrefix(line, "run = "); ok {
-				return run
+// The tasks the projects share are written once, in tasks/ (what a project made by charter new
+// includes from GitHub): every project includes the shared folder and its language's, and defines
+// none of their tasks itself, except setup in a TypeScript project, which first builds this repo's
+// TypeScript library (ts/), its local package @charter/ts. One line in each, so what is learned in
+// one project holds in the others.
+func TestTheProjectsIncludeTheSharedTasks(t *testing.T) {
+	includedBy := func(folder string) map[string]bool {
+		tasks := map[string]bool{}
+		files, _ := filepath.Glob(filepath.Join("../../tasks", folder, "*.toml"))
+		for _, file := range files {
+			content, _ := os.ReadFile(file)
+			for _, m := range includedTaskDef.FindAllStringSubmatch(string(content), -1) {
+				tasks[m[1]] = true
 			}
 		}
-		return ""
+		if len(tasks) == 0 {
+			t.Fatalf("tasks/%s defines no tasks", folder)
+		}
+		return tasks
 	}
-	reference := filepath.Join("../../examples", "notes-go", "mise.toml")
 	for _, name := range examples(t) {
-		file := filepath.Join("../..", name, "mise.toml")
-		tasks := same
-		if strings.HasPrefix(name, "examples/") {
-			tasks = append(slices.Clone(same), shared...)
+		lang := "go"
+		if strings.HasSuffix(name, "-ts") {
+			lang = "ts"
 		}
-		for _, shared := range tasks {
-			want, got := task(reference, shared), task(file, shared)
-			if strings.HasSuffix(name, "-ts") && shared == "setup" {
-				// A TypeScript example first installs and builds the TypeScript library (ts/), its
-				// local package @charter/ts, which exports what the build writes: both the same line.
-				want = `"npm ci --no-fund --no-audit --prefix ../../ts && npm run build --prefix ../../ts && ` + strings.TrimPrefix(want, `"`)
+		file := filepath.Join("../..", name, "mise.toml")
+		content, _ := os.ReadFile(file)
+		if want := `includes = ["../../tasks/shared", "../../tasks/` + lang + `"]`; !strings.Contains(string(content), want) {
+			t.Errorf("%s: no %s", name, want)
+		}
+		if !strings.Contains(string(content), "\nCHARTER_TOOL = \"go run ../../cmd/charter\"\n") {
+			t.Errorf("%s: CHARTER_TOOL is not this checkout's tool", name)
+		}
+		shared := includedBy("shared")
+		for task := range includedBy(lang) {
+			shared[task] = true
+		}
+		for _, m := range taskDef.FindAllStringSubmatch(string(content), -1) {
+			if shared[m[1]] && !(lang == "ts" && m[1] == "setup") {
+				t.Errorf("%s defines %s, which tasks/ already does", name, m[1])
 			}
-			if want == "" || got != want {
-				t.Errorf("%s: task %s runs %s, want %s (as notes-go)", name, shared, got, want)
-			}
+		}
+		if lang == "ts" && !strings.Contains(string(content), `run = "npm ci --no-fund --no-audit --prefix ../../ts && npm run build --prefix ../../ts && npm ci --no-fund --no-audit"`) {
+			t.Errorf("%s: setup does not build the TypeScript library first", name)
+		}
+		if strings.Contains(string(content), "go run ../../cmd/charter ") {
+			t.Errorf("%s: a task runs the tool as go run ../../cmd/charter, not {{env.CHARTER_TOOL}}", name)
 		}
 	}
 }

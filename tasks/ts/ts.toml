@@ -1,0 +1,13 @@
+# Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
+# and its tasks run in the project (dir), calling the tool as CHARTER_TOOL (its mise.toml sets it).
+# A TypeScript project (oRPC): install its packages, run it under workerd.
+
+["setup"]
+description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import, and @charter/ts (the TypeScript library)"
+dir = "{{config_root}}"
+run = "npm ci --no-fund --no-audit"
+
+["dev"]
+description = "The API on API_PORT (cf dev). First time, in another shell: mise run migrate:local"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} exec -env PORT={{env.API_PORT}} cf dev"

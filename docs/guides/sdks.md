@@ -69,11 +69,11 @@ Push a tag `vX.Y.Z`; the `release` workflow runs `mise run sdk:dist`, `mise run 
 ## Update charter
 
 ```sh
-mise up --bump github:joeblew999/charter                    # the tool
+mise up --bump github:joeblew999/charter                    # the tool; then the same version in ?ref= of the includes in mise.toml
 go get -u github.com/joeblew999/charter/go && go mod tidy   # the Go library
 mise run workflows && mise run check
 ```
 
-In TypeScript, change the version (it is there twice) in the URL of `@charter/ts` in `package.json`, then `npm install`. A project whose `mise.toml` pins `"go:github.com/joeblew999/charter/cmd/charter"` builds the tool from source: replace that line with `"github:joeblew999/charter" = "<version>"`.
+In TypeScript, change the version (it is there twice) in the URL of `@charter/ts` in `package.json`, then `npm install`. A project whose `mise.toml` still holds every task, or pins `"go:github.com/joeblew999/charter/cmd/charter"`: make a new project with `charter new` and take its `[tools]`, `CHARTER_TOOL` and `[task_config]` lines, then delete the tasks that `tasks/` now defines.
 
 Releases are `v0`: anything can change between them. A project made before v0.8.0 (from orpc-api) does not update: make a new one and move `api/`, `migrations/` and your bindings into it.

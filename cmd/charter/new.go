@@ -228,6 +228,17 @@ func copyExample(from, into, name, module, subdomain, version, checkout string, 
 		exampleWorker, name,
 		exampleTool, tool,
 	}
+	// The tasks the project shares with every other: charter's tasks/ folders, from GitHub at the
+	// release, or from the checkout.
+	for _, folder := range []string{"shared", "go", "ts"} {
+		include := repoURL + ".git//tasks/" + folder + "?ref=" + version
+		if checkout != "" {
+			include = filepath.ToSlash(filepath.Join(checkout, "tasks", folder))
+		} else {
+			include = "git::" + include
+		}
+		pairs = append(pairs, `"../../tasks/`+folder+`"`, `"`+include+`"`)
+	}
 	if ts {
 		// The TypeScript library: the release's package, or the checkout's folder (built by setup).
 		// And the tests, which the TypeScript example shares with the Go one: copied into test/.

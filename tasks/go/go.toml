@@ -1,0 +1,39 @@
+# Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
+# and its tasks run in the project (dir), calling the tool as CHARTER_TOOL (its mise.toml sets it).
+# A Go project (Huma on workers-go): run it natively, build the TinyGo Wasm, write the specs, test.
+
+["setup"]
+description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import"
+dir = "{{config_root}}"
+run = "npm ci --no-fund --no-audit"
+
+["run"]
+description = "The API natively on API_PORT: no Cloudflare, an in-memory store"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} exec -env PORT={{env.API_PORT}} go run ."
+
+["build"]
+description = "Build the Worker's Wasm with TinyGo into build/, tuned for Workers, with the library's Worker glue beside it; fails over 3 MB gzipped"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} wasm-build"
+
+["dev"]
+description = "The API under workerd on API_PORT (cf dev). First time: mise run migrate:local. After a Go change: mise run build"
+dir = "{{config_root}}"
+depends = ["build"]
+run = "{{env.CHARTER_TOOL}} exec -env PORT={{env.API_PORT}} cf dev"
+
+["spec"]
+description = "Write both specs from the contract (api/contract.go) into fern/"
+dir = "{{config_root}}"
+run = 'go run ./cmd/spec fern/openapi.json fern/asyncapi.json {{env.API_URL}}'
+
+["spec:check"]
+description = "Fail if a committed spec is stale against the contract"
+dir = "{{config_root}}"
+run = 'go run ./cmd/spec -check fern/openapi.json fern/asyncapi.json {{env.API_URL}}'
+
+["test"]
+description = "Go tests: the API, the MCP endpoint, the contract's rules"
+dir = "{{config_root}}"
+run = "go test ./..."

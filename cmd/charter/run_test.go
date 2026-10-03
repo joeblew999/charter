@@ -153,6 +153,8 @@ func TestTaskLinesNeedNoUnixShell(t *testing.T) {
 	for _, name := range examples(t) {
 		files = append(files, filepath.Join("../..", name, "mise.toml"))
 	}
+	shared, _ := filepath.Glob("../../tasks/*/*.toml") // what projects include
+	files = append(files, shared...)
 	run := regexp.MustCompile(`(?m)^run(_windows)? = (.*)$`)
 	setting := regexp.MustCompile(`(^|&& )[A-Z_]+=`)
 	for _, file := range files {

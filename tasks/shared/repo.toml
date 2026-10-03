@@ -1,0 +1,48 @@
+# Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
+# and its tasks run in the project (dir), calling the tool as CHARTER_TOOL (its mise.toml sets it).
+# The repo: releases, GitHub workflows, the docs site in docs/.
+
+["release"]
+description = "REMOTE on a version tag (vX.Y.Z): attach dist/* to its GitHub Release. Anywhere else: a dry run that lists dist/"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} release"
+
+["release:tags"]
+description = "REMOTE on a version tag (vX.Y.Z): tag the committed Go SDK, a module in a subdirectory (sdk/go/vX.Y.Z). Anywhere else: a dry run"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} release-tags sdk/go"
+
+["workflows"]
+description = "Write .github/workflows/ from the tool's templates (never edit the copies)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} workflows"
+
+["workflows:check"]
+description = "Fail if a workflow in .github/workflows/ differs from the tool's template"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} workflows -check"
+
+["docs:setup"]
+description = "Write the docs site's config and docs/writing.md (the same for every repo; GitHub Pages renders the folder)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} docs"
+
+["docs:lint"]
+description = "Check docs/ for what a program can check: front matter, links, the index, tasks and paths that don't exist"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} docs-lint"
+
+["docs:check"]
+description = "Fail if the docs site's config differs from what docs:setup writes, or docs/ fails the lint"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} docs -check && {{env.CHARTER_TOOL}} docs-lint"
+
+["docs:review"]
+description = "Have Claude (the claude command) bring docs/ up to date and into line with docs/writing.md"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} docs-review"
+
+["docs:pages"]
+description = "REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself)"
+dir = "{{config_root}}"
+run = 'gh api -X POST "repos/{owner}/{repo}/pages" -f "source[branch]=main" -f "source[path]=/docs"'

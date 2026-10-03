@@ -8,6 +8,8 @@ parent: Reference
 
 Run in the project's folder; words after the name go to the task, flags after `--`. **REMOTE**: reads or changes something on Cloudflare or GitHub. `mise tasks` lists them.
 
+Most tasks are written once, in charter's `tasks/` folders. A project includes `tasks/shared` and the one of its language (`[task_config] includes` in its `mise.toml`, from GitHub at the release it pins), and its `mise.toml` holds only its own tasks: `check`, `lint`, `deploy` and the tests. A task in `mise.toml` takes the place of the shared one with its name. The tasks call the tool through the setting `CHARTER_TOOL`: `charter` in a project, this checkout's in the examples here.
+
 ## A Go project
 
 What `charter new` makes, and `examples/notes-go/`.

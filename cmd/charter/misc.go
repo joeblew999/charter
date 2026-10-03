@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -125,17 +126,61 @@ func projectsBelow(dir string) ([]string, error) {
 	return found, nil
 }
 
-// tasksOf are the tasks a mise.toml defines itself (mise also offers a folder the tasks of the
-// mise.toml files above it, which is not what `each` asks).
+// tasksOf are the tasks a mise.toml defines itself and those it includes ([task_config] includes:
+// charter's tasks/ folders). Mise also offers a folder the tasks of the mise.toml files above it,
+// which is not what `each` asks. An include from GitHub is read by asking mise.
 func tasksOf(file string) map[string]bool {
 	tasks := map[string]bool{}
-	if content, err := os.ReadFile(file); err == nil {
-		for _, m := range taskDef.FindAllStringSubmatch(string(content), -1) {
-			tasks[m[1]] = true
+	content, err := os.ReadFile(file)
+	if err != nil {
+		return tasks
+	}
+	for _, m := range taskDef.FindAllStringSubmatch(string(content), -1) {
+		tasks[m[1]] = true
+	}
+	for _, m := range includeDef.FindAllStringSubmatch(string(content), -1) {
+		for _, include := range quoted.FindAllStringSubmatch(m[1], -1) {
+			if strings.Contains(include[1], "::") {
+				for name := range miseTasks(filepath.Dir(file)) {
+					tasks[name] = true
+				}
+				continue
+			}
+			files, _ := filepath.Glob(filepath.Join(filepath.Dir(file), filepath.FromSlash(include[1]), "*.toml"))
+			for _, included := range files {
+				if content, err := os.ReadFile(included); err == nil {
+					for _, m := range includedTaskDef.FindAllStringSubmatch(string(content), -1) {
+						tasks[m[1]] = true
+					}
+				}
+			}
 		}
 	}
 	return tasks
 }
+
+// miseTasks are the tasks mise offers in dir, or none if it cannot say.
+func miseTasks(dir string) map[string]bool {
+	tasks := map[string]bool{}
+	out, err := output(dir, "mise", "tasks", "ls", "--json")
+	if err != nil {
+		return tasks
+	}
+	var listed []struct{ Name string }
+	if json.Unmarshal([]byte(out), &listed) == nil {
+		for _, task := range listed {
+			tasks[task.Name] = true
+		}
+	}
+	return tasks
+}
+
+var (
+	includeDef = regexp.MustCompile(`(?m)^includes\s*=\s*\[([^\]]*)\]`)
+	quoted     = regexp.MustCompile(`"([^"]+)"`)
+	// A task in an included file is a table of its own: ["sdk:gen"].
+	includedTaskDef = regexp.MustCompile(`(?m)^\["?([a-z0-9:-]+)"?\]`)
+)
 
 var settingDef = regexp.MustCompile(`(?m)^([A-Z][A-Z0-9_]*)\s*=`)
 

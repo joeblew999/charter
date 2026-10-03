@@ -1,0 +1,18 @@
+# Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
+# and its tasks run in the project (dir), calling the tool as CHARTER_TOOL (its mise.toml sets it).
+# Performance work on a Go Worker: a scratch Worker per experiment, and the quick deploy-and-measure loop.
+
+["perf"]
+description = "REMOTE, writes test notes: the quick loop for performance work: build, deploy, then bench the new isolate from its first request (8 at once, then each operation). About two minutes"
+dir = "{{config_root}}"
+run = "mise run deploy && {{env.CHARTER_TOOL}} bench -each -burst 8 -write"
+
+["perf:try"]
+description = "REMOTE: try a change on a scratch Worker of its own and delete it after: mise run perf:try -- -name <experiment> [-build '<wasm-build flags>'] [-keep]. Several can run at once"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} perf"
+
+["perf:clean"]
+description = "REMOTE: delete the scratch Workers and databases that perf:try runs left"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} perf-clean"

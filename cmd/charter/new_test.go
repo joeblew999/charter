@@ -54,7 +54,8 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 		"fern/generators.yml":           "path: github.com/zeta/billing-api/sdk/go\n",
 		"test/soak-go/main.go":          `notes "github.com/zeta/billing-api/sdk/go"`,
 		"test/soak-go/go.mod":           "github.com/zeta/billing-api/sdk/go => ../../sdk/go",
-		"mise.toml":                     `run = "go run {{env.CHARTER}}/cmd/charter wasm-build"`,
+		"mise.toml":                     `CHARTER_TOOL = "go run {{env.CHARTER}}/cmd/charter"`,
+		"mise.toml   ":                  `includes = ["` + filepath.ToSlash(repo) + `/tasks/shared", "` + filepath.ToSlash(repo) + `/tasks/go"]`,
 		"mise.toml ":                    "\nCHARTER = \"" + filepath.ToSlash(repo) + "\"\n",
 		".gitattributes":                "* text=auto eol=lf\n",
 		".github/workflows/check.yml":   "- run: mise run check",
@@ -152,12 +153,12 @@ func TestNewProjectFromAReleasePinsTheTool(t *testing.T) {
 		t.Fatal(err)
 	}
 	tasks, _ := os.ReadFile(filepath.Join(into, "mise.toml"))
-	for _, want := range []string{"[tools]\n# The tool every task runs, the release's binary: `mise up --bump github:joeblew999/charter` moves to a newer one.\n\"github:joeblew999/charter\" = \"1.2.3\"\n", `run = "charter wasm-build"`, `-run "charter migrate-local -port {port}"`} {
+	for _, want := range []string{"[tools]\n# The tool every task runs, the release's binary: `mise up --bump github:joeblew999/charter` moves to a newer one.\n\"github:joeblew999/charter\" = \"1.2.3\"\n", "\nCHARTER_TOOL = \"charter\"\n", `includes = ["git::https://github.com/joeblew999/charter.git//tasks/shared?ref=v1.2.3", "git::https://github.com/joeblew999/charter.git//tasks/go?ref=v1.2.3"]`, `-run "{{env.CHARTER_TOOL}} migrate-local -port {port}"`} {
 		if !strings.Contains(string(tasks), want) {
 			t.Errorf("mise.toml: no %q", want)
 		}
 	}
-	for _, gone := range []string{"go run ../../", "CHARTER", exampleWorker} {
+	for _, gone := range []string{"go run ../../", "\nCHARTER =", "../../tasks", exampleWorker} {
 		if strings.Contains(string(tasks), gone) {
 			t.Errorf("mise.toml mentions %q", gone)
 		}
@@ -182,7 +183,7 @@ func TestNewTypeScriptProject(t *testing.T) {
 		"package-lock.json ":          `"node_modules/@charter/ts": {`,
 		"mise.toml":                   `run = "npm ci --no-fund --no-audit --prefix {{env.CHARTER}}/ts && npm run build --prefix {{env.CHARTER}}/ts && npm ci --no-fund --no-audit"`,
 		"mise.toml ":                  `run = 'node test/live-test.mjs {{env.API_URL}}`,
-		"mise.toml  ":                 `run = "go run {{env.CHARTER}}/cmd/charter sdk-gen"`,
+		"mise.toml  ":                 `includes = ["` + filepath.ToSlash(repo) + `/tasks/shared", "` + filepath.ToSlash(repo) + `/tasks/ts"]`,
 		"go.work":                     "use " + filepath.ToSlash(repo) + "\n",
 		"fern/generators.yml":         "path: github.com/zeta/billing-api/sdk/go\n",
 		"test/live-test.mjs":          "",
@@ -238,7 +239,8 @@ func TestNewTypeScriptProjectFromARelease(t *testing.T) {
 		"package.json": `"@charter/ts": "https://github.com/joeblew999/charter/releases/download/v1.2.3/charter-ts-1.2.3.tgz"`,
 		"mise.toml":    "\"github:joeblew999/charter\" = \"1.2.3\"\n",
 		"mise.toml ":   "[tasks.setup]\ndescription = \"Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import, and @charter/ts (the TypeScript library)\"\nrun = \"npm ci --no-fund --no-audit\"\n",
-		"mise.toml  ":  `run = "charter exec cf deploy && charter migrate"`,
+		"mise.toml  ":  "\nCHARTER_TOOL = \"charter\"\n",
+		"mise.toml   ": `"git::https://github.com/joeblew999/charter.git//tasks/ts?ref=v1.2.3"]`,
 	} {
 		content, _ := os.ReadFile(filepath.Join(into, strings.TrimSpace(file)))
 		if !strings.Contains(string(content), want) {
