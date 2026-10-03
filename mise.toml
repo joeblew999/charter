@@ -131,7 +131,7 @@ run = "go run ./cmd/charter release"
 # ---- docs: the docs site in docs/ ----------------------------------------------------------------
 
 [tasks."docs:setup"]
-description = "Write the docs site's config and docs/writing.md (the same for every repo; GitHub Pages renders the folder)"
+description = "Write the docs site's config and docs/writing.md (the same for every repo; GitHub Pages renders the folder), and the pages docs/_generated.toml lists"
 run = "go run ./cmd/charter docs"
 
 [tasks."docs:lint"]

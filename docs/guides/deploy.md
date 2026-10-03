@@ -80,3 +80,21 @@ mise run repo:check    # REMOTE, read-only: fails on drift, for CI
 ```
 
 It runs at the repo's root, from any folder in it, and keeps: the docs site's config and `docs/writing.md`; the issue forms and `labels.tsv`; the workflows, for a repo that is a project or lists `projects`; the GitHub labels, removing GitHub's unused defaults; the description, homepage and topics; GitHub Pages for the docs folder. Running it again changes nothing. A project in a subfolder keeps its own tasks.
+
+### Generated pages
+
+A page made from the code (every command and flag, the MCP tools, the API's routes, the last test run) is committed like any other, so GitHub Pages renders it with no build step:
+
+1. Give the repo a command that prints the page as Markdown, from its `# Title` on.
+2. List it in `_generated.toml` in `docs/` (the underscore keeps it off the site):
+
+   ```toml
+   [[generated]]
+   page = "reference/commands.md"              # below docs/
+   run = "go run ./cmd/billing docs-commands"  # at the repo's root; no shell, "double quotes" hold an argument with spaces
+   ```
+
+3. `mise run docs:setup` writes it with charter's front matter: the title from its first heading, its section page as parent (`reference/x.md`: `reference.md`), after the written pages. Commit it.
+4. Link it from its section's page, and add it to the home page's "What is generated" table, written by `mise run docs:setup`.
+
+`mise run docs:check` fails while a committed page differs from what its command prints now, as `spec:check` does for the specs. `docs:lint` checks a generated page's front matter, links and curly braces, not the tasks, paths and versions it names: those are fixed in the code.

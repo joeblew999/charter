@@ -107,8 +107,8 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 | `workflows` * | `-check`, `-into <repo dir>` | Writes `.github/`: the workflows `check`, `deploy`, `sdk-check`, `release`, the issue forms and `labels.tsv` |
 | `issue` * | `<bug\|feature\|upstream>` | Prints an issue body with that form's headings, for `gh issue create --body-file` |
 | `labels` * | | REMOTE. Creates or updates the repo's labels from the labels file; removes GitHub's default labels it lacks that nothing uses |
-| `docs` * | `-check`, `-into <repo dir>` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt` |
-| `docs-lint` * | `-into <repo dir>` | Fails on missing front matter, an unlinked page, a dead link or anchor, an unknown task, a missing path, a release version |
+| `docs` * | `-check`, `-into <repo dir>` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt`, and each page that `_generated.toml` in `docs/` lists, from its command's output; `-check` fails if one is stale ([how](../guides/deploy.md#generated-pages)) |
+| `docs-lint` * | `-into <repo dir>` | Fails on missing front matter, an unlinked page, a dead link or anchor, an unknown task, a missing path, a release version; in a generated page, only the first three |
 | `docs-review` * | `-print` | Hands Claude the review prompt with what the lint found |
 | `upstream` * | | Every `Upstream:` tag in the code, with its issue's state |
 | `each` * | `-only <name,...>`, then `<task> [args]` | Runs a mise task in every project below this folder that has it |

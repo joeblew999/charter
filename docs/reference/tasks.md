@@ -58,8 +58,8 @@ What `charter new` makes, and `examples/notes-go/`.
 | `release:tags` | REMOTE on a version tag: tags `sdk/go/vX.Y.Z`. Elsewhere a dry run |
 | `repo`, `repo:check` | REMOTE. `charter repo` at the repo's root: keeps it as `charter.toml` says ([Keep the repo in shape](../guides/deploy.md#keep-the-repo-in-shape)); `repo:check` changes nothing and fails on drift |
 | `workflows`, `workflows:check` | Writes `.github/` from the tool's templates; fails if it differs |
-| `docs:setup` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt` |
-| `docs:lint`, `docs:check` | Checks `docs/`; `docs:check` also fails if the config is stale |
+| `docs:setup` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt` and the [generated pages](../guides/deploy.md#generated-pages) |
+| `docs:lint`, `docs:check` | Checks `docs/`; `docs:check` also fails if the config or a generated page is stale |
 | `docs:review` | Has Claude bring `docs/` into line with `docs/writing.md` |
 | `docs:pages` | REMOTE. Turns GitHub Pages on for `docs/` |
 

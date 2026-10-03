@@ -58,6 +58,16 @@ func docsLint(args []string) error {
 		return err
 	}
 	sort.Strings(pages)
+	// Generated pages (docs/_generated.toml): what is in them comes from the repo's code, so only
+	// what their place in the site decides is checked (front matter, links, braces).
+	list, err := readGenerated(docs)
+	if err != nil {
+		return err
+	}
+	generated := map[string]bool{}
+	for _, g := range list {
+		generated[filepath.Join(docs, filepath.FromSlash(g.Page))] = true
+	}
 	// The tasks a page may name: the folder's own, and those of the projects below it (a repo that
 	// holds several projects documents their tasks too).
 	tasks := tasksOf(filepath.Join(into, "mise.toml"))
@@ -133,7 +143,8 @@ func docsLint(args []string) error {
 		}
 		// Plans and findings describe what isn't built or what once was: only their links are checked.
 		// writing.md is the same page in every repo, with example names of its own.
-		if strings.Contains(rel, "plans/") || rel == "findings.md" || rel == "writing.md" {
+		// A generated page is fixed in the code that writes it, and checked by charter docs -check.
+		if strings.Contains(rel, "plans/") || rel == "findings.md" || rel == "writing.md" || generated[page] {
 			continue
 		}
 		for _, m := range pinnedVersion.FindAllString(text, -1) {
