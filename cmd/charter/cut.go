@@ -16,6 +16,7 @@ import (
 // every OS, as a check after the fact. It works in any repo whose tasks follow charter's names, and
 // in one that ships no files: each step is a mise task the repo may or may not have.
 //
+//	setup            installs what the checks need, as CI does first (none: skipped)
 //	check            the repo's own checks (none: skipped)
 //	spec:diff        fails on a breaking change to the specs unless the tag is a major release (none: skipped)
 //	dist             builds what ships into dist/ (none: the repo ships no files)
@@ -24,7 +25,7 @@ import (
 
 func init() {
 	commands["release"] = command{"vX.Y.Z [-dry-run] [-prerelease] [-notes-footer <text or file>]",
-		"cut a release from this machine: check the repo is clean and is the default branch on GitHub, run its check, spec:diff and dist tasks, tag, push the tag, make the GitHub Release (notes: the commits since the last tag) and run its release:publish and release:tags tasks; -dry-run changes nothing", release}
+		"cut a release from this machine: check the repo is clean and is the default branch on GitHub, run its setup, check, spec:diff and dist tasks, tag, push the tag, make the GitHub Release (notes: the commits since the last tag) and run its release:publish and release:tags tasks; -dry-run changes nothing", release}
 	anywhere["release"] = true
 }
 
@@ -138,6 +139,10 @@ func release(args []string) error {
 	}
 	if !tasks["check"] {
 		fmt.Println("  no check task: nothing to run before the tag")
+	}
+	// As CI runs it: setup (the packages a fresh clone lacks), then check.
+	if err := run("setup"); err != nil {
+		return err
 	}
 	if err := run("check"); err != nil {
 		return err
