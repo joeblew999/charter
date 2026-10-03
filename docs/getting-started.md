@@ -16,7 +16,7 @@ mise x go node github:joeblew999/charter -- charter new -name billing-api -modul
 cd billing-api && git init
 ```
 
-`mise x` fetches the newest charter release (a binary for your system) and Go and Node, for this one command; the project pins that release in its `mise.toml`. `-name` is the folder, the Worker and its database; `-subdomain` your account's `workers.dev` subdomain ([every flag](reference/charter.md#make-a-project)). The project is a copy of the notes example, so every check passes before you change anything. `-empty` starts from one route, `GET /api/hello`, instead.
+`mise x` fetches the newest charter release (a binary for your system) and Go and Node, for this one command; the project pins that release in its `mise.toml`. `-name` is the folder, the Worker and its database; `-subdomain` your account's `workers.dev` subdomain ([every flag](reference/charter.md#make-a-project)). The project is a copy of the notes example, so every check passes before you change anything. `-empty` starts from one route, `GET /api/hello`, instead; `-empty -ui htmx` adds [server-rendered pages](guides/pages.md).
 
 ## 2. Install and check
 

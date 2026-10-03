@@ -1,0 +1,7 @@
+# gsx's settings for the pages (https://gsxhq.github.io, Configuration). The htmx preset makes
+# hx-get, hx-post and the like URL attributes, which gsx checks as it does href; hx-sse:connect,
+# from htmx 4's SSE extension, is one too.
+url_presets = ["htmx"]
+
+[url_attrs]
+names = ["hx-sse:connect"]

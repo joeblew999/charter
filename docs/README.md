@@ -16,6 +16,7 @@ Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go
 - **A Go server on Workers** at the CPU cost of a TypeScript one ([Benchmarks](benchmarks.md)), that also runs natively.
 - **SDKs and a CLI** in any language [Fern](https://buildwithfern.com) supports.
 - **SSE and WebSocket streams** that lose nothing across deploys.
+- **Server-rendered pages** in the same Worker, with gsx and htmx 4, live over those streams ([Server-rendered pages](guides/pages.md)).
 - **Every step is a task:** `mise run <task>`, the same locally and on GitHub.
 
 ## What is where
@@ -31,6 +32,7 @@ Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go
 | The tool | `cmd/charter/` | The command behind every task ([The charter command](reference/charter.md)) |
 | The examples | `examples/notes-go/` (what `charter new` copies), `examples/notes-ts/` | The notes API, in Go and in TypeScript |
 | The start projects | `examples/start-go/`, `examples/start-ts/` (what `charter new -empty` copies) | One route, `GET /api/hello`, with the same tasks, specs, SDKs, tests and workflows |
+| The start project with pages | `examples/start-htmx/` (what `charter new -empty -ui htmx` copies) | The Go start project with messages and server-rendered pages (gsx, htmx 4), live over SSE ([Server-rendered pages](guides/pages.md)) |
 | The conformance projects | `conformance/showcase-go/`, `conformance/showcase-ts/` | Every Fern feature end to end, in Go and in TypeScript: the proof that the generated SDKs work |
 
 ## What is generated
@@ -40,6 +42,7 @@ Never edit these: change the source and run the task.
 | Path | Written by |
 |---|---|
 | `fern/openapi.json`, `fern/asyncapi.json` | `mise run spec`, from the contract |
+| `pages/*.x.go` (committed) | `mise run ui:gen`, from the gsx components (`examples/start-htmx/`) |
 | `sdk/go/` (committed), `sdk/out/` | `mise run sdk:publish`, `mise run sdk:gen` |
 | `build/`, `dist/`, `ts/dist/` | `mise run build`, `mise run sdk:dist`, `mise run ts:build` |
 | `.github/` | `mise run workflows` |
@@ -50,7 +53,7 @@ Never edit these: change the source and run the task.
 | Section | Pages |
 |---|---|
 | Start | [Getting started](getting-started.md) |
-| [Guides](guides.md) | [Your API](guides/replace-the-example.md) (the contract, MCP, TypeScript), [Streaming](guides/streaming.md), [SDKs](guides/sdks.md) (Fern features, languages, releases), [Deploy and CI](guides/deploy.md), [Performance](guides/performance.md) |
+| [Guides](guides.md) | [Your API](guides/replace-the-example.md) (the contract, MCP, TypeScript), [Streaming](guides/streaming.md), [SDKs](guides/sdks.md) (Fern features, languages, releases), [Deploy and CI](guides/deploy.md), [Performance](guides/performance.md), [Server-rendered pages](guides/pages.md) (gsx, htmx 4) |
 | [Reference](reference.md) | [Tasks](reference/tasks.md), [The charter command](reference/charter.md), [Go packages](reference/packages.md) |
 | [How to help](contributing.md) | [Rules](rules.md), [Benchmarks](benchmarks.md), [Upstream issues](upstream.md), [Writing docs](writing.md) |
 

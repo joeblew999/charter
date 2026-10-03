@@ -184,6 +184,64 @@ func TestNewEmptyProject(t *testing.T) {
 	}
 }
 
+// -empty -ui htmx: the start project with server-rendered pages (gsx, htmx 4) under the project's
+// names; it builds, passes its tests, and its committed gsx output is what gsx generates for it.
+func TestNewEmptyHTMXProject(t *testing.T) {
+	if testing.Short() {
+		t.Skip("scaffolds a project and builds it")
+	}
+	into, repo, said := scaffold(t, "-empty", "-ui", "htmx")
+	for _, want := range []string{"the page at / shows them live", pagesGuide, "http://localhost:5179/api/hello", replaceGuide} {
+		if !strings.Contains(said, want) {
+			t.Errorf("new does not say %q:\n%s", want, said)
+		}
+	}
+	workerURL(t, into, "billing-api.your-subdomain.workers.dev")
+	for file, want := range map[string]string{
+		"go.mod":               "\ntool github.com/gsxhq/gsx/cmd/gsx\n",
+		"main.go":              `"github.com/zeta/billing-api/pages"`,
+		"pages/home.gsx":       `"github.com/zeta/billing-api/api"`,
+		"pages/home.x.go":      `"github.com/zeta/billing-api/api"`,
+		"cloudflare.config.ts": `HUB: bindings.durableObject({ worker: name, exportName: "Hub" })`,
+		"mise.toml":            `unchanged -files "*.x.go" go tool gsx generate`,
+		"README.md":            "`charter new -empty -ui htmx`",
+		"README.md ":           "`mise run ui:gen`",
+		"docs/README.md":       "| The pages | `pages/*.gsx`",
+		"docs/README.md ":      pagesGuide,
+	} {
+		content, err := os.ReadFile(filepath.Join(into, strings.TrimSpace(file)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(content), want) {
+			t.Errorf("%s: no %q", file, want)
+		}
+	}
+	listed, err := output(repo, "git", "ls-files", "--cached", "--others", "--exclude-standard", "--", startDirHTMX)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range strings.Split(listed, "\n") {
+		if rel := strings.TrimPrefix(file, startDirHTMX+"/"); !exists(filepath.Join(into, rel)) {
+			t.Errorf("%s was not copied", rel)
+		}
+	}
+	notMentioned(t, into, "notes", "charter-start", startDirHTMX, exampleTool)
+	for _, args := range [][]string{{"build", "./..."}, {"vet", "./..."}, {"test", "./..."}, {"run", filepath.ToSlash(repo) + "/cmd/charter", "unchanged", "-files", "*.x.go", "go", "tool", "gsx", "generate", "--no-cache", "-q"}} {
+		cmd := exec.Command("go", args...)
+		cmd.Dir = into
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("go %s in the new project: %v\n%s", strings.Join(args, " "), err, out)
+		}
+	}
+	// -ui is htmx, and only with -empty in Go.
+	for _, args := range [][]string{{"-ui", "htmx"}, {"-empty", "-ui", "htmx", "-lang", "ts"}, {"-empty", "-ui", "datastar"}} {
+		if err := newProject(append([]string{"-name", "billing-api", "-module", "github.com/zeta/billing-api", "-into", into + "2", "-from", repo}, args...)); err == nil || !strings.Contains(err.Error(), "-ui") {
+			t.Errorf("new %s: %v", strings.Join(args, " "), err)
+		}
+	}
+}
+
 // -empty -lang ts: the TypeScript start project, with its own tests (none of the Go example's).
 func TestNewEmptyTypeScriptProject(t *testing.T) {
 	if testing.Short() {
@@ -265,7 +323,7 @@ func TestNewProjectFromAReleasePinsTheTool(t *testing.T) {
 		t.Fatal(err)
 	}
 	into := t.TempDir()
-	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", "", false, false); err != nil {
+	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", "", false, false, ""); err != nil {
 		t.Fatal(err)
 	}
 	tasks, _ := os.ReadFile(filepath.Join(into, "mise.toml"))
@@ -348,7 +406,7 @@ func TestNewTypeScriptProjectFromARelease(t *testing.T) {
 		t.Fatal(err)
 	}
 	into := t.TempDir()
-	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", "", true, false); err != nil {
+	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", "", true, false, ""); err != nil {
 		t.Fatal(err)
 	}
 	for file, want := range map[string]string{
