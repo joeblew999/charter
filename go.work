@@ -4,6 +4,6 @@ use (
 	.
 	./examples/notes-go
 	./examples/notes-go/sdk/go
-	./examples/showcase-go
+	./conformance/showcase-go
 	./go
 )

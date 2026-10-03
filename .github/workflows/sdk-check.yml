@@ -17,11 +17,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        example: [notes-go, notes-ts, showcase-go, showcase-ts]
+        project: [examples/notes-go, examples/notes-ts, conformance/showcase-go, conformance/showcase-ts]
         group: [go, typescript]
     defaults:
       run:
-        working-directory: examples/${{ matrix.example }}
+        working-directory: ${{ matrix.project }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.0.1

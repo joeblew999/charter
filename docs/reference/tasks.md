@@ -65,15 +65,15 @@ What `charter new` makes, and `examples/notes-go/`.
 | Project | Differences |
 |---|---|
 | `examples/notes-ts/` | No `run`, `build`, `test:native`, `test:workerd`, `perf`. `lint` typechecks, `test` runs the feed's tests |
-| `examples/showcase-go/` | No `migrate`, `live-test`, `soak`, `bench`. `showcase-test` runs the SDK test against a running server |
-| `examples/showcase-ts/` | `test:workerd` runs the TypeScript SDK inside the Worker; `deploy` deploys it twice |
+| `conformance/showcase-go/` | No `migrate`, `live-test`, `soak`, `bench`. `showcase-test` runs the SDK test against a running server |
+| `conformance/showcase-ts/` | `test:workerd` runs the TypeScript SDK inside the Worker; `deploy` deploys it twice |
 
 ## This repo
 
 | Task | What it does |
 |---|---|
-| `check` | `charter:check`, `go:check`, `examples:check`. Needs Docker |
-| `examples:check` | `check` in every example |
+| `check` | `charter:check`, `go:check`, `ts:check`, `projects:check`. Needs Docker |
+| `projects:check` | `check` in every project under `examples/` and `conformance/` |
 | `charter:check` | The tool: gofmt, vet, tests, the generated workflows and docs config, the docs lint |
 | `go:check` | `go:lint` and `go:test`: the library, for the host and for Wasm |
 | `ts:setup` | Installs the TypeScript library's packages |

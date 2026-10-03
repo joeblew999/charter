@@ -151,7 +151,7 @@ func TestMain(m *testing.M) {
 func TestTaskLinesNeedNoUnixShell(t *testing.T) {
 	files := []string{"../../mise.toml"}
 	for _, name := range examples(t) {
-		files = append(files, filepath.Join("../../examples", name, "mise.toml"))
+		files = append(files, filepath.Join("../..", name, "mise.toml"))
 	}
 	run := regexp.MustCompile(`(?m)^run(_windows)? = (.*)$`)
 	setting := regexp.MustCompile(`(^|&& )[A-Z_]+=`)

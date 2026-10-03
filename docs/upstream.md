@@ -23,7 +23,7 @@ parent: How to help
 | [fern#17939](https://github.com/fern-api/fern/issues/17939) | The CLI prints `json` streams at the end; the terminator is not escaped | A plain-text terminator | |
 | [fern#9559](https://github.com/fern-api/fern/issues/9559) | OpenAPI 3.2.0 is rejected | `version: "3.1.1"` in `ts/src/specs.ts` | Use oRPC's default |
 | [orpc#2115](https://github.com/middleapi/orpc/issues/2115) | oRPC generates no AsyncAPI | `ts/src/asyncapi.ts` | Publish it ([#23](https://github.com/joeblew999/charter/issues/23)) |
-| Fern, not filed | A named form-encoded OAuth request schema breaks the Go SDK's test | The schema is inline (`examples/showcase-go/api/contract.go`) | Drop that `RequestBody` |
+| Fern, not filed | A named form-encoded OAuth request schema breaks the Go SDK's test | The schema is inline (`conformance/showcase-go/api/contract.go`) | Drop that `RequestBody` |
 | Huma, not filed | A `RawBody` beside a `Body` gives Fern's Go SDK an `io.Reader` | `jsonOnly` in `go/humaworkers/humaworkers.go` | Delete `jsonOnly` |
 | Fern, not filed | An AsyncAPI server's `pathname` is ignored | Tests pass `baseUrl` | |
 | `cf dev`, not filed | A refused WebSocket upgrade is dropped | The showcase test accepts either | |

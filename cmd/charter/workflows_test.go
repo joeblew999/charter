@@ -78,13 +78,13 @@ func TestWorkflowsFitTheRepo(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, workflow := range project {
-		for _, gone := range []string{"examples", "matrix.example", "charter:check", "go:check", "ts:check", "charter:release"} {
+		for _, gone := range []string{"examples", "matrix.project", "charter:check", "go:check", "ts:check", "charter:release"} {
 			if strings.Contains(string(workflow), gone) {
 				t.Errorf("%s for a project mentions %q", name, gone)
 			}
 		}
 	}
-	for _, want := range []string{"mise run charter:check", "mise run go:check", "mise run ts:check", "working-directory: examples/${{ matrix.example }}", "mise run check", "  tool-windows:\n    runs-on: windows-2025\n", "  example-windows:\n"} {
+	for _, want := range []string{"mise run charter:check", "mise run go:check", "mise run ts:check", "working-directory: ${{ matrix.project }}", "mise run check", "  tool-windows:\n    runs-on: windows-2025\n", "  example-windows:\n"} {
 		if !strings.Contains(string(repo["check.yml"]), want) {
 			t.Errorf("check.yml for a repo with examples: no %q", want)
 		}
@@ -102,7 +102,7 @@ func TestWorkflowsFitTheRepo(t *testing.T) {
 // workflows), or in the example a new project is a copy of.
 func TestWorkflowsRunTasksThatExist(t *testing.T) {
 	step := regexp.MustCompile(`- run: mise run ([a-z][a-z0-9:-]*)`)
-	list := regexp.MustCompile(`example: \[([a-z, -]+)\]`)
+	list := regexp.MustCompile(`(example|project): \[([a-z/, -]+)\]`)
 	all := examples(t)
 	kinds := repoKinds(t)
 	tasks := func(dir string) map[string]bool { return tasksOf(filepath.Join(dir, "mise.toml")) }
@@ -115,14 +115,25 @@ func TestWorkflowsRunTasksThatExist(t *testing.T) {
 		for name, workflow := range workflows {
 			// A job's steps run at the root, or in the examples its matrix (or its input) lists.
 			for _, job := range strings.Split(string(workflow), "\n    runs-on: ")[1:] {
-				where := []string{"notes-go"}
+				where := []string{"examples/notes-go"}
 				if m := list.FindStringSubmatch(job); m != nil {
-					where = strings.Split(m[1], ", ")
+					where = strings.Split(m[2], ", ")
+					if m[1] == "example" { // names of folders in examples/
+						for i := range where {
+							where[i] = "examples/" + where[i]
+						}
+					}
 				} else if kind != "a project" && !strings.Contains(job, "working-directory") {
 					where = nil // the repo's own tasks
 				}
 				if name == "deploy.yml" && kind != "a project" {
-					where = strings.Split(list.FindStringSubmatch(strings.ReplaceAll(string(workflow), "options:", "example:"))[1], ", ")
+					m := list.FindStringSubmatch(strings.ReplaceAll(string(workflow), "options:", "example:"))
+					where = strings.Split(m[2], ", ")
+					if m[1] == "example" { // names of folders in examples/
+						for i := range where {
+							where[i] = "examples/" + where[i]
+						}
+					}
 				}
 				for _, m := range step.FindAllStringSubmatch(job, -1) {
 					if where == nil && !root[m[1]] {
@@ -131,8 +142,8 @@ func TestWorkflowsRunTasksThatExist(t *testing.T) {
 					for _, example := range where {
 						if !slices.Contains(all, example) {
 							t.Errorf("%s for %s: no example %s", name, kind, example)
-						} else if !tasks(filepath.Join("../../examples", example))[m[1]] {
-							t.Errorf("%s for %s: mise run %s is not a task of examples/%s", name, kind, m[1], example)
+						} else if !tasks(filepath.Join("../..", example))[m[1]] {
+							t.Errorf("%s for %s: mise run %s is not a task of %s", name, kind, m[1], example)
 						}
 					}
 				}

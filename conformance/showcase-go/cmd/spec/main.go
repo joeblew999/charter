@@ -9,7 +9,7 @@
 package main
 
 import (
-	"github.com/joeblew999/charter/examples/showcase-go/api"
+	"github.com/joeblew999/charter/conformance/showcase-go/api"
 	"github.com/joeblew999/charter/go/specfile"
 )
 

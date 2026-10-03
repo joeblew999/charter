@@ -54,7 +54,7 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 | `migrate-local` | `-port <port>`, `-worker <name>` | Applies `migrations/*.sql` to a running dev server's local D1 |
 | `migrate` | `-worker <name>` | REMOTE. Applies pending migrations to `<worker>-db` |
 | `doctor` | | Says what the project's tasks need and lack |
-| `harness-sync`, `harness-test`, `harness-deploy` | `harness-test -remote` | For a Worker that imports its own generated SDK (`examples/showcase-ts/`): copy it in, test it under `cf dev` or deployed, deploy it twice |
+| `harness-sync`, `harness-test`, `harness-deploy` | `harness-test -remote` | For a Worker that imports its own generated SDK (`conformance/showcase-ts/`): copy it in, test it under `cf dev` or deployed, deploy it twice |
 
 `with-server` and `exec` run a program an npm package of the project installs (`cf`, `fern`) from `node_modules/.bin`, never from the path.
 

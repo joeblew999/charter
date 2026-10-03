@@ -31,7 +31,7 @@ curl -N 'localhost:5174/api/notes/watch?after=0&seconds=5'   # every note after 
 3. **Add a feed to the hub:** `hub.DurableObject[Device]("HUB", "devices")` in `platform_js.go`, `hub.Memory[Device]` in `platform_other.go`. The binding stays the same.
 4. **No item may contain `[end-of-stream]`:** refuse it in the input's `Resolve`, as `CreateInput` does.
 
-A WebSocket the client also sends on: see `examples/showcase-go/api/contract.go` and [SDKs](sdks.md#fern-features).
+A WebSocket the client also sends on: see `conformance/showcase-go/api/contract.go` and [SDKs](sdks.md#fern-features).
 
 ## Check it
 

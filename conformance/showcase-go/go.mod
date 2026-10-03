@@ -1,4 +1,4 @@
-module github.com/joeblew999/charter/examples/showcase-go
+module github.com/joeblew999/charter/conformance/showcase-go
 
 go 1.27.1
 

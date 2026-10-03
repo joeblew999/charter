@@ -49,7 +49,7 @@ Add a group under `groups:` in `fern/generators.yml`, then `mise run sdk:gen pyt
 
 ## Fern features
 
-The showcase (`examples/showcase-go/`, and `examples/showcase-ts/` from oRPC) switches each on; copy the lines from its contract and `api/spec.go`.
+The showcase (`conformance/showcase-go/`, and `conformance/showcase-ts/` from oRPC) switches each on; copy the lines from its contract and `api/spec.go`.
 
 | Feature | In the Go contract | The caller gets |
 |---|---|---|

@@ -9,19 +9,22 @@ import (
 	"testing"
 )
 
-// The examples of this repo, by folder name: the projects in ../../examples.
+// The projects of this repo, by path from its root: the examples (what a project starts from) and
+// the conformance projects (every Fern feature, end to end).
 func examples(t *testing.T) []string {
 	t.Helper()
-	dirs, err := projectsBelow("../../examples")
-	if err != nil {
-		t.Fatal(err)
-	}
 	var names []string
-	for _, dir := range dirs {
-		names = append(names, filepath.Base(dir))
+	for _, parent := range []string{"examples", "conformance"} {
+		dirs, err := projectsBelow(filepath.Join("../..", parent))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, dir := range dirs {
+			names = append(names, parent+"/"+filepath.Base(dir))
+		}
 	}
-	if want := []string{"notes-go", "notes-ts", "showcase-go", "showcase-ts"}; !slices.Equal(names, want) {
-		t.Fatalf("examples/ has the projects %v, want %v", names, want)
+	if want := []string{"examples/notes-go", "examples/notes-ts", "conformance/showcase-go", "conformance/showcase-ts"}; !slices.Equal(names, want) {
+		t.Fatalf("the repo has the projects %v, want %v", names, want)
 	}
 	return names
 }
@@ -30,12 +33,12 @@ func examples(t *testing.T) []string {
 // The showcases add one: typescript-public, which shows Fern's audiences.
 func TestEveryExampleHasTheCommonGroups(t *testing.T) {
 	for _, name := range examples(t) {
-		groups, err := sdkGroups(filepath.Join("../../examples", name, generators))
+		groups, err := sdkGroups(filepath.Join("../..", name, generators))
 		if err != nil {
 			t.Fatal(err)
 		}
 		want := sdkCommon
-		if strings.HasPrefix(name, "showcase-") {
+		if strings.HasPrefix(filepath.Base(name), "showcase-") {
 			want = append(slices.Clone(sdkCommon), "typescript-public")
 		}
 		if !slices.Equal(groups, want) {
@@ -51,7 +54,7 @@ func TestTheExamplesPinTheSameTools(t *testing.T) {
 	seen := map[string]string{} // tool -> "version (file)"
 	files := []string{"../../mise.toml"}
 	for _, name := range examples(t) {
-		files = append(files, filepath.Join("../../examples", name, "mise.toml"))
+		files = append(files, filepath.Join("../..", name, "mise.toml"))
 	}
 	for _, file := range files {
 		content, err := os.ReadFile(file)
@@ -101,7 +104,7 @@ func TestTheExamplesShareTheirTaskLines(t *testing.T) {
 	}
 	reference := filepath.Join("../../examples", "notes-go", "mise.toml")
 	for _, name := range examples(t) {
-		file := filepath.Join("../../examples", name, "mise.toml")
+		file := filepath.Join("../..", name, "mise.toml")
 		for _, shared := range same {
 			want, got := task(reference, shared), task(file, shared)
 			if strings.HasSuffix(name, "-ts") && shared == "setup" {
@@ -167,13 +170,13 @@ func TestAProjectIsAMiseFileBesideAFernFolder(t *testing.T) {
 func TestEveryExampleHasItsOwnSettings(t *testing.T) {
 	ports := map[string]string{}
 	for _, name := range examples(t) {
-		file := filepath.Join("../../examples", name, "mise.toml")
+		file := filepath.Join("../..", name, "mise.toml")
 		settings := settingsOf(file)
 		if !settings["API_URL"] || !settings["API_PORT"] || settings["CLOUDFLARE_API_TOKEN"] {
 			t.Errorf("%s: [env] sets %v, want API_URL and API_PORT", name, settings)
 		}
 		content, _ := os.ReadFile(file)
-		if want := "default='https://charter-" + name + ".gedw99.workers.dev'"; !strings.Contains(string(content), want) {
+		if want := "default='https://charter-" + filepath.Base(name) + ".gedw99.workers.dev'"; !strings.Contains(string(content), want) {
 			t.Errorf("%s: no API_URL with %s", name, want)
 		}
 		port := regexp.MustCompile(`API_PORT', default='(\d+)'`).FindStringSubmatch(string(content))

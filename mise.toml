@@ -1,8 +1,9 @@
 # charter: contract-first APIs on Cloudflare Workers, in Go. The tool (cmd/charter), the Go library
-# (go/), the TypeScript library (ts/), and four example projects (examples/). This file has the
-# tasks of the repo as a whole. Each example is a complete project with a mise.toml of its own and
+# (go/), the TypeScript library (ts/), two example projects (examples/) and two conformance projects
+# (conformance/: every Fern feature, end to end). This file has the tasks of the repo as a whole.
+# Each is a complete project with a mise.toml of its own and
 # the same task names (setup, check, build, spec, deploy, sdk:gen ...): cd into it and run them there.
-#   mise install && mise run setup     # tools, then every example's npm packages
+#   mise install && mise run setup     # tools, then every project's npm packages
 #   mise run check                     # every local check (needs Docker, no Cloudflare account)
 #   mise tasks                         # all of them
 # Every task is one line that sh and Windows' cmd.exe both take: programs, "double quotes", &&.
@@ -26,11 +27,11 @@ description = "Install every example's npm packages (its own mise run setup)"
 run = "go run ./cmd/charter each setup"
 
 [tasks.check]
-description = "Every LOCAL check (no Cloudflare account; needs Docker): the tool, the Go library, the TypeScript library, then each example's own check"
-depends = ["charter:check", "go:check", "ts:check", "examples:check"]
+description = "Every LOCAL check (no Cloudflare account; needs Docker): the tool, the Go library, the TypeScript library, then each project's own check"
+depends = ["charter:check", "go:check", "ts:check", "projects:check"]
 
-[tasks."examples:check"]
-description = "LOCAL: mise run check in every example, one after the other"
+[tasks."projects:check"]
+description = "LOCAL: mise run check in every project (examples/ and conformance/), one after the other"
 run = "go run ./cmd/charter each check"
 
 [tasks.compare]

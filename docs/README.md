@@ -28,7 +28,8 @@ Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go
 | The TypeScript library | `ts/` | `@charter/ts`: the AsyncAPI generator for oRPC, both specs from one contract, `follow()`. The TypeScript examples take it as a local package |
 | The Worker glue | `go/worker/` | The JavaScript the library needs; the build copies it into `build/` |
 | The tool | `cmd/charter/` | The command behind every task ([The charter command](reference/charter.md)) |
-| The examples | `examples/notes-go/` (what `charter new` copies), `examples/notes-ts/`, `examples/showcase-go/`, `examples/showcase-ts/` | The notes API and a showcase of Fern features, in Go and TypeScript |
+| The examples | `examples/notes-go/` (what `charter new` copies), `examples/notes-ts/` | The notes API, in Go and in TypeScript |
+| The conformance projects | `conformance/showcase-go/`, `conformance/showcase-ts/` | Every Fern feature end to end, in Go and in TypeScript: the proof that the generated SDKs work |
 
 ## What is generated
 

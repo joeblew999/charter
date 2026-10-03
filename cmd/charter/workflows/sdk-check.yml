@@ -18,13 +18,13 @@ jobs:
       fail-fast: false
       matrix:
         # if-dir examples
-        example: [notes-go, notes-ts, showcase-go, showcase-ts]
+        project: [examples/notes-go, examples/notes-ts, conformance/showcase-go, conformance/showcase-ts]
         # end
         group: [go, typescript]
     # if-dir examples
     defaults:
       run:
-        working-directory: examples/${{ matrix.example }}
+        working-directory: ${{ matrix.project }}
     # end
     steps:
       - uses: actions/checkout@v7.0.1

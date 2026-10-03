@@ -27,7 +27,8 @@ Needs [mise](https://mise.jdx.dev), Go and git, on macOS, Linux or Windows. Then
 | Folder | What it is |
 |---|---|
 | `go/` | The Go library a project imports |
-| `examples/` | Four complete projects: the notes API and a showcase of every Fern feature, each in Go and in TypeScript. `charter new` copies the Go notes one |
+| `examples/` | The notes API as a complete project, in Go (what `charter new` copies) and in TypeScript |
+| `conformance/` | Every Fern feature end to end (OAuth, idempotency, uploads, webhooks, pagination, typed WebSockets), in Go and in TypeScript: the proof that the generated SDKs work |
 | `cmd/charter/` | The tool behind every task |
 | `docs/` | Everything else: [start here](docs/README.md), rendered at https://joeblew999.github.io/charter/ |
 

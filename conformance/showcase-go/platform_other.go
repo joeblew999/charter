@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/joeblew999/charter/examples/showcase-go/api"
+	"github.com/joeblew999/charter/conformance/showcase-go/api"
 )
 
 // env reads the settings from the environment, and sends webhooks with net/http.
