@@ -77,7 +77,7 @@ groups:
   cli:
     generators:
       - name: fernapi/fern-cli-generator
-        version: 0.44.0
+        version: 0.45.1
         output:
           location: local-file-system
           path: ../sdk/out/cli
