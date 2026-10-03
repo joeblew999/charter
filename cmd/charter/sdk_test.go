@@ -29,8 +29,12 @@ func examples(t *testing.T) []string {
 	return names
 }
 
+// The projects with a CLI: the notes examples, the full showcase, and the conformance projects,
+// which generate it from every Fern feature. The start projects, what new -empty copies, have none.
+var withCLI = []string{"examples/notes-go", "examples/notes-ts", "conformance/showcase-go", "conformance/showcase-ts"}
+
 // Every example has the same groups in the same order, so the same task works in each of them.
-// The showcases add one: typescript-public, which shows Fern's audiences.
+// One with a CLI adds cli; the showcases add typescript-public, which shows Fern's audiences.
 func TestEveryExampleHasTheCommonGroups(t *testing.T) {
 	for _, name := range examples(t) {
 		groups, err := sdkGroups(filepath.Join("../..", name, generators))
@@ -38,11 +42,40 @@ func TestEveryExampleHasTheCommonGroups(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := sdkCommon
+		if slices.Contains(withCLI, name) {
+			want = append(slices.Clone(want), "cli")
+		}
 		if strings.HasPrefix(filepath.Base(name), "showcase-") {
-			want = append(slices.Clone(sdkCommon), "typescript-public")
+			want = append(slices.Clone(want), "typescript-public")
 		}
 		if !slices.Equal(groups, want) {
 			t.Errorf("%s: groups %v, want %v", name, groups, want)
+		}
+	}
+}
+
+// The cli group is the one switch: a project pins Rust, zig and cargo-zigbuild if and only if it
+// has it.
+func TestTheCLIPinsFollowTheCLIGroup(t *testing.T) {
+	for _, name := range examples(t) {
+		if err := cliPinsAgree(filepath.Join("../..", name)); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, fernDir), 0o755)
+	for _, c := range []struct {
+		tools, groups, fails string
+	}{
+		{"go = \"1\"\n", "groups:\n  go:\n", ""},
+		{"go = \"1\"\nrust = \"1\"\nzig = \"1\"\n\"aqua:rust-cross/cargo-zigbuild\" = \"1\"\n", "groups:\n  go:\n  cli:\n", ""},
+		{"go = \"1\"\nrust = \"1\"\n", "groups:\n  go:\n", "no cli group: remove them"},
+		{"go = \"1\"\n", "groups:\n  cli:\n", "does not pin rust"},
+	} {
+		os.WriteFile(filepath.Join(dir, "mise.toml"), []byte("[tools]\n"+c.tools), 0o644)
+		os.WriteFile(filepath.Join(dir, generators), []byte(c.groups), 0o644)
+		if err := cliPinsAgree(dir); (c.fails == "") != (err == nil) || err != nil && !strings.Contains(err.Error(), c.fails) {
+			t.Errorf("%q with %q: %v, want %q", c.tools, c.groups, err, c.fails)
 		}
 	}
 }
@@ -135,7 +168,6 @@ func TestSDKCommandsSayWhatTheyNeed(t *testing.T) {
 		"sdk-check needs <group>":        sdkCheck(nil),
 		"mise run sdk:gen go":            sdkCheck([]string{"go"}),
 		"cli-build takes no arguments":   cliBuild([]string{"notes"}),
-		"mise run sdk:gen cli":           cliBuild(nil),
 		"sdk-gen needs <group>":          sdkGen(nil),
 		"sdk-publish takes no arguments": sdkPublish([]string{"notes"}),
 		"dist-sdk takes no arguments":    distSDK([]string{"notes"}),
@@ -144,6 +176,21 @@ func TestSDKCommandsSayWhatTheyNeed(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("got %v, want an error with %q", err, want)
 		}
+	}
+	// Without the cli group every CLI command says the project has none; with it, what is missing.
+	noCLI := "this project has no CLI (no cli group in fern/generators.yml)"
+	for name, err := range map[string]error{
+		"cli-build": cliBuild(nil), "dist-cli": distCLI(nil), "cli-smoke": cliSmoke(nil), "sdk-gen cli": sdkGen([]string{"cli"}),
+		"sdk-ready cli": sdkReady([]string{"cli"}), "dist -target": distAll([]string{"-target", "linux-amd64"}),
+	} {
+		if err == nil || !strings.Contains(err.Error(), noCLI) {
+			t.Errorf("%s without a cli group: %v, want %q", name, err, noCLI)
+		}
+	}
+	os.MkdirAll(fernDir, 0o755)
+	os.WriteFile(generators, []byte("groups:\n  cli:\n"), 0o644)
+	if err := cliBuild(nil); err == nil || !strings.Contains(err.Error(), "mise run sdk:gen cli") {
+		t.Errorf("cli-build with a cli group: %v", err)
 	}
 }
 

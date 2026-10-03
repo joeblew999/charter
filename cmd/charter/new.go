@@ -13,8 +13,8 @@ import (
 )
 
 func init() {
-	commands["new"] = command{"-name <name> [-lang go|ts] [-empty [-ui htmx|datastar]] [-module <go module>] [-subdomain <workers.dev subdomain>] [-into <dir>] [-from <checkout>]",
-		"create a new API project: a copy of a tested example (examples/notes-go in the charter repo; -empty: examples/start-go; -empty -ui htmx: examples/start-htmx; -empty -ui datastar: examples/start-datastar) under your name", newProject}
+	commands["new"] = command{"-name <name> [-lang go|ts] [-empty [-ui htmx|datastar] [-cli]] [-module <go module>] [-subdomain <workers.dev subdomain>] [-into <dir>] [-from <checkout>]",
+		"create a new API project: a copy of a tested example (examples/notes-go in the charter repo; -empty: examples/start-go; -empty -ui htmx: examples/start-htmx; -empty -ui datastar: examples/start-datastar) under your name; -cli adds the notes example's CLI to an -empty one", newProject}
 	commands["version"] = command{"", "the release this tool is, which is what new pins a project to", func([]string) error {
 		fmt.Println(orCheckout(toolVersion()))
 		return nil
@@ -62,11 +62,12 @@ const (
 // project starts from code that passed that repo's checks, not from a template kept beside it.
 func newProject(args []string) error {
 	var name, module, subdomain, into, from, lang, ui string
-	var empty bool
+	var empty, cli bool
 	flags("new", args, func(f *flag.FlagSet) {
 		f.StringVar(&lang, "lang", "go", "the contract's language: go (Huma) or ts (oRPC)")
 		f.BoolVar(&empty, "empty", false, "start without the notes example: one route, GET /api/hello, with the same tasks, specs, SDKs, tests and workflows")
 		f.StringVar(&ui, "ui", "", "with -empty, in Go: htmx or datastar, for server-rendered pages (gsx, and htmx 4 or Datastar) in the same Worker, live over SSE")
+		f.BoolVar(&cli, "cli", false, "with -empty: a CLI too (Fern's, in Rust, for every OS): the notes example's cli group in fern/generators.yml and its Rust, zig and cargo-zigbuild pins in mise.toml")
 		f.StringVar(&name, "name", "", "the project and its Worker, e.g. billing-api (lower case, digits, hyphens)")
 		f.StringVar(&module, "module", "", "its Go module path (default: github.com/<your GitHub login>/<name>)")
 		f.StringVar(&subdomain, "subdomain", placeholderSubdomain, "your account's workers.dev subdomain: the Worker's URL is https://<name>.<subdomain>.workers.dev (the default is a placeholder)")
@@ -85,6 +86,8 @@ func newProject(args []string) error {
 		return errors.New("new: -ui is htmx or datastar: server-rendered pages with gsx, and htmx 4 or Datastar")
 	case ui != "" && (!empty || ts):
 		return errors.New("new: -ui goes with -empty, in Go (-lang go, the default)")
+	case cli && !empty:
+		return errors.New("new: -cli goes with -empty: the notes example has its CLI already")
 	}
 	if !regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`).MatchString(subdomain) {
 		return errors.New("new: -subdomain is the one word before .workers.dev, e.g. -subdomain acme")
@@ -147,13 +150,23 @@ func newProject(args []string) error {
 	if err != nil {
 		return err
 	}
+	if cli {
+		if err := addCLI(from, into, name); err != nil {
+			return err
+		}
+	}
+	// What the pages say of the CLI follows the project: a start project has none unless -cli.
+	noCLI := func(page string) string { return page }
+	if empty && !cli {
+		noCLI = withoutCLI
+	}
 
 	// What a repo has around a project: its start pages, the docs folder, the GitHub workflows.
 	for path, content := range map[string]string{
-		"README.md":       withPages(projectReadme(name, orCheckout(version), apiPort(tasks), ts, empty), ui),
+		"README.md":       noCLI(withPages(projectReadme(name, orCheckout(version), apiPort(tasks), ts, empty), ui)),
 		"AGENTS.md":       "# For agents\n\nEverything about this project is in [docs/](docs/README.md), the same pages developers read. Read [docs/README.md](docs/README.md), then [docs/rules.md](docs/rules.md): the rules are binding.\n",
 		"CLAUDE.md":       "@AGENTS.md\n",
-		"docs/README.md":  withPages(projectDocs(name, ts, empty), ui),
+		"docs/README.md":  noCLI(withPages(projectDocs(name, ts, empty), ui)),
 		"docs/rules.md":   projectRules(ts),
 		"docs/writing.md": docsWriting,
 		"charter.toml":    charterTomlFor(name + ": a contract-first API on Cloudflare Workers"),
@@ -209,6 +222,71 @@ Cost: on Cloudflare a simple read uses under 1 ms of CPU, a database read 1 to 2
 the first request in a new isolate about 10 ms (measured 2026-10-02). mise run bench measures yours.
 `, into, module, name, into, apiPort(tasks), withPages(startsAs("api/contract.go", empty), ui), afterDeploy(name, subdomain))
 	return nil
+}
+
+// The notes example's lines a CLI needs, which new -cli adds to a start project: the cli group of
+// its fern/generators.yml (a paragraph of its own), and the pins of its mise.toml from Rust's comment
+// to cargo-zigbuild's line.
+var (
+	cliGroup      = regexp.MustCompile(`(?m)^(?:  #.*\n)*  cli:\n(?:    .*\n)+`)
+	cliPinLines   = regexp.MustCompile(`(?m)^# Builds the generated CLI.*\n(?:.*\n)*?"aqua:rust-cross/cargo-zigbuild" = "[^"]*"\n`)
+	cliBinaryName = regexp.MustCompile(`(?m)^(\s+binaryName: ).*$`)
+	nodePin       = regexp.MustCompile(`(?m)^node = "[^"]*"\n`)
+)
+
+// addCLI gives the project in into the notes example's CLI (in from, a checkout or a release's
+// clone): its cli group, binary named after the project, after the project's groups, and its pins
+// after the project's Node. The group is the switch; the pins follow it.
+func addCLI(from, into, name string) error {
+	source := filepath.Join(from, filepath.FromSlash(exampleDir))
+	example, err := os.ReadFile(filepath.Join(source, filepath.FromSlash(generators)))
+	if err != nil {
+		return err
+	}
+	group := cliGroup.Find(example)
+	if group == nil {
+		return fmt.Errorf("%s/%s has no cli group: -cli needs a newer release of charter", source, generators)
+	}
+	exampleTasks, err := os.ReadFile(filepath.Join(source, "mise.toml"))
+	if err != nil {
+		return err
+	}
+	pins := cliPinLines.Find(exampleTasks)
+	if pins == nil {
+		return fmt.Errorf("%s/mise.toml does not pin the CLI's tools", source)
+	}
+	file := filepath.Join(into, filepath.FromSlash(generators))
+	settings, err := os.ReadFile(file)
+	if err != nil {
+		return err
+	}
+	group = cliBinaryName.ReplaceAll(group, []byte("${1}"+name))
+	if err := write(file, strings.TrimRight(string(settings), "\n")+"\n\n"+string(group)); err != nil {
+		return err
+	}
+	file = filepath.Join(into, "mise.toml")
+	tasks, err := os.ReadFile(file)
+	if err != nil {
+		return err
+	}
+	at := nodePin.FindIndex(tasks)
+	if at == nil {
+		return fmt.Errorf("%s pins no node to put the CLI's tools after", file)
+	}
+	tasks = append(tasks[:at[1]:at[1]], append(pins, tasks[at[1]:]...)...)
+	if err := write(file, string(tasks)); err != nil {
+		return err
+	}
+	return cliPinsAgree(into)
+}
+
+// withoutCLI is a page of a start project as it reads without a CLI.
+func withoutCLI(page string) string {
+	return strings.NewReplacer(
+		"Fern generates SDKs\nand a CLI from them.", "Fern generates SDKs\nfrom them.",
+		"Fern generates SDKs and a CLI from them.", "Fern generates SDKs from them.",
+		"(go, typescript, typescript-dist, cli)", "(go, typescript, typescript-dist)",
+	).Replace(page)
 }
 
 // copyExample writes the example in from (a checkout of charter, or a clone of a release) into

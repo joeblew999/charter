@@ -16,11 +16,15 @@ import (
 
 // A project's Fern folder is fern/: fern.config.json, generators.yml and the two generated specs.
 // Each group in generators.yml is one SDK (or the CLI), generated into sdk/out/<group>.
+//
+// A project ships a CLI if and only if generators.yml has a group named cli: that group is the one
+// switch. Without it nothing builds, ships or checks a CLI, and the project pins no Rust, zig or
+// cargo-zigbuild (cliPinsAgree holds mise.toml to the switch).
 
 func init() {
 	commands["sdk-gen"] = command{"<group>", "generate one SDK with Fern (Docker) into sdk/out/<group>", sdkGen}
 	commands["sdk-check"] = command{"<group>", "prove a generated SDK works (sdk/out/<group>): Go = build, vet, tests against WireMock; TypeScript = typecheck", sdkCheck}
-	commands["sdk-ready"] = command{"[group...]", "generate and build what the tests use, if missing: TypeScript and Go SDKs, the Fern CLI (or only the groups named)", sdkReady}
+	commands["sdk-ready"] = command{"[group...]", "generate and build what the tests use, if missing: TypeScript and Go SDKs, the Fern CLI if the project has one (or only the groups named)", sdkReady}
 	commands["sdk-list"] = command{"", "the SDK groups the project defines (fern/generators.yml)", sdkList}
 	commands["sdk-clean"] = command{"", "remove generated SDKs (sdk/out) and stop leftover WireMock containers", sdkClean}
 	commands["cli-build"] = command{"[-linux]", "HEAVY: build the generated Rust CLI (sdk/out/cli), natively or for Linux in Docker", cliBuild}
@@ -42,6 +46,9 @@ func docker() error {
 func sdkGen(args []string) error {
 	if len(args) != 1 {
 		return errors.New("sdk-gen needs <group>: a group in " + generators + " (charter sdk-list)")
+	}
+	if args[0] == "cli" && !hasCLI() {
+		return errNoCLI
 	}
 	if err := docker(); err != nil {
 		return err
@@ -161,8 +168,12 @@ func sdkCheckDir(dir string) error {
 }
 
 func sdkReady(groups []string) error {
+	if slices.Contains(groups, "cli") && !hasCLI() {
+		return errNoCLI
+	}
+	// By default, the CLI too when the project has one.
 	wanted := func(group string) bool {
-		return len(groups) == 0 || slices.Contains(groups, group)
+		return (len(groups) == 0 && (group != "cli" || hasCLI())) || slices.Contains(groups, group)
 	}
 	needs := []struct{ file, group string }{
 		{"typescript-dist/esm/index.mjs", "typescript-dist"},
@@ -208,8 +219,42 @@ func sdkList([]string) error {
 }
 
 // sdkCommon are the groups every project's generators.yml defines, in this order (a test holds this
-// repo's examples to it).
-var sdkCommon = []string{"go", "typescript", "typescript-dist", "cli"}
+// repo's examples to it). A project with a CLI has the group cli after them.
+var sdkCommon = []string{"go", "typescript", "typescript-dist"}
+
+// errNoCLI is what the CLI's commands say in a project without one.
+var errNoCLI = errors.New("this project has no CLI (no cli group in fern/generators.yml): " + docsURL + "guides/sdks.html#add-the-cli")
+
+// hasCLI reports whether the project ships a CLI: its generators.yml has the group cli.
+func hasCLI() bool {
+	groups, _ := sdkGroups(generators)
+	return slices.Contains(groups, "cli")
+}
+
+// The tools that only the CLI needs, as a project's mise.toml pins them: Rust builds it, zig and
+// cargo-zigbuild link it for the other systems. new -cli copies these lines from the notes example.
+var cliPin = regexp.MustCompile(`(?m)^(rust|zig|"aqua:rust-cross/cargo-zigbuild") = "[^"]*"$`)
+
+// cliPinsAgree fails unless the mise.toml in dir pins the CLI's tools exactly when generators.yml
+// in dir has the cli group: the group is the switch, and the pins follow it.
+func cliPinsAgree(dir string) error {
+	tasks, err := os.ReadFile(filepath.Join(dir, "mise.toml"))
+	if err != nil {
+		return err
+	}
+	groups, err := sdkGroups(filepath.Join(dir, generators))
+	if err != nil {
+		return err
+	}
+	pins := len(cliPin.FindAll(tasks, -1))
+	switch cli := slices.Contains(groups, "cli"); {
+	case cli && pins != 3:
+		return errors.New("fern/generators.yml has the cli group, but mise.toml does not pin rust, zig and \"aqua:rust-cross/cargo-zigbuild\" (the notes example's lines)")
+	case !cli && pins != 0:
+		return errors.New("mise.toml pins the CLI's tools (rust, zig, cargo-zigbuild), but fern/generators.yml has no cli group: remove them")
+	}
+	return nil
+}
 
 // sdkGroups are the groups a generators.yml defines, in the file's order.
 func sdkGroups(file string) ([]string, error) {
@@ -275,6 +320,9 @@ func cliBuild(args []string) error {
 	})
 	if len(rest) != 0 {
 		return errors.New("cli-build takes no arguments: it builds sdk/out/cli")
+	}
+	if !hasCLI() {
+		return errNoCLI
 	}
 	dir := sdkOut("cli")
 	if !exists(dir) {

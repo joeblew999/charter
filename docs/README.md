@@ -14,7 +14,7 @@ Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go
 
 - **One contract** (`api/contract.go`), from which the validation, the OpenAPI and AsyncAPI specs, the MCP tools and the SDKs follow.
 - **A Go server on Workers** at the CPU cost of a TypeScript one ([Benchmarks](benchmarks.md)), that also runs natively.
-- **SDKs and a CLI** in any language [Fern](https://buildwithfern.com) supports.
+- **SDKs** in any language [Fern](https://buildwithfern.com) supports, and **a CLI** for every OS if you want one ([Add the CLI](guides/sdks.md#add-the-cli)).
 - **SSE and WebSocket streams** that lose nothing across deploys.
 - **Server-rendered pages** in the same Worker, with gsx and htmx 4 or Datastar, live over those streams ([Server-rendered pages](guides/pages.md)).
 - **Every step is a task:** `mise run <task>`, the same locally and on GitHub.
@@ -31,7 +31,7 @@ Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go
 | The shared tasks | `tasks/shared/`, `tasks/go/`, `tasks/ts/` | The tasks every project includes, at the release it pins; its `mise.toml` holds only its own |
 | The tool | `cmd/charter/` | The command behind every task ([The charter command](reference/charter.md)) |
 | The examples | `examples/notes-go/` (what `charter new` copies), `examples/notes-ts/` | The notes API, in Go and in TypeScript |
-| The start projects | `examples/start-go/`, `examples/start-ts/` (what `charter new -empty` copies) | One route, `GET /api/hello`, with the same tasks, specs, SDKs, tests and workflows |
+| The start projects | `examples/start-go/`, `examples/start-ts/` (what `charter new -empty` copies) | One route, `GET /api/hello`, with the same tasks, specs, SDKs, tests and workflows, and no CLI (`-empty -cli` adds the notes example's) |
 | The start projects with pages | `examples/start-htmx/`, `examples/start-datastar/` (what `charter new -empty -ui htmx` and `-ui datastar` copy) | The Go start project with messages and server-rendered pages (gsx, and htmx 4 or Datastar), live over SSE ([Server-rendered pages](guides/pages.md)) |
 | The conformance projects | `conformance/showcase-go/`, `conformance/showcase-ts/` | Every Fern feature end to end, in Go and in TypeScript: the proof that the generated SDKs work |
 

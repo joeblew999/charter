@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -12,11 +11,18 @@ import (
 // The two kinds of repo the templates serve: one project at the root, and several in examples/.
 func repoKinds(t *testing.T) map[string]string {
 	t.Helper()
-	single, several := t.TempDir(), t.TempDir()
-	if err := os.Mkdir(filepath.Join(several, "examples"), 0o755); err != nil {
-		t.Fatal(err)
+	single, plain, several := t.TempDir(), t.TempDir(), t.TempDir()
+	cli := "groups:\n  go:\n  cli:\n"
+	for file, content := range map[string]string{
+		filepath.Join(single, generators):                          cli,
+		filepath.Join(plain, generators):                           "groups:\n  go:\n",
+		filepath.Join(several, "examples", "notes-go", generators): cli,
+	} {
+		if err := write(file, content); err != nil {
+			t.Fatal(err)
+		}
 	}
-	return map[string]string{"a project": single, "a repo with examples/": several}
+	return map[string]string{"a project": single, "a project without a CLI": plain, "a repo with examples/": several}
 }
 
 // The rules the templates keep, for either kind of repo: pinned actions and runners, and no logic
@@ -57,7 +63,7 @@ func TestWorkflowTemplates(t *testing.T) {
 				if runner, ok := strings.CutPrefix(line, "runs-on: "); ok && strings.Contains(runner, "latest") {
 					at("pin the runner (ubuntu-24.04), not %q", runner)
 				}
-				if strings.HasPrefix(line, "# if-dir") || line == "# else" || line == "# end" {
+				if strings.HasPrefix(line, "# if-dir") || line == "# if-cli" || line == "# else" || line == "# end" {
 					at("a marker line was written: %q", line)
 				}
 			}
@@ -126,10 +132,10 @@ func TestWorkflowsRunTasksThatExist(t *testing.T) {
 							where[i] = "examples/" + where[i]
 						}
 					}
-				} else if kind != "a project" && !strings.Contains(job, "working-directory") {
+				} else if !strings.HasPrefix(kind, "a project") && !strings.Contains(job, "working-directory") {
 					where = nil // the repo's own tasks
 				}
-				if name == "deploy.yml" && kind != "a project" {
+				if name == "deploy.yml" && !strings.HasPrefix(kind, "a project") {
 					m := list.FindStringSubmatch(strings.ReplaceAll(string(workflow), "options:", "example:"))
 					where = strings.Split(m[2], ", ")
 					if m[1] == "example" { // names of folders in examples/
@@ -167,7 +173,8 @@ func TestVersionTags(t *testing.T) {
 }
 
 // A release is cut on a developer's machine; the workflows check its tag afterwards on every OS, add
-// what the Release lacks, and start the Windows CLI on Windows.
+// what the Release lacks, and start the Windows CLI on Windows, if the repo has a CLI: a project
+// without the cli group builds none.
 func TestWorkflowsCheckTheTag(t *testing.T) {
 	for kind, dir := range repoKinds(t) {
 		workflows, err := workflowsFor(dir)
@@ -178,10 +185,16 @@ func TestWorkflowsCheckTheTag(t *testing.T) {
 			t.Errorf("check.yml for %s does not run on a version tag", kind)
 		}
 		release := string(workflows["release.yml"])
-		for _, want := range []string{"- run: mise run release:publish", "  cli-windows:\n    needs: cli\n    runs-on: windows-2025\n", "- run: mise run sdk:cli:smoke"} {
-			if !strings.Contains(release, want) {
-				t.Errorf("release.yml for %s: no %q", kind, want)
+		if !strings.Contains(release, "- run: mise run release:publish") {
+			t.Errorf("release.yml for %s: no release:publish", kind)
+		}
+		for _, want := range []string{"  cli:\n    runs-on: ubuntu-24.04\n", "- run: mise run sdk:dist:cli", "  cli-windows:\n    needs: cli\n    runs-on: windows-2025\n", "- run: mise run sdk:cli:smoke"} {
+			if has, cli := strings.Contains(release, want), kind != "a project without a CLI"; has != cli {
+				t.Errorf("release.yml for %s: %q there = %v", kind, want, has)
 			}
+		}
+		if kind == "a project without a CLI" && strings.Contains(release, "cli") {
+			t.Errorf("release.yml for %s mentions the CLI:\n%s", kind, release)
 		}
 		if strings.Contains(release, "- run: mise run release\n") {
 			t.Errorf("release.yml for %s cuts a release: on a tag it only publishes (mise run release:publish)", kind)

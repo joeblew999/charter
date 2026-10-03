@@ -52,14 +52,3 @@ groups:
           # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
           guardProcessEnvAccess: true
           outputSourceFiles: false
-
-  # A Rust CLI for the API (Fern's CLI generator, early access).
-  cli:
-    generators:
-      - name: fernapi/fern-cli-generator
-        version: 0.45.1
-        output:
-          location: local-file-system
-          path: ../sdk/out/cli
-        config:
-          binaryName: charter-start-htmx

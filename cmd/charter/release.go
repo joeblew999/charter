@@ -28,7 +28,7 @@ import (
 
 func init() {
 	commands["release-tool"] = command{"[-tag vX.Y.Z]", "GoReleaser on this tool, in its own repo: on a version tag, archives and checksums go to its GitHub Release (if they are not there yet); no tag: a snapshot into dist/", releaseTool}
-	commands["dist"] = command{"[-target <os>-<arch>,...]", "build everything the project ships into an emptied dist/: its SDKs and specs (dist-sdk), then its CLI (dist-cli)", distAll}
+	commands["dist"] = command{"[-target <os>-<arch>,...]", "build everything the project ships into an emptied dist/: its SDKs and specs (dist-sdk), then its CLI if it has one (dist-cli)", distAll}
 	commands["dist-sdk"] = command{"", "generate, check and archive the project's SDKs and its specs into dist/ (Docker)", distSDK}
 	commands["dist-cli"] = command{"[-target <os>-<arch>,...]", "HEAVY: generate the project's Fern CLI and build it into dist/ for darwin, linux and windows on amd64 and arm64: every target this machine builds (a Mac builds all six)", distCLI}
 	commands["cli-smoke"] = command{"", "run the CLI that dist/ holds for this machine with --version: proves a binary built elsewhere starts here", cliSmoke}
@@ -136,7 +136,7 @@ func distSDK(args []string) error {
 }
 
 // distAll builds what the project ships into an emptied dist/, so nothing left from an older build
-// goes onto a release: the SDKs and the specs, then the CLI.
+// goes onto a release: the SDKs and the specs, then the CLI if the project has one.
 func distAll(args []string) error {
 	var only string
 	rest := flags("dist", args, func(f *flag.FlagSet) {
@@ -145,11 +145,18 @@ func distAll(args []string) error {
 	if len(rest) != 0 {
 		return errors.New("dist takes no arguments: it builds what the project ships")
 	}
+	if only != "" && !hasCLI() {
+		return fmt.Errorf("dist -target picks the CLI's targets: %w", errNoCLI)
+	}
 	if err := os.RemoveAll(dist); err != nil {
 		return err
 	}
 	if err := distSDK(nil); err != nil {
 		return err
+	}
+	if !hasCLI() {
+		fmt.Println("no CLI: the project has no cli group in fern/generators.yml, so dist/ holds the SDKs and the specs")
+		return nil
 	}
 	if only == "" {
 		return distCLI(nil)
@@ -219,6 +226,9 @@ func distCLI(args []string) error {
 	})
 	if len(rest) != 0 {
 		return errors.New("dist-cli takes no arguments: it builds the project's cli group")
+	}
+	if !hasCLI() {
+		return errNoCLI
 	}
 	targets, skipped, err := cliTargetsFor(runtime.GOOS, only)
 	if err != nil {
@@ -290,6 +300,9 @@ func distCLI(args []string) error {
 func cliSmoke(args []string) error {
 	if len(args) != 0 {
 		return errors.New("cli-smoke takes no arguments: it runs the CLI in dist/ for this machine")
+	}
+	if !hasCLI() {
+		return errNoCLI
 	}
 	name, err := distName()
 	if err != nil {

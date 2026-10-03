@@ -18,7 +18,7 @@ What `charter new` makes, and `examples/notes-go/`.
 |---|---|
 | `setup` | Installs the npm packages: `cf`, Fern, what the tests import |
 | `check` | Every local check: `lint`, `test`, `spec:check`, `sdk:publish:fresh`, `test:native`, `test:workerd`, `workflows:check`, `docs:check` |
-| `doctor` | Says what the tasks need and lack |
+| `doctor` | Says what the tasks need and lack; Rust only with a CLI, and whether the CLI's pins agree with the `cli` group |
 | `run` | The API natively on `API_PORT`, in memory |
 | `build` | The Wasm and the Worker glue into `build/`; fails over 3,000,000 bytes gzipped |
 | `dev` | `build`, then the Worker under workerd (`cf dev`) |
@@ -50,15 +50,15 @@ What `charter new` makes, and `examples/notes-go/`.
 | `sdk:check-spec` | Fern's validation of the specs and its settings |
 | `sdk:gen <group>` | Generates one SDK into `sdk/out/<group>` (Docker) |
 | `sdk:check <group>` | Go: build, vet, tests against WireMock. TypeScript: typecheck |
-| `sdk:ready [group...]` | Generates what the tests use, if missing or made from specs or settings that have changed since, and builds the CLI |
+| `sdk:ready [group...]` | Generates what the tests use, if missing or made from specs or settings that have changed since, and builds the CLI if the project has one |
 | `sdk:publish` | Generates and checks the Go SDK, copies it into `sdk/go/` |
 | `sdk:publish:check` | Fails if `sdk/go/` is not what the specs generate now |
 | `sdk:publish:fresh` | Fails if the specs changed since `sdk/go/` was made (a hash, no Docker) |
-| `sdk:cli:build [-linux]` | HEAVY. Builds the generated Rust CLI |
+| `sdk:cli:build [-linux]` | HEAVY. Builds the generated Rust CLI. This and the two below need the `cli` group in `fern/generators.yml` ([Add the CLI](../guides/sdks.md#add-the-cli)); without it they say the project has no CLI |
 | `sdk:dist` | Generates, checks and archives every SDK and the specs into `dist/` |
 | `sdk:dist:cli [-target ...]` | HEAVY. The CLI into `dist/` for darwin, linux, windows × amd64, arm64 (all six on a Mac, all but darwin elsewhere) |
 | `sdk:cli:smoke` | Runs the CLI in `dist/` built for this machine |
-| `dist` | HEAVY. Empties `dist/`, then `sdk:dist` and `sdk:dist:cli`: what a release ships |
+| `dist` | HEAVY. Empties `dist/`, then `sdk:dist` and, with a CLI, `sdk:dist:cli`: what a release ships |
 | `sdk:docs` | Previews the API's reference site on port 3030 |
 | `sdk:clean` | Removes `sdk/out` and stops leftover WireMock containers |
 | `release -- vX.Y.Z [-dry-run]` | REMOTE. Cuts a release from this machine: `check`, `dist`, the tag, the GitHub Release, `release:publish`, `release:tags` ([how](../guides/release.md)) |
@@ -76,7 +76,7 @@ What `charter new` makes, and `examples/notes-go/`.
 | Project | Differences |
 |---|---|
 | `examples/notes-ts/` | No `run`, `build`, `test:native`, `perf`. `lint` typechecks, `test` runs the feed's tests, `test:workerd` runs the live and auth tests under workerd |
-| `examples/start-go/` | No `soak`. `live-test` checks `/api/hello`, the spec and MCP |
+| `examples/start-go/` | No `soak`, no CLI (the CLI tasks say so). `live-test` checks `/api/hello`, the spec and MCP |
 | `examples/start-htmx/` | As `examples/start-go/`, with the pages: `check` adds `ui:check`; `live-test` writes test messages and checks the pages and their stream too |
 | `examples/start-datastar/` | As `examples/start-htmx/` |
 | `ui:gen`, `ui:check` | In `examples/start-htmx/` and `examples/start-datastar/`: write `pages/*.x.go` from `pages/*.gsx` (gsx, pinned in `go.mod`); fail if the committed ones are stale, writing them as they should be |
@@ -115,5 +115,5 @@ What `charter new` makes, and `examples/notes-go/`.
 |---|---|
 | Checked | `charter:check`, `go:check`, `ts:check`; in `examples/notes-go/`, `examples/notes-ts/`, `examples/start-datastar/`, `examples/start-go/`, `examples/start-htmx/` and `examples/start-ts/`, `setup` and `check`. A project made by `charter new` gets the same two jobs |
 | Not checked | Fern's tasks and those that need a generated SDK: Fern generates in Linux containers, which GitHub's Windows and macOS runners do not run. The REMOTE tasks |
-| The CLI | Built for every OS on Linux by the `release` workflow (darwin only by a release cut on a Mac); its `cli-windows` job starts the Windows amd64 one on Windows (`sdk:cli:smoke`) |
+| The CLI | In a project with one: built for every OS on Linux by the `release` workflow (darwin only by a release cut on a Mac); its `cli-windows` job starts the Windows amd64 one on Windows (`sdk:cli:smoke`) |
 | Different on Windows | A stopped server is ended by force with what it started (`taskkill`); git must check out LF line ends (`.gitattributes` says so) |
