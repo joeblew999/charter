@@ -25,7 +25,7 @@ Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go
 | A project | a folder with `mise.toml` beside `fern/` | One API. `charter new` makes one |
 | The contract | `api/contract.go` (Go), `src/contract.ts` (TypeScript) | The source |
 | The library | `go/` | What a Go project imports ([Go packages](reference/packages.md)) |
-| The TypeScript library | `ts/` | `@charter/ts`: the AsyncAPI generator for oRPC, both specs from one contract, `follow()`. The TypeScript examples take it as a local package |
+| The TypeScript library | `ts/` | `@charter/ts`: the AsyncAPI generator for oRPC, both specs from one contract, `follow()`. The TypeScript examples take it as a local package; elsewhere it is installed from a release |
 | The Worker glue | `go/worker/` | The JavaScript the library needs; the build copies it into `build/` |
 | The tool | `cmd/charter/` | The command behind every task ([The charter command](reference/charter.md)) |
 | The examples | `examples/notes-go/` (what `charter new` copies), `examples/notes-ts/` | The notes API, in Go and in TypeScript |
@@ -39,7 +39,7 @@ Never edit these: change the source and run the task.
 |---|---|
 | `fern/openapi.json`, `fern/asyncapi.json` | `mise run spec`, from the contract |
 | `sdk/go/` (committed), `sdk/out/` | `mise run sdk:publish`, `mise run sdk:gen` |
-| `build/`, `dist/` | `mise run build`, `mise run sdk:dist` |
+| `build/`, `dist/`, `ts/dist/` | `mise run build`, `mise run sdk:dist`, `mise run ts:build` |
 | `.github/` | `mise run workflows` |
 | `docs/_config.yml`, `docs/writing.md`, `docs/llms.txt`, `docs/_sass/` | `mise run docs:setup` |
 

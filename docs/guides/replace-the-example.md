@@ -57,4 +57,7 @@ Without a stream, also remove the hub: `Hub` in `Env`, `feed`, the `HUB` binding
 
 ## In TypeScript
 
-`examples/notes-ts/` is the same API on oRPC (`src/contract.ts`, Zod); `src/asyncapi.ts` writes the AsyncAPI spec oRPC lacks. To start one, copy the folder and `examples/notes-go/test/`, pin the charter tool in `mise.toml`, rename the Worker, run `charter workflows`. It has no native run and no MCP, and answers invalid input with 400.
+`examples/notes-ts/` is the same API on oRPC (`src/contract.ts`, Zod), without a native run or MCP; invalid input gets a 400. To start one:
+
+1. Copy the folder and `examples/notes-go/test/`. In `mise.toml`, pin the charter tool, rename the Worker, and make `setup` only `npm ci --no-fund --no-audit`. Run `charter workflows`.
+2. In `package.json`, set `@charter/ts` to `https://github.com/joeblew999/charter/releases/download/vX.Y.Z/charter-ts-X.Y.Z.tgz`, then `npm install`.

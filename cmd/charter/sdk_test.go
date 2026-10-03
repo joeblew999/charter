@@ -108,9 +108,9 @@ func TestTheExamplesShareTheirTaskLines(t *testing.T) {
 		for _, shared := range same {
 			want, got := task(reference, shared), task(file, shared)
 			if strings.HasSuffix(name, "-ts") && shared == "setup" {
-				// A TypeScript example also installs the packages of the TypeScript library (ts/),
-				// its local package @charter/ts: both the same line.
-				want = strings.TrimSuffix(want, `"`) + ` && npm ci --no-fund --no-audit --prefix ../../ts"`
+				// A TypeScript example first installs and builds the TypeScript library (ts/), its
+				// local package @charter/ts, which exports what the build writes: both the same line.
+				want = `"npm ci --no-fund --no-audit --prefix ../../ts && npm run build --prefix ../../ts && ` + strings.TrimPrefix(want, `"`)
 			}
 			if want == "" || got != want {
 				t.Errorf("%s: task %s runs %s, want %s (as notes-go)", name, shared, got, want)

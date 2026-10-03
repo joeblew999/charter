@@ -92,7 +92,8 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 | `sdk-ready` | `[group...]`: default `typescript-dist`, `go`, `cli` |
 | `sdk-publish` | `-check` (fail if `sdk/go` is stale), `-quick` (with it: by a hash), `-into <dir>` |
 | `cli-build`, `dist-cli` | `-linux`: for Linux, in Docker |
-| `release` | `-tag vX.Y.Z`; without a tag or a workflow's tag, a dry run |
+| `release` * | `-tag vX.Y.Z`; without a tag or a workflow's tag, a dry run |
+| `dist-ts` * | `-tag vX.Y.Z`: builds `ts/` and packs it as `dist/charter-ts-X.Y.Z.tgz`, in this repo |
 | `release-tags` * | `-tag vX.Y.Z`, then `<module dir>...` |
 | `release-tool` * | `-tag vX.Y.Z`: GoReleaser on the tool, in this repo |
 

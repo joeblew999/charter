@@ -78,7 +78,7 @@ func TestWorkflowsFitTheRepo(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, workflow := range project {
-		for _, gone := range []string{"examples", "matrix.project", "charter:check", "go:check", "ts:check", "charter:release"} {
+		for _, gone := range []string{"examples", "matrix.project", "charter:check", "go:check", "ts:check", "ts:dist", "charter:release"} {
 			if strings.Contains(string(workflow), gone) {
 				t.Errorf("%s for a project mentions %q", name, gone)
 			}
@@ -93,8 +93,8 @@ func TestWorkflowsFitTheRepo(t *testing.T) {
 	if !strings.Contains(string(project["check.yml"]), "  check-windows:\n    runs-on: windows-2025\n") {
 		t.Error("check.yml for a project: no check-windows job")
 	}
-	if !strings.Contains(string(project["release.yml"]), "mise run release:tags") || !strings.Contains(string(repo["release.yml"]), "mise run charter:release") {
-		t.Error("release.yml: a project tags its modules after the SDKs, this repo after the tool's release")
+	if !strings.Contains(string(project["release.yml"]), "mise run release:tags") || !strings.Contains(string(repo["release.yml"]), "mise run charter:release") || !strings.Contains(string(repo["release.yml"]), "mise run ts:dist") {
+		t.Error("release.yml: a project tags its modules after the SDKs, this repo after the tool's release, and it packs the TypeScript library")
 	}
 }
 

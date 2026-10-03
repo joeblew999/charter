@@ -1,14 +1,14 @@
 # Written by `charter workflows` from its template (github.com/joeblew999/charter, cmd/charter/workflows/release.yml):
 # change the template, not this file. Every step that does work is a mise task, so it runs locally too.
-# On a version tag (vX.Y.Z): the SDK sources, the specs and the Linux CLI go onto the GitHub Release, and
-# the Go modules in subdirectories get their tags.
+# On a version tag (vX.Y.Z): the SDK sources, the specs and the Linux CLI go onto the GitHub Release (in
+# charter, also the tool and the TypeScript library's package), and the Go modules in subdirectories get their tags.
 # On a pull request or by hand it is a dry run: the same build, kept as workflow artifacts, nothing published.
 name: release
 on:
   push:
     tags: ["v*"]
   pull_request:
-    paths: [cmd/**, go/**, examples/**, .goreleaser.yaml, mise.toml, go.mod, .github/workflows/release.yml]
+    paths: [cmd/**, go/**, ts/**, examples/**, .goreleaser.yaml, mise.toml, go.mod, .github/workflows/release.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -31,6 +31,21 @@ jobs:
           path: dist/
           if-no-files-found: error
       - run: mise run release:tags
+  # The TypeScript library: its npm package, which a project installs from the Release's URL.
+  ts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run ts:setup
+      - run: mise run ts:dist
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ts
+          path: dist/
+          if-no-files-found: error
+      - run: mise run ts:release
   sdk:
     runs-on: ubuntu-24.04
     timeout-minutes: 30

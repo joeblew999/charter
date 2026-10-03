@@ -74,15 +74,18 @@ What `charter new` makes, and `examples/notes-go/`.
 | Task | What it does |
 |---|---|
 | `check` | `charter:check`, `go:check`, `ts:check`, `projects:check`. Needs Docker |
-| `projects:check` | `check` in every project under `examples/` and `conformance/` |
+| `projects:check` | `ts:build`, then `check` in every project under `examples/` and `conformance/` |
 | `charter:check` | The tool: gofmt, vet, tests, the generated workflows and docs config, the docs lint |
 | `go:check` | `go:lint` and `go:test`: the library, for the host and for Wasm |
 | `go:lint`, `go:test` | The library's lint (gofmt, vet, vet for Wasm) and its tests, on their own |
-| `ts:setup` | Installs the TypeScript library's packages |
+| `ts:setup` | Installs the TypeScript library's packages and builds it |
+| `ts:build` | Compiles the TypeScript library into `ts/dist/`, which its package exports. After changing `ts/src/` |
 | `ts:check` | The TypeScript library: typecheck (`ts:lint`) and tests (`ts:test`) |
 | `ts:lint`, `ts:test` | The TypeScript library's typecheck and its tests, on their own |
 | `compare` | REMOTE. The same bench against the TypeScript and the Go notes Workers |
 | `charter:release` | GoReleaser on the tool. REMOTE on a version tag; elsewhere a snapshot |
+| `ts:dist` | Packs the TypeScript library into `dist/charter-ts-X.Y.Z.tgz`, versioned as the tag (none: `0.0.0-dev`) |
+| `ts:release` | REMOTE on a version tag: attaches `dist/*` to its GitHub Release. Elsewhere a dry run |
 | `release:tags` | REMOTE on a version tag: tags `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` |
 | `setup`, `doctor`, `sdk:clean`, `workflows`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:review`, `docs:pages`, `cloudflare:secrets` | As in a project, for the whole repo |
 
