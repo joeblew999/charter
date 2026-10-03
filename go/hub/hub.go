@@ -1,7 +1,7 @@
 // Package hub is the live signal of a feed: publish an item, and every subscriber gets it.
 //
 // It is only a wake-up signal. The log (D1) is the source of truth, and follow.Follow fills any
-// gap from it, so a hub may drop, restart or deliver out of order (docs/realtime.md, rule 2).
+// gap from it, so a hub may drop, restart or deliver out of order (docs/guides/streaming.md, rule 2).
 //
 // One hub carries one type of item. A second feed is a second hub, with its own name:
 //

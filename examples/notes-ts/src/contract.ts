@@ -18,7 +18,7 @@ export const note = z.object({
 	created_at: z.string(),
 });
 
-/** The resume position in every stream: a note id, as an opaque string like list's cursor (docs/realtime.md, rule 1). */
+/** The resume position in every stream: a note id, as an opaque string like list's cursor (docs/guides/streaming.md, rule 1). */
 export const after = z.string().regex(/^\d+$/).optional()
 	.describe("Resume after this note id (the id of the last note you received). Absent: only notes created from now on");
 

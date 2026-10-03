@@ -20,7 +20,7 @@ type Store interface {
 	Latest(ctx context.Context) (int64, error)
 }
 
-// Hub is the live fan-out of notes: only a wake-up signal for followers (docs/realtime.md, rule 2).
+// Hub is the live fan-out of notes: only a wake-up signal for followers (docs/guides/streaming.md, rule 2).
 // A feed of another type has its own: hub.Hub[T].
 type Hub = hub.Hub[Note]
 
