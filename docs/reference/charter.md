@@ -19,7 +19,7 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 
 | Command | Flags | What it does |
 |---|---|---|
-| `new` * | `-name <name>` (required), `-lang go` or `ts` (default `go`), `-empty`, `-ui htmx` or `datastar` (with `-empty`, in Go), `-module <go module>` (default `github.com/<gh login>/<name>`), `-subdomain <workers.dev subdomain>` (default a placeholder), `-into <empty dir>` (default `./<name>`), `-from <checkout>` | Copies `examples/notes-go/` (without `sdk/go/`), or with `-lang ts` `examples/notes-ts/` and the tests it shares, under your name; with `-empty`, `examples/start-go/` or `examples/start-ts/` (one route, `GET /api/hello`); with `-empty -ui htmx` or `datastar`, `examples/start-htmx/` or `examples/start-datastar/` (and [pages](../guides/pages.md)); adds docs and workflows; pins the tool and the library to its own release (with `-from`, to the checkout). `-lang ts` needs Node |
+| `new` * | `-name <name>` (required), `-lang go` or `ts` (default `go`), `-empty`, `-ui htmx` or `datastar` (with `-empty`, in Go), `-cli` (with `-empty`), `-module <go module>` (default `github.com/<gh login>/<name>`), `-subdomain <workers.dev subdomain>` (default a placeholder), `-into <empty dir>` (default `./<name>`), `-from <checkout>` | Copies `examples/notes-go/` (without `sdk/go/`), or with `-lang ts` `examples/notes-ts/` and the tests it shares, under your name; with `-empty`, `examples/start-go/` or `examples/start-ts/` (one route, `GET /api/hello`); with `-empty -ui htmx` or `datastar`, `examples/start-htmx/` or `examples/start-datastar/` (and [pages](../guides/pages.md)); a start project has no CLI, and `-cli` adds the notes example's `cli` group and its Rust, zig and cargo-zigbuild pins ([Add the CLI](../guides/sdks.md#add-the-cli)); adds docs and workflows; pins the tool and the library to its own release (with `-from`, to the checkout). `-lang ts` needs Node |
 | `version` * | | The release the tool is |
 
 ## Build
@@ -58,7 +58,7 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 | `migrate` | `-worker <name>` | REMOTE. Applies pending migrations to `<worker>-db` |
 | `tail` | `-worker <name>` (default: `API_URL`'s), `-for <duration>` (default: until Ctrl-C) | REMOTE, read-only. Streams the Worker's live logs with Cloudflare's tail API (no wrangler): a line per request (UTC time, method, URL, status, outcome), then its console output and exceptions. Deletes the tail when it stops. Needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (the environment, or fnox) |
 | `access` | `setup [email...]`, `token create <machine> <file\|fnox>`, `token list`, `token revoke <machine>`, `delete` | REMOTE. Cloudflare Access in front of the Worker (`API_URL`): people log in with GitHub, each machine has a service token of its own; the Worker's `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`, and the IDs in fnox ([Auth](../guides/auth.md#cloudflare-access)). Needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_GITHUB_IDP_ID` |
-| `doctor` | | Says what the project's tasks need and lack |
+| `doctor` | | Says what the project's tasks need and lack: Rust and cargo-zigbuild only with a CLI; warns when the CLI's pins in `mise.toml` and the `cli` group disagree |
 | `harness-sync`, `harness-test`, `harness-deploy` | `harness-test -remote` | For a Worker that imports its own generated SDK (`conformance/showcase-ts/`): copy it in, test it under `cf dev` or deployed, deploy it twice |
 
 `with-server` and `exec` run a program an npm package of the project installs (`cf`, `fern`) from `node_modules/.bin`, never from the path.
@@ -94,12 +94,12 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 |---|---|
 | `sdk-list`, `sdk-clean`, `dist-sdk` | none |
 | `sdk-gen`, `sdk-check` | `<group>` |
-| `sdk-ready` | `[group...]`: default `typescript-dist`, `go`, `cli` |
+| `sdk-ready` | `[group...]`: default `typescript-dist`, `go`, and `cli` if the project has it |
 | `sdk-publish` | `-check` (fail if `sdk/go` is stale), `-quick` (with it: by a hash), `-into <dir>` |
-| `cli-build` | `-linux`: for Linux, in Docker |
+| `cli-build` | `-linux`: for Linux, in Docker. This, `dist-cli` and `cli-smoke` fail in a project without the `cli` group, saying it has no CLI |
 | `dist-cli` | `-target <os>-<arch>,...`: of `darwin`, `linux`, `windows` × `amd64`, `arm64`; default every one this machine builds (darwin only on a Mac). Writes `dist/<project>-cli-<os>-<arch>[.exe]` and runs this machine's |
 | `cli-smoke` | none: runs the CLI in `dist/` for this machine with `--version` |
-| `dist` | `-target` as `dist-cli`: empties `dist/`, then `dist-sdk` and `dist-cli` |
+| `dist` | `-target` as `dist-cli`: empties `dist/`, then `dist-sdk` and, with a CLI, `dist-cli` |
 | `release` * | `vX.Y.Z`, `-dry-run`, `-prerelease`, `-notes-footer <text or file>`, in any order. At the repo's root: fails unless the tree is clean, `HEAD` is the default branch on `origin`, every workflow run on it passed and the tag is new; runs the tasks `setup`, `check`, `spec:diff` (a breaking change needs a major release) and `dist`, tags, pushes the tag, makes the GitHub Release (notes: the commits since the last version tag), runs `release:publish` and `release:tags`. A task the repo lacks is skipped (no `dist`: it ships no files). `-dry-run` stops before the tag |
 | `publish` * | `-tag vX.Y.Z`: makes the Release if missing, attaches the files in `dist/` it lacks, writes `SHA256SUMS` of every file on it. Without a tag (or one from `release` or a workflow), a dry run |
 | `dist-ts` * | `-tag vX.Y.Z`: builds `ts/` and packs it as `dist/charter-ts-X.Y.Z.tgz`, in this repo |
@@ -121,7 +121,7 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 | Command | Flags | What it does |
 |---|---|---|
 | `repo` * | `-check` | REMOTE. At the repo's root, from its `charter.toml`: the docs site (with its generated pages), the issue forms and `labels.tsv`, `renovate.json` (unless `renovate = false`), the workflows (if it lists `projects`), the labels, the description, homepage and topics (always with `charter`), GitHub Pages. Prints `ok` or `changed` per item; `-check` changes nothing and fails on drift ([how](../guides/deploy.md#keep-the-repo-in-shape)) |
-| `workflows` * | `-check`, `-into <repo dir>` | Writes `.github/`: the workflows `check`, `deploy`, `sdk-check`, `release`, the issue forms and `labels.tsv` |
+| `workflows` * | `-check`, `-into <repo dir>` | Writes `.github/`: the workflows `check`, `deploy`, `sdk-check`, `release` (its CLI jobs only with the `cli` group), the issue forms and `labels.tsv` |
 | `issue` * | `<bug\|feature\|upstream\|plan>` | Prints an issue body with that form's headings, for `gh issue create --body-file`. Plans are `plan` issues, never pages |
 | `labels` * | | REMOTE. Creates or updates the repo's labels from the labels file; removes GitHub's default labels it lacks that nothing uses |
 | `docs` * | `-check`, `-into <repo dir>` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt`, and each page that `_generated.toml` in `docs/` lists, from its command's output; `-check` fails if one is stale ([how](../guides/deploy.md#generated-pages)) |

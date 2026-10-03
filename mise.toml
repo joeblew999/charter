@@ -40,7 +40,7 @@ description = "REMOTE, writes test notes: the same bench against the TypeScript 
 run = "go run ./cmd/charter each -only notes-ts,notes-go bench -each -write -warm 20s -n 30"
 
 [tasks.doctor]
-description = "Check what each example's tasks need: npm packages, Docker, Go, Rust"
+description = "Check what each example's tasks need: npm packages, Docker, Go, Rust (with a CLI)"
 run = "go run ./cmd/charter each doctor"
 
 [tasks."sdk:clean"]

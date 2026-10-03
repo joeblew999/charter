@@ -1,6 +1,7 @@
 # Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
 # and its tasks run in the project (dir), calling the tool as CHARTER_TOOL (its mise.toml sets it).
 # The SDKs, the CLI and the API docs Fern generates from the specs in fern/ (its settings: fern/generators.yml).
+# A project has a CLI only if generators.yml has the cli group; without it the CLI tasks say so and stop.
 
 ["spec:diff"]
 description = "Compare fern/openapi.json and fern/asyncapi.json with the previous release's (git tags) and fail on a breaking change, unless -tag is a major release: mise run spec:diff [-- -from vX.Y.Z -catalog catalog.json]"
@@ -28,7 +29,7 @@ dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} sdk-check"
 
 ["sdk:ready"]
-description = "Generate and build what the tests use, if missing or made from other specs (TypeScript and Go SDKs, the CLI): mise run sdk:ready [group...]"
+description = "Generate and build what the tests use, if missing or made from other specs (TypeScript and Go SDKs, the CLI if the project has one): mise run sdk:ready [group...]"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} sdk-ready"
 
@@ -48,7 +49,7 @@ dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} sdk-publish -check -quick"
 
 ["sdk:cli:build"]
-description = "HEAVY: build the generated Rust CLI in sdk/out/cli: mise run sdk:cli:build [-linux]"
+description = "HEAVY: build the generated Rust CLI in sdk/out/cli (a project with the cli group): mise run sdk:cli:build [-linux]"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} cli-build"
 
@@ -58,17 +59,17 @@ dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} dist-sdk"
 
 ["sdk:dist:cli"]
-description = "HEAVY: generate the CLI and build it into dist/ for darwin, linux, windows x amd64, arm64 (all six on a Mac; elsewhere all but darwin): mise run sdk:dist:cli [-target linux-arm64,...]"
+description = "HEAVY: generate the CLI (a project with the cli group) and build it into dist/ for darwin, linux, windows x amd64, arm64 (all six on a Mac; elsewhere all but darwin): mise run sdk:dist:cli [-target linux-arm64,...]"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} dist-cli"
 
 ["sdk:cli:smoke"]
-description = "Run the CLI that dist/ holds for this machine with --version (the release workflow does it on Windows)"
+description = "Run the CLI that dist/ holds for this machine with --version (the release workflow does it on Windows), in a project with the cli group"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} cli-smoke"
 
 ["dist"]
-description = "HEAVY: everything a release ships, into an emptied dist/: sdk:dist, then sdk:dist:cli (what mise run release builds)"
+description = "HEAVY: everything a release ships, into an emptied dist/: sdk:dist, then sdk:dist:cli if the project has the cli group (what mise run release builds)"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} dist"
 

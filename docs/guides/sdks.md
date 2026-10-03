@@ -6,7 +6,7 @@ parent: Guides
 
 # SDKs: generate, add features and languages
 
-[Fern](https://buildwithfern.com) generates typed clients and a CLI from the specs your contract writes. It runs in Docker. Method names, paging and streaming come from the contract.
+[Fern](https://buildwithfern.com) generates typed clients, and a CLI if the project has one, from the specs your contract writes. It runs in Docker. Method names, paging and streaming come from the contract.
 
 ## Generate and check
 
@@ -14,7 +14,7 @@ parent: Guides
 mise run sdk:gen typescript         # -> sdk/out/typescript (not committed)
 mise run sdk:gen go                 # -> sdk/out/go
 mise run sdk:check go               # build, vet, Fern's tests against a mock
-mise run sdk:cli:build              # HEAVY the first time: the Rust CLI
+mise run sdk:cli:build              # HEAVY the first time: the Rust CLI (a project with one)
 mise run sdk:clean                  # after a contract change: a stale SDK is not regenerated
 ```
 
@@ -47,6 +47,12 @@ Add a group under `groups:` in `fern/generators.yml`, then `mise run sdk:gen pyt
           path: ../sdk/out/python
 ```
 
+## Add the CLI
+
+A project has a CLI if and only if `fern/generators.yml` has the group `cli`: Fern writes it in Rust, and `dist` builds it for every OS ([Release](release.md#the-cli-for-every-os)). The notes examples and the showcases have it; a project made with `charter new -empty` has not, so it pins no Rust (1 to 3 GB a version), zig or cargo-zigbuild. Without the group, `dist` ships the SDKs and the specs only, the `release` workflow has no CLI jobs, `doctor` asks for no Rust, and the CLI tasks say the project has none.
+
+To have one, make the project with `charter new -empty -cli`, or copy into an existing one the `cli` group of `examples/notes-go/fern/generators.yml` (with your `binaryName`) and its `rust`, `zig` and `cargo-zigbuild` lines of `mise.toml`, then `mise install && mise run workflows`. To drop it, remove those lines, then `mise run workflows`. `mise run doctor` warns when the pins and the group disagree.
+
 ## Fern features
 
 The showcase (`conformance/showcase-go/`, and `conformance/showcase-ts/` from oRPC) switches each on; copy the lines from its contract and `api/spec.go`.
@@ -64,7 +70,7 @@ The spec only describes: the server must enforce auth, and idempotency is the ha
 
 ## Release
 
-`mise run release -- vX.Y.Z` ships the SDKs, the specs and the CLI for every OS from your machine: [Release](release.md).
+`mise run release -- vX.Y.Z` ships the SDKs, the specs and, with a CLI, the CLI for every OS from your machine: [Release](release.md).
 
 ## Update charter
 

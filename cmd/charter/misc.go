@@ -16,7 +16,7 @@ import (
 
 func init() {
 	commands["upstream"] = command{"", "the upstream issues the code under this folder works around (every `Upstream:` tag) and their state", upstream}
-	commands["doctor"] = command{"", "check what the project's tasks need: npm installs, Docker, Go, Rust, leftover containers", doctor}
+	commands["doctor"] = command{"", "check what the project's tasks need: npm installs, Docker, Go, Rust (with a CLI), leftover containers", doctor}
 	commands["each"] = command{"[-only <name,...>] <task> [args]", "run a mise task in every project below this folder that has it (a repo that holds several projects, as this tool's own does in examples/)", each}
 	anywhere["upstream"], anywhere["each"] = true, true
 }
@@ -80,12 +80,22 @@ func doctor([]string) error {
 	} else {
 		bad("docker not running: start Docker")
 	}
-	for _, tool := range []struct{ name, arg, why string }{
+	tools := []struct{ name, arg, why string }{
 		{"go", "version", "the tool itself, a Go Worker, sdk:check on Go SDKs"},
-		{"cargo", "--version", "the Fern CLI builds"},
-		{"cargo-zigbuild", "--version", "the CLI for Linux and Windows, sdk:dist:cli"},
 		{"gh", "--version", "upstream:status, docs:setup, release"},
-	} {
+	}
+	// Rust and zig only for a project with a CLI.
+	if hasCLI() {
+		tools = append(tools,
+			struct{ name, arg, why string }{"cargo", "--version", "the Fern CLI builds"},
+			struct{ name, arg, why string }{"cargo-zigbuild", "--version", "the CLI for Linux and Windows, sdk:dist:cli"})
+	} else {
+		ok("no CLI (no cli group in fern/generators.yml): no Rust needed")
+	}
+	if err := cliPinsAgree("."); err != nil {
+		warn("%v", err)
+	}
+	for _, tool := range tools {
 		if out, err := exec.Command(tool.name, tool.arg).Output(); err == nil {
 			ok("%s (%s)", strings.SplitN(strings.TrimSpace(string(out)), "\n", 2)[0], tool.why)
 		} else {
