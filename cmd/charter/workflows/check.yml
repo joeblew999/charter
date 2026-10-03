@@ -63,9 +63,13 @@ jobs:
   example-windows:
     runs-on: windows-2025
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [notes-go, notes-ts]
     defaults:
       run:
-        working-directory: examples/notes-go
+        working-directory: examples/${{ matrix.example }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.0.1
