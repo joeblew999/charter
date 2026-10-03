@@ -33,7 +33,7 @@ dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} workflows -check"
 
 ["docs:setup"]
-description = "Write the docs site's config and docs/writing.md (the same for every repo; GitHub Pages renders the folder)"
+description = "Write the docs site's config and docs/writing.md (the same for every repo; GitHub Pages renders the folder), and the pages docs/_generated.toml lists"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} docs"
 
@@ -43,7 +43,7 @@ dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} docs-lint"
 
 ["docs:check"]
-description = "Fail if the docs site's config differs from what docs:setup writes, or docs/ fails the lint"
+description = "Fail if the docs site's config or a generated page differs from what docs:setup writes, or docs/ fails the lint"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} docs -check && {{env.CHARTER_TOOL}} docs-lint"
 

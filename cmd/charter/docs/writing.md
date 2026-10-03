@@ -38,7 +38,7 @@ A page belongs to one section. Nothing a user needs lives only under How to help
 - **Links are relative,** and an anchor must match a heading. A new page gets a row in the home page's index.
 - **No two opening curly braces together, and no curly brace followed by a percent sign:** the site's renderer reads them as template code.
 - **No release version in a page:** link `releases/latest`, write `@latest`, or use `vX.Y.Z`.
-- **Don't edit what is generated:** `_config.yml`, `_sass/`, `llms.txt`, this page.
+- **Don't edit what is generated:** `_config.yml`, `_sass/`, `llms.txt`, this page, and the pages `_generated.toml` lists (change the code their command reads). The home page's "What is generated" table lists them.
 
 ## When the code changes
 
