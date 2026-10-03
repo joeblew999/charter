@@ -22,7 +22,7 @@ Each example has the same task names. `mise run doctor` says what is missing.
 Use the GitHub forms (for a bug in Fern, TinyGo, workers-go, Huma or oRPC, check [Upstream issues](upstream.md) first). An agent prints the same form:
 
 ```sh
-charter issue bug > body.md     # or: feature, upstream. Its first line is the gh command that files it
+charter issue bug > body.md     # or: feature, upstream, plan. Its first line is the gh command that files it
 ```
 
 ## Make it faster

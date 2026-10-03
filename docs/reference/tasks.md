@@ -25,6 +25,7 @@ What `charter new` makes, and `examples/notes-go/`.
 | `migrate:local` | Applies `migrations/` to the local D1 of a running `dev` |
 | `spec` | Writes `fern/openapi.json` and `fern/asyncapi.json` from the contract |
 | `spec:check` | Fails if a committed spec is stale |
+| `spec:diff` | The specs against the previous release's: fails on a breaking change unless `-- -tag vX.Y.Z` is a major release ([Repos that use each other](../guides/repos.md#catch-a-breaking-change)) |
 | `lint` | `gofmt`, `go vet` for the host and for Wasm |
 | `test` | `go test ./...` |
 | `test:native` | The live and MCP tests against the native build, on a free port |
@@ -88,6 +89,7 @@ What `charter new` makes, and `examples/notes-go/`.
 | `ts:check` | The TypeScript library: typecheck (`ts:lint`) and tests (`ts:test`) |
 | `ts:lint`, `ts:test` | The TypeScript library's typecheck and its tests, on their own |
 | `compare` | REMOTE. The same bench against the TypeScript and the Go notes Workers |
+| `catalog` | REMOTE, read-only. `charter catalog`: the owner's charter repos and who pins each ([Repos that use each other](../guides/repos.md)) |
 | `charter:release` | GoReleaser on the tool. REMOTE on a version tag; elsewhere a snapshot |
 | `ts:dist` | Packs the TypeScript library into `dist/charter-ts-X.Y.Z.tgz`, versioned as the tag (none: `0.0.0-dev`) |
 | `ts:release` | REMOTE on a version tag: attaches `dist/*` to its GitHub Release. Elsewhere a dry run |

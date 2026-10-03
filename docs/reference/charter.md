@@ -99,13 +99,22 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 | `release-tags` * | `-tag vX.Y.Z`, then `<module dir>...` |
 | `release-tool` * | `-tag vX.Y.Z`: GoReleaser on the tool, in this repo |
 
+## Repos that use each other
+
+[The guide](../guides/repos.md).
+
+| Command | Flags | What it does |
+|---|---|---|
+| `catalog` * | `-owner <login>` (default: the token's), `-json`, `-page` | REMOTE, read-only. The owner's charter repos, what each publishes, and the repos that pin it, read from their `mise.toml`, `go.mod` and `package.json`. Markdown; `-page` adds a docs page's front matter |
+| `spec-diff` | `-from vX.Y.Z` (default: the newest version tag before `-tag`), `-to vX.Y.Z` (default: the working tree), `-tag vX.Y.Z` (default: the workflow's tag), `-catalog <file or url>` | Compares `fern/openapi.json` and `fern/asyncapi.json`, marking breaking changes `!`. Fails on one unless `-tag` is a major release; with `-catalog`, names the repos that pin this one |
+
 ## The repo around a project
 
 | Command | Flags | What it does |
 |---|---|---|
-| `repo` * | `-check` | REMOTE. At the repo's root, from its `charter.toml`: the docs site, the issue forms and `labels.tsv`, the workflows (if it lists `projects`), the labels, the description, homepage and topics, GitHub Pages. Prints `ok` or `changed` per item; `-check` changes nothing and fails on drift ([how](../guides/deploy.md#keep-the-repo-in-shape)) |
+| `repo` * | `-check` | REMOTE. At the repo's root, from its `charter.toml`: the docs site, the issue forms and `labels.tsv`, `renovate.json` (unless `renovate = false`), the workflows (if it lists `projects`), the labels, the description, homepage and topics (always with `charter`), GitHub Pages. Prints `ok` or `changed` per item; `-check` changes nothing and fails on drift ([how](../guides/deploy.md#keep-the-repo-in-shape)) |
 | `workflows` * | `-check`, `-into <repo dir>` | Writes `.github/`: the workflows `check`, `deploy`, `sdk-check`, `release`, the issue forms and `labels.tsv` |
-| `issue` * | `<bug\|feature\|upstream>` | Prints an issue body with that form's headings, for `gh issue create --body-file` |
+| `issue` * | `<bug\|feature\|upstream\|plan>` | Prints an issue body with that form's headings, for `gh issue create --body-file`. Plans are `plan` issues, never pages |
 | `labels` * | | REMOTE. Creates or updates the repo's labels from the labels file; removes GitHub's default labels it lacks that nothing uses |
 | `docs` * | `-check`, `-into <repo dir>` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt`, and each page that `_generated.toml` in `docs/` lists, from its command's output; `-check` fails if one is stale ([how](../guides/deploy.md#generated-pages)) |
 | `docs-lint` * | `-into <repo dir>` | Fails on missing front matter, an unlinked page, a dead link or anchor, an unknown task, a missing path, a release version; in a generated page, only the first three |

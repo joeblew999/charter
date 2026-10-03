@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -34,6 +35,7 @@ type charterToml struct {
 	Homepage    string   // default: the GitHub Pages URL
 	Docs        string   // the docs folder, default "docs"
 	Projects    []string // folders that are charter projects; with any, the repo gets the workflows
+	Renovate    bool     // write renovate.json, which takes charter's Renovate preset; default true
 }
 
 var (
@@ -47,7 +49,7 @@ var (
 // parseCharterToml reads charter.toml. Only the standard library: the format is a small part of
 // TOML, one key per line, and anything else is an error, not ignored.
 func parseCharterToml(text string) (charterToml, error) {
-	config := charterToml{Docs: "docs"}
+	config := charterToml{Docs: "docs", Renovate: true}
 	seen := map[string]bool{}
 	for number, line := range strings.Split(text, "\n") {
 		line = strings.TrimSpace(line)
@@ -75,6 +77,10 @@ func parseCharterToml(text string) (charterToml, error) {
 				return config, at(`%s is a string in double quotes`, key)
 			}
 			text = unquoted
+		case "renovate":
+			if value != "true" && value != "false" {
+				return config, at("renovate is true or false")
+			}
 		case "topics", "projects":
 			if !tomlList.MatchString(value) {
 				return config, at(`%s is a list: ["a", "b"]`, key)
@@ -88,7 +94,7 @@ func parseCharterToml(text string) (charterToml, error) {
 				list = append(list, unquoted)
 			}
 		default:
-			return config, at("no key %q: description, topics, homepage, docs, projects", key)
+			return config, at("no key %q: description, topics, homepage, docs, projects, renovate", key)
 		}
 		switch key {
 		case "description":
@@ -101,6 +107,8 @@ func parseCharterToml(text string) (charterToml, error) {
 			config.Topics = list
 		case "projects":
 			config.Projects = list
+		case "renovate":
+			config.Renovate = value == "true"
 		}
 	}
 	if config.Description == "" {
@@ -111,13 +119,37 @@ func parseCharterToml(text string) (charterToml, error) {
 			return config, fmt.Errorf("charter.toml: topic %q: GitHub takes lower-case letters, digits and hyphens, up to 50", topic)
 		}
 	}
+	if !slices.Contains(config.Topics, charterTopic) {
+		config.Topics = append(config.Topics, charterTopic)
+	}
 	if len(config.Topics) > 20 {
-		return config, errors.New("charter.toml: GitHub takes up to 20 topics")
+		return config, errors.New("charter.toml: GitHub takes up to 20 topics, charter's own among them")
 	}
 	if config.Docs != "docs" && config.Docs != "." {
 		return config, errors.New(`charter.toml: docs is "docs" or "." (GitHub Pages serves a site from one of those)`)
 	}
 	return config, nil
+}
+
+// charterTopic is the topic every repo charter repo keeps has: charter catalog finds them by it.
+const charterTopic = "charter"
+
+// The Renovate preset every charter repo takes (cmd/charter/renovate/charter.json), so a release of
+// one repo opens a pull request in each repo that pins it.
+//
+//go:embed renovate/charter.json
+var renovatePreset []byte
+
+const renovatePresetPath = "cmd/charter/renovate/charter"
+
+// renovateConfig is the renovate.json charter repo writes: charter's preset, at this tool's release
+// (from a checkout: at main).
+func renovateConfig(release string) []byte {
+	preset := "github>" + strings.TrimPrefix(repoURL, "https://github.com/") + "//" + renovatePresetPath
+	if release != "" {
+		preset += "#" + release
+	}
+	return []byte("{\n  \"$schema\": \"https://docs.renovatebot.com/renovate-schema.json\",\n  \"extends\": [\"" + preset + "\"]\n}\n")
 }
 
 // charterTomlFor is the charter.toml that charter new writes.
@@ -208,6 +240,11 @@ func keepRepo(root string, check bool) error {
 			}
 			return syncFiles(filepath.Join(root, ".github"), files, check)
 		}},
+	}
+	if config.Renovate {
+		steps = append(steps, step{"renovate.json", func() ([]string, error) {
+			return syncFiles(root, map[string][]byte{"renovate.json": renovateConfig(toolVersion())}, check)
+		}})
 	}
 	if len(config.Projects) > 0 || isProject(root) {
 		steps = append(steps, step{".github/workflows", func() ([]string, error) {
