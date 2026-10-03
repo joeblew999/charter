@@ -17,13 +17,14 @@ import (
 // in one that ships no files: each step is a mise task the repo may or may not have.
 //
 //	check            the repo's own checks (none: skipped)
+//	spec:diff        fails on a breaking change to the specs unless the tag is a major release (none: skipped)
 //	dist             builds what ships into dist/ (none: the repo ships no files)
 //	release:publish  attaches dist/ to the Release (none: publish here)
 //	release:tags     tags Go modules in subdirectories (none: skipped)
 
 func init() {
 	commands["release"] = command{"vX.Y.Z [-dry-run] [-prerelease] [-notes-footer <text or file>]",
-		"cut a release from this machine: check the repo is clean and is the default branch on GitHub, run its check and dist tasks, tag, push the tag, make the GitHub Release (notes: the commits since the last tag) and run its release:publish and release:tags tasks; -dry-run changes nothing", release}
+		"cut a release from this machine: check the repo is clean and is the default branch on GitHub, run its check, spec:diff and dist tasks, tag, push the tag, make the GitHub Release (notes: the commits since the last tag) and run its release:publish and release:tags tasks; -dry-run changes nothing", release}
 	anywhere["release"] = true
 }
 
@@ -139,6 +140,10 @@ func release(args []string) error {
 		fmt.Println("  no check task: nothing to run before the tag")
 	}
 	if err := run("check"); err != nil {
+		return err
+	}
+	// A breaking change to the API's specs since the last release needs a major version.
+	if err := run("spec:diff"); err != nil {
 		return err
 	}
 	if err := os.RemoveAll(dist); err != nil {

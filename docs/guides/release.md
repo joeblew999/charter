@@ -16,10 +16,11 @@ mise run release -- vX.Y.Z
 It stops unless the tree is clean, `HEAD` is the default branch on GitHub and the tag is new. Then:
 
 1. `check`, as CI runs it.
-2. `dist` into an empty `dist/`: the SDKs, the specs and the CLI.
-3. The tag, pushed.
-4. The GitHub Release. Its notes are the commit subjects since the last tag; `-notes-footer <text or file>` adds a line, `-prerelease` marks it.
-5. `release:publish` attaches `dist/` and writes `SHA256SUMS`; `release:tags` tags `sdk/go/vX.Y.Z`.
+2. `spec:diff`: a breaking change to the specs since the last release stops it unless the tag is a major release (in v0, the minor number) ([Repos that use each other](repos.md)).
+3. `dist` into an empty `dist/`: the SDKs, the specs and the CLI.
+4. The tag, pushed.
+5. The GitHub Release. Its notes are the commit subjects since the last tag; `-notes-footer <text or file>` adds a line, `-prerelease` marks it.
+6. `release:publish` attaches `dist/` and writes `SHA256SUMS`; `release:tags` tags `sdk/go/vX.Y.Z`.
 
 A repo with no `dist` task (one that ships no files) gets the same, without files. Nothing goes to a package registry. A new project's release took about four minutes on an Apple silicon Mac (3 Oct 2026), most of it the six CLI builds.
 
