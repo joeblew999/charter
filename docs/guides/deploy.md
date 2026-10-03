@@ -14,6 +14,7 @@ How to put a project on Cloudflare Workers, test it there, and run the same from
 npx cf auth login     # once per machine; or set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
 mise run deploy       # builds the Wasm, deploys the Worker with its secrets, its D1 database and the hub, applies migrations
 mise run live-test    # REMOTE, writes test notes: a few seconds after every deploy
+mise run tail         # REMOTE, read-only: the Worker's live logs until Ctrl-C (needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, from fnox)
 ```
 
 - **`cloudflare.config.ts`** declares the Worker, the database `<name>-db` (binding `DB`), the hub (`HUB`) and `APP_NAME`. A second deploy keeps the database.
