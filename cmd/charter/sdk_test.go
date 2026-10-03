@@ -104,8 +104,10 @@ func TestTheExamplesShareTheirTaskLines(t *testing.T) {
 		file := filepath.Join("../../examples", name, "mise.toml")
 		for _, shared := range same {
 			want, got := task(reference, shared), task(file, shared)
-			if name == "showcase-ts" && shared == "setup" {
-				continue // it also installs the packages of notes-ts, whose spec generators it imports
+			if strings.HasSuffix(name, "-ts") && shared == "setup" {
+				// A TypeScript example also installs the packages of the TypeScript library (ts/),
+				// its local package @charter/ts: both the same line.
+				want = strings.TrimSuffix(want, `"`) + ` && npm ci --no-fund --no-audit --prefix ../../ts"`
 			}
 			if want == "" || got != want {
 				t.Errorf("%s: task %s runs %s, want %s (as notes-go)", name, shared, got, want)

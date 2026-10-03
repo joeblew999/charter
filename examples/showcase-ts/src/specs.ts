@@ -1,6 +1,6 @@
-// The showcase's two specs from its contract, with the generators ../notes-ts/ uses (../notes-ts/src/specs.ts).
+// The showcase's two specs from its contract, with the library's generators (@charter/ts/specs, in ../../ts).
 // `server` is where the API is served: the deployed harness, .../api/mock.
-import { asyncapiSpec, openapiSpec } from "../../notes-ts/src/specs.ts";
+import { asyncapiSpec, openapiSpec } from "@charter/ts/specs";
 import { asyncInfo, contract, document, info, webhooks } from "./contract.ts";
 
 export const specs = {

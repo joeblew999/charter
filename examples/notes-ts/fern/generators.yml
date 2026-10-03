@@ -1,6 +1,6 @@
 # The notes API from the oRPC contract. openapi.json and asyncapi.json are written by `mise run spec`
 # from src/contract.ts (never by hand). What Fern needs (SDK names, x-fern-pagination,
-# x-fern-streaming) is declared there; the WebSocket channel comes from src/asyncapi.ts.
+# x-fern-streaming) is declared there; the WebSocket channel comes from asyncapi() of @charter/ts (../../ts/src/asyncapi.ts).
 api:
   specs:
     - openapi: openapi.json

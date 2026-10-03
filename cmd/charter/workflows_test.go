@@ -78,13 +78,13 @@ func TestWorkflowsFitTheRepo(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, workflow := range project {
-		for _, gone := range []string{"examples", "matrix.example", "charter:check", "go:check", "charter:release"} {
+		for _, gone := range []string{"examples", "matrix.example", "charter:check", "go:check", "ts:check", "charter:release"} {
 			if strings.Contains(string(workflow), gone) {
 				t.Errorf("%s for a project mentions %q", name, gone)
 			}
 		}
 	}
-	for _, want := range []string{"mise run charter:check", "mise run go:check", "working-directory: examples/${{ matrix.example }}", "mise run check", "  tool-windows:\n    runs-on: windows-2025\n", "  example-windows:\n"} {
+	for _, want := range []string{"mise run charter:check", "mise run go:check", "mise run ts:check", "working-directory: examples/${{ matrix.example }}", "mise run check", "  tool-windows:\n    runs-on: windows-2025\n", "  example-windows:\n"} {
 		if !strings.Contains(string(repo["check.yml"]), want) {
 			t.Errorf("check.yml for a repo with examples: no %q", want)
 		}

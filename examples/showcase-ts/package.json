@@ -17,6 +17,7 @@
 		"ws": "^8.18.0"
 	},
 	"dependencies": {
+		"@charter/ts": "file:../../ts",
 		"@orpc/contract": "2.0.0-beta.40",
 		"@orpc/openapi": "2.0.0-beta.40",
 		"@orpc/server": "2.0.0-beta.40",

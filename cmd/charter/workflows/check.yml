@@ -13,8 +13,8 @@ env:
   GH_TOKEN: ${{ github.token }} # charter docs -check reads the repo's name and description with gh
 jobs:
   # if-dir examples
-  # A repo that holds several projects: the tool, the Go library, and each example in a job of its
-  # own, so a failure names its part.
+  # A repo that holds several projects: the tool, the Go and the TypeScript library, and each example
+  # in a job of its own, so a failure names its part.
   tool:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -29,6 +29,14 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.0.1
       - run: mise run go:check
+  library-ts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run ts:setup
+      - run: mise run ts:check
   examples:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -44,7 +52,7 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: mise run setup
       - run: mise run check
-  # The same tasks on Windows: the tool, the library and the Go notes example. Not the SDKs: Fern
+  # The same tasks on Windows: the tool, both libraries and the Go notes example. Not the SDKs: Fern
   # generates in Linux containers, which GitHub's Windows runners do not run.
   tool-windows:
     runs-on: windows-2025
@@ -60,6 +68,14 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.0.1
       - run: mise run go:check
+  library-ts-windows:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run ts:setup
+      - run: mise run ts:check
   example-windows:
     runs-on: windows-2025
     timeout-minutes: 45
