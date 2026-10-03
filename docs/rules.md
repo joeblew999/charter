@@ -19,7 +19,7 @@ Binding, for developers and agents alike: other repos build on this one.
 | **Workarounds name their issue:** `Upstream: <owner>/<repo>#<n> (when fixed: ...)`, and a row in [Upstream issues](upstream.md) | Otherwise it is never removed |
 | **After a deploy, the live test passes against it** | Some bugs exist only on Cloudflare |
 | **Only verified results go into the docs:** what ran, where, when. Performance numbers only in [Benchmarks](benchmarks.md) | A reader acts on it; a copied number goes stale |
-| **A release is a version tag** ([how](contributing.md#cut-a-release)) | The workflow builds from the tagged commit |
+| **A release is a version tag, cut with `mise run release`** ([how](contributing.md#cut-a-release)) | It checks and builds before the tag, in minutes; the workflows check the tag on every OS after |
 
 ## Working in a checkout
 

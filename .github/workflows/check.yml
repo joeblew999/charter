@@ -5,6 +5,8 @@ name: check
 on:
   push:
     branches: [main]
+    # A release is cut from a developer's machine: this checks its tag on every OS afterwards.
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 permissions:

@@ -58,9 +58,19 @@ dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} dist-sdk"
 
 ["sdk:dist:cli"]
-description = "HEAVY: generate and build the CLI into dist/: mise run sdk:dist:cli [-linux]"
+description = "HEAVY: generate the CLI and build it into dist/ for darwin, linux, windows x amd64, arm64 (all six on a Mac; elsewhere all but darwin): mise run sdk:dist:cli [-target linux-arm64,...]"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} dist-cli"
+
+["sdk:cli:smoke"]
+description = "Run the CLI that dist/ holds for this machine with --version (the release workflow does it on Windows)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} cli-smoke"
+
+["dist"]
+description = "HEAVY: everything a release ships, into an emptied dist/: sdk:dist, then sdk:dist:cli (what mise run release builds)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} dist"
 
 ["sdk:docs"]
 description = "Preview the API's reference site locally (fern docs dev): http://localhost:3030"

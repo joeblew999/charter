@@ -43,9 +43,12 @@ func specDiff(args []string) error {
 	flags("spec-diff", args, func(f *flag.FlagSet) {
 		f.StringVar(&from, "from", "", "the release to compare with (default: the newest version tag before this one)")
 		f.StringVar(&to, "to", "", "a version tag to compare (default: the working tree)")
-		f.StringVar(&tag, "tag", "", "the release being made (default: the tag a workflow runs on): a breaking change passes only if it is a major one")
+		f.StringVar(&tag, "tag", "", "the release being made (default: the tag `release` or a workflow runs for): a breaking change passes only if it is a major one")
 		f.StringVar(&catalogFrom, "catalog", "", "what charter catalog -json wrote (a file or a URL): name the repos that pin this one")
 	})
+	if tag == "" {
+		tag = os.Getenv(releaseTagEnv)
+	}
 	if tag == "" && os.Getenv("GITHUB_REF_TYPE") == "tag" {
 		tag = os.Getenv("GITHUB_REF_NAME")
 	}

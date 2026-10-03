@@ -165,3 +165,26 @@ func TestVersionTags(t *testing.T) {
 		}
 	}
 }
+
+// A release is cut on a developer's machine; the workflows check its tag afterwards on every OS, add
+// what the Release lacks, and start the Windows CLI on Windows.
+func TestWorkflowsCheckTheTag(t *testing.T) {
+	for kind, dir := range repoKinds(t) {
+		workflows, err := workflowsFor(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(workflows["check.yml"]), "    tags: [\"v*\"]\n") {
+			t.Errorf("check.yml for %s does not run on a version tag", kind)
+		}
+		release := string(workflows["release.yml"])
+		for _, want := range []string{"- run: mise run release:publish", "  cli-windows:\n    needs: cli\n    runs-on: windows-2025\n", "- run: mise run sdk:cli:smoke"} {
+			if !strings.Contains(release, want) {
+				t.Errorf("release.yml for %s: no %q", kind, want)
+			}
+		}
+		if strings.Contains(release, "- run: mise run release\n") {
+			t.Errorf("release.yml for %s cuts a release: on a tag it only publishes (mise run release:publish)", kind)
+		}
+	}
+}

@@ -1,8 +1,10 @@
 # Written by `charter workflows` from its template (github.com/joeblew999/charter, cmd/charter/workflows/release.yml):
 # change the template, not this file. Every step that does work is a mise task, so it runs locally too.
-# On a version tag (vX.Y.Z): the SDK sources, the specs and the Linux CLI go onto the GitHub Release (in
-# charter, also the tool and the TypeScript library's package), and the Go modules in subdirectories get their tags.
-# On a pull request or by hand it is a dry run: the same build, kept as workflow artifacts, nothing published.
+# A release is cut from a developer's machine (mise run release -- vX.Y.Z), which builds and attaches
+# everything. On its tag this builds it all again on GitHub's machines, as a check, attaches only what the
+# Release lacks (everything, if the tag was pushed by hand), rewrites SHA256SUMS, tags the Go modules in
+# subdirectories and starts the Windows CLI on Windows. On a pull request or by hand it is a dry run: the
+# same build, kept as workflow artifacts, nothing published.
 name: release
 on:
   push:
@@ -58,6 +60,8 @@ jobs:
         working-directory: examples/${{ matrix.example }}
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0 # the Release's description lists the commits since the last tag
       - uses: jdx/mise-action@v5.0.1
       - run: mise run setup
       - run: mise run sdk:dist
@@ -66,8 +70,10 @@ jobs:
           name: sdk-${{ matrix.example }}
           path: examples/${{ matrix.example }}/dist/
           if-no-files-found: error
-      - run: mise run release
-  # amd64 only: the binaryen the tool pins has no linux/arm64 build, so mise can't install it on an arm runner.
+      - run: mise run release:publish
+  # The CLI for Linux and Windows on amd64 and arm64, cross-built with zig (darwin's need a Mac: the release
+  # cut from one has them). amd64 only: the binaryen the tool pins has no linux/arm64 build, so mise can't
+  # install it on an arm runner.
   cli:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -80,6 +86,8 @@ jobs:
         working-directory: examples/${{ matrix.example }}
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0 # the Release's description lists the commits since the last tag
       - uses: jdx/mise-action@v5.0.1
       - run: mise run setup
       - run: mise run sdk:dist:cli
@@ -88,4 +96,24 @@ jobs:
           name: cli-${{ matrix.example }}
           path: examples/${{ matrix.example }}/dist/
           if-no-files-found: error
-      - run: mise run release
+      - run: mise run release:publish
+  # The Windows CLI the cli job built, started on Windows: no other machine can start it.
+  cli-windows:
+    needs: cli
+    runs-on: windows-2025
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [notes-go, notes-ts]
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: cli-${{ matrix.example }}
+          path: examples/${{ matrix.example }}/dist/
+      - run: mise run sdk:cli:smoke

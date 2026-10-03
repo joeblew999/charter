@@ -83,6 +83,7 @@ func doctor([]string) error {
 	for _, tool := range []struct{ name, arg, why string }{
 		{"go", "version", "the tool itself, a Go Worker, sdk:check on Go SDKs"},
 		{"cargo", "--version", "the Fern CLI builds"},
+		{"cargo-zigbuild", "--version", "the CLI for Linux and Windows, sdk:dist:cli"},
 		{"gh", "--version", "upstream:status, docs:setup, release"},
 	} {
 		if out, err := exec.Command(tool.name, tool.arg).Output(); err == nil {

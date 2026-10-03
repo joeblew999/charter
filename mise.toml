@@ -73,6 +73,18 @@ run = "go run ./cmd/charter catalog"
 description = "Write .github/workflows/ from the templates in cmd/charter/workflows (edit those, never the copies)"
 run = "go run ./cmd/charter workflows"
 
+[tasks.release]
+description = "REMOTE: cut a release of the repo from this machine: mise run release -- vX.Y.Z [-dry-run]. Runs check and dist, tags, pushes, makes the GitHub Release, runs release:publish and release:tags"
+run = "go run ./cmd/charter release"
+
+[tasks.dist]
+description = "HEAVY: what the notes examples ship (their SDKs, specs and CLI for every OS), each into its own dist/: what mise run release builds before the tag"
+run = "go run ./cmd/charter each -only notes-go,notes-ts dist"
+
+[tasks."release:publish"]
+description = "REMOTE on a version tag (vX.Y.Z): the TypeScript library's package, then the tool (GoReleaser), then the notes examples' dist/, onto its GitHub Release. Anywhere else: the same as a dry run"
+run = "go run ./cmd/charter dist-ts && go run ./cmd/charter publish && go run ./cmd/charter release-tool && go run ./cmd/charter each -only notes-go,notes-ts release:publish"
+
 [tasks."charter:release"]
 description = "GoReleaser on the tool (.goreleaser.yaml). REMOTE on a version tag (vX.Y.Z): archives and checksums go to its GitHub Release. Anywhere else: a snapshot into dist/"
 run = "go run ./cmd/charter release-tool"
@@ -129,8 +141,8 @@ description = "Build the TypeScript library and pack it into dist/charter-ts-X.Y
 run = "go run ./cmd/charter dist-ts"
 
 [tasks."ts:release"]
-description = "REMOTE on a version tag (vX.Y.Z): attach dist/* (what ts:dist wrote) to its GitHub Release. Anywhere else: a dry run that lists dist/"
-run = "go run ./cmd/charter release"
+description = "REMOTE on a version tag (vX.Y.Z): attach dist/* (what ts:dist wrote) to its GitHub Release, if it lacks them. Anywhere else: a dry run that lists dist/"
+run = "go run ./cmd/charter publish"
 
 # ---- docs: the docs site in docs/ ----------------------------------------------------------------
 
