@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -25,7 +26,7 @@ import (
 
 func init() {
 	commands["release"] = command{"vX.Y.Z [-dry-run] [-prerelease] [-notes-footer <text or file>]",
-		"cut a release from this machine: check the repo is clean and is the default branch on GitHub, run its setup, check, spec:diff and dist tasks, tag, push the tag, make the GitHub Release (notes: the commits since the last tag) and run its release:publish and release:tags tasks; -dry-run changes nothing", release}
+		"cut a release from this machine: check the repo is clean, is the default branch on GitHub and passed CI there, run its setup, check, spec:diff and dist tasks, tag, push the tag, make the GitHub Release (notes: the commits since the last tag) and run its release:publish and release:tags tasks; -dry-run changes nothing", release}
 	anywhere["release"] = true
 }
 
@@ -93,13 +94,51 @@ func releaseChecks(tag string) ([]releaseCheck, error) {
 		return nil, err
 	}
 	signedIn := exec.Command("gh", "auth", "status").Run() == nil
+	ciOK, ci := ciPassed(head)
 	return []releaseCheck{
 		{"clean", "the working tree is clean", status == ""},
 		{"main", fmt.Sprintf("HEAD (%.7s) is the default branch on origin (%.7s)", head, main), head == main},
 		{"new here", tag + " is not a tag here", local},
 		{"new on origin", tag + " is not a tag on origin", onGitHub == ""},
 		{"gh", "gh is signed in", signedIn},
+		{"ci", ci, ciOK},
 	}, nil
+}
+
+// ciPassed says whether every workflow GitHub ran on a push of commit passed, on every OS it runs:
+// a release is cut only from a commit that is green on the default branch. A repo with no workflows
+// has nothing to wait for.
+func ciPassed(commit string) (bool, string) {
+	if files, _ := filepath.Glob(filepath.Join(".github", "workflows", "*.y*ml")); len(files) == 0 {
+		return true, "no workflows here: nothing on GitHub to wait for"
+	}
+	out, err := output(".", "gh", "run", "list", "--commit", commit, "--event", "push", "--limit", "50", "--json", "workflowName,status,conclusion")
+	if err != nil {
+		return false, "GitHub's runs on HEAD could not be read (gh run list)"
+	}
+	var runs []struct{ WorkflowName, Status, Conclusion string }
+	if err := json.Unmarshal([]byte(out), &runs); err != nil {
+		return false, "GitHub's runs on HEAD could not be read: " + err.Error()
+	}
+	if len(runs) == 0 {
+		return false, fmt.Sprintf("GitHub has run no workflow on HEAD (%.7s) yet: push it and wait", commit)
+	}
+	var waiting, failed []string
+	for _, run := range runs {
+		switch {
+		case run.Status != "completed":
+			waiting = append(waiting, run.WorkflowName)
+		case run.Conclusion != "success" && run.Conclusion != "skipped":
+			failed = append(failed, run.WorkflowName+" "+run.Conclusion)
+		}
+	}
+	switch {
+	case len(failed) > 0:
+		return false, "CI failed on HEAD: " + strings.Join(failed, ", ")
+	case len(waiting) > 0:
+		return false, "CI is still running on HEAD: " + strings.Join(waiting, ", ") + " (run release again when it passes)"
+	}
+	return true, fmt.Sprintf("CI passed on HEAD: %d workflow runs", len(runs))
 }
 
 func release(args []string) error {

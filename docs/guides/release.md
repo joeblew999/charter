@@ -13,7 +13,7 @@ mise run release -- vX.Y.Z -dry-run    # every check and the build; changes noth
 mise run release -- vX.Y.Z
 ```
 
-It stops unless the tree is clean, `HEAD` is the default branch on GitHub and the tag is new. Then:
+It stops unless the tree is clean, `HEAD` is the default branch on GitHub, every workflow GitHub ran on that commit passed (on every OS it runs; a repo with no workflows skips this) and the tag is new. Then:
 
 1. `setup` then `check`, as CI runs them.
 2. `spec:diff`: a breaking change to the specs since the last release stops it unless the tag is a major release (in v0, the minor number) ([Repos that use each other](repos.md)).
