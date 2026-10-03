@@ -169,7 +169,9 @@ func TestSpecDiffOpenAPI(t *testing.T) {
 		}, want: "response.owner: anyOf ErrorDetail added", breaking: true},
 		{name: "inside a variant", before: func(d map[string]any) {
 			at(note(d), "properties")["owner"] = map[string]any{"anyOf": []any{map[string]any{"$ref": "#/components/schemas/HelloOutputBody"}}}
-		}, after: func(d map[string]any) { delete(at(d, "components", "schemas", "HelloOutputBody", "properties"), "message") },
+		}, after: func(d map[string]any) {
+			delete(at(d, "components", "schemas", "HelloOutputBody", "properties"), "message")
+		},
 			want: "field response.owner(HelloOutputBody).message removed", breaking: true},
 		{name: "a token no longer needed", after: func(d map[string]any) { delete(at(d, "paths", "/api/notes", "post"), "security") },
 			want: "security loosened: anyone, was bearer[write]"},
