@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"time"
 )
 
 // A project's Fern folder is fern/: fern.config.json, generators.yml and the two generated specs.
@@ -36,8 +38,18 @@ const (
 	wiremock   = "ancestor=wiremock/wiremock:3.9.1"
 )
 
+// dockerWait is how long Docker has to answer: one that has gone to sleep with the Mac can say it is
+// running and answer nothing, and then Fern would wait for it forever.
+var dockerWait = 20 * time.Second
+
 func docker() error {
-	if exec.Command("docker", "info").Run() != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), dockerWait)
+	defer cancel()
+	err := exec.CommandContext(ctx, "docker", "info").Run()
+	switch {
+	case ctx.Err() != nil:
+		return fmt.Errorf("Docker doesn't answer (docker info, %s): restart it (OrbStack: orb stop && orb start; Docker Desktop: quit and open it)", dockerWait)
+	case err != nil:
 		return errors.New("Docker is not running: start it first")
 	}
 	return nil

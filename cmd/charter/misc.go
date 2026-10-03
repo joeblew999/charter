@@ -75,10 +75,10 @@ func doctor([]string) error {
 	} else {
 		bad("no npm packages: mise run setup")
 	}
-	if docker() == nil {
+	if err := docker(); err == nil {
 		ok("docker running (Fern generates in containers)")
 	} else {
-		bad("docker not running: start Docker")
+		bad(err.Error())
 	}
 	tools := []struct{ name, arg, why string }{
 		{"go", "version", "the tool itself, a Go Worker, sdk:check on Go SDKs"},
