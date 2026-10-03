@@ -7,6 +7,37 @@ import (
 	core "github.com/joeblew999/charter/examples/notes-go/sdk/go/core"
 )
 
+// Too Many Requests: more than 100 calls in 60 s by this caller
+type TooManyRequestsError struct {
+	*core.APIError
+	Body *ErrorModel
+}
+
+func (t *TooManyRequestsError) UnmarshalJSON(data []byte) error {
+	var body *ErrorModel
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	t.StatusCode = 429
+	t.Body = body
+	return nil
+}
+
+func (t *TooManyRequestsError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.Body)
+}
+
+func (t *TooManyRequestsError) Unwrap() error {
+	return t.APIError
+}
+
+func (t *TooManyRequestsError) GetBody() *ErrorModel {
+	if t == nil {
+		return nil
+	}
+	return t.Body
+}
+
 // Unauthorized
 type UnauthorizedError struct {
 	*core.APIError

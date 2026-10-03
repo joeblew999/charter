@@ -75,9 +75,25 @@ Put `OIDC_ISSUER` (its discovery document is at `<issuer>/.well-known/openid-con
 | TypeScript | `bearer: { token }` | both as `headers` (fern-api/fern#17775). A client with no credentials for the WebSocket channel passes `auth: false` |
 | CLI | `NOTES_TOKEN` | the flags `--access-client-id`, `--access-client-secret` or the variables, but it sends only one of the two: it cannot pass Access yet |
 
+## Rate limits
+
+A limited operation takes at most `limit` calls per caller in each `period` (10 or 60 s); one more is 429 with `Retry-After`. The caller is who auth let in (service token, subject, email, or the token's secret), or the client's IP (`CF-Connecting-IP`) on a public operation; a call auth refuses is not counted. In the notes examples, creating a note takes 100 a minute.
+
+```go
+ratelimit.Declare(config.OpenAPI, ratelimit.Limit{Binding: "READ_LIMIT", Limit: 600, Period: 60, Scope: "read"}) // per scope; none: only operations' own
+Extensions: ratelimit.On(ratelimit.Limit{Binding: "WRITE_LIMIT", Limit: 100, Period: 60}, nil)                   // in an operation: its own
+routes.UseMiddleware(ratelimit.Middleware(routes, nil))                                                        // after auth.Middleware
+```
+
+In TypeScript (`@charter/ts/ratelimit`): `spec: needs(["write"], limited(writeLimit))`, `rateLimits` in openapiSpec's options for scopes, and `await rateLimit(limitOf(procedure), keyOf(caller, headers), env)` after `authorize` (`examples/notes-ts/src/index.ts`).
+
+- Each limit is a [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) binding of that name. `cloudflare.config.ts` declares one per `x-rate-limit` in `fern/openapi.json`, with its limit and period, so they are written once; it holds each binding's namespace, a number unique in the account.
+- The binding counts per Cloudflare location and is eventually consistent: it stops abuse, it does not account. `cf dev` counts locally. Natively, Go counts in memory.
+- A Worker without the binding lets every call through, and logs it once.
+
 ## Proven
 
-- Locally (`mise run check`): `test/auth-test.mjs` serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in: the Go Worker natively and as TinyGo Wasm under workerd, the TypeScript one under workerd.
+- Locally (`mise run check`): `test/auth-test.mjs` serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After` after the write limit for one caller while another still writes: the Go Worker natively and as TinyGo Wasm under workerd, the TypeScript one under workerd. Rate limits were not tried on Cloudflare.
 - On Cloudflare, 2026-10-03: a project made by `charter new` behind Access, through these tasks. No token: 302. A wrong secret: 302. The machine's token: reads; writing is 403. With the write token: writes; with the read token or a JWT from an untrusted issuer: 403 and 401. The live, SDK (Go and TypeScript) and MCP tests passed through Access. An OIDC issuer was not tried there.
 
 ## Limits

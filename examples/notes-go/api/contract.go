@@ -16,6 +16,7 @@ import (
 	"github.com/joeblew999/charter/go/asyncapi"
 	"github.com/joeblew999/charter/go/auth"
 	"github.com/joeblew999/charter/go/humaworkers"
+	"github.com/joeblew999/charter/go/ratelimit"
 )
 
 // What the specs say about the API as a whole.
@@ -25,6 +26,10 @@ const (
 	Description = "Notes API: Huma contract (Go) -> OpenAPI -> Fern."
 	LiveTitle   = "charter-notes-go live"
 )
+
+// WriteLimit is how often one caller may create notes: the Worker's WRITE_LIMIT binding, which
+// cloudflare.config.ts declares from the spec. Over it: 429.
+var WriteLimit = ratelimit.Limit{Binding: "WRITE_LIMIT", Limit: 100, Period: 60}
 
 // END is what a planned stream end returns: SSE `event: close` with `data: "[end-of-stream]"`,
 // Fern's terminator for watch. Fern matches the terminator as a substring of each event's data, so
@@ -151,7 +156,7 @@ func Routes(env Env) []humaworkers.Route {
 				OperationID: "createNote", Method: http.MethodPost, Path: "/api/notes",
 				Summary: "Create a note", Tags: []string{"notes"},
 				Security:   auth.Needs("write"),
-				Extensions: sdk("notes", "create", nil),
+				Extensions: sdk("notes", "create", ratelimit.On(WriteLimit, nil)),
 			}, env.create)
 		}},
 	}

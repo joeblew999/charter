@@ -18,6 +18,7 @@ import (
 	"github.com/joeblew999/charter/go/follow"
 	"github.com/joeblew999/charter/go/humamcp"
 	"github.com/joeblew999/charter/go/humaworkers"
+	"github.com/joeblew999/charter/go/ratelimit"
 )
 
 // Env is what the platform supplies: bindings on Cloudflare (platform_js.go), memory elsewhere.
@@ -42,11 +43,14 @@ var Trusted = []auth.Trusted{
 	auth.OIDC{},
 }
 
-// Handler serves the contract on env, plus the two specs with the request's origin as their server,
-// plus the contract as MCP tools (/api/mcp: a tool call runs the same operation as the REST route).
+// Handler serves the contract on env, each call allowed (auth) and limited (ratelimit) as its
+// operation says, plus the two specs with the request's origin as their server, plus the contract
+// as MCP tools (/api/mcp: a tool call runs the same operation as the REST route).
 func Handler(env Env) http.Handler {
 	routes := humaworkers.New(config(), Routes(env))
 	routes.UseMiddleware(auth.Middleware(routes, env.Var, Trusted...))
+	// After auth: a limit counts per caller (WriteLimit).
+	routes.UseMiddleware(ratelimit.Middleware(routes, nil))
 	mcp := humamcp.Handler(routes)
 	discovery := auth.Discovery(env.Var)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

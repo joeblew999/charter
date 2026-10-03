@@ -101,7 +101,7 @@ dir = "go"
 run = "go run ../cmd/charter lint -wasm ./... ."
 
 [tasks."go:test"]
-description = "The Go library's tests: humaworkers, transport, hub, follow, humamcp, asyncapi, specfile"
+description = "The Go library's tests: humaworkers, transport, hub, follow, humamcp, asyncapi, specfile, auth, ratelimit"
 dir = "go"
 run = "go test ./..."
 
@@ -128,7 +128,7 @@ dir = "ts"
 run = "go run ../cmd/charter exec tsc"
 
 [tasks."ts:test"]
-description = "The TypeScript library's tests: follow()"
+description = "The TypeScript library's tests: follow(), auth, ratelimit"
 dir = "ts"
 run = "go run ../cmd/charter exec vitest run"
 

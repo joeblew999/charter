@@ -103,6 +103,7 @@ export function expand(declared: Record<string, unknown> | undefined, security: 
 
 /** One secret's value (undefined when unset) and the scopes it grants. */
 export interface Token {
+	secret?: string; // the secret's name, e.g. WRITE_TOKEN: the caller's `token`
 	value: string | undefined;
 	scopes: string[];
 }
@@ -134,11 +135,12 @@ export interface Caller {
 	email?: string; // a person: from Access, or an OIDC token that has it
 	machine?: string; // an Access service token's Client ID
 	subject?: string; // the token's sub
+	token?: string; // a bearer token: the name of the secret that holds it, e.g. WRITE_TOKEN
 	scopes: string[];
 }
 
 /** The caller as a log line or an error message would name it. */
-export const callerName = (c: Caller) => c.email ?? (c.machine ? `service token ${c.machine}` : c.subject ?? "the token");
+export const callerName = (c: Caller) => c.email ?? (c.machine ? `service token ${c.machine}` : c.token ? `the token ${c.token}` : c.subject ?? "the token");
 
 /** The security a procedure's contract declares, or the API's default. */
 export function securityOf(procedure: unknown, defaults?: Security): Security | undefined {
@@ -197,9 +199,9 @@ async function identify(headers: Headers, trusted: Trusted): Promise<Caller[]> {
 		const scopes = typeof claims.scope === "string" ? claims.scope.split(" ").filter(Boolean) : Array.isArray(claims.scp) ? claims.scp.map(String) : [];
 		return [...callers, { scheme: "oidc", email: typeof claims.email === "string" ? claims.email : undefined, subject: claims.sub, scopes }];
 	}
-	const granted = (trusted.tokens ?? []).filter(t => t.value && same(bearer, t.value)).flatMap(t => t.scopes);
-	if (!(trusted.tokens ?? []).some(t => t.value && same(bearer, t.value))) throw new Error("not a token this API knows");
-	return [...callers, { scheme: "bearer", scopes: granted }];
+	const matching = (trusted.tokens ?? []).filter(t => t.value && same(bearer, t.value));
+	if (!matching.length) throw new Error("not a token this API knows");
+	return [...callers, { scheme: "bearer", token: matching[0]!.secret, scopes: matching.flatMap(t => t.scopes) }];
 }
 
 // The keys of each issuer (createRemoteJWKSet keeps them; an unknown kid refetches after its cooldown),

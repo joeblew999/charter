@@ -1,8 +1,10 @@
 // Who may write, by every way in, against a running Worker that trusts a test issuer this script
 // serves on <keys port>: as Cloudflare Access (ACCESS_TEAM_DOMAIN=http://localhost:<keys port>,
 // ACCESS_AUD=test-aud) and as an OpenID Connect issuer (OIDC_ISSUER the same, OIDC_AUDIENCE=
-// https://notes.test). Under workerd this is what proves the Worker verifies a JWT. Never point a
-// deployed Worker at it: the keys are made here, for this run.
+// https://notes.test). Under workerd this is what proves the Worker verifies a JWT. Then the rate
+// limit on creating notes (x-rate-limit in the spec): a caller of its own may write that many times,
+// then gets 429 with Retry-After, while another caller still writes. Never point a deployed Worker
+// at it: the keys are made here, for this run.
 // Usage: node test/auth-test.mjs <origin> <keys port>   (mise run test:native, test:workerd)
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
@@ -47,6 +49,22 @@ try {
   const ok = res.status === 302 && res.headers.get("location") === `${issuer}/.well-known/openid-configuration`;
   console.log(`${ok ? "PASS" : "FAIL"}  the spec's openIdConnectUrl sends a client on to the issuer: ${res.status} ${res.headers.get("location")}`);
   if (!ok) failed++;
+
+  // The rate limit, per caller: each a subject of its own, so the other tests' writes do not count.
+  const { limit, period } = (await (await fetch(`${origin}/api/openapi.json`)).json()).paths["/api/notes"].post["x-rate-limit"];
+  const write = async (sub, n) => fetch(`${origin}/api/notes`, { method: "POST", headers: { "content-type": "application/json", ...(await oidc({ sub, scope: "write" })) }, body: JSON.stringify({ body: `rate limit test ${n}` }) });
+  const sub = `rate-limit-${Date.now()}`, statuses = [];
+  for (let n = 0; n < limit; n++) statuses.push((await write(sub, n)).status);
+  const over = await write(sub, limit), other = await write(`${sub}-other`, 0);
+  const checks = [
+    [`${limit} writes in ${period} s by one caller`, statuses.every(s => s === 200), statuses.filter(s => s !== 200).join(" ")],
+    ["one more is 429, with Retry-After", over.status === 429 && over.headers.get("retry-after") === String(period), `${over.status} ${over.headers.get("retry-after")} ${await over.text()}`],
+    ["another caller still writes", other.status === 200, other.status],
+  ];
+  for (const [name, pass, got] of checks) {
+    console.log(`${pass ? "PASS" : "FAIL"}  ${name}${pass ? "" : `: ${got}`}`);
+    if (!pass) failed++;
+  }
 } finally {
   keys.close();
 }
