@@ -4,8 +4,8 @@ import { DurablePublisher } from "@orpc/cloudflare";
 import { call, implement, withEventMeta } from "@orpc/server";
 import type { z } from "zod";
 import { asyncInfo, contract, END, info, type note } from "./contract.ts";
-import { asyncapiSpec, openapiSpec } from "./specs.ts";
-import { follow, type FollowSource } from "./follow.ts";
+import { asyncapiSpec, openapiSpec } from "@charter/ts/specs";
+import { follow, type FollowSource } from "@charter/ts/follow";
 export { NotesHub } from "./hub.ts";
 
 type Note = z.infer<typeof note>;

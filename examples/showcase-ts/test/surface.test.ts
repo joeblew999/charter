@@ -14,7 +14,7 @@ const server = "https://charter-showcase-ts-api.gedw99.workers.dev/api/mock";
 const json = (url: URL) => JSON.parse(readFileSync(url, "utf8"));
 
 const expected = json(new URL("handwritten-surface.json", import.meta.url));
-// oRPC writes 3.1.1 (asked for in ../notes-ts/src/specs.ts); the hand-written file said 3.1.0.
+// oRPC writes 3.1.1 (asked for in @charter/ts/specs, ../../ts/src/specs.ts); the hand-written file said 3.1.0.
 expected.openapi.version = "3.1.1";
 // The WebSocket server is the deployed harness, as in openapi.json; it was a placeholder (api.example.com).
 expected.asyncapi.servers.production = { host: "charter-showcase-ts-api.gedw99.workers.dev", pathname: "/api/mock", protocol: "wss" };

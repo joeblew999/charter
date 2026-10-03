@@ -99,6 +99,42 @@ func TestTheNotesExamplesHaveTheSameSurface(t *testing.T) {
 	}
 }
 
+// Each notes example keeps its own migrations/, as every project does, but both servers serve the
+// same API from the same table: the two folders hold the same files, byte for byte.
+func TestTheNotesExamplesHaveTheSameSchema(t *testing.T) {
+	files := func(dir string) map[string]string {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := map[string]string{}
+		for _, entry := range entries {
+			raw, err := os.ReadFile(dir + "/" + entry.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+			out[entry.Name()] = string(raw)
+		}
+		return out
+	}
+	goFiles, tsFiles := files("notes-go/migrations"), files("notes-ts/migrations")
+	if len(goFiles) == 0 {
+		t.Fatal("notes-go/migrations: no files")
+	}
+	for name, content := range goFiles {
+		if other, ok := tsFiles[name]; !ok {
+			t.Errorf("migrations/%s is in notes-go only", name)
+		} else if other != content {
+			t.Errorf("migrations/%s differs between notes-go and notes-ts", name)
+		}
+	}
+	for name := range tsFiles {
+		if _, ok := goFiles[name]; !ok {
+			t.Errorf("migrations/%s is in notes-ts only", name)
+		}
+	}
+}
+
 func at(doc any, path ...string) any {
 	for _, key := range path {
 		m, ok := doc.(map[string]any)

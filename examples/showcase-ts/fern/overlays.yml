@@ -1,6 +1,6 @@
 # OpenAPI Overlay: change how the SDK looks without editing openapi.json (e.g. a spec you don't own).
 # Kept to show the feature on a generated spec. When the contract is yours, say it there instead, as
-# ../notes-ts/src/contract.ts does (x-fern-sdk-group-name and x-fern-sdk-method-name in `spec`).
+# a contract does in openapi({ spec }) (x-fern-sdk-group-name and x-fern-sdk-method-name).
 overlay: 1.0.0
 info:
   title: Showcase SDK naming

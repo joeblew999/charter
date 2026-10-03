@@ -1,14 +1,14 @@
 import { asyncIteratorObject, oc } from "@orpc/contract";
 import { openapi, type OpenAPIV3_2 } from "@orpc/openapi";
 import { z } from "zod";
-import { asyncapi } from "../../notes-ts/src/asyncapi.ts";
+import { asyncapi } from "@charter/ts/asyncapi";
 
 // The showcase API, contract first: one API with every Fern feature we use (docs/guides/sdks.md). The harness
 // Worker implements it (src/showcase.ts, under /api/mock) and both specs are generated from it
 // (spec.ts -> fern/{openapi,asyncapi}.json). Each feature is switched on here:
 // - on an operation, by `openapi({ operationId, tags, spec })`: the SDK names and Fern's x-fern-*;
 // - for the whole document, by `document` below: oRPC's contract has no place for those;
-// - the WebSocket by `asyncapi({...})` (../notes-ts/src/asyncapi.ts), and the webhooks by `webhooks` below.
+// - the WebSocket by `asyncapi({...})` (@charter/ts/asyncapi, in ../../ts), and the webhooks by `webhooks` below.
 // A Go server of the same API (../showcase-go/api, ../showcase-go/fern) compares its spec with
 // these names: operation ids, paths, parameters, x-fern-* values, the channel and its messages.
 

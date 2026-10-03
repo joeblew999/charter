@@ -1,7 +1,7 @@
 # charter: contract-first APIs on Cloudflare Workers, in Go. The tool (cmd/charter), the Go library
-# (go/), and four example projects (examples/). This file has the tasks of the repo as a whole. Each
-# example is a complete project with a mise.toml of its own and the same task names (setup, check,
-# build, spec, deploy, sdk:gen ...): cd into it and run them there.
+# (go/), the TypeScript library (ts/), and four example projects (examples/). This file has the
+# tasks of the repo as a whole. Each example is a complete project with a mise.toml of its own and
+# the same task names (setup, check, build, spec, deploy, sdk:gen ...): cd into it and run them there.
 #   mise install && mise run setup     # tools, then every example's npm packages
 #   mise run check                     # every local check (needs Docker, no Cloudflare account)
 #   mise tasks                         # all of them
@@ -10,6 +10,8 @@
 
 [tools]
 go = "1.27.1"
+# The TypeScript library (ts/): its checks, mise run ts:check.
+node = "26.10.0"
 jq = "1.8.2"
 gh = "2.101.0"
 # Builds and publishes the tool (.goreleaser.yaml): mise run charter:release.
@@ -24,8 +26,8 @@ description = "Install every example's npm packages (its own mise run setup)"
 run = "go run ./cmd/charter each setup"
 
 [tasks.check]
-description = "Every LOCAL check (no Cloudflare account; needs Docker): the tool, the library, then each example's own check"
-depends = ["charter:check", "go:check", "examples:check"]
+description = "Every LOCAL check (no Cloudflare account; needs Docker): the tool, the Go library, the TypeScript library, then each example's own check"
+depends = ["charter:check", "go:check", "ts:check", "examples:check"]
 
 [tasks."examples:check"]
 description = "LOCAL: mise run check in every example, one after the other"
@@ -80,6 +82,27 @@ run = "go test ./..."
 [tasks."go:check"]
 description = "LOCAL: the Go library's lint and tests"
 depends = ["go:lint", "go:test"]
+
+# ---- ts: the TypeScript library (ts/), @charter/ts, a local package of the TypeScript examples --
+
+[tasks."ts:setup"]
+description = "Install the TypeScript library's npm packages (each TypeScript example's setup does it too)"
+dir = "ts"
+run = "npm ci --no-fund --no-audit"
+
+[tasks."ts:lint"]
+description = "Typecheck the TypeScript library and its tests"
+dir = "ts"
+run = "go run ../cmd/charter exec tsc"
+
+[tasks."ts:test"]
+description = "The TypeScript library's tests: follow()"
+dir = "ts"
+run = "go run ../cmd/charter exec vitest run"
+
+[tasks."ts:check"]
+description = "LOCAL: the TypeScript library's typecheck and tests"
+depends = ["ts:lint", "ts:test"]
 
 # ---- docs: the docs site in docs/ ----------------------------------------------------------------
 

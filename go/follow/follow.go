@@ -1,5 +1,5 @@
 // Package follow is the one way a client receives a live, ordered, gap-free feed
-// (docs/guides/streaming.md, rule 3): the Go port of api/ts/src/follow.ts, with the same tests. Both transports
+// (docs/guides/streaming.md, rule 3): the Go port of ts/src/follow.ts, with the same tests. Both transports
 // (SSE and the WebSocket) are thin adapters over Follow.
 //
 // The log (D1) is the source of truth and the item id is the only position. The live source (the hub

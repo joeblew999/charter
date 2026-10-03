@@ -1,0 +1,31 @@
+{
+	"name": "@charter/ts",
+	"private": true,
+	"type": "module",
+	"description": "charter's TypeScript library, the counterpart of go/: the AsyncAPI generator for oRPC, both specs from one contract, the command behind a spec.ts, and follow(), the gap-free feed. TypeScript sources, imported as they are: Node strips the types, Vite bundles them. A project takes it as a local package (\"@charter/ts\": \"file:../../ts\") and brings oRPC and Zod itself (peerDependencies); devDependencies are what the library's own checks use.",
+	"exports": {
+		"./asyncapi": "./src/asyncapi.ts",
+		"./specs": "./src/specs.ts",
+		"./spec-files": "./src/spec-files.ts",
+		"./follow": "./src/follow.ts"
+	},
+	"peerDependencies": {
+		"@orpc/contract": "2.0.0-beta.40",
+		"@orpc/json-schema": "2.0.0-beta.40",
+		"@orpc/openapi": "2.0.0-beta.40",
+		"@orpc/server": "2.0.0-beta.40",
+		"@orpc/zod": "2.0.0-beta.40",
+		"zod": "^4.6.5"
+	},
+	"devDependencies": {
+		"@orpc/contract": "2.0.0-beta.40",
+		"@orpc/json-schema": "2.0.0-beta.40",
+		"@orpc/openapi": "2.0.0-beta.40",
+		"@orpc/server": "2.0.0-beta.40",
+		"@orpc/zod": "2.0.0-beta.40",
+		"@types/node": "^22.12.0",
+		"typescript": "^7.0.2",
+		"vitest": "^4.1.11",
+		"zod": "^4.6.5"
+	}
+}

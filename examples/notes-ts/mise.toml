@@ -29,12 +29,12 @@ API_URL = "{{ get_env(name='API_URL', default='https://charter-notes-ts.gedw99.w
 # ---- the project ---------------------------------------------------------------------------------
 
 [tasks.setup]
-description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import"
-run = "npm ci --no-fund --no-audit"
+description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import; and those of the TypeScript library (../../ts), which src/ imports as @charter/ts"
+run = "npm ci --no-fund --no-audit && npm ci --no-fund --no-audit --prefix ../../ts"
 
 [tasks.check]
-description = "Every LOCAL check (no Cloudflare account): typecheck, unit tests, and the committed specs match the contract"
-depends = ["lint", "test", "spec:check"]
+description = "Every LOCAL check (no Cloudflare account): typecheck, and the committed specs match the contract. (The unit tests of follow() are the library's: mise run ts:check at the repo root)"
+depends = ["lint", "spec:check"]
 
 [tasks.doctor]
 description = "Check what the tasks need: npm packages, Docker, Go, Rust"
@@ -61,10 +61,6 @@ run = 'node spec.ts --check fern/openapi.json fern/asyncapi.json {{env.API_URL}}
 [tasks.lint]
 description = "Typecheck the Worker"
 run = "go run ../../cmd/charter exec -quiet cf workers types && go run ../../cmd/charter exec tsc"
-
-[tasks.test]
-description = "Unit tests (follow(), the one real-time feed)"
-run = "go run ../../cmd/charter exec vitest run"
 
 # ---- Cloudflare: deploy it, test and measure what is deployed ------------------------------------
 

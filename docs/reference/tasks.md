@@ -76,6 +76,8 @@ What `charter new` makes, and `examples/notes-go/`.
 | `examples:check` | `check` in every example |
 | `charter:check` | The tool: gofmt, vet, tests, the generated workflows and docs config, the docs lint |
 | `go:check` | `go:lint` and `go:test`: the library, for the host and for Wasm |
+| `ts:setup` | Installs the TypeScript library's packages |
+| `ts:check` | The TypeScript library: typecheck (`ts:lint`) and tests (`ts:test`) |
 | `compare` | REMOTE. The same bench against the TypeScript and the Go notes Workers |
 | `charter:release` | GoReleaser on the tool. REMOTE on a version tag; elsewhere a snapshot |
 | `release:tags` | REMOTE on a version tag: tags `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` |

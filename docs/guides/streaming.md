@@ -20,7 +20,7 @@ curl -N 'localhost:5174/api/notes/watch?after=0&seconds=5'   # every note after 
 
 1. **One log, one cursor.** D1 is the source of truth; the item's id is the only position (the list's `cursor`, `after`, the SSE `id:`, each WebSocket message's `id`).
 2. **The hub is disposable.** A Durable Object that only wakes open streams; it stores nothing and may restart at any time.
-3. **One feed.** `follow.Follow` (Go) or `follow()` (`examples/notes-ts/src/follow.ts`) subscribes to the hub, catches up from the log, then goes live; after a hub drop it resubscribes and catches up, and without a wake-up it reads the log every 30 seconds.
+3. **One feed.** `follow.Follow` (Go) or `follow()` (`ts/src/follow.ts`) subscribes to the hub, catches up from the log, then goes live; after a hub drop it resubscribes and catches up, and without a wake-up it reads the log every 30 seconds.
 4. **Transports are thin adapters over the feed,** declared in the contract: SSE in OpenAPI, the WebSocket in AsyncAPI.
 5. **Streams end, and never fail silently.** SSE ends after `seconds` with `event: close` and `[end-of-stream]`; if the feed gives up, SSE ends without it and the WebSocket closes with 1011.
 
