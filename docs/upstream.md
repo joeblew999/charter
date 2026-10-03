@@ -28,6 +28,6 @@ parent: How to help
 | Huma, not filed | A `RawBody` beside a `Body` gives Fern's Go SDK an `io.Reader` | `jsonOnly` in `go/humaworkers/humaworkers.go` | Delete `jsonOnly` |
 | Fern, not filed | An AsyncAPI server's `pathname` is ignored | Tests pass `baseUrl` | |
 | `cf dev`, not filed | A refused WebSocket upgrade is dropped | The showcase test accepts either | |
-| Fern, not filed | With `endpoint-security`, the TypeScript SDK's WebSocket client uses `_metadata` it never declares, and the SDK is not written | `auth: any` in the notes examples' `fern/generators.yml` | Route credentials per operation |
-| Fern, not filed | An `auth` setting in `fern/generators.yml` marks every AsyncAPI channel as needing credentials | A TypeScript client with none passes `auth: false` (`test/sdk-live-test.mjs`, `test/soak.mjs`) | Drop `auth: false` |
-| Fern, not filed | The CLI sends only the first credential it has (`AuthStrategy::Any`) | None: the CLI cannot pass Access | |
+| [fern#17997](https://github.com/fern-api/fern/issues/17997) | With `endpoint-security`, the TypeScript SDK's WebSocket client uses `_metadata` it never declares, and the SDK is not written | `auth: any` in the notes examples' `fern/generators.yml` | Route credentials per operation |
+| [fern#17998](https://github.com/fern-api/fern/issues/17998) | An `auth` setting in `fern/generators.yml` marks every AsyncAPI channel as needing credentials | A TypeScript client with none passes `auth: false` (`test/sdk-live-test.mjs`, `test/soak.mjs`) | Drop `auth: false` |
+| [fern#17996](https://github.com/fern-api/fern/issues/17996) | The CLI sends only the first credential it has (`AuthStrategy::Any`) | None: the CLI cannot pass Access | |
