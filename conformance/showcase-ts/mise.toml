@@ -29,8 +29,8 @@ API_MOCK_URL = "{{ get_env(name='API_MOCK_URL', default='https://charter-showcas
 # ---- the project ---------------------------------------------------------------------------------
 
 [tasks.setup]
-description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import; and those of the TypeScript library (../../ts), which src/ imports as @charter/ts"
-run = "npm ci --no-fund --no-audit && npm ci --no-fund --no-audit --prefix ../../ts"
+description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import; and build the TypeScript library (../../ts), which src/ and spec.ts import as @charter/ts (a project outside this repo installs it from a GitHub release instead)"
+run = "npm ci --no-fund --no-audit --prefix ../../ts && npm run build --prefix ../../ts && npm ci --no-fund --no-audit"
 
 [tasks.check]
 description = "Every LOCAL check (no Cloudflare account; needs Docker): the committed specs match the contract, Fern accepts them, the tests in test/ pass, the Worker typechecks, and the SDK works inside workerd"

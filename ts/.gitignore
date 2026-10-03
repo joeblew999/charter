@@ -1,2 +1,4 @@
 # npm packages
 node_modules/
+# What npm run build writes (tsconfig.build.json)
+dist/

@@ -2,12 +2,31 @@
 	"name": "@charter/ts",
 	"private": true,
 	"type": "module",
-	"description": "charter's TypeScript library, the counterpart of go/: the AsyncAPI generator for oRPC, both specs from one contract, the command behind a spec.ts, and follow(), the gap-free feed. TypeScript sources, imported as they are: Node strips the types, Vite bundles them. A project takes it as a local package (\"@charter/ts\": \"file:../../ts\") and brings oRPC and Zod itself (peerDependencies); devDependencies are what the library's own checks use.",
+	"version": "0.0.0",
+	"description": "charter's TypeScript library, the counterpart of go/: the AsyncAPI generator for oRPC, both specs from one contract, the command behind a spec.ts, and follow(), the gap-free feed. It ships compiled (dist/, written by npm run build: Node won't strip the types of a package in node_modules). A project brings oRPC and Zod itself (peerDependencies) and takes the library as the package attached to each GitHub release (mise run ts:dist writes it; the version is the release's), or in this repo as \"file:../../ts\"; devDependencies are what the library's own build and checks use.",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json"
+	},
 	"exports": {
-		"./asyncapi": "./src/asyncapi.ts",
-		"./specs": "./src/specs.ts",
-		"./spec-files": "./src/spec-files.ts",
-		"./follow": "./src/follow.ts"
+		"./asyncapi": {
+			"types": "./dist/asyncapi.d.ts",
+			"default": "./dist/asyncapi.js"
+		},
+		"./specs": {
+			"types": "./dist/specs.d.ts",
+			"default": "./dist/specs.js"
+		},
+		"./spec-files": {
+			"types": "./dist/spec-files.d.ts",
+			"default": "./dist/spec-files.js"
+		},
+		"./follow": {
+			"types": "./dist/follow.d.ts",
+			"default": "./dist/follow.js"
+		}
 	},
 	"peerDependencies": {
 		"@orpc/contract": "2.0.0-beta.40",
