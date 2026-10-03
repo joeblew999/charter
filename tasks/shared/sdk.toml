@@ -2,6 +2,11 @@
 # and its tasks run in the project (dir), calling the tool as CHARTER_TOOL (its mise.toml sets it).
 # The SDKs, the CLI and the API docs Fern generates from the specs in fern/ (its settings: fern/generators.yml).
 
+["spec:diff"]
+description = "Compare fern/openapi.json and fern/asyncapi.json with the previous release's (git tags) and fail on a breaking change, unless -tag is a major release: mise run spec:diff [-- -from vX.Y.Z -catalog catalog.json]"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} spec-diff"
+
 ["sdk:list"]
 description = "The SDK groups fern/generators.yml defines"
 dir = "{{config_root}}"

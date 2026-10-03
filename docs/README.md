@@ -43,6 +43,7 @@ Never edit these: change the source and run the task.
 | `sdk/go/` (committed), `sdk/out/` | `mise run sdk:publish`, `mise run sdk:gen` |
 | `build/`, `dist/`, `ts/dist/` | `mise run build`, `mise run sdk:dist`, `mise run ts:build` |
 | `.github/` | `mise run workflows` |
+| `renovate.json` | `mise run repo` |
 | `docs/_config.yml`, `docs/writing.md`, `docs/llms.txt`, `docs/_sass/` | `mise run docs:setup` |
 | A page that `_generated.toml` in `docs/` lists (this repo has none) | `mise run docs:setup`, from its command ([Generated pages](guides/deploy.md#generated-pages)) |
 
@@ -51,7 +52,7 @@ Never edit these: change the source and run the task.
 | Section | Pages |
 |---|---|
 | Start | [Getting started](getting-started.md) |
-| [Guides](guides.md) | [Your API](guides/replace-the-example.md) (the contract, MCP, TypeScript), [Streaming](guides/streaming.md), [SDKs](guides/sdks.md) (Fern features, languages, releases), [Deploy and CI](guides/deploy.md), [Performance](guides/performance.md) |
+| [Guides](guides.md) | [Your API](guides/replace-the-example.md) (the contract, MCP, TypeScript), [Streaming](guides/streaming.md), [SDKs](guides/sdks.md) (Fern features, languages, releases), [Deploy and CI](guides/deploy.md), [Performance](guides/performance.md), [Repos that use each other](guides/repos.md) (who pins what, breaking changes, Renovate) |
 | [Reference](reference.md) | [Tasks](reference/tasks.md), [The charter command](reference/charter.md), [Go packages](reference/packages.md) |
 | [How to help](contributing.md) | [Rules](rules.md), [Benchmarks](benchmarks.md), [Upstream issues](upstream.md), [Writing docs](writing.md) |
 

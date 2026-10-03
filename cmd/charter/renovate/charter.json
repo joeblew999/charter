@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "charter's Renovate preset: a repo's renovate.json (written by charter repo) extends it at the release it pins. Not the workflows: charter writes those. A new release of a pinned repo opens a pull request; minor and patch ones merge themselves once its checks pass. https://joeblew999.github.io/charter/guides/repos.html",
+  "enabledManagers": ["mise", "gomod", "npm", "custom.regex"],
+  "postUpdateOptions": ["gomodTidy"],
+  "platformAutomerge": false,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Task folders a mise.toml includes from GitHub: [task_config] includes = [\"git::https://github.com/<owner>/<repo>.git//<folder>?ref=vX.Y.Z\"]",
+      "managerFilePatterns": ["/(^|/)\\.?mise\\.toml$/"],
+      "matchStrings": ["git::https://github\\.com/(?<depName>[^/\"]+/[^/\"]+?)\\.git//[^?\"]+\\?ref=(?<currentValue>[^\"]+)"],
+      "datasourceTemplate": "github-tags"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Minor and patch updates merge themselves when the checks pass; a major one waits for a person",
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "automerge": true
+    },
+    {
+      "description": "charter's tool, task folders and Go library move together: one pull request",
+      "matchPackageNames": ["/(^|[:\\/])joeblew999\\/charter($|\\/)/"],
+      "groupName": "charter"
+    }
+  ]
+}

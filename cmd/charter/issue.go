@@ -11,18 +11,18 @@ import (
 // fill in, and the gh command that files it with the form's labels.
 
 func init() {
-	commands["issue"] = command{"<bug|feature|upstream>", "print an issue body with the headings of that issue form, for gh issue create --body-file", issue}
+	commands["issue"] = command{"<bug|feature|upstream|plan>", "print an issue body with the headings of that issue form, for gh issue create --body-file", issue}
 	commands["labels"] = command{"", "REMOTE: create or update this repo's GitHub labels from labels.tsv, and remove GitHub's default ones that are unused", labels}
 	anywhere["issue"], anywhere["labels"] = true, true
 }
 
 func issue(args []string) error {
 	if len(args) != 1 {
-		return errors.New("issue needs the kind: bug, feature or upstream")
+		return errors.New("issue needs the kind: bug, feature, upstream or plan")
 	}
 	form, err := collaborationFiles.ReadFile("github/ISSUE_TEMPLATE/" + args[0] + ".yml")
 	if err != nil {
-		return errors.New("no such issue form: bug, feature or upstream")
+		return errors.New("no such issue form: bug, feature, upstream or plan")
 	}
 	title, formLabels := "", ""
 	var body []string

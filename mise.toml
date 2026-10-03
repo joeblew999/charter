@@ -65,6 +65,10 @@ run = "go run ./cmd/charter repo"
 description = "REMOTE, read-only: fail if the repo differs from charter.toml and the tool's templates"
 run = "go run ./cmd/charter repo -check"
 
+[tasks.catalog]
+description = "REMOTE, read-only: the owner's charter repos, what each publishes, and the repos that pin it, as Markdown (-- -json for JSON, -- -page for a docs page)"
+run = "go run ./cmd/charter catalog"
+
 [tasks.workflows]
 description = "Write .github/workflows/ from the templates in cmd/charter/workflows (edit those, never the copies)"
 run = "go run ./cmd/charter workflows"

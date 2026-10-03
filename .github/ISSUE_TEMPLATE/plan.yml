@@ -1,0 +1,43 @@
+# Written by `charter workflows` from its template (in the charter tool): change the template, not this file.
+# Each field's label is a heading in the issue body; `charter issue plan` prints the same headings.
+name: Plan
+description: A step of the plan, for the people who work on this repository. Plans are issues, never pages in docs/.
+title: "[plan] "
+labels: ["plan", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One outcome per issue, small enough to finish in a pull request or a few. Link the issues it
+        builds on and those it closes. **Agents:** `charter issue plan > body.md`, then
+        `gh issue create --body-file body.md`.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What is true when this is done, in a sentence or two.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      description: A checklist, in order; each step something a pull request does.
+      value: |
+        - [ ] 
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: What you would run, and what it should print or do.
+    validations:
+      required: true
+  - type: textarea
+    id: related
+    attributes:
+      label: Related
+      description: The issues this builds on, closes or waits for (#12, owner/repo#34).
+    validations:
+      required: false
