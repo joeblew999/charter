@@ -10,6 +10,8 @@ run = "npm ci --no-fund --no-audit"
 ["run"]
 description = "The API natively on API_PORT: no Cloudflare, an in-memory store"
 dir = "{{config_root}}"
+# Throwaway tokens: a project with WORKER_SECRETS READ_TOKEN WRITE_TOKEN (the notes example) takes them.
+env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
 run = "{{env.CHARTER_TOOL}} exec -env PORT={{env.API_PORT}} go run ."
 
 ["build"]
@@ -20,6 +22,8 @@ run = "{{env.CHARTER_TOOL}} wasm-build"
 ["dev"]
 description = "The API under workerd on API_PORT (cf dev). First time: mise run migrate:local. After a Go change: mise run build"
 dir = "{{config_root}}"
+# Throwaway tokens: a project with WORKER_SECRETS READ_TOKEN WRITE_TOKEN (the notes example) takes them.
+env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
 depends = ["build"]
 run = "{{env.CHARTER_TOOL}} exec -env PORT={{env.API_PORT}} cf dev"
 

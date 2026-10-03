@@ -37,10 +37,15 @@ import (
 
     notes "github.com/joeblew999/charter/examples/notes-go/sdk/go"
     client "github.com/joeblew999/charter/examples/notes-go/sdk/go/client"
+    option "github.com/joeblew999/charter/examples/notes-go/sdk/go/option"
 )
 
 func do() {
-    client := client.NewClient()
+    client := client.NewClient(
+        option.WithToken(
+            "<token>",
+        ),
+    )
     request := &notes.CreateInputBody{
         Body: "Buy milk",
     }
@@ -158,6 +163,7 @@ specified on the client so that they're applied on every request, or for an indi
 ```go
 // Specify default options applied on every request.
 client := client.NewClient(
+    option.WithToken("<YOUR_API_KEY>"),
     option.WithHTTPClient(
         &http.Client{
             Timeout: 5 * time.Second,
@@ -168,7 +174,7 @@ client := client.NewClient(
 // Specify options for an individual request.
 response, err := client.Notes.Create(
     ...,
-    option.WithMaxAttempts(1),
+    option.WithToken("<YOUR_API_KEY>"),
 )
 ```
 

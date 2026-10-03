@@ -1,11 +1,12 @@
 import { env } from "cloudflare:workers";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { DurablePublisher } from "@orpc/cloudflare";
-import { call, implement, withEventMeta } from "@orpc/server";
+import { call, implement, ORPCError, withEventMeta } from "@orpc/server";
 import type { z } from "zod";
 import { asyncInfo, contract, END, info, type note } from "./contract.ts";
 import { asyncapiSpec, openapiSpec } from "@charter/ts/specs";
 import { follow, type FollowSource } from "@charter/ts/follow";
+import { authorize, scheme, securityOf } from "@charter/ts/auth";
 export { NotesHub } from "./hub.ts";
 
 type Note = z.infer<typeof note>;
@@ -25,8 +26,23 @@ const notes: FollowSource<Note> = {
 const followNotes = (after: string | undefined, signal: AbortSignal | undefined) =>
 	follow(notes, { after: after === undefined ? undefined : Number(after), signal, onBroken: error => console.warn("follow: hub subscription broken, resubscribing", String(error)) });
 
-// The contract (src/contract.ts) implemented on D1, served by oRPC's OpenAPIHandler as plain REST.
-const api = implement(contract);
+// Who may do what (the contract says what each operation needs): the Worker's secrets, each with its
+// scopes. Writing needs write; READ_TOKEN may not (reads are public). An unset secret matches nothing.
+const tokens = () => [
+	{ value: env.WRITE_TOKEN, scopes: ["read", "write"] },
+	{ value: env.READ_TOKEN, scopes: ["read"] },
+];
+
+// The contract (src/contract.ts) implemented on D1, served by oRPC's OpenAPIHandler as plain REST,
+// each call allowed by the token in its Authorization header (401 without one it knows, 403 without
+// the scope).
+const api = implement(contract)
+	.$context<{ authorization?: string | null }>()
+	.use(({ context, procedure, next }) => {
+		const denied = authorize(context.authorization, securityOf(procedure), tokens());
+		if (denied) throw new ORPCError(denied.status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", { message: denied.message });
+		return next();
+	});
 
 export const router = api.router({
 	hello: api.hello.handler(() => ({ message: `Hello from ${env.APP_NAME}` })),
@@ -82,7 +98,7 @@ async function live(request: Request): Promise<Response> {
 	const closed = new AbortController();
 	let feed: AsyncIterable<Note>;
 	try {
-		feed = await call(router.notes.live, Object.fromEntries(new URL(request.url).searchParams), { signal: closed.signal });
+		feed = await call(router.notes.live, Object.fromEntries(new URL(request.url).searchParams), { signal: closed.signal, context: {} });
 	} catch (error) {
 		return new Response(`bad request: ${(error as Error).message}`, { status: 400 });
 	}
@@ -106,10 +122,10 @@ export default {
 	async fetch(request) {
 		const url = new URL(request.url);
 		// The specs, generated from the same router as fern/{openapi,asyncapi}.json.
-		if (url.pathname === "/api/openapi.json") return Response.json(await openapiSpec(router, { info, server: url.origin }));
+		if (url.pathname === "/api/openapi.json") return Response.json(await openapiSpec(router, { info, server: url.origin, base: scheme() }));
 		if (url.pathname === "/api/asyncapi.json") return Response.json(await asyncapiSpec(router, { info: asyncInfo, server: url.origin }));
 		if (url.pathname === "/api/notes/live") return live(request);
-		const { matched, response } = await handler.handle(request, { context: {} });
+		const { matched, response } = await handler.handle(request, { context: { authorization: request.headers.get("authorization") } });
 		return matched ? response : new Response("not found", { status: 404 });
 	},
 } satisfies ExportedHandler;

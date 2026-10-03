@@ -17,6 +17,7 @@ The packages of `github.com/joeblew999/charter/go`. The rest is in the doc comme
 | `follow` | The gap-free feed over a log and a hub ([Streaming](../guides/streaming.md)) | `follow.Follow(ctx, source, follow.Options{After: &after}, emit)` |
 | `humamcp` | The API's operations as MCP tools | `humamcp.Handler(api)`, `humamcp.Expose(op, false)` |
 | `asyncapi` | AsyncAPI 3.0.0 from Huma operations: WebSocket channels | `asyncapi.Operation(op, asyncapi.Channel{...})`, `asyncapi.SendOperation` |
+| `auth` | Bearer tokens with scopes: declared in the contract, enforced by one middleware (401, 403) | `auth.Scheme(config.OpenAPI)`, `Security: auth.Needs("write")`, `api.UseMiddleware(auth.Middleware(api, env.Var, tokens...))` |
 | `specfile` | The body of a project's `./cmd/spec` | `specfile.Main(api.OpenAPI, api.AsyncAPI)` |
 
 The Worker glue, in `go/worker/`, written into `build/` by the build:

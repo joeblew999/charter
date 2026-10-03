@@ -13,7 +13,7 @@ dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} migrate-local"
 
 ["cloudflare:secrets"]
-description = "REMOTE, once per repo: copy CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from fnox into the repo's GitHub secrets, for the deploy workflow"
+description = "REMOTE, once per repo: copy CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and the Worker's secrets (WORKER_SECRETS) from fnox into the repo's GitHub secrets, for the deploy workflow"
 dir = "{{config_root}}"
 run = "fnox exec -- {{env.CHARTER_TOOL}} github-secrets CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"
 

@@ -25,7 +25,7 @@ Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go
 | A project | a folder with `mise.toml` beside `fern/` | One API. `charter new` makes one |
 | The contract | `api/contract.go` (Go), `src/contract.ts` (TypeScript) | The source |
 | The library | `go/` | What a Go project imports ([Go packages](reference/packages.md)) |
-| The TypeScript library | `ts/` | `@charter/ts`: the AsyncAPI generator for oRPC, both specs from one contract, `follow()`. The TypeScript examples take it as a local package; elsewhere it is installed from a release |
+| The TypeScript library | `ts/` | `@charter/ts`: the AsyncAPI generator for oRPC, both specs from one contract, `follow()`, bearer tokens with scopes (`auth`). The TypeScript examples take it as a local package; elsewhere it is installed from a release |
 | The Worker glue | `go/worker/` | The JavaScript the library needs; the build copies it into `build/` |
 | The shared tasks | `tasks/shared/`, `tasks/go/`, `tasks/ts/` | The tasks every project includes, at the release it pins; its `mise.toml` holds only its own |
 | The tool | `cmd/charter/` | The command behind every task ([The charter command](reference/charter.md)) |

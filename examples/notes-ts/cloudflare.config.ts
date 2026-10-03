@@ -23,6 +23,9 @@ export default defineConfig({
 			ASSETS: bindings.assets(),
 			DB: bindings.d1(),
 			HUB: bindings.durableObject({ worker: "charter-notes-ts", exportName: "NotesHub" }),
+			// The tokens (src/index.ts): set by every mise run deploy, from the environment under cf dev.
+			READ_TOKEN: bindings.secret(),
+			WRITE_TOKEN: bindings.secret(),
 		},
 	},
 });

@@ -17,6 +17,9 @@ gh = "2.101.0"
 fnox = "1.35.2"
 
 [env]
+# The Worker's secrets: every mise run deploy sets them, from fnox (fnox.toml) or, in CI, from the
+# repo's GitHub secrets. The local runs and tests use throwaway ones.
+WORKER_SECRETS = "READ_TOKEN WRITE_TOKEN"
 # How the tasks run the charter tool.
 CHARTER_TOOL = "go run ../../cmd/charter"
 # The local dev port.
@@ -47,15 +50,18 @@ run = "{{env.CHARTER_TOOL}} lint -wasm . *.go api cmd test"
 
 [tasks."test:native"]
 description = "The real-time live test and the MCP client test against the native build"
+env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
 run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -env PORT={port} -start "go run ." -run "node test/live-test.mjs http://localhost:{port}" -run "node test/mcp-test.mjs http://localhost:{port}"'
 
 [tasks."test:workerd"]
 description = "The same against the TinyGo Wasm under workerd (go test can't see TinyGo's gaps)"
+env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
 depends = ["build"]
 run = '{{env.CHARTER_TOOL}} with-server -url http://localhost:{port}/api/hello -env PORT={port} -start "cf dev" -run "{{env.CHARTER_TOOL}} migrate-local -port {port}" -run "node test/live-test.mjs http://localhost:{port}" -run "node test/mcp-test.mjs http://localhost:{port}"'
 
 [tasks.mcp-test]
 description = "The MCP client test (/api/mcp, official TypeScript client) against a running mise run run or mise run dev; writes test notes"
+env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
 run = 'node test/mcp-test.mjs http://localhost:{{env.API_PORT}}'
 
 # ---- Cloudflare: deploy it, test and measure what is deployed ------------------------------------
@@ -63,17 +69,17 @@ run = 'node test/mcp-test.mjs http://localhost:{{env.API_PORT}}'
 [tasks.deploy]
 description = "REMOTE: build and deploy the Worker, then apply pending D1 migrations"
 depends = ["build"]
-run = "{{env.CHARTER_TOOL}} exec cf deploy && {{env.CHARTER_TOOL}} migrate"
+run = "{{env.CHARTER_TOOL}} exec -secrets {{env.CHARTER_TOOL}} deploy"
 
 [tasks.live-test]
 description = "REMOTE, writes test notes: SSE + WebSocket, raw and through the generated TypeScript SDK, then MCP"
 depends = ["sdk:ready typescript-dist"]
-run = 'node test/live-test.mjs {{env.API_URL}} && node test/sdk-live-test.mjs {{env.API_URL}} && node test/mcp-test.mjs {{env.API_URL}}'
+run = '{{env.CHARTER_TOOL}} exec -secrets node test/live-test.mjs {{env.API_URL}} && {{env.CHARTER_TOOL}} exec -secrets node test/sdk-live-test.mjs {{env.API_URL}} && {{env.CHARTER_TOOL}} exec -secrets node test/mcp-test.mjs {{env.API_URL}}'
 
 [tasks.soak]
 description = "REMOTE, redeploys the Worker: the real-time matrix, every client x scenario, with the generated SDKs and CLI. --idle <min> for the long-idle case"
 depends = ["sdk:ready"]
-run = 'node test/soak.mjs {{env.API_URL}}'
+run = '{{env.CHARTER_TOOL}} exec -secrets node test/soak.mjs {{env.API_URL}}'
 
 [tasks.bench]
 description = "REMOTE, read-only: every GET operation of the deployed Worker: wall time, Cloudflare's CPU time, and the CPU of each request. Add -write to include the ones that change data"

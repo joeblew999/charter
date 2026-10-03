@@ -160,7 +160,7 @@ await sleep(3000);
 const created = [];
 const create = async n => {
   try {
-    const res = await fetch(`${origin}/api/notes`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ body: `${tag} #${n}` }) });
+    const res = await fetch(`${origin}/api/notes`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${process.env.WRITE_TOKEN}` }, body: JSON.stringify({ body: `${tag} #${n}` }) });
     if (res.ok) created.push({ id: (await res.json()).id, at: t(), ms: Date.now() }); else console.log(`${t()}s create failed ${res.status}`);
   } catch (error) { console.log(`${t()}s create error ${error.message}`); }
 };

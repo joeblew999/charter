@@ -6,7 +6,8 @@ import { pathToFileURL } from "node:url";
 const origin = process.argv[2];
 const { NotesClient } = await import(pathToFileURL(`${process.cwd()}/sdk/out/typescript-dist/esm/index.mjs`));
 
-const client = new NotesClient({ baseUrl: origin });
+// Writing needs WRITE_TOKEN (charter exec -secrets sets it); the SDK sends it as a bearer token.
+const client = new NotesClient({ baseUrl: origin, token: process.env.WRITE_TOKEN });
 const body = `sdk live ${Date.now()}`;
 const got = { sse: null, ws: null };
 
@@ -26,7 +27,7 @@ socket.close();
 
 let failed = 0;
 for (const [name, note] of Object.entries(got)) {
-  const ok = note?.id === created.id;
+  const ok = Number.isInteger(created?.id) && note?.id === created.id;
   console.log(`${ok ? "PASS" : "FAIL"}  SDK ${name === "sse" ? "notes.watch() (SSE)" : "liveNotes.connect() (WebSocket, Durable Object)"}: ${JSON.stringify(note)}`);
   if (!ok) failed++;
 }

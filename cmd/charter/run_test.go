@@ -197,3 +197,23 @@ func TestTaskLinesNeedNoUnixShell(t *testing.T) {
 		}
 	}
 }
+
+// -h on any command prints its usage and does nothing else: some commands change things at once
+// (labels, deploy) and take no flags of their own.
+func TestHelpNeverRuns(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the tool")
+	}
+	tool := filepath.Join(t.TempDir(), "charter")
+	if out, err := exec.Command("go", "build", "-o", tool, ".").CombinedOutput(); err != nil {
+		t.Fatalf("go build: %v\n%s", err, out)
+	}
+	for name := range commands {
+		cmd := exec.Command(tool, name, "-h")
+		cmd.Dir = t.TempDir() // not a project: a command that ran would fail or do nothing here
+		out, err := cmd.CombinedOutput()
+		if err != nil || !strings.HasPrefix(string(out), "charter "+name) {
+			t.Errorf("charter %s -h: %v\n%s", name, err, out)
+		}
+	}
+}

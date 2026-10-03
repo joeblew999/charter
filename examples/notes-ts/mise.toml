@@ -17,6 +17,9 @@ rust = "1.98.1"
 gh = "2.101.0"
 
 [env]
+# The Worker's secrets: every mise run deploy sets them, from fnox (fnox.toml) or, in CI, from the
+# repo's GitHub secrets. The local runs and tests use throwaway ones.
+WORKER_SECRETS = "READ_TOKEN WRITE_TOKEN"
 # How the tasks run the charter tool.
 CHARTER_TOOL = "go run ../../cmd/charter"
 # The local dev port.
@@ -61,17 +64,17 @@ run = "{{env.CHARTER_TOOL}} exec -quiet cf workers types && {{env.CHARTER_TOOL}}
 
 [tasks.deploy]
 description = "REMOTE: deploy the Worker, then apply pending D1 migrations"
-run = "{{env.CHARTER_TOOL}} exec cf deploy && {{env.CHARTER_TOOL}} migrate"
+run = "{{env.CHARTER_TOOL}} exec -secrets {{env.CHARTER_TOOL}} deploy"
 
 [tasks.live-test]
 description = "REMOTE, writes test notes: SSE + WebSocket, raw and through the generated TypeScript SDK"
 depends = ["sdk:ready typescript-dist"]
-run = 'node ../notes-go/test/live-test.mjs {{env.API_URL}} && node ../notes-go/test/sdk-live-test.mjs {{env.API_URL}}'
+run = '{{env.CHARTER_TOOL}} exec -secrets node ../notes-go/test/live-test.mjs {{env.API_URL}} && {{env.CHARTER_TOOL}} exec -secrets node ../notes-go/test/sdk-live-test.mjs {{env.API_URL}}'
 
 [tasks.soak]
 description = "REMOTE, redeploys the Worker: the real-time matrix, every client x scenario, with the generated SDKs and CLI. --idle <min> for the long-idle case"
 depends = ["sdk:ready"]
-run = 'node ../notes-go/test/soak.mjs {{env.API_URL}}'
+run = '{{env.CHARTER_TOOL}} exec -secrets node ../notes-go/test/soak.mjs {{env.API_URL}}'
 
 [tasks.bench]
 description = "REMOTE, read-only: every GET operation of the deployed Worker, wall time and Cloudflare's CPU time. Add -write to include the ones that change data"

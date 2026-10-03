@@ -182,7 +182,7 @@ func TestNewTypeScriptProject(t *testing.T) {
 		"package-lock.json":           `"name": "billing-api"`,
 		"package-lock.json ":          `"node_modules/@charter/ts": {`,
 		"mise.toml":                   `run = "npm ci --no-fund --no-audit --prefix {{env.CHARTER}}/ts && npm run build --prefix {{env.CHARTER}}/ts && npm ci --no-fund --no-audit"`,
-		"mise.toml ":                  `run = 'node test/live-test.mjs {{env.API_URL}}`,
+		"mise.toml ":                  `run = '{{env.CHARTER_TOOL}} exec -secrets node test/live-test.mjs {{env.API_URL}}`,
 		"mise.toml  ":                 `includes = ["` + filepath.ToSlash(repo) + `/tasks/shared", "` + filepath.ToSlash(repo) + `/tasks/ts"]`,
 		"go.work":                     "use " + filepath.ToSlash(repo) + "\n",
 		"fern/generators.yml":         "path: github.com/zeta/billing-api/sdk/go\n",

@@ -21,6 +21,9 @@ export default defineConfig(ctx => {
 				APP_NAME: bindings.text(name),
 				DB: bindings.d1(),
 				HUB: bindings.durableObject({ worker: name, exportName: "Hub" }),
+				// The tokens (api/handlers.go): set by every mise run deploy, from the environment under cf dev.
+				READ_TOKEN: bindings.secret(),
+				WRITE_TOKEN: bindings.secret(),
 			},
 		},
 	};

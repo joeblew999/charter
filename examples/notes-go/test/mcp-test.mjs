@@ -18,7 +18,8 @@ const text = result => result.content.map(block => block.text).join("");
 
 for (const [era, mode, version] of [["stateless", { pin: "2026-07-28" }, "2026-07-28"], ["handshake", "legacy", "2025-11-25"]]) {
   const client = new Client({ name: "mcp-test", version: "1.0.0" }, { versionNegotiation: { mode } });
-  await client.connect(new StreamableHTTPClientTransport(new URL(endpoint)));
+  // A tool call runs the REST operation with this Authorization: createNote needs the write token.
+  await client.connect(new StreamableHTTPClientTransport(new URL(endpoint), { requestInit: { headers: { authorization: `Bearer ${process.env.WRITE_TOKEN}` } } }));
   const label = name => `${era} (${client.getNegotiatedProtocolVersion()}): ${name}`;
   check(label("connects"), client.getNegotiatedProtocolVersion() === version && client.getServerVersion()?.name === "charter-notes-go", [client.getNegotiatedProtocolVersion(), client.getServerVersion()]);
 

@@ -6,6 +6,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/joeblew999/charter/go/asyncapi"
+	"github.com/joeblew999/charter/go/auth"
 	"github.com/joeblew999/charter/go/humaworkers"
 )
 
@@ -17,6 +18,8 @@ func init() {
 func config() huma.Config {
 	config := humaworkers.Config(Title, Version)
 	config.Info.Description = Description
+	// Bearer tokens; an operation that needs one says which scopes (reads are public).
+	auth.Scheme(config.OpenAPI)
 	return config
 }
 

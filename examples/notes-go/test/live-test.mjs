@@ -1,11 +1,16 @@
 // Live test of the API's real-time paths: an SSE client (GET /api/notes/watch) and a WebSocket
 // client (/api/notes/live) connect, a note is created, and both must receive it (through
 // the hub Durable Object); then SSE resume after a reconnect. Usage, from the project's
-// folder (`ws` comes from its node_modules): node test/live-test.mjs <origin>
+// folder (`ws` comes from its node_modules): node test/live-test.mjs <origin>. Writing needs a
+// token: WRITE_TOKEN; READ_TOKEN must be refused (charter exec -secrets sets both).
 import { createRequire } from "node:module";
 const WebSocket = createRequire(`${process.cwd()}/`)("ws");
 
 const origin = process.argv[2];
+const { WRITE_TOKEN, READ_TOKEN } = process.env;
+if (!WRITE_TOKEN || !READ_TOKEN) { console.log("FAIL  WRITE_TOKEN and READ_TOKEN are not set (run it through charter exec -secrets)"); process.exit(1); }
+const json = { "content-type": "application/json" };
+const writer = { ...json, authorization: `Bearer ${WRITE_TOKEN}` };
 const body = `live ${Date.now()}`;
 const got = { sse: null, ws: null, resume: null };
 
@@ -28,7 +33,7 @@ const wsDone = new Promise((resolve, reject) => {
 await new Promise(r => ws.on("open", r));
 await new Promise(r => setTimeout(r, 1500)); // let the SSE stream attach to the hub
 
-const created = await (await fetch(`${origin}/api/notes`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ body }) })).json();
+const created = await (await fetch(`${origin}/api/notes`, { method: "POST", headers: writer, body: JSON.stringify({ body }) })).json();
 await Promise.race([Promise.all([sse, wsDone]), new Promise(r => setTimeout(r, 10000))]);
 ws.close();
 
@@ -49,16 +54,27 @@ async function sseEvents(headers, seconds, until) {
 }
 const first = sseEvents({}, 8, events => events.some(e => e.note.body === `${body} a`));
 await new Promise(r => setTimeout(r, 1500));
-await fetch(`${origin}/api/notes`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ body: `${body} a` }) });
+await fetch(`${origin}/api/notes`, { method: "POST", headers: writer, body: JSON.stringify({ body: `${body} a` }) });
 const lastId = (await first).at(-1)?.id;
-const missed = await (await fetch(`${origin}/api/notes`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ body: `${body} b` }) })).json();
+const missed = await (await fetch(`${origin}/api/notes`, { method: "POST", headers: writer, body: JSON.stringify({ body: `${body} b` }) })).json();
 const replayed = await sseEvents({ "last-event-id": lastId }, 4, events => events.some(e => e.note.id === missed.id));
 got.resume = replayed.find(e => e.note.id === missed.id)?.note ?? null;
 created.resumeId = missed.id;
 
+// Who may write: no token is 401, the read token 403.
+const refused = {
+  "no token": [(await fetch(`${origin}/api/notes`, { method: "POST", headers: json, body: JSON.stringify({ body }) })).status, 401],
+  "the read token": [(await fetch(`${origin}/api/notes`, { method: "POST", headers: { ...json, authorization: `Bearer ${READ_TOKEN}` }, body: JSON.stringify({ body }) })).status, 403],
+};
+
 let failed = 0;
+for (const [name, [status, want]] of Object.entries(refused)) {
+  console.log(`${status === want ? "PASS" : "FAIL"}  POST /api/notes with ${name}: ${status} (want ${want})`);
+  if (status !== want) failed++;
+}
 for (const [name, note] of Object.entries(got)) {
-  const ok = note?.id === (name === "resume" ? created.resumeId : created.id);
+  const want = name === "resume" ? created.resumeId : created.id;
+  const ok = Number.isInteger(want) && note?.id === want;
   const label = { sse: "SSE /api/notes/watch", ws: "WebSocket /api/notes/live (Durable Object)", resume: "SSE resume: missed note replayed after reconnect (Last-Event-ID)" }[name];
   console.log(`${ok ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(note)}`);
   if (!ok) failed++;

@@ -40,7 +40,7 @@ var started string
 const whatAProjectIs = "a project is a folder with a mise.toml beside a fern/ folder (charter new makes one)"
 
 func main() {
-	if len(os.Args) < 2 || os.Args[1] == "help" || os.Args[1] == "-h" || os.Args[1] == "--help" {
+	if len(os.Args) < 2 || os.Args[1] == "help" || isHelp(os.Args[1]) {
 		names := make([]string, 0, len(commands))
 		for name := range commands {
 			names = append(names, name)
@@ -62,6 +62,11 @@ func main() {
 	if !ok {
 		fail(fmt.Errorf("no command %q: charter help lists them", os.Args[1]))
 	}
+	// Help never runs the command: some change things at once (labels, deploy) and take no flags.
+	if len(os.Args) > 2 && isHelp(os.Args[2]) {
+		fmt.Printf("charter %s\n\n%s\n", strings.TrimSpace(os.Args[1]+" "+cmd.usage), cmd.help)
+		return
+	}
 	var err error
 	if started, err = os.Getwd(); err != nil {
 		fail(err)
@@ -77,6 +82,8 @@ func main() {
 		fail(err)
 	}
 }
+
+func isHelp(arg string) bool { return arg == "-h" || arg == "-help" || arg == "--help" }
 
 func fail(err error) {
 	var exit *exec.ExitError

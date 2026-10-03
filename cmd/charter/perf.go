@@ -1,11 +1,14 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -59,7 +62,21 @@ func perf(args []string) error {
 			}
 		}()
 	}
-	if err := quiet(".", nil, npmBin("cf"), "deploy", "--mode", mode); err != nil {
+	// The scratch Worker's secrets are throwaway tokens: the bench writes with WRITE_TOKEN's.
+	throwaway := map[string]string{}
+	for _, name := range workerSecretNames() {
+		throwaway[name] = randomToken()
+	}
+	secrets, err := secretsFile(throwaway)
+	if err != nil {
+		return err
+	}
+	deployArgs := []string{"deploy", "--mode", mode}
+	if secrets != "" {
+		defer os.Remove(secrets)
+		deployArgs = append(deployArgs, "--secrets-file", secrets)
+	}
+	if err := quiet(".", nil, npmBin("cf"), deployArgs...); err != nil {
 		return err
 	}
 	if err := migrate([]string{"-worker", worker}); err != nil {
@@ -80,12 +97,15 @@ func perf(args []string) error {
 		}
 	}
 	// Deployed again, so that the bench meets a new isolate: the requests above used the first.
-	if err := quiet(".", nil, npmBin("cf"), "deploy", "--mode", mode); err != nil {
+	if err := quiet(".", nil, npmBin("cf"), deployArgs...); err != nil {
 		return err
 	}
 	time.Sleep(5 * time.Second)
 	if len(rest) == 0 {
 		rest = []string{"-each", "-burst", "8", "-write"}
+	}
+	if token := throwaway["WRITE_TOKEN"]; token != "" {
+		rest = append([]string{"-header", "Authorization: Bearer " + token}, rest...)
 	}
 	return bench(append(rest, "-worker", worker, scratch))
 }
@@ -178,4 +198,11 @@ func d1Databases() ([]d1Database, error) {
 		return nil, fmt.Errorf("cf d1 list: %w", err)
 	}
 	return databases, nil
+}
+
+// randomToken is a new token: 32 random bytes, in hex.
+func randomToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }

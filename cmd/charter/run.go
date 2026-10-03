@@ -19,8 +19,8 @@ import (
 // A setting of mise.toml reaches a line through mise's own template, which no shell sees.
 
 func init() {
-	commands["exec"] = command{"[-env NAME=VALUE]... [-quiet] <program> [args]",
-		"run a program with these variables set; one that an npm package of the project installed (cf, fern, tsc) is found in node_modules/.bin. -quiet: its output only if it fails", execProgram}
+	commands["exec"] = command{"[-env NAME=VALUE]... [-quiet] [-secrets] <program> [args]",
+		"run a program with these variables set; one that an npm package of the project installed (cf, fern, tsc) is found in node_modules/.bin. -quiet: its output only if it fails. -secrets: with the secrets WORKER_SECRETS names, from fnox unless they are set already (as on GitHub)", execProgram}
 	commands["lint"] = command{"[-vet <packages>] [-wasm <packages>] <file or folder>...",
 		"fail if gofmt would change one of the files (a * pattern is matched here, not by the shell), then go vet the packages (default ./...), and those of -wasm for Wasm (GOOS=js GOARCH=wasm)", lint}
 	anywhere["exec"], anywhere["lint"] = true, true
@@ -126,13 +126,22 @@ func settings(env []string) error {
 // execProgram is `NAME=VALUE program args` for every shell.
 func execProgram(args []string) error {
 	var env list
-	var hide bool
+	var hide, secrets bool
 	rest := flags("exec", args, func(f *flag.FlagSet) {
 		f.Var(&env, "env", "a variable for the program, NAME=VALUE (repeat)")
 		f.BoolVar(&hide, "quiet", false, "show the program's output only if it fails")
+		f.BoolVar(&secrets, "secrets", false, "with the secrets WORKER_SECRETS names: from fnox (its fnox.toml) unless they are all set already")
 	})
 	if len(rest) == 0 {
 		return errors.New("exec needs <program> [args]")
+	}
+	if secrets {
+		for _, name := range strings.Fields(os.Getenv("WORKER_SECRETS")) {
+			if os.Getenv(name) == "" {
+				rest = append([]string{"fnox", "exec", "--"}, rest...)
+				break
+			}
+		}
 	}
 	if err := settings(env); err != nil {
 		return err

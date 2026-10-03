@@ -7,6 +7,37 @@ import (
 	core "github.com/joeblew999/charter/examples/notes-go/sdk/go/core"
 )
 
+// Unauthorized
+type UnauthorizedError struct {
+	*core.APIError
+	Body *ErrorModel
+}
+
+func (u *UnauthorizedError) UnmarshalJSON(data []byte) error {
+	var body *ErrorModel
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	u.StatusCode = 401
+	u.Body = body
+	return nil
+}
+
+func (u *UnauthorizedError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(u.Body)
+}
+
+func (u *UnauthorizedError) Unwrap() error {
+	return u.APIError
+}
+
+func (u *UnauthorizedError) GetBody() *ErrorModel {
+	if u == nil {
+		return nil
+	}
+	return u.Body
+}
+
 // Unprocessable Entity
 type UnprocessableEntityError struct {
 	*core.APIError

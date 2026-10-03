@@ -17,7 +17,7 @@ func server(t *testing.T) (*httptest.Server, *MemStore) {
 	t.Helper()
 	memory := &MemStore{}
 	env := Env{
-		Var:   func(string) string { return "test" },
+		Var:   testVars,
 		Store: func() (Store, error) { return memory, nil },
 		Hub:   func() (Hub, error) { return memory, nil },
 	}
@@ -26,6 +26,12 @@ func server(t *testing.T) (*httptest.Server, *MemStore) {
 	return srv, memory
 }
 
+// testVars are the Worker's settings in the tests: its name and its two tokens.
+func testVars(name string) string {
+	return map[string]string{"APP_NAME": "test", "WRITE_TOKEN": "write-token", "READ_TOKEN": "read-token"}[name]
+}
+
+// do sends a request with the write token, unless headers set Authorization themselves.
 func do(t *testing.T, method, url, body string, headers ...string) (int, string, http.Header) {
 	t.Helper()
 	req, err := http.NewRequest(method, url, strings.NewReader(body))
@@ -35,6 +41,7 @@ func do(t *testing.T, method, url, body string, headers ...string) (int, string,
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	req.Header.Set("Authorization", "Bearer write-token")
 	for i := 0; i+1 < len(headers); i += 2 {
 		req.Header.Set(headers[i], headers[i+1])
 	}
@@ -65,6 +72,30 @@ func create(t *testing.T, base, body string) Note {
 }
 
 func quote(s string) string { b, _ := json.Marshal(s); return string(b) }
+
+// Writing needs the write token: none (or an unknown one) is 401, the read token 403. Reads are public.
+func TestTokens(t *testing.T) {
+	srv, _ := server(t)
+	for _, c := range []struct {
+		method, path, body, authorization string
+		want                              int
+	}{
+		{"POST", "/api/notes", `{"body":"x"}`, "", 401},
+		{"POST", "/api/notes", `{"body":"x"}`, "Bearer wrong", 401},
+		{"POST", "/api/notes", `{"body":"x"}`, "Bearer read-token", 403},
+		{"POST", "/api/notes", `{"body":"x"}`, "Bearer write-token", 200},
+		{"GET", "/api/notes", "", "", 200},
+		{"GET", "/api/hello", "", "", 200},
+	} {
+		status, out, header := do(t, c.method, srv.URL+c.path, c.body, "Authorization", c.authorization)
+		if status != c.want {
+			t.Errorf("%s %s with %q: %d, want %d: %s", c.method, c.path, c.authorization, status, c.want, out)
+		}
+		if status == 401 && header.Get("WWW-Authenticate") != "Bearer" {
+			t.Errorf("%s %s: a 401 without WWW-Authenticate: Bearer", c.method, c.path)
+		}
+	}
+}
 
 func TestHello(t *testing.T) {
 	srv, _ := server(t)

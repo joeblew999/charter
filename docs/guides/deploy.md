@@ -12,7 +12,7 @@ How to put a project on Cloudflare Workers, test it there, and run the same from
 
 ```sh
 npx cf auth login     # once per machine; or set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
-mise run deploy       # builds the Wasm, deploys the Worker, its D1 database and the hub, applies migrations
+mise run deploy       # builds the Wasm, deploys the Worker with its secrets, its D1 database and the hub, applies migrations
 mise run live-test    # REMOTE, writes test notes: a few seconds after every deploy
 ```
 
@@ -20,6 +20,20 @@ mise run live-test    # REMOTE, writes test notes: a few seconds after every dep
 - **Migrations** are `migrations/*.sql`, applied in name order, each once: `mise run migrate` on Cloudflare, `mise run migrate:local` for `mise run dev`. Never edit one that was applied.
 - **The URL is `API_URL`** in `mise.toml`: the specs name it and the remote tests call it. After changing it, `mise run spec`. `mise.local.toml` overrides it on one machine; do not run `mise run spec` then.
 - **The build fails over 3,000,000 bytes gzipped,** the Workers Free limit.
+
+## Tokens
+
+Writing a note needs a token with the `write` scope; reading is public. The contract says so (`Security: auth.Needs("write")` in Go, `spec: needs(["write"], ...)` in TypeScript), so the specs and the SDKs carry it, and one middleware enforces it: no token it knows is 401, a token without the scope 403. The libraries are `go/auth` and `@charter/ts/auth`.
+
+The tokens are the Worker's secrets, named in `mise.toml` (`WORKER_SECRETS = "READ_TOKEN WRITE_TOKEN"`) and declared in `cloudflare.config.ts` (`bindings.secret()`). `fnox.toml` says where fnox keeps them; make them once:
+
+```sh
+openssl rand -hex 32 | fnox set WRITE_TOKEN -k "<name> WRITE_TOKEN" -p keychain
+openssl rand -hex 32 | fnox set READ_TOKEN -k "<name> READ_TOKEN" -p keychain
+mise run cloudflare:secrets    # copies them, and the Cloudflare credentials, to GitHub for CI
+```
+
+Every `mise run deploy` sets them on the Worker, so the first deploy and a changed token are the same step. The tasks that need them run through `charter exec -secrets`, which takes them from fnox unless they are already set, as in CI. Local runs and tests use throwaway tokens. No task prints a value.
 
 ## Test
 

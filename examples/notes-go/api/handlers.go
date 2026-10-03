@@ -14,6 +14,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/joeblew999/charter/go/auth"
 	"github.com/joeblew999/charter/go/follow"
 	"github.com/joeblew999/charter/go/humamcp"
 	"github.com/joeblew999/charter/go/humaworkers"
@@ -27,10 +28,19 @@ type Env struct {
 	Hub   func() (Hub, error)
 }
 
+// Tokens are who may do what: the Worker's secrets (WORKER_SECRETS in mise.toml), each with its
+// scopes. Writing needs write; READ_TOKEN is a token that may not (reads are public). An unset
+// secret matches no token.
+var Tokens = []auth.Token{
+	{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}},
+	{Secret: "READ_TOKEN", Scopes: []string{"read"}},
+}
+
 // Handler serves the contract on env, plus the two specs with the request's origin as their server,
 // plus the contract as MCP tools (/api/mcp: a tool call runs the same operation as the REST route).
 func Handler(env Env) http.Handler {
 	routes := humaworkers.New(config(), Routes(env))
+	routes.UseMiddleware(auth.Middleware(routes, env.Var, Tokens...))
 	mcp := humamcp.Handler(routes)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var spec func(server string) ([]byte, error)

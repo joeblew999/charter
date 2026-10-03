@@ -26,6 +26,10 @@
 		"./follow": {
 			"types": "./dist/follow.d.ts",
 			"default": "./dist/follow.js"
+		},
+		"./auth": {
+			"types": "./dist/auth.d.ts",
+			"default": "./dist/auth.js"
 		}
 	},
 	"peerDependencies": {

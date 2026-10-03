@@ -14,6 +14,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/joeblew999/charter/go/asyncapi"
+	"github.com/joeblew999/charter/go/auth"
 	"github.com/joeblew999/charter/go/humaworkers"
 )
 
@@ -149,6 +150,7 @@ func Routes(env Env) []humaworkers.Route {
 			huma.Register(api, huma.Operation{
 				OperationID: "createNote", Method: http.MethodPost, Path: "/api/notes",
 				Summary: "Create a note", Tags: []string{"notes"},
+				Security:   auth.Needs("write"),
 				Extensions: sdk("notes", "create", nil),
 			}, env.create)
 		}},

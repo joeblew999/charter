@@ -4,8 +4,9 @@
 import { asyncInfo, contract, info } from "./src/contract.ts";
 import { specFiles } from "@charter/ts/spec-files";
 import { asyncapiSpec, openapiSpec } from "@charter/ts/specs";
+import { scheme } from "@charter/ts/auth";
 
 await specFiles("spec", {
-	openapi: server => openapiSpec(contract, { info, server }),
+	openapi: server => openapiSpec(contract, { info, server, base: scheme() }),
 	asyncapi: server => asyncapiSpec(contract, { info: asyncInfo, server }),
 });

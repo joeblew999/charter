@@ -9,6 +9,14 @@
       "url": "https://charter-notes-ts.gedw99.workers.dev"
     }
   ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
   "openapi": "3.1.1",
   "paths": {
     "/api/hello": {
@@ -186,7 +194,14 @@
           }
         },
         "x-fern-sdk-group-name": "notes",
-        "x-fern-sdk-method-name": "create"
+        "x-fern-sdk-method-name": "create",
+        "security": [
+          {
+            "bearer": [
+              "write"
+            ]
+          }
+        ]
       }
     },
     "/api/notes/watch": {

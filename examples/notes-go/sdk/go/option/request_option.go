@@ -103,3 +103,17 @@ func WithEnvironment(environment sdkgo.Environment) *core.EnvironmentOption {
 		Environment: environment,
 	}
 }
+
+// WithToken sets the 'Authorization: Bearer <token>' request header.
+func WithToken(token string) *core.TokenOption {
+	return &core.TokenOption{
+		Token: token,
+	}
+}
+
+// WithTokenFunc sets a function that returns the 'Authorization: Bearer' token at request time.
+func WithTokenFunc(fn func() (string, error)) *core.TokenFuncOption {
+	return &core.TokenFuncOption{
+		TokenFunc: fn,
+	}
+}

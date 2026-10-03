@@ -1,6 +1,7 @@
 import { asyncIteratorObject, oc } from "@orpc/contract";
 import { openapi, type OpenAPIV3_2 } from "@orpc/openapi";
 import { asyncapi } from "@charter/ts/asyncapi";
+import { needs } from "@charter/ts/auth";
 import { z } from "zod";
 
 // The API, contract first: every route with its method, path, input and output as Zod 4 schemas.
@@ -83,7 +84,7 @@ export const contract = {
 			.input(z.object({ after }))
 			.output(asyncIteratorObject(note)),
 		create: oc
-			.meta(openapi({ method: "POST", path: "/api/notes", summary: "Create a note", tags: ["notes"], operationId: "createNote", spec: sdk("notes", "create") }))
+			.meta(openapi({ method: "POST", path: "/api/notes", summary: "Create a note", tags: ["notes"], operationId: "createNote", spec: needs(["write"], sdk("notes", "create")) }))
 			.input(z.object({ body: z.string().min(1).refine(body => !body.includes(END), `must not contain ${END}`) }))
 			.output(note),
 	},

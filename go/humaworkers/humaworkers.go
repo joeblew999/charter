@@ -122,6 +122,10 @@ func (a *API) Operation(id string) *huma.Operation {
 	return nil
 }
 
+// Spec is the document as far as routes are registered: its settings (security, servers) without
+// registering anything, which OpenAPI does.
+func (a *API) Spec() *huma.OpenAPI { return a.API.OpenAPI() }
+
 // OpenAPI registers every route and returns the document.
 func (a *API) OpenAPI() *huma.OpenAPI {
 	a.Operations()

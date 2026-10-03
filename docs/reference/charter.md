@@ -50,9 +50,10 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 | Command | Flags | What it does |
 |---|---|---|
 | `with-server` * | `-url <url>`, `-env NAME=VALUE`, `-start <cmd>`, `-run <cmd>`, `-show` | Starts a server, waits for the URL, runs the commands, stops the server and what it started. `{port}`, `{port2}`: free ports. Output only on failure, or with `-show` |
-| `exec` * | `-env NAME=VALUE`, `-quiet`, then `<program> [args]` | Runs a program with those variables; `-quiet` shows its output only if it fails |
+| `exec` * | `-env NAME=VALUE`, `-quiet`, `-secrets`, then `<program> [args]` | Runs a program with those variables; `-quiet` shows its output only if it fails; `-secrets` adds the secrets `WORKER_SECRETS` names, from fnox unless already set |
 | `lint` * | `-vet <packages>`, `-wasm <packages>`, then `<file or folder>...` | Fails if `gofmt` would change a file, then `go vet` for the host and for Wasm |
 | `migrate-local` | `-port <port>`, `-worker <name>` | Applies `migrations/*.sql` to a running dev server's local D1 |
+| `deploy` | `cf deploy` flags | REMOTE. Deploys the Worker with the secrets `WORKER_SECRETS` names, from the environment through a private file (never printed), then `migrate` |
 | `migrate` | `-worker <name>` | REMOTE. Applies pending migrations to `<worker>-db` |
 | `doctor` | | Says what the project's tasks need and lack |
 | `harness-sync`, `harness-test`, `harness-deploy` | `harness-test -remote` | For a Worker that imports its own generated SDK (`conformance/showcase-ts/`): copy it in, test it under `cf dev` or deployed, deploy it twice |
