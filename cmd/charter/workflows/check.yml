@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [examples/notes-go, examples/notes-ts, examples/start-go, examples/start-htmx, examples/start-ts, conformance/showcase-go, conformance/showcase-ts]
+        project: [examples/notes-go, examples/notes-ts, examples/start-datastar, examples/start-go, examples/start-htmx, examples/start-ts, conformance/showcase-go, conformance/showcase-ts]
     defaults:
       run:
         working-directory: ${{ matrix.project }}
@@ -82,7 +82,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [examples/notes-go, examples/notes-ts, examples/start-go, examples/start-htmx, examples/start-ts]
+        project: [examples/notes-go, examples/notes-ts, examples/start-datastar, examples/start-go, examples/start-htmx, examples/start-ts]
     defaults:
       run:
         working-directory: ${{ matrix.project }}
@@ -120,7 +120,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [examples/notes-go, examples/notes-ts, examples/start-go, examples/start-htmx, examples/start-ts]
+        project: [examples/notes-go, examples/notes-ts, examples/start-datastar, examples/start-go, examples/start-htmx, examples/start-ts]
     defaults:
       run:
         working-directory: ${{ matrix.project }}

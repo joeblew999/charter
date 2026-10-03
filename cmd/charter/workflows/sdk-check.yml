@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         # if-dir examples
-        project: [examples/notes-go, examples/notes-ts, examples/start-go, examples/start-htmx, examples/start-ts, conformance/showcase-go, conformance/showcase-ts]
+        project: [examples/notes-go, examples/notes-ts, examples/start-datastar, examples/start-go, examples/start-htmx, examples/start-ts, conformance/showcase-go, conformance/showcase-ts]
         # end
         group: [go, typescript]
     # if-dir examples

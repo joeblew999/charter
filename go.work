@@ -6,6 +6,7 @@ use (
 	./examples/notes-go
 	./examples/notes-go/sdk/go
 	./examples/start-go
+	./examples/start-datastar
 	./examples/start-htmx
 	./go
 )
