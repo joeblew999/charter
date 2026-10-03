@@ -46,9 +46,11 @@ It compares `fern/openapi.json` and `fern/asyncapi.json` and marks each breaking
 | A parameter, field or request body made required; a received field made optional | The reverse |
 | A type changed, or narrowed in what the consumer sends | A type widened there (`integer` to `integer` or `null`) |
 | An enum value removed; an enum added to a sent value | An enum value added |
-| Security tightened: a caller let in before is not now (a scope or scheme added, an open operation closed) | Security loosened |
+| A limit tightened on a sent value (`minLength`, `minimum`, `minItems` up; `maxLength`, `maximum`, `maxItems` down; a `pattern` or `multipleOf` added or changed) | A limit loosened, or any limit on a received value |
+| A `oneOf` or `anyOf` variant removed from what the consumer sends, or added to what it receives; an `allOf` part added to what it sends, or removed from what it receives | The reverse. A variant is known by its `$ref`, or its place in the list |
+| Security tightened: a caller let in before is not now (a scope or scheme added, an open operation closed), for an operation or an AsyncAPI channel (its operations' `security`, else its servers') | Security loosened |
 
-It fails on a breaking change unless `-tag` (or the workflow's tag) is a major release after `-from`: a higher major number, or in v0 a higher minor one. With `-catalog`, it names the repos that pin this one's programs, modules or packages. Not compared: `oneOf`, `anyOf`, `allOf`, limits such as `maxLength`, and AsyncAPI security.
+It fails on a breaking change unless `-tag` (or the workflow's tag) is a major release after `-from`: a higher major number, or in v0 a higher minor one. With `-catalog`, it names the repos that pin this one's programs, modules or packages.
 
 ## Propagate a release
 

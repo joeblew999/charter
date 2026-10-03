@@ -142,6 +142,35 @@ func TestSpecDiffOpenAPI(t *testing.T) {
 			op := at(d, "paths", "/api/notes", "post")
 			op["security"] = append(anyList(op["security"]), map[string]any{"partner": []any{"write"}})
 		}, want: "security loosened"},
+		{name: "an upper limit lowered", after: func(d map[string]any) { at(limit(d), "schema")["maximum"] = 50 },
+			want: "query.limit: maximum 50, was 100", breaking: true},
+		{name: "an upper limit raised", after: func(d map[string]any) { at(limit(d), "schema")["maximum"] = 500 },
+			want: "query.limit: maximum 500, was 100"},
+		{name: "a lower limit raised on a request field", after: func(d map[string]any) {
+			at(d, "components", "schemas", "CreateInputBody", "properties", "body")["minLength"] = 3
+		}, want: "request.body: minLength 3, was 1", breaking: true},
+		{name: "a new limit on a request field", after: func(d map[string]any) {
+			at(d, "components", "schemas", "CreateInputBody", "properties", "body")["maxLength"] = 280
+		}, want: "request.body: now maxLength 280", breaking: true},
+		{name: "a new limit on a response field", after: func(d map[string]any) { at(note(d), "properties", "body")["maxLength"] = 280 },
+			want: "response.body: now maxLength 280"},
+		{name: "a pattern on a request field", after: func(d map[string]any) {
+			at(d, "components", "schemas", "CreateInputBody", "properties", "body")["pattern"] = "^[a-z]+$"
+		}, want: "request.body: now pattern ^[a-z]+$", breaking: true},
+		{name: "a variant removed from what is sent", before: func(d map[string]any) {
+			at(d, "components", "schemas", "CreateInputBody", "properties")["kind"] = map[string]any{"oneOf": []any{map[string]any{"type": "string"}, map[string]any{"type": "integer"}}}
+		}, after: func(d map[string]any) {
+			at(d, "components", "schemas", "CreateInputBody", "properties", "kind")["oneOf"] = []any{map[string]any{"type": "string"}}
+		}, want: "request.kind: oneOf #2 removed", breaking: true},
+		{name: "a variant added to what is received", before: func(d map[string]any) {
+			at(note(d), "properties")["owner"] = map[string]any{"anyOf": []any{map[string]any{"$ref": "#/components/schemas/HelloOutputBody"}}}
+		}, after: func(d map[string]any) {
+			at(note(d), "properties", "owner")["anyOf"] = []any{map[string]any{"$ref": "#/components/schemas/HelloOutputBody"}, map[string]any{"$ref": "#/components/schemas/ErrorDetail"}}
+		}, want: "response.owner: anyOf ErrorDetail added", breaking: true},
+		{name: "inside a variant", before: func(d map[string]any) {
+			at(note(d), "properties")["owner"] = map[string]any{"anyOf": []any{map[string]any{"$ref": "#/components/schemas/HelloOutputBody"}}}
+		}, after: func(d map[string]any) { delete(at(d, "components", "schemas", "HelloOutputBody", "properties"), "message") },
+			want: "field response.owner(HelloOutputBody).message removed", breaking: true},
 		{name: "a token no longer needed", after: func(d map[string]any) { delete(at(d, "paths", "/api/notes", "post"), "security") },
 			want: "security loosened: anyone, was bearer[write]"},
 	})
@@ -168,6 +197,15 @@ func TestSpecDiffAsyncAPI(t *testing.T) {
 			want: "operation receiveNote: action send, was receive", breaking: true},
 		{name: "an operation removed", after: func(d map[string]any) { delete(at(d, "operations"), "receiveNote") },
 			want: "operation receiveNote: removed", breaking: true},
+		{name: "a channel closed to anonymous subscribers", after: func(d map[string]any) {
+			at(d, "components")["securitySchemes"] = map[string]any{"bearer": map[string]any{"type": "http", "scheme": "bearer"}}
+			at(d, "operations", "receiveNote")["security"] = []any{map[string]any{"$ref": "#/components/securitySchemes/bearer"}}
+		}, want: "channel liveNotes: security tightened: bearer[], was anyone", breaking: true},
+		{name: "a channel opened", before: func(d map[string]any) {
+			at(d, "components")["securitySchemes"] = map[string]any{"bearer": map[string]any{"type": "http", "scheme": "bearer"}}
+			at(d, "operations", "receiveNote")["security"] = []any{map[string]any{"$ref": "#/components/securitySchemes/bearer"}}
+		}, after: func(d map[string]any) { delete(at(d, "operations", "receiveNote"), "security") },
+			want: "channel liveNotes: security loosened: anyone, was bearer[]"},
 	})
 }
 

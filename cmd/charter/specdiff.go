@@ -401,11 +401,106 @@ func (d *specDiffer) schema(where, path string, way flow, before, after any) {
 			d.add(false, where, "field %s added", join(name))
 		}
 	}
+	d.limits(where, field(), way, a, b)
+	d.combined(where, path, way, a, b)
 	if a["items"] != nil && b["items"] != nil {
 		d.schema(where, path+"[]", way, a["items"], b["items"])
 	}
 	if object(a["additionalProperties"]) != nil && object(b["additionalProperties"]) != nil {
 		d.schema(where, path+"{}", way, a["additionalProperties"], b["additionalProperties"])
+	}
+}
+
+// The limits on a value: a lower one is tighter when it goes up, an upper one when it goes down.
+var (
+	lowerLimits = []string{"minLength", "minimum", "exclusiveMinimum", "minItems", "minProperties"}
+	upperLimits = []string{"maxLength", "maximum", "exclusiveMaximum", "maxItems", "maxProperties"}
+)
+
+// limits compares a schema's value limits. A tighter one breaks a consumer that sends the value (what
+// it sent may now be refused); a pattern or multipleOf that changes at all is called tighter, as
+// whether it accepts less cannot be told.
+func (d *specDiffer) limits(where, field string, way flow, a, b map[string]any) {
+	number := func(v any) (float64, bool) { f, ok := v.(float64); return f, ok }
+	for _, upper := range []bool{false, true} {
+		names := lowerLimits
+		if upper {
+			names = upperLimits
+		}
+		for _, name := range names {
+			was, hadIt := number(a[name])
+			now, hasIt := number(b[name])
+			if !hadIt && !hasIt || hadIt && hasIt && was == now {
+				continue
+			}
+			tighter := !hadIt || hasIt && (upper && now < was || !upper && now > was)
+			switch {
+			case !hasIt:
+				d.add(false, where, "%s: %s %v dropped", field, name, was)
+			case !hadIt:
+				d.add(way == sends, where, "%s: now %s %v", field, name, now)
+			default:
+				d.add(way == sends && tighter, where, "%s: %s %v, was %v", field, name, now, was)
+			}
+		}
+	}
+	for _, name := range []string{"pattern", "multipleOf"} {
+		was, now := a[name], b[name]
+		switch {
+		case was == nil && now == nil || fmt.Sprint(was) == fmt.Sprint(now):
+		case now == nil:
+			d.add(false, where, "%s: %s %v dropped", field, name, was)
+		case was == nil:
+			d.add(way == sends, where, "%s: now %s %v", field, name, now)
+		default:
+			d.add(way == sends, where, "%s: %s %v, was %v", field, name, now, was)
+		}
+	}
+}
+
+// combined compares oneOf, anyOf and allOf. A variant (oneOf, anyOf) is known by its $ref, or by its
+// place in the list. One removed breaks a consumer that sends it; one added breaks a consumer that
+// receives, which may be handed a value its SDK does not know. A part of allOf adds constraints:
+// one added breaks a sender, one removed breaks a receiver, which loses what it promised.
+func (d *specDiffer) combined(where, path string, way flow, a, b map[string]any) {
+	field := path
+	if field == "" {
+		field = "the message"
+	}
+	key := func(doc map[string]any, i int, v any) string {
+		if _, ref := resolve(doc, v); ref != "" {
+			return ref[strings.LastIndex(ref, "/")+1:]
+		}
+		return fmt.Sprint("#", i+1)
+	}
+	for _, kind := range []string{"oneOf", "anyOf", "allOf"} {
+		la, lb := anyList(a[kind]), anyList(b[kind])
+		if len(la) == 0 && len(lb) == 0 {
+			continue
+		}
+		before, after := map[string]any{}, map[string]any{}
+		for i, v := range la {
+			before[key(d.a, i, v)] = v
+		}
+		for i, v := range lb {
+			after[key(d.b, i, v)] = v
+		}
+		removedBreaks, addedBreaks := way == sends, way == receives
+		if kind == "allOf" {
+			removedBreaks, addedBreaks = way == receives, way == sends
+		}
+		for _, name := range sortedKeys(before) {
+			if v, ok := after[name]; ok {
+				d.schema(where, path+"("+name+")", way, before[name], v)
+			} else {
+				d.add(removedBreaks, where, "%s: %s %s removed", field, kind, name)
+			}
+		}
+		for _, name := range sortedKeys(after) {
+			if _, ok := before[name]; !ok {
+				d.add(addedBreaks, where, "%s: %s %s added", field, kind, name)
+			}
+		}
 	}
 }
 
@@ -595,7 +690,11 @@ func describeWays(ways []map[string][]string) string {
 // security fails when a caller let in before is not let in now: a new way in must ask for no
 // scheme and no scope that some old way did not.
 func (d *specDiffer) security(where string, a, b map[string]any) {
-	before, after := requirements(d.a, a), requirements(d.b, b)
+	d.ways(where, requirements(d.a, a), requirements(d.b, b))
+}
+
+// ways compares the ways in before and after a change.
+func (d *specDiffer) ways(where string, before, after []map[string][]string) {
 	enough := func(have, need map[string][]string) bool {
 		for scheme, scopes := range need {
 			got, ok := have[scheme]
@@ -658,6 +757,7 @@ func (d *specDiffer) asyncAPI() {
 				d.add(false, where, "message %s added", message)
 			}
 		}
+		d.ways(where, channelSecurity(d.a, name), channelSecurity(d.b, name))
 		for _, binding := range sortedKeys(object(a["bindings"])) {
 			d.schema(where, binding+".query", sends, object(object(a["bindings"])[binding])["query"], object(object(b["bindings"])[binding])["query"])
 		}
@@ -682,4 +782,42 @@ func (d *specDiffer) asyncAPI() {
 			d.add(false, "operation "+name, "added")
 		}
 	}
+}
+
+// channelSecurity is the ways into an AsyncAPI 3 channel: its operations' security, else the
+// servers'. An entry is a security scheme (or a $ref to one), any one of which is enough; its
+// scopes are what it asks for. None lets anyone in.
+func channelSecurity(doc map[string]any, channel string) []map[string][]string {
+	var list []any
+	for _, name := range sortedKeys(object(doc["operations"])) {
+		op := object(object(doc["operations"])[name])
+		if object(op["channel"])["$ref"] == "#/channels/"+channel {
+			list = append(list, anyList(op["security"])...)
+		}
+	}
+	if len(list) == 0 {
+		for _, name := range sortedKeys(object(doc["servers"])) {
+			list = append(list, anyList(object(object(doc["servers"])[name])["security"])...)
+		}
+	}
+	var ways []map[string][]string
+	for _, v := range list {
+		scheme, ref := resolve(doc, v)
+		name := ref[strings.LastIndex(ref, "/")+1:]
+		if name == "" {
+			name, _ = scheme["name"].(string)
+		}
+		if name == "" {
+			name, _ = scheme["type"].(string)
+		}
+		scopes := stringsOf(object(v)["scopes"])
+		if scopes == nil {
+			scopes = stringsOf(scheme["scopes"])
+		}
+		ways = append(ways, map[string][]string{name: scopes})
+	}
+	if len(ways) == 0 {
+		ways = append(ways, map[string][]string{})
+	}
+	return ways
 }
