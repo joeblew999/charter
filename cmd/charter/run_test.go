@@ -143,6 +143,11 @@ func TestMain(m *testing.M) {
 		http.ListenAndServe("localhost:"+os.Getenv("PORT"), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 		return
 	}
+	// The tests run inside a release (mise run release sets the tag for its tasks) and in a workflow
+	// on a version tag: each test that needs a tag sets it, so none comes in from outside.
+	for _, name := range []string{releaseTagEnv, "GITHUB_REF_TYPE", "GITHUB_REF_NAME"} {
+		os.Unsetenv(name)
+	}
 	os.Exit(m.Run())
 }
 
