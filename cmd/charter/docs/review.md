@@ -27,8 +27,8 @@ For every page under `docs/` (leave `_config.yml`, `_sass/` and `writing.md` alo
 ## Limits
 
 - **Don't change code, tasks, specs or generated files.** If the docs can only be made true by changing code, leave the code and say so in your summary.
-- **Don't invent.** No result, number or behaviour that you did not find in the repo. `docs/findings.md` holds verified results only: fix its links and paths, but do not add results, and do not change what an entry says happened.
-- **Don't touch `docs/plans/` beyond links, paths and anything that is now built** (move that to the page of the part it belongs to, and remove it from the plan).
+- **Don't invent.** No result, number or behaviour that you did not find in the repo.
+- **Keep it short.** Cut what a reader does not act on: history, plans (those are GitHub issues), background. A page over about 500 words is a sign to cut.
 - **Keep every page's front matter**, and give any page you add its own, plus a row in the start page.
 
 ## Finish
