@@ -190,8 +190,29 @@ func TestNewEmptyHTMXProject(t *testing.T) {
 	if testing.Short() {
 		t.Skip("scaffolds a project and builds it")
 	}
-	into, repo, said := scaffold(t, "-empty", "-ui", "htmx")
-	for _, want := range []string{"the page at / shows them live", pagesGuide, "http://localhost:5179/api/hello", replaceGuide} {
+	into, repo := pagesProject(t, "htmx", startDirHTMX, "5179", "live with htmx 4")
+	// -ui is htmx or datastar, and only with -empty in Go.
+	for _, args := range [][]string{{"-ui", "htmx"}, {"-empty", "-ui", "htmx", "-lang", "ts"}, {"-empty", "-ui", "react"}} {
+		if err := newProject(append([]string{"-name", "billing-api", "-module", "github.com/zeta/billing-api", "-into", into + "2", "-from", repo}, args...)); err == nil || !strings.Contains(err.Error(), "-ui") {
+			t.Errorf("new %s: %v", strings.Join(args, " "), err)
+		}
+	}
+}
+
+// -empty -ui datastar: the same with Datastar.
+func TestNewEmptyDatastarProject(t *testing.T) {
+	if testing.Short() {
+		t.Skip("scaffolds a project and builds it")
+	}
+	pagesProject(t, "datastar", startDirDatastar, "5180", "live with Datastar")
+}
+
+// pagesProject makes a project with -empty -ui ui, from the example in dir (local port port), and
+// checks it.
+func pagesProject(t *testing.T, ui, dir, port, live string) (into, repo string) {
+	t.Helper()
+	into, repo, said := scaffold(t, "-empty", "-ui", ui)
+	for _, want := range []string{"the page at / shows them live", pagesGuide, "http://localhost:" + port + "/api/hello", replaceGuide} {
 		if !strings.Contains(said, want) {
 			t.Errorf("new does not say %q:\n%s", want, said)
 		}
@@ -204,10 +225,11 @@ func TestNewEmptyHTMXProject(t *testing.T) {
 		"pages/home.x.go":      `"github.com/zeta/billing-api/api"`,
 		"cloudflare.config.ts": `HUB: bindings.durableObject({ worker: name, exportName: "Hub" })`,
 		"mise.toml":            `unchanged -files "*.x.go" go tool gsx generate`,
-		"README.md":            "`charter new -empty -ui htmx`",
+		"README.md":            "`charter new -empty -ui " + ui + "`",
 		"README.md ":           "`mise run ui:gen`",
 		"docs/README.md":       "| The pages | `pages/*.gsx`",
 		"docs/README.md ":      pagesGuide,
+		"docs/README.md  ":     live,
 	} {
 		content, err := os.ReadFile(filepath.Join(into, strings.TrimSpace(file)))
 		if err != nil {
@@ -217,16 +239,16 @@ func TestNewEmptyHTMXProject(t *testing.T) {
 			t.Errorf("%s: no %q", file, want)
 		}
 	}
-	listed, err := output(repo, "git", "ls-files", "--cached", "--others", "--exclude-standard", "--", startDirHTMX)
+	listed, err := output(repo, "git", "ls-files", "--cached", "--others", "--exclude-standard", "--", dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, file := range strings.Split(listed, "\n") {
-		if rel := strings.TrimPrefix(file, startDirHTMX+"/"); !exists(filepath.Join(into, rel)) {
+		if rel := strings.TrimPrefix(file, dir+"/"); !exists(filepath.Join(into, rel)) {
 			t.Errorf("%s was not copied", rel)
 		}
 	}
-	notMentioned(t, into, "notes", "charter-start", startDirHTMX, exampleTool)
+	notMentioned(t, into, "notes", "charter-start", dir, exampleTool)
 	for _, args := range [][]string{{"build", "./..."}, {"vet", "./..."}, {"test", "./..."}, {"run", filepath.ToSlash(repo) + "/cmd/charter", "unchanged", "-files", "*.x.go", "go", "tool", "gsx", "generate", "--no-cache", "-q"}} {
 		cmd := exec.Command("go", args...)
 		cmd.Dir = into
@@ -234,12 +256,7 @@ func TestNewEmptyHTMXProject(t *testing.T) {
 			t.Fatalf("go %s in the new project: %v\n%s", strings.Join(args, " "), err, out)
 		}
 	}
-	// -ui is htmx, and only with -empty in Go.
-	for _, args := range [][]string{{"-ui", "htmx"}, {"-empty", "-ui", "htmx", "-lang", "ts"}, {"-empty", "-ui", "datastar"}} {
-		if err := newProject(append([]string{"-name", "billing-api", "-module", "github.com/zeta/billing-api", "-into", into + "2", "-from", repo}, args...)); err == nil || !strings.Contains(err.Error(), "-ui") {
-			t.Errorf("new %s: %v", strings.Join(args, " "), err)
-		}
-	}
+	return into, repo
 }
 
 // -empty -lang ts: the TypeScript start project, with its own tests (none of the Go example's).

@@ -1,0 +1,18 @@
+{
+  "asyncapi": "3.0.0",
+  "channels": {},
+  "components": {
+    "messages": {}
+  },
+  "info": {
+    "title": "charter-start-datastar live",
+    "version": "1.0.0"
+  },
+  "operations": {},
+  "servers": {
+    "production": {
+      "host": "charter-start-datastar.gedw99.workers.dev",
+      "protocol": "wss"
+    }
+  }
+}

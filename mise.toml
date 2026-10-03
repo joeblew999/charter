@@ -1,5 +1,5 @@
 # charter: contract-first APIs on Cloudflare Workers, in Go. The tool (cmd/charter), the Go library
-# (go/), the TypeScript library (ts/), five example projects (examples/: notes and start, each in Go and TypeScript, and start-htmx: start in Go with server-rendered pages) and two conformance projects
+# (go/), the TypeScript library (ts/), six example projects (examples/: notes and start, each in Go and TypeScript, and start-htmx and start-datastar: start in Go with server-rendered pages) and two conformance projects
 # (conformance/: every Fern feature, end to end). This file has the tasks of the repo as a whole.
 # Each is a complete project with a mise.toml of its own and
 # the same task names (setup, check, build, spec, deploy, sdk:gen ...): cd into it and run them there.

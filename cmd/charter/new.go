@@ -13,8 +13,8 @@ import (
 )
 
 func init() {
-	commands["new"] = command{"-name <name> [-lang go|ts] [-empty [-ui htmx]] [-module <go module>] [-subdomain <workers.dev subdomain>] [-into <dir>] [-from <checkout>]",
-		"create a new API project: a copy of a tested example (examples/notes-go in the charter repo; -empty: examples/start-go; -empty -ui htmx: examples/start-htmx) under your name", newProject}
+	commands["new"] = command{"-name <name> [-lang go|ts] [-empty [-ui htmx|datastar]] [-module <go module>] [-subdomain <workers.dev subdomain>] [-into <dir>] [-from <checkout>]",
+		"create a new API project: a copy of a tested example (examples/notes-go in the charter repo; -empty: examples/start-go; -empty -ui htmx: examples/start-htmx; -empty -ui datastar: examples/start-datastar) under your name", newProject}
 	commands["version"] = command{"", "the release this tool is, which is what new pins a project to", func([]string) error {
 		fmt.Println(orCheckout(toolVersion()))
 		return nil
@@ -42,6 +42,8 @@ const (
 	startDirTS = "examples/start-ts"
 	// -empty -ui htmx: start-go's plumbing with server-rendered pages (gsx, htmx 4) in the same Worker.
 	startDirHTMX = "examples/start-htmx"
+	// -empty -ui datastar: the same with the pages made live by Datastar instead.
+	startDirDatastar = "examples/start-datastar"
 	// How the example's tasks run the tool: from the checkout they are in.
 	exampleTool = "go run ../../cmd/charter"
 	// And the tasks of a project made from a checkout: CHARTER, in its mise.toml, is that checkout.
@@ -64,7 +66,7 @@ func newProject(args []string) error {
 	flags("new", args, func(f *flag.FlagSet) {
 		f.StringVar(&lang, "lang", "go", "the contract's language: go (Huma) or ts (oRPC)")
 		f.BoolVar(&empty, "empty", false, "start without the notes example: one route, GET /api/hello, with the same tasks, specs, SDKs, tests and workflows")
-		f.StringVar(&ui, "ui", "", "with -empty, in Go: htmx, for server-rendered pages (gsx and htmx 4) in the same Worker, live over SSE")
+		f.StringVar(&ui, "ui", "", "with -empty, in Go: htmx or datastar, for server-rendered pages (gsx, and htmx 4 or Datastar) in the same Worker, live over SSE")
 		f.StringVar(&name, "name", "", "the project and its Worker, e.g. billing-api (lower case, digits, hyphens)")
 		f.StringVar(&module, "module", "", "its Go module path (default: github.com/<your GitHub login>/<name>)")
 		f.StringVar(&subdomain, "subdomain", placeholderSubdomain, "your account's workers.dev subdomain: the Worker's URL is https://<name>.<subdomain>.workers.dev (the default is a placeholder)")
@@ -79,10 +81,10 @@ func newProject(args []string) error {
 	}
 	ts := lang == "ts"
 	switch {
-	case ui != "" && ui != "htmx":
-		return errors.New("new: -ui is htmx: server-rendered pages with gsx and htmx 4")
+	case ui != "" && ui != "htmx" && ui != "datastar":
+		return errors.New("new: -ui is htmx or datastar: server-rendered pages with gsx, and htmx 4 or Datastar")
 	case ui != "" && (!empty || ts):
-		return errors.New("new: -ui htmx goes with -empty, in Go (-lang go, the default)")
+		return errors.New("new: -ui goes with -empty, in Go (-lang go, the default)")
 	}
 	if !regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`).MatchString(subdomain) {
 		return errors.New("new: -subdomain is the one word before .workers.dev, e.g. -subdomain acme")
@@ -326,7 +328,7 @@ const (
 
 var (
 	// The workers.dev subdomain the example's Worker is deployed on, as its mise.toml names it.
-	ownerSubdomain = regexp.MustCompile(`https://charter-(?:notes|start)-(?:go|ts|htmx)\.([a-z0-9-]+)\.workers\.dev`)
+	ownerSubdomain = regexp.MustCompile(`https://charter-(?:notes|start)-(?:go|ts|htmx|datastar)\.([a-z0-9-]+)\.workers\.dev`)
 	// The local port a project's mise.toml defaults API_PORT to.
 	portDefault = regexp.MustCompile(`API_PORT', default='(\d+)'`)
 	// Fern's organisation: the name its generated READMEs and packages start from.
@@ -339,6 +341,8 @@ func projectSource(ts, empty bool, ui string) string {
 	switch {
 	case ui == "htmx":
 		return startDirHTMX
+	case ui == "datastar":
+		return startDirDatastar
 	case ts && empty:
 		return startDirTS
 	case ts:
@@ -607,18 +611,19 @@ func emptied(page string) string {
 	).Replace(page)
 }
 
-// withPages is a page or message of new -empty as it reads for new -empty -ui htmx: the same, with
-// the messages and the server-rendered pages.
+// withPages is a page or message of new -empty as it reads for new -empty -ui htmx or datastar: the
+// same, with the messages and the server-rendered pages.
 func withPages(text, ui string) string {
-	if ui != "htmx" {
+	library := map[string]string{"htmx": "htmx 4", "datastar": "Datastar"}[ui]
+	if library == "" {
 		return text
 	}
 	return strings.NewReplacer(
-		"`charter new -empty`", "`charter new -empty -ui htmx`",
-		" with an MCP endpoint.", " with an MCP endpoint, and server-rendered pages (gsx and htmx 4) in the same Worker.",
+		"`charter new -empty`", "`charter new -empty -ui "+ui+"`",
+		" with an MCP endpoint.", " with an MCP endpoint, and server-rendered pages (gsx and "+library+") in the same Worker.",
 		"/api/hello\nmise run dev", "/ (the pages; the API: /api/hello)\nmise run dev",
 		"After changing it: `mise run spec`.", "After changing it: `mise run spec`. The pages are `pages/*.gsx`; after changing one: `mise run ui:gen`.",
-		"| The server | `api/handlers.go` |\n", "| The server | `api/handlers.go` |\n| The pages | `pages/*.gsx`: gsx components, live with htmx 4. `mise run ui:gen` writes `pages/*.x.go` (generated; never edit) |\n",
+		"| The server | `api/handlers.go` |\n", "| The server | `api/handlers.go` |\n| The pages | `pages/*.gsx`: gsx components, live with "+library+". `mise run ui:gen` writes `pages/*.x.go` (generated; never edit) |\n",
 		"with one route, `GET /api/hello`, and a D1 database with no tables. How to add\nyours:", "with `GET /api/hello`, messages in D1 (`GET` and `POST /api/messages`) and a page that shows\nthem live. The pages: [Server-rendered pages]("+pagesGuide+"). Routes of your own:",
 		"The API is one route, GET /api/hello:", "The API is GET /api/hello and the messages (GET and POST /api/messages); the page at / shows them live.\nThe pages are pages/*.gsx, then mise run ui:gen: "+pagesGuide+"\nRoutes of your own:",
 	).Replace(text)
