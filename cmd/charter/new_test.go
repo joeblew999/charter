@@ -64,6 +64,7 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 		"docs/README.md ":               replaceGuide,
 		"docs/rules.md":                 "`mise run spec`",
 		"README.md":                     "# billing-api",
+		"charter.toml":                  "description = \"billing-api: a contract-first API on Cloudflare Workers\"\ntopics = []\n",
 	} {
 		content, err := os.ReadFile(filepath.Join(into, strings.TrimSpace(file)))
 		if err != nil {

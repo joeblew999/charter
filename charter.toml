@@ -1,0 +1,4 @@
+# The repo as `charter repo` keeps it (mise run repo; mise run repo:check changes nothing).
+description = "Contract-first APIs on Cloudflare Workers with Huma (Go) or oRPC (TypeScript): OpenAPI and AsyncAPI generated, SDKs in any language with Fern, a CLI, MCP and real-time. Go at TypeScript's cost."
+topics = ["asyncapi", "cloudflare-workers", "contract-first", "d1", "durable-objects", "fern", "golang", "huma", "mcp", "openapi", "orpc", "sdk-generator", "sse", "tinygo", "typescript", "websocket", "workers-go"]
+projects = ["examples/notes-go", "examples/notes-ts", "conformance/showcase-go", "conformance/showcase-ts"]

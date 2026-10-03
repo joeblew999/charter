@@ -57,20 +57,14 @@ func docs(args []string) error {
 	if err != nil {
 		return errors.New("docs needs a GitHub repo here (gh repo view failed)")
 	}
-	var repo struct {
-		NameWithOwner, Name, Description string
-		DefaultBranchRef                 struct{ Name string }
-	}
+	var repo githubRepo
 	if err := json.Unmarshal([]byte(out), &repo); err != nil {
 		return err
 	}
-	description, _ := json.Marshal(repo.Description) // a YAML string, safely quoted
-	config := strings.NewReplacer("__NAME__", repo.Name, "__DESCRIPTION__", string(description),
-		"__REPO__", repo.NameWithOwner, "__BRANCH__", repo.DefaultBranchRef.Name).Replace(docsConfig)
 	stale := 0
-	for path, content := range map[string]string{"docs/_config.yml": config, "docs/_sass/custom/custom.scss": docsStyle, "docs/writing.md": docsWriting, "docs/llms.txt": docsLLMs} {
+	for path, content := range docsSite(repo, "docs") {
 		path = filepath.Join(into, path)
-		if current, _ := os.ReadFile(path); bytes.Equal(current, []byte(content)) {
+		if current, _ := os.ReadFile(path); bytes.Equal(current, content) {
 			continue
 		}
 		stale++
@@ -78,10 +72,7 @@ func docs(args []string) error {
 			fmt.Fprintf(os.Stderr, "%s differs from what `charter docs` writes: mise run docs:setup\n", path)
 			continue
 		}
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return err
-		}
-		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		if err := write(path, string(content)); err != nil {
 			return err
 		}
 		fmt.Println("wrote", path)
@@ -92,6 +83,27 @@ func docs(args []string) error {
 	owner, name, _ := strings.Cut(repo.NameWithOwner, "/")
 	fmt.Printf("docs site: https://%s.github.io/%s/ (first time: mise run docs:pages)\n", owner, name)
 	return nil
+}
+
+// githubRepo is what gh repo view --json says about a repo.
+type githubRepo struct {
+	NameWithOwner, Name, Description, HomepageURL string
+	DefaultBranchRef                              struct{ Name string }
+	RepositoryTopics                              []struct{ Name string }
+}
+
+// docsSite are the files that make a repo's docs folder a site, by their path in the repo: the same
+// for every repo but for its name, description, URLs and the folder.
+func docsSite(repo githubRepo, folder string) map[string][]byte {
+	description, _ := json.Marshal(repo.Description) // a YAML string, safely quoted
+	config := strings.NewReplacer("__NAME__", repo.Name, "__DESCRIPTION__", string(description),
+		"__REPO__", repo.NameWithOwner, "__BRANCH__", repo.DefaultBranchRef.Name,
+		"gh_edit_source: docs", "gh_edit_source: "+folder).Replace(docsConfig)
+	files := map[string][]byte{}
+	for path, content := range map[string]string{"_config.yml": config, "_sass/custom/custom.scss": docsStyle, "writing.md": docsWriting, "llms.txt": docsLLMs} {
+		files[filepath.Join(folder, path)] = []byte(content)
+	}
+	return files
 }
 
 // docsReviewRun hands Claude (the claude command, Claude Code) the review prompt with what

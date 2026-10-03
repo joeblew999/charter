@@ -12,7 +12,7 @@ import (
 
 func init() {
 	commands["issue"] = command{"<bug|feature|upstream>", "print an issue body with the headings of that issue form, for gh issue create --body-file", issue}
-	commands["labels"] = command{"", "REMOTE: create or update this repo's GitHub labels from .github/labels.tsv", labels}
+	commands["labels"] = command{"", "REMOTE: create or update this repo's GitHub labels from labels.tsv, and remove GitHub's default ones that are unused", labels}
 	anywhere["issue"], anywhere["labels"] = true, true
 }
 
@@ -49,20 +49,18 @@ func issue(args []string) error {
 	return nil
 }
 
+// labels is the labels step of charter repo on its own.
 func labels([]string) error {
-	rows, err := collaborationFiles.ReadFile("github/labels.tsv")
+	repo, err := gh(".", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner")
 	if err != nil {
 		return err
 	}
-	for _, row := range strings.Split(strings.TrimSpace(string(rows)), "\n")[1:] {
-		field := strings.Split(row, "\t")
-		if len(field) != 3 {
-			continue
-		}
-		if err := quiet(".", nil, "gh", "label", "create", field[0], "--color", field[1], "--description", field[2], "--force"); err != nil {
-			return err
-		}
-		fmt.Println("label", field[0])
+	changes, err := syncLabels(".", repo, false)
+	for _, change := range changes {
+		fmt.Println("label:", change)
 	}
-	return nil
+	if err == nil && len(changes) == 0 {
+		fmt.Println("labels: ok")
+	}
+	return err
 }

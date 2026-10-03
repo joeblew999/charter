@@ -56,6 +56,7 @@ What `charter new` makes, and `examples/notes-go/`.
 | `sdk:clean` | Removes `sdk/out` and stops leftover WireMock containers |
 | `release` | REMOTE on a version tag: attaches `dist/*` to its GitHub Release. Elsewhere a dry run |
 | `release:tags` | REMOTE on a version tag: tags `sdk/go/vX.Y.Z`. Elsewhere a dry run |
+| `repo`, `repo:check` | REMOTE. `charter repo` at the repo's root: keeps it as `charter.toml` says ([Keep the repo in shape](../guides/deploy.md#keep-the-repo-in-shape)); `repo:check` changes nothing and fails on drift |
 | `workflows`, `workflows:check` | Writes `.github/` from the tool's templates; fails if it differs |
 | `docs:setup` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt` |
 | `docs:lint`, `docs:check` | Checks `docs/`; `docs:check` also fails if the config is stale |
@@ -89,7 +90,7 @@ What `charter new` makes, and `examples/notes-go/`.
 | `ts:dist` | Packs the TypeScript library into `dist/charter-ts-X.Y.Z.tgz`, versioned as the tag (none: `0.0.0-dev`) |
 | `ts:release` | REMOTE on a version tag: attaches `dist/*` to its GitHub Release. Elsewhere a dry run |
 | `release:tags` | REMOTE on a version tag: tags `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` |
-| `setup`, `doctor`, `sdk:clean`, `workflows`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:review`, `docs:pages`, `cloudflare:secrets` | As in a project, for the whole repo |
+| `setup`, `doctor`, `sdk:clean`, `repo`, `repo:check`, `workflows`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:review`, `docs:pages`, `cloudflare:secrets` | As in a project, for the whole repo |
 
 ## Windows and macOS
 

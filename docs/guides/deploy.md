@@ -44,7 +44,25 @@ Add a Go test in `api/` with the helpers in `api/api_test.go` (`server(t)`, `do(
 
 ```sh
 mise run cloudflare:secrets    # once: the deploy workflow's two secrets, from fnox (or: gh secret set)
-mise run docs:pages            # once: GitHub Pages for docs/
 ```
 
 Limits: one Worker and database, no staging, no custom domain. The deploy workflow has not yet run from GitHub.
+
+## Keep the repo in shape
+
+`charter.toml` at the repo's root says what the repo is; `charter new` writes one.
+
+```toml
+description = "billing-api: a contract-first API on Cloudflare Workers"
+topics = ["api", "cloudflare-workers"]
+# homepage = "https://..."     default: the GitHub Pages URL
+# docs = "docs"                the docs folder: "docs" or "."
+# projects = ["api"]           folders that are projects, in a repo that holds several
+```
+
+```sh
+mise run repo          # REMOTE: brings the repo in line, printing ok or changed per item
+mise run repo:check    # REMOTE, read-only: fails on drift, for CI
+```
+
+It runs at the repo's root, from any folder in it, and keeps: the docs site's config and `docs/writing.md`; the issue forms and `labels.tsv`; the workflows, for a repo that is a project or lists `projects`; the GitHub labels, removing GitHub's unused defaults; the description, homepage and topics; GitHub Pages for the docs folder. Running it again changes nothing. A project in a subfolder keeps its own tasks.

@@ -57,6 +57,14 @@ run = "go run ./cmd/charter upstream"
 description = "The tool's own checks (gofmt, vet, tests, with the test that holds the two notes examples to one surface), the generated workflows and docs config match their templates, and docs/ passes the lint"
 run = "go run ./cmd/charter lint -vet ./cmd/...,./examples cmd examples/*.go && go test ./cmd/... ./examples && go run ./cmd/charter workflows -check && go run ./cmd/charter docs -check && go run ./cmd/charter docs-lint"
 
+[tasks.repo]
+description = "REMOTE: keep the repo in shape from charter.toml: docs site, issue forms, labels, workflows, description, homepage, topics, GitHub Pages"
+run = "go run ./cmd/charter repo"
+
+[tasks."repo:check"]
+description = "REMOTE, read-only: fail if the repo differs from charter.toml and the tool's templates"
+run = "go run ./cmd/charter repo -check"
+
 [tasks.workflows]
 description = "Write .github/workflows/ from the templates in cmd/charter/workflows (edit those, never the copies)"
 run = "go run ./cmd/charter workflows"
