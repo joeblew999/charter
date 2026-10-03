@@ -33,6 +33,7 @@ What `charter new` makes, and `examples/notes-go/`.
 | `mcp-test` | The MCP test against a running `run` or `dev` |
 | `deploy` | REMOTE. `build`, `cf deploy`, `migrate` |
 | `migrate` | REMOTE. Applies pending migrations to `<worker>-db` |
+| `tail` | REMOTE, read-only. The deployed Worker's live logs: each request, its console output and exceptions, until Ctrl-C; `-- -for 30s`, `-- -worker <name>` |
 | `live-test` | REMOTE, writes test notes. SSE, WebSocket, the TypeScript SDK, MCP |
 | `soak` | REMOTE, redeploys. Every client against every real-time scenario; `--idle <min>` |
 | `bench` | REMOTE, read-only. Times every GET operation |

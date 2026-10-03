@@ -1,6 +1,6 @@
 # Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
 # and its tasks run in the project (dir), calling the tool as CHARTER_TOOL (its mise.toml sets it).
-# Cloudflare: the database's migrations, the secrets a deploy from GitHub needs, and Access in front of the Worker.
+# Cloudflare: the database's migrations, the Worker's live logs, the secrets a deploy from GitHub needs, and Access in front of the Worker.
 
 ["migrate"]
 description = "REMOTE: apply pending migrations/ to the Worker's D1 database"
@@ -11,6 +11,11 @@ run = "{{env.CHARTER_TOOL}} migrate"
 description = "Apply migrations/ to the local D1 of a running mise run dev"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} migrate-local"
+
+["tail"]
+description = "REMOTE, read-only: stream the deployed Worker's live logs (requests, console output, exceptions) until Ctrl-C; -- -for 30s stops by itself, -- -worker <name> tails another"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} tail"
 
 ["cloudflare:secrets"]
 description = "REMOTE, once per repo: copy CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and the Worker's secrets (WORKER_SECRETS) from fnox into the repo's GitHub secrets, for the deploy workflow"

@@ -377,7 +377,7 @@ func requestCPU(worker string, since time.Time, samples []sample) (map[string]fl
 	for deadline := time.Now().Add(2 * time.Minute); ; time.Sleep(3 * time.Second) {
 		query["timeframe"] = map[string]int64{"from": since.Add(-2 * time.Second).UnixMilli(), "to": time.Now().UnixMilli()}
 		body, _ := json.Marshal(query)
-		req, _ := http.NewRequest("POST", "https://api.cloudflare.com/client/v4/accounts/"+account+"/workers/observability/telemetry/query", bytes.NewReader(body))
+		req, _ := http.NewRequest("POST", cloudflareAPI+"/accounts/"+account+"/workers/observability/telemetry/query", bytes.NewReader(body))
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
 		res, err := benchClient.Do(req)

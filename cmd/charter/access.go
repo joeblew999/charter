@@ -63,6 +63,9 @@ func envPrefix(name string) string {
 // cloudflare calls Cloudflare's API for one account.
 type cloudflare struct{ token, account string }
 
+// cloudflareAPI is where Cloudflare's API is (a test's server, in tests).
+var cloudflareAPI = "https://api.cloudflare.com/client/v4"
+
 func newCloudflare() (cloudflare, error) {
 	cf := cloudflare{secret("CLOUDFLARE_API_TOKEN"), secret("CLOUDFLARE_ACCOUNT_ID")}
 	if cf.token == "" || cf.account == "" {
@@ -84,7 +87,7 @@ func (cf cloudflare) call(method, path string, body, out any) error {
 		}
 		reader = bytes.NewReader(b)
 	}
-	req, err := http.NewRequest(method, "https://api.cloudflare.com/client/v4/accounts/"+cf.account+path, reader)
+	req, err := http.NewRequest(method, cloudflareAPI+"/accounts/"+cf.account+path, reader)
 	if err != nil {
 		return err
 	}
