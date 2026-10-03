@@ -6,12 +6,12 @@
 **Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go or [oRPC](https://orpc.dev) in TypeScript.** Write the contract once and get the server, the OpenAPI and AsyncAPI specs, typed SDKs in any language ([Fern](https://buildwithfern.com)), a CLI, an MCP endpoint and real-time streams: generated from that contract, and tested.
 
 ```sh
-go run github.com/joeblew999/charter/cmd/charter@latest new -name billing-api -module github.com/you/billing-api
+mise x go node github:joeblew999/charter -- charter new -name billing-api -module github.com/you/billing-api   # -lang ts: oRPC
 cd billing-api && mise install && mise run setup && mise run check   # a working API, checked locally
 mise run deploy                                                       # on Cloudflare
 ```
 
-Needs [mise](https://mise.jdx.dev), Go and git, on macOS, Linux or Windows. Then: [Getting started](docs/getting-started.md).
+Needs [mise](https://mise.jdx.dev) and git, on macOS, Linux or Windows: mise fetches the charter tool (a release binary), Go and Node. Then: [Getting started](docs/getting-started.md).
 
 ## What you get
 

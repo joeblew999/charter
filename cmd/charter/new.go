@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -25,13 +26,17 @@ const (
 	repoURL    = "https://github.com/joeblew999/charter"
 	repoModule = "github.com/joeblew999/charter"
 	docsURL    = "https://joeblew999.github.io/charter/"
-	// The tool as a module's package: what `go run` and mise's go: backend take.
+	// The tool as a module's package: what `go run` takes.
 	toolPackage = repoModule + "/cmd/charter"
+	// The tool as mise installs it: the release's binary for the system (GitHub's assets).
+	toolRelease = "github:joeblew999/charter"
 
-	// The example a new project is a copy of, and its names in the charter repo.
+	// The example a new project is a copy of (Go; -lang ts: the TypeScript one), and its names in the
+	// charter repo. Both name their Go SDK by the Go example's module.
 	exampleDir    = "examples/notes-go"
 	exampleModule = repoModule + "/" + exampleDir
 	exampleWorker = "charter-notes-go"
+	exampleDirTS  = "examples/notes-ts"
 	// How the example's tasks run the tool: from the checkout they are in.
 	exampleTool = "go run ../../cmd/charter"
 	// And the tasks of a project made from a checkout: CHARTER, in its mise.toml, is that checkout.
@@ -49,8 +54,9 @@ const (
 // own version (a tag, cloned), or from -from, or from the checkout the tool is run in, so a new
 // project starts from code that passed that repo's checks, not from a template kept beside it.
 func newProject(args []string) error {
-	var name, module, subdomain, into, from string
+	var name, module, subdomain, into, from, lang string
 	flags("new", args, func(f *flag.FlagSet) {
+		f.StringVar(&lang, "lang", "go", "the contract's language: go (Huma) or ts (oRPC)")
 		f.StringVar(&name, "name", "", "the project and its Worker, e.g. billing-api (lower case, digits, hyphens)")
 		f.StringVar(&module, "module", "", "its Go module path (default: github.com/<your GitHub login>/<name>)")
 		f.StringVar(&subdomain, "subdomain", placeholderSubdomain, "your account's workers.dev subdomain: the Worker's URL is https://<name>.<subdomain>.workers.dev (the default is a placeholder)")
@@ -60,6 +66,10 @@ func newProject(args []string) error {
 	if !regexp.MustCompile(`^[a-z][a-z0-9-]{1,40}[a-z0-9]$`).MatchString(name) {
 		return errors.New("new needs -name: lower-case letters, digits and hyphens, e.g. -name billing-api")
 	}
+	if lang != "go" && lang != "ts" {
+		return errors.New("new: -lang is go (Huma) or ts (oRPC)")
+	}
+	ts := lang == "ts"
 	if !regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`).MatchString(subdomain) {
 		return errors.New("new: -subdomain is the one word before .workers.dev, e.g. -subdomain acme")
 	}
@@ -88,7 +98,7 @@ func newProject(args []string) error {
 	case version == "":
 		dir, ok := checkoutAbove(started)
 		if !ok {
-			return errors.New("new: run it as go run " + toolPackage + "@latest, or pass -from <checkout of charter>")
+			return errors.New("new: run a release (mise x " + toolRelease + " -- charter new ...), or pass -from <checkout of charter>")
 		}
 		checkout = dir
 	default:
@@ -113,19 +123,19 @@ func newProject(args []string) error {
 	if !exists(filepath.Join(source, "api", "contract.go")) {
 		return fmt.Errorf("%s is not a checkout of charter (no %s)", from, exampleDir)
 	}
-	fmt.Println(pinned(version, checkout))
-	tasks, err := copyExample(from, into, name, module, subdomain, version, checkout)
+	fmt.Println(pinned(version, checkout, ts))
+	tasks, err := copyExample(from, into, name, module, subdomain, version, checkout, ts)
 	if err != nil {
 		return err
 	}
 
 	// What a repo has around a project: its start pages, the docs folder, the GitHub workflows.
 	for path, content := range map[string]string{
-		"README.md":       projectReadme(name, orCheckout(version)),
+		"README.md":       projectReadme(name, orCheckout(version), ts),
 		"AGENTS.md":       "# For agents\n\nEverything about this project is in [docs/](docs/README.md), the same pages developers read. Read [docs/README.md](docs/README.md), then [docs/rules.md](docs/rules.md): the rules are binding.\n",
 		"CLAUDE.md":       "@AGENTS.md\n",
-		"docs/README.md":  projectDocs(name),
-		"docs/rules.md":   projectRules,
+		"docs/README.md":  projectDocs(name, ts),
+		"docs/rules.md":   projectRules(ts),
 		"docs/writing.md": docsWriting,
 	} {
 		if err := write(filepath.Join(into, path), content); err != nil {
@@ -134,6 +144,10 @@ func newProject(args []string) error {
 	}
 	if err := writeWorkflows(into); err != nil {
 		return err
+	}
+
+	if ts {
+		return finishTS(into, name, subdomain, version, checkout, tasks)
 	}
 
 	// The Go library: the release the tool is, or the checkout's.
@@ -180,8 +194,12 @@ the first request in a new isolate about 10 ms (measured 2026-10-02). mise run b
 
 // copyExample writes the example in from (a checkout of charter, or a clone of a release) into
 // into, under the project's names. It returns the example's mise.toml as it was.
-func copyExample(from, into, name, module, subdomain, version, checkout string) ([]byte, error) {
-	source := filepath.Join(from, filepath.FromSlash(exampleDir))
+func copyExample(from, into, name, module, subdomain, version, checkout string, ts bool) ([]byte, error) {
+	dir := exampleDir
+	if ts {
+		dir = exampleDirTS
+	}
+	source := filepath.Join(from, filepath.FromSlash(dir))
 	tasks, err := os.ReadFile(filepath.Join(source, "mise.toml"))
 	if err != nil {
 		return nil, err
@@ -196,25 +214,50 @@ func copyExample(from, into, name, module, subdomain, version, checkout string) 
 	// A release: mise installs it, pinned, and it is on the path of every task. A checkout: nothing
 	// is pinned (the newest release can be older than the checkout), and the tasks `go run` it from
 	// there, at the one place CHARTER names.
-	tool, which := "charter", "[tools]\n# The tool every task runs: `mise up` moves to a newer release.\n\"go:"+toolPackage+"\" = \""+strings.TrimPrefix(version, "v")+"\"\n"
+	tool, which := "charter", "[tools]\n# The tool every task runs, the release's binary: `mise up --bump "+toolRelease+"` moves to a newer one.\n\""+toolRelease+"\" = \""+strings.TrimPrefix(version, "v")+"\"\n"
 	if checkout != "" {
 		// With forward slashes on every system: a backslash in a TOML string starts an escape.
 		tool, which = checkoutTool, "[env]\n# The checkout of charter whose tool the tasks run (go.work lets them) and whose Go library go.mod\n# builds against: charter new -from.\nCHARTER = \""+filepath.ToSlash(checkout)+"\"\n"
 	}
-	rename := strings.NewReplacer(
+	worker := "charter-" + filepath.Base(dir)
+	pairs := []string{
 		exampleModule, module,
-		exampleWorker+"."+string(owner[1])+".workers.dev", name+"."+subdomain+".workers.dev",
+		worker + "." + string(owner[1]) + ".workers.dev", name + "." + subdomain + ".workers.dev",
+		exampleWorker + "." + string(owner[1]) + ".workers.dev", name + "." + subdomain + ".workers.dev",
+		worker, name,
 		exampleWorker, name,
 		exampleTool, tool,
-	)
+	}
+	if ts {
+		// The TypeScript library: the release's package, or the checkout's folder (built by setup).
+		// And the tests, which the TypeScript example shares with the Go one: copied into test/.
+		library, build := tsPackageURL(version), ""
+		if checkout != "" {
+			library, build = "file:"+filepath.ToSlash(filepath.Join(checkout, "ts")), "npm ci --no-fund --no-audit --prefix {{env.CHARTER}}/ts && npm run build --prefix {{env.CHARTER}}/ts && "
+		}
+		pairs = append(pairs,
+			"npm ci --no-fund --no-audit --prefix ../../ts && npm run build --prefix ../../ts && ", build,
+			`"file:../../ts"`, `"`+library+`"`,
+			"../"+filepath.Base(exampleDir)+"/test/", "test/",
+		)
+	}
+	rename := strings.NewReplacer(pairs...)
 
 	// Everything git knows of the example or would add (so not node_modules, build/ or sdk/out).
-	listed, err := output(from, "git", "ls-files", "--cached", "--others", "--exclude-standard", "--", exampleDir)
+	listed, err := output(from, "git", "ls-files", "--cached", "--others", "--exclude-standard", "--", dir)
 	if err != nil {
-		return nil, fmt.Errorf("listing the files of %s in %s: %w", exampleDir, from, err)
+		return nil, fmt.Errorf("listing the files of %s in %s: %w", dir, from, err)
 	}
-	for _, file := range strings.Split(listed, "\n") {
-		rel := strings.TrimPrefix(file, exampleDir+"/")
+	files := strings.Split(listed, "\n")
+	if ts {
+		tests, err := output(from, "git", "ls-files", "--cached", "--others", "--exclude-standard", "--", exampleDir+"/test")
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, strings.Split(tests, "\n")...)
+	}
+	for _, file := range files {
+		rel := strings.TrimPrefix(strings.TrimPrefix(file, dir+"/"), exampleDir+"/")
 		if file == "" || strings.HasPrefix(rel, exampleSDK) {
 			continue
 		}
@@ -252,7 +295,7 @@ const (
 
 var (
 	// The workers.dev subdomain the example's Worker is deployed on, as its mise.toml names it.
-	ownerSubdomain = regexp.MustCompile(`https://` + exampleWorker + `\.([a-z0-9-]+)\.workers\.dev`)
+	ownerSubdomain = regexp.MustCompile(`https://charter-notes-(?:go|ts)\.([a-z0-9-]+)\.workers\.dev`)
 	// Fern's organisation: the name its generated READMEs and packages start from.
 	fernOrganization = regexp.MustCompile(`"organization":\s*"[^"]*"`)
 	goPin            = regexp.MustCompile(`(?m)^go = "([^"]+)"`)
@@ -290,11 +333,71 @@ func afterDeploy(name, subdomain string) string {
 
 // pinned is the first line new prints: which release the tool is, and what the project uses of it.
 // (Minutes after a release, @latest can still be the one before.)
-func pinned(version, checkout string) string {
-	if checkout == "" {
+func pinned(version, checkout string, ts bool) string {
+	switch {
+	case checkout == "" && ts:
+		return fmt.Sprintf("charter %s: pins the tool to %s in mise.toml and the TypeScript library to %s in package.json", version, version, version)
+	case checkout == "":
 		return fmt.Sprintf("charter %s: pins the tool to %s in mise.toml and the Go library to %s in go.mod", version, version, version)
+	case ts:
+		return fmt.Sprintf("charter %s, copying from %s: the tasks run the tool from that checkout (CHARTER in mise.toml), and package.json takes its TypeScript library (ts/)", orCheckout(version), checkout)
 	}
 	return fmt.Sprintf("charter %s, copying from %s: the tasks run the tool from that checkout (CHARTER in mise.toml), and go.mod builds against its library (a replace line)", orCheckout(version), checkout)
+}
+
+// tsPackageURL is where a release's TypeScript library is: the package the release workflow attaches.
+func tsPackageURL(version string) string {
+	return repoURL + "/releases/download/" + version + "/charter-ts-" + strings.TrimPrefix(version, "v") + ".tgz"
+}
+
+// finishTS is the end of new for a TypeScript project: the lockfile for its own @charter/ts, and
+// what to do next.
+func finishTS(into, name, subdomain, version, checkout string, tasks []byte) error {
+	if checkout != "" {
+		// The tasks `go run` the tool from the checkout: a workspace of that module allows it.
+		if err := write(filepath.Join(into, "go.work"), "go "+goVersion(tasks)+"\n\nuse "+filepath.ToSlash(checkout)+"\n"); err != nil {
+			return err
+		}
+	}
+	// The example's lockfile links the library's folder in the charter repo: drop that, and lock the
+	// project's own (the other packages keep the versions the example was checked with).
+	lockFile := filepath.Join(into, "package-lock.json")
+	content, err := os.ReadFile(lockFile)
+	if err != nil {
+		return err
+	}
+	var lock map[string]any
+	if err := json.Unmarshal(content, &lock); err != nil {
+		return fmt.Errorf("%s: %w", lockFile, err)
+	}
+	packages, _ := lock["packages"].(map[string]any)
+	delete(packages, "../../ts")
+	delete(packages, "node_modules/@charter/ts")
+	if content, err = json.MarshalIndent(lock, "", "\t"); err != nil {
+		return err
+	}
+	if err := os.WriteFile(lockFile, content, 0o644); err != nil {
+		return err
+	}
+	if err := quiet(into, nil, "npm", "install", "--package-lock-only", "--no-fund", "--no-audit"); err != nil {
+		return fmt.Errorf("npm install --package-lock-only in the new project (new -lang ts needs Node): %w", err)
+	}
+	fmt.Printf(`created %s (Worker %s)
+
+  cd %s && git init
+  mise install && mise run setup     # tools, then npm packages
+  mise run check                     # typecheck, spec drift
+  mise run dev                       # the API under workerd: http://localhost:5173/api/hello (first time: mise run migrate:local)
+  mise run deploy                    # to Cloudflare, then: mise run live-test
+
+The API is the notes example: change src/contract.ts, then mise run spec.
+The TypeScript library (@charter/ts) is a dependency in package.json.
+To put your own API in its place: %s
+With a GitHub repo: mise run docs:setup, mise run docs:pages. The workflows are in .github/workflows.
+
+%s
+`, into, name, into, replaceGuide, afterDeploy(name, subdomain))
+	return nil
 }
 
 // orCheckout names the tool's version, or says that it has none.
@@ -325,7 +428,26 @@ func write(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0o644)
 }
 
-func projectReadme(name, version string) string {
+func projectReadme(name, version string, ts bool) string {
+	if ts {
+		return "# " + name + `
+
+A contract-first TypeScript API on Cloudflare Workers: oRPC and Zod, with real-time (SSE +
+WebSocket). The OpenAPI and AsyncAPI specs are generated from the contract, and Fern generates SDKs
+and a CLI from them. Made with ` + "`charter new -lang ts`" + ` from [charter](` + repoURL + `) (` + version + `),
+whose [docs](` + docsURL + `) explain the design.
+
+` + "```sh" + `
+mise install && mise run setup     # tools, then npm packages
+mise run check                     # every local check
+mise run dev                       # under workerd: http://localhost:5173/api/hello (first time: mise run migrate:local)
+mise run deploy                    # to Cloudflare, then: mise run live-test
+mise tasks                         # everything else: every task is one line
+` + "```" + `
+
+The contract is ` + "`src/contract.ts`" + `. After changing it: ` + "`mise run spec`" + `. Docs are in [docs/](docs/README.md).
+`
+	}
 	return "# " + name + `
 
 A contract-first Go API on Cloudflare Workers: Huma on workers-go, built with TinyGo, with real-time
@@ -346,7 +468,18 @@ The contract is ` + "`api/contract.go`" + `. After changing it: ` + "`mise run s
 `
 }
 
-func projectDocs(name string) string {
+func projectDocs(name string, ts bool) string {
+	if ts {
+		return strings.NewReplacer(
+			"You write the contract in Go;", "You write the contract in TypeScript;",
+			"`api/contract.go` (Huma: Go structs and their tags)", "`src/contract.ts` (oRPC and Zod)",
+			"| The server | `api/handlers.go` |", "| The server | `src/index.ts`; the hub (a Durable Object) is `src/hub.ts` |",
+			"| The Worker's entry | `worker.mjs`. The rest of the JavaScript is the Go library's: the build writes it into `build/` |\n", "",
+			"| MCP | `/api/mcp`: every one-shot operation of the contract is a tool |\n", "",
+		).Replace(projectDocs(name, false)[:strings.Index(projectDocs(name, false), "How it works")]) + `How it works, the real-time design and the measured costs are documented once, in
+[charter's docs](` + docsURL + `). The TypeScript library this project depends on (` + "`@charter/ts`: `specs`, `spec-files`, `asyncapi`, `follow`" + `) comes from there.
+`
+	}
 	return `---
 title: Start here
 nav_order: 1
@@ -391,7 +524,18 @@ glue the build writes into ` + "`build/`" + `) comes from there.
 `
 }
 
-const projectRules = `---
+func projectRules(ts bool) string {
+	if ts {
+		return strings.NewReplacer(
+			"api/contract.go", "src/contract.ts",
+			"- **Everything that ships to Workers builds with TinyGo** (`mise run build`). `go test` can't see TinyGo's gaps, so the check also runs the Wasm under workerd.\n", "",
+			"Go modules in `go.mod`, n", "N",
+		).Replace(goRules)
+	}
+	return goRules
+}
+
+const goRules = `---
 title: Rules
 nav_order: 2
 ---

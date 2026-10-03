@@ -81,6 +81,8 @@ func TestTheExamplesPinTheSameTools(t *testing.T) {
 // others. (The lines that differ by nature, a Go build against a TypeScript one, are not listed.)
 func TestTheExamplesShareTheirTaskLines(t *testing.T) {
 	same := []string{"setup", "sdk:list", "sdk:check-spec", "sdk:gen", "sdk:check", "sdk:ready", "sdk:cli:build", "sdk:clean", "doctor"}
+	// And what the two examples share as the projects charter new makes from them.
+	shared := []string{"upstream:status", "cloudflare:secrets", "sdk:publish", "sdk:publish:check", "sdk:publish:fresh", "sdk:docs", "release", "release:tags", "workflows", "workflows:check", "docs:setup", "docs:lint", "docs:check", "docs:review", "docs:pages"}
 	task := func(file, name string) string {
 		content, err := os.ReadFile(file)
 		if err != nil {
@@ -105,7 +107,11 @@ func TestTheExamplesShareTheirTaskLines(t *testing.T) {
 	reference := filepath.Join("../../examples", "notes-go", "mise.toml")
 	for _, name := range examples(t) {
 		file := filepath.Join("../..", name, "mise.toml")
-		for _, shared := range same {
+		tasks := same
+		if strings.HasPrefix(name, "examples/") {
+			tasks = append(slices.Clone(same), shared...)
+		}
+		for _, shared := range tasks {
 			want, got := task(reference, shared), task(file, shared)
 			if strings.HasSuffix(name, "-ts") && shared == "setup" {
 				// A TypeScript example first installs and builds the TypeScript library (ts/), its

@@ -57,7 +57,4 @@ Without a stream, also remove the hub: `Hub` in `Env`, `feed`, the `HUB` binding
 
 ## In TypeScript
 
-`examples/notes-ts/` is the same API on oRPC (`src/contract.ts`, Zod), without a native run or MCP; invalid input gets a 400. To start one:
-
-1. Copy the folder and `examples/notes-go/test/`. In `mise.toml`, pin the charter tool, rename the Worker, and make `setup` only `npm ci --no-fund --no-audit`. Run `charter workflows`.
-2. In `package.json`, set `@charter/ts` to `https://github.com/joeblew999/charter/releases/download/vX.Y.Z/charter-ts-X.Y.Z.tgz`, then `npm install`.
+`examples/notes-ts/` is the same API on oRPC (`src/contract.ts`, Zod), without a native run or MCP; invalid input gets a 400. `charter new -lang ts` makes a project from it, as [Getting started](../getting-started.md) does in Go: the tests it shares with the Go example go into `test/`, and `@charter/ts` comes from the release. Then `src/contract.ts` is the contract, `src/index.ts` the server and `mise run dev` runs it.

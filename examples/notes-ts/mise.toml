@@ -1,12 +1,12 @@
-# The notes API in TypeScript on Cloudflare Workers: the same API as ../notes-go, from an oRPC
-# contract (src/contract.ts). The specs (fern/), the SDKs, a CLI and the API docs come from it.
+# The notes API in TypeScript on Cloudflare Workers, from an oRPC contract (src/contract.ts).
+# The specs (fern/), the SDKs, a CLI and the API docs come from it.
 #   mise install && mise run setup     # tools, then npm packages
 #   mise run check                     # every local check (no Cloudflare account)
 #   mise tasks                         # all of them
 # Every task is one line that sh and Windows' cmd.exe both take: programs, "double quotes", &&. A
 # setting is written {{env.NAME}}, which mise fills in itself. Anything else is a
 # command of the charter tool, which works on the project it is run in (`help` lists its commands).
-# The tests a deploy must pass are the Go project's (../notes-go/test): one API, one set of tests.
+# The tests a deploy must pass: ../notes-go/test/ (one API, one set of tests).
 
 [tools]
 # The charter tool is Go, and so is one client of the soak test.
@@ -29,16 +29,20 @@ API_URL = "{{ get_env(name='API_URL', default='https://charter-notes-ts.gedw99.w
 # ---- the project ---------------------------------------------------------------------------------
 
 [tasks.setup]
-description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import; and build the TypeScript library (../../ts), which src/ and spec.ts import as @charter/ts (a project outside this repo installs it from a GitHub release instead)"
+description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import, and @charter/ts (the TypeScript library)"
 run = "npm ci --no-fund --no-audit --prefix ../../ts && npm run build --prefix ../../ts && npm ci --no-fund --no-audit"
 
 [tasks.check]
-description = "Every LOCAL check (no Cloudflare account): typecheck, and the committed specs match the contract. (The unit tests of follow() are the library's: mise run ts:check at the repo root)"
-depends = ["lint", "spec:check"]
+description = "Every LOCAL check (no Cloudflare account): typecheck, the committed specs match the contract, and what is generated matches. (The unit tests of follow() are the library's: mise run ts:check at the repo root)"
+depends = ["lint", "spec:check", "sdk:publish:fresh", "workflows:check", "docs:check"]
 
 [tasks.doctor]
 description = "Check what the tasks need: npm packages, Docker, Go, Rust"
 run = "go run ../../cmd/charter doctor"
+
+[tasks."upstream:status"]
+description = "The upstream issues the code works around (every `Upstream:` tag): CLOSED means that workaround can go"
+run = "go run ../../cmd/charter upstream"
 
 # ---- the API: run it, test it --------------------------------------------------------------------
 
@@ -86,6 +90,10 @@ run = 'node ../notes-go/test/soak.mjs {{env.API_URL}}'
 description = "REMOTE, read-only: every GET operation of the deployed Worker, wall time and Cloudflare's CPU time. Add -write to include the ones that change data"
 run = 'go run ../../cmd/charter bench -cpu -warm 30s -spec fern/openapi.json -body "POST /api/notes={\"body\":\"bench\"}"'
 
+[tasks."cloudflare:secrets"]
+description = "REMOTE, once per repo: copy CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from fnox into the repo's GitHub secrets, for the deploy workflow"
+run = "fnox exec -- go run ../../cmd/charter github-secrets CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"
+
 [tasks."cloudflare:token"]
 description = "Fail unless CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set: what a deploy from GitHub needs (locally, cf auth login is enough)"
 run = "go run ../../cmd/charter need-env CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"
@@ -112,6 +120,18 @@ run = "go run ../../cmd/charter sdk-check"
 description = "Generate and build what the tests use, if missing (TypeScript and Go SDKs, the CLI): mise run sdk:ready [group...]"
 run = "go run ../../cmd/charter sdk-ready"
 
+[tasks."sdk:publish"]
+description = "Generate and check the Go SDK, then copy its sources into sdk/go, the committed module another repo can go get (Docker). Commit the result"
+run = "go run ../../cmd/charter sdk-publish"
+
+[tasks."sdk:publish:check"]
+description = "Fail if sdk/go is not what the committed specs generate now (Docker)"
+run = "go run ../../cmd/charter sdk-publish -check"
+
+[tasks."sdk:publish:fresh"]
+description = "Fail if the specs changed since sdk/go was made from them (no Docker: it compares a hash). sdk:publish:check proves the content"
+run = "go run ../../cmd/charter sdk-publish -check -quick"
+
 [tasks."sdk:cli:build"]
 description = "HEAVY: build the generated Rust CLI in sdk/out/cli: mise run sdk:cli:build [-linux]"
 run = "go run ../../cmd/charter cli-build"
@@ -124,10 +144,50 @@ run = "go run ../../cmd/charter dist-sdk"
 description = "HEAVY: generate and build the CLI into dist/: mise run sdk:dist:cli [-linux]"
 run = "go run ../../cmd/charter dist-cli"
 
+[tasks."sdk:docs"]
+description = "Preview the API's reference site locally (fern docs dev): http://localhost:3030"
+# Fern runs its preview app from ~/.fern, outside the project: tell mise's shims which node to use there.
+env = { MISE_NODE_VERSION = "26.10.0" }
+run = "go run ../../cmd/charter exec fern docs dev --port 3030"
+
 [tasks."sdk:clean"]
 description = "Remove generated SDKs (sdk/out) and stop leftover WireMock containers"
 run = "go run ../../cmd/charter sdk-clean"
 
+# ---- the repo: releases, GitHub workflows, the docs site in docs/ --------------------------------
+
 [tasks.release]
 description = "REMOTE on a version tag (vX.Y.Z): attach dist/* to its GitHub Release. Anywhere else: a dry run that lists dist/"
 run = "go run ../../cmd/charter release"
+
+[tasks."release:tags"]
+description = "REMOTE on a version tag (vX.Y.Z): tag the committed Go SDK, a module in a subdirectory (sdk/go/vX.Y.Z). Anywhere else: a dry run"
+run = "go run ../../cmd/charter release-tags sdk/go"
+
+[tasks.workflows]
+description = "Write .github/workflows/ from the tool's templates (never edit the copies)"
+run = "go run ../../cmd/charter workflows"
+
+[tasks."workflows:check"]
+description = "Fail if a workflow in .github/workflows/ differs from the tool's template"
+run = "go run ../../cmd/charter workflows -check"
+
+[tasks."docs:setup"]
+description = "Write the docs site's config and docs/writing.md (the same for every repo; GitHub Pages renders the folder)"
+run = "go run ../../cmd/charter docs"
+
+[tasks."docs:lint"]
+description = "Check docs/ for what a program can check: front matter, links, the index, tasks and paths that don't exist"
+run = "go run ../../cmd/charter docs-lint"
+
+[tasks."docs:check"]
+description = "Fail if the docs site's config differs from what docs:setup writes, or docs/ fails the lint"
+run = "go run ../../cmd/charter docs -check && go run ../../cmd/charter docs-lint"
+
+[tasks."docs:review"]
+description = "Have Claude (the claude command) bring docs/ up to date and into line with docs/writing.md"
+run = "go run ../../cmd/charter docs-review"
+
+[tasks."docs:pages"]
+description = "REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself)"
+run = 'gh api -X POST "repos/{owner}/{repo}/pages" -f "source[branch]=main" -f "source[path]=/docs"'

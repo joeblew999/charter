@@ -7,16 +7,16 @@ nav_order: 2
 
 One tutorial. You end with a Go API ([Huma](https://huma.rocks)) on Cloudflare Workers, tested there, with a generated SDK. For oRPC: [In TypeScript](guides/replace-the-example.md#in-typescript).
 
-You need [mise](https://mise.jdx.dev), Go and git (macOS, Linux or Windows: [what is covered on Windows](reference/tasks.md#windows-and-macos)), and from step 5 Docker and a Cloudflare account.
+You need [mise](https://mise.jdx.dev) and git (macOS, Linux or Windows: [what is covered on Windows](reference/tasks.md#windows-and-macos)), and from step 5 Docker and a Cloudflare account.
 
 ## 1. Create the project
 
 ```sh
-go run github.com/joeblew999/charter/cmd/charter@latest new -name billing-api -module github.com/you/billing-api -subdomain you
+mise x go node github:joeblew999/charter -- charter new -name billing-api -module github.com/you/billing-api -subdomain you
 cd billing-api && git init
 ```
 
-`-name` is the folder, the Worker and its database; `-subdomain` your account's `workers.dev` subdomain ([every flag](reference/charter.md#make-a-project)). The project is a copy of the notes example, so every check passes before you change anything.
+`mise x` fetches the newest charter release (a binary for your system) and Go and Node, for this one command; the project pins that release in its `mise.toml`. `-name` is the folder, the Worker and its database; `-subdomain` your account's `workers.dev` subdomain ([every flag](reference/charter.md#make-a-project)). The project is a copy of the notes example, so every check passes before you change anything.
 
 ## 2. Install and check
 

@@ -1,6 +1,6 @@
 # The notes API from the oRPC contract. openapi.json and asyncapi.json are written by `mise run spec`
 # from src/contract.ts (never by hand). What Fern needs (SDK names, x-fern-pagination,
-# x-fern-streaming) is declared there; the WebSocket channel comes from asyncapi() of @charter/ts (../../ts/src/asyncapi.ts).
+# x-fern-streaming) is declared there; the WebSocket channel comes from asyncapi() of @charter/ts.
 api:
   specs:
     - openapi: openapi.json
@@ -18,8 +18,8 @@ groups:
           location: local-file-system
           path: ../sdk/out/go
         config:
-          # The same module path as ../notes-go's SDK (the one committed to its sdk/go): the two APIs have the
-          # same surface, and ../notes-go/test/soak-go builds against either SDK under this one import path.
+          # The Go example's module path: the two APIs have the same surface, so the soak test's Go client
+          # (test/soak-go, shared with the Go example) builds against either SDK under this one import path.
           module:
             path: github.com/joeblew999/charter/examples/notes-go/sdk/go
             version: "1.22"

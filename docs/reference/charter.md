@@ -10,15 +10,16 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 
 | Where | How to run it |
 |---|---|
+| Anywhere | `mise x github:joeblew999/charter -- charter <command>`: the newest release's binary |
 | Anywhere, with Go | `go run github.com/joeblew999/charter/cmd/charter@latest <command>` |
-| In a project | `charter <command>`: `mise.toml` pins it |
+| In a project | `charter <command>`: `mise.toml` pins its release (`"github:joeblew999/charter"`) |
 | In this repo | `go run ./cmd/charter <command>` |
 
 ## Make a project
 
 | Command | Flags | What it does |
 |---|---|---|
-| `new` * | `-name <name>` (required), `-module <go module>` (default `github.com/<gh login>/<name>`), `-subdomain <workers.dev subdomain>` (default a placeholder), `-into <empty dir>` (default `./<name>`), `-from <checkout>` | Copies `examples/notes-go/` (without `sdk/go/`) under your name, adds docs and workflows, pins the tool and the library to its own release (with `-from`, to the checkout) |
+| `new` * | `-name <name>` (required), `-lang go` or `ts` (default `go`), `-module <go module>` (default `github.com/<gh login>/<name>`), `-subdomain <workers.dev subdomain>` (default a placeholder), `-into <empty dir>` (default `./<name>`), `-from <checkout>` | Copies `examples/notes-go/` (without `sdk/go/`), or with `-lang ts` `examples/notes-ts/` and the tests it shares, under your name; adds docs and workflows; pins the tool and the library to its own release (with `-from`, to the checkout). `-lang ts` needs Node |
 | `version` * | | The release the tool is |
 
 ## Build

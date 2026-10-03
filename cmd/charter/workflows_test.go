@@ -118,7 +118,7 @@ func TestWorkflowsRunTasksThatExist(t *testing.T) {
 		for name, workflow := range workflows {
 			// A job's steps run at the root, or in the examples its matrix (or its input) lists.
 			for _, job := range strings.Split(string(workflow), "\n    runs-on: ")[1:] {
-				where := []string{"examples/notes-go"}
+				where := []string{"examples/notes-go", "examples/notes-ts"} // what a project is a copy of
 				if m := list.FindStringSubmatch(job); m != nil {
 					where = strings.Split(m[2], ", ")
 					if m[1] == "example" { // names of folders in examples/

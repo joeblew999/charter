@@ -98,7 +98,7 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 	})
 	// From a checkout the tool is the checkout's: no release is pinned, which could be an older tool.
 	tasks, _ := os.ReadFile(filepath.Join(into, "mise.toml"))
-	if strings.Contains(string(tasks), `"go:`+toolPackage+`"`) {
+	if strings.Contains(string(tasks), toolRelease) {
 		t.Error("mise.toml pins a release of the tool, though the project was made from a checkout")
 	}
 	// The same tasks as the example: nothing was filtered.
@@ -148,11 +148,11 @@ func TestNewProjectFromAReleasePinsTheTool(t *testing.T) {
 		t.Fatal(err)
 	}
 	into := t.TempDir()
-	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", ""); err != nil {
+	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", "", false); err != nil {
 		t.Fatal(err)
 	}
 	tasks, _ := os.ReadFile(filepath.Join(into, "mise.toml"))
-	for _, want := range []string{"[tools]\n# The tool every task runs: `mise up` moves to a newer release.\n\"go:" + toolPackage + "\" = \"1.2.3\"\n", `run = "charter wasm-build"`, `-run "charter migrate-local -port {port}"`} {
+	for _, want := range []string{"[tools]\n# The tool every task runs, the release's binary: `mise up --bump github:joeblew999/charter` moves to a newer one.\n\"github:joeblew999/charter\" = \"1.2.3\"\n", `run = "charter wasm-build"`, `-run "charter migrate-local -port {port}"`} {
 		if !strings.Contains(string(tasks), want) {
 			t.Errorf("mise.toml: no %q", want)
 		}
@@ -164,12 +164,96 @@ func TestNewProjectFromAReleasePinsTheTool(t *testing.T) {
 	}
 }
 
+// -lang ts: the TypeScript example under the project's names, with the tests it shares with the Go
+// one copied in, and the TypeScript library from this checkout; its lockfile is the project's own.
+func TestNewTypeScriptProject(t *testing.T) {
+	if testing.Short() {
+		t.Skip("scaffolds a project and locks its npm packages")
+	}
+	into, repo, said := scaffold(t, "-lang", "ts", "-subdomain", "acme")
+	if first, _, _ := strings.Cut(said, "\n"); !strings.Contains(first, "package.json takes its TypeScript library") {
+		t.Errorf("first line: %q", first)
+	}
+	workerURL(t, into, "billing-api.acme.workers.dev")
+	for file, want := range map[string]string{
+		"src/contract.ts":             "@orpc/contract",
+		"package.json":                `"@charter/ts": "file:` + filepath.ToSlash(filepath.Join(repo, "ts")) + `"`,
+		"package-lock.json":           `"name": "billing-api"`,
+		"package-lock.json ":          `"node_modules/@charter/ts": {`,
+		"mise.toml":                   `run = "npm ci --no-fund --no-audit --prefix {{env.CHARTER}}/ts && npm run build --prefix {{env.CHARTER}}/ts && npm ci --no-fund --no-audit"`,
+		"mise.toml ":                  `run = 'node test/live-test.mjs {{env.API_URL}}`,
+		"mise.toml  ":                 `run = "go run {{env.CHARTER}}/cmd/charter sdk-gen"`,
+		"go.work":                     "use " + filepath.ToSlash(repo) + "\n",
+		"fern/generators.yml":         "path: github.com/zeta/billing-api/sdk/go\n",
+		"test/live-test.mjs":          "",
+		"test/soak-go/main.go":        `notes "github.com/zeta/billing-api/sdk/go"`,
+		".github/workflows/check.yml": "- run: mise run check",
+		"docs/README.md":              "`src/contract.ts` (oRPC and Zod)",
+		"docs/rules.md":               "`src/contract.ts`",
+		"README.md":                   "oRPC and Zod",
+	} {
+		content, err := os.ReadFile(filepath.Join(into, strings.TrimSpace(file)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(content), want) {
+			t.Errorf("%s: no %q", file, want)
+		}
+	}
+	if lock, _ := os.ReadFile(filepath.Join(into, "package-lock.json")); strings.Contains(string(lock), `"../../ts"`) {
+		t.Error("package-lock.json still links the example's ../../ts")
+	}
+	for _, file := range []string{"go.mod", "api", "worker.mjs"} {
+		if exists(filepath.Join(into, file)) {
+			t.Errorf("%s is in a TypeScript project", file)
+		}
+	}
+	filepath.WalkDir(into, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		content, _ := os.ReadFile(path)
+		for _, gone := range []string{"charter-notes", "notes-go", "notes-ts", "../../", "TinyGo", "Huma"} {
+			// (The lockfile holds the path to this checkout's library, relative: from a checkout only.)
+			if strings.Contains(string(content), gone) && !strings.Contains(filepath.ToSlash(path), "/test/") && !(gone == "../../" && filepath.Base(path) == "package-lock.json") {
+				t.Errorf("%s mentions %q", path, gone)
+			}
+		}
+		return nil
+	})
+}
+
+// From a release, a TypeScript project installs the library from the release's package, and its
+// setup is the npm install alone.
+func TestNewTypeScriptProjectFromARelease(t *testing.T) {
+	repo, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	into := t.TempDir()
+	if _, err := copyExample(repo, into, "billing-api", "github.com/zeta/billing-api", "acme", "v1.2.3", "", true); err != nil {
+		t.Fatal(err)
+	}
+	for file, want := range map[string]string{
+		"package.json": `"@charter/ts": "https://github.com/joeblew999/charter/releases/download/v1.2.3/charter-ts-1.2.3.tgz"`,
+		"mise.toml":    "\"github:joeblew999/charter\" = \"1.2.3\"\n",
+		"mise.toml ":   "[tasks.setup]\ndescription = \"Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import, and @charter/ts (the TypeScript library)\"\nrun = \"npm ci --no-fund --no-audit\"\n",
+		"mise.toml  ":  `run = "charter exec cf deploy && charter migrate"`,
+	} {
+		content, _ := os.ReadFile(filepath.Join(into, strings.TrimSpace(file)))
+		if !strings.Contains(string(content), want) {
+			t.Errorf("%s: no %q", file, want)
+		}
+	}
+}
+
 // What the first line says a release pins, and what a checkout does.
 func TestPinned(t *testing.T) {
 	for want, got := range map[string]string{
-		"charter v1.2.3: pins the tool to v1.2.3 in mise.toml and the Go library to v1.2.3 in go.mod":                                                                                                 pinned("v1.2.3", ""),
-		"charter v1.2.3, copying from /src: the tasks run the tool from that checkout (CHARTER in mise.toml), and go.mod builds against its library (a replace line)":                                 pinned("v1.2.3", "/src"),
-		"charter (not a release: built from a checkout), copying from /src: the tasks run the tool from that checkout (CHARTER in mise.toml), and go.mod builds against its library (a replace line)": pinned("", "/src"),
+		"charter v1.2.3: pins the tool to v1.2.3 in mise.toml and the Go library to v1.2.3 in go.mod":                                                                                                 pinned("v1.2.3", "", false),
+		"charter v1.2.3, copying from /src: the tasks run the tool from that checkout (CHARTER in mise.toml), and go.mod builds against its library (a replace line)":                                 pinned("v1.2.3", "/src", false),
+		"charter (not a release: built from a checkout), copying from /src: the tasks run the tool from that checkout (CHARTER in mise.toml), and go.mod builds against its library (a replace line)": pinned("", "/src", false),
+		"charter v1.2.3: pins the tool to v1.2.3 in mise.toml and the TypeScript library to v1.2.3 in package.json":                                                                                   pinned("v1.2.3", "", true),
 	} {
 		if got != want {
 			t.Errorf("got  %s\nwant %s", got, want)
