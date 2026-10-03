@@ -80,7 +80,7 @@ mise run repo          # REMOTE: brings the repo in line, printing ok or changed
 mise run repo:check    # REMOTE, read-only: fails on drift, for CI
 ```
 
-It runs at the repo's root, from any folder in it, and keeps: the docs site's config and `docs/writing.md`; the issue forms and `labels.tsv`; the workflows, for a repo that is a project or lists `projects`; the GitHub labels, removing GitHub's unused defaults; the description, homepage and topics, with `charter` added, which is how `charter catalog` finds the repo; `renovate.json` ([Repos that use each other](repos.md#propagate-a-release)); GitHub Pages for the docs folder. Running it again changes nothing. A project in a subfolder keeps its own tasks.
+It runs at the repo's root, from any folder in it, and keeps: the docs site's config, `docs/writing.md` and the [generated pages](#generated-pages); the issue forms and `labels.tsv`; the workflows, for a repo that is a project or lists `projects`; the GitHub labels, removing GitHub's unused defaults; the description, homepage and topics, with `charter` added, which is how `charter catalog` finds the repo; `renovate.json` ([Repos that use each other](repos.md#propagate-a-release)); GitHub Pages for the docs folder. Running it again changes nothing. A project in a subfolder keeps its own tasks.
 
 ### Generated pages
 
