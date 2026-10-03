@@ -105,6 +105,7 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 | `dist-ts` * | `-tag vX.Y.Z`: builds `ts/` and packs it as `dist/charter-ts-X.Y.Z.tgz`, in this repo |
 | `release-tags` * | `-tag vX.Y.Z`, then `<module dir>...` |
 | `release-tool` * | `-tag vX.Y.Z`: GoReleaser on the tool, in this repo; a Release that has its files already gets a build only |
+| `ci-scope` | none: in the check workflow, writes `tool`, `library`, `library-ts` and `examples` to `$GITHUB_OUTPUT`: all of them on a push, on a pull request those for what it changes ([which](tasks.md#windows-and-macos)) |
 
 ## Repos that use each other
 
