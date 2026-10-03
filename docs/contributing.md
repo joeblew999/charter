@@ -29,28 +29,16 @@ A report needs the exact command, its full output, and what you expected. If the
 
 ## Make it faster
 
-Performance work here is a loop of about a minute and a half, and it does not touch the deployed Workers. You need a Cloudflare account (`npx cf auth login` in the example) and, for CPU figures, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in your environment.
+Performance work here is a loop of about a minute and a half, and it does not touch the deployed Workers: `mise run perf:try` in `examples/notes-go/` builds your change, deploys it to a scratch Worker of its own, benches it and deletes it. You need a Cloudflare account (`npx cf auth login` in the example) and, for CPU figures, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in your environment.
 
 ```sh
 cd examples/notes-go
 mise run perf:try -- -name myidea                    # build, deploy to a scratch Worker of its own, bench, delete
-mise run perf:try -- -name heap4 -build '-heap 4'    # the same with other build flags
 ```
 
-It prints the CPU time Cloudflare recorded for every request, in the order sent, and whether a request was served by a reused Go runtime (no letter), one started ahead (`w`) or one it had to start (`n`):
-
-```
-GET /api/hello      0 0 0 0 0 1 0 0 0 0 1 0 0
-POST /api/notes     2 2 3 2 2 2 2 4 2 2 3 3 2
-```
-
-- **Read each request, not the median.** Every finding so far came from a pattern in that line: every second request costing double, one in three starting a runtime, the first request in a new isolate.
-- **Compare against a baseline from the same hour.** Run it once before your change.
-- **`mise run compare`** (at the repo root) runs the same bench against the TypeScript notes Worker and the Go one: the target is that they cost the same.
-- **Several people can run experiments at once:** each `-name` is its own Worker and database. `mise run perf:clean` deletes any that were left.
-- **Then prove it is still correct:** `mise run check`, and for anything that touches streams, the soak (`mise run soak`).
-
-The flags are in [Measure and improve performance](guides/performance.md). What has been found is in [Benchmarks](benchmarks.md), what is left in [the performance plan](plans/performance.md). Open performance issues are labelled [`perf`](https://github.com/joeblew999/charter/labels/perf).
+- **How to run and read an experiment:** [Try a change](benchmarks.md#try-a-change). Read each request, not the median.
+- **The target:** the Go notes Worker costs what the TypeScript one does. `mise run compare` (at the repo root) benches both.
+- **What has been found and tried** is on [Performance](benchmarks.md), **what is left** in [the plan](plans/next.md#make-the-go-worker-cheaper). Open performance issues are labelled [`perf`](https://github.com/joeblew999/charter/labels/perf).
 
 ## Pick up an issue
 
@@ -64,4 +52,4 @@ Issues follow the plan ([What is next](plans/next.md)), under two milestones: "0
 
 [The working rules](rules.md) are short and binding: mise drives everything, every task is one line, the contract is the source, workarounds name their upstream issue, and only verified results go into the findings.
 
-The other pages for working here: [Upstream issues](upstream.md), [Benchmarks](benchmarks.md), [Findings](findings.md), [What is next](plans/next.md), [Performance plan](plans/performance.md), [The restructure](plans/structure.md).
+The other pages for working here: [Upstream issues](upstream.md), [Findings](findings.md), [What is next](plans/next.md).

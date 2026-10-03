@@ -5,23 +5,23 @@ parent: How to help
 ---
 # What is next: what is not built yet
 
-The plan, in the order of its two milestones. Each item is an issue on GitHub: the issue says what done looks like, this page says why and what is known. What exists is on the other pages; what was proven is in [Findings](../findings.md).
+The plan, in the order of its two milestones. It mirrors the open issues: the issue says what done looks like, this page says why and what is known. What exists is on the other pages; what was proven is in [Findings](../findings.md).
 
 ## 0.8: one project shape
 
 | Issue | What | State |
 |---|---|---|
-| [#17](https://github.com/joeblew999/charter/issues/17) | One project shape: the library, four example projects, the tool | [The restructure](structure.md) |
-| [#18](https://github.com/joeblew999/charter/issues/18) | Docs: half the pages, one fact in one place | These pages |
+| [#17](https://github.com/joeblew999/charter/issues/17) | One project shape: the library, four example projects, the tool | Released as v0.8.0. Left: `ts/`, a TypeScript library, when there is one to publish (the AsyncAPI generator, the feed); the showcase imports them from `examples/notes-ts/` |
+| [#18](https://github.com/joeblew999/charter/issues/18) | Docs: fewer pages, one fact in one place | These pages |
 | [#19](https://github.com/joeblew999/charter/issues/19) | The tool writes a project's collaboration files: issue forms, labels, contact links | Not started |
 
 ## 1.0: used by other repos
 
 | Issue | What | What is known |
 |---|---|---|
-| [#20](https://github.com/joeblew999/charter/issues/20) | Move the projects already using it to charter | They were made from earlier releases, with the old layout ([how a project updates](../reference/releases.md#how-a-project-updates)) |
+| [#20](https://github.com/joeblew999/charter/issues/20) | Move the projects already using it to charter | They were made from earlier releases, with the old layout ([how a project updates](../reference/config.md#moving-a-project-made-before-v080)) |
 | [#21](https://github.com/joeblew999/charter/issues/21) | Drop the TinyGo patches as upstream fixes land | [Upstream issues](../upstream.md): one fix is on TinyGo's dev branch, one issue is open |
-| [#22](https://github.com/joeblew999/charter/issues/22) | Cold start: the first use of each operation in a new isolate | [Performance plan](performance.md) |
+| [#22](https://github.com/joeblew999/charter/issues/22) | Cold start: the first use of each operation in a new isolate | [Below](#make-the-go-worker-cheaper) |
 | [#23](https://github.com/joeblew999/charter/issues/23) | Publish the AsyncAPI generator for oRPC as a package | Below |
 | [#24](https://github.com/joeblew999/charter/issues/24) | Releases: SDKs as packages, the CLI for macOS and Windows | Below |
 | [#25](https://github.com/joeblew999/charter/issues/25) | A soak test that works on any project's contract | Today `test/soak.mjs` knows the notes routes |
@@ -30,6 +30,23 @@ The plan, in the order of its two milestones. Each item is an issue on GitHub: t
 | [#28](https://github.com/joeblew999/charter/issues/28) | Go client and server on separate Workers | Below |
 | [#29](https://github.com/joeblew999/charter/issues/29) | Fern: file what we found, and settle its licensing | Below |
 | [#30](https://github.com/joeblew999/charter/issues/30) | Integrate with gsx | Not looked at |
+
+## Make the Go Worker cheaper
+
+The goal: a Go Worker that fits Workers Free (10 ms of CPU) on every request, without giving up anything the soak checks. Ordinary requests are there; what is left is a new isolate. The numbers, and what has been tried and dropped: [Performance](../benchmarks.md). Issues: [`perf`](https://github.com/joeblew999/charter/labels/perf). Done when the first use of each operation in a new isolate fits in 10 ms of CPU, or the docs say plainly that it cannot, with a measurement on Cloudflare; and `mise run soak` passes, including `--idle 20`.
+
+Left, most promising first:
+
+1. **The first use of each operation in a new isolate** ([#22](https://github.com/joeblew999/charter/issues/22)). Ideas:
+   - warm the handlers that need a binding, with a stand-in for it during start-up;
+   - start a replacement runtime after a response when none is waiting;
+   - fewer package initialisers (Huma's formats, `regexp`);
+   - pre-initialise the Wasm at build time (Wizer-style).
+2. **Drop the patches as TinyGo ships the fixes** ([#21](https://github.com/joeblew999/charter/issues/21)).
+3. **Offer the reusing entry to workers-go** (`go/worker/go.mjs`), as an option of its generator.
+4. **Let a runtime live until it is idle.** Today it is dropped when its heap is nearly full, because a collection in a full heap was so costly. With stacks reused the heap holds little that is live, so a collection may now be cheap. Measure it on Cloudflare first.
+5. **A stream's own cost.** Not looked at.
+6. **Let the hub hold the client WebSockets, with hibernation.** Then the Go Worker only serves short requests. The cost: catch-up from D1 moves into JavaScript, or the hub calls the Go Worker for it.
 
 ## The AsyncAPI generator, as a package
 
