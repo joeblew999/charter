@@ -31,7 +31,8 @@ description = "Every LOCAL check (no Cloudflare account; needs Docker): the tool
 depends = ["charter:check", "go:check", "ts:check", "projects:check"]
 
 [tasks."projects:check"]
-description = "LOCAL: mise run check in every project (examples/ and conformance/), one after the other"
+description = "LOCAL: mise run check in every project (examples/ and conformance/), one after the other, against the TypeScript library as built now"
+depends = ["ts:build"]
 run = "go run ./cmd/charter each check"
 
 [tasks.compare]
@@ -84,12 +85,18 @@ run = "go test ./..."
 description = "LOCAL: the Go library's lint and tests"
 depends = ["go:lint", "go:test"]
 
-# ---- ts: the TypeScript library (ts/), @charter/ts, a local package of the TypeScript examples --
+# ---- ts: the TypeScript library (ts/), @charter/ts: a local package of the TypeScript examples here, a
+# package on each GitHub release for a project elsewhere -------------------------------------------
 
 [tasks."ts:setup"]
-description = "Install the TypeScript library's npm packages (each TypeScript example's setup does it too)"
+description = "Install the TypeScript library's npm packages and build it (each TypeScript example's setup does it too)"
 dir = "ts"
-run = "npm ci --no-fund --no-audit"
+run = "npm ci --no-fund --no-audit && npm run build"
+
+[tasks."ts:build"]
+description = "Compile the TypeScript library into ts/dist/ (JavaScript and types), which its package exports: after changing ts/src, before an example uses it"
+dir = "ts"
+run = "npm run build"
 
 [tasks."ts:lint"]
 description = "Typecheck the TypeScript library and its tests"
@@ -104,6 +111,14 @@ run = "go run ../cmd/charter exec vitest run"
 [tasks."ts:check"]
 description = "LOCAL: the TypeScript library's typecheck and tests"
 depends = ["ts:lint", "ts:test"]
+
+[tasks."ts:dist"]
+description = "Build the TypeScript library and pack it into dist/charter-ts-X.Y.Z.tgz, X.Y.Z from the version tag (none: 0.0.0-dev): what a project installs from the release's URL"
+run = "go run ./cmd/charter dist-ts"
+
+[tasks."ts:release"]
+description = "REMOTE on a version tag (vX.Y.Z): attach dist/* (what ts:dist wrote) to its GitHub Release. Anywhere else: a dry run that lists dist/"
+run = "go run ./cmd/charter release"
 
 # ---- docs: the docs site in docs/ ----------------------------------------------------------------
 

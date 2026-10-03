@@ -1,7 +1,7 @@
 // Both specs from one contract or router: for a spec.ts (offline, into a Fern folder) and for a
 // Worker (/api/openapi.json, /api/asyncapi.json). It knows no contract: the caller passes its `info`
 // and URL. No Workers APIs and no files here, so Node and a Worker can both run it.
-import { getOpenAPIMeta, OpenAPIGenerator, type OpenAPIV3_2 } from "@orpc/openapi";
+import { getOpenAPIMeta, OpenAPIGenerator, type OpenAPIV3_1, type OpenAPIV3_2 } from "@orpc/openapi";
 import type { RouterContract } from "@orpc/contract";
 import { DelegatingJsonSchemaConverter, mapJsonSchemaRefs, type JsonSchema } from "@orpc/json-schema";
 import { walkProcedureContractsAsync, type AnyRouter } from "@orpc/server";
@@ -28,7 +28,7 @@ export interface OpenAPISpecOptions {
 
 /** OpenAPI 3.1.1 (oRPC 2.0 defaults to 3.2.0, which Fern rejects), without the WebSocket channels. */
 // Upstream: fern-api/fern#9559 (when fixed: drop `version` and use oRPC's 3.2.0 default)
-export const openapiSpec = async (router: RouterContract | AnyRouter, { info, server, base, webhooks }: OpenAPISpecOptions) => {
+export const openapiSpec = async (router: RouterContract | AnyRouter, { info, server, base, webhooks }: OpenAPISpecOptions): Promise<OpenAPIV3_1.OpenAPIObject> => {
 	const doc = await new OpenAPIGenerator({ converters }).generate(router, {
 		version: "3.1.1",
 		base: { info, servers: [{ url: server }], ...base },
