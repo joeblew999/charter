@@ -232,7 +232,17 @@ func keepRepo(root string, check bool) error {
 		run  func() ([]string, error)
 	}
 	steps := []step{
-		{"docs site (" + config.Docs + "/)", func() ([]string, error) { return syncFiles(root, docsSite(site, config.Docs), check) }},
+		{"docs site (" + config.Docs + "/)", func() ([]string, error) {
+			files := docsSite(site, config.Docs)
+			generated, err := readGenerated(filepath.Join(root, filepath.FromSlash(config.Docs)))
+			if err != nil {
+				return nil, err
+			}
+			if err := addGenerated(files, root, config.Docs, generated); err != nil {
+				return nil, err
+			}
+			return syncFiles(root, files, check)
+		}},
 		{".github issue forms and labels.tsv", func() ([]string, error) {
 			files, err := githubFiles(root, false)
 			if err != nil {

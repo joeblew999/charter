@@ -112,7 +112,7 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 
 | Command | Flags | What it does |
 |---|---|---|
-| `repo` * | `-check` | REMOTE. At the repo's root, from its `charter.toml`: the docs site, the issue forms and `labels.tsv`, `renovate.json` (unless `renovate = false`), the workflows (if it lists `projects`), the labels, the description, homepage and topics (always with `charter`), GitHub Pages. Prints `ok` or `changed` per item; `-check` changes nothing and fails on drift ([how](../guides/deploy.md#keep-the-repo-in-shape)) |
+| `repo` * | `-check` | REMOTE. At the repo's root, from its `charter.toml`: the docs site (with its generated pages), the issue forms and `labels.tsv`, `renovate.json` (unless `renovate = false`), the workflows (if it lists `projects`), the labels, the description, homepage and topics (always with `charter`), GitHub Pages. Prints `ok` or `changed` per item; `-check` changes nothing and fails on drift ([how](../guides/deploy.md#keep-the-repo-in-shape)) |
 | `workflows` * | `-check`, `-into <repo dir>` | Writes `.github/`: the workflows `check`, `deploy`, `sdk-check`, `release`, the issue forms and `labels.tsv` |
 | `issue` * | `<bug\|feature\|upstream\|plan>` | Prints an issue body with that form's headings, for `gh issue create --body-file`. Plans are `plan` issues, never pages |
 | `labels` * | | REMOTE. Creates or updates the repo's labels from the labels file; removes GitHub's default labels it lacks that nothing uses |
