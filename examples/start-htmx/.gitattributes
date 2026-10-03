@@ -1,0 +1,15 @@
+# Line ends are LF on every system: the checks compare generated files with the committed ones byte
+# for byte, and gofmt wants LF. (Git on Windows would otherwise check files out with CRLF.)
+* text=auto eol=lf
+
+# Generated files: nobody edits these by hand. GitHub marks them "generated" and folds them in diffs.
+fern/*.json                  linguist-generated=true
+sdk/go/**                    linguist-generated=true
+*.x.go                       linguist-generated=true
+pages/static/*.min.js        linguist-vendored=true
+package-lock.json            linguist-generated=true
+.github/workflows/*.yml      linguist-generated=true
+docs/_config.yml             linguist-generated=true
+docs/writing.md              linguist-generated=true
+docs/llms.txt                linguist-generated=true
+docs/_sass/**                linguist-generated=true

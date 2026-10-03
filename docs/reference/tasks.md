@@ -70,6 +70,8 @@ What `charter new` makes, and `examples/notes-go/`.
 |---|---|
 | `examples/notes-ts/` | No `run`, `build`, `test:native`, `test:workerd`, `perf`. `lint` typechecks, `test` runs the feed's tests |
 | `examples/start-go/` | No `soak`. `live-test` checks `/api/hello`, the spec and MCP |
+| `examples/start-htmx/` | As `examples/start-go/`, with the pages: `check` adds `ui:check`; `live-test` writes test messages and checks the pages and their stream too |
+| `ui:gen`, `ui:check` | In `examples/start-htmx/`: write `pages/*.x.go` from `pages/*.gsx` (gsx, pinned in `go.mod`); fail if the committed ones are stale, writing them as they should be |
 | `examples/start-ts/` | As `examples/notes-ts/`, but `test:workerd` runs the live test under workerd; no `soak` |
 | `conformance/showcase-go/` | No `migrate`, `live-test`, `soak`, `bench` |
 | `showcase-test` | In `conformance/showcase-go/`: the SDK test against a running `run` or `dev` |
@@ -100,6 +102,6 @@ What `charter new` makes, and `examples/notes-go/`.
 
 | | On Windows (`windows-2025`) and macOS (`macos-15`), on every push |
 |---|---|
-| Checked | `charter:check`, `go:check`, `ts:check`; in `examples/notes-go/`, `examples/notes-ts/`, `examples/start-go/` and `examples/start-ts/`, `setup` and `check`. A project made by `charter new` gets the same two jobs |
+| Checked | `charter:check`, `go:check`, `ts:check`; in `examples/notes-go/`, `examples/notes-ts/`, `examples/start-go/`, `examples/start-htmx/` and `examples/start-ts/`, `setup` and `check`. A project made by `charter new` gets the same two jobs |
 | Not checked | Fern's tasks and those that need a generated SDK: Fern generates in Linux containers, which GitHub's Windows and macOS runners do not run. The REMOTE tasks |
 | Different on Windows | A stopped server is ended by force with what it started (`taskkill`); git must check out LF line ends (`.gitattributes` says so) |

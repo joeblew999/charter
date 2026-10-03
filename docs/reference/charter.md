@@ -19,7 +19,7 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 
 | Command | Flags | What it does |
 |---|---|---|
-| `new` * | `-name <name>` (required), `-lang go` or `ts` (default `go`), `-empty`, `-module <go module>` (default `github.com/<gh login>/<name>`), `-subdomain <workers.dev subdomain>` (default a placeholder), `-into <empty dir>` (default `./<name>`), `-from <checkout>` | Copies `examples/notes-go/` (without `sdk/go/`), or with `-lang ts` `examples/notes-ts/` and the tests it shares, under your name; with `-empty`, `examples/start-go/` or `examples/start-ts/` (one route, `GET /api/hello`); adds docs and workflows; pins the tool and the library to its own release (with `-from`, to the checkout). `-lang ts` needs Node |
+| `new` * | `-name <name>` (required), `-lang go` or `ts` (default `go`), `-empty`, `-ui htmx` (with `-empty`, in Go), `-module <go module>` (default `github.com/<gh login>/<name>`), `-subdomain <workers.dev subdomain>` (default a placeholder), `-into <empty dir>` (default `./<name>`), `-from <checkout>` | Copies `examples/notes-go/` (without `sdk/go/`), or with `-lang ts` `examples/notes-ts/` and the tests it shares, under your name; with `-empty`, `examples/start-go/` or `examples/start-ts/` (one route, `GET /api/hello`); with `-empty -ui htmx`, `examples/start-htmx/` (and [pages](../guides/pages.md)); adds docs and workflows; pins the tool and the library to its own release (with `-from`, to the checkout). `-lang ts` needs Node |
 | `version` * | | The release the tool is |
 
 ## Build
@@ -28,6 +28,7 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 |---|---|---|
 | `wasm-build` | below | Writes the Worker glue into `build/`, patches a copy of TinyGo's runtime once per TinyGo version, builds `build/app.wasm` and checks its size |
 | `size` * | `-max <bytes> <file>` | The size check on its own |
+| `unchanged` | `-files <pattern,...>`, then `<program> [args]` | Runs a generator whose output the project commits (gsx's `*.x.go`) and fails, naming them, if it changed, added or removed a matching file; what it wrote stays |
 
 ### wasm-build
 

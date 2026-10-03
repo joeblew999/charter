@@ -13,8 +13,8 @@ import (
 )
 
 func init() {
-	commands["new"] = command{"-name <name> [-lang go|ts] [-empty] [-module <go module>] [-subdomain <workers.dev subdomain>] [-into <dir>] [-from <checkout>]",
-		"create a new API project: a copy of a tested example (examples/notes-go in the charter repo; -empty: examples/start-go) under your name", newProject}
+	commands["new"] = command{"-name <name> [-lang go|ts] [-empty [-ui htmx]] [-module <go module>] [-subdomain <workers.dev subdomain>] [-into <dir>] [-from <checkout>]",
+		"create a new API project: a copy of a tested example (examples/notes-go in the charter repo; -empty: examples/start-go; -empty -ui htmx: examples/start-htmx) under your name", newProject}
 	commands["version"] = command{"", "the release this tool is, which is what new pins a project to", func([]string) error {
 		fmt.Println(orCheckout(toolVersion()))
 		return nil
@@ -40,6 +40,8 @@ const (
 	// -empty: the same plumbing with one route (GET /api/hello) and no notes.
 	startDir   = "examples/start-go"
 	startDirTS = "examples/start-ts"
+	// -empty -ui htmx: start-go's plumbing with server-rendered pages (gsx, htmx 4) in the same Worker.
+	startDirHTMX = "examples/start-htmx"
 	// How the example's tasks run the tool: from the checkout they are in.
 	exampleTool = "go run ../../cmd/charter"
 	// And the tasks of a project made from a checkout: CHARTER, in its mise.toml, is that checkout.
@@ -57,11 +59,12 @@ const (
 // own version (a tag, cloned), or from -from, or from the checkout the tool is run in, so a new
 // project starts from code that passed that repo's checks, not from a template kept beside it.
 func newProject(args []string) error {
-	var name, module, subdomain, into, from, lang string
+	var name, module, subdomain, into, from, lang, ui string
 	var empty bool
 	flags("new", args, func(f *flag.FlagSet) {
 		f.StringVar(&lang, "lang", "go", "the contract's language: go (Huma) or ts (oRPC)")
 		f.BoolVar(&empty, "empty", false, "start without the notes example: one route, GET /api/hello, with the same tasks, specs, SDKs, tests and workflows")
+		f.StringVar(&ui, "ui", "", "with -empty, in Go: htmx, for server-rendered pages (gsx and htmx 4) in the same Worker, live over SSE")
 		f.StringVar(&name, "name", "", "the project and its Worker, e.g. billing-api (lower case, digits, hyphens)")
 		f.StringVar(&module, "module", "", "its Go module path (default: github.com/<your GitHub login>/<name>)")
 		f.StringVar(&subdomain, "subdomain", placeholderSubdomain, "your account's workers.dev subdomain: the Worker's URL is https://<name>.<subdomain>.workers.dev (the default is a placeholder)")
@@ -75,6 +78,12 @@ func newProject(args []string) error {
 		return errors.New("new: -lang is go (Huma) or ts (oRPC)")
 	}
 	ts := lang == "ts"
+	switch {
+	case ui != "" && ui != "htmx":
+		return errors.New("new: -ui is htmx: server-rendered pages with gsx and htmx 4")
+	case ui != "" && (!empty || ts):
+		return errors.New("new: -ui htmx goes with -empty, in Go (-lang go, the default)")
+	}
 	if !regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`).MatchString(subdomain) {
 		return errors.New("new: -subdomain is the one word before .workers.dev, e.g. -subdomain acme")
 	}
@@ -128,21 +137,21 @@ func newProject(args []string) error {
 	if !exists(filepath.Join(source, "api", "contract.go")) {
 		return fmt.Errorf("%s is not a checkout of charter (no %s)", from, exampleDir)
 	}
-	if dir := projectSource(ts, empty); !exists(filepath.Join(from, filepath.FromSlash(dir), "mise.toml")) {
+	if dir := projectSource(ts, empty, ui); !exists(filepath.Join(from, filepath.FromSlash(dir), "mise.toml")) {
 		return fmt.Errorf("%s has no %s: -empty needs a newer release of charter", from, dir)
 	}
 	fmt.Println(pinned(version, checkout, ts))
-	tasks, err := copyExample(from, into, name, module, subdomain, version, checkout, ts, empty)
+	tasks, err := copyExample(from, into, name, module, subdomain, version, checkout, ts, empty, ui)
 	if err != nil {
 		return err
 	}
 
 	// What a repo has around a project: its start pages, the docs folder, the GitHub workflows.
 	for path, content := range map[string]string{
-		"README.md":       projectReadme(name, orCheckout(version), apiPort(tasks), ts, empty),
+		"README.md":       withPages(projectReadme(name, orCheckout(version), apiPort(tasks), ts, empty), ui),
 		"AGENTS.md":       "# For agents\n\nEverything about this project is in [docs/](docs/README.md), the same pages developers read. Read [docs/README.md](docs/README.md), then [docs/rules.md](docs/rules.md): the rules are binding.\n",
 		"CLAUDE.md":       "@AGENTS.md\n",
-		"docs/README.md":  projectDocs(name, ts, empty),
+		"docs/README.md":  withPages(projectDocs(name, ts, empty), ui),
 		"docs/rules.md":   projectRules(ts),
 		"docs/writing.md": docsWriting,
 		"charter.toml":    charterTomlFor(name + ": a contract-first API on Cloudflare Workers"),
@@ -196,14 +205,14 @@ With a GitHub repo: mise run repo (charter.toml: its description, topics, docs s
 %s
 Cost: on Cloudflare a simple read uses under 1 ms of CPU, a database read 1 to 2 ms, a write about 2 ms;
 the first request in a new isolate about 10 ms (measured 2026-10-02). mise run bench measures yours.
-`, into, module, name, into, apiPort(tasks), startsAs("api/contract.go", empty), afterDeploy(name, subdomain))
+`, into, module, name, into, apiPort(tasks), withPages(startsAs("api/contract.go", empty), ui), afterDeploy(name, subdomain))
 	return nil
 }
 
 // copyExample writes the example in from (a checkout of charter, or a clone of a release) into
 // into, under the project's names. It returns the example's mise.toml as it was.
-func copyExample(from, into, name, module, subdomain, version, checkout string, ts, empty bool) ([]byte, error) {
-	dir := projectSource(ts, empty)
+func copyExample(from, into, name, module, subdomain, version, checkout string, ts, empty bool, ui string) ([]byte, error) {
+	dir := projectSource(ts, empty, ui)
 	// The notes example in TypeScript shares the Go one's tests; the start projects have their own.
 	sharedTests := ts && !empty
 	source := filepath.Join(from, filepath.FromSlash(dir))
@@ -312,11 +321,12 @@ func copyExample(from, into, name, module, subdomain, version, checkout string, 
 const (
 	placeholderSubdomain = "your-subdomain"
 	replaceGuide         = docsURL + "guides/replace-the-example.html"
+	pagesGuide           = docsURL + "guides/pages.html"
 )
 
 var (
 	// The workers.dev subdomain the example's Worker is deployed on, as its mise.toml names it.
-	ownerSubdomain = regexp.MustCompile(`https://charter-(?:notes|start)-(?:go|ts)\.([a-z0-9-]+)\.workers\.dev`)
+	ownerSubdomain = regexp.MustCompile(`https://charter-(?:notes|start)-(?:go|ts|htmx)\.([a-z0-9-]+)\.workers\.dev`)
 	// The local port a project's mise.toml defaults API_PORT to.
 	portDefault = regexp.MustCompile(`API_PORT', default='(\d+)'`)
 	// Fern's organisation: the name its generated READMEs and packages start from.
@@ -325,8 +335,10 @@ var (
 )
 
 // projectSource is the folder of the charter repo a new project is a copy of.
-func projectSource(ts, empty bool) string {
+func projectSource(ts, empty bool, ui string) string {
 	switch {
+	case ui == "htmx":
+		return startDirHTMX
 	case ts && empty:
 		return startDirTS
 	case ts:
@@ -593,6 +605,23 @@ func emptied(page string) string {
 		"`mise run live-test`, `mise run soak`", "`mise run live-test`",
 		"The project starts as the notes example. Which files hold it, and what to do with each when you put your\nown API in: [Replace the example with your API](", "The project starts with one route, `GET /api/hello`, and a D1 database with no tables. How to add\nyours: [Your API](",
 	).Replace(page)
+}
+
+// withPages is a page or message of new -empty as it reads for new -empty -ui htmx: the same, with
+// the messages and the server-rendered pages.
+func withPages(text, ui string) string {
+	if ui != "htmx" {
+		return text
+	}
+	return strings.NewReplacer(
+		"`charter new -empty`", "`charter new -empty -ui htmx`",
+		" with an MCP endpoint.", " with an MCP endpoint, and server-rendered pages (gsx and htmx 4) in the same Worker.",
+		"/api/hello\nmise run dev", "/ (the pages; the API: /api/hello)\nmise run dev",
+		"After changing it: `mise run spec`.", "After changing it: `mise run spec`. The pages are `pages/*.gsx`; after changing one: `mise run ui:gen`.",
+		"| The server | `api/handlers.go` |\n", "| The server | `api/handlers.go` |\n| The pages | `pages/*.gsx`: gsx components, live with htmx 4. `mise run ui:gen` writes `pages/*.x.go` (generated; never edit) |\n",
+		"with one route, `GET /api/hello`, and a D1 database with no tables. How to add\nyours:", "with `GET /api/hello`, messages in D1 (`GET` and `POST /api/messages`) and a page that shows\nthem live. The pages: [Server-rendered pages]("+pagesGuide+"). Routes of your own:",
+		"The API is one route, GET /api/hello:", "The API is GET /api/hello and the messages (GET and POST /api/messages); the page at / shows them live.\nThe pages are pages/*.gsx, then mise run ui:gen: "+pagesGuide+"\nRoutes of your own:",
+	).Replace(text)
 }
 
 func projectRules(ts bool) string {

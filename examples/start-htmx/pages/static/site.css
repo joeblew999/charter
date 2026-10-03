@@ -1,0 +1,48 @@
+/* The pages' stylesheet: plain CSS, served from /static/site.css. */
+:root {
+	color-scheme: light dark;
+	font-family: system-ui, sans-serif;
+	line-height: 1.5;
+}
+main {
+	max-width: 40rem;
+	margin: 0 auto;
+	padding: 1rem;
+}
+form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+input {
+	flex: 1;
+	min-width: 12rem;
+	padding: 0.5rem;
+	font: inherit;
+}
+button {
+	padding: 0.5rem 1rem;
+	font: inherit;
+}
+.problem {
+	flex-basis: 100%;
+	margin: 0;
+	color: #c62828;
+}
+ul {
+	list-style: none;
+	padding: 0;
+}
+li {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.5rem 0;
+	border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+	overflow-wrap: anywhere;
+}
+time {
+	flex-shrink: 0;
+	opacity: 0.6;
+	font-size: 0.875rem;
+}

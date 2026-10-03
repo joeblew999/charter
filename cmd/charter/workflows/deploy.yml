@@ -11,7 +11,7 @@ on:
       example:
         description: The example whose Worker to deploy
         type: choice
-        options: [notes-go, notes-ts, start-go, start-ts]
+        options: [notes-go, notes-ts, start-go, start-htmx, start-ts]
         required: true
     # end
 permissions:
