@@ -43,6 +43,6 @@ The plan is the [open issues](https://github.com/joeblew999/charter/issues) and 
 
 ## Cut a release
 
-1. `mise run check` at the root, and `charter new` into an empty folder followed by its `mise run check`.
-2. Push the tag `vX.Y.Z`; never upload files or module tags by hand.
-3. The `release` workflow builds the tool, tags `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z`, and attaches the notes examples' SDKs, specs and CLI, and the TypeScript library's package (`charter-ts-X.Y.Z.tgz`).
+1. `charter new` into an empty folder, then its `mise run check`.
+2. At the root, `mise run release -- vX.Y.Z -dry-run`, then `mise run release -- vX.Y.Z`: `check` (Docker), the notes examples' SDKs, specs and CLI for every OS (`dist`, all six only on a Mac), the tag, then the TypeScript library's package (`charter-ts-X.Y.Z.tgz`), the tool (GoReleaser), the examples' files and `SHA256SUMS` onto the Release (`release:publish`), and the tags `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` (`release:tags`). Never upload files or module tags by hand.
+3. The `check` and `release` workflows then run on the tag: a failure there is fixed in a new release.

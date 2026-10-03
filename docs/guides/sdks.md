@@ -4,7 +4,7 @@ nav_order: 3
 parent: Guides
 ---
 
-# SDKs: generate, add features and languages, release
+# SDKs: generate, add features and languages
 
 [Fern](https://buildwithfern.com) generates typed clients and a CLI from the specs your contract writes. It runs in Docker. Method names, paging and streaming come from the contract.
 
@@ -64,7 +64,7 @@ The spec only describes: the server must enforce auth, and idempotency is the ha
 
 ## Release
 
-Push a tag `vX.Y.Z`; the `release` workflow runs `mise run sdk:dist`, `mise run sdk:dist:cli`, `mise run release` (attaches `dist/` to the GitHub Release) and `mise run release:tags` (tags `sdk/go/vX.Y.Z`). On a pull request it is a dry run. Nothing is published to a package registry.
+`mise run release -- vX.Y.Z` ships the SDKs, the specs and the CLI for every OS from your machine: [Release](release.md).
 
 ## Update charter
 

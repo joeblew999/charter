@@ -52,10 +52,13 @@ What `charter new` makes, and `examples/notes-go/`.
 | `sdk:publish:fresh` | Fails if the specs changed since `sdk/go/` was made (a hash, no Docker) |
 | `sdk:cli:build [-linux]` | HEAVY. Builds the generated Rust CLI |
 | `sdk:dist` | Generates, checks and archives every SDK and the specs into `dist/` |
-| `sdk:dist:cli [-linux]` | HEAVY. The CLI into `dist/` |
+| `sdk:dist:cli [-target ...]` | HEAVY. The CLI into `dist/` for darwin, linux, windows × amd64, arm64 (all six on a Mac, all but darwin elsewhere) |
+| `sdk:cli:smoke` | Runs the CLI in `dist/` built for this machine |
+| `dist` | HEAVY. Empties `dist/`, then `sdk:dist` and `sdk:dist:cli`: what a release ships |
 | `sdk:docs` | Previews the API's reference site on port 3030 |
 | `sdk:clean` | Removes `sdk/out` and stops leftover WireMock containers |
-| `release` | REMOTE on a version tag: attaches `dist/*` to its GitHub Release. Elsewhere a dry run |
+| `release -- vX.Y.Z [-dry-run]` | REMOTE. Cuts a release from this machine: `check`, `dist`, the tag, the GitHub Release, `release:publish`, `release:tags` ([how](../guides/release.md)) |
+| `release:publish` | REMOTE on a version tag: makes its GitHub Release if missing, attaches what of `dist/*` it lacks, writes `SHA256SUMS`. Elsewhere a dry run |
 | `release:tags` | REMOTE on a version tag: tags `sdk/go/vX.Y.Z`. Elsewhere a dry run |
 | `repo`, `repo:check` | REMOTE. `charter repo` at the repo's root: keeps it as `charter.toml` says ([Keep the repo in shape](../guides/deploy.md#keep-the-repo-in-shape)); `repo:check` changes nothing and fails on drift |
 | `workflows`, `workflows:check` | Writes `.github/` from the tool's templates; fails if it differs |
@@ -93,16 +96,20 @@ What `charter new` makes, and `examples/notes-go/`.
 | `ts:lint`, `ts:test` | The TypeScript library's typecheck and its tests, on their own |
 | `compare` | REMOTE. The same bench against the TypeScript and the Go notes Workers |
 | `catalog` | REMOTE, read-only. `charter catalog`: the owner's charter repos and who pins each ([Repos that use each other](../guides/repos.md)) |
-| `charter:release` | GoReleaser on the tool. REMOTE on a version tag; elsewhere a snapshot |
+| `release -- vX.Y.Z [-dry-run]` | REMOTE. Cuts a release of the repo, as in a project; [how](../contributing.md#cut-a-release) |
+| `dist` | HEAVY. `dist` in `examples/notes-go/` and `examples/notes-ts/` |
+| `release:publish` | REMOTE on a version tag: `ts:dist`, then the package, the tool (GoReleaser) and the notes examples' `dist/` onto the Release. Elsewhere a dry run |
+| `charter:release` | GoReleaser on the tool. REMOTE on a version tag (a build only if the Release has the tool already); elsewhere a snapshot |
 | `ts:dist` | Packs the TypeScript library into `dist/charter-ts-X.Y.Z.tgz`, versioned as the tag (none: `0.0.0-dev`) |
-| `ts:release` | REMOTE on a version tag: attaches `dist/*` to its GitHub Release. Elsewhere a dry run |
+| `ts:release` | REMOTE on a version tag: attaches what of `dist/*` its GitHub Release lacks. Elsewhere a dry run |
 | `release:tags` | REMOTE on a version tag: tags `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` |
 | `setup`, `doctor`, `sdk:clean`, `repo`, `repo:check`, `workflows`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:review`, `docs:pages`, `cloudflare:secrets` | As in a project, for the whole repo |
 
 ## Windows and macOS
 
-| | On Windows (`windows-2025`) and macOS (`macos-15`), on every push |
+| | On Windows (`windows-2025`) and macOS (`macos-15`), on every push and version tag |
 |---|---|
 | Checked | `charter:check`, `go:check`, `ts:check`; in `examples/notes-go/`, `examples/notes-ts/`, `examples/start-datastar/`, `examples/start-go/`, `examples/start-htmx/` and `examples/start-ts/`, `setup` and `check`. A project made by `charter new` gets the same two jobs |
 | Not checked | Fern's tasks and those that need a generated SDK: Fern generates in Linux containers, which GitHub's Windows and macOS runners do not run. The REMOTE tasks |
+| The CLI | Built for every OS on Linux by the `release` workflow (darwin only by a release cut on a Mac); its `cli-windows` job starts the Windows amd64 one on Windows (`sdk:cli:smoke`) |
 | Different on Windows | A stopped server is ended by force with what it started (`taskkill`); git must check out LF line ends (`.gitattributes` says so) |

@@ -51,10 +51,10 @@ Add a Go test in `api/` with the helpers in `api/api_test.go` (`server(t)`, `do(
 
 | Workflow | When | Runs |
 |---|---|---|
-| `check` | Every push to main and pull request | `setup`, `check`, on Linux and Windows |
+| `check` | Every push to main, version tag and pull request | `setup`, `check`, on Linux, Windows and macOS |
 | `sdk-check` | The same | `sdk:gen`, `sdk:check`, `sdk:publish:check` |
 | `deploy` | `gh workflow run deploy.yml` | `deploy`, then `live-test` |
-| `release` | A version tag | [Release](sdks.md#release) |
+| `release` | A version tag (`mise run release` pushes it) | Builds it all again, adds what the Release lacks ([Release](release.md)) |
 
 ```sh
 mise run cloudflare:secrets    # once: the deploy workflow's two secrets, from fnox (or: gh secret set)

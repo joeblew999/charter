@@ -94,11 +94,15 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 | `sdk-gen`, `sdk-check` | `<group>` |
 | `sdk-ready` | `[group...]`: default `typescript-dist`, `go`, `cli` |
 | `sdk-publish` | `-check` (fail if `sdk/go` is stale), `-quick` (with it: by a hash), `-into <dir>` |
-| `cli-build`, `dist-cli` | `-linux`: for Linux, in Docker |
-| `release` * | `-tag vX.Y.Z`; without a tag or a workflow's tag, a dry run |
+| `cli-build` | `-linux`: for Linux, in Docker |
+| `dist-cli` | `-target <os>-<arch>,...`: of `darwin`, `linux`, `windows` × `amd64`, `arm64`; default every one this machine builds (darwin only on a Mac). Writes `dist/<project>-cli-<os>-<arch>[.exe]` and runs this machine's |
+| `cli-smoke` | none: runs the CLI in `dist/` for this machine with `--version` |
+| `dist` | `-target` as `dist-cli`: empties `dist/`, then `dist-sdk` and `dist-cli` |
+| `release` * | `vX.Y.Z`, `-dry-run`, `-prerelease`, `-notes-footer <text or file>`, in any order. At the repo's root: fails unless the tree is clean, `HEAD` is the default branch on `origin` and the tag is new; runs the tasks `check` and `dist`, tags, pushes the tag, makes the GitHub Release (notes: the commits since the last version tag), runs `release:publish` and `release:tags`. A task the repo lacks is skipped (no `dist`: it ships no files). `-dry-run` stops before the tag |
+| `publish` * | `-tag vX.Y.Z`: makes the Release if missing, attaches the files in `dist/` it lacks, writes `SHA256SUMS` of every file on it. Without a tag (or one from `release` or a workflow), a dry run |
 | `dist-ts` * | `-tag vX.Y.Z`: builds `ts/` and packs it as `dist/charter-ts-X.Y.Z.tgz`, in this repo |
 | `release-tags` * | `-tag vX.Y.Z`, then `<module dir>...` |
-| `release-tool` * | `-tag vX.Y.Z`: GoReleaser on the tool, in this repo |
+| `release-tool` * | `-tag vX.Y.Z`: GoReleaser on the tool, in this repo; a Release that has its files already gets a build only |
 
 ## Repos that use each other
 
