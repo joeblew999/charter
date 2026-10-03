@@ -60,12 +60,13 @@ What `charter new` makes, and `examples/notes-go/`.
 | `docs:review` | Has Claude bring `docs/` into line with `docs/writing.md` |
 | `docs:pages` | REMOTE. Turns GitHub Pages on for `docs/` |
 
-## The other examples
+## The other projects
 
 | Project | Differences |
 |---|---|
 | `examples/notes-ts/` | No `run`, `build`, `test:native`, `test:workerd`, `perf`. `lint` typechecks, `test` runs the feed's tests |
-| `conformance/showcase-go/` | No `migrate`, `live-test`, `soak`, `bench`. `showcase-test` runs the SDK test against a running server |
+| `conformance/showcase-go/` | No `migrate`, `live-test`, `soak`, `bench` |
+| `showcase-test` | In `conformance/showcase-go/`: the SDK test against a running `run` or `dev` |
 | `conformance/showcase-ts/` | `test:workerd` runs the TypeScript SDK inside the Worker; `deploy` deploys it twice |
 
 ## This repo
@@ -76,8 +77,10 @@ What `charter new` makes, and `examples/notes-go/`.
 | `projects:check` | `check` in every project under `examples/` and `conformance/` |
 | `charter:check` | The tool: gofmt, vet, tests, the generated workflows and docs config, the docs lint |
 | `go:check` | `go:lint` and `go:test`: the library, for the host and for Wasm |
+| `go:lint`, `go:test` | The library's lint (gofmt, vet, vet for Wasm) and its tests, on their own |
 | `ts:setup` | Installs the TypeScript library's packages |
 | `ts:check` | The TypeScript library: typecheck (`ts:lint`) and tests (`ts:test`) |
+| `ts:lint`, `ts:test` | The TypeScript library's typecheck and its tests, on their own |
 | `compare` | REMOTE. The same bench against the TypeScript and the Go notes Workers |
 | `charter:release` | GoReleaser on the tool. REMOTE on a version tag; elsewhere a snapshot |
 | `release:tags` | REMOTE on a version tag: tags `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` |
