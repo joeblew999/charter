@@ -53,9 +53,28 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: mise run setup
       - run: mise run check
+  # Which Windows and macOS jobs to run: all of them on main and on a version tag; on a pull request,
+  # those for what it changes (mise run ci:scope says which and why). Linux runs everything always.
+  scope:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      tool: ${{ steps.scope.outputs.tool }}
+      library: ${{ steps.scope.outputs.library }}
+      library-ts: ${{ steps.scope.outputs.library-ts }}
+      examples: ${{ steps.scope.outputs.examples }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: jdx/mise-action@v5.0.1
+      - id: scope
+        run: mise run ci:scope
   # The same tasks on Windows: the tool, both libraries and the examples. Not the SDKs: Fern
   # generates in Linux containers, which GitHub's Windows runners do not run.
   tool-windows:
+    needs: scope
+    if: needs.scope.outputs.tool == 'true'
     runs-on: windows-2025
     timeout-minutes: 20
     steps:
@@ -63,6 +82,8 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: mise run charter:check
   library-windows:
+    needs: scope
+    if: needs.scope.outputs.library == 'true'
     runs-on: windows-2025
     timeout-minutes: 20
     steps:
@@ -70,6 +91,8 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: mise run go:check
   library-ts-windows:
+    needs: scope
+    if: needs.scope.outputs.library-ts == 'true'
     runs-on: windows-2025
     timeout-minutes: 20
     steps:
@@ -78,6 +101,8 @@ jobs:
       - run: mise run ts:setup
       - run: mise run ts:check
   example-windows:
+    needs: scope
+    if: needs.scope.outputs.examples != '[]'
     runs-on: windows-2025
     timeout-minutes: 45
     # One task at a time: here the tasks `go run` the tool from the checkout, and Windows locks the
@@ -87,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [examples/notes-go, examples/notes-ts, examples/start-datastar, examples/start-go, examples/start-htmx, examples/start-ts]
+        project: ${{ fromJSON(needs.scope.outputs.examples) }}
     defaults:
       run:
         working-directory: ${{ matrix.project }}
@@ -98,6 +123,8 @@ jobs:
       - run: mise run check
   # The same on macOS (GitHub's macOS runners have no Docker either, so no SDKs here too).
   tool-macos:
+    needs: scope
+    if: needs.scope.outputs.tool == 'true'
     runs-on: macos-15
     timeout-minutes: 20
     steps:
@@ -105,6 +132,8 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: mise run charter:check
   library-macos:
+    needs: scope
+    if: needs.scope.outputs.library == 'true'
     runs-on: macos-15
     timeout-minutes: 20
     steps:
@@ -112,6 +141,8 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: mise run go:check
   library-ts-macos:
+    needs: scope
+    if: needs.scope.outputs.library-ts == 'true'
     runs-on: macos-15
     timeout-minutes: 20
     steps:
@@ -120,12 +151,14 @@ jobs:
       - run: mise run ts:setup
       - run: mise run ts:check
   example-macos:
+    needs: scope
+    if: needs.scope.outputs.examples != '[]'
     runs-on: macos-15
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        project: [examples/notes-go, examples/notes-ts, examples/start-datastar, examples/start-go, examples/start-htmx, examples/start-ts]
+        project: ${{ fromJSON(needs.scope.outputs.examples) }}
     defaults:
       run:
         working-directory: ${{ matrix.project }}

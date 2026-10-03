@@ -90,7 +90,7 @@ func TestWorkflowsFitTheRepo(t *testing.T) {
 			}
 		}
 	}
-	for _, want := range []string{"mise run charter:check", "mise run go:check", "mise run ts:check", "working-directory: ${{ matrix.project }}", "mise run check", "  tool-windows:\n    runs-on: windows-2025\n", "  example-windows:\n"} {
+	for _, want := range []string{"mise run charter:check", "mise run go:check", "mise run ts:check", "working-directory: ${{ matrix.project }}", "mise run check", "  tool-windows:\n    needs: scope\n", "    runs-on: windows-2025\n", "  example-windows:\n", "run: mise run ci:scope", "fromJSON(needs.scope.outputs.examples)"} {
 		if !strings.Contains(string(repo["check.yml"]), want) {
 			t.Errorf("check.yml for a repo with examples: no %q", want)
 		}

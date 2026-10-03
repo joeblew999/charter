@@ -99,6 +99,7 @@ What `charter new` makes, and `examples/notes-go/`.
 | `ts:check` | The TypeScript library: typecheck (`ts:lint`) and tests (`ts:test`) |
 | `ts:lint`, `ts:test` | The TypeScript library's typecheck and its tests, on their own |
 | `compare` | REMOTE. The same bench against the TypeScript and the Go notes Workers |
+| `ci:scope` | In the check workflow: which Windows and macOS jobs run. All on a push to main or a version tag; on a pull request, those for what it changes (`charter ci-scope`) |
 | `catalog` | REMOTE, read-only. `charter catalog`: the owner's charter repos and who pins each ([Repos that use each other](../guides/repos.md)) |
 | `release -- vX.Y.Z [-dry-run]` | REMOTE. Cuts a release of the repo, as in a project; [how](../contributing.md#cut-a-release) |
 | `dist` | HEAVY. `dist` in `examples/notes-go/` and `examples/notes-ts/` |
@@ -111,7 +112,7 @@ What `charter new` makes, and `examples/notes-go/`.
 
 ## Windows and macOS
 
-| | On Windows (`windows-2025`) and macOS (`macos-15`), on every push and version tag |
+| | On Windows (`windows-2025`) and macOS (`macos-15`): all of it on every push to main and every version tag; on a pull request, only what it changes needs (`ci:scope`: `cmd/` the tool, `go/` the Go library and Go examples, `ts/` the TypeScript library and TypeScript examples, an example's folder that example, `.github/`, `tasks/` or `mise.toml` everything). Linux checks everything always |
 |---|---|
 | Checked | `charter:check`, `go:check`, `ts:check`; in `examples/notes-go/`, `examples/notes-ts/`, `examples/start-datastar/`, `examples/start-go/`, `examples/start-htmx/` and `examples/start-ts/`, `setup` and `check`. A project made by `charter new` gets the same two jobs |
 | Not checked | Fern's tasks and those that need a generated SDK: Fern generates in Linux containers, which GitHub's Windows and macOS runners do not run. The REMOTE tasks |
