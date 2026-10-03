@@ -1,6 +1,6 @@
 // Package humaworkers runs a Huma API (github.com/danielgtaylor/huma) on Cloudflare Workers through
 // workers-go and TinyGo. It exists for three reasons, each
-// measured under workerd (docs/findings.md, "Go on workers-go"):
+// measured under workerd:
 //
 //   - workers-go starts a fresh Go runtime for every request, so registering every operation at
 //     start-up would be paid on every request. Here only the operation a request matches is registered
@@ -221,7 +221,7 @@ func match(pattern, path string) (map[string]string, bool) {
 // the input has a RawBody []byte next to its typed Body (the request as posted, kept beside the
 // validated one). Huma 2.39.1 then documents both content types, though only the Body's is read,
 // and Fern's Go generator takes the binary one: the method's request becomes an io.Reader
-// (docs/upstream.md, "Found, not filed"). op is the one in the OpenAPI document. An input with a
+// (docs/upstream.md). op is the one in the OpenAPI document. An input with a
 // RawBody alone keeps it: it is its only content.
 func jsonOnly(op *huma.Operation) {
 	const raw = "application/octet-stream"

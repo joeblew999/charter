@@ -5,39 +5,24 @@ parent: How to help
 ---
 # Rules for working in this repo
 
-The rules for changing charter, for developers and agents alike. They are binding. Other repos build on this one, so it stays clean, pinned and verified. Read [what is what](README.md#what-is-what) first.
-
-## The rules
+Binding, for developers and agents alike: other repos build on this one.
 
 | Rule | Why |
 |---|---|
-| **`docs/` is the single source of truth.** `AGENTS.md`, `CLAUDE.md` and folder READMEs only point to it | One place cannot contradict itself |
-| **Pages follow [Writing docs](writing.md).** Run `mise run docs:lint` before committing a docs change | The lint finds dead links, tasks and paths |
-| **Never edit what is generated** ([the list](README.md#what-is-generated)). Change the source or the template, run the task | A hand edit is lost at the next run, and `mise run check` fails until then |
-| **mise drives everything, and every task is one line.** What needs more is a command of the tool ([how to add one](reference/charter.md#add-a-command)). No scripts folder, no shell blocks in `mise.toml`, and nothing in a line that only sh or only cmd.exe takes ([what a line may have](reference/charter.md#commands-programs-and-task-lines)) | A task then runs the same locally, on GitHub, on Windows and in every project |
-| **A project is self-contained, and task names are the same in every project.** The root `mise.toml` only runs each example's tasks | `charter new` copies an example as it is; nothing is filtered |
-| **Workflows only call mise.** A step that does work is `mise run <task>`; actions and runners are pinned | A failing step runs the same on your machine |
-| **The contract is the source.** After changing one, `mise run spec` in that example | A stale spec fails the check |
-| **The Go and the oRPC contract of an API describe the same API.** Change both together | `TestTheNotesExamplesHaveTheSameSurface` and `TestSameSurfaceAsTheORPCShowcase` fail otherwise |
-| **Everything that ships to Workers builds with TinyGo.** Standard Go is for the native build, `go test` and the spec commands | `go test` cannot see TinyGo's gaps, so each check also runs the Wasm under workerd |
-| **The library's Go and its Worker glue change together** (`go/` and `go/worker/`) | They ship as one module, and a project gets both from one version |
-| **Exact pins, one place each** ([where](reference/config.md#pinned-versions)). Lockfiles are committed. No global installs | A build is the same everywhere |
-| **Workarounds name their upstream issue:** `Upstream: <owner>/<repo>#<n> (when fixed: ...)` in the code, and a row in [Upstream issues](upstream.md) | A workaround without its issue is never removed |
-| **Test locally and on Cloudflare.** After a deploy the live test must pass against the deployed Worker | Some bugs exist only in production |
-| **Only verified results go into [Findings](findings.md):** what ran, where, when, what came out | A reader acts on it |
-| **Performance numbers live in [Benchmarks](benchmarks.md) only,** with where and when they were measured. Prove a claim with `mise run compare` | A repeated number goes stale in one of its copies |
-| **A release is a version tag.** Never upload release files or push module tags by hand ([how](reference/releases.md#how-a-release-is-cut)) | The workflow builds from the tagged commit |
+| **`docs/` is the single source of truth.** `AGENTS.md`, `CLAUDE.md` and folder READMEs only point to it. Pages follow [Writing docs](writing.md); run `mise run docs:lint` | One place cannot contradict itself |
+| **Never edit what is generated** ([the list](README.md#what-is-generated)) | A hand edit is lost, and `mise run check` fails |
+| **Every task is one line** of programs, double quotes and `&&`, which sh and cmd.exe both take. More is a command of the tool in `cmd/charter/`, added to [its table](reference/charter.md) | A task runs the same everywhere, Windows included |
+| **A project is self-contained; task names are the same in every project.** Workflows only call mise | `charter new` copies an example as it is, and CI runs what you run |
+| **After changing a contract, `mise run spec`.** The Go and the oRPC contract of an API change together | The surface tests fail otherwise |
+| **What ships to Workers builds with TinyGo,** checked under workerd. `go/` and its glue `go/worker/` change together | `go test` cannot see TinyGo's gaps; the two ship as one module |
+| **Exact pins, one place each:** `mise.toml`, `go.mod`, `package.json`, `fern/generators.yml`; TinyGo in `cmd/charter/wasm.go`. Lockfiles are committed | A build is the same everywhere |
+| **Workarounds name their issue:** `Upstream: <owner>/<repo>#<n> (when fixed: ...)`, and a row in [Upstream issues](upstream.md) | Otherwise it is never removed |
+| **After a deploy, the live test passes against it** | Some bugs exist only on Cloudflare |
+| **Only verified results go into the docs:** what ran, where, when. Performance numbers only in [Benchmarks](benchmarks.md) | A reader acts on it; a copied number goes stale |
+| **A release is a version tag** ([how](contributing.md#cut-a-release)) | The workflow builds from the tagged commit |
 
-## A fresh checkout or worktree
+## Working in a checkout
 
-Set up as in [How to help](contributing.md#set-up).
-
-- **The local checks pick free ports,** so several can run at once: two worktrees, two agents.
-- **Give a server you start by hand a port of your own** (`API_PORT`), and stop it when you are done.
-- **Heavy jobs:** `sdk:gen` needs Docker, `sdk:cli:build` compiles Rust, `soak` redeploys a Worker. Stop the containers you start (`mise run sdk:clean`).
-
-## Using cf, Cloudflare's CLI
-
-- **It is pinned** in each example's `package.json`. Tasks run that one from the example's folder (`charter exec cf`, which finds it in `node_modules/.bin`); by hand it is `npx cf`.
-- **It is search-first:** `cf cli search "<what you want>"`, then `<command> --help`, then `cf schema <command>`.
-- **Output is JSON.** Lists return one page unless you pass `--per-page`; deletes need `--force` in a shell without a terminal.
+- **Local checks pick free ports,** so worktrees and agents can run at once. Give a server you start by hand its own `API_PORT`, and stop it.
+- **Heavy:** `sdk:gen` (Docker), `sdk:cli:build` (Rust), `soak` (redeploys). `mise run sdk:clean` stops the containers.
+- **Cloudflare's CLI** is `npx cf`, pinned per example. `cf cli search "<what>"` finds a command.

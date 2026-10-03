@@ -5,7 +5,7 @@ has_children: true
 ---
 # How to help
 
-Three ways in: report something, make it faster, or pick up an issue. Everything runs through `mise`, the same on your machine and in CI.
+Report something, make it faster, or pick up an issue. [The rules](rules.md) are short and binding.
 
 ## Set up
 
@@ -15,41 +15,34 @@ mise install && mise run setup    # tools, then every example's npm packages
 mise run check                    # everything, locally: needs Docker, no Cloudflare account
 ```
 
-The repo is a library (`go/`), a tool (`cmd/charter/`) and four example projects (`examples/`). Each example is a complete project with its own `mise.toml`; `cd` into one and the same task names work there (`check`, `dev`, `deploy`, `bench`). `mise run doctor` says what is missing.
+Each example has the same task names. `mise run doctor` says what is missing.
 
-## Report a bug or ask for a feature
+## Report a bug
 
-On GitHub, use the forms: a bug, a feature, or a bug in a project this one is built on. An agent cannot fill a web form, so the tool prints the same headings:
+Use the GitHub forms (for a bug in Fern, TinyGo, workers-go, Huma or oRPC, check [Upstream issues](upstream.md) first). An agent prints the same form:
 
 ```sh
-charter issue bug > body.md     # or: feature, upstream. Fill it in; its first line is the gh command that files it
+charter issue bug > body.md     # or: feature, upstream. Its first line is the gh command that files it
 ```
-
-A report needs the exact command, its full output, and what you expected. If the bug is in TinyGo, workers-go, Fern, Huma or oRPC, check [Upstream issues](upstream.md) first: those are fixed there.
 
 ## Make it faster
 
-Performance work here is a loop of about a minute and a half, and it does not touch the deployed Workers: `mise run perf:try` in `examples/notes-go/` builds your change, deploys it to a scratch Worker of its own, benches it and deletes it. You need a Cloudflare account (`npx cf auth login` in the example) and, for CPU figures, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in your environment.
+A loop of about a minute and a half on a scratch Worker; it needs a Cloudflare account, and `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` for CPU figures.
 
 ```sh
 cd examples/notes-go
-mise run perf:try -- -name myidea                    # build, deploy to a scratch Worker of its own, bench, delete
+mise run perf:try -- -name base      # a baseline, from the same hour
+mise run perf:try -- -name myidea    # your change: built, deployed, benched, deleted
 ```
 
-- **How to run and read an experiment:** [Try a change](benchmarks.md#try-a-change). Read each request, not the median.
-- **The target:** the Go notes Worker costs what the TypeScript one does. `mise run compare` (at the repo root) benches both.
-- **What has been found and tried** is on [Performance](benchmarks.md), **what is left** in [the plan](plans/next.md#make-the-go-worker-cheaper). Open performance issues are labelled [`perf`](https://github.com/joeblew999/charter/labels/perf).
+How to read it: [Performance](guides/performance.md). The target is the TypeScript Worker's cost (`mise run compare` at the root); what was tried: [Benchmarks](benchmarks.md). Issues: [`perf`](https://github.com/joeblew999/charter/labels/perf).
 
 ## Pick up an issue
 
-Issues follow the plan ([What is next](plans/next.md)), under two milestones: "0.8: one project shape" and "1.0: used by other repos". [`good first issue`](https://github.com/joeblew999/charter/labels/good%20first%20issue) are small and say what done looks like. Before a pull request:
+The plan is the [open issues](https://github.com/joeblew999/charter/issues) and their milestones; [`good first issue`](https://github.com/joeblew999/charter/labels/good%20first%20issue) says what done looks like. Before a pull request: `mise run check` passes, and `docs/` says what changed.
 
-- **`mise run check` passes.**
-- **A page in `docs/` says what changed,** if a reader needs to know ([Writing docs](writing.md)).
-- **Nothing generated was edited by hand** ([what is generated](README.md#what-is-generated)).
+## Cut a release
 
-## The rules
-
-[The working rules](rules.md) are short and binding: mise drives everything, every task is one line, the contract is the source, workarounds name their upstream issue, and only verified results go into the findings.
-
-The other pages for working here: [Upstream issues](upstream.md), [Findings](findings.md), [What is next](plans/next.md).
+1. `mise run check` at the root, and `charter new` into an empty folder followed by its `mise run check`.
+2. Push the tag `vX.Y.Z`; never upload files or module tags by hand.
+3. The `release` workflow builds the tool, tags `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z`, and attaches the notes examples' SDKs, specs and CLI.

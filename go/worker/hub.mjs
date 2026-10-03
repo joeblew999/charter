@@ -2,7 +2,7 @@
 // from (the counterpart of api/ts/src/hub.ts). Subscribers (a Go Worker's Follow loops) are
 // hibernatable WebSockets, so the hub sleeps between messages. It stores nothing and relays any
 // message as it is: the log is the Worker's own (D1 in the notes example) and Follow catches up
-// from it, so the hub may restart at any time (docs/realtime.md, rule 2). One class serves every
+// from it, so the hub may restart at any time (docs/guides/streaming.md, rule 2). One class serves every
 // feed: each feed is an object of it, by name. It is JavaScript because a Durable Object class has
 // to be: workers-go can call one, not be one.
 //

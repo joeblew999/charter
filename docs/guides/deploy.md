@@ -1,88 +1,50 @@
 ---
-title: Deploy
-nav_order: 7
+title: Deploy and CI
+nav_order: 4
 parent: Guides
 ---
 
-# Deploy to Cloudflare
+# Deploy and CI
 
-How to put a project on Cloudflare Workers with its database, and test it there: from your machine, and from GitHub. You need a Cloudflare account and a project that passes `mise run check`.
-
-What is recorded as run is the notes example's own deploy ([Findings](../findings.md)), not a deploy of a freshly made project.
-
-## Log in
-
-```sh
-npx cf auth login     # once per machine: opens the browser
-```
-
-Or an API token, for a machine without a browser:
-
-```sh
-export CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=...
-mise run cloudflare:token            # fails, naming it, if one is not set
-```
-
-`cf` is Cloudflare's CLI, installed by `mise run setup`. The token must be able to edit Workers and D1; the exact permissions were not checked.
+How to put a project on Cloudflare Workers, test it there, and run the same from GitHub. Local checks cannot see everything Cloudflare's runtime does, so every deploy is followed by the live test.
 
 ## Deploy
 
 ```sh
-mise run deploy       # builds the Wasm, deploys, applies pending migrations
-mise run live-test    # REMOTE, writes test notes: run it after every deploy
+npx cf auth login     # once per machine; or set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
+mise run deploy       # builds the Wasm, deploys the Worker, its D1 database and the hub, applies migrations
+mise run live-test    # REMOTE, writes test notes: a few seconds after every deploy
 ```
 
-`cloudflare.config.ts` is the whole description of what is created:
+- **`cloudflare.config.ts`** declares the Worker, the database `<name>-db` (binding `DB`), the hub (`HUB`) and `APP_NAME`. A second deploy keeps the database.
+- **Migrations** are `migrations/*.sql`, applied in name order, each once: `mise run migrate` on Cloudflare, `mise run migrate:local` for `mise run dev`. Never edit one that was applied.
+- **The URL is `API_URL`** in `mise.toml`: the specs name it and the remote tests call it. After changing it, `mise run spec`. `mise.local.toml` overrides it on one machine; do not run `mise run spec` then.
+- **The build fails over 3,000,000 bytes gzipped,** the Workers Free limit.
 
-| What | Name | What it is for |
+## Test
+
+| Task | Where | What it proves |
 |---|---|---|
-| The Worker | the project's name | Runs your Go code as Wasm |
-| A D1 database | `<name>-db`, bound as `DB` | Your data. It is the log every stream reads |
-| A Durable Object class | `Hub`, bound as `HUB` | The hub: wakes open streams. It stores nothing |
-| A variable | `APP_NAME` | The name in the greeting of `/api/hello` |
+| `mise run check` | Local | Lint, Go tests, fresh specs, then the live and MCP tests natively (`test:native`) and as Wasm under workerd (`test:workerd`) |
+| `mise run live-test` | Cloudflare | The same programs, and the TypeScript SDK, on the deployed Worker |
+| `mise run soak` | Cloudflare, redeploys | No stream loses, repeats or reorders an item ([Streaming](streaming.md)) |
 
-- **The build fails over 3,000,000 bytes gzipped,** the Workers Free limit. The notes example is about 875 KB (2026-10-01); every package you import is compiled in.
-- **A second deploy** updates the Worker and keeps the database.
-- **Wait a few seconds before the live test:** a request right after a deploy can still reach the previous version.
+Add a Go test in `api/` with the helpers in `api/api_test.go` (`server(t)`, `do(t, method, url, body)`). Add a Node program that takes a URL and exits 1 on a failure to `test:native`, `test:workerd` and `live-test` in `mise.toml`.
 
-## Migrations
+## CI on GitHub
 
-The tables are the SQL files in `migrations/`, applied in the order of their names, each once. To change the schema, add a file with the next number. Never edit one that was applied.
+`charter new` writes the workflows; every step is a mise task, so a failing step runs the same on your machine. Never edit them: `mise run workflows` writes them again.
 
-```sh
-mise run migrate          # REMOTE: what the deployed database has not had yet (mise run deploy does this too)
-mise run migrate:local    # the same for the local database of a running mise run dev
-```
-
-## The Worker's URL
-
-`cf deploy` prints it: `https://<name>.<your-subdomain>.workers.dev`. The tasks take it from `API_URL`, whose default is in `mise.toml`: the specs name it as their server, the remote tests call it, and its first label is the Worker's name ([who reads it](../reference/config.md#environment-variables)).
-
-- **To change it for everyone:** change the default in `mise.toml`, run `mise run spec`, and commit both.
-- **`mise.local.toml`** overrides it on one machine, and is not committed. Use it to point the tests at another deployment. Do not run `mise run spec` while it is set: the committed specs would then fail `mise run check` everywhere else.
-
-## Deploy from GitHub
-
-The `deploy` workflow runs only when you start it:
+| Workflow | When | Runs |
+|---|---|---|
+| `check` | Every push to main and pull request | `setup`, `check`, on Linux and Windows |
+| `sdk-check` | The same | `sdk:gen`, `sdk:check`, `sdk:publish:check` |
+| `deploy` | `gh workflow run deploy.yml` | `deploy`, then `live-test` |
+| `release` | A version tag | [Release](sdks.md#release) |
 
 ```sh
-gh workflow run deploy.yml
+mise run cloudflare:secrets    # once: the deploy workflow's two secrets, from fnox (or: gh secret set)
+mise run docs:pages            # once: GitHub Pages for docs/
 ```
 
-It runs `cloudflare:token`, `setup`, `deploy`, then `live-test`, so a deploy from GitHub is always tested. It needs two repository secrets:
-
-```sh
-mise run cloudflare:secrets    # REMOTE, once: copies both from fnox into the repo's GitHub secrets, without printing them
-```
-
-- **[fnox](https://fnox.jdx.dev)** is a secret store that `mise install` provides: `fnox set CLOUDFLARE_API_TOKEN` asks for the value.
-- **Without fnox:** `gh secret set CLOUDFLARE_API_TOKEN` and `gh secret set CLOUDFLARE_ACCOUNT_ID`.
-- **The workflow reads the default `API_URL`** from `mise.toml`. It cannot see a `mise.local.toml`.
-
-Whether the workflow has run on GitHub was not checked: the recorded deploys were made from a machine.
-
-## Limits
-
-- **One Worker, one database, no staging.** A second environment is a second project name, or a change to `cloudflare.config.ts` that no page covers.
-- **No custom domain** is set: the Worker is on its `workers.dev` address.
-- **What a request costs:** [Benchmarks](../benchmarks.md).
+Limits: one Worker and database, no staging, no custom domain. The deploy workflow has not yet run from GitHub.

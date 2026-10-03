@@ -1,4 +1,4 @@
-// follow(): the one way a client receives a live, ordered, gap-free feed (docs/realtime.md, rule 3).
+// follow(): the one way a client receives a live, ordered, gap-free feed (docs/guides/streaming.md, rule 3).
 // Both transports (SSE `notes.watch`, WebSocket `/api/notes/live`) are thin adapters over it.
 //
 // The log (D1) is the source of truth and the item id is the only position. The live source (the

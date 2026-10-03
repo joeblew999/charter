@@ -40,7 +40,7 @@ type Note struct {
 	CreatedAt string `json:"created_at" example:"2026-10-01 12:00:00"`
 }
 
-// Position is the note's place in the log: the only position anywhere (docs/realtime.md, rule 1).
+// Position is the note's place in the log: the only position anywhere (docs/guides/streaming.md, rule 1).
 func (n Note) Position() int64 { return n.ID }
 
 // The resume position in every stream: a note id, as an opaque string like list's cursor.

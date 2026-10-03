@@ -3,7 +3,7 @@ import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
 // The oRPC API (src/contract.ts) on D1, plus NotesHub: a hibernating Durable Object that fans every
 // new note out to the Worker's follow() loops. The Worker, not the hub, holds the clients' SSE
-// streams and WebSockets (docs/realtime.md).
+// streams and WebSockets (docs/guides/streaming.md).
 export default defineConfig({
 	worker: {
 		name: "charter-notes-ts",
