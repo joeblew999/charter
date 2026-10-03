@@ -78,6 +78,10 @@ jobs:
   example-windows:
     runs-on: windows-2025
     timeout-minutes: 45
+    # One task at a time: here the tasks `go run` the tool from the checkout, and Windows locks the
+    # program Go has just built while another task builds it again.
+    env:
+      MISE_JOBS: "1"
     strategy:
       fail-fast: false
       matrix:
