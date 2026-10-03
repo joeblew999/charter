@@ -40,7 +40,7 @@ description = "REMOTE, writes test notes: the same bench against the TypeScript 
 run = "go run ./cmd/charter each -only notes-ts,notes-go bench -each -write -warm 20s -n 30"
 
 [tasks.doctor]
-description = "Check what each example's tasks need: npm packages, Docker, Go, Rust"
+description = "Check what each example's tasks need: npm packages, Docker, Go, Rust (with a CLI)"
 run = "go run ./cmd/charter each doctor"
 
 [tasks."sdk:clean"]
@@ -52,6 +52,10 @@ description = "The upstream issues our code works around (every `Upstream:` tag)
 run = "go run ./cmd/charter upstream"
 
 # ---- charter: the tool (cmd/charter) and what it writes ------------------------------------------
+
+[tasks."ci:scope"]
+description = "In the check workflow: which Windows and macOS jobs to run (all on a push; on a pull request, those for what it changes)"
+run = "go run ./cmd/charter ci-scope"
 
 [tasks."charter:check"]
 description = "The tool's own checks (gofmt, vet, tests, with the test that holds the two notes examples to one surface), the generated workflows and docs config match their templates, and docs/ passes the lint"

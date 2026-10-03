@@ -3,7 +3,7 @@
 # The tasks every charter project has: what it needs, and the upstream issues it works around.
 
 ["doctor"]
-description = "Check what the tasks need: npm packages, Docker, Go, Rust"
+description = "Check what the tasks need: npm packages, Docker, Go, Rust (with a CLI)"
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} doctor"
 

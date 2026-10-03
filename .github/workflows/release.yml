@@ -3,8 +3,8 @@
 # A release is cut from a developer's machine (mise run release -- vX.Y.Z), which builds and attaches
 # everything. On its tag this builds it all again on GitHub's machines, as a check, attaches only what the
 # Release lacks (everything, if the tag was pushed by hand), rewrites SHA256SUMS, tags the Go modules in
-# subdirectories and starts the Windows CLI on Windows. On a pull request or by hand it is a dry run: the
-# same build, kept as workflow artifacts, nothing published.
+# subdirectories and, if the project has a CLI, starts the Windows one on Windows. On a pull request or
+# by hand it is a dry run: the same build, kept as workflow artifacts, nothing published.
 name: release
 on:
   push:
@@ -71,9 +71,10 @@ jobs:
           path: examples/${{ matrix.example }}/dist/
           if-no-files-found: error
       - run: mise run release:publish
-  # The CLI for Linux and Windows on amd64 and arm64, cross-built with zig (darwin's need a Mac: the release
-  # cut from one has them). amd64 only: the binaryen the tool pins has no linux/arm64 build, so mise can't
-  # install it on an arm runner.
+  # The CLI, if the project has one (the cli group in fern/generators.yml), for Linux and Windows on
+  # amd64 and arm64, cross-built with zig (darwin's need a Mac: the release cut from one has them).
+  # amd64 only: the binaryen the tool pins has no linux/arm64 build, so mise can't install it on an
+  # arm runner.
   cli:
     runs-on: ubuntu-24.04
     timeout-minutes: 30

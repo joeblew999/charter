@@ -17,7 +17,7 @@ It stops unless the tree is clean, `HEAD` is the default branch on GitHub, every
 
 1. `setup` then `check`, as CI runs them.
 2. `spec:diff`: a breaking change to the specs since the last release stops it unless the tag is a major release (in v0, the minor number) ([Repos that use each other](repos.md)).
-3. `dist` into an empty `dist/`: the SDKs, the specs and the CLI.
+3. `dist` into an empty `dist/`: the SDKs, the specs and, if the project has the `cli` group, the CLI.
 4. The tag, pushed.
 5. The GitHub Release. Its notes are the commit subjects since the last tag; `-notes-footer <text or file>` adds a line, `-prerelease` marks it.
 6. `release:publish` attaches `dist/` and writes `SHA256SUMS`; `release:tags` tags `sdk/go/vX.Y.Z`.
@@ -28,7 +28,7 @@ The `release` workflow then builds it all again on the tag and attaches only wha
 
 ## The CLI for every OS
 
-`sdk:dist:cli` builds `dist/<project>-cli-<os>-<arch>` (`.exe` on Windows) for `darwin`, `linux` and `windows` on `amd64` and `arm64`: darwin with Apple's linker, so only on a Mac; the others with zig (`cargo-zigbuild`, pinned in `mise.toml`) from any machine. Linux is a static musl binary. `-- -target linux-arm64,...` builds fewer. Install it with mise, `bin` being `binaryName` in `fern/generators.yml`:
+In a project with the `cli` group in `fern/generators.yml` ([Add the CLI](sdks.md#add-the-cli)), `sdk:dist:cli` builds `dist/<project>-cli-<os>-<arch>` (`.exe` on Windows) for `darwin`, `linux` and `windows` on `amd64` and `arm64`: darwin with Apple's linker, so only on a Mac; the others with zig (`cargo-zigbuild`, pinned in `mise.toml`) from any machine. Linux is a static musl binary. `-- -target linux-arm64,...` builds fewer. Install it with mise, `bin` being `binaryName` in `fern/generators.yml`:
 
 ```sh
 mise use "github:<owner>/<repo>[bin=<binary>]"

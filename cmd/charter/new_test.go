@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -146,7 +147,6 @@ func TestNewEmptyProject(t *testing.T) {
 		"main.go":                  `"github.com/zeta/billing-api/api"`,
 		"cloudflare.config.ts":     "`billing-api-${ctx.mode}` : \"billing-api\"",
 		"fern/generators.yml":      "path: github.com/zeta/billing-api/sdk/go\n",
-		"fern/generators.yml ":     "binaryName: billing-api\n",
 		"mise.toml":                `includes = ["` + filepath.ToSlash(repo) + `/tasks/shared", "` + filepath.ToSlash(repo) + `/tasks/go"]`,
 		"test/live-test.mjs":       "/api/hello",
 		"test/mcp-test.mjs":        `"billing-api"`,
@@ -172,6 +172,18 @@ func TestNewEmptyProject(t *testing.T) {
 		}
 	}
 	notMentioned(t, into, "notes", "charter-start", startDir, exampleTool)
+	// No CLI: no cli group, so no Rust, zig or cargo-zigbuild, and the pages do not promise one.
+	if hasCLIIn(t, into) {
+		t.Error("an -empty project has the cli group")
+	}
+	if err := cliPinsAgree(into); err != nil {
+		t.Error(err)
+	}
+	for _, file := range []string{"README.md", "docs/README.md"} {
+		if content, _ := os.ReadFile(filepath.Join(into, file)); strings.Contains(string(content), "CLI from") || strings.Contains(string(content), ", cli)") {
+			t.Errorf("%s promises a CLI", file)
+		}
+	}
 	// The tool sees the tasks the project includes from the checkout (docs-lint asks it).
 	if tasks := tasksOf(filepath.Join(into, "mise.toml")); !tasks["spec"] || !tasks["sdk:gen"] {
 		t.Errorf("tasksOf does not find the included tasks: %v", tasks)
@@ -182,6 +194,50 @@ func TestNewEmptyProject(t *testing.T) {
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("go %s in the new project: %v\n%s", strings.Join(args, " "), err, out)
 		}
+	}
+}
+
+// hasCLIIn reports whether the project in dir has the cli group.
+func hasCLIIn(t *testing.T, dir string) bool {
+	t.Helper()
+	groups, err := sdkGroups(filepath.Join(dir, generators))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return slices.Contains(groups, "cli")
+}
+
+// -empty -cli: the start project with the notes example's CLI: its cli group, binary named after
+// the project, and the pins it needs. -cli goes only with -empty.
+func TestNewEmptyProjectWithACLI(t *testing.T) {
+	if testing.Short() {
+		t.Skip("scaffolds a project")
+	}
+	into, repo, _ := scaffold(t, "-empty", "-cli", "-lang", "ts")
+	if !hasCLIIn(t, into) {
+		t.Fatal("no cli group")
+	}
+	if err := cliPinsAgree(into); err != nil {
+		t.Error(err)
+	}
+	groups, _ := sdkGroups(filepath.Join(into, generators))
+	if want := append(slices.Clone(sdkCommon), "cli"); !slices.Equal(groups, want) {
+		t.Errorf("groups %v, want %v", groups, want)
+	}
+	example, _ := os.ReadFile(filepath.Join(repo, exampleDir, "mise.toml"))
+	for file, want := range map[string]string{
+		"fern/generators.yml": "        config:\n          binaryName: billing-api\n",
+		"mise.toml":           "node = \"26.10.0\"\n" + string(cliPinLines.Find(example)),
+		"README.md":           "Fern generates SDKs\nand a CLI from them.",
+		"docs/README.md":      "(go, typescript, typescript-dist, cli)",
+	} {
+		if content, _ := os.ReadFile(filepath.Join(into, file)); !strings.Contains(string(content), want) {
+			t.Errorf("%s: no %q", file, want)
+		}
+	}
+	notMentioned(t, into, "notes", "charter-start", startDirTS)
+	if err := newProject([]string{"-name", "billing-api", "-module", "github.com/zeta/billing-api", "-into", into + "2", "-from", repo, "-cli"}); err == nil || !strings.Contains(err.Error(), "-cli goes with -empty") {
+		t.Errorf("new -cli without -empty: %v", err)
 	}
 }
 

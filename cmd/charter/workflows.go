@@ -64,28 +64,45 @@ func workflowTemplates() (map[string][]byte, error) {
 // conditional keeps the lines a repo needs. A template says which with comment lines of its own:
 //
 //	# if-dir examples   the lines up to "# else" or "# end" are for a repo that has the folder examples/
+//	# if-cli            the lines up to "# else" or "# end" are for a repo that ships a CLI (shipsCLI)
 //	# else              the lines up to "# end" are for a repo that doesn't
 //	# end
 //
 // So one set of templates serves a repo that is one project, with its tasks at the root (what
 // `charter new` makes), and a repo that holds several in examples/ (charter's own, which also has
-// the tool and the Go library). The marker lines themselves are never written.
+// the tool and the Go library); and a project with a CLI and one without. A block can hold another.
+// The marker lines themselves are never written.
 func conditional(template []byte, repo string) []byte {
 	var out []string
-	keep, inside := true, false
+	var open []bool // whether each open block keeps its lines
+	keep := func() bool { return !slices.Contains(open, false) }
 	for _, line := range strings.Split(string(template), "\n") {
 		switch marker := strings.TrimSpace(line); {
 		case strings.HasPrefix(marker, "# if-dir "):
-			inside, keep = true, exists(filepath.Join(repo, strings.TrimPrefix(marker, "# if-dir ")))
-		case inside && marker == "# else":
-			keep = !keep
-		case inside && marker == "# end":
-			inside, keep = false, true
-		case keep:
+			open = append(open, exists(filepath.Join(repo, strings.TrimPrefix(marker, "# if-dir "))))
+		case marker == "# if-cli":
+			open = append(open, shipsCLI(repo))
+		case len(open) > 0 && marker == "# else":
+			open[len(open)-1] = !open[len(open)-1]
+		case len(open) > 0 && marker == "# end":
+			open = open[:len(open)-1]
+		case keep():
 			out = append(out, line)
 		}
 	}
 	return []byte(strings.Join(out, "\n"))
+}
+
+// shipsCLI reports whether the repo in dir releases a CLI: its project (at the root) or one of the
+// projects in its examples/ has the cli group in fern/generators.yml.
+func shipsCLI(dir string) bool {
+	files, _ := filepath.Glob(filepath.Join(dir, "examples", "*", generators))
+	for _, file := range append([]string{filepath.Join(dir, generators)}, files...) {
+		if groups, _ := sdkGroups(file); slices.Contains(groups, "cli") {
+			return true
+		}
+	}
+	return false
 }
 
 // workflowsFor are the workflows as the repo in dir needs them, by file name.
