@@ -17,9 +17,11 @@ The only page with the numbers: CPU per request on Cloudflare, from Workers Logs
 | list (a D1 read) | 0 to 1 ms | 1 ms |
 | create (a D1 write and a hub publish) | 1 ms | 1 to 2 ms |
 | The first request in a new isolate | | 7 to 11 ms |
-| The first list or create in a new isolate | | 14 to 33 ms |
+| The first list or create in a new isolate | | 6 to 33 ms (on 2026-10-03: list 11, create 6) |
 | A request of a burst that starts its own Go runtime, several at once | | about 100 ms |
 | An SSE stream of 15 to 60 seconds, over its life | | 40 to 150 ms |
+
+The Go showcase Worker (every Fern feature, a bearer token checked on every request), 2026-10-03: list about 1 ms, create about 1 ms, 404 0 ms.
 
 ## What closed the gap
 
