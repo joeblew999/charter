@@ -155,7 +155,7 @@ func renovateConfig(release string) []byte {
 
 // charterTomlFor is the charter.toml that charter new and charter adopt write.
 func charterTomlFor(description string) string {
-	return "# The repo as charter repo keeps it (mise run repo). Topics: lower-case words, e.g. [\"api\", \"cloudflare-workers\"].\n" +
+	return "# The repo as charter repo keeps it (mise run repo). Topics: lower-case words and hyphens, e.g. [\"docs\", \"command-line\"].\n" +
 		"description = " + strconv.Quote(description) + "\ntopics = []\n"
 }
 

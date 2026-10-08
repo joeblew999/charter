@@ -29,8 +29,13 @@ var upstreamTag = regexp.MustCompile(`^([^:]+:[0-9]+):.*Upstream: ([\w.-]+/[\w.-
 func upstream([]string) error {
 	// Not where a tag is written about: the docs, the task descriptions, this file and the tool's tests.
 	out, err := output(".", "git", "grep", "-n", "-E", `Upstream: [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+`, "--", ":!*.md", ":!*mise.toml", ":!cmd/charter/misc.go", ":!cmd/charter/*_test.go")
-	if err != nil {
-		return errors.New("no Upstream: tags found")
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 {
+		// git grep found nothing: a repo that works around nothing has nothing to remove.
+		fmt.Println("0 upstream issues: no Upstream: tag in the code here")
+		return nil
+	} else if err != nil {
+		return errors.New("upstream reads the files git tracks: run it in a git repo")
 	}
 	places := map[string][]string{}
 	for _, line := range strings.Split(out, "\n") {
@@ -59,7 +64,7 @@ func upstream([]string) error {
 	}
 	fmt.Printf("\n%d upstream issues, %d closed", len(issues), closed)
 	if closed > 0 {
-		fmt.Print(": remove those workarounds (docs/upstream.md)")
+		fmt.Print(": remove those workarounds (each tag says what to do then)")
 	}
 	fmt.Println()
 	return nil
