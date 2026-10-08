@@ -162,7 +162,12 @@ func tasksOf(file string) map[string]bool {
 			if !filepath.IsAbs(folder) {
 				folder = filepath.Join(filepath.Dir(file), folder)
 			}
+			// An include is a folder of task files, or one task file by name (includes = ["tasks.toml"]:
+			// a repo whose product is that file, which other repos include from git).
 			files, _ := filepath.Glob(filepath.Join(folder, "*.toml"))
+			if info, err := os.Stat(folder); err == nil && !info.IsDir() {
+				files = []string{folder}
+			}
 			for _, included := range files {
 				if content, err := os.ReadFile(included); err == nil {
 					for _, m := range includedTaskDef.FindAllStringSubmatch(string(content), -1) {
