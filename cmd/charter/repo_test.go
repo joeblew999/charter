@@ -271,6 +271,76 @@ func TestRepoKeepsTheRepo(t *testing.T) {
 	}
 }
 
+// charter repo in a repo that is not a project and lists none (what charter adopt leaves): the docs
+// site, the issue forms, labels.tsv and renovate.json, and no workflows. A form the repo wrote
+// itself (it does not start with charter's header) is kept and is not drift; one charter wrote and
+// someone edited is written again.
+func TestRepoInARepoThatIsNotAProject(t *testing.T) {
+	forms, err := collaboration()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, content := range forms {
+		if strings.HasPrefix(name, "ISSUE_TEMPLATE/") && !strings.HasPrefix(string(content), formHeader) {
+			t.Errorf("cmd/charter/github/%s does not start with %q: a repo's own form is known by lacking it", name, formHeader)
+		}
+		// YAML ends an unquoted value at a colon and a space, and GitHub then offers no such form.
+		for _, m := range regexp.MustCompile(`(?m)^ *(?:description|label|name|title): ([^"'|\n].*)$`).FindAllStringSubmatch(string(content), -1) {
+			if strings.Contains(m[1], ": ") {
+				t.Errorf("cmd/charter/github/%s: a colon and a space in an unquoted value: %s", name, m[1])
+			}
+		}
+	}
+	root := t.TempDir()
+	github := &fakeGitHub{labels: map[string][2]string{}}
+	gh = github.gh
+	t.Cleanup(func() {
+		gh = func(string, ...string) (string, error) { return "", errors.New("no gh in tests") }
+	})
+	own := "# This repo's own bug form.\nname: Bug report\n"
+	edited := formHeader + " workflows`\nname: Mine now\n"
+	for file, content := range map[string]string{
+		"charter.toml":                       "description = \"Field notes\"\n",
+		"mise.toml":                          "[tasks.test]\nrun = \"true\"\n",
+		".github/ISSUE_TEMPLATE/bug.yml":     own,
+		".github/ISSUE_TEMPLATE/feature.yml": edited,
+	} {
+		if err := write(filepath.Join(root, filepath.FromSlash(file)), content); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := keepRepo(root, false); err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range []string{"docs/_config.yml", "docs/writing.md", "renovate.json", ".github/labels.tsv", ".github/ISSUE_TEMPLATE/config.yml", ".github/ISSUE_TEMPLATE/plan.yml", ".github/ISSUE_TEMPLATE/upstream.yml"} {
+		if !exists(filepath.Join(root, filepath.FromSlash(file))) {
+			t.Errorf("no %s", file)
+		}
+	}
+	for _, file := range []string{".github/workflows", "fern", "AGENTS.md", "docs/README.md"} {
+		if exists(filepath.Join(root, filepath.FromSlash(file))) {
+			t.Errorf("charter repo wrote %s in a repo that is not a project", file)
+		}
+	}
+	if have, _ := os.ReadFile(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "bug.yml")); string(have) != own {
+		t.Errorf("the repo's own bug form was replaced:\n%s", have)
+	}
+	if have, _ := os.ReadFile(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "feature.yml")); string(have) != string(forms["ISSUE_TEMPLATE/feature.yml"]) {
+		t.Error("a form charter wrote, edited by hand, was not written again")
+	}
+	if got := ownForms(root); !slices.Equal(got, []string{"ISSUE_TEMPLATE/bug.yml"}) {
+		t.Errorf("the repo's own forms: %v", got)
+	}
+	if err := keepRepo(root, true); err != nil {
+		t.Errorf("-check with a form of the repo's own: %v", err)
+	}
+	// Deleted, the form is charter's again.
+	os.Remove(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "bug.yml"))
+	if err := keepRepo(root, true); err == nil {
+		t.Error("-check passed without the bug form")
+	}
+}
+
 // The preset renovate.json takes: valid JSON, with the managers for every kind of pin catalog reads,
 // and a release's renovate.json takes it at that release.
 func TestRenovatePreset(t *testing.T) {

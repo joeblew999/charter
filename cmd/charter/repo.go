@@ -18,7 +18,8 @@ import (
 
 // `charter repo` keeps a repo in shape from charter.toml at its root: the docs site, the issue forms
 // and labels, the workflows when it has projects, the repo's description, homepage and topics on
-// GitHub, and GitHub Pages. Each item prints ok or changed, and running it again changes nothing.
+// GitHub, and GitHub Pages. Any repo: one that is not a project and lists none gets everything but
+// the workflows. An issue form of the repo's own (ownForms) is kept. Each item prints ok or changed, and running it again changes nothing.
 // With -check it changes nothing and fails if an item differs, for CI. It calls the steps that
 // `charter docs`, `charter workflows` and `charter labels` are on their own.
 
@@ -152,7 +153,7 @@ func renovateConfig(release string) []byte {
 	return []byte("{\n  \"$schema\": \"https://docs.renovatebot.com/renovate-schema.json\",\n  \"extends\": [\"" + preset + "\"]\n}\n")
 }
 
-// charterTomlFor is the charter.toml that charter new writes.
+// charterTomlFor is the charter.toml that charter new and charter adopt write.
 func charterTomlFor(description string) string {
 	return "# The repo as charter repo keeps it (mise run repo). Topics: lower-case words, e.g. [\"api\", \"cloudflare-workers\"].\n" +
 		"description = " + strconv.Quote(description) + "\ntopics = []\n"
@@ -188,7 +189,7 @@ func repoCommand(args []string) error {
 func keepRepo(root string, check bool) error {
 	text, err := os.ReadFile(filepath.Join(root, "charter.toml"))
 	if err != nil {
-		return fmt.Errorf("no charter.toml at the repo's root (%s): charter new writes one; it needs at least description = \"...\"", root)
+		return fmt.Errorf("no charter.toml at the repo's root (%s): charter adopt writes one (charter new, for a new project); it needs at least description = \"...\"", root)
 	}
 	config, err := parseCharterToml(string(text))
 	if err != nil {
@@ -233,12 +234,8 @@ func keepRepo(root string, check bool) error {
 	}
 	steps := []step{
 		{"docs site (" + config.Docs + "/)", func() ([]string, error) {
-			files := docsSite(site, config.Docs)
-			generated, err := readGenerated(filepath.Join(root, filepath.FromSlash(config.Docs)))
+			files, _, err := siteFiles(root, config.Docs, site)
 			if err != nil {
-				return nil, err
-			}
-			if err := addGenerated(files, root, config.Docs, generated); err != nil {
 				return nil, err
 			}
 			return syncFiles(root, files, check)
@@ -272,6 +269,9 @@ func keepRepo(root string, check bool) error {
 		step{"topics", func() ([]string, error) { return syncTopics(root, repo, config.Topics, check) }},
 		step{"GitHub Pages", func() ([]string, error) { return syncPages(root, repo, config.Docs, check) }},
 	)
+	for _, form := range ownForms(root) {
+		fmt.Printf("kept     .github/%s: the repo's own (it does not start with %q)\n", form, formHeader)
+	}
 	drift := 0
 	for _, step := range steps {
 		changes, err := step.run()
