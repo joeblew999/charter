@@ -20,6 +20,16 @@ goreleaser = "2.18.2"
 # Holds the Cloudflare credentials (the keychain, through fnox): mise run cloudflare:secrets.
 fnox = "1.35.2"
 
+[env]
+# How the tasks this repo includes run the tool: from this checkout.
+CHARTER_TOOL = "go run ./cmd/charter"
+
+[task_config]
+# The tasks any repo takes from charter (tasks/repo: the repo on GitHub, the docs site in docs/, the
+# issues, the upstream issues), as this repo takes them itself. A repo elsewhere includes the folder
+# from GitHub, by tag.
+includes = ["tasks/repo"]
+
 # ---- everything ----------------------------------------------------------------------------------
 
 [tasks.setup]
@@ -47,10 +57,6 @@ run = "go run ./cmd/charter each doctor"
 description = "Remove every example's generated SDKs and stop leftover WireMock containers"
 run = "go run ./cmd/charter each sdk:clean"
 
-[tasks."upstream:status"]
-description = "The upstream issues our code works around (every `Upstream:` tag): CLOSED means that workaround can go"
-run = "go run ./cmd/charter upstream"
-
 # ---- charter: the tool (cmd/charter) and what it writes ------------------------------------------
 
 [tasks."ci:scope"]
@@ -60,14 +66,6 @@ run = "go run ./cmd/charter ci-scope"
 [tasks."charter:check"]
 description = "The tool's own checks (gofmt, vet, tests, with the test that holds the two notes examples to one surface), the generated workflows and docs config match their templates, and docs/ passes the lint"
 run = "go run ./cmd/charter lint -vet ./cmd/...,./examples cmd examples/*.go && go test ./cmd/... ./examples && go run ./cmd/charter workflows -check && go run ./cmd/charter docs -check && go run ./cmd/charter docs-lint"
-
-[tasks.repo]
-description = "REMOTE: keep the repo in shape from charter.toml: docs site, issue forms, labels, workflows, description, homepage, topics, GitHub Pages"
-run = "go run ./cmd/charter repo"
-
-[tasks."repo:check"]
-description = "REMOTE, read-only: fail if the repo differs from charter.toml and the tool's templates"
-run = "go run ./cmd/charter repo -check"
 
 [tasks.catalog]
 description = "REMOTE, read-only: the owner's charter repos, what each publishes, and the repos that pin it, as Markdown (-- -json for JSON, -- -page for a docs page)"
@@ -147,24 +145,6 @@ run = "go run ./cmd/charter dist-ts"
 [tasks."ts:release"]
 description = "REMOTE on a version tag (vX.Y.Z): attach dist/* (what ts:dist wrote) to its GitHub Release, if it lacks them. Anywhere else: a dry run that lists dist/"
 run = "go run ./cmd/charter publish"
-
-# ---- docs: the docs site in docs/ ----------------------------------------------------------------
-
-[tasks."docs:setup"]
-description = "Write the docs site's config and docs/writing.md (the same for every repo; GitHub Pages renders the folder), and the pages docs/_generated.toml lists"
-run = "go run ./cmd/charter docs"
-
-[tasks."docs:lint"]
-description = "Check docs/ for what a program can check: front matter, links, the index, tasks and paths that don't exist"
-run = "go run ./cmd/charter docs-lint"
-
-[tasks."docs:review"]
-description = "Have Claude (the claude command) bring docs/ up to date and into line with docs/writing.md"
-run = "go run ./cmd/charter docs-review"
-
-[tasks."docs:pages"]
-description = "REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself)"
-run = 'gh api -X POST "repos/{owner}/{repo}/pages" -f "source[branch]=main" -f "source[path]=/docs"'
 
 # ---- cloudflare: the credentials a deploy from GitHub needs --------------------------------------
 

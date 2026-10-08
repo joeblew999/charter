@@ -1,0 +1,30 @@
+# Charter's tasks for any repo: a repo includes this folder by tag (mise.toml, [task_config] includes),
+# whether or not it is a charter project, and gets these tasks and no others. They run at the repo's
+# root (dir) and call the tool as CHARTER_TOOL, or as charter when the repo does not set it (it pins
+# the tool under [tools]). Not here: releases, workflows, SDKs, Cloudflare (tasks/shared).
+# The docs site in docs/, which GitHub Pages renders.
+
+["docs:setup"]
+description = "Write the docs site's config and docs/writing.md (the same for every repo; GitHub Pages renders the folder), and the pages docs/_generated.toml lists"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} docs"
+
+["docs:lint"]
+description = "Check docs/ for what a program can check: front matter, links, the index, tasks and paths that don't exist"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} docs-lint"
+
+["docs:check"]
+description = "Fail if the docs site's config or a generated page differs from what docs:setup writes, or docs/ fails the lint"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} docs -check && {{ env.CHARTER_TOOL | default(value='charter') }} docs-lint"
+
+["docs:review"]
+description = "Have Claude (the claude command) bring docs/ up to date and into line with docs/writing.md"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} docs-review"
+
+["docs:pages"]
+description = "REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself)"
+dir = "{{config_root}}"
+run = 'gh api -X POST "repos/{owner}/{repo}/pages" -f "source[branch]=main" -f "source[path]=/docs"'

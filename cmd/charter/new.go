@@ -164,8 +164,8 @@ func newProject(args []string) error {
 	// What a repo has around a project: its start pages, the docs folder, the GitHub workflows.
 	for path, content := range map[string]string{
 		"README.md":       noCLI(withPages(projectReadme(name, orCheckout(version), apiPort(tasks), ts, empty), ui)),
-		"AGENTS.md":       "# For agents\n\nEverything about this project is in [docs/](docs/README.md), the same pages developers read. Read [docs/README.md](docs/README.md), then [docs/rules.md](docs/rules.md): the rules are binding.\n",
-		"CLAUDE.md":       "@AGENTS.md\n",
+		"AGENTS.md":       agentsPage,
+		"CLAUDE.md":       claudePage,
 		"docs/README.md":  noCLI(withPages(projectDocs(name, ts, empty), ui)),
 		"docs/rules.md":   projectRules(ts),
 		"docs/writing.md": docsWriting,
@@ -310,7 +310,7 @@ func copyExample(from, into, name, module, subdomain, version, checkout string, 
 	// A release: mise installs it, pinned, and it is on the path of every task. A checkout: nothing
 	// is pinned (the newest release can be older than the checkout), and the tasks `go run` it from
 	// there, at the one place CHARTER names.
-	tool, which := "charter", "[tools]\n# The tool every task runs, the release's binary: `mise up --bump "+toolRelease+"` moves to a newer one.\n\""+toolRelease+"\" = \""+strings.TrimPrefix(version, "v")+"\"\n"
+	tool, which := "charter", "[tools]\n"+toolPin(version)
 	if checkout != "" {
 		// With forward slashes on every system: a backslash in a TOML string starts an escape.
 		tool, which = checkoutTool, "[env]\n# The checkout of charter whose tool the tasks run (go.work lets them) and whose Go library go.mod\n# builds against: charter new -from.\nCHARTER = \""+filepath.ToSlash(checkout)+"\"\n"
@@ -330,14 +330,8 @@ func copyExample(from, into, name, module, subdomain, version, checkout string, 
 	}
 	// The tasks the project shares with every other: charter's tasks/ folders, from GitHub at the
 	// release, or from the checkout.
-	for _, folder := range []string{"shared", "go", "ts"} {
-		include := repoURL + ".git//tasks/" + folder + "?ref=" + version
-		if checkout != "" {
-			include = filepath.ToSlash(filepath.Join(checkout, "tasks", folder))
-		} else {
-			include = "git::" + include
-		}
-		pairs = append(pairs, `"../../tasks/`+folder+`"`, `"`+include+`"`)
+	for _, folder := range []string{repoTasksFolder, "shared", "go", "ts"} {
+		pairs = append(pairs, `"../../tasks/`+folder+`"`, `"`+tasksInclude(folder, version, checkout)+`"`)
 	}
 	if ts {
 		// The TypeScript library: the release's package, or the checkout's folder (built by setup).
@@ -548,6 +542,22 @@ With a GitHub repo: mise run repo (charter.toml: its description, topics, docs s
 	return nil
 }
 
+// toolPin are the lines of a mise.toml's [tools] that pin the tool to a release: mise installs that
+// release's binary, and it is on the path of every task.
+func toolPin(version string) string {
+	return "# The tool every task runs, the release's binary: `mise up --bump " + toolRelease + "` moves to a newer one.\n\"" + toolRelease + "\" = \"" + strings.TrimPrefix(version, "v") + "\"\n"
+}
+
+// tasksInclude is one of charter's tasks/ folders as a mise.toml includes it ([task_config]
+// includes): from GitHub at the release, or the checkout's folder (forward slashes on every system:
+// a backslash in a TOML string starts an escape).
+func tasksInclude(folder, version, checkout string) string {
+	if checkout != "" {
+		return filepath.ToSlash(filepath.Join(checkout, "tasks", folder))
+	}
+	return "git::" + repoURL + ".git//tasks/" + folder + "?ref=" + version
+}
+
 // orCheckout names the tool's version, or says that it has none.
 func orCheckout(version string) string {
 	if version == "" {
@@ -634,24 +644,7 @@ func projectDocs(name string, ts, empty bool) string {
 [charter's docs](` + docsURL + `). The TypeScript library this project depends on (` + "`@charter/ts`: `specs`, `spec-files`, `asyncapi`, `follow`" + `) comes from there.
 `
 	}
-	return `---
-title: Start here
-nav_order: 1
-permalink: /
----
-
-# ` + name + `
-
-Everything written about this project lives in this folder. ` + "`AGENTS.md`" + ` only points here.
-
-| Page | What it covers |
-|---|---|
-| This page | What is what |
-| [rules.md](rules.md) | The working rules |
-| [writing.md](writing.md) | The rules a page in ` + "`docs/`" + ` is held to |
-
-## What is what
-
+	return startPage(name) + `
 You write the contract in Go; everything else is generated from it.
 
 | | |
@@ -721,18 +714,9 @@ func projectRules(ts bool) string {
 	return goRules
 }
 
-const goRules = `---
-title: Rules
-nav_order: 2
----
-
-# Rules for working in this project
-
-- **` + "`docs/`" + ` is the single source of truth.** Write things down in a page here, following [writing.md](writing.md). ` + "`mise run docs:lint`" + ` checks what a program can, ` + "`mise run docs:review`" + ` has Claude check the rest.
-- **mise drives everything, locally and on GitHub, and every task is one line.** Anything longer belongs in the charter tool the tasks call.
+const goRules = rulesHead + ruleDocs + `- **mise drives everything, locally and on GitHub, and every task is one line.** Anything longer belongs in the charter tool the tasks call.
 - **The contract is the source.** After changing ` + "`api/contract.go`" + `, run ` + "`mise run spec`" + `. ` + "`mise run check`" + ` fails if a committed spec is stale. Never edit ` + "`fern/openapi.json`" + ` or ` + "`fern/asyncapi.json`" + ` by hand.
 - **Everything that ships to Workers builds with TinyGo** (` + "`mise run build`" + `). ` + "`go test`" + ` can't see TinyGo's gaps, so the check also runs the Wasm under workerd.
 - **Test locally and on Cloudflare.** After a deploy, ` + "`mise run live-test`" + ` must pass against the deployed Worker: some bugs exist only in production.
 - **Exact pins.** Tools in ` + "`mise.toml`" + `, Go modules in ` + "`go.mod`" + `, npm packages in ` + "`package.json`" + `. Lockfiles are committed.
-- **Workarounds name their upstream issue:** ` + "`Upstream: <owner>/<repo>#<n> (when fixed: ...)`" + ` in the code; ` + "`mise run upstream:status`" + ` lists them.
-`
+` + ruleUpstream

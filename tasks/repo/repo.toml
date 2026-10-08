@@ -1,0 +1,25 @@
+# Charter's tasks for any repo: a repo includes this folder by tag (mise.toml, [task_config] includes),
+# whether or not it is a charter project, and gets these tasks and no others. They run at the repo's
+# root (dir) and call the tool as CHARTER_TOOL, or as charter when the repo does not set it (it pins
+# the tool under [tools]). Not here: releases, workflows, SDKs, Cloudflare (tasks/shared).
+# The repo on GitHub, its issues, and the upstream issues its code works around.
+
+["repo"]
+description = "REMOTE: keep the repo in shape from charter.toml at its root: docs site, issue forms, labels, description, homepage, topics, GitHub Pages; the workflows only in a repo with charter projects"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} repo"
+
+["repo:check"]
+description = "REMOTE, read-only: fail if the repo differs from charter.toml and the tool's templates (charter repo -check)"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} repo -check"
+
+["issues"]
+description = "REMOTE, read-only: the open issues, newest first: what is reported and what is planned (a plan is an issue)"
+dir = "{{config_root}}"
+run = "gh issue list --state open --limit 30"
+
+["upstream:status"]
+description = "REMOTE, read-only: the upstream issues the code works around (every `Upstream:` tag): CLOSED means that workaround can go"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} upstream"

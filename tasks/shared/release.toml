@@ -1,0 +1,29 @@
+# Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
+# beside tasks/repo (the tasks any repo takes), and its tasks run in the project (dir), calling the
+# tool as CHARTER_TOOL (its mise.toml sets it).
+# Releases and the GitHub workflows.
+
+["release"]
+description = "REMOTE: cut a release from this machine: mise run release -- vX.Y.Z [-dry-run]. Checks the repo, runs check and dist, tags, pushes, makes the GitHub Release, runs release:publish and release:tags"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} release"
+
+["release:publish"]
+description = "REMOTE on a version tag (vX.Y.Z): make its GitHub Release if missing, attach what of dist/* it lacks, write SHA256SUMS. Anywhere else: a dry run that lists dist/ and prints the notes"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} publish"
+
+["release:tags"]
+description = "REMOTE on a version tag (vX.Y.Z): tag the committed Go SDK, a module in a subdirectory (sdk/go/vX.Y.Z). Anywhere else: a dry run"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} release-tags sdk/go"
+
+["workflows"]
+description = "Write .github/workflows/ from the tool's templates (never edit the copies)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} workflows"
+
+["workflows:check"]
+description = "Fail if a workflow in .github/workflows/ differs from the tool's template"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} workflows -check"

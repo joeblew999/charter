@@ -64,12 +64,8 @@ func docs(args []string) error {
 	if err := json.Unmarshal([]byte(out), &repo); err != nil {
 		return err
 	}
-	files := docsSite(repo, "docs")
-	generated, err := readGenerated(filepath.Join(into, "docs"))
+	files, generated, err := siteFiles(into, "docs", repo)
 	if err != nil {
-		return err
-	}
-	if err := addGenerated(files, into, "docs", generated); err != nil {
 		return err
 	}
 	writer := map[string]string{} // a generated page: its command
@@ -123,6 +119,17 @@ func docsSite(repo githubRepo, folder string) map[string][]byte {
 		files[filepath.Join(folder, path)] = []byte(content)
 	}
 	return files
+}
+
+// siteFiles are every file charter writes into the docs folder of the repo at root, by their path in
+// the repo: the site's own (docsSite) and the pages its _generated.toml lists, which are returned too.
+func siteFiles(root, folder string, repo githubRepo) (map[string][]byte, []generatedPage, error) {
+	files := docsSite(repo, folder)
+	generated, err := readGenerated(filepath.Join(root, filepath.FromSlash(folder)))
+	if err != nil {
+		return nil, nil, err
+	}
+	return files, generated, addGenerated(files, root, folder, generated)
 }
 
 // addGenerated adds the generated pages to files (by their path in the repo at root, below the

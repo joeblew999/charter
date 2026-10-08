@@ -26,9 +26,9 @@ API_URL = "{{ get_env(name='API_URL', default='https://charter-start-ts.gedw99.w
 # CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
 
 [task_config]
-# The tasks every project shares, and those of its language: charter's tasks/ folder (a project
-# includes it from GitHub, by tag). A task defined below takes the place of the shared one.
-includes = ["../../tasks/shared", "../../tasks/ts"]
+# The tasks any repo takes, those every project shares, and those of its language: charter's tasks/ folders (a project
+# includes them from GitHub, by tag). A task defined below takes the place of the included one.
+includes = ["../../tasks/repo", "../../tasks/shared", "../../tasks/ts"]
 
 # ---- the project ---------------------------------------------------------------------------------
 

@@ -111,8 +111,8 @@ func TestTheExamplesPinTheSameTools(t *testing.T) {
 }
 
 // The tasks the projects share are written once, in tasks/ (what a project made by charter new
-// includes from GitHub): every project includes the shared folder and its language's, and defines
-// none of their tasks itself, except setup in a TypeScript project, which first builds this repo's
+// includes from GitHub): every project includes the folder any repo takes (tasks/repo), the shared
+// folder and its language's, and defines none of their tasks itself, except setup in a TypeScript project, which first builds this repo's
 // TypeScript library (ts/), its local package @charter/ts. One line in each, so what is learned in
 // one project holds in the others.
 func TestTheProjectsIncludeTheSharedTasks(t *testing.T) {
@@ -137,15 +137,20 @@ func TestTheProjectsIncludeTheSharedTasks(t *testing.T) {
 		}
 		file := filepath.Join("../..", name, "mise.toml")
 		content, _ := os.ReadFile(file)
-		if want := `includes = ["../../tasks/shared", "../../tasks/` + lang + `"]`; !strings.Contains(string(content), want) {
+		if want := `includes = ["../../tasks/repo", "../../tasks/shared", "../../tasks/` + lang + `"]`; !strings.Contains(string(content), want) {
 			t.Errorf("%s: no %s", name, want)
 		}
 		if !strings.Contains(string(content), "\nCHARTER_TOOL = \"go run ../../cmd/charter\"\n") {
 			t.Errorf("%s: CHARTER_TOOL is not this checkout's tool", name)
 		}
 		shared := includedBy("shared")
-		for task := range includedBy(lang) {
-			shared[task] = true
+		for _, folder := range []string{repoTasksFolder, lang} {
+			for task := range includedBy(folder) {
+				if shared[task] {
+					t.Errorf("tasks/%s defines %s, which another folder of tasks/ does too", folder, task)
+				}
+				shared[task] = true
+			}
 		}
 		for _, m := range taskDef.FindAllStringSubmatch(string(content), -1) {
 			if shared[m[1]] && !(lang == "ts" && m[1] == "setup") {
@@ -157,6 +162,46 @@ func TestTheProjectsIncludeTheSharedTasks(t *testing.T) {
 		}
 		if strings.Contains(string(content), "go run ../../cmd/charter ") {
 			t.Errorf("%s: a task runs the tool as go run ../../cmd/charter, not {{env.CHARTER_TOOL}}", name)
+		}
+	}
+}
+
+// tasks/repo is what a repo that is not a project includes: exactly the tasks any repo can use
+// (repoTasks), each calling the tool as CHARTER_TOOL or, where a repo sets none, as charter; and
+// nothing of a project's (releases, workflows, SDKs, Cloudflare), which stay in tasks/shared.
+func TestTheTasksAnyRepoTakes(t *testing.T) {
+	var names []string
+	files, _ := filepath.Glob("../../tasks/" + repoTasksFolder + "/*.toml")
+	for _, file := range files {
+		content, _ := os.ReadFile(file)
+		for _, m := range includedTaskDef.FindAllStringSubmatch(string(content), -1) {
+			names = append(names, m[1])
+		}
+		if strings.Contains(string(content), "{{env.CHARTER_TOOL}}") {
+			t.Errorf("%s: a task needs CHARTER_TOOL set: {{ env.CHARTER_TOOL | default(value='charter') }}", file)
+		}
+		for _, m := range regexp.MustCompile(`(?m)^run = ["'](.*)["']$`).FindAllStringSubmatch(string(content), -1) {
+			if !strings.HasPrefix(m[1], "{{ env.CHARTER_TOOL | default(value='charter') }} ") && !strings.HasPrefix(m[1], "gh ") {
+				t.Errorf("%s: a task runs neither the tool nor gh: %s", file, m[1])
+			}
+		}
+	}
+	slices.Sort(names)
+	if !slices.Equal(names, repoTasks) {
+		t.Errorf("tasks/%s has %v, and adopt knows %v", repoTasksFolder, names, repoTasks)
+	}
+	shared, _ := filepath.Glob("../../tasks/shared/*.toml")
+	for _, file := range shared {
+		content, _ := os.ReadFile(file)
+		for _, m := range includedTaskDef.FindAllStringSubmatch(string(content), -1) {
+			if slices.Contains(repoTasks, m[1]) {
+				t.Errorf("%s defines %s, which tasks/%s does", file, m[1], repoTasksFolder)
+			}
+		}
+	}
+	for _, kept := range []string{"release", "workflows", "workflows:check", "doctor", "sdk:gen", "migrate"} {
+		if slices.Contains(names, kept) {
+			t.Errorf("tasks/%s has %s, a project's task", repoTasksFolder, kept)
 		}
 	}
 }
