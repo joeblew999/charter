@@ -1,4 +1,4 @@
-# Written by `charter repo` and `charter workflows` from the charter tool's template: change the template, not this file.
+# Written by `charter repo` and `charter workflows` from their template (github.com/joeblew999/charter): don't edit, change the template.
 # For a form of the repo's own, write this file without the line above: charter then leaves it alone.
 # A blank issue skips every required field, so the web offers only the forms. gh and the API ignore
 # forms: `charter issue <kind>` prints the same headings as a body for them.

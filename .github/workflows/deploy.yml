@@ -1,5 +1,5 @@
 # Written by `charter workflows` from its template (github.com/joeblew999/charter, cmd/charter/workflows/deploy.yml):
-# change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# don't edit: change the template, not this file. Every step that does work is a mise task, so it runs locally too.
 # By hand only: deploy the Worker to Cloudflare, apply its D1 migrations, then run the live test against
 # what was deployed (some failures only show on Cloudflare itself). Needs the secrets below
 # (mise run cloudflare:secrets copies them; the tokens only where the Worker has them: WORKER_SECRETS).

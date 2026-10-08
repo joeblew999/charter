@@ -1,5 +1,5 @@
 # Written by `charter workflows` from its template (github.com/joeblew999/charter, cmd/charter/workflows/release.yml):
-# change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# don't edit: change the template, not this file. Every step that does work is a mise task, so it runs locally too.
 # A release is cut from a developer's machine (mise run release -- vX.Y.Z), which builds and attaches
 # everything. On its tag this builds it all again on GitHub's machines, as a check, attaches only what the
 # Release lacks (everything, if the tag was pushed by hand), rewrites SHA256SUMS, tags the Go modules in

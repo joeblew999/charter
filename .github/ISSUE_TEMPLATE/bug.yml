@@ -1,4 +1,4 @@
-# Written by `charter repo` and `charter workflows` from the charter tool's template: change the template, not this file.
+# Written by `charter repo` and `charter workflows` from their template (github.com/joeblew999/charter): don't edit, change the template.
 # For a form of the repo's own, write this file without the line above: charter then leaves it alone.
 # Each field's label is a heading in the issue body; `charter issue bug` prints the same headings.
 name: Bug report

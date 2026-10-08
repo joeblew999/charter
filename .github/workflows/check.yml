@@ -1,5 +1,5 @@
 # Written by `charter workflows` from its template (github.com/joeblew999/charter, cmd/charter/workflows/check.yml):
-# change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# don't edit: change the template, not this file. Every step that does work is a mise task, so it runs locally too.
 # The local checks (no Cloudflare account): lint, tests, spec drift, the build, and the live tests natively and under workerd.
 name: check
 on:

@@ -252,8 +252,8 @@ func TestRepoKeepsTheRepo(t *testing.T) {
 	if err := keep(false); err != nil {
 		t.Fatal(err)
 	}
-	if exists(filepath.Join(root, ".github", "workflows")) || !exists(filepath.Join(root, ".github", "labels.tsv")) {
-		t.Error("without projects: the issue forms and labels, and no workflows")
+	if exists(filepath.Join(root, ".github", "workflows", "check.yml")) || !exists(filepath.Join(root, ".github", "labels.tsv")) {
+		t.Error("without projects: the issue forms and labels, and none of a project's workflows")
 	}
 	if *github.pages != [3]string{"legacy", "main", "/docs"} || !slices.Equal(github.topics, []string{"charter"}) {
 		t.Errorf("Pages %v, topics %v", *github.pages, github.topics)
@@ -272,7 +272,8 @@ func TestRepoKeepsTheRepo(t *testing.T) {
 }
 
 // charter repo in a repo that is not a project and lists none (what charter adopt leaves): the docs
-// site, the issue forms, labels.tsv and renovate.json, and no workflows. A form the repo wrote
+// site, the issue forms, labels.tsv, renovate.json and the one workflow any repo takes (repo-check,
+// unless workflow = false), beside the repo's own workflows and none of a project's. A form the repo wrote
 // itself (it does not start with charter's header) is kept and is not drift; one charter wrote and
 // someone edited is written again.
 func TestRepoInARepoThatIsNotAProject(t *testing.T) {
@@ -304,6 +305,7 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 		"mise.toml":                          "[tasks.test]\nrun = \"true\"\n",
 		".github/ISSUE_TEMPLATE/bug.yml":     own,
 		".github/ISSUE_TEMPLATE/feature.yml": edited,
+		".github/workflows/stages.yml":       "name: stages\n",
 	} {
 		if err := write(filepath.Join(root, filepath.FromSlash(file)), content); err != nil {
 			t.Fatal(err)
@@ -312,12 +314,12 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 	if err := keepRepo(root, false); err != nil {
 		t.Fatal(err)
 	}
-	for _, file := range []string{"docs/_config.yml", "docs/writing.md", "renovate.json", ".github/labels.tsv", ".github/ISSUE_TEMPLATE/config.yml", ".github/ISSUE_TEMPLATE/plan.yml", ".github/ISSUE_TEMPLATE/upstream.yml"} {
+	for _, file := range []string{"docs/_config.yml", "docs/writing.md", "renovate.json", ".github/labels.tsv", ".github/workflows/repo-check.yml", ".github/workflows/stages.yml", ".github/ISSUE_TEMPLATE/config.yml", ".github/ISSUE_TEMPLATE/plan.yml", ".github/ISSUE_TEMPLATE/upstream.yml"} {
 		if !exists(filepath.Join(root, filepath.FromSlash(file))) {
 			t.Errorf("no %s", file)
 		}
 	}
-	for _, file := range []string{".github/workflows", "fern", "AGENTS.md", "docs/README.md"} {
+	for _, file := range []string{".github/workflows/check.yml", ".github/workflows/deploy.yml", ".github/workflows/release.yml", ".github/workflows/sdk-check.yml", "fern", "AGENTS.md", "docs/README.md"} {
 		if exists(filepath.Join(root, filepath.FromSlash(file))) {
 			t.Errorf("charter repo wrote %s in a repo that is not a project", file)
 		}
@@ -334,6 +336,50 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 	if err := keepRepo(root, true); err != nil {
 		t.Errorf("-check with a form of the repo's own: %v", err)
 	}
+	// The workflow: one job on Linux, on pull requests and pushes to the default branch, every step a
+	// mise task of tasks/repo, reading GitHub with the run's own token and no permission to write.
+	workflow, _ := os.ReadFile(filepath.Join(root, ".github", "workflows", repoWorkflow))
+	for _, want := range []string{"name: repo-check\n", "    branches: [main]\n", "  pull_request:\n", "\npermissions:\n  contents: read\n  issues: read\n  pull-requests: read\n  pages: read\n",
+		"GH_TOKEN: ${{ github.token }}", "    runs-on: ubuntu-24.04\n", "- run: mise run docs:check\n", "- run: mise run repo:check\n", "- run: mise run upstream:status\n"} {
+		if !strings.Contains(string(workflow), want) {
+			t.Errorf("%s: no %q", repoWorkflow, want)
+		}
+	}
+	if strings.Count(string(workflow), "runs-on:") != 1 || strings.Contains(string(workflow), ": write") || strings.Contains(string(workflow), "__") {
+		t.Errorf("%s: more than one job, a permission to write, or a placeholder left:\n%s", repoWorkflow, workflow)
+	}
+	for _, m := range regexp.MustCompile(`- run: (.*)`).FindAllStringSubmatch(string(workflow), -1) {
+		if task, ok := strings.CutPrefix(m[1], "mise run "); !ok || !slices.Contains(repoTasks, task) {
+			t.Errorf("%s runs %q, which is not a task of tasks/repo", repoWorkflow, m[1])
+		}
+	}
+	for _, m := range regexp.MustCompile(`- uses: (.*)`).FindAllStringSubmatch(string(workflow), -1) {
+		if !regexp.MustCompile(`^[\w.-]+/[\w.-]+@v\d+\.\d+\.\d+$`).MatchString(m[1]) {
+			t.Errorf("%s: pin the action to an exact version, not %q", repoWorkflow, m[1])
+		}
+	}
+	// workflow = false: charter writes none, and one that is there is the repo's.
+	if err := os.WriteFile(filepath.Join(root, "charter.toml"), []byte("description = \"Field notes\"\nworkflow = false\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	os.Remove(filepath.Join(root, ".github", "workflows", repoWorkflow))
+	if err := keepRepo(root, false); err != nil || exists(filepath.Join(root, ".github", "workflows", repoWorkflow)) {
+		t.Errorf("workflow = false: %v, and the workflow is there: %v", err, exists(filepath.Join(root, ".github", "workflows", repoWorkflow)))
+	}
+	// A project gets its own workflows, whose check holds its docs, and not this one.
+	project := t.TempDir()
+	for file, content := range map[string]string{"charter.toml": "description = \"An API\"\n", "mise.toml": "", "fern/generators.yml": "groups:\n  go:\n"} {
+		if err := write(filepath.Join(project, filepath.FromSlash(file)), content); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := keepRepo(project, false); err != nil {
+		t.Fatal(err)
+	}
+	if exists(filepath.Join(project, ".github", "workflows", repoWorkflow)) || !exists(filepath.Join(project, ".github", "workflows", "check.yml")) {
+		t.Error("a project: its own workflows, and no repo-check")
+	}
+
 	// Deleted, the form is charter's again.
 	os.Remove(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "bug.yml"))
 	if err := keepRepo(root, true); err == nil {

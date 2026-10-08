@@ -37,6 +37,7 @@ type charterToml struct {
 	Docs        string   // the docs folder, default "docs"
 	Projects    []string // folders that are charter projects; with any, the repo gets the workflows
 	Renovate    bool     // write renovate.json, which takes charter's Renovate preset; default true
+	Workflow    bool     // in a repo that is not a project: write the repo-check workflow; default true
 }
 
 var (
@@ -50,7 +51,7 @@ var (
 // parseCharterToml reads charter.toml. Only the standard library: the format is a small part of
 // TOML, one key per line, and anything else is an error, not ignored.
 func parseCharterToml(text string) (charterToml, error) {
-	config := charterToml{Docs: "docs", Renovate: true}
+	config := charterToml{Docs: "docs", Renovate: true, Workflow: true}
 	seen := map[string]bool{}
 	for number, line := range strings.Split(text, "\n") {
 		line = strings.TrimSpace(line)
@@ -78,9 +79,9 @@ func parseCharterToml(text string) (charterToml, error) {
 				return config, at(`%s is a string in double quotes`, key)
 			}
 			text = unquoted
-		case "renovate":
+		case "renovate", "workflow":
 			if value != "true" && value != "false" {
-				return config, at("renovate is true or false")
+				return config, at("%s is true or false", key)
 			}
 		case "topics", "projects":
 			if !tomlList.MatchString(value) {
@@ -95,7 +96,7 @@ func parseCharterToml(text string) (charterToml, error) {
 				list = append(list, unquoted)
 			}
 		default:
-			return config, at("no key %q: description, topics, homepage, docs, projects, renovate", key)
+			return config, at("no key %q: description, topics, homepage, docs, projects, renovate, workflow", key)
 		}
 		switch key {
 		case "description":
@@ -110,6 +111,8 @@ func parseCharterToml(text string) (charterToml, error) {
 			config.Projects = list
 		case "renovate":
 			config.Renovate = value == "true"
+		case "workflow":
+			config.Workflow = value == "true"
 		}
 	}
 	if config.Description == "" {
@@ -150,12 +153,13 @@ func renovateConfig(release string) []byte {
 	if release != "" {
 		preset += "#" + release
 	}
-	return []byte("{\n  \"$schema\": \"https://docs.renovatebot.com/renovate-schema.json\",\n  \"extends\": [\"" + preset + "\"]\n}\n")
+	// JSON has no comments: Renovate's own description field says where the file comes from.
+	return []byte("{\n  \"$schema\": \"https://docs.renovatebot.com/renovate-schema.json\",\n  \"description\": \"Written by `charter repo` (github.com/joeblew999/charter): don't edit, run it again (mise run repo). renovate = false in charter.toml leaves this file to the repo.\",\n  \"extends\": [\"" + preset + "\"]\n}\n")
 }
 
 // charterTomlFor is the charter.toml that charter new and charter adopt write.
 func charterTomlFor(description string) string {
-	return "# The repo as charter repo keeps it (mise run repo). Topics: lower-case words and hyphens, e.g. [\"docs\", \"command-line\"].\n" +
+	return "# The repo as `charter repo` keeps it (mise run repo). Topics: lower-case words and hyphens, e.g. [\"docs\", \"command-line\"].\n" +
 		"description = " + strconv.Quote(description) + "\ntopics = []\n"
 }
 
@@ -253,13 +257,19 @@ func keepRepo(root string, check bool) error {
 			return syncFiles(root, map[string][]byte{"renovate.json": renovateConfig(toolVersion())}, check)
 		}})
 	}
-	if len(config.Projects) > 0 || isProject(root) {
+	switch {
+	case hasProjects(root, config):
 		steps = append(steps, step{".github/workflows", func() ([]string, error) {
 			workflows, err := workflowsFor(root)
 			if err != nil {
 				return nil, err
 			}
 			return syncFiles(filepath.Join(root, ".github", "workflows"), workflows, check)
+		}})
+	case config.Workflow:
+		// Not a project: the one workflow any repo takes. Its other workflows are its own.
+		steps = append(steps, step{".github/workflows/" + repoWorkflow, func() ([]string, error) {
+			return syncFiles(root, map[string][]byte{".github/workflows/" + repoWorkflow: repoWorkflowFor(repo.DefaultBranchRef.Name)}, check)
 		}})
 	}
 	steps = append(steps,
@@ -319,10 +329,16 @@ func labelRows() ([][3]string, error) {
 		return nil, err
 	}
 	var labels [][3]string
-	for _, row := range strings.Split(strings.TrimSpace(string(rows)), "\n")[1:] {
-		if field := strings.Split(row, "\t"); len(field) == 3 {
+	// A line that starts with # says where the file comes from; the first of the others names the columns.
+	header := true
+	for _, row := range strings.Split(strings.TrimSpace(string(rows)), "\n") {
+		if strings.HasPrefix(row, "#") {
+			continue
+		}
+		if field := strings.Split(row, "\t"); len(field) == 3 && !header {
 			labels = append(labels, [3]string{field[0], field[1], field[2]})
 		}
+		header = false
 	}
 	return labels, nil
 }

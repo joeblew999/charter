@@ -164,6 +164,7 @@ func adopt(root, description, version, checkout string) error {
 		{"docs/rules.md", repoRules},
 	}
 	for _, page := range pages {
+		page[1] = startedBy("adopt", page[0], page[1])
 		path := filepath.Join(root, filepath.FromSlash(page[0]))
 		switch {
 		case exists(path):
@@ -213,7 +214,7 @@ func adopt(root, description, version, checkout string) error {
 	have, err := os.ReadFile(file)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
-		if err := write(file, adoptedTasks(name, pin, include, checkout != "")); err != nil {
+		if err := write(file, startedBy("adopt", "mise.toml", adoptedTasks(name, pin, include, checkout != ""))); err != nil {
 			return err
 		}
 		say("wrote", "mise.toml", "")
