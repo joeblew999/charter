@@ -50,7 +50,7 @@ Never edit these: change the source and run the task.
 | `build/`, `dist/`, `ts/dist/` | `mise run build`, `mise run sdk:dist`, `mise run ts:build` |
 | `.github/` | `mise run workflows`; in a repo that is not a project, its issue forms, `labels.tsv` and the `repo-check` workflow by `mise run repo` |
 | `renovate.json` | `mise run repo` |
-| `docs/_config.yml`, `docs/writing.md`, `docs/llms.txt`, `docs/_sass/` | `mise run docs:setup` |
+| `docs/_config.yml`, `docs/writing.md`, `docs/repo.md`, `docs/repo/`, `docs/llms.txt`, `docs/_sass/` | `mise run docs:setup` |
 | A page that `_generated.toml` in `docs/` lists (this repo has none) | `mise run docs:setup`, from its command ([Generated pages](guides/deploy.md#generated-pages)) |
 
 ## Every page
@@ -61,5 +61,6 @@ Never edit these: change the source and run the task.
 | [Guides](guides.md) | [Your API](guides/replace-the-example.md) (the contract, MCP, TypeScript), [Streaming](guides/streaming.md), [SDKs](guides/sdks.md) (Fern features, languages, releases), [Deploy and CI](guides/deploy.md), [Auth](guides/auth.md) (tokens, Cloudflare Access, OpenID Connect), [Release](guides/release.md) (from your machine, the CLI for every OS), [Performance](guides/performance.md), [Repos that use each other](guides/repos.md) (who pins what, breaking changes, Renovate), [Server-rendered pages](guides/pages.md) (gsx, htmx 4, Datastar), [Any repo](guides/any-repo.md) (what a repo with no API takes: `charter adopt`, `tasks/repo/`) |
 | [Reference](reference.md) | [Tasks](reference/tasks.md), [The charter command](reference/charter.md), [Go packages](reference/packages.md) |
 | [How to help](contributing.md) | [Rules](rules.md), [Benchmarks](benchmarks.md), [Upstream issues](upstream.md), [Writing docs](writing.md) |
+| [How this repo is kept](repo.md) | What is the same in every repo charter keeps: [the rules they share](repo/rules.md) |
 
 For an agent: [llms.txt](https://joeblew999.github.io/charter/llms.txt) lists every page as Markdown.

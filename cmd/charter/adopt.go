@@ -32,7 +32,7 @@ var repoTasks = []string{"docs:check", "docs:lint", "docs:pages", "docs:review",
 
 // The pages every repo charter keeps has, the same in a project made by new and a repo adopt took.
 const (
-	agentsPage = "# For agents\n\nEverything about this repo is in [docs/](docs/README.md), the same pages developers read. Read [docs/README.md](docs/README.md), then [docs/rules.md](docs/rules.md): the rules are binding.\n"
+	agentsPage = "# For agents\n\nEverything about this repo is in [docs/](docs/README.md), the same pages developers read. Read [docs/README.md](docs/README.md), then the rules, which are binding: [docs/repo/rules.md](docs/repo/rules.md), the same in every repo charter keeps, and [docs/rules.md](docs/rules.md), this repo's own.\n"
 	claudePage = "@AGENTS.md\n"
 
 	rulesHead = `---
@@ -47,11 +47,11 @@ nav_order: 2
 	ruleUpstream = "- **Workarounds name their upstream issue:** `Upstream: <owner>/<repo>#<n> (when fixed: ...)` in the code; `mise run upstream:status` lists them.\n"
 
 	// The rules every repo shares. A project's (goRules) add those of an API on Workers.
-	repoRules = rulesHead + ruleDocs +
-		"- **Never edit what is generated** ([the list](README.md#what-is-generated)): change its source and run its task.\n" +
-		ruleUpstream +
-		"- **Plans are issues,** never pages in `docs/`: `charter issue plan` prints the form to fill in, `mise run issues` lists the open ones.\n" +
-		"- **Only verified results go into the docs:** what ran, where, when.\n"
+	// A repo's own rules: the rules every repo shares are charter's page, repo/rules.md, the same
+	// everywhere, so this one starts with the pointer and is the repo's to add to.
+	repoRules = rulesHead +
+		"The rules every repo shares are in [Rules for every repo](repo/rules.md), which charter writes: the same page in each. Add here what is this repo's own.\n\n" +
+		"- **What is generated here:** [the list](README.md#what-is-generated).\n"
 )
 
 // startPage is the top of a repo's docs/README.md, the docs site's home page: its front matter, its
@@ -70,7 +70,8 @@ Everything written about this repo lives in this folder. ` + "`AGENTS.md`" + ` o
 | Page | What it covers |
 |---|---|
 | This page | What is what |
-| [rules.md](rules.md) | The working rules |
+| [repo.md](repo.md) | How every repo charter keeps is kept: [the rules they share](repo/rules.md) |
+| [rules.md](rules.md) | This repo's own rules |
 | [writing.md](writing.md) | The rules a page in ` + "`docs/`" + ` is held to |
 
 ## What is what
@@ -190,7 +191,7 @@ func adopt(root, description, version, checkout string) error {
 			say("ok", "docs/", ": the docs site's files are what charter docs writes")
 		}
 	default:
-		stale, err := syncFiles(root, map[string][]byte{"docs/writing.md": []byte(docsWriting)}, false)
+		stale, err := syncFiles(root, map[string][]byte{"docs/writing.md": []byte(docsWriting), "docs/repo.md": []byte(docsRepo), "docs/repo/rules.md": []byte(docsRepoRules)}, false)
 		if err != nil {
 			return err
 		}

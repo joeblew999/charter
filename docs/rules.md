@@ -5,7 +5,7 @@ parent: How to help
 ---
 # Rules for working in this repo
 
-Binding, for developers and agents alike: other repos build on this one.
+Binding, for developers and agents alike: other repos build on this one. These are this repo's own; the rules every repo shares are in [Rules for every repo](repo/rules.md).
 
 | Rule | Why |
 |---|---|

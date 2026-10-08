@@ -32,6 +32,14 @@ var docsStyle string
 //go:embed docs/writing.md
 var docsWriting string
 
+// The pages that say how every repo is kept: the same in each, as writing.md is.
+//
+//go:embed docs/repo.md
+var docsRepo string
+
+//go:embed docs/repo/rules.md
+var docsRepoRules string
+
 //go:embed docs/review.md
 var docsReview string
 
@@ -115,7 +123,7 @@ func docsSite(repo githubRepo, folder string) map[string][]byte {
 		"__REPO__", repo.NameWithOwner, "__BRANCH__", repo.DefaultBranchRef.Name,
 		"gh_edit_source: docs", "gh_edit_source: "+folder).Replace(docsConfig)
 	files := map[string][]byte{}
-	for path, content := range map[string]string{"_config.yml": config, "_sass/custom/custom.scss": docsStyle, "writing.md": docsWriting, "llms.txt": docsLLMs} {
+	for path, content := range map[string]string{"_config.yml": config, "_sass/custom/custom.scss": docsStyle, "writing.md": docsWriting, "repo.md": docsRepo, "repo/rules.md": docsRepoRules, "llms.txt": docsLLMs} {
 		files[filepath.Join(folder, path)] = []byte(content)
 	}
 	return files

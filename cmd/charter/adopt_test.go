@@ -33,17 +33,18 @@ func TestAdopt(t *testing.T) {
 		t.Fatal(err)
 	}
 	for file, want := range map[string]string{
-		"charter.toml":    "description = \"field-notes\"\ntopics = []\n",
-		"AGENTS.md":       "[docs/rules.md](docs/rules.md)",
-		"CLAUDE.md":       "@AGENTS.md\n",
-		"docs/README.md":  "# field-notes\n",
-		"docs/README.md ": "\n## What is generated\n",
-		"docs/rules.md":   "**Plans are issues,**",
-		"docs/rules.md ":  "[the list](README.md#what-is-generated)",
-		"docs/writing.md": "# Writing docs",
-		"mise.toml":       "[tools]\n# The tool every task runs, the release's binary: `mise up --bump github:joeblew999/charter` moves to a newer one.\n\"github:joeblew999/charter\" = \"1.2.3\"\n",
-		"mise.toml ":      "[task_config]\n",
-		"mise.toml  ":     "\nincludes = [\"git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.2.3\"]\n",
+		"charter.toml":       "description = \"field-notes\"\ntopics = []\n",
+		"AGENTS.md":          "[docs/rules.md](docs/rules.md)",
+		"CLAUDE.md":          "@AGENTS.md\n",
+		"docs/README.md":     "# field-notes\n",
+		"docs/README.md ":    "\n## What is generated\n",
+		"docs/rules.md":      "[Rules for every repo](repo/rules.md)",
+		"docs/repo/rules.md": "**A plan is an issue,**",
+		"docs/rules.md ":     "[the list](README.md#what-is-generated)",
+		"docs/writing.md":    "# Writing docs",
+		"mise.toml":          "[tools]\n# The tool every task runs, the release's binary: `mise up --bump github:joeblew999/charter` moves to a newer one.\n\"github:joeblew999/charter\" = \"1.2.3\"\n",
+		"mise.toml ":         "[task_config]\n",
+		"mise.toml  ":        "\nincludes = [\"git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.2.3\"]\n",
 	} {
 		if !strings.Contains(read(strings.TrimSpace(file)), want) {
 			t.Errorf("%s: no %q", file, want)

@@ -5,7 +5,7 @@ Everything about this repo is in [docs/](docs/README.md), the same pages develop
 Read, in this order:
 
 1. [docs/README.md](docs/README.md): what is what, and the index of every page. The repo has two servers, four contracts and four Fern folders, and they are easy to mix up.
-2. [docs/rules.md](docs/rules.md): the working rules. They are binding.
+2. The rules, which are binding: [docs/repo/rules.md](docs/repo/rules.md), the same in every repo charter keeps, and [docs/rules.md](docs/rules.md), this repo's own.
 3. The page for the part you are changing, from the index.
 4. [docs/writing.md](docs/writing.md) before you write or change a page in `docs/`.
 

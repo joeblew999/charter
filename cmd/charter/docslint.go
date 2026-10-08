@@ -144,7 +144,7 @@ func docsLint(args []string) error {
 		// Plans and findings describe what isn't built or what once was: only their links are checked.
 		// writing.md is the same page in every repo, with example names of its own.
 		// A generated page is fixed in the code that writes it, and checked by charter docs -check.
-		if strings.Contains(rel, "plans/") || rel == "findings.md" || rel == "writing.md" || generated[page] {
+		if strings.Contains(rel, "plans/") || rel == "findings.md" || rel == "writing.md" || rel == "repo.md" || strings.HasPrefix(rel, "repo/") || generated[page] {
 			continue
 		}
 		for _, m := range pinnedVersion.FindAllString(text, -1) {

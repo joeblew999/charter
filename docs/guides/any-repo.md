@@ -15,7 +15,7 @@ Most of charter is not about an API. A repo with no Worker, no contract and no F
 | Generated pages | `_generated.toml` in `docs/`: pages a command of the repo writes, checked for freshness | Any repo |
 | Tasks page | The repo's mise tasks as a page of its docs, from `charter docs-tasks` | Any repo |
 | Checks, here and on GitHub | One task, `repo:ci` (`docs:check`, `repo:check`, `upstream:status`), and one workflow, `repo-check`, that runs only that task | A repo that is not a project |
-| Agents and rules | `AGENTS.md`, `CLAUDE.md`, `rules.md` in `docs/` | Any repo |
+| Agents and rules | `AGENTS.md` and `CLAUDE.md`, which point at `docs/`; `repo.md` and `repo/rules.md` in `docs/`, the rules every repo shares, written by charter and the same in each; `rules.md`, the repo's own | Any repo |
 | Issues and plans | The issue forms, the labels, the tasks `issue` and `issues`; a plan is an issue | Any repo |
 | Upstream | `Upstream:` tags and `upstream:status` | Any repo |
 | Release | `mise run release -- vX.Y.Z`: the repo's own `check`, the tag, the GitHub Release with notes from the commits | Any repo |
