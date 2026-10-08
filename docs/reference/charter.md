@@ -6,7 +6,7 @@ parent: Reference
 
 # The charter command: every command and flag
 
-The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A command works on the project it is run in: the nearest folder upwards with a `mise.toml` beside a `fern/` folder. Commands marked * also run outside one. Flags come before arguments.
+The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A command works on the project it is run in: the nearest folder upwards with a `mise.toml` beside a `fern/` folder. Commands marked * also run outside one, and those under [Any repo](#any-repo) are for a repo that is not a project as much as for one. Flags come before arguments.
 
 | Where | How to run it |
 |---|---|
@@ -116,18 +116,26 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 | `catalog` * | `-owner <login>` (default: the token's), `-json`, `-page` | REMOTE, read-only. The owner's charter repos, what each publishes, and the repos that pin it, read from their `mise.toml`, `go.mod` and `package.json`. Markdown; `-page` adds a docs page's front matter |
 | `spec-diff` | `-from vX.Y.Z` (default: the newest version tag before `-tag`), `-to vX.Y.Z` (default: the working tree), `-tag vX.Y.Z` (default: the workflow's tag), `-catalog <file or url>` | Compares `fern/openapi.json` and `fern/asyncapi.json`, marking breaking changes `!`. Fails on one unless `-tag` is a major release; with `-catalog`, names the repos that pin this one |
 
-## The repo around a project
+## Any repo
+
+What a repo takes whether or not it holds a project ([the guide](../guides/any-repo.md)); the tasks of `tasks/repo/` run these.
 
 | Command | Flags | What it does |
 |---|---|---|
-| `repo` * | `-check` | REMOTE. At the repo's root, from its `charter.toml`: the docs site (with its generated pages), the issue forms and `labels.tsv`, `renovate.json` (unless `renovate = false`), the workflows (if it lists `projects`), the labels, the description, homepage and topics (always with `charter`), GitHub Pages. Prints `ok` or `changed` per item; `-check` changes nothing and fails on drift ([how](../guides/deploy.md#keep-the-repo-in-shape)) |
-| `workflows` * | `-check`, `-into <repo dir>` | Writes `.github/`: the workflows `check`, `deploy`, `sdk-check`, `release` (its CLI jobs only with the `cli` group), the issue forms and `labels.tsv` |
-| `issue` * | `<bug\|feature\|upstream\|plan>` | Prints an issue body with that form's headings, for `gh issue create --body-file`. Plans are `plan` issues, never pages |
+| `adopt` * | `-description <text>` (default: the repo's on GitHub, or its folder's name), `-from <checkout>` (include `tasks/repo` from a checkout of charter, and pin no tool) | In a git repo, at its root, writes what is missing: `charter.toml`, `AGENTS.md`, `CLAUDE.md`, the start page and the rules in `docs/`, a `mise.toml` with the tool pinned at its own release and `tasks/repo` included at that tag; and what `docs` writes (without the repo on GitHub, only `docs/writing.md`). A `mise.toml` the repo has is kept: it prints the lines to add. Changes nothing on GitHub; safe to run again |
+| `repo` * | `-check` | REMOTE. At the repo's root, from its `charter.toml`: the docs site (with its generated pages), the issue forms (not one the repo wrote itself) and `labels.tsv`, `renovate.json` (unless `renovate = false`), the workflows (only if it is a project or lists `projects`), the labels, the description, homepage and topics (always with `charter`), GitHub Pages. Prints `ok` or `changed` per item; `-check` changes nothing and fails on drift ([how](../guides/deploy.md#keep-the-repo-in-shape)) |
+| `issue` * | `<bug\|feature\|upstream\|plan>` | Prints an issue body with that form's headings (the repo's own form's, where it has one), for `gh issue create --body-file`. Plans are `plan` issues, never pages |
 | `labels` * | | REMOTE. Creates or updates the repo's labels from the labels file; removes GitHub's default labels it lacks that nothing uses |
 | `docs` * | `-check`, `-into <repo dir>` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt`, and each page that `_generated.toml` in `docs/` lists, from its command's output; `-check` fails if one is stale ([how](../guides/deploy.md#generated-pages)) |
 | `docs-lint` * | `-into <repo dir>` | Fails on missing front matter, an unlinked page, a dead link or anchor, an unknown task, a missing path, a release version; in a generated page, only the first three |
 | `docs-review` * | `-print` | Hands Claude the review prompt with what the lint found |
 | `upstream` * | | Every `Upstream:` tag in the code, with its issue's state |
-| `each` * | `-only <name,...>`, then `<task> [args]` | Runs a mise task in every project below this folder that has it |
 | `need-env` * | `<NAME>...` | Fails unless these variables are set |
 | `github-secrets` * | `<NAME>...` | Copies variables into the repo's GitHub secrets, never printing them |
+
+## A repo that holds projects
+
+| Command | Flags | What it does |
+|---|---|---|
+| `workflows` * | `-check`, `-into <repo dir>` | Writes `.github/`: the workflows `check`, `deploy`, `sdk-check`, `release` (its CLI jobs only with the `cli` group), the issue forms (not one the repo wrote itself) and `labels.tsv`. A repo that is not a project takes the forms from `repo` |
+| `each` * | `-only <name,...>`, then `<task> [args]` | Runs a mise task in every project below this folder that has it |

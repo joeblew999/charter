@@ -13,6 +13,8 @@ mise run deploy                                                       # on Cloud
 
 Needs [mise](https://mise.jdx.dev) and git, on macOS, Linux or Windows: mise fetches the charter tool (a release binary), Go and Node. Then: [Getting started](docs/getting-started.md).
 
+A repo with no API takes the docs site, the repo settings, the rules, the issue forms and the upstream tracking with `charter adopt`: [Any repo](docs/guides/any-repo.md).
+
 ## What you get
 
 - **The contract is the source.** Change it, run `mise run spec`, and everything downstream follows. A stale spec fails the check.

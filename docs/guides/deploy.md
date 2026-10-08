@@ -55,7 +55,7 @@ Limits: one Worker and database, no staging, no custom domain. The deploy workfl
 
 ## Keep the repo in shape
 
-`charter.toml` at the repo's root says what the repo is; `charter new` writes one.
+`charter.toml` at the repo's root says what the repo is; `charter new` writes one, and `charter adopt` in a repo that is not a project ([Any repo](any-repo.md)).
 
 ```toml
 description = "billing-api: a contract-first API on Cloudflare Workers"
@@ -71,7 +71,7 @@ mise run repo          # REMOTE: brings the repo in line, printing ok or changed
 mise run repo:check    # REMOTE, read-only: fails on drift, for CI
 ```
 
-It runs at the repo's root, from any folder in it, and keeps: the docs site's config, `docs/writing.md` and the [generated pages](#generated-pages); the issue forms and `labels.tsv`; the workflows, for a repo that is a project or lists `projects`; the GitHub labels, removing GitHub's unused defaults; the description, homepage and topics, with `charter` added, which is how `charter catalog` finds the repo; `renovate.json` ([Repos that use each other](repos.md#propagate-a-release)); GitHub Pages for the docs folder. Running it again changes nothing. A project in a subfolder keeps its own tasks.
+It runs at the repo's root, from any folder in it, and keeps: the docs site's config, `docs/writing.md` and the [generated pages](#generated-pages); the issue forms (not one the repo wrote itself: a file in `.github/ISSUE_TEMPLATE/` that does not start with charter's `# Written by` line is kept, and named in the output) and `labels.tsv`; the workflows, only for a repo that is a project or lists `projects`; the GitHub labels, removing GitHub's unused defaults; the description, homepage and topics, with `charter` added, which is how `charter catalog` finds the repo; `renovate.json` ([Repos that use each other](repos.md#propagate-a-release)); GitHub Pages for the docs folder. Running it again changes nothing. A project in a subfolder keeps its own tasks.
 
 ### Generated pages
 

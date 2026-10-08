@@ -8,11 +8,25 @@ parent: Reference
 
 Run in the project's folder; words after the name go to the task, flags after `--`. **REMOTE**: reads or changes something on Cloudflare or GitHub. `mise tasks` lists them.
 
-Most tasks are written once, in charter's `tasks/` folders. A project includes `tasks/shared` and the one of its language (`[task_config] includes` in its `mise.toml`, from GitHub at the release it pins), and its `mise.toml` holds only its own tasks: `check`, `lint`, `deploy` and the tests. A task in `mise.toml` takes the place of the shared one with its name. The tasks call the tool through the setting `CHARTER_TOOL`: `charter` in a project, this checkout's in the examples here.
+Most tasks are written once, in charter's `tasks/` folders. A project includes `tasks/repo`, `tasks/shared` and the one of its language (`[task_config] includes` in its `mise.toml`, from GitHub at the release it pins), and its `mise.toml` holds only its own tasks: `check`, `lint`, `deploy` and the tests. A task in `mise.toml` takes the place of the included one with its name. The tasks call the tool through the setting `CHARTER_TOOL`: `charter` in a project, this checkout's in the examples here.
+
+## Any repo
+
+The tasks of `tasks/repo/`, which a repo that is not a project includes on its own ([Any repo](../guides/any-repo.md)). A project and this repo have them too. Without `CHARTER_TOOL` they run `charter`.
+
+| Task | What it does |
+|---|---|
+| `repo`, `repo:check` | REMOTE. `charter repo` at the repo's root: keeps it as `charter.toml` says; the workflows only in a repo with projects ([Keep the repo in shape](../guides/deploy.md#keep-the-repo-in-shape)); `repo:check` changes nothing and fails on drift |
+| `issues` | REMOTE, read-only. The open issues, newest first: what is reported and what is planned |
+| `upstream:status` | REMOTE, read-only. Every `Upstream:` tag in the code, with its issue's state |
+| `docs:setup` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt` and the [generated pages](../guides/deploy.md#generated-pages) |
+| `docs:lint`, `docs:check` | Checks `docs/`; `docs:check` also fails if the config or a generated page is stale |
+| `docs:review` | Has Claude bring `docs/` into line with `docs/writing.md` |
+| `docs:pages` | REMOTE. Turns GitHub Pages on for `docs/` |
 
 ## A Go project
 
-What `charter new` makes, and `examples/notes-go/`.
+What `charter new` makes, and `examples/notes-go/`: these, and the tasks of [any repo](#any-repo).
 
 | Task | What it does |
 |---|---|
@@ -45,7 +59,6 @@ What `charter new` makes, and `examples/notes-go/`.
 | `access:setup -- <email>...` | REMOTE. Cloudflare Access in front of the Worker: these people log in with GitHub; the Worker's `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`, also in fnox. Again to change who ([Auth](../guides/auth.md#cloudflare-access)) |
 | `access:token -- create <machine> <file\|fnox>`, `list`, `revoke <machine>` | REMOTE. A machine's own Access service token: made, listed, revoked |
 | `access:delete` | REMOTE. Deletes the Access application and its machines' tokens |
-| `upstream:status` | REMOTE, read-only. Every `Upstream:` tag in the code, with its issue's state |
 | `sdk:list` | The groups in `fern/generators.yml` |
 | `sdk:check-spec` | Fern's validation of the specs and its settings |
 | `sdk:gen <group>` | Generates one SDK into `sdk/out/<group>` (Docker) |
@@ -64,12 +77,7 @@ What `charter new` makes, and `examples/notes-go/`.
 | `release -- vX.Y.Z [-dry-run]` | REMOTE. Cuts a release from this machine: `check`, `dist`, the tag, the GitHub Release, `release:publish`, `release:tags` ([how](../guides/release.md)) |
 | `release:publish` | REMOTE on a version tag: makes its GitHub Release if missing, attaches what of `dist/*` it lacks, writes `SHA256SUMS`. Elsewhere a dry run |
 | `release:tags` | REMOTE on a version tag: tags `sdk/go/vX.Y.Z`. Elsewhere a dry run |
-| `repo`, `repo:check` | REMOTE. `charter repo` at the repo's root: keeps it as `charter.toml` says ([Keep the repo in shape](../guides/deploy.md#keep-the-repo-in-shape)); `repo:check` changes nothing and fails on drift |
 | `workflows`, `workflows:check` | Writes `.github/` from the tool's templates; fails if it differs |
-| `docs:setup` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt` and the [generated pages](../guides/deploy.md#generated-pages) |
-| `docs:lint`, `docs:check` | Checks `docs/`; `docs:check` also fails if the config or a generated page is stale |
-| `docs:review` | Has Claude bring `docs/` into line with `docs/writing.md` |
-| `docs:pages` | REMOTE. Turns GitHub Pages on for `docs/` |
 
 ## The other projects
 
@@ -108,7 +116,7 @@ What `charter new` makes, and `examples/notes-go/`.
 | `ts:dist` | Packs the TypeScript library into `dist/charter-ts-X.Y.Z.tgz`, versioned as the tag (none: `0.0.0-dev`) |
 | `ts:release` | REMOTE on a version tag: attaches what of `dist/*` its GitHub Release lacks. Elsewhere a dry run |
 | `release:tags` | REMOTE on a version tag: tags `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` |
-| `setup`, `doctor`, `sdk:clean`, `repo`, `repo:check`, `workflows`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:review`, `docs:pages`, `cloudflare:secrets` | As in a project, for the whole repo |
+| `setup`, `doctor`, `sdk:clean`, `workflows`, `cloudflare:secrets` | As in a project, for the whole repo |
 
 ## Windows and macOS
 
