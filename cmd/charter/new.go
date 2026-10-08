@@ -163,17 +163,20 @@ func newProject(args []string) error {
 
 	// What a repo has around a project: its start pages, the docs folder, the GitHub workflows.
 	for path, content := range map[string]string{
-		"README.md":       noCLI(withPages(projectReadme(name, orCheckout(version), apiPort(tasks), ts, empty), ui)),
-		"AGENTS.md":       agentsPage,
-		"CLAUDE.md":       claudePage,
-		"docs/README.md":  noCLI(withPages(projectDocs(name, ts, empty), ui)),
-		"docs/rules.md":   projectRules(ts),
-		"docs/writing.md": docsWriting,
-		"charter.toml":    charterTomlFor(name + ": a contract-first API on Cloudflare Workers"),
+		"README.md":      noCLI(withPages(projectReadme(name, orCheckout(version), apiPort(tasks), ts, empty), ui)),
+		"AGENTS.md":      agentsPage,
+		"CLAUDE.md":      claudePage,
+		"docs/README.md": noCLI(withPages(projectDocs(name, ts, empty), ui)),
+		"docs/rules.md":  projectRules(ts),
+		"charter.toml":   charterTomlFor(name + ": a contract-first API on Cloudflare Workers"),
 	} {
-		if err := write(filepath.Join(into, path), content); err != nil {
+		if err := write(filepath.Join(into, path), startedBy("new", path, content)); err != nil {
 			return err
 		}
+	}
+	// The writing rules are charter's in every repo: charter docs writes them again.
+	if err := write(filepath.Join(into, "docs", "writing.md"), docsWriting); err != nil {
+		return err
 	}
 	if err := writeWorkflows(into); err != nil {
 		return err
@@ -384,7 +387,7 @@ func copyExample(from, into, name, module, subdomain, version, checkout string, 
 			if !strings.Contains(text, header+"\n") {
 				return nil, fmt.Errorf("%s/mise.toml has no %s", source, header)
 			}
-			text = strings.Replace(text, header+"\n", which, 1)
+			text = startedBy("new", rel, strings.TrimLeft(strings.Replace(text, header+"\n", which, 1), "\n"))
 		case "fern/fern.config.json":
 			text = fernOrganization.ReplaceAllString(text, `"organization": "`+name+`"`)
 		}

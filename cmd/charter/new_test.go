@@ -76,6 +76,15 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 			t.Errorf("%s: no %q", file, want)
 		}
 	}
+	// Every file new writes around the example says so: started by new and the project's from then
+	// on, or charter's to write again.
+	for file, charters := range map[string]bool{"README.md": false, "AGENTS.md": false, "CLAUDE.md": false, "docs/README.md": false, "docs/rules.md": false, "charter.toml": false, "mise.toml": false,
+		"docs/writing.md": true, ".github/labels.tsv": true, ".github/workflows/check.yml": true, ".github/ISSUE_TEMPLATE/plan.yml": true} {
+		content, _ := os.ReadFile(filepath.Join(into, filepath.FromSlash(file)))
+		if owned, command, ok := markOf(content); !ok || owned != charters || (!charters && command != "new") {
+			t.Errorf("%s: its mark says charter's %v, by %q (%v): want charter's %v", file, owned, command, ok, charters)
+		}
+	}
 	// A plain copy: every file of the example is there (but the committed SDK, made from specs that
 	// now name another Worker), and nothing in the project names the example or this repo's folders.
 	listed, err := output(repo, "git", "ls-files", "--cached", "--others", "--exclude-standard", "--", exampleDir)

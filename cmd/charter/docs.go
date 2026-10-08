@@ -181,7 +181,7 @@ func generatedPageText(root, docs string, g generatedPage, index int, out string
 		}
 		front += "parent: " + yamlString(parent) + "\n"
 	}
-	note := "\n\nWritten by `" + g.Run + "` (docs/_generated.toml), never by hand: change the code it reads, then `mise run docs:setup`."
+	note := "\n\nWritten by `charter docs` from what `" + g.Run + "` prints (docs/_generated.toml): don't edit, change the code that command reads, then `mise run docs:setup`."
 	body := out[:heading[1]] + note + out[heading[1]:]
 	return front + "---\n\n" + strings.TrimRight(body, "\n") + "\n", nil
 }

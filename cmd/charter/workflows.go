@@ -27,6 +27,29 @@ var workflowFiles embed.FS
 //go:embed github/ISSUE_TEMPLATE/*.yml github/labels.tsv
 var collaborationFiles embed.FS
 
+// The workflow of a repo that is not a project (cmd/charter/repoworkflows): the checks any repo
+// takes from charter, in one job. A project's workflows run its own check, which holds its docs to
+// the same, so a repo gets this one or those, never both.
+//
+//go:embed repoworkflows/repo-check.yml
+var repoWorkflowTemplate string
+
+const repoWorkflow = "repo-check.yml"
+
+// repoWorkflowFor is that workflow for a repo whose default branch is branch.
+func repoWorkflowFor(branch string) []byte {
+	if branch == "" {
+		branch = "main"
+	}
+	return []byte(strings.Replace(repoWorkflowTemplate, "__BRANCH__", branch, 1))
+}
+
+// hasProjects reports whether the repo at root is a project or lists some: it gets the projects'
+// workflows.
+func hasProjects(root string, config charterToml) bool {
+	return len(config.Projects) > 0 || isProject(root)
+}
+
 // collaboration are those files, by their path below .github.
 func collaboration() (map[string][]byte, error) {
 	files := map[string][]byte{}

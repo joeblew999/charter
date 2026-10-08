@@ -41,7 +41,7 @@ func TestGeneratedPages(t *testing.T) {
 	}
 	page := generate()
 	want := "---\ntitle: \"Commands\"\nnav_order: 100\nparent: \"Reference\"\n---\n\n# Commands\n\n" +
-		"Written by `go run gen.go` (docs/_generated.toml), never by hand: change the code it reads, then `mise run docs:setup`.\n\n" +
+		"Written by `charter docs` from what `go run gen.go` prints (docs/_generated.toml): don't edit, change the code that command reads, then `mise run docs:setup`.\n\n" +
 		"Every flag, from the code: `-port`. Run `mise run nothing-like-it` in `cmd/none/`.\n"
 	if string(page) != want {
 		t.Fatalf("the page:\n%s\nwant:\n%s", page, want)

@@ -1,0 +1,32 @@
+# Written by `charter repo` from its template (github.com/joeblew999/charter, cmd/charter/repoworkflows/repo-check.yml):
+# don't edit: change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# For a repo that is not a charter project: the checks any repo takes from charter (tasks/repo). The
+# repo's own checks are its own workflow's. `workflow = false` in charter.toml: charter writes none.
+name: repo-check
+on:
+  push:
+    branches: [__BRANCH__]
+  pull_request:
+  workflow_dispatch:
+# What the checks read with gh, and nothing they could change: the repo and its topics, its labels
+# and whether a default one is in use (issues, pull requests), and whether Pages serves docs/.
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  pages: read
+env:
+  GH_TOKEN: ${{ github.token }}
+jobs:
+  repo-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      # docs/ is what charter docs writes, every generated page is fresh, and the pages pass the lint.
+      - run: mise run docs:check
+      # The repo is as charter.toml and the tool's templates say: forms, labels, topics, Pages.
+      - run: mise run repo:check
+      # The upstream issues the code works around, with their state: a closed one can go.
+      - run: mise run upstream:status
