@@ -163,6 +163,7 @@ func TestTaskLinesNeedNoUnixShell(t *testing.T) {
 	files = append(files, shared...)
 	run := regexp.MustCompile(`(?m)^run(_windows)? = (.*)$`)
 	setting := regexp.MustCompile(`(^|&& )[A-Z_]+=`)
+	miseTemplate := regexp.MustCompile(`\{\{[^{}]*\}\}`)
 	for _, file := range files {
 		content, err := os.ReadFile(file)
 		if err != nil {
@@ -182,7 +183,9 @@ func TestTaskLinesNeedNoUnixShell(t *testing.T) {
 				t.Errorf("%s: not a one-line string: %s", file, line)
 				continue
 			}
-			command := line[1 : len(line)-1]
+			// A template of mise's is filled in before any shell reads the line (tasks/repo: the tool is
+			// CHARTER_TOOL, or charter where a repo does not set it).
+			command := miseTemplate.ReplaceAllString(line[1:len(line)-1], "x")
 			for unix, instead := range map[string]string{
 				"$":            "a setting is {{env.NAME}}",
 				"'":            "cmd.exe keeps single quotes: use double quotes",
