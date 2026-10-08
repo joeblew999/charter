@@ -1,28 +1,30 @@
-# Written by `charter workflows` from its template (in the charter tool): change the template, not this file.
+# Written by `charter repo` and `charter workflows` from the charter tool's template: change the template, not this file.
+# For a form of the repo's own, write this file without the line above: charter then leaves it alone.
 # Each field's label is a heading in the issue body; `charter issue upstream` prints the same headings.
 name: Upstream bug
-description: A bug that looks like it is in a project this one is built on, to be recorded in docs/upstream.md and fixed there.
+description: A bug that looks like it is in a project this one is built on, to be recorded here and fixed there.
 title: "[upstream] "
 labels: ["upstream", "needs-triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        [docs/upstream.md](../blob/main/docs/upstream.md) is the ledger: if your bug is
-        already in it, add what you found to that entry's issue instead of filing. It is upstream
-        only if a correct caller, reading only that project's public documentation, would hit it.
+        The upstream issues this repository tracks are its `Upstream:` tags
+        (`mise run upstream:status`), and `docs/upstream.md` where it keeps that page: if your bug
+        is already there, add what you found to that issue instead of filing. It is upstream only
+        if a correct caller, reading only that project's public documentation, would hit it.
   - type: input
     id: project
     attributes:
       label: Project
-      description: The project and version the bug is in, for example "tinygo 0.42.0".
+      description: The project and version the bug is in, for example "mise 2026.10.4".
     validations:
       required: true
   - type: textarea
     id: repro
     attributes:
       label: Smallest program that shows it
-      description: Without this repository if possible: a maintainer there must be able to run it.
+      description: Without this repository if possible, so that a maintainer there can run it.
       render: text
     validations:
       required: true
@@ -30,7 +32,7 @@ body:
     id: measured
     attributes:
       label: What was measured
-      description: Numbers, and the command that produced them.
+      description: The output or the numbers, and the command that produced them.
     validations:
       required: true
   - type: textarea
