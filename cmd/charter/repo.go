@@ -293,7 +293,7 @@ func keepRepo(root string, check bool) error {
 	case config.Workflow:
 		// Not a project: the one workflow any repo takes. Its other workflows are its own.
 		steps = append(steps, step{".github/workflows/" + repoWorkflow, func() ([]string, error) {
-			return syncFiles(root, map[string][]byte{".github/workflows/" + repoWorkflow: repoWorkflowFor(repo.DefaultBranchRef.Name)}, check)
+			return syncFiles(root, map[string][]byte{".github/workflows/" + repoWorkflow: repoWorkflowFor(root, repo.DefaultBranchRef.Name)}, check)
 		}})
 	}
 	steps = append(steps,

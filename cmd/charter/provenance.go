@@ -106,7 +106,7 @@ func writtenFiles(root string) (files map[string][]byte, unknown map[string]stri
 	}
 	if !projects && config.Workflow {
 		if path := ".github/workflows/" + repoWorkflow; onGitHub {
-			files[path] = repoWorkflowFor(repo.DefaultBranchRef.Name)
+			files[path] = repoWorkflowFor(root, repo.DefaultBranchRef.Name)
 		} else {
 			unknown[path] = "not compared: it names the default branch on GitHub, which gh could not read here"
 		}

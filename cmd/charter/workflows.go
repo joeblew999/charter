@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -36,12 +37,21 @@ var repoWorkflowTemplate string
 
 const repoWorkflow = "repo-check.yml"
 
-// repoWorkflowFor is that workflow for a repo whose default branch is branch.
-func repoWorkflowFor(branch string) []byte {
+// repoWorkflowFor is that workflow for the repo at root, whose default branch is branch. The mise
+// it installs is the one the repo's mise.toml asks for (min_version): one place says which mise,
+// and a runner's own may be older (seen: a repo that needs 2026.10.4 on a runner with 2026.10.3).
+func repoWorkflowFor(root, branch string) []byte {
 	if branch == "" {
 		branch = "main"
 	}
-	return []byte(strings.Replace(repoWorkflowTemplate, "__BRANCH__", branch, 1))
+	text := strings.Replace(repoWorkflowTemplate, "__BRANCH__", branch, 1)
+	with := ""
+	if config, err := os.ReadFile(filepath.Join(root, "mise.toml")); err == nil {
+		if m := regexp.MustCompile(`(?m)^min_version\s*=\s*"([0-9][0-9A-Za-z.-]*)"`).FindStringSubmatch(string(config)); m != nil {
+			with = "\n        with:\n          version: " + m[1] + " # the repo's mise.toml: min_version"
+		}
+	}
+	return []byte(strings.Replace(text, "__MISE__", with, 1))
 }
 
 // hasProjects reports whether the repo at root is a project or lists some: it gets the projects'

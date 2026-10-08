@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: jdx/mise-action@v5.0.1
+      - uses: jdx/mise-action@v5.0.1__MISE__
       # One task, the same one a developer runs: what it checks is written in tasks/repo, not here,
       # so a pass on your machine is a pass on GitHub. docs:check, repo:check, upstream:status.
       - run: mise run repo:ci
