@@ -42,7 +42,7 @@ func collaboration() (map[string][]byte, error) {
 
 func init() {
 	commands["workflows"] = command{"[-check] [-into <repo dir>]",
-		"write a repo's .github: the workflows (check, deploy, sdk-check, release), the issue forms and the labels file; -check fails if they differ", workflows}
+		"write a repo's .github: the workflows (check, deploy, sdk-check, release), the issue forms (not one the repo wrote itself) and the labels file; -check fails if they differ", workflows}
 	anywhere["workflows"] = true
 }
 
@@ -117,12 +117,41 @@ func workflowsFor(dir string) (map[string][]byte, error) {
 	return templates, nil
 }
 
-// githubFiles are the files of a repo's .github folder, by their path below it: the issue forms and
-// the labels file, and with workflows the workflows as the repo in dir needs them.
+// formHeader starts every file charter writes into .github/ISSUE_TEMPLATE. A file there with one of
+// those names that starts otherwise is the repo's own form.
+const formHeader = "# Written by `charter"
+
+// ownForms are the issue forms of the repo in dir that are its own, by their path below .github: a
+// file where charter writes one of its forms, which does not start with formHeader. Charter leaves
+// them as they are, so a repo keeps a form of its own by writing it, and hands it back by deleting it.
+func ownForms(dir string) []string {
+	files, _ := collaboration()
+	var own []string
+	for name := range files {
+		if !strings.HasPrefix(name, "ISSUE_TEMPLATE/") {
+			continue
+		}
+		if have, err := os.ReadFile(filepath.Join(dir, ".github", filepath.FromSlash(name))); err == nil && !bytes.HasPrefix(have, []byte(formHeader)) {
+			own = append(own, name)
+		}
+	}
+	slices.Sort(own)
+	return own
+}
+
+// githubFiles are the files charter writes into the .github folder of the repo in dir, by their path
+// below it: the issue forms (not where the repo has its own, ownForms) and the labels file, and with
+// workflows the workflows as the repo needs them.
 func githubFiles(dir string, workflows bool) (map[string][]byte, error) {
 	files, err := collaboration()
-	if err != nil || !workflows {
-		return files, err
+	if err != nil {
+		return nil, err
+	}
+	for _, own := range ownForms(dir) {
+		delete(files, own)
+	}
+	if !workflows {
+		return files, nil
 	}
 	found, err := workflowsFor(dir)
 	if err != nil {
