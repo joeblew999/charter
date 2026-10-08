@@ -222,7 +222,7 @@ func adopt(root, description, version, checkout string) error {
 	default:
 		text := string(have)
 		if add := linesToAdd(text, pin, include, checkout != ""); len(add) == 0 {
-			say("kept", "mise.toml", ": it pins the tool and includes tasks/"+repoTasksFolder)
+			say("kept", "mise.toml", ": it has charter's lines (tasks/"+repoTasksFolder+" included)")
 		} else {
 			say("kept", "mise.toml", ": it is yours. Add to it:\n"+strings.Join(add, "\n"))
 		}
