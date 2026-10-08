@@ -1,12 +1,8 @@
 # Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
 # beside tasks/repo (the tasks any repo takes), and its tasks run in the project (dir), calling the
 # tool as CHARTER_TOOL (its mise.toml sets it).
-# Releases and the GitHub workflows.
-
-["release"]
-description = "REMOTE: cut a release from this machine: mise run release -- vX.Y.Z [-dry-run]. Checks the repo, runs check and dist, tags, pushes, makes the GitHub Release, runs release:publish and release:tags"
-dir = "{{config_root}}"
-run = "{{env.CHARTER_TOOL}} release"
+# What a release of a project adds (the files in dist/, the module tags), and the GitHub workflows.
+# The release itself, `release`, is a task any repo takes: tasks/repo.
 
 ["release:publish"]
 description = "REMOTE on a version tag (vX.Y.Z): make its GitHub Release if missing, attach what of dist/* it lacks, write SHA256SUMS. Anywhere else: a dry run that lists dist/ and prints the notes"

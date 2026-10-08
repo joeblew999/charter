@@ -18,6 +18,7 @@ Most of charter is not about an API. A repo with no Worker, no contract and no F
 | Agents and rules | `AGENTS.md`, `CLAUDE.md`, `rules.md` in `docs/` | Any repo |
 | Issues and plans | The issue forms, the labels, the tasks `issue` and `issues`; a plan is an issue | Any repo |
 | Upstream | `Upstream:` tags and `upstream:status` | Any repo |
+| Release | `mise run release -- vX.Y.Z`: the repo's own `check`, the tag, the GitHub Release with notes from the commits | Any repo |
 | Cloudflare | Access, secrets, migrations, logs | A repo with a Worker ([Deploy and CI](deploy.md), [Auth](auth.md)) |
 | API project | Contract, specs, SDKs, CLI, release, the GitHub workflows | A charter project ([Getting started](../getting-started.md)) |
 
@@ -67,7 +68,7 @@ charter files    # every file here with either mark; charter's with matches, dif
 includes = ["git::https://github.com/joeblew999/charter.git//tasks/repo?ref=vX.Y.Z"]
 ```
 
-That folder has `repo`, `repo:check`, `repo:ci`, `issue`, `issues`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:check`, `docs:review` and `docs:pages` ([Tasks](../reference/tasks.md#any-repo)), and none of a project's: no release, workflows, SDK or Cloudflare tasks. They run `charter`; a repo that runs the tool another way sets `CHARTER_TOOL` under `[env]`. A task of the same name in `mise.toml` takes the place of the included one.
+That folder has `release`, `repo`, `repo:check`, `repo:ci`, `issue`, `issues`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:check`, `docs:review` and `docs:pages` ([Tasks](../reference/tasks.md#any-repo)), and none of a project's: no release, workflows, SDK or Cloudflare tasks. They run `charter`; a repo that runs the tool another way sets `CHARTER_TOOL` under `[env]`. A task of the same name in `mise.toml` takes the place of the included one.
 
 ## What each aspect needs
 

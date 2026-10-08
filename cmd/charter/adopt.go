@@ -28,7 +28,7 @@ func init() {
 // are those tasks (a test holds the list to the folder).
 const repoTasksFolder = "repo"
 
-var repoTasks = []string{"docs:check", "docs:lint", "docs:pages", "docs:review", "docs:setup", "issue", "issues", "repo", "repo:check", "repo:ci", "upstream:status"}
+var repoTasks = []string{"docs:check", "docs:lint", "docs:pages", "docs:review", "docs:setup", "issue", "issues", "release", "repo", "repo:check", "repo:ci", "upstream:status"}
 
 // The pages every repo charter keeps has, the same in a project made by new and a repo adopt took.
 const (

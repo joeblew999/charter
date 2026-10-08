@@ -199,7 +199,7 @@ func TestTheTasksAnyRepoTakes(t *testing.T) {
 			}
 		}
 	}
-	for _, kept := range []string{"release", "workflows", "workflows:check", "doctor", "sdk:gen", "migrate"} {
+	for _, kept := range []string{"release:publish", "release:tags", "workflows", "workflows:check", "doctor", "sdk:gen", "migrate"} {
 		if slices.Contains(names, kept) {
 			t.Errorf("tasks/%s has %s, a project's task", repoTasksFolder, kept)
 		}

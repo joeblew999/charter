@@ -1,0 +1,6 @@
+# Charter's tasks for any repo (see repo.toml): cutting a release.
+
+["release"]
+description = "REMOTE: cut a release from this machine: mise run release -- vX.Y.Z [-dry-run]. The repo is clean and is the default branch on GitHub, then the repo's own tasks where it has them: setup, check, dist. Then the tag, the push, the GitHub Release with notes from the commits. It does not wait for GitHub's workflows: check is the same check, run here; a workflow that FAILED on this commit stops it"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} release"

@@ -26,7 +26,7 @@ import (
 
 func init() {
 	commands["release"] = command{"vX.Y.Z [-dry-run] [-prerelease] [-notes-footer <text or file>]",
-		"cut a release from this machine: check the repo is clean, is the default branch on GitHub and passed CI there, run its setup, check, spec:diff and dist tasks, tag, push the tag, make the GitHub Release (notes: the commits since the last tag) and run its release:publish and release:tags tasks; -dry-run changes nothing", release}
+		"cut a release from this machine: check the repo is clean, is the default branch on GitHub and has no failed workflow there, run its setup, check, spec:diff and dist tasks, tag, push the tag, make the GitHub Release (notes: the commits since the last tag) and run its release:publish and release:tags tasks; -dry-run changes nothing", release}
 	anywhere["release"] = true
 }
 
@@ -121,7 +121,7 @@ func ciPassed(commit string) (bool, string) {
 		return false, "GitHub's runs on HEAD could not be read: " + err.Error()
 	}
 	if len(runs) == 0 {
-		return false, fmt.Sprintf("GitHub has run no workflow on HEAD (%.7s) yet: push it and wait", commit)
+		return true, fmt.Sprintf("GitHub has run no workflow on HEAD (%.7s) yet: not waited for, the checks run here", commit)
 	}
 	var waiting, failed []string
 	for _, run := range runs {
@@ -136,7 +136,9 @@ func ciPassed(commit string) (bool, string) {
 	case len(failed) > 0:
 		return false, "CI failed on HEAD: " + strings.Join(failed, ", ")
 	case len(waiting) > 0:
-		return false, "CI is still running on HEAD: " + strings.Join(waiting, ", ") + " (run release again when it passes)"
+		// Every step of a workflow is a mise task, and release runs check here: a runner that has
+		// not got to it yet (GitHub may have none free for an hour) tells nothing a failure would.
+		return true, "CI has not finished on HEAD (" + strings.Join(waiting, ", ") + "): not waited for, the checks run here"
 	}
 	return true, fmt.Sprintf("CI passed on HEAD: %d workflow runs", len(runs))
 }
