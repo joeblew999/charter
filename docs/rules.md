@@ -16,6 +16,7 @@ Binding, for developers and agents alike: other repos build on this one.
 | **After changing a contract, `mise run spec`.** The Go and the oRPC contract of an API change together | The surface tests fail otherwise |
 | **What ships to Workers builds with TinyGo,** checked under workerd. `go/` and its glue `go/worker/` change together | `go test` cannot see TinyGo's gaps; the two ship as one module |
 | **Exact pins, one place each:** `mise.toml`, `go.mod`, `package.json`, `fern/generators.yml`; TinyGo in `cmd/charter/wasm.go`. Lockfiles are committed | A build is the same everywhere |
+| **Every file the tool writes into a repo says so in its first lines:** ``Written by `charter <command>` `` and `don't edit`, or ``Started by `charter <command>` `` and `yours to edit` ([Any repo](guides/any-repo.md#tell-what-is-charters)) | A reader of that repo can tell what is charter's; a test fails on a template without it |
 | **Workarounds name their issue:** `Upstream: <owner>/<repo>#<n> (when fixed: ...)`, and a row in [Upstream issues](upstream.md) | Otherwise it is never removed |
 | **After a deploy, the live test passes against it** | Some bugs exist only on Cloudflare |
 | **Only verified results go into the docs:** what ran, where, when. Performance numbers only in [Benchmarks](benchmarks.md) | A reader acts on it; a copied number goes stale |
