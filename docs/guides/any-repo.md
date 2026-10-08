@@ -14,7 +14,7 @@ Most of charter is not about an API. A repo with no Worker, no contract and no F
 | Docs site | `docs/` rendered the same everywhere; `writing.md`; `docs:setup`, `docs:lint`, `docs:check`, `docs:review`, `docs:pages` | Any repo |
 | Generated pages | `_generated.toml` in `docs/`: pages a command of the repo writes, checked for freshness | Any repo |
 | Agents and rules | `AGENTS.md`, `CLAUDE.md`, `rules.md` in `docs/` | Any repo |
-| Issues and plans | The issue forms, the labels, `charter issue`, the task `issues`; a plan is an issue | Any repo |
+| Issues and plans | The issue forms, the labels, the tasks `issue` and `issues`; a plan is an issue | Any repo |
 | Upstream | `Upstream:` tags and `upstream:status` | Any repo |
 | Cloudflare | Access, secrets, migrations, logs | A repo with a Worker ([Deploy and CI](deploy.md), [Auth](auth.md)) |
 | API project | Contract, specs, SDKs, CLI, release, the GitHub workflows | A charter project ([Getting started](../getting-started.md)) |
@@ -50,7 +50,7 @@ It writes no workflows, no issue forms and nothing on GitHub: `mise run repo` do
 includes = ["git::https://github.com/joeblew999/charter.git//tasks/repo?ref=vX.Y.Z"]
 ```
 
-That folder has `repo`, `repo:check`, `issues`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:check`, `docs:review` and `docs:pages` ([Tasks](../reference/tasks.md#any-repo)), and none of a project's: no release, workflows, SDK or Cloudflare tasks. They run `charter`; a repo that runs the tool another way sets `CHARTER_TOOL` under `[env]`. A task of the same name in `mise.toml` takes the place of the included one.
+That folder has `repo`, `repo:check`, `issue`, `issues`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:check`, `docs:review` and `docs:pages` ([Tasks](../reference/tasks.md#any-repo)), and none of a project's: no release, workflows, SDK or Cloudflare tasks. They run `charter`; a repo that runs the tool another way sets `CHARTER_TOOL` under `[env]`. A task of the same name in `mise.toml` takes the place of the included one.
 
 ## What each aspect needs
 
@@ -60,7 +60,7 @@ That folder has `repo`, `repo:check`, `issues`, `upstream:status`, `docs:setup`,
 | Docs site | Pages in `docs/` that follow [Writing docs](../writing.md) | `mise run docs:check` before a commit |
 | Generated pages | A command of the repo that prints the page | [Generated pages](deploy.md#generated-pages) |
 | Agents and rules | Nothing | Write what you learn in `docs/`, never in `AGENTS.md` |
-| Issues and plans | `mise run repo`, which writes the forms and labels | `charter issue plan > body.md`; `mise run issues` |
+| Issues and plans | `mise run repo`, which writes the forms and labels | `mise run issue -- plan > body.md`; `mise run issues` |
 | Upstream | A comment `Upstream: <owner>/<repo>#<n> (when fixed: ...)` at each workaround | `mise run upstream:status` |
 
 `mise run repo` in a repo that is not a project writes no workflows. An issue form the repo wrote itself is kept: charter's forms start with a line that says charter wrote them, and a file in `.github/ISSUE_TEMPLATE/` without it is the repo's own, which `charter issue` then prints. Delete it to get charter's.
