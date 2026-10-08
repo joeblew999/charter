@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -34,40 +35,62 @@ type miseTask struct {
 	Hide, Global              bool
 }
 
+var errNoTasks = errors.New("docs-tasks: no tasks to list (hidden tasks and those of a mise config outside the repo are left out)")
+
 func docsTasks(args []string) error {
-	var only, not, title string
-	flags("docs-tasks", args, func(f *flag.FlagSet) {
-		f.StringVar(&only, "only", "", "only the tasks from these sources, comma-separated: a source is named as the page's headings name it (mise.toml, tasks.toml, owner/repo//folder), and a part of the name is enough")
-		f.StringVar(&not, "not", "", "leave out the tasks from these sources, named the same way")
-		f.StringVar(&title, "title", "Tasks", "the page's title")
-	})
 	root, err := output(started, "git", "rev-parse", "--show-toplevel")
 	if err != nil {
 		return errors.New("docs-tasks runs in a git repo")
 	}
-	root = filepath.FromSlash(root)
-	config, err := os.ReadFile(filepath.Join(root, "mise.toml"))
-	if err != nil {
-		return fmt.Errorf("docs-tasks reads the repo's tasks from mise: no mise.toml at %s", root)
-	}
-	listed, err := output(root, "mise", "tasks", "ls", "--json")
-	if err != nil {
-		return errors.New("docs-tasks: mise tasks ls --json failed")
-	}
-	var tasks []miseTask
-	if err := json.Unmarshal([]byte(listed), &tasks); err != nil {
-		return fmt.Errorf("docs-tasks: what mise tasks ls --json printed: %w", err)
-	}
-	details, err := output(root, "mise", "generate", "task-docs", "--style", "detailed")
-	if err != nil {
-		return errors.New("docs-tasks: mise generate task-docs failed")
-	}
-	page, err := tasksPage(title, root, includesOf(string(config)), tasks, details, commaList(only), commaList(not), os.ReadFile)
+	page, err := docsTasksPage(filepath.FromSlash(root), args)
 	if err != nil {
 		return err
 	}
 	fmt.Print(page)
 	return nil
+}
+
+// docsTasksPage is the page docs-tasks prints for the repo at root. charter docs calls it itself
+// for a generated page whose command is `charter docs-tasks`, so the page is written by the tool
+// that checks it, whatever charter is on the path. A repo with no mise.toml yet has a page that
+// says so: every repo charter keeps has this page from its first day.
+func docsTasksPage(root string, args []string) (string, error) {
+	var only, not, title string
+	flags("docs-tasks", args, func(f *flag.FlagSet) {
+		f.StringVar(&only, "only", "", "only the tasks from these sources, comma-separated: a source is named as the page's headings name it (mise.toml, tasks.toml, owner/repo//folder); a part of the name is enough")
+		f.StringVar(&not, "not", "", "leave out the tasks from these sources, named the same way")
+		f.StringVar(&title, "title", "Tasks", "the page's title")
+	})
+	config, err := os.ReadFile(filepath.Join(root, "mise.toml"))
+	if err != nil {
+		return "# " + title + "\n\nThis repo has no `mise.toml` at its root yet. Its tasks are listed here once it has one.\n", nil
+	}
+	// Listing tasks runs nothing, so mise may read this repo's config before the developer has
+	// trusted it (a repo just adopted, a fresh clone on a CI runner).
+	mise := func(args ...string) (string, error) {
+		cmd := exec.Command("mise", args...)
+		cmd.Dir, cmd.Stderr = root, os.Stderr
+		cmd.Env = append(os.Environ(), "MISE_TRUSTED_CONFIG_PATHS="+root)
+		out, err := cmd.Output()
+		return strings.TrimSpace(string(out)), err
+	}
+	listed, err := mise("tasks", "ls", "--json")
+	if err != nil {
+		return "", errors.New("docs-tasks: mise tasks ls --json failed")
+	}
+	var tasks []miseTask
+	if err := json.Unmarshal([]byte(listed), &tasks); err != nil {
+		return "", fmt.Errorf("docs-tasks: what mise tasks ls --json printed: %w", err)
+	}
+	details, err := mise("generate", "task-docs", "--style", "detailed")
+	if err != nil {
+		return "", errors.New("docs-tasks: mise generate task-docs failed")
+	}
+	page, err := tasksPage(title, root, includesOf(string(config)), tasks, details, commaList(only), commaList(not), os.ReadFile)
+	if errors.Is(err, errNoTasks) {
+		return "# " + title + "\n\nThis repo has no mise task to list yet.\n", nil
+	}
+	return page, err
 }
 
 // commaList is a comma-separated flag's values.
@@ -201,7 +224,7 @@ func tasksPage(title, root string, includes []string, tasks []miseTask, details 
 		}
 	}
 	if count == 0 {
-		return "", errors.New("docs-tasks: no tasks to list (hidden tasks and those of a mise config outside the repo are left out)")
+		return "", errNoTasks
 	}
 	page.WriteString("\n## Each task\n" + each.String())
 	// The site's renderer reads two curly braces, or one and a percent sign, as template code.

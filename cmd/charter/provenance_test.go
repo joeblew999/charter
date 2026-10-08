@@ -67,12 +67,18 @@ func TestEveryFileCharterWritesSaysSo(t *testing.T) {
 	if err := adopt(root, "", "v1.2.3", ""); err != nil {
 		t.Fatal(err)
 	}
+	// The mise.toml adopt wrote includes charter's tasks at the release v1.2.3, which is not one:
+	// mise could not list the tasks for the tasks page. Here the include is this checkout's folder.
+	checkout, _ := filepath.Abs(filepath.Join("..", ".."))
+	if err := os.WriteFile(filepath.Join(root, "mise.toml"), []byte(startedBy("adopt", "mise.toml", adoptedTasks("field-notes", "", tasksInclude(repoTasksFolder, "", checkout), true))), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	for _, dir := range []string{root, project} {
 		if err := keepRepo(dir, false); err != nil {
 			t.Fatal(err)
 		}
 	}
-	started := []string{"AGENTS.md", "CLAUDE.md", "charter.toml", "docs/README.md", "docs/rules.md", "mise.toml"}
+	started := []string{"AGENTS.md", "CLAUDE.md", "charter.toml", "docs/README.md", "docs/rules.md", "mise.toml", "docs/_generated.toml"}
 	found := map[string]bool{}
 	for _, dir := range []string{root, project} {
 		err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {

@@ -319,7 +319,13 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 			t.Errorf("no %s", file)
 		}
 	}
-	for _, file := range []string{".github/workflows/check.yml", ".github/workflows/deploy.yml", ".github/workflows/release.yml", ".github/workflows/sdk-check.yml", "fern", "AGENTS.md", "docs/README.md"} {
+	// What adopt writes on the first run, repo puts back when it is missing: one list (startPages).
+	for _, file := range []string{"AGENTS.md", "CLAUDE.md", "docs/README.md", "docs/rules.md"} {
+		if have, _ := os.ReadFile(filepath.Join(root, filepath.FromSlash(file))); !strings.Contains(string(have), "Started by `charter adopt`") {
+			t.Errorf("charter repo did not put back %s, which adopt starts a repo with", file)
+		}
+	}
+	for _, file := range []string{".github/workflows/check.yml", ".github/workflows/deploy.yml", ".github/workflows/release.yml", ".github/workflows/sdk-check.yml", "fern"} {
 		if exists(filepath.Join(root, filepath.FromSlash(file))) {
 			t.Errorf("charter repo wrote %s in a repo that is not a project", file)
 		}
@@ -340,7 +346,7 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 	// mise task of tasks/repo, reading GitHub with the run's own token and no permission to write.
 	workflow, _ := os.ReadFile(filepath.Join(root, ".github", "workflows", repoWorkflow))
 	for _, want := range []string{"name: repo-check\n", "    branches: [main]\n", "  pull_request:\n", "\npermissions:\n  contents: read\n  issues: read\n  pull-requests: read\n  pages: read\n",
-		"GH_TOKEN: ${{ github.token }}", "    runs-on: ubuntu-24.04\n", "- run: mise run docs:check\n", "- run: mise run repo:check\n", "- run: mise run upstream:status\n"} {
+		"GH_TOKEN: ${{ github.token }}", "    runs-on: ubuntu-24.04\n", "- run: mise run repo:ci\n"} {
 		if !strings.Contains(string(workflow), want) {
 			t.Errorf("%s: no %q", repoWorkflow, want)
 		}

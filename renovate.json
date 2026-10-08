@@ -1,0 +1,5 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Written by `charter repo` (github.com/joeblew999/charter): don't edit, run it again (mise run repo). renovate = false in charter.toml leaves this file to the repo.",
+  "extends": ["github>joeblew999/charter//cmd/charter/renovate/charter"]
+}

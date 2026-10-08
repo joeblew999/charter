@@ -14,7 +14,7 @@ Most of charter is not about an API. A repo with no Worker, no contract and no F
 | Docs site | `docs/` rendered the same everywhere; `writing.md`; `docs:setup`, `docs:lint`, `docs:check`, `docs:review`, `docs:pages` | Any repo |
 | Generated pages | `_generated.toml` in `docs/`: pages a command of the repo writes, checked for freshness | Any repo |
 | Tasks page | The repo's mise tasks as a page of its docs, from `charter docs-tasks` | Any repo |
-| Checks on GitHub | One workflow, `repo-check`: `docs:check`, `repo:check`, `upstream:status` | A repo that is not a project |
+| Checks, here and on GitHub | One task, `repo:ci` (`docs:check`, `repo:check`, `upstream:status`), and one workflow, `repo-check`, that runs only that task | A repo that is not a project |
 | Agents and rules | `AGENTS.md`, `CLAUDE.md`, `rules.md` in `docs/` | Any repo |
 | Issues and plans | The issue forms, the labels, the tasks `issue` and `issues`; a plan is an issue | Any repo |
 | Upstream | `Upstream:` tags and `upstream:status` | Any repo |
@@ -67,7 +67,7 @@ charter files    # every file here with either mark; charter's with matches, dif
 includes = ["git::https://github.com/joeblew999/charter.git//tasks/repo?ref=vX.Y.Z"]
 ```
 
-That folder has `repo`, `repo:check`, `issue`, `issues`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:check`, `docs:review` and `docs:pages` ([Tasks](../reference/tasks.md#any-repo)), and none of a project's: no release, workflows, SDK or Cloudflare tasks. They run `charter`; a repo that runs the tool another way sets `CHARTER_TOOL` under `[env]`. A task of the same name in `mise.toml` takes the place of the included one.
+That folder has `repo`, `repo:check`, `repo:ci`, `issue`, `issues`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:check`, `docs:review` and `docs:pages` ([Tasks](../reference/tasks.md#any-repo)), and none of a project's: no release, workflows, SDK or Cloudflare tasks. They run `charter`; a repo that runs the tool another way sets `CHARTER_TOOL` under `[env]`. A task of the same name in `mise.toml` takes the place of the included one.
 
 ## What each aspect needs
 
@@ -102,10 +102,10 @@ run = "charter docs-tasks"
 
 ## Checks on GitHub
 
-`mise run repo` writes the workflow `repo-check.yml` into `.github/workflows/` in a repo that is not a project: on pull requests and pushes to the default branch, one job on Linux runs `mise run docs:check`, `mise run repo:check` and `mise run upstream:status`. It reads GitHub with the run's own token and may write nothing (`contents`, `issues`, `pull-requests`, `pages`: read).
+`mise run repo` writes the workflow `repo-check.yml` into `.github/workflows/` in a repo that is not a project: on pull requests and pushes to the default branch, one job on Linux runs `mise run repo:ci`, and nothing else. That task is `docs:check`, `repo:check` and `upstream:status`, written once in `tasks/repo`: run it on your machine and you have run what GitHub runs. It reads GitHub with the run's own token and may write nothing (`contents`, `issues`, `pull-requests`, `pages`: read).
 
 - **It does not run the repo's own `check`:** that can be slow or need secrets, and belongs in the repo's own workflow, which charter leaves alone.
 - **`workflow = false`** in `charter.toml`: charter writes none.
 - **A project gets none:** its `check` workflow runs `docs:check` within `check`. It does not run `repo:check` or `upstream:status`.
 
-Limits: the `repo-check` workflow has not yet run on GitHub. `charter adopt` from a checkout of charter needs `-from <checkout>` and pins no tool. The docs site's config needs the repo on GitHub.
+Limits: `charter adopt` from a checkout of charter needs `-from <checkout>` and pins no tool. The docs site's config needs the repo on GitHub.

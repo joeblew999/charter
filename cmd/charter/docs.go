@@ -137,12 +137,22 @@ func siteFiles(root, folder string, repo githubRepo) (map[string][]byte, []gener
 func addGenerated(files map[string][]byte, root, docs string, generated []generatedPage) error {
 	for i, g := range generated {
 		args := splitCommand(g.Run)
-		cmd := exec.Command(args[0], args[1:]...)
-		var stderr bytes.Buffer
-		cmd.Dir, cmd.Stderr = root, &stderr
-		out, err := cmd.Output()
-		if err != nil {
-			return fmt.Errorf("generated page %s: %s: %v\n%s", g.Page, g.Run, err, strings.TrimSpace(stderr.String()))
+		var out []byte
+		if len(args) >= 2 && args[0] == "charter" && args[1] == "docs-tasks" {
+			// charter's own page: written by this tool itself, not by whichever charter is on the path
+			text, err := docsTasksPage(root, args[2:])
+			if err != nil {
+				return fmt.Errorf("generated page %s: %s: %w", g.Page, g.Run, err)
+			}
+			out = []byte(text)
+		} else {
+			cmd := exec.Command(args[0], args[1:]...)
+			var stderr bytes.Buffer
+			cmd.Dir, cmd.Stderr = root, &stderr
+			var err error
+			if out, err = cmd.Output(); err != nil {
+				return fmt.Errorf("generated page %s: %s: %v\n%s", g.Page, g.Run, err, strings.TrimSpace(stderr.String()))
+			}
 		}
 		page, err := generatedPageText(root, docs, g, i, string(out))
 		if err != nil {

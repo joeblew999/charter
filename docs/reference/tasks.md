@@ -18,6 +18,7 @@ The tasks of `tasks/repo/`, which a repo that is not a project includes on its o
 |---|---|
 | `repo`, `repo:check` | REMOTE. `charter repo` at the repo's root: keeps it as `charter.toml` says; the workflows only in a repo with projects ([Keep the repo in shape](../guides/deploy.md#keep-the-repo-in-shape)); `repo:check` changes nothing and fails on drift |
 | `issues` | REMOTE, read-only. The open issues, newest first: what is reported and what is planned |
+| `repo:ci` | REMOTE, read-only. What the `repo-check` workflow runs, and all it runs: `docs:check`, `repo:check`, `upstream:status` |
 | `issue` | Prints the body to fill in for an issue of one kind (`-- bug`, `feature`, `upstream`, `plan`), and the `gh` command that files it |
 | `upstream:status` | REMOTE, read-only. Every `Upstream:` tag in the code, with its issue's state |
 | `docs:setup` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt` and the [generated pages](../guides/deploy.md#generated-pages) |

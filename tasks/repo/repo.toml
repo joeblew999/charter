@@ -19,6 +19,11 @@ description = "REMOTE, read-only: the open issues, newest first: what is reporte
 dir = "{{config_root}}"
 run = "gh issue list --state open --limit 30"
 
+["repo:ci"]
+description = "Everything the repo-check workflow runs, here: docs:check (the docs site and generated pages are fresh, docs/ passes the lint), repo:check (the repo is as charter.toml says), upstream:status. The workflow runs this one task and nothing else, so a pass here is a pass on GitHub. REMOTE, read-only"
+dir = "{{config_root}}"
+depends = ["docs:check", "repo:check", "upstream:status"]
+
 ["issue"]
 description = "Print the body to fill in for an issue of one kind, with that form's headings, and the gh command that files it with the form's labels: mise run issue -- bug (or feature, upstream, plan)"
 dir = "{{config_root}}"

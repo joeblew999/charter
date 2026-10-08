@@ -236,7 +236,31 @@ func keepRepo(root string, check bool) error {
 		name string
 		run  func() ([]string, error)
 	}
-	steps := []step{
+	steps := []step{}
+	if len(config.Projects) == 0 && !isProject(root) {
+		// What adopt wrote on the first run: the same list (startPages). One that has gone missing is
+		// put back; one that is there is the repo's own, whatever it says.
+		steps = append(steps, step{"what the repo starts with (charter adopt)", func() ([]string, error) {
+			var missing []string
+			for _, page := range startPages(repo.Name, config.Description) {
+				if strings.HasPrefix(page[0], "docs/") && config.Docs != "docs" {
+					continue
+				}
+				path := filepath.Join(root, filepath.FromSlash(page[0]))
+				if exists(path) {
+					continue
+				}
+				if !check {
+					if err := write(path, page[1]); err != nil {
+						return nil, err
+					}
+				}
+				missing = append(missing, page[0])
+			}
+			return missing, nil
+		}})
+	}
+	steps = append(steps, []step{
 		{"docs site (" + config.Docs + "/)", func() ([]string, error) {
 			files, _, err := siteFiles(root, config.Docs, site)
 			if err != nil {
@@ -251,7 +275,7 @@ func keepRepo(root string, check bool) error {
 			}
 			return syncFiles(filepath.Join(root, ".github"), files, check)
 		}},
-	}
+	}...)
 	if config.Renovate {
 		steps = append(steps, step{"renovate.json", func() ([]string, error) {
 			return syncFiles(root, map[string][]byte{"renovate.json": renovateConfig(toolVersion())}, check)

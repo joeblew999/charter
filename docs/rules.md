@@ -12,7 +12,7 @@ Binding, for developers and agents alike: other repos build on this one.
 | **`docs/` is the single source of truth.** `AGENTS.md`, `CLAUDE.md` and folder READMEs only point to it. Pages follow [Writing docs](writing.md); run `mise run docs:lint` | One place cannot contradict itself |
 | **Never edit what is generated** ([the list](README.md#what-is-generated)) | A hand edit is lost, and `mise run check` fails |
 | **Every task is one line** of programs, double quotes and `&&`, which sh and cmd.exe both take. More is a command of the tool in `cmd/charter/`, added to [its table](reference/charter.md) | A task runs the same everywhere, Windows included |
-| **A project is self-contained; task names are the same in every project.** Workflows only call mise | `charter new` copies an example as it is, and CI runs what you run |
+| **A project is self-contained; task names are the same in every project.** Workflows only call mise, one task a job, so what GitHub runs you can run | `charter new` copies an example as it is, and CI runs what you run |
 | **After changing a contract, `mise run spec`.** The Go and the oRPC contract of an API change together | The surface tests fail otherwise |
 | **What ships to Workers builds with TinyGo,** checked under workerd. `go/` and its glue `go/worker/` change together | `go test` cannot see TinyGo's gaps; the two ship as one module |
 | **Exact pins, one place each:** `mise.toml`, `go.mod`, `package.json`, `fern/generators.yml`; TinyGo in `cmd/charter/wasm.go`. Lockfiles are committed | A build is the same everywhere |

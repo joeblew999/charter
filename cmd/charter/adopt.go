@@ -28,7 +28,7 @@ func init() {
 // are those tasks (a test holds the list to the folder).
 const repoTasksFolder = "repo"
 
-var repoTasks = []string{"docs:check", "docs:lint", "docs:pages", "docs:review", "docs:setup", "issue", "issues", "repo", "repo:check", "upstream:status"}
+var repoTasks = []string{"docs:check", "docs:lint", "docs:pages", "docs:review", "docs:setup", "issue", "issues", "repo", "repo:check", "repo:ci", "upstream:status"}
 
 // The pages every repo charter keeps has, the same in a project made by new and a repo adopt took.
 const (
@@ -85,7 +85,7 @@ Say here what this repo is, and where its parts are: a row per part.
 
 | Name | Where | What it is |
 |---|---|---|
-| The tasks | ` + "`mise.toml`" + ` | ` + "`mise tasks`" + ` lists them; those any repo takes come from [charter](` + anyRepoGuide + `) |
+| The tasks | ` + "`mise.toml`" + ` | [Tasks](tasks.md) lists them, written from the tasks themselves; those any repo takes come from [charter](` + anyRepoGuide + `) |
 
 ## What is generated
 
@@ -156,15 +156,7 @@ func adopt(root, description, version, checkout string) error {
 		}
 		docsOwn = config.Docs == "docs"
 	}
-	pages := [][2]string{
-		{"charter.toml", charterTomlFor(description)},
-		{"AGENTS.md", agentsPage},
-		{"CLAUDE.md", claudePage},
-		{"docs/README.md", repoDocs(name)},
-		{"docs/rules.md", repoRules},
-	}
-	for _, page := range pages {
-		page[1] = startedBy("adopt", page[0], page[1])
+	for _, page := range startPages(name, description) {
 		path := filepath.Join(root, filepath.FromSlash(page[0]))
 		switch {
 		case exists(path):
@@ -237,6 +229,27 @@ func adopt(root, description, version, checkout string) error {
 			fmt.Printf("         mise.toml defines %s itself: each takes the place of charter's task of that name. Delete those you want from charter\n", strings.Join(own, ", "))
 		}
 	}
+	// The pages a command writes (docs/_generated.toml: the tasks page), now that mise.toml is there.
+	if docsOwn {
+		generated, err := readGenerated(filepath.Join(root, "docs"))
+		if err != nil {
+			return err
+		}
+		pages := map[string][]byte{}
+		if err := addGenerated(pages, root, "docs", generated); err != nil {
+			// mise cannot list the tasks yet (the tool is not installed, or the release is not out):
+			// the first mise run docs:setup or mise run repo writes the page.
+			say("waiting", "docs/tasks.md", ": mise could not list the tasks yet; after mise install, mise run docs:setup writes it")
+		} else {
+			stale, err := syncFiles(root, pages, false)
+			if err != nil {
+				return err
+			}
+			for _, file := range stale {
+				say("wrote", file, "")
+			}
+		}
+	}
 	fmt.Printf(`
   mise install && mise tasks         # the tool, then what there is to run
   mise run docs:lint                 # check docs/
@@ -245,6 +258,26 @@ func adopt(root, description, version, checkout string) error {
 What each part is, and what it needs: %s
 `, anyRepoGuide)
 	return nil
+}
+
+// startPages are the files a repo that is not a project starts with and then owns, each with its
+// "Started by" mark: one list, written by adopt on the first run and put back by repo if one goes
+// missing, so there is one place that says what a repo of the charter way has.
+func startPages(name, description string) [][2]string {
+	pages := [][2]string{
+		{"charter.toml", charterTomlFor(description)},
+		{"AGENTS.md", agentsPage},
+		{"CLAUDE.md", claudePage},
+		{"docs/README.md", repoDocs(name)},
+		{"docs/rules.md", repoRules},
+		// Every repo has mise tasks, so every repo has the page of them: written by charter from
+		// the tasks themselves (charter docs-tasks), fresh or the check fails.
+		{"docs/_generated.toml", "# Pages a command writes: mise run docs:setup runs each and writes the page; docs:check fails on a stale one.\n[[generated]]\npage = \"tasks.md\"\nrun = \"charter docs-tasks\"\n"},
+	}
+	for i := range pages {
+		pages[i][1] = startedBy("adopt", pages[i][0], pages[i][1])
+	}
+	return pages
 }
 
 // linesToAdd are the lines a mise.toml the repo wrote lacks, each under where it goes: the tool's pin
