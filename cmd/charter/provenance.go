@@ -169,7 +169,7 @@ func filesReport(root string) ([]string, error) {
 		by := "charter " + command
 		switch {
 		case !ok && (written || later):
-			charters = append(charters, row("charter's", "differs", path, "it carries no mark (an earlier release wrote it, or you did): mise run repo writes charter's"))
+			charters = append(charters, row("charter's", "differs", path, "it carries no mark (an earlier release wrote it, or you did): mise run repo, or for a page mise run docs:setup, writes charter's"))
 		case !ok:
 		case !owned:
 			yours = append(yours, row("yours", "started", path, by+" wrote it once: edit it"))
