@@ -61,6 +61,14 @@ func docsTasksPage(root string, args []string) (string, error) {
 		f.StringVar(&not, "not", "", "leave out the tasks from these sources, named the same way")
 		f.StringVar(&title, "title", "Tasks", "the page's title")
 	})
+	// mise names each task's file by its full path: the repo's root must be one too, or the repo's
+	// own tasks look like another repo's (charter docs passes the root as it was given: ".").
+	if abs, err := filepath.Abs(root); err == nil {
+		root = abs
+	}
+	if real, err := filepath.EvalSymlinks(root); err == nil {
+		root = real
+	}
 	config, err := os.ReadFile(filepath.Join(root, "mise.toml"))
 	if err != nil {
 		return "# " + title + "\n\nThis repo has no `mise.toml` at its root yet. Its tasks are listed here once it has one.\n", nil
