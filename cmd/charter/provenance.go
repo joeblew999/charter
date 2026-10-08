@@ -104,6 +104,11 @@ func writtenFiles(root string) (files map[string][]byte, unknown map[string]stri
 		}
 		files[path] = content
 	}
+	if !projects {
+		for path, content := range agentFiles() {
+			files[path] = content
+		}
+	}
 	if !projects && config.Workflow {
 		if path := ".github/workflows/" + repoWorkflow; onGitHub {
 			files[path] = repoWorkflowFor(root, repo.DefaultBranchRef.Name)

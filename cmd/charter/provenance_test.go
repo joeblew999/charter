@@ -78,7 +78,7 @@ func TestEveryFileCharterWritesSaysSo(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	started := []string{"AGENTS.md", "CLAUDE.md", "charter.toml", "docs/README.md", "docs/rules.md", "mise.toml", "docs/_generated.toml"}
+	started := []string{"charter.toml", "docs/README.md", "docs/rules.md", "mise.toml", "docs/_generated.toml"}
 	found := map[string]bool{}
 	for _, dir := range []string{root, project} {
 		err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
@@ -139,7 +139,7 @@ func TestEveryFileCharterWritesSaysSo(t *testing.T) {
 	report := strings.Join(lines, "\n")
 	for path, state := range map[string]string{
 		".github/labels.tsv": "charter's  matches ", ".github/workflows/repo-check.yml": "charter's  matches ", "docs/_config.yml": "charter's  matches ",
-		"docs/writing.md": "charter's  differs ", "renovate.json": "charter's  missing ", "AGENTS.md": "yours      started ", "mise.toml": "yours      started ",
+		"docs/writing.md": "charter's  differs ", "renovate.json": "charter's  missing ", "AGENTS.md": "charter's  matches ", "CLAUDE.md": "charter's  matches ", "mise.toml": "yours      started ",
 		".github/ISSUE_TEMPLATE/bug.yml": "yours      own form",
 	} {
 		if !slices.ContainsFunc(lines, func(line string) bool { return strings.HasPrefix(line, state+"  "+path+" ") }) {

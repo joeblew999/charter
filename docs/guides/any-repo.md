@@ -15,7 +15,7 @@ Most of charter is not about an API. A repo with no Worker, no contract and no F
 | Generated pages | `_generated.toml` in `docs/`: pages a command of the repo writes, checked for freshness | Any repo |
 | Tasks page | The repo's mise tasks as a page of its docs, from `charter docs-tasks` | Any repo |
 | Checks, here and on GitHub | One task, `repo:ci` (`docs:check`, `repo:check`, `upstream:status`), and one workflow, `repo-check`, that runs only that task | A repo that is not a project |
-| Agents and rules | `AGENTS.md` and `CLAUDE.md`, which point at `docs/`; `repo.md` and `repo/rules.md` in `docs/`, the rules every repo shares, written by charter and the same in each; `rules.md`, the repo's own | Any repo |
+| Agents and rules | `AGENTS.md` and `CLAUDE.md`, which point at `docs/` and are the same in every repo; `repo.md` and `repo/rules.md` in `docs/`, the rules every repo shares, written by charter and the same in each; `rules.md`, the repo's own | Any repo |
 | Issues and plans | The issue forms, the labels, the tasks `issue` and `issues`; a plan is an issue | Any repo |
 | Upstream | `Upstream:` tags and `upstream:status` | Any repo |
 | Release | `mise run release -- vX.Y.Z`: the repo's own `check`, the tag, the GitHub Release with notes from the commits | Any repo |
@@ -36,7 +36,7 @@ mise install && mise tasks
 | It writes | If missing | Otherwise |
 |---|---|---|
 | `charter.toml` | The description from GitHub, `-description`, or the folder's name | Kept |
-| `AGENTS.md`, `CLAUDE.md` | Pointers to `docs/` | Kept |
+| `AGENTS.md`, `CLAUDE.md` | Pointers to `docs/`, with the order to read it in: charter's, the same in every repo | Written again if they differ: what is the repo's own goes in `docs/` |
 | `README.md` and `rules.md` in `docs/` | The start page to fill in, and the rules every repo shares | Kept |
 | `writing.md`, and with the repo on GitHub the site's config, in `docs/` | What `charter docs` writes | Written again if stale: they are charter's |
 | `mise.toml` | The tool pinned at its release, and the include below at that tag | Kept: it prints the lines to add, and the tasks of yours that take the place of charter's |

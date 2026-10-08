@@ -240,6 +240,9 @@ func keepRepo(root string, check bool) error {
 	if len(config.Projects) == 0 && !isProject(root) {
 		// What adopt wrote on the first run: the same list (startPages). One that has gone missing is
 		// put back; one that is there is the repo's own, whatever it says.
+		steps = append(steps, step{"AGENTS.md and CLAUDE.md", func() ([]string, error) {
+			return syncFiles(root, agentFiles(), check)
+		}})
 		steps = append(steps, step{"what the repo starts with (charter adopt)", func() ([]string, error) {
 			var missing []string
 			for _, page := range startPages(repo.Name, config.Description) {

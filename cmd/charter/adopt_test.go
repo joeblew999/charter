@@ -34,7 +34,8 @@ func TestAdopt(t *testing.T) {
 	}
 	for file, want := range map[string]string{
 		"charter.toml":       "description = \"field-notes\"\ntopics = []\n",
-		"AGENTS.md":          "[docs/rules.md](docs/rules.md)",
+		"AGENTS.md":          "[docs/repo/rules.md](docs/repo/rules.md)",
+		"AGENTS.md ":         "Written by `charter repo`",
 		"CLAUDE.md":          "@AGENTS.md\n",
 		"docs/README.md":     "# field-notes\n",
 		"docs/README.md ":    "\n## What is generated\n",
@@ -51,7 +52,7 @@ func TestAdopt(t *testing.T) {
 		}
 	}
 	for _, api := range []string{"TinyGo", "contract", "mise run spec", "Workers", "fern/", "deploy"} {
-		for _, file := range []string{"docs/rules.md", "docs/README.md", "AGENTS.md", "mise.toml"} {
+		for _, file := range []string{"docs/rules.md", "docs/README.md", "mise.toml"} {
 			if strings.Contains(read(file), api) {
 				t.Errorf("%s mentions %q, which only an API project has", file, api)
 			}
@@ -70,8 +71,19 @@ func TestAdopt(t *testing.T) {
 	}
 
 	// Again: nothing changes, and what the repo wrote is kept (a release moved on, too).
+	// AGENTS.md is charter's, the same in every repo: a hand edit is written over.
+	pointer := read("AGENTS.md")
+	if err := os.WriteFile(filepath.Join(root, "docs/rules.md"), []byte("mine\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte("mine\n"), 0o644); err != nil {
 		t.Fatal(err)
+	}
+	if err := adopt(root, "something else", "v1.3.0", ""); err != nil {
+		t.Fatal(err)
+	}
+	if read("AGENTS.md") != pointer {
+		t.Error("adopt left a hand-edited AGENTS.md, which is charter's to write")
 	}
 	before := map[string]string{}
 	files := []string{"charter.toml", "AGENTS.md", "CLAUDE.md", "docs/README.md", "docs/rules.md", "docs/writing.md", "mise.toml"}

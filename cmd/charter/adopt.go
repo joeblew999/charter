@@ -172,6 +172,18 @@ func adopt(root, description, version, checkout string) error {
 		}
 	}
 
+	// The pointer files: charter's, the same in every repo, written again if they differ.
+	pointers, err := syncFiles(root, agentFiles(), false)
+	if err != nil {
+		return err
+	}
+	for _, file := range pointers {
+		say("wrote", file, "")
+	}
+	if len(pointers) == 0 {
+		say("ok", "AGENTS.md, CLAUDE.md", ": what charter writes")
+	}
+
 	// What charter docs writes: charter's own files, the same in every repo, so written again if stale.
 	switch {
 	case !docsOwn:
@@ -261,14 +273,41 @@ What each part is, and what it needs: %s
 	return nil
 }
 
+// agentFiles are the two pointer files of a repo that is not a project: the same in every repo
+// charter keeps, and charter's to write again, so what agents are told first cannot drift from repo
+// to repo. What is a repo's own is in its docs/, where they point.
+func agentFiles() map[string][]byte {
+	mark := "<!-- Written by `charter repo` (" + charterRepo + "): don't edit. The same in every repo charter keeps; what is this repo's own is in docs/. -->\n\n"
+	return map[string][]byte{
+		"AGENTS.md": []byte(mark + repoAgentsPage),
+		"CLAUDE.md": []byte(mark + claudePage),
+	}
+}
+
+const repoAgentsPage = `# For agents
+
+Everything about this repo is in [docs/](docs/README.md), the same pages developers read. Nothing is kept here, so there is one source of truth.
+
+Read, in this order:
+
+1. [docs/README.md](docs/README.md): what this repo is, and the index of every page.
+2. [docs/repo/rules.md](docs/repo/rules.md): the rules every repo shares. They are binding.
+3. [docs/rules.md](docs/rules.md): this repo's own rules, which add to those.
+4. The open issues, ` + "`mise run issues`" + `: what is reported and what is planned. One labelled ` + "`needs-triage`" + ` comes first.
+5. The page for the part you are changing, from the index.
+6. [docs/writing.md](docs/writing.md) before you write or change a page in ` + "`docs/`" + `.
+
+` + "`mise tasks`" + ` lists what there is to run; ` + "`mise run check`" + `, where the repo has it, is what must pass.
+
+When you learn or change something, write it in the page in ` + "`docs/`" + ` it belongs to, and run ` + "`mise run docs:check`" + `. Don't add README files elsewhere.
+`
+
 // startPages are the files a repo that is not a project starts with and then owns, each with its
 // "Started by" mark: one list, written by adopt on the first run and put back by repo if one goes
 // missing, so there is one place that says what a repo of the charter way has.
 func startPages(name, description string) [][2]string {
 	pages := [][2]string{
 		{"charter.toml", charterTomlFor(description)},
-		{"AGENTS.md", agentsPage},
-		{"CLAUDE.md", claudePage},
 		{"docs/README.md", repoDocs(name)},
 		{"docs/rules.md", repoRules},
 		// Every repo has mise tasks, so every repo has the page of them: written by charter from

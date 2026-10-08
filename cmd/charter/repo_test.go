@@ -320,7 +320,12 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 		}
 	}
 	// What adopt writes on the first run, repo puts back when it is missing: one list (startPages).
-	for _, file := range []string{"AGENTS.md", "CLAUDE.md", "docs/README.md", "docs/rules.md"} {
+	for _, file := range []string{"AGENTS.md", "CLAUDE.md"} {
+		if have, _ := os.ReadFile(filepath.Join(root, file)); !strings.Contains(string(have), "Written by `charter repo`") {
+			t.Errorf("charter repo did not write %s, the same in every repo", file)
+		}
+	}
+	for _, file := range []string{"docs/README.md", "docs/rules.md"} {
 		if have, _ := os.ReadFile(filepath.Join(root, filepath.FromSlash(file))); !strings.Contains(string(have), "Started by `charter adopt`") {
 			t.Errorf("charter repo did not put back %s, which adopt starts a repo with", file)
 		}
