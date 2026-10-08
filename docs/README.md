@@ -48,7 +48,7 @@ Never edit these: change the source and run the task.
 | `pages/*.x.go` (committed) | `mise run ui:gen`, from the gsx components (`examples/start-htmx/`, `examples/start-datastar/`) |
 | `sdk/go/` (committed), `sdk/out/` | `mise run sdk:publish`, `mise run sdk:gen` |
 | `build/`, `dist/`, `ts/dist/` | `mise run build`, `mise run sdk:dist`, `mise run ts:build` |
-| `.github/` | `mise run workflows`; in a repo that is not a project, its issue forms and `labels.tsv` by `mise run repo` |
+| `.github/` | `mise run workflows`; in a repo that is not a project, its issue forms, `labels.tsv` and the `repo-check` workflow by `mise run repo` |
 | `renovate.json` | `mise run repo` |
 | `docs/_config.yml`, `docs/writing.md`, `docs/llms.txt`, `docs/_sass/` | `mise run docs:setup` |
 | A page that `_generated.toml` in `docs/` lists (this repo has none) | `mise run docs:setup`, from its command ([Generated pages](guides/deploy.md#generated-pages)) |
