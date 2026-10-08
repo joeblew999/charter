@@ -1,4 +1,5 @@
-# Written by `charter workflows` from its template (in the charter tool): change the template, not this file.
+# Written by `charter repo` and `charter workflows` from the charter tool's template: change the template, not this file.
+# For a form of the repo's own, write this file without the line above: charter then leaves it alone.
 # Each field's label is a heading in the issue body; `charter issue bug` prints the same headings.
 name: Bug report
 description: It did the wrong thing. Not for bugs in the projects it is built on.
@@ -8,9 +9,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Is it ours?** A bug in a project this one is built on is fixed there. Check
-        [docs/upstream.md](../blob/main/docs/upstream.md) first, and use the
-        *Upstream bug* form if it is theirs.
+        **Is it ours?** A bug in a project this one is built on is fixed there. Check the
+        upstream issues this repository already tracks first (`mise run upstream:status`, and
+        `docs/upstream.md` where it keeps that page), and use the *Upstream bug* form if it is theirs.
 
         **Agents:** forms are web-only. Run `charter issue bug > body.md`, fill it in, and file
         with `gh issue create --body-file body.md`.
@@ -54,14 +55,14 @@ body:
     id: repro
     attributes:
       label: Steps to reproduce
-      description: From a known state, for example a project just made with `charter new`.
+      description: From a known state, for example a fresh clone.
     validations:
       required: false
   - type: textarea
     id: versions
     attributes:
       label: Versions
-      description: The output of `charter version` and `charter doctor`.
+      description: The release or commit you ran, your OS, and the versions of the tools it uses (`mise ls --current`). In a charter project, also the output of `charter doctor`.
       render: text
     validations:
       required: true
@@ -70,7 +71,7 @@ body:
     attributes:
       label: Checks
       options:
-        - label: It is not already in docs/upstream.md or an open issue.
+        - label: It is not already an open issue, or an upstream issue this repository tracks.
           required: true
         - label: What I pasted holds no secret, token or personal path.
           required: true
