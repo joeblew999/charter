@@ -3,9 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
-	"strings"
 	"testing"
 )
 
@@ -27,216 +25,6 @@ func examples(t *testing.T) []string {
 		t.Fatalf("the repo has the projects %v, want %v", names, want)
 	}
 	return names
-}
-
-// The projects with a CLI: the notes examples, the full showcase, and the conformance projects,
-// which generate it from every Fern feature. The start projects, what new -empty copies, have none.
-var withCLI = []string{"examples/notes-go", "examples/notes-ts", "conformance/showcase-go", "conformance/showcase-ts"}
-
-// Every example has the same groups in the same order, so the same task works in each of them.
-// One with a CLI adds cli; the showcases add typescript-public, which shows Fern's audiences.
-func TestEveryExampleHasTheCommonGroups(t *testing.T) {
-	for _, name := range examples(t) {
-		groups, err := sdkGroups(filepath.Join("../..", name, generators))
-		if err != nil {
-			t.Fatal(err)
-		}
-		want := sdkCommon
-		if slices.Contains(withCLI, name) {
-			want = append(slices.Clone(want), "cli")
-		}
-		if strings.HasPrefix(filepath.Base(name), "showcase-") {
-			want = append(slices.Clone(want), "typescript-public")
-		}
-		if !slices.Equal(groups, want) {
-			t.Errorf("%s: groups %v, want %v", name, groups, want)
-		}
-	}
-}
-
-// The cli group is the one switch: a project pins Rust, zig and cargo-zigbuild if and only if it
-// has it.
-func TestTheCLIPinsFollowTheCLIGroup(t *testing.T) {
-	for _, name := range examples(t) {
-		if err := cliPinsAgree(filepath.Join("../..", name)); err != nil {
-			t.Errorf("%s: %v", name, err)
-		}
-	}
-	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, fernDir), 0o755)
-	for _, c := range []struct {
-		tools, groups, fails string
-	}{
-		{"go = \"1\"\n", "groups:\n  go:\n", ""},
-		{"go = \"1\"\nrust = \"1\"\nzig = \"1\"\n\"aqua:rust-cross/cargo-zigbuild\" = \"1\"\n", "groups:\n  go:\n  cli:\n", ""},
-		{"go = \"1\"\nrust = \"1\"\n", "groups:\n  go:\n", "no cli group: remove them"},
-		{"go = \"1\"\n", "groups:\n  cli:\n", "does not pin rust"},
-	} {
-		os.WriteFile(filepath.Join(dir, "mise.toml"), []byte("[tools]\n"+c.tools), 0o644)
-		os.WriteFile(filepath.Join(dir, generators), []byte(c.groups), 0o644)
-		if err := cliPinsAgree(dir); (c.fails == "") != (err == nil) || err != nil && !strings.Contains(err.Error(), c.fails) {
-			t.Errorf("%q with %q: %v, want %q", c.tools, c.groups, err, c.fails)
-		}
-	}
-}
-
-// A project's mise.toml is complete: it pins the tools its own tasks need. So the same tool is
-// pinned in several files of this repo, and this holds them to one version each.
-func TestTheExamplesPinTheSameTools(t *testing.T) {
-	pin := regexp.MustCompile(`(?m)^([a-z][a-z0-9_-]*) = "([^"]+)"`)
-	seen := map[string]string{} // tool -> "version (file)"
-	files := []string{"../../mise.toml"}
-	for _, name := range examples(t) {
-		files = append(files, filepath.Join("../..", name, "mise.toml"))
-	}
-	for _, file := range files {
-		content, err := os.ReadFile(file)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, tools, _ := strings.Cut(string(content), "\n[tools]\n")
-		tools, _, _ = strings.Cut(tools, "\n[")
-		pins := pin.FindAllStringSubmatch(tools, -1)
-		if len(pins) == 0 {
-			t.Errorf("%s: no [tools]", file)
-		}
-		for _, m := range pins {
-			here := m[2] + " (" + file + ")"
-			if had, ok := seen[m[1]]; ok && !strings.HasPrefix(had, m[2]+" ") {
-				t.Errorf("%s is pinned to %s and to %s", m[1], had, here)
-			}
-			seen[m[1]] = here
-		}
-	}
-}
-
-// The tasks the projects share are written once, in tasks/ (what a project made by charter new
-// includes from GitHub): every project includes the folder any repo takes (tasks/repo), the shared
-// folder and its language's, and defines none of their tasks itself, except setup in a TypeScript project, which first builds this repo's
-// TypeScript library (ts/), its local package @charter/ts. One line in each, so what is learned in
-// one project holds in the others.
-func TestTheProjectsIncludeTheSharedTasks(t *testing.T) {
-	includedBy := func(folder string) map[string]bool {
-		tasks := map[string]bool{}
-		files, _ := filepath.Glob(filepath.Join("../../tasks", folder, "*.toml"))
-		for _, file := range files {
-			content, _ := os.ReadFile(file)
-			for _, m := range includedTaskDef.FindAllStringSubmatch(string(content), -1) {
-				tasks[m[1]] = true
-			}
-		}
-		if len(tasks) == 0 {
-			t.Fatalf("tasks/%s defines no tasks", folder)
-		}
-		return tasks
-	}
-	for _, name := range examples(t) {
-		lang := "go"
-		if strings.HasSuffix(name, "-ts") {
-			lang = "ts"
-		}
-		file := filepath.Join("../..", name, "mise.toml")
-		content, _ := os.ReadFile(file)
-		if want := `includes = ["../../tasks/repo", "../../tasks/shared", "../../tasks/` + lang + `"]`; !strings.Contains(string(content), want) {
-			t.Errorf("%s: no %s", name, want)
-		}
-		if !strings.Contains(string(content), "\nCHARTER_TOOL = \"go run ../../cmd/charter\"\n") {
-			t.Errorf("%s: CHARTER_TOOL is not this checkout's tool", name)
-		}
-		shared := includedBy("shared")
-		for _, folder := range []string{repoTasksFolder, lang} {
-			for task := range includedBy(folder) {
-				if shared[task] {
-					t.Errorf("tasks/%s defines %s, which another folder of tasks/ does too", folder, task)
-				}
-				shared[task] = true
-			}
-		}
-		for _, m := range taskDef.FindAllStringSubmatch(string(content), -1) {
-			if shared[m[1]] && !(lang == "ts" && m[1] == "setup") {
-				t.Errorf("%s defines %s, which tasks/ already does", name, m[1])
-			}
-		}
-		if lang == "ts" && !strings.Contains(string(content), `run = "npm ci --no-fund --no-audit --prefix ../../ts && npm run build --prefix ../../ts && npm ci --no-fund --no-audit"`) {
-			t.Errorf("%s: setup does not build the TypeScript library first", name)
-		}
-		if strings.Contains(string(content), "go run ../../cmd/charter ") {
-			t.Errorf("%s: a task runs the tool as go run ../../cmd/charter, not {{env.CHARTER_TOOL}}", name)
-		}
-	}
-}
-
-// tasks/repo is what a repo that is not a project includes: exactly the tasks any repo can use
-// (repoTasks), each calling the tool as CHARTER_TOOL or, where a repo sets none, as charter; and
-// nothing of a project's (releases, workflows, SDKs, Cloudflare), which stay in tasks/shared.
-func TestTheTasksAnyRepoTakes(t *testing.T) {
-	var names []string
-	files, _ := filepath.Glob("../../tasks/" + repoTasksFolder + "/*.toml")
-	for _, file := range files {
-		content, _ := os.ReadFile(file)
-		for _, m := range includedTaskDef.FindAllStringSubmatch(string(content), -1) {
-			names = append(names, m[1])
-		}
-		if strings.Contains(string(content), "{{env.CHARTER_TOOL}}") {
-			t.Errorf("%s: a task needs CHARTER_TOOL set: {{ env.CHARTER_TOOL | default(value='charter') }}", file)
-		}
-		for _, m := range regexp.MustCompile(`(?m)^run = ["'](.*)["']$`).FindAllStringSubmatch(string(content), -1) {
-			if !strings.HasPrefix(m[1], "{{ env.CHARTER_TOOL | default(value='charter') }} ") && !strings.HasPrefix(m[1], "gh ") {
-				t.Errorf("%s: a task runs neither the tool nor gh: %s", file, m[1])
-			}
-		}
-	}
-	slices.Sort(names)
-	if !slices.Equal(names, repoTasks) {
-		t.Errorf("tasks/%s has %v, and adopt knows %v", repoTasksFolder, names, repoTasks)
-	}
-	shared, _ := filepath.Glob("../../tasks/shared/*.toml")
-	for _, file := range shared {
-		content, _ := os.ReadFile(file)
-		for _, m := range includedTaskDef.FindAllStringSubmatch(string(content), -1) {
-			if slices.Contains(repoTasks, m[1]) {
-				t.Errorf("%s defines %s, which tasks/%s does", file, m[1], repoTasksFolder)
-			}
-		}
-	}
-	for _, kept := range []string{"release:publish", "release:tags", "workflows", "workflows:check", "doctor", "sdk:gen", "migrate"} {
-		if slices.Contains(names, kept) {
-			t.Errorf("tasks/%s has %s, a project's task", repoTasksFolder, kept)
-		}
-	}
-}
-
-// The SDK commands work on the project's one API, and say how to generate what is missing.
-func TestSDKCommandsSayWhatTheyNeed(t *testing.T) {
-	t.Chdir(t.TempDir())
-	for want, err := range map[string]error{
-		"sdk-check needs <group>":        sdkCheck(nil),
-		"mise run sdk:gen go":            sdkCheck([]string{"go"}),
-		"cli-build takes no arguments":   cliBuild([]string{"notes"}),
-		"sdk-gen needs <group>":          sdkGen(nil),
-		"sdk-publish takes no arguments": sdkPublish([]string{"notes"}),
-		"dist-sdk takes no arguments":    distSDK([]string{"notes"}),
-		"dist-cli takes no arguments":    distCLI([]string{"notes"}),
-	} {
-		if err == nil || !strings.Contains(err.Error(), want) {
-			t.Errorf("got %v, want an error with %q", err, want)
-		}
-	}
-	// Without the cli group every CLI command says the project has none; with it, what is missing.
-	noCLI := "this project has no CLI (no cli group in fern/generators.yml)"
-	for name, err := range map[string]error{
-		"cli-build": cliBuild(nil), "dist-cli": distCLI(nil), "cli-smoke": cliSmoke(nil), "sdk-gen cli": sdkGen([]string{"cli"}),
-		"sdk-ready cli": sdkReady([]string{"cli"}), "dist -target": distAll([]string{"-target", "linux-amd64"}),
-	} {
-		if err == nil || !strings.Contains(err.Error(), noCLI) {
-			t.Errorf("%s without a cli group: %v, want %q", name, err, noCLI)
-		}
-	}
-	os.MkdirAll(fernDir, 0o755)
-	os.WriteFile(generators, []byte("groups:\n  cli:\n"), 0o644)
-	if err := cliBuild(nil); err == nil || !strings.Contains(err.Error(), "mise run sdk:gen cli") {
-		t.Errorf("cli-build with a cli group: %v", err)
-	}
 }
 
 // What marks a project, and that a command finds it from any folder inside it.
@@ -267,31 +55,6 @@ func TestAProjectIsAMiseFileBesideAFernFolder(t *testing.T) {
 	}
 }
 
-// Every example sets its own API_URL and API_PORT, which is what `each` keeps apart between them.
-func TestEveryExampleHasItsOwnSettings(t *testing.T) {
-	ports := map[string]string{}
-	for _, name := range examples(t) {
-		file := filepath.Join("../..", name, "mise.toml")
-		settings := settingsOf(file)
-		if !settings["API_URL"] || !settings["API_PORT"] || settings["CLOUDFLARE_API_TOKEN"] {
-			t.Errorf("%s: [env] sets %v, want API_URL and API_PORT", name, settings)
-		}
-		content, _ := os.ReadFile(file)
-		if want := "default='https://charter-" + filepath.Base(name) + ".gedw99.workers.dev'"; !strings.Contains(string(content), want) {
-			t.Errorf("%s: no API_URL with %s", name, want)
-		}
-		port := regexp.MustCompile(`API_PORT', default='(\d+)'`).FindStringSubmatch(string(content))
-		if port == nil {
-			t.Errorf("%s: no default for API_PORT", name)
-			continue
-		}
-		if other := ports[port[1]]; other != "" {
-			t.Errorf("%s: its default port %s is also that of %s", name, port[1], other)
-		}
-		ports[port[1]] = name
-	}
-}
-
 // sdk-ready generates a group again when the Fern folder changed since it was generated (#41).
 func TestAGeneratedSDKIsStaleWhenItsSpecsChange(t *testing.T) {
 	t.Chdir(t.TempDir())
@@ -314,4 +77,17 @@ func TestAGeneratedSDKIsStaleWhenItsSpecsChange(t *testing.T) {
 	if sdkFresh("go") {
 		t.Error("fresh after the spec changed")
 	}
+}
+
+// sdkCommon are the groups every project's generators.yml defines, in this order.
+var sdkCommon = []string{"go", "typescript", "typescript-dist"}
+
+// taskMatches are the tasks a task file defines, as [_, name] pairs (tomlTasks, for the loops here).
+func taskMatches(content []byte) [][]string {
+	names, _ := tomlTasks(content)
+	pairs := make([][]string, len(names))
+	for i, name := range names {
+		pairs[i] = []string{"", name}
+	}
+	return pairs
 }

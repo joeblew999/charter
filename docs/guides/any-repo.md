@@ -11,7 +11,7 @@ Most of charter is not about an API. A repo with no Worker, no contract and no F
 | Aspect | What a repo gets | For |
 |---|---|---|
 | Repo | `charter.toml`; description, topics, homepage, labels, GitHub Pages kept on GitHub by `repo` and `repo:check` | Any repo |
-| Docs site | `docs/` rendered the same everywhere; charter's own pages in `docs/charter/`; `adopt`, `docs:setup`, `docs:lint`, `docs:check`, `docs:review`, `docs:pages` | Any repo |
+| Docs site | `docs/` rendered the same everywhere; charter's own pages in `docs/charter/`; `adopt`, `adopt`, `docs:lint`, `docs:check`, `docs:review`, `docs:pages` | Any repo |
 | Generated pages | `_generated.toml` in `docs/`: pages a command of the repo writes, checked for freshness | Any repo |
 | Tasks page | The repo's mise tasks as `docs/charter/tasks.md`, from mise; more pages of them with `charter docs-tasks` | Any repo |
 | Checks, here and on GitHub | One task, `repo:ci` (`docs:check`, `repo:check`, `upstream:status`), and one workflow, `charter.yml`, that runs only that task | A repo that is not a project |
@@ -94,7 +94,7 @@ experimental = true
 
 mise counts a task include from a `git::` source as experimental: without `experimental = true` it skips the include, with only a warning, and the repo has none of these tasks. `adopt` and `new` write it; `adopt` names it among the lines to add to a `mise.toml` you have.
 
-That folder has `adopt`, `release`, `repo`, `repo:check`, `repo:ci`, `issue`, `issues`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:check`, `docs:review` and `docs:pages` ([Tasks](../reference/tasks.md#any-repo)), and none of a project's: no release, workflows, SDK or Cloudflare tasks. They run `charter`; a repo that runs the tool another way sets `CHARTER_TOOL` under `[env]`. A task of the same name in `mise.toml` takes the place of the included one.
+That folder has `adopt`, `release`, `repo`, `repo:check`, `repo:ci`, `issue`, `issues`, `upstream:status`, `adopt`, `docs:lint`, `docs:check`, `docs:review` and `docs:pages` ([Tasks](../reference/tasks.md#any-repo)), and none of a project's: no release, workflows, SDK or Cloudflare tasks. They run `charter`; a repo that runs the tool another way sets `CHARTER_TOOL` under `[env]`. A task of the same name in `mise.toml` takes the place of the included one.
 
 ## What each aspect needs
 

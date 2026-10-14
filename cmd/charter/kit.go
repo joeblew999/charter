@@ -81,6 +81,9 @@ func keepCharters(dir string, files map[string][]byte, check bool) (stale, kept 
 			continue // one that waits (the tasks page, before mise can list the tasks): what is there stays
 		}
 		path := filepath.Join(dir, name)
+		if charters, _, ok := markOf(content); ok && !charters && exists(path) {
+			continue // a file the repo starts with (docs/README.md): written once, then the repo's
+		}
 		have, err := os.ReadFile(path)
 		switch {
 		case err == nil && bytes.Equal(have, content):
@@ -142,8 +145,8 @@ func sweep(root, dir string, match func(name string) bool, files map[string][]by
 }
 
 // kitFor is the kit for the repo at root, by path in the repo: every file of cmd/charter/kit copied as
-// it is, but for which of them the repo takes (a project's workflows or charter.yml; AGENTS.md and
-// CLAUDE.md where it has no project of its own; renovate.json unless charter.toml says not), and the
+// it is, but for which of them the repo takes (a project's workflows or charter.yml; renovate.json
+// unless charter.toml says not), and the
 // two pages written from the tool and from mise. What cannot be written yet is in waiting, with why:
 // its path is in files with no content, so what is there stays.
 func kitFor(root string) (files map[string][]byte, waiting map[string]string, err error) {
@@ -151,7 +154,7 @@ func kitFor(root string) (files map[string][]byte, waiting map[string]string, er
 	if err != nil {
 		return nil, nil, err
 	}
-	project, projects := isProject(root), hasProjects(root, config)
+	project := isProject(root)
 	files, waiting = map[string][]byte{}, map[string]string{}
 	err = fs.WalkDir(kit, "kit", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() {
@@ -161,7 +164,6 @@ func kitFor(root string) (files map[string][]byte, waiting map[string]string, er
 		base := filepath.Base(rel)
 		switch {
 		case rel == "renovate.json" && !config.Renovate,
-			(rel == "AGENTS.md" || rel == "CLAUDE.md") && projects,
 			rel == ".github/workflows/"+repoWorkflow && (project || !config.Workflow),
 			strings.HasPrefix(rel, ".github/workflows/charter-") && !project,
 			base == "charter-release-cli.yml" && !shipsCLI(root):
@@ -177,10 +179,11 @@ func kitFor(root string) (files map[string][]byte, waiting map[string]string, er
 		return nil, nil, err
 	}
 	files[filepath.Join(config.Docs, charterFolder, "using.md")] = []byte(docsUsing())
-	if path, page, err := tasksFile(root, config.Docs); err == nil {
+	path := filepath.Join(config.Docs, charterFolder, "tasks.md")
+	if _, page, err := tasksFile(root, config.Docs); err == nil {
 		files[path] = page
 	} else {
-		files[path] = nil
+		files[path] = nil // what is there stays: the sweep must not take it
 		waiting[path] = "mise could not list the tasks yet (mise install first)"
 	}
 	return files, waiting, nil
@@ -213,6 +216,13 @@ func writeKit(root string, check bool) (changed, kept []string, waiting map[stri
 		changed = append(changed, gone...)
 	}
 	return changed, kept, waiting, nil
+}
+
+// markedCharters reports whether the file is there and carries charter's mark.
+func markedCharters(path string) bool {
+	content, err := os.ReadFile(path)
+	charters, _, ok := markOf(content)
+	return err == nil && ok && charters
 }
 
 // isCharter reports whether the repo at root is charter's own: its tasks run the tool from the

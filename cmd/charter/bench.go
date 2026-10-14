@@ -10,25 +10,17 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"sort"
 	"strings"
 	"time"
 )
 
+// charter bench: time every operation of an API from its OpenAPI spec: wall time, and with -cpu the CPU time Cloudflare measured
+// Run by: mise run perf (tasks/repo/tasks.toml); mise run bench (the examples' mise.toml)
 func init() {
 	commands["bench"] = command{"[-n 20] [-spec <file or url>] [-write] [-cpu] [-warm 45s] [-worker <name>] [-header 'Name: value']... [<url>]",
 		"time every operation of an API from its OpenAPI spec: wall time, and with -cpu the CPU time Cloudflare measured", bench}
 	anywhere["bench"] = true
-}
-
-// benchClient gives every request a limit, so a run can't hang on one.
-var benchClient = &http.Client{Timeout: 30 * time.Second}
-
-// A call is one operation made callable from the spec's own examples.
-type call struct {
-	method, path, trigger string
-	body                  []byte
 }
 
 // bench times an API's operations as a client sees them, and with -cpu also reads what they cost
@@ -297,62 +289,6 @@ func callsFromSpec(source string, write bool, given map[string][]byte) (calls []
 	return calls, skipped, nil
 }
 
-// example is a value for a parameter or a schema: its own example, or one built from its
-// properties' examples (an object's required properties), following $ref.
-func example(doc map[string]any, holder map[string]any) any {
-	if v, ok := holder["example"]; ok {
-		return v
-	}
-	schema, _ := holder["schema"].(map[string]any)
-	for depth := 0; schema != nil && depth < 8; depth++ {
-		ref, ok := schema["$ref"].(string)
-		if !ok {
-			break
-		}
-		schema, _ = dig(doc, strings.Split(strings.TrimPrefix(ref, "#/"), "/")...).(map[string]any)
-	}
-	if schema == nil {
-		return nil
-	}
-	if examples := items(schema["examples"]); len(examples) > 0 {
-		return examples[0]
-	}
-	for _, key := range []string{"example", "default"} {
-		if v, ok := schema[key]; ok {
-			return v
-		}
-	}
-	if values := items(schema["enum"]); len(values) > 0 {
-		return values[0]
-	}
-	if properties, ok := schema["properties"].(map[string]any); ok {
-		object := map[string]any{}
-		for _, name := range items(schema["required"]) {
-			property, _ := properties[fmt.Sprint(name)].(map[string]any)
-			value := example(doc, map[string]any{"schema": property})
-			if value == nil {
-				return nil
-			}
-			object[fmt.Sprint(name)] = value
-		}
-		return object
-	}
-	return nil
-}
-
-func dig(v any, keys ...string) any {
-	for _, key := range keys {
-		m, ok := v.(map[string]any)
-		if !ok {
-			return nil
-		}
-		v = m[key]
-	}
-	return v
-}
-
-func items(v any) []any { l, _ := v.([]any); return l }
-
 // A sample is one request bench made: its operation, "burst" when it was one of -burst, Cloudflare's
 // id for it, and the kind of Go runtime that served it ("warm", "new", "reused", or nothing).
 type sample struct{ trigger, phase, ray, kind string }
@@ -483,16 +419,4 @@ func summarise(samples []sample, cpu map[string]float64) map[string][2]float64 {
 		out[trigger] = [2]float64{all[len(all)/2], all[min(len(all)-1, len(all)*99/100)]}
 	}
 	return out
-}
-
-// secret is an environment variable, or the same name from fnox when the environment has none.
-func secret(name string) string {
-	if value := os.Getenv(name); value != "" {
-		return value
-	}
-	out, err := exec.Command("fnox", "get", name).Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
 }

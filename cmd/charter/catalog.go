@@ -17,48 +17,12 @@ import (
 	"time"
 )
 
-// `charter catalog` finds which of an owner's repos use each other, from what is already in them.
-// The charter repos are those with the GitHub topic charter (charter repo sets it), charter itself,
-// and every repo that pins one of them. For each it lists what it publishes (its latest release and
-// its files, specs, Go modules, npm packages, task folders, deployed URL) and its consumers: the
-// repos whose mise.toml, go.mod or package.json pins it, at which version. Nothing is declared for
-// the catalog: it reads the pins the repos build with. Read-only.
-
+// charter catalog: REMOTE, read-only: the owner's charter repos, what each publishes, and the repos that pin it (their mise.toml, go.mod, package.json), as Markdown or -json; -page adds a docs page's front matter
+// Run by: mise run catalog (mise.toml)
 func init() {
 	commands["catalog"] = command{"[-owner <login>] [-json] [-page]",
 		"REMOTE, read-only: the owner's charter repos, what each publishes, and the repos that pin it (their mise.toml, go.mod, package.json), as Markdown or -json; -page adds a docs page's front matter", catalogCommand}
 	anywhere["catalog"] = true
-}
-
-type catalog struct {
-	Owner string     `json:"owner"`
-	Read  string     `json:"read"` // when, RFC 3339
-	Repos []producer `json:"repos"`
-}
-
-type producer struct {
-	Repo        string   `json:"repo"` // owner/name
-	Description string   `json:"description,omitempty"`
-	Topic       bool     `json:"topic"`             // has the topic charter
-	Release     string   `json:"release,omitempty"` // the latest release's tag
-	Binaries    []string `json:"binaries,omitempty"`
-	Files       []string `json:"files,omitempty"` // the latest release's other files
-	Specs       []string `json:"specs,omitempty"`
-	GoModules   []string `json:"go_modules,omitempty"`
-	Packages    []string `json:"packages,omitempty"` // npm
-	Tasks       []string `json:"tasks,omitempty"`    // folders a mise.toml can include
-	Deployed    []string `json:"deployed,omitempty"`
-	Consumers   []pin    `json:"consumers"`
-}
-
-// pin is one place a repo says which version of another it uses.
-type pin struct {
-	Repo    string `json:"repo"`    // the consumer
-	File    string `json:"file"`    // where, in the consumer
-	Kind    string `json:"kind"`    // tool (mise [tools]), tasks (mise includes), go, npm
-	Name    string `json:"name"`    // what it pins
-	Version string `json:"version"` // as written
-	Target  string `json:"-"`       // the producer, owner/name
 }
 
 func catalogCommand(args []string) error {
@@ -178,7 +142,7 @@ var (
 	taskFolder = regexp.MustCompile(`^(tasks/[^/]+)/[^/]+\.toml$`)
 )
 
-const maxPinFiles = 60 // per repo: a large monorepo is read in part, and says so
+const maxPinFiles = 60
 
 func readCatalog(client githubClient, owner string, now time.Time) (catalog, error) {
 	var listings []githubListing
@@ -295,19 +259,6 @@ func escapePath(p string) string {
 	}
 	return strings.Join(parts, "/")
 }
-
-var (
-	// github.com/owner/name in a URL, a module path or a git remote.
-	githubRepoRef = regexp.MustCompile(`github\.com[/:]([A-Za-z0-9_.-]+)/([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*?)(?:\.git)?(?:[/#?"' ]|$)`)
-	miseSection   = regexp.MustCompile(`^\[([^\]]+)\]\s*$`)
-	miseTool      = regexp.MustCompile(`^"?((?:github|ubi|go):[^"=\s]+)"?\s*=\s*(.+)$`)
-	miseInclude   = regexp.MustCompile(`git::https://github\.com/([^/]+)/([^/]+?)(?:\.git)?//([^?"]+)\?ref=([^"]+)`)
-	quotedVersion = regexp.MustCompile(`^"([^"]*)"|version\s*=\s*"([^"]*)"`)
-	goRequire     = regexp.MustCompile(`^(?:require\s+)?(github\.com/\S+)\s+(v\S+)(\s*//\s*indirect)?`)
-	npmGitHub     = regexp.MustCompile(`^(?:github:|git\+https://github\.com/|https://github\.com/)([^/]+)/([^/#.]+)`)
-	npmVersion    = regexp.MustCompile(`releases/download/([^/]+)/|#(.+)$`)
-	apiURL        = regexp.MustCompile(`(?m)^API_URL\s*=.*?(https://[^'"\s}]+)`)
-)
 
 // pinsIn are the pins in one file of a repo: mise.toml's tools and task includes, go.mod's direct
 // requirements, package.json's dependencies on GitHub.

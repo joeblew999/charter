@@ -28,7 +28,7 @@ API_URL = "{{ get_env(name='API_URL', default='https://charter-start-ts.gedw99.w
 [task_config]
 # The tasks any repo takes, those every project shares, and those of its language: charter's tasks/ folders (a project
 # includes them from GitHub, by tag). A task defined below takes the place of the included one.
-includes = ["../../tasks/repo", "../../tasks/shared", "../../tasks/ts"]
+includes = ["../../tasks/repo"]
 
 # ---- the project ---------------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ run = "npm ci --no-fund --no-audit --prefix ../../ts && npm run build --prefix .
 
 [tasks.check]
 description = "Every LOCAL check (no Cloudflare account): typecheck, the committed specs match the contract, the live test under workerd, and what is generated matches"
-depends = ["lint", "spec:check", "sdk:publish:fresh", "test:workerd", "workflows:check", "docs:check"]
+depends = ["lint", "spec:check", "sdk:publish:fresh", "test:workerd", "docs:check"]
 
 # ---- the API: run it, test it --------------------------------------------------------------------
 
@@ -71,3 +71,11 @@ run = 'node test/live-test.mjs {{env.API_URL}}'
 [tasks.bench]
 description = "REMOTE, read-only: every GET operation of the deployed Worker, wall time and Cloudflare's CPU time"
 run = '{{env.CHARTER_TOOL}} bench -cpu -warm 30s -spec fern/openapi.json'
+
+# TypeScript's dev: the shared one (charter's tasks) builds the Go Worker first.
+[tasks.dev]
+description = "The API on API_PORT (cf dev). First time, in another shell: mise run migrate:local"
+dir = "{{config_root}}"
+# Throwaway tokens: a project whose WORKER_SECRETS has READ_TOKEN and WRITE_TOKEN takes them.
+env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
+run = "{{env.CHARTER_TOOL}} exec -env PORT={{env.API_PORT}} cf dev"

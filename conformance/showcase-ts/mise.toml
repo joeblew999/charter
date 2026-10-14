@@ -34,7 +34,7 @@ API_MOCK_URL = "{{ get_env(name='API_MOCK_URL', default='https://charter-showcas
 [task_config]
 # The tasks any repo takes, those every project shares, and those of its language: charter's tasks/ folders (a project
 # includes them from GitHub, by tag). A task defined below takes the place of the included one.
-includes = ["../../tasks/repo", "../../tasks/shared", "../../tasks/ts"]
+includes = ["../../tasks/repo"]
 
 # ---- the project ---------------------------------------------------------------------------------
 
@@ -79,3 +79,11 @@ run = "{{env.CHARTER_TOOL}} harness-deploy"
 [tasks.live-test]
 description = "REMOTE: run Fern's TypeScript SDK inside the deployed Worker"
 run = "{{env.CHARTER_TOOL}} harness-test -remote"
+
+# TypeScript's dev: the shared one (charter's tasks) builds the Go Worker first.
+[tasks.dev]
+description = "The API on API_PORT (cf dev). First time, in another shell: mise run migrate:local"
+dir = "{{config_root}}"
+# Throwaway tokens: a project whose WORKER_SECRETS has READ_TOKEN and WRITE_TOKEN takes them.
+env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
+run = "{{env.CHARTER_TOOL}} exec -env PORT={{env.API_PORT}} cf dev"

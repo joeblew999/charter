@@ -1,166 +1,22 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 )
 
-// `charter repo` keeps the repo on GitHub in shape from charter.toml at its root: its labels, its
-// description, homepage and topics, and GitHub Pages. It writes no file: charter adopt writes the kit.
-// Each item prints ok or changed, and running it again changes nothing. With -check it changes
-// nothing and fails if an item differs, for CI.
-
+// charter repo: keep the repo on GitHub in shape from charter.toml at its root: labels, description, homepage, topics, Pages (it writes no file: adopt writes the kit); -check changes nothing and fails on drift
+// Run by: mise run repo (tasks/repo/tasks.toml); mise run repo:check (tasks/repo/tasks.toml)
 func init() {
 	commands["repo"] = command{"[-check]",
 		"keep the repo on GitHub in shape from charter.toml at its root: labels, description, homepage, topics, Pages (it writes no file: adopt writes the kit); -check changes nothing and fails on drift", repoCommand}
 	anywhere["repo"] = true
-}
-
-// charterToml is charter.toml: a few `key = "value"` and `key = ["a", "b"]` lines.
-type charterToml struct {
-	Description string   // the repo's description on GitHub, and the docs site's
-	Topics      []string // the repo's topics on GitHub
-	Homepage    string   // default: the GitHub Pages URL
-	Docs        string   // the docs folder, default "docs"
-	Projects    []string // folders that are charter projects; with any, the repo gets the workflows
-	Renovate    bool     // write renovate.json, which takes charter's Renovate preset; default true
-	Workflow    bool     // in a repo that is not a project: write the charter.yml workflow; default true
-}
-
-var (
-	tomlLine   = regexp.MustCompile(`^([a-z]+)\s*=\s*(.*)$`)
-	tomlString = `"(?:[^"\\]|\\.)*"`
-	tomlList   = regexp.MustCompile(`^\[\s*(` + tomlString + `(?:\s*,\s*` + tomlString + `)*)?\s*,?\s*\]$`)
-	tomlItem   = regexp.MustCompile(tomlString)
-	topicName  = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,49}$`)
-)
-
-// parseCharterToml reads charter.toml. Only the standard library: the format is a small part of
-// TOML, one key per line, and anything else is an error, not ignored.
-func parseCharterToml(text string) (charterToml, error) {
-	config := charterToml{Docs: "docs", Renovate: true, Workflow: true}
-	seen := map[string]bool{}
-	for number, line := range strings.Split(text, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		at := func(format string, a ...any) error {
-			return fmt.Errorf("charter.toml, line %d: "+format, append([]any{number + 1}, a...)...)
-		}
-		m := tomlLine.FindStringSubmatch(line)
-		if m == nil {
-			return config, at(`want key = "value" or key = ["a", "b"]`)
-		}
-		key, value := m[1], m[2]
-		if seen[key] {
-			return config, at("%s twice", key)
-		}
-		seen[key] = true
-		var text string
-		var list []string
-		switch key {
-		case "description", "homepage", "docs":
-			unquoted, err := strconv.Unquote(value)
-			if err != nil || !strings.HasPrefix(value, `"`) {
-				return config, at(`%s is a string in double quotes`, key)
-			}
-			text = unquoted
-		case "renovate", "workflow":
-			if value != "true" && value != "false" {
-				return config, at("%s is true or false", key)
-			}
-		case "topics", "projects":
-			if !tomlList.MatchString(value) {
-				return config, at(`%s is a list: ["a", "b"]`, key)
-			}
-			list = []string{}
-			for _, item := range tomlItem.FindAllString(value, -1) {
-				unquoted, err := strconv.Unquote(item)
-				if err != nil {
-					return config, at("%s: %v", item, err)
-				}
-				list = append(list, unquoted)
-			}
-		default:
-			return config, at("no key %q: description, topics, homepage, docs, projects, renovate, workflow", key)
-		}
-		switch key {
-		case "description":
-			config.Description = text
-		case "homepage":
-			config.Homepage = text
-		case "docs":
-			config.Docs = filepath.ToSlash(filepath.Clean(text))
-		case "topics":
-			config.Topics = list
-		case "projects":
-			config.Projects = list
-		case "renovate":
-			config.Renovate = value == "true"
-		case "workflow":
-			config.Workflow = value == "true"
-		}
-	}
-	if config.Description == "" {
-		return config, errors.New(`charter.toml needs description = "..."`)
-	}
-	for _, topic := range config.Topics {
-		if !topicName.MatchString(topic) {
-			return config, fmt.Errorf("charter.toml: topic %q: GitHub takes lower-case letters, digits and hyphens, up to 50", topic)
-		}
-	}
-	if !slices.Contains(config.Topics, charterTopic) {
-		config.Topics = append(config.Topics, charterTopic)
-	}
-	if len(config.Topics) > 20 {
-		return config, errors.New("charter.toml: GitHub takes up to 20 topics, charter's own among them")
-	}
-	if config.Docs != "docs" && config.Docs != "." {
-		return config, errors.New(`charter.toml: docs is "docs" or "." (GitHub Pages serves a site from one of those)`)
-	}
-	return config, nil
-}
-
-// readCharterToml reads the charter.toml of the repo at root; without one, the defaults.
-func readCharterToml(root string) (charterToml, error) {
-	text, err := os.ReadFile(filepath.Join(root, "charter.toml"))
-	if err != nil {
-		return charterToml{Docs: "docs", Renovate: true, Workflow: true}, nil
-	}
-	return parseCharterToml(string(text))
-}
-
-// charterTopic is the topic every repo charter repo keeps has: charter catalog finds them by it.
-const charterTopic = "charter"
-
-// charterTomlFor is the charter.toml that charter new and charter adopt write.
-func charterTomlFor(description string) string {
-	return "# The repo as `charter repo` keeps it (mise run repo). Topics: lower-case words and hyphens, e.g. [\"docs\", \"command-line\"].\n" +
-		"description = " + strconv.Quote(description) + "\ntopics = []\n"
-}
-
-// gh runs GitHub's command in dir and returns what it printed; on a failure the error says what gh
-// said. Tests replace it.
-var gh = func(dir string, args ...string) (string, error) {
-	cmd := exec.Command("gh", args...)
-	var stderr bytes.Buffer
-	cmd.Dir, cmd.Stderr = dir, &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("gh %s: %v: %s", strings.Join(args[:min(2, len(args))], " "), err, strings.TrimSpace(stderr.String()))
-	}
-	return strings.TrimSpace(string(out)), nil
 }
 
 func repoCommand(args []string) error {
@@ -248,25 +104,6 @@ func keepRepo(root string, check bool) error {
 		return fmt.Errorf("%d items differ from charter.toml and the tool's templates: mise run repo", drift)
 	}
 	return nil
-}
-
-// syncFiles writes the files (by their path below dir) that differ, or with check only names them.
-func syncFiles(dir string, files map[string][]byte, check bool) ([]string, error) {
-	var stale []string
-	for name, content := range files {
-		path := filepath.Join(dir, name)
-		if have, err := os.ReadFile(path); err == nil && bytes.Equal(have, content) {
-			continue
-		}
-		stale = append(stale, filepath.ToSlash(name))
-		if !check {
-			if err := write(path, string(content)); err != nil {
-				return nil, err
-			}
-		}
-	}
-	slices.Sort(stale)
-	return stale, nil
 }
 
 // labelRows are the labels in the kit's .github/charter-labels.tsv: name, color, description.

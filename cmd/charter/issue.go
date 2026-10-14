@@ -6,14 +6,11 @@ import (
 	"strings"
 )
 
-// The issue forms are for the web. gh and the API ignore forms, so an agent would file a body with
-// none of the fields triage needs: `charter issue <kind>` prints the form's headings as a body to
-// fill in, and the gh command that files it with the form's labels.
-
+// charter issue: print an issue body with the headings of that issue form, for gh issue create --body-file
+// Run by: mise run issue (tasks/repo/tasks.toml)
 func init() {
 	commands["issue"] = command{"<bug|feature|upstream|plan>", "print an issue body with the headings of that issue form, for gh issue create --body-file", issue}
-	commands["labels"] = command{"", "REMOTE: create or update this repo's GitHub labels from .github/charter-labels.tsv (the kit's), and remove GitHub's default ones that are unused", labels}
-	anywhere["issue"], anywhere["labels"] = true, true
+	anywhere["issue"] = true
 }
 
 func issue(args []string) error {
@@ -48,20 +45,4 @@ func issue(args []string) error {
 	fmt.Printf("<!-- Fill this in, then: gh issue create --title %q --label %s,agent-filed --body-file <this file> -->\n\n", title+"...", formLabels)
 	fmt.Print(strings.Join(body, "\n"))
 	return nil
-}
-
-// labels is the labels step of charter repo on its own.
-func labels([]string) error {
-	repo, err := gh(".", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner")
-	if err != nil {
-		return err
-	}
-	changes, err := syncLabels(".", repo, false)
-	for _, change := range changes {
-		fmt.Println("label:", change)
-	}
-	if err == nil && len(changes) == 0 {
-		fmt.Println("labels: ok")
-	}
-	return err
 }

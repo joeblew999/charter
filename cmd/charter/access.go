@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"maps"
-	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
@@ -15,6 +12,8 @@ import (
 	"strings"
 )
 
+// charter access: REMOTE: Cloudflare Access in front of the Worker (API_URL): people log in with GitHub, each machine has a service token of its own. Needs CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_GITHUB_IDP_ID (the environment, or fnox). Secrets are never printed
+// Run by: mise run access:delete (tasks/repo/tasks.toml); mise run access:setup (tasks/repo/tasks.toml); mise run access:token (tasks/repo/tasks.toml)
 func init() {
 	commands["access"] = command{"setup [email...] | token create <machine> <file|fnox> | token list | token revoke <machine> | delete",
 		"REMOTE: Cloudflare Access in front of the Worker (API_URL): people log in with GitHub, each machine has a service token of its own. Needs CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_GITHUB_IDP_ID (the environment, or fnox). Secrets are never printed", access}
@@ -54,65 +53,6 @@ func access(args []string) error {
 		return a.delete()
 	}
 	return errors.New("access setup [email...] | token create <machine> <file|fnox> | token list | token revoke <machine> | delete")
-}
-
-// envPrefix is go/auth's EnvPrefix: the start of the variables an API's SDKs read.
-func envPrefix(name string) string {
-	return strings.ToUpper(strings.NewReplacer("-", "_", " ", "_", ".", "_").Replace(name))
-}
-
-// cloudflare calls Cloudflare's API for one account.
-type cloudflare struct{ token, account string }
-
-// cloudflareAPI is where Cloudflare's API is (a test's server, in tests).
-var cloudflareAPI = "https://api.cloudflare.com/client/v4"
-
-func newCloudflare() (cloudflare, error) {
-	cf := cloudflare{secret("CLOUDFLARE_API_TOKEN"), secret("CLOUDFLARE_ACCOUNT_ID")}
-	if cf.token == "" || cf.account == "" {
-		return cf, errors.New("CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are not set (in the environment, or in fnox)")
-	}
-	return cf, nil
-}
-
-var ids = regexp.MustCompile(`[0-9a-f-]{32,}`)
-
-// call sends body (if any) to path under the account and decodes the result into out (if any).
-// What it says on failure has no IDs in it.
-func (cf cloudflare) call(method, path string, body, out any) error {
-	var reader io.Reader
-	if body != nil {
-		b, err := json.Marshal(body)
-		if err != nil {
-			return err
-		}
-		reader = bytes.NewReader(b)
-	}
-	req, err := http.NewRequest(method, cloudflareAPI+"/accounts/"+cf.account+path, reader)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", "Bearer "+cf.token)
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	var answer struct {
-		Success bool            `json:"success"`
-		Errors  json.RawMessage `json:"errors"`
-		Result  json.RawMessage `json:"result"`
-	}
-	if err := json.NewDecoder(res.Body).Decode(&answer); err != nil || !answer.Success {
-		return fmt.Errorf("%s %s: HTTP %d %s", method, ids.ReplaceAllString(path, "<id>"), res.StatusCode, answer.Errors)
-	}
-	if out != nil {
-		return json.Unmarshal(answer.Result, out)
-	}
-	return nil
 }
 
 type accessApp struct {

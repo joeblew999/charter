@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+// charter unchanged: run a program that writes generated files the project commits (gsx's *.x.go), and fail, naming them, if it changed, added or removed one: the committed ones were stale
+// Run by: mise run ui:check (the examples' mise.toml)
 func init() {
 	commands["unchanged"] = command{"-files <pattern,...> <program> [args]",
 		"run a program that writes generated files the project commits (gsx's *.x.go), and fail, naming them, if it changed, added or removed one: the committed ones were stale", unchanged}

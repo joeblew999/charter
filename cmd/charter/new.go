@@ -8,51 +8,16 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime/debug"
 	"strings"
 )
 
+// charter new: create a new API project: a copy of a tested example (examples/notes-go in the charter repo; -empty: examples/start-go; -empty -ui htmx: examples/start-htmx; -empty -ui datastar: examples/start-datastar) under your name; -cli adds the notes example's CLI to an -empty one
+// Run by: people, as `charter new`
 func init() {
 	commands["new"] = command{"-name <name> [-lang go|ts] [-empty [-ui htmx|datastar] [-cli]] [-module <go module>] [-subdomain <workers.dev subdomain>] [-into <dir>] [-from <checkout>]",
 		"create a new API project: a copy of a tested example (examples/notes-go in the charter repo; -empty: examples/start-go; -empty -ui htmx: examples/start-htmx; -empty -ui datastar: examples/start-datastar) under your name; -cli adds the notes example's CLI to an -empty one", newProject}
-	commands["version"] = command{"", "the release this tool is, which is what new pins a project to", func([]string) error {
-		fmt.Println(orCheckout(toolVersion()))
-		return nil
-	}}
-	anywhere["new"], anywhere["version"] = true, true
+	anywhere["new"] = true
 }
-
-const (
-	repoURL    = "https://github.com/joeblew999/charter"
-	repoModule = "github.com/joeblew999/charter"
-	docsURL    = "https://joeblew999.github.io/charter/"
-	// The tool as a module's package: what `go run` takes.
-	toolPackage = repoModule + "/cmd/charter"
-	// The tool as mise installs it: the release's binary for the system (GitHub's assets).
-	toolRelease = "github:joeblew999/charter"
-
-	// The example a new project is a copy of (Go; -lang ts: the TypeScript one), and its names in the
-	// charter repo. Both name their Go SDK by the Go example's module.
-	exampleDir    = "examples/notes-go"
-	exampleModule = repoModule + "/" + exampleDir
-	exampleWorker = "charter-notes-go"
-	exampleDirTS  = "examples/notes-ts"
-	// -empty: the same plumbing with one route (GET /api/hello) and no notes.
-	startDir   = "examples/start-go"
-	startDirTS = "examples/start-ts"
-	// -empty -ui htmx: start-go's plumbing with server-rendered pages (gsx, htmx 4) in the same Worker.
-	startDirHTMX = "examples/start-htmx"
-	// -empty -ui datastar: the same with the pages made live by Datastar instead.
-	startDirDatastar = "examples/start-datastar"
-	// How the example's tasks run the tool: from the checkout they are in.
-	exampleTool = "go run ../../cmd/charter"
-	// And the tasks of a project made from a checkout: CHARTER, in its mise.toml, is that checkout.
-	// (A template of mise's, which fills it in before any shell reads the line: $CHARTER is sh only.)
-	checkoutTool = "go run {{env.CHARTER}}/cmd/charter"
-	// Not copied: the committed Go SDK. It is generated from the specs, which carry the Worker's URL,
-	// and it is a module under the example's path: `mise run sdk:publish` writes the project's own.
-	exampleSDK = "sdk/go/"
-)
 
 // newProject makes a project that is the example under another name. The example is a complete
 // project (its own mise.toml, Go module, package.json, Fern folder, tests), so new copies its files
@@ -164,8 +129,6 @@ func newProject(args []string) error {
 	// What a repo has around a project: its start pages, the docs folder, the GitHub workflows.
 	for path, content := range map[string]string{
 		"README.md":      noCLI(withPages(projectReadme(name, orCheckout(version), apiPort(tasks), ts, empty), ui)),
-		"AGENTS.md":      agentsPage,
-		"CLAUDE.md":      claudePage,
 		"docs/README.md": noCLI(withPages(projectDocs(name, ts, empty), ui)),
 		"docs/rules.md":  projectRules(ts),
 		"charter.toml":   charterTomlFor(name + ": a contract-first API on Cloudflare Workers"),
@@ -329,11 +292,9 @@ func copyExample(from, into, name, module, subdomain, version, checkout string, 
 		envPrefix(exampleWorker) + "_", envPrefix(name) + "_",
 		exampleTool, tool,
 	}
-	// The tasks the project shares with every other: charter's tasks/ folders, from GitHub at the
-	// release, or from the checkout.
-	for _, folder := range []string{repoTasksFolder, "shared", "go", "ts"} {
-		pairs = append(pairs, `"../../tasks/`+folder+`"`, `"`+tasksInclude(folder, version, checkout)+`"`)
-	}
+	// The tasks the project shares with every repo: charter's one task file, from GitHub at the release,
+	// or from the checkout.
+	pairs = append(pairs, `"../../tasks/`+repoTasksFolder+`"`, `"`+tasksInclude(repoTasksFolder, version, checkout)+`"`)
 	if ts {
 		// The TypeScript library: the release's package, or the checkout's folder (built by setup).
 		library, build := tsPackageURL(version), ""
@@ -493,11 +454,6 @@ func pinned(version, checkout string, ts bool) string {
 	return fmt.Sprintf("charter %s, copying from %s: the tasks run the tool from that checkout (CHARTER in mise.toml), and go.mod builds against its library (a replace line)", orCheckout(version), checkout)
 }
 
-// tsPackageURL is where a release's TypeScript library is: the package the release workflow attaches.
-func tsPackageURL(version string) string {
-	return repoURL + "/releases/download/" + version + "/charter-ts-" + strings.TrimPrefix(version, "v") + ".tgz"
-}
-
 // finishTS is the end of new for a TypeScript project: the lockfile for its own @charter/ts, and
 // what to do next.
 func finishTS(into, name, subdomain, version, checkout string, tasks []byte, empty bool) error {
@@ -545,63 +501,6 @@ With a GitHub repo: mise run repo (charter.toml: its description, topics, docs s
 %s
 `, into, name, into, apiPort(tasks), startsAs("src/contract.ts", empty), afterDeploy(name, subdomain))
 	return nil
-}
-
-// toolPin are the lines of a mise.toml's [tools] that pin the tool to a release: mise installs that
-// release's binary, and it is on the path of every task.
-func toolPin(version string) string {
-	return "# The tool every task runs, the release's binary. `mise x " + toolRelease + "@X.Y.Z -- charter upgrade` moves it,\n# and the includes of charter's tasks with it.\n\"" + toolRelease + "\" = \"" + strings.TrimPrefix(version, "v") + "\"\n"
-}
-
-// tasksInclude is one of charter's tasks/ folders as a mise.toml includes it ([task_config]
-// includes): from GitHub at the release, or the checkout's folder (forward slashes on every system:
-// a backslash in a TOML string starts an escape).
-func tasksInclude(folder, version, checkout string) string {
-	if checkout != "" {
-		return filepath.ToSlash(filepath.Join(checkout, "tasks", folder))
-	}
-	return "git::" + repoURL + ".git//tasks/" + folder + "?ref=" + version
-}
-
-// gitIncludes is the setting a mise.toml needs for the includes tasksInclude writes from GitHub
-// (git::): mise counts task includes from a git source as experimental, and without it skips them
-// with only a warning, so the repo has none of charter's tasks. A checkout's folders need nothing.
-const gitIncludes = "[settings]\n# mise takes task includes from a git:: source only with this on; without it they are skipped,\n# with a warning, and none of charter's tasks are here.\nexperimental = true\n"
-
-// withGitIncludes is a mise.toml with gitIncludes at its end, unless it says so already.
-func withGitIncludes(text string) string {
-	if strings.Contains(text, "\nexperimental = true") {
-		return text
-	}
-	return strings.TrimRight(text, "\n") + "\n\n" + gitIncludes
-}
-
-// orCheckout names the tool's version, or says that it has none.
-func orCheckout(version string) string {
-	if version == "" {
-		return "(not a release: built from a checkout)"
-	}
-	return version
-}
-
-// toolVersion is the release this tool was built from (go run ...cmd/charter@v0.3.0), or "" from a
-// checkout.
-func toolVersion() string {
-	if built != "" && !strings.Contains(built, "SNAPSHOT") {
-		return built // a binary from a GitHub Release
-	}
-	info, ok := debug.ReadBuildInfo()
-	if !ok || !strings.HasPrefix(info.Main.Version, "v") || strings.Contains(info.Main.Version, "-0.") {
-		return "" // (devel), or a pseudo-version of an untagged commit
-	}
-	return info.Main.Version
-}
-
-func write(path, content string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(path, []byte(content), 0o644)
 }
 
 func projectReadme(name, version, port string, ts, empty bool) string {
@@ -738,3 +637,40 @@ const goRules = rulesHead + ruleDocs + `- **mise drives everything, locally and 
 - **Test locally and on Cloudflare.** After a deploy, ` + "`mise run live-test`" + ` must pass against the deployed Worker: some bugs exist only in production.
 - **Exact pins.** Tools in ` + "`mise.toml`" + `, Go modules in ` + "`go.mod`" + `, npm packages in ` + "`package.json`" + `. Lockfiles are committed.
 ` + ruleUpstream
+
+// The parts of a project's rules page, new's own.
+const (
+	rulesHead = `---
+title: Rules
+nav_order: 2
+---
+
+# Rules for working in this repo
+
+`
+	ruleDocs     = "- **`docs/` is the single source of truth.** Write things down in a page here, following [Writing docs](charter/writing.md). `mise run docs:lint` checks what a program can, `mise run docs:review` has Claude check the rest.\n"
+	ruleUpstream = "- **Workarounds name their upstream issue:** `Upstream: <owner>/<repo>#<n> (when fixed: ...)` in the code; `mise run upstream:status` lists them.\n"
+)
+
+// startPage is the top of a repo's docs/README.md, the docs site's home page: its front matter, its
+// name, the index of its pages, and the heading the map of the repo goes under.
+func startPage(name string) string {
+	return `---
+title: Start here
+nav_order: 1
+permalink: /
+---
+
+# ` + name + `
+
+Everything written about this repo lives in this folder. ` + "`AGENTS.md`" + ` only points here.
+
+| Page | What it covers |
+|---|---|
+| This page | What is what |
+| [rules.md](rules.md) | This repo's own rules |
+| [charter/](charter/README.md) | Charter's part, the same in every repo it keeps: [the rules they share](charter/rules.md), [using charter](charter/using.md), [writing docs](charter/writing.md), [the tasks](charter/tasks.md) |
+
+## What is what
+`
+}

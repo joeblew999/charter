@@ -30,87 +30,15 @@ CHARTER_TOOL = "go run ./cmd/charter"
 # from GitHub, by tag.
 includes = ["tasks/repo"]
 
-# ---- everything ----------------------------------------------------------------------------------
+# ---- this repo's own tasks, in the order you run them; the shared ones are in tasks/repo/tasks.toml ----
+
+# ==== 1. Set up: every example's npm packages, and the TypeScript library's =======================
 
 [tasks.setup]
 description = "Install every example's npm packages (its own mise run setup)"
 run = "go run ./cmd/charter each setup"
 
-[tasks.check]
-description = "Every LOCAL check (no Cloudflare account; needs Docker): the tool, the Go library, the TypeScript library, then each project's own check"
-depends = ["charter:check", "go:check", "ts:check", "projects:check"]
-
-[tasks."projects:check"]
-description = "LOCAL: mise run check in every project (examples/ and conformance/), one after the other, against the TypeScript library as built now"
-depends = ["ts:build"]
-run = "go run ./cmd/charter each check"
-
-[tasks.compare]
-description = "REMOTE, writes test notes: the same bench against the TypeScript notes Worker and then the Go one, with writes and the CPU of each request: are they level? About two minutes"
-run = "go run ./cmd/charter each -only notes-ts,notes-go bench -each -write -warm 20s -n 30"
-
-[tasks.doctor]
-description = "Check what each example's tasks need: npm packages, Docker, Go, Rust (with a CLI)"
-run = "go run ./cmd/charter each doctor"
-
-[tasks."sdk:clean"]
-description = "Remove every example's generated SDKs and stop leftover WireMock containers"
-run = "go run ./cmd/charter each sdk:clean"
-
-# ---- charter: the tool (cmd/charter) and what it writes ------------------------------------------
-
-[tasks."ci:scope"]
-description = "In the check workflow: which Windows and macOS jobs to run (all on a push; on a pull request, those for what it changes)"
-run = "go run ./cmd/charter ci-scope"
-
-[tasks."charter:check"]
-description = "The tool's own checks (gofmt, vet, tests, with the test that holds the two notes examples to one surface), the generated workflows and docs config match their templates, and docs/ passes the lint"
-run = "go run ./cmd/charter lint -vet ./cmd/...,./examples cmd examples/*.go && go test ./cmd/... ./examples && go run ./cmd/charter adopt -check && go run ./cmd/charter docs -check && go run ./cmd/charter docs-lint"
-
-[tasks.catalog]
-description = "REMOTE, read-only: the owner's charter repos, what each publishes, and the repos that pin it, as Markdown (-- -json for JSON, -- -page for a docs page)"
-run = "go run ./cmd/charter catalog"
-
-
-[tasks.release]
-description = "REMOTE: cut a release of the repo from this machine: mise run release -- vX.Y.Z [-dry-run]. Runs check and dist, tags, pushes, makes the GitHub Release, runs release:publish and release:tags"
-run = "go run ./cmd/charter release"
-
-[tasks.dist]
-description = "HEAVY: what the notes examples ship (their SDKs, specs and CLI for every OS), each into its own dist/: what mise run release builds before the tag"
-run = "go run ./cmd/charter each -only notes-go,notes-ts dist"
-
-[tasks."release:publish"]
-description = "REMOTE on a version tag (vX.Y.Z): the TypeScript library's package, then the tool (GoReleaser), then the notes examples' dist/, onto its GitHub Release. Anywhere else: the same as a dry run"
-run = "go run ./cmd/charter dist-ts && go run ./cmd/charter publish && go run ./cmd/charter release-tool && go run ./cmd/charter each -only notes-go,notes-ts release:publish"
-
-[tasks."charter:release"]
-description = "GoReleaser on the tool (.goreleaser.yaml). REMOTE on a version tag (vX.Y.Z): archives and checksums go to its GitHub Release. Anywhere else: a snapshot into dist/"
-run = "go run ./cmd/charter release-tool"
-
-[tasks."release:tags"]
-description = "REMOTE on a version tag (vX.Y.Z): tag the Go modules in subdirectories that others import (go/vX.Y.Z, examples/notes-go/sdk/go/vX.Y.Z). Anywhere else: a dry run"
-run = "go run ./cmd/charter release-tags go examples/notes-go/sdk/go"
-
-# ---- go: the Go library (go/) that a Go API on Workers imports, with the Worker glue (go/worker/) ----
-
-[tasks."go:lint"]
-description = "gofmt and go vet of the Go library, for the host and for Wasm"
-dir = "go"
-run = "go run ../cmd/charter lint -wasm ./... ."
-
-[tasks."go:test"]
-description = "The Go library's tests: humaworkers, transport, hub, follow, humamcp, asyncapi, specfile, auth, ratelimit"
-dir = "go"
-run = "go test ./..."
-
-[tasks."go:check"]
-description = "LOCAL: the Go library's lint and tests"
-depends = ["go:lint", "go:test"]
-
-# ---- ts: the TypeScript library (ts/), @charter/ts: a local package of the TypeScript examples here, a
 # package on each GitHub release for a project elsewhere -------------------------------------------
-
 [tasks."ts:setup"]
 description = "Install the TypeScript library's npm packages and build it (each TypeScript example's setup does it too)"
 dir = "ts"
@@ -121,29 +49,82 @@ description = "Compile the TypeScript library into ts/dist/ (JavaScript and type
 dir = "ts"
 run = "npm run build"
 
-[tasks."ts:lint"]
-description = "Typecheck the TypeScript library and its tests"
-dir = "ts"
-run = "go run ../cmd/charter exec tsc"
+# ==== 2. After a change (and the shared steps: mise run adopt, mise run issues): check, here ======
 
-[tasks."ts:test"]
-description = "The TypeScript library's tests: follow(), auth, ratelimit"
-dir = "ts"
-run = "go run ../cmd/charter exec vitest run"
+[tasks."charter:check"]
+description = "The tool's own checks (gofmt, vet, tests, with the test that holds the two notes examples to one surface), the generated workflows and docs config match their templates, and docs/ passes the lint"
+run = "go run ./cmd/charter lint -vet ./cmd/...,./examples cmd examples/*.go && go test ./cmd/... ./examples && go run ./cmd/charter adopt -check && go run ./cmd/charter docs-lint"
+
+[tasks."go:check"]
+description = "LOCAL: the Go library's lint (gofmt, go vet, for the host and for Wasm) and tests"
+dir = "go"
+run = "go run ../cmd/charter lint -wasm ./... . && go test ./..."
 
 [tasks."ts:check"]
 description = "LOCAL: the TypeScript library's typecheck and tests"
-depends = ["ts:lint", "ts:test"]
+dir = "ts"
+run = "go run ../cmd/charter exec tsc && go run ../cmd/charter exec vitest run"
+
+[tasks."projects:check"]
+description = "LOCAL: mise run check in every project (examples/ and conformance/), one after the other, against the TypeScript library as built now"
+depends = ["ts:build"]
+run = "go run ./cmd/charter each check"
+
+[tasks.check]
+description = "Every LOCAL check (no Cloudflare account; needs Docker): the tool, the Go library, the TypeScript library, then each project's own check"
+depends = ["charter:check", "go:check", "ts:check", "projects:check"]
+
+[tasks."ci:scope"]
+description = "In the check workflow: which Windows and macOS jobs to run (all on a push; on a pull request, those for what it changes)"
+run = "go run ./cmd/charter ci-scope"
+
+# ==== 3. Release: mise run release -- vX.Y.Z (the fast track for the tool alone: docs/contributing.md) ====
+
+[tasks.release]
+description = "REMOTE: cut a release of the repo from this machine: mise run release -- vX.Y.Z [-dry-run]. Runs check and dist, tags, pushes, makes the GitHub Release, runs release:publish and release:tags"
+run = "go run ./cmd/charter release"
+
+[tasks.dist]
+description = "HEAVY: what the notes examples ship (their SDKs, specs and CLI for every OS), each into its own dist/: what mise run release builds before the tag"
+run = "go run ./cmd/charter each -only notes-go,notes-ts dist"
 
 [tasks."ts:dist"]
 description = "Build the TypeScript library and pack it into dist/charter-ts-X.Y.Z.tgz, X.Y.Z from the version tag (none: 0.0.0-dev): what a project installs from the release's URL"
 run = "go run ./cmd/charter dist-ts"
 
+[tasks."charter:release"]
+description = "GoReleaser on the tool (.goreleaser.yaml). REMOTE on a version tag (vX.Y.Z): archives and checksums go to its GitHub Release. Anywhere else: a snapshot into dist/"
+run = "go run ./cmd/charter release-tool"
+
+[tasks."release:publish"]
+description = "REMOTE on a version tag (vX.Y.Z): the TypeScript library's package, then the tool (GoReleaser), then the notes examples' dist/, onto its GitHub Release. Anywhere else: the same as a dry run"
+run = "go run ./cmd/charter dist-ts && go run ./cmd/charter publish && go run ./cmd/charter release-tool && go run ./cmd/charter each -only notes-go,notes-ts release:publish"
+
 [tasks."ts:release"]
 description = "REMOTE on a version tag (vX.Y.Z): attach dist/* (what ts:dist wrote) to its GitHub Release, if it lacks them. Anywhere else: a dry run that lists dist/"
 run = "go run ./cmd/charter publish"
 
-# ---- cloudflare: the credentials a deploy from GitHub needs --------------------------------------
+[tasks."release:tags"]
+description = "REMOTE on a version tag (vX.Y.Z): tag the Go modules in subdirectories that others import (go/vX.Y.Z, examples/notes-go/sdk/go/vX.Y.Z). Anywhere else: a dry run"
+run = "go run ./cmd/charter release-tags go examples/notes-go/sdk/go"
+
+# ==== Now and then ================================================================================
+
+[tasks.doctor]
+description = "Check what each example's tasks need: npm packages, Docker, Go, Rust (with a CLI)"
+run = "go run ./cmd/charter each doctor"
+
+[tasks."sdk:clean"]
+description = "Remove every example's generated SDKs and stop leftover WireMock containers"
+run = "go run ./cmd/charter each sdk:clean"
+
+[tasks.compare]
+description = "REMOTE, writes test notes: the same bench against the TypeScript notes Worker and then the Go one, with writes and the CPU of each request: are they level? About two minutes"
+run = "go run ./cmd/charter each -only notes-ts,notes-go bench -each -write -warm 20s -n 30"
+
+[tasks.catalog]
+description = "REMOTE, read-only: the owner's charter repos, what each publishes, and the repos that pin it, as Markdown (-- -json for JSON, -- -page for a docs page)"
+run = "go run ./cmd/charter catalog"
 
 [tasks."cloudflare:secrets"]
 description = "REMOTE, once per repo: copy CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from fnox into this repo's GitHub secrets, for the deploy workflow"

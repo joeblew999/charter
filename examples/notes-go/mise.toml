@@ -41,13 +41,13 @@ API_URL = "{{ get_env(name='API_URL', default='https://charter-notes-go.gedw99.w
 [task_config]
 # The tasks any repo takes, those every project shares, and those of its language: charter's tasks/ folders (a project
 # includes them from GitHub, by tag). A task defined below takes the place of the included one.
-includes = ["../../tasks/repo", "../../tasks/shared", "../../tasks/go"]
+includes = ["../../tasks/repo"]
 
 # ---- the project ---------------------------------------------------------------------------------
 
 [tasks.check]
 description = "Every LOCAL check (no Cloudflare account): lint, tests, spec drift, the TinyGo build, the live and MCP tests natively and under workerd, and what is generated matches"
-depends = ["lint", "test", "spec:check", "sdk:publish:fresh", "test:native", "test:workerd", "workflows:check", "docs:check"]
+depends = ["lint", "test", "spec:check", "sdk:publish:fresh", "test:native", "test:workerd", "docs:check"]
 
 # ---- the API: run it, build it, test it ----------------------------------------------------------
 

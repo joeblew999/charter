@@ -22,6 +22,8 @@ import (
 	"time"
 )
 
+// charter tail: REMOTE, read-only: stream the deployed Worker's live logs (each request, its console output and exceptions) until Ctrl-C or -for ends. The Worker: API_URL's, unless -worker names another. Needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (the environment, or fnox)
+// Run by: mise run tail (tasks/repo/tasks.toml)
 func init() {
 	commands["tail"] = command{"[-worker <name>] [-for <duration>]",
 		"REMOTE, read-only: stream the deployed Worker's live logs (each request, its console output and exceptions) until Ctrl-C or -for ends. The Worker: API_URL's, unless -worker names another. Needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (the environment, or fnox)", tail}

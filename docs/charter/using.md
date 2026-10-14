@@ -36,20 +36,16 @@ Those marked * work in any repo; the others in a project, a folder with a `mise.
 | `dist-cli [-target <os>-<arch>,...]` | HEAVY: generate the project's Fern CLI and build it into dist/ for darwin, linux and windows on amd64 and arm64: every target this machine builds (a Mac builds all six) |
 | `dist-sdk` | generate, check and archive the project's SDKs and its specs into dist/ (Docker) |
 | `dist-ts [-tag vX.Y.Z]` * | build the TypeScript library (ts/) and pack it, versioned as the tag, into dist/charter-ts-X.Y.Z.tgz: the package a project installs from the GitHub Release's URL (no tag: version 0.0.0-dev) |
-| `docs [-into <repo dir>] [-check]` * | write the pages docs/_generated.toml lists, each from its command (charter's own pages and the site's files are the kit's: charter adopt); -check fails if one is stale |
 | `docs-lint [-into <repo dir>]` * | check docs/ for what can be checked without reading: front matter, links, the index, tasks and paths that don't exist |
 | `docs-review [-print]` * | have Claude bring docs/ up to date and into line with docs/charter/writing.md (-print: only show the prompt) |
-| `docs-tasks [-only <source,...>] [-not <source,...>] [-title <text>]` * | print the repo's mise tasks as a docs page, for docs/_generated.toml: grouped by the file or include they come from, in the order they are written, each with its description, arguments and flags; -only and -not choose the sources |
 | `doctor` | check what the project's tasks need: npm installs, Docker, Go, Rust (with a CLI), leftover containers |
 | `each [-only <name,...>] <task> [args]` * | run a mise task in every project below this folder that has it (a repo that holds several projects, as this tool's own does in examples/) |
 | `exec [-env NAME=VALUE]... [-quiet] [-secrets] <program> [args]` * | run a program with these variables set; one that an npm package of the project installed (cf, fern, tsc) is found in node_modules/.bin. -quiet: its output only if it fails. -secrets: with the secrets WORKER_SECRETS names, from fnox unless they are set already (as on GitHub) |
-| `files` * | list every file in this repo that charter wrote, by the mark in its first lines: charter's (and whether it is what this release writes) or yours since charter started it |
 | `github-secrets <NAME>...` * | copy environment variables into this repo's GitHub Actions secrets (values are never printed) |
 | `harness-deploy` | REMOTE: deploy the project's Worker twice: as itself and, --mode api, as <worker>-api |
 | `harness-sync` | copy the project's compiled TypeScript SDK (sdk/out/typescript-dist) into its Worker (src/client), generating it first if the specs are newer |
 | `harness-test [-remote]` | run the SDK test inside the project's Worker: under cf dev, or the deployed one (API_URL, API_MOCK_URL) |
 | `issue <bug\|feature\|upstream\|plan>` * | print an issue body with the headings of that issue form, for gh issue create --body-file |
-| `labels` * | REMOTE: create or update this repo's GitHub labels from .github/charter-labels.tsv (the kit's), and remove GitHub's default ones that are unused |
 | `lint [-vet <packages>] [-wasm <packages>] <file or folder>...` * | fail if gofmt would change one of the files (a * pattern is matched here, not by the shell), then go vet the packages (default ./...), and those of -wasm for Wasm (GOOS=js GOARCH=wasm) |
 | `migrate [-worker <name>]` | REMOTE: apply pending migrations/ to the Worker's D1 database (<worker>-db; the Worker: API_URL's) |
 | `migrate-local [-port <port>]` | apply migrations/*.sql to a running dev server's local D1, each once (the port: API_PORT) |
@@ -68,7 +64,6 @@ Those marked * work in any repo; the others in a project, a folder with a `mise.
 | `sdk-list` | the SDK groups the project defines (fern/generators.yml) |
 | `sdk-publish [-check [-quick]] [-into <dir>]` | generate the Go SDK, check it, and copy its sources into the committed folder another repo can go get (sdk/go); -check: fail if that copy is stale (Docker) |
 | `sdk-ready [group...]` | generate and build what the tests use, if missing: TypeScript and Go SDKs, the Fern CLI if the project has one (or only the groups named) |
-| `size -max <bytes> <file>` * | fail if <file>, gzipped, is larger than <bytes> |
 | `spec-diff [-from vX.Y.Z] [-to vX.Y.Z] [-tag vX.Y.Z] [-catalog <file or url>]` | compare fern/openapi.json and fern/asyncapi.json with the previous release's (git tags) and fail on a breaking change unless -tag is a major release; -catalog names the consumers it affects |
 | `tail [-worker <name>] [-for <duration>]` | REMOTE, read-only: stream the deployed Worker's live logs (each request, its console output and exceptions) until Ctrl-C or -for ends. The Worker: API_URL's, unless -worker names another. Needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (the environment, or fnox) |
 | `unchanged -files <pattern,...> <program> [args]` | run a program that writes generated files the project commits (gsx's *.x.go), and fail, naming them, if it changed, added or removed one: the committed ones were stale |

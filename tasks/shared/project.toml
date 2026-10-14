@@ -1,8 +1,0 @@
-# Charter's project tasks: a project includes this folder by tag (mise.toml, [task_config] includes),
-# and its tasks run in the project (dir), calling the tool as CHARTER_TOOL (its mise.toml sets it).
-# What a project's tasks need.
-
-["doctor"]
-description = "Check what the tasks need: npm packages, Docker, Go, Rust (with a CLI)"
-dir = "{{config_root}}"
-run = "{{env.CHARTER_TOOL}} doctor"

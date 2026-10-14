@@ -32,8 +32,7 @@ A repo with no API takes the parts that are not about one (the docs site, the re
 | The library | `go/` | What a Go project imports ([Go packages](reference/packages.md)) |
 | The TypeScript library | `ts/` | `@charter/ts`: the AsyncAPI generator for oRPC, both specs from one contract, `follow()`, `auth`: bearer tokens, Cloudflare Access and an OpenID Connect issuer, with scopes, and `ratelimit`: limits per caller. The TypeScript examples take it as a local package; elsewhere it is installed from a release |
 | The Worker glue | `go/worker/` | The JavaScript the library needs; the build copies it into `build/` |
-| The tasks for any repo | `tasks/repo/` | The tasks a repo takes whether or not it is a project: the repo on GitHub, the docs site, the issues, the upstream issues ([Any repo](guides/any-repo.md)) |
-| The shared tasks | `tasks/shared/`, `tasks/go/`, `tasks/ts/` | The tasks every project includes beside those, at the release it pins; its `mise.toml` holds only its own |
+| Charter's tasks | `tasks/repo/tasks.toml` | The one task file every repo includes, project or not, at the release it pins; a repo's `mise.toml` holds only its own ([Any repo](guides/any-repo.md)) |
 | The tool | `cmd/charter/` | The command behind every task ([The charter command](reference/charter.md)) |
 | The examples | `examples/notes-go/` (what `charter new` copies), `examples/notes-ts/` | The notes API, in Go and in TypeScript |
 | The start projects | `examples/start-go/`, `examples/start-ts/` (what `charter new -empty` copies) | One route, `GET /api/hello`, with the same tasks, specs, SDKs, tests and workflows, and no CLI (`-empty -cli` adds the notes example's) |
@@ -53,7 +52,7 @@ Never edit these: change the source and run the task.
 | `.github/` (but `workflows/check.yml`, `deploy.yml`, `release.yml`, `sdk-check.yml`, this repo's own), `renovate.json`, `AGENTS.md`, `CLAUDE.md` in a repo with no project at its root | `mise run adopt`, from `cmd/charter/kit/` |
 | `docs/charter/`, `docs/_config.yml`, `docs/llms.txt`, `docs/_sass/` | `mise run adopt`, from `cmd/charter/kit/` |
 | `docs/charter/tasks.md`, `docs/charter/using.md` | `mise run adopt`, from mise and from the tool |
-| A page that `_generated.toml` in `docs/` lists (this repo has none) | `mise run docs:setup`, from its command ([Generated pages](guides/deploy.md#generated-pages)) |
+| A page that `_generated.toml` in `docs/` lists (this repo has none) | `mise run adopt`, from its command ([Generated pages](guides/deploy.md#generated-pages)) |
 
 ## Every page
 

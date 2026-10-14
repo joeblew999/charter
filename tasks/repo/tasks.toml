@@ -1,0 +1,292 @@
+# Charter's tasks, the one file every repo includes (mise.toml, [task_config] includes), from GitHub at
+# the release it pins. A task the repo defines in its own mise.toml takes the place of the one here.
+#
+# This file is the flow: its tasks are in the order you run them, step by step.
+# Before it, once, in a repo with nothing of charter's (X.Y.Z: the latest release, named, as mise
+# caches its list of releases):
+#   mise x github:joeblew999/charter@X.Y.Z -- charter adopt
+#   mise trust && mise install
+# To move to a new release: mise x github:joeblew999/charter@X.Y.Z -- charter upgrade, then step 1.
+
+# ==== 1. Charter's files: write the kit as this release has it (docs/charter/, the site, the forms, the workflows) ====
+
+# or not it is a charter project. The tasks run at the repo's root and call the tool as CHARTER_TOOL, or
+# as charter where the repo does not set it (it pins the tool under [tools]). A task the repo defines in
+# its own mise.toml takes the place of the one here with its name: a TypeScript project defines its own
+# dev and setup. The tasks of an API project fail in a repo that has none.
+["adopt"]
+description = "Write charter's kit into this repo as this release has it: docs/charter/, the docs site's files, the issue forms, the workflows, AGENTS.md, CLAUDE.md, renovate.json; never a file of the repo's own"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} adopt"
+
+# ==== 2. The repo on GitHub, from charter.toml: labels, description, topics, Pages ================
+
+# The repo on GitHub, its issues, and the upstream issues its code works around.
+["repo"]
+description = "REMOTE: keep the repo on GitHub in shape from charter.toml at its root: labels, description, homepage, topics, GitHub Pages. It writes no file: mise run adopt writes the kit"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} repo"
+
+# ==== 3. Before a change: what is reported and planned ============================================
+
+["issues"]
+description = "REMOTE, read-only: the open issues, newest first: what is reported and what is planned (a plan is an issue)"
+dir = "{{config_root}}"
+run = "gh issue list --state open --limit 30"
+
+["issue"]
+description = "Print the body to fill in for an issue of one kind, with that form's headings, and the gh command that files it with the form's labels: mise run issue -- bug (or feature, upstream, plan)"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} issue"
+
+# ==== 4. A project: set up, build, run (a repo with no API goes on at 5) ==========================
+
+["setup"]
+description = "Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import"
+dir = "{{config_root}}"
+run = "npm ci --no-fund --no-audit"
+
+# What a project's tasks need.
+["doctor"]
+description = "Check what the tasks need: npm packages, Docker, Go, Rust (with a CLI)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} doctor"
+
+["build"]
+description = "Build the Worker's Wasm with TinyGo into build/, tuned for Workers, with the library's Worker glue beside it; fails over 3 MB gzipped"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} wasm-build"
+
+["run"]
+description = "The API natively on API_PORT: no Cloudflare, an in-memory store"
+dir = "{{config_root}}"
+# Throwaway tokens: a project with WORKER_SECRETS READ_TOKEN WRITE_TOKEN (the notes example) takes them.
+env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
+run = "{{env.CHARTER_TOOL}} exec -env PORT={{env.API_PORT}} go run ."
+
+["dev"]
+description = "The API under workerd on API_PORT (cf dev). First time: mise run migrate:local. After a Go change: mise run build"
+dir = "{{config_root}}"
+# Throwaway tokens: a project with WORKER_SECRETS READ_TOKEN WRITE_TOKEN (the notes example) takes them.
+env = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
+depends = ["build"]
+run = "{{env.CHARTER_TOOL}} exec -env PORT={{env.API_PORT}} cf dev"
+
+["spec"]
+description = "Write both specs from the contract (api/contract.go) into fern/"
+dir = "{{config_root}}"
+run = 'go run ./cmd/spec fern/openapi.json fern/asyncapi.json {{env.API_URL}}'
+
+["test"]
+description = "Go tests: the API, the MCP endpoint, the contract's rules"
+dir = "{{config_root}}"
+run = "go test ./..."
+
+["migrate:local"]
+description = "Apply migrations/ to the local D1 of a running mise run dev"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} migrate-local"
+
+# ==== 5. Check: the whole CI, here. GitHub runs the same tasks and nothing more ===================
+
+["docs:lint"]
+description = "Check docs/ for what a program can check: front matter, links, the index, tasks and paths that don't exist"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} docs-lint"
+
+["docs:check"]
+description = "Fail if a file of charter's kit or a generated page differs from what adopt writes, or docs/ fails the lint"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} adopt -check && {{ env.CHARTER_TOOL | default(value='charter') }} docs-lint"
+
+["repo:check"]
+description = "REMOTE, read-only: fail if the repo on GitHub differs from charter.toml (charter repo -check)"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} repo -check"
+
+["upstream:status"]
+description = "REMOTE, read-only: the upstream issues the code works around (every `Upstream:` tag): CLOSED means that workaround can go"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} upstream"
+
+["repo:ci"]
+description = "Everything the charter workflow runs (charter.yml, which calls charter's repo-check), here: docs:check (the docs site and generated pages are fresh, docs/ passes the lint), repo:check (the repo is as charter.toml says), upstream:status. The workflow runs this one task and nothing else, so a pass here is a pass on GitHub. REMOTE, read-only"
+dir = "{{config_root}}"
+depends = ["docs:check", "repo:check", "upstream:status"]
+
+["spec:check"]
+description = "Fail if a committed spec is stale against the contract"
+dir = "{{config_root}}"
+run = 'go run ./cmd/spec -check fern/openapi.json fern/asyncapi.json {{env.API_URL}}'
+
+# ==== 6. A project's SDKs (Fern, in Docker) =======================================================
+
+["sdk:list"]
+description = "The SDK groups fern/generators.yml defines"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-list"
+
+["sdk:gen"]
+description = "Generate an SDK with Fern (Docker): mise run sdk:gen <group> -> sdk/out/<group>"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-gen"
+
+["sdk:check"]
+description = "Prove a generated SDK works (Go: build, vet, tests against WireMock; TypeScript: typecheck): mise run sdk:check <group>"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-check"
+
+["sdk:check-spec"]
+description = "Validate the specs and Fern's settings with Fern"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} exec fern check --warnings"
+
+["sdk:ready"]
+description = "Generate and build what the tests use, if missing or made from other specs (TypeScript and Go SDKs, the CLI if the project has one): mise run sdk:ready [group...]"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-ready"
+
+["sdk:publish"]
+description = "Generate and check the Go SDK, then copy its sources into sdk/go, the committed module another repo can go get (Docker). Commit the result"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-publish"
+
+["sdk:publish:check"]
+description = "Fail if sdk/go is not what the committed specs generate now (Docker)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-publish -check"
+
+["sdk:publish:fresh"]
+description = "Fail if the specs changed since sdk/go was made from them (no Docker: it compares a hash). sdk:publish:check proves the content"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-publish -check -quick"
+
+["sdk:cli:build"]
+description = "HEAVY: build the generated Rust CLI in sdk/out/cli (a project with the cli group): mise run sdk:cli:build [-linux]"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} cli-build"
+
+["sdk:cli:smoke"]
+description = "Run the CLI that dist/ holds for this machine with --version (the release workflow does it on Windows), in a project with the cli group"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} cli-smoke"
+
+["sdk:dist"]
+description = "Generate, check and archive what a release ships into dist/: Go and TypeScript SDK sources, the specs (Docker)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} dist-sdk"
+
+["sdk:dist:cli"]
+description = "HEAVY: generate the CLI (a project with the cli group) and build it into dist/ for darwin, linux, windows x amd64, arm64 (all six on a Mac; elsewhere all but darwin): mise run sdk:dist:cli [-target linux-arm64,...]"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} dist-cli"
+
+["dist"]
+description = "HEAVY: everything a release ships, into an emptied dist/: sdk:dist, then sdk:dist:cli if the project has the cli group (what mise run release builds)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} dist"
+
+["sdk:docs"]
+description = "Preview the API's reference site locally (fern docs dev): http://localhost:3030"
+dir = "{{config_root}}"
+# Fern runs its preview app from ~/.fern, outside the project: tell mise's shims which node to use there.
+env = { MISE_NODE_VERSION = "26.10.0" }
+run = "{{env.CHARTER_TOOL}} exec fern docs dev --port 3030"
+
+# ==== 7. A project on Cloudflare: credentials, database, logs, Access =============================
+
+["cloudflare:secrets"]
+description = "REMOTE, once per repo: copy CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and the Worker's secrets (WORKER_SECRETS) from fnox into the repo's GitHub secrets, for the deploy workflow"
+dir = "{{config_root}}"
+run = "fnox exec -- {{env.CHARTER_TOOL}} github-secrets CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"
+
+["cloudflare:token"]
+description = "Fail unless CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set: what a deploy from GitHub needs (locally, cf auth login is enough)"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} need-env CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID"
+
+["migrate"]
+description = "REMOTE: apply pending migrations/ to the Worker's D1 database"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} migrate"
+
+["tail"]
+description = "REMOTE, read-only: stream the deployed Worker's live logs (requests, console output, exceptions) until Ctrl-C; -- -for 30s stops by itself, -- -worker <name> tails another"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} tail"
+
+["access:setup"]
+description = "REMOTE, once and after changing who may log in: Cloudflare Access in front of the Worker (people log in with GitHub: mise run access:setup -- <email>...), and the Worker's ACCESS_TEAM_DOMAIN and ACCESS_AUD; the IDs in fnox. Idempotent"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} access setup"
+
+["access:token"]
+description = "REMOTE: a machine's own Access service token: mise run access:token -- create <machine> <file|fnox>, list, revoke <machine>"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} access token"
+
+["access:delete"]
+description = "REMOTE: delete the Worker's Access application and its machines' service tokens"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} access delete"
+
+# ==== 8. Release: mise run release -- vX.Y.Z ======================================================
+
+# The SDKs, the CLI and the API docs Fern generates from the specs in fern/ (its settings: fern/generators.yml).
+# A project has a CLI only if generators.yml has the cli group; without it the CLI tasks say so and stop.
+["spec:diff"]
+description = "Compare fern/openapi.json and fern/asyncapi.json with the previous release's (git tags) and fail on a breaking change, unless -tag is a major release: mise run spec:diff [-- -from vX.Y.Z -catalog catalog.json]"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} spec-diff"
+
+["release"]
+description = "REMOTE: cut a release from this machine: mise run release -- vX.Y.Z [-dry-run]. The repo is clean and is the default branch on GitHub, then the repo's own tasks where it has them: setup, check, dist. Then the tag, the push, the GitHub Release with notes from the commits. It does not wait for GitHub's workflows: check is the same check, run here; a workflow that FAILED on this commit stops it"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} release"
+
+# beside tasks/repo (the tasks any repo takes), and its tasks run in the project (dir), calling the
+# tool as CHARTER_TOOL (its mise.toml sets it).
+# What a release of a project adds (the files in dist/, the module tags), and the GitHub workflows.
+# The release itself, `release`, is a task any repo takes: tasks/repo.
+["release:publish"]
+description = "REMOTE on a version tag (vX.Y.Z): make its GitHub Release if missing, attach what of dist/* it lacks, write SHA256SUMS. Anywhere else: a dry run that lists dist/ and prints the notes"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} publish"
+
+["release:tags"]
+description = "REMOTE on a version tag (vX.Y.Z): tag the committed Go SDK, a module in a subdirectory (sdk/go/vX.Y.Z). Anywhere else: a dry run"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} release-tags sdk/go"
+
+# ==== Now and then ================================================================================
+
+["docs:review"]
+description = "Have Claude (the claude command) bring docs/ up to date and into line with docs/charter/writing.md"
+dir = "{{config_root}}"
+run = "{{ env.CHARTER_TOOL | default(value='charter') }} docs-review"
+
+["docs:pages"]
+description = "REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself)"
+dir = "{{config_root}}"
+run = 'gh api -X POST "repos/{owner}/{repo}/pages" -f "source[branch]=main" -f "source[path]=/docs"'
+
+# Performance work on a Go Worker: a scratch Worker per experiment, and the quick deploy-and-measure loop.
+["perf"]
+description = "REMOTE, writes test notes: the quick loop for performance work: build, deploy, then bench the new isolate from its first request (8 at once, then each operation). About two minutes"
+dir = "{{config_root}}"
+run = "mise run deploy && {{env.CHARTER_TOOL}} bench -each -burst 8 -write"
+
+["perf:try"]
+description = "REMOTE: try a change on a scratch Worker of its own and delete it after: mise run perf:try -- -name <experiment> [-build '<wasm-build flags>'] [-keep]. Several can run at once"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} perf"
+
+["perf:clean"]
+description = "REMOTE: delete the scratch Workers and databases that perf:try runs left"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} perf-clean"
+
+["sdk:clean"]
+description = "Remove generated SDKs (sdk/out) and stop leftover WireMock containers"
+dir = "{{config_root}}"
+run = "{{env.CHARTER_TOOL}} sdk-clean"

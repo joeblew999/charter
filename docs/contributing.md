@@ -41,18 +41,9 @@ How to read it: [Performance](guides/performance.md). The target is the TypeScri
 
 The plan is the [open issues](https://github.com/joeblew999/charter/issues) and their milestones; [`good first issue`](https://github.com/joeblew999/charter/labels/good%20first%20issue) says what done looks like. Before a pull request: `mise run check` passes, and `docs/` says what changed.
 
-## Try a change on a test repo
+## A change to charter
 
-A change to the tool or the kit (`cmd/charter/kit/`) is tried on a throwaway repo with the binary you build, before any release:
-
-```sh
-go build -o /tmp/charter ./cmd/charter      # the tool as this checkout has it
-mkdir /tmp/try && cd /tmp/try && git init   # or a copy of a repo that uses charter
-/tmp/charter adopt -from <this checkout>    # the kit, and the tasks from this checkout
-mise run repo:ci                            # the repo's whole CI, here
-```
-
-`-from` is needed only where the repo has no `mise.toml`: a binary that is not a release has no version to pin. Run `/tmp/charter adopt` again after each change. Release only once the test repo passes.
+What to run, in order, is the order of the tasks: this repo's own in `mise.toml`, the shared ones in `tasks/repo/tasks.toml`. A change to the tool, the kit or the tasks is tried on a throwaway repo by the flow test (`cmd/charter/flow_test.go`), which `mise run charter:check` runs; then it is released, by the [fast track](#fast-track-the-tool-only).
 
 ## Cut a release
 

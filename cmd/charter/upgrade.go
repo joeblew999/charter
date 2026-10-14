@@ -1,11 +1,5 @@
 package main
 
-// charter upgrade: move the repo it is run in to a release of this tool, in one step. The tool's pin
-// and every include of charter's tasks name a release and move together, as does the TypeScript
-// library a project installs from a release; then AGENTS.md and CLAUDE.md, where they carry its mark,
-// are written again as that release writes them. Charter's own places (docs/charter/, its forms, its
-// workflow) need nothing here: mise run adopt writes them as the release has them.
-
 import (
 	"errors"
 	"flag"
@@ -16,6 +10,8 @@ import (
 	"strings"
 )
 
+// charter upgrade: move the repo you are in to a release of charter, by default the one running: in mise.toml the tool's pin and every include of charter's tasks together, @charter/ts in package.json, and AGENTS.md and CLAUDE.md written again; then mise run adopt writes charter's kit as it has it. Run it from the release you want: mise x github:joeblew999/charter@X.Y.Z -- charter upgrade
+// Run by: people, as `charter upgrade`
 func init() {
 	commands["upgrade"] = command{"[vX.Y.Z]",
 		"move the repo you are in to a release of charter, by default the one running: in mise.toml the tool's pin and every include of charter's tasks together, @charter/ts in package.json, and AGENTS.md and CLAUDE.md written again; then mise run adopt writes charter's kit as it has it. Run it from the release you want: mise x github:joeblew999/charter@X.Y.Z -- charter upgrade", upgradeCommand}
@@ -88,18 +84,6 @@ func upgrade(root, to string, same bool, out *os.File) error {
 	if !same {
 		fmt.Fprintf(out, "\n  mise install && mise x %s@%s -- charter upgrade    # AGENTS.md and CLAUDE.md as %s writes them\n", toolRelease, strings.TrimPrefix(to, "v"), to)
 		return nil
-	}
-	// Charter's own pointer files, in a repo that is not a project: written again when they differ.
-	for name, content := range agentFiles() {
-		path := filepath.Join(root, name)
-		have, err := os.ReadFile(path)
-		if charters, _, ok := markOf(have); err != nil || !ok || !charters || string(have) == string(content) {
-			continue
-		}
-		if err := write(path, string(content)); err != nil {
-			return err
-		}
-		say("wrote", name, ": as "+to+" writes it")
 	}
 	if mod, err := os.ReadFile(filepath.Join(root, "go.mod")); err == nil && strings.Contains(string(mod), repoModule+"/go ") {
 		say("waiting", "go.mod", ": go get "+repoModule+"/go@"+to+" && go mod tidy")

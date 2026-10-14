@@ -17,11 +17,11 @@ func TestCIScope(t *testing.T) {
 	}{
 		{name: "a push runs everything", all: true, tool: true, library: true, libraryTS: true, examples: examples},
 		{name: "docs only", changed: []string{"docs/README.md"}, examples: []string{}},
-		{name: "the tool", changed: []string{"cmd/charter/specdiff.go"}, tool: true, examples: []string{}},
+		{name: "the tool", changed: []string{"cmd/charter/spec-diff.go"}, tool: true, examples: []string{}},
 		{name: "the Go library", changed: []string{"go/auth/auth.go"}, library: true, examples: []string{"examples/notes-go", "examples/start-go"}},
 		{name: "the TypeScript library", changed: []string{"ts/src/auth.ts"}, libraryTS: true, examples: []string{"examples/notes-ts", "examples/start-ts"}},
 		{name: "one example", changed: []string{"examples/notes-ts/src/index.ts"}, examples: []string{"examples/notes-ts"}},
-		{name: "the shared tasks", changed: []string{"tasks/shared/sdk.toml", "tasks/repo/docs.toml"}, tool: true, library: true, libraryTS: true, examples: examples},
+		{name: "the shared tasks", changed: []string{"tasks/repo/tasks.toml", "tasks/repo/tasks.toml"}, tool: true, library: true, libraryTS: true, examples: examples},
 		{name: "a workflow", changed: []string{".github/workflows/check.yml"}, tool: true, library: true, libraryTS: true, examples: examples},
 	} {
 		t.Run(c.name, func(t *testing.T) {

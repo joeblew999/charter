@@ -9,7 +9,7 @@ parent: How to help
 
 | Issue | Problem | Workaround | When fixed |
 |---|---|---|---|
-| [tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800) | The collector runs at every pause of a workers-go program | A runtime patch and an 8 MB heap (`cmd/charter/wasm.go`) | Drop the patch |
+| [tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800) | The collector runs at every pause of a workers-go program | A runtime patch and an 8 MB heap (`cmd/charter/wasm-build.go`) | Drop the patch |
 | [tinygo#5801](https://github.com/tinygo-org/tinygo/issues/5801) (fixed on dev) | Goroutine stacks are rarely freed | A patch reuses them | Drop it with a TinyGo release that has the fix |
 | [tinygo#5798](https://github.com/tinygo-org/tinygo/issues/5798) | Go timers stall on Cloudflare | `go/worker/tinygo-clock.mjs` | Delete it |
 | [tinygo-org/net#56](https://github.com/tinygo-org/net/pull/56) | `http.ServeMux` has no method patterns | `humaworkers` routes itself | Use Huma's adapter |

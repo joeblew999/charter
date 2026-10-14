@@ -48,15 +48,12 @@ func TestUpgradeMovesEverythingTogether(t *testing.T) {
 		t.Error("AGENTS.md was written by a release other than the one named")
 	}
 
-	// From the release itself: charter's pointer file is written again, a file of the repo's is not.
+	// From the release itself: only the pins; the kit (AGENTS.md among it) is charter adopt's.
 	if err := upgrade(root, "v1.3.0", true, null); err != nil {
 		t.Fatal(err)
 	}
-	if read("AGENTS.md") != string(agentFiles()["AGENTS.md"]) {
-		t.Errorf("AGENTS.md is not as this release writes it:\n%s", read("AGENTS.md"))
-	}
-	if read("CLAUDE.md") != "mine, not charter's\n" {
-		t.Error("upgrade wrote over a CLAUDE.md without charter's mark")
+	if !strings.Contains(read("AGENTS.md"), "an old text") || read("CLAUDE.md") != "mine, not charter's\n" {
+		t.Error("upgrade wrote a file of the kit: that is charter adopt's")
 	}
 	// Again: nothing changes.
 	before := read("mise.toml")

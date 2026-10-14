@@ -8,7 +8,7 @@ parent: Reference
 
 Run in the project's folder; words after the name go to the task, flags after `--`. **REMOTE**: reads or changes something on Cloudflare or GitHub. `mise tasks` lists them.
 
-Most tasks are written once, in charter's `tasks/` folders. A project includes `tasks/repo`, `tasks/shared` and the one of its language (`[task_config] includes` in its `mise.toml`, from GitHub at the release it pins), and its `mise.toml` holds only its own tasks: `check`, `lint`, `deploy` and the tests. A task in `mise.toml` takes the place of the included one with its name. The tasks call the tool through the setting `CHARTER_TOOL`: `charter` in a project, this checkout's in the examples here.
+Most tasks are written once, in charter's one task file, `tasks/repo/tasks.toml`. Every repo includes it (`[task_config] includes` in its `mise.toml`, from GitHub at the release it pins), and its `mise.toml` holds only its own tasks: `check`, `lint`, `deploy` and the tests. A task in `mise.toml` takes the place of the included one with its name. The tasks call the tool through the setting `CHARTER_TOOL`: `charter` in a project, this checkout's in the examples here.
 
 ## Any repo
 
@@ -23,7 +23,7 @@ The tasks of `tasks/repo/`, which a repo that is not a project includes on its o
 | `issue` | Prints the body to fill in for an issue of one kind (`-- bug`, `feature`, `upstream`, `plan`), and the `gh` command that files it |
 | `upstream:status` | REMOTE, read-only. Every `Upstream:` tag in the code, with its issue's state |
 | `adopt` | Writes charter's kit into the repo as this release has it: `docs/charter/`, the docs site's files, the issue forms and labels, the workflows, `AGENTS.md`, `CLAUDE.md`, `renovate.json`; never a file of the repo's own |
-| `docs:setup` | `adopt`, then the [generated pages](../guides/deploy.md#generated-pages) |
+| `adopt` | `adopt`, then the [generated pages](../guides/deploy.md#generated-pages) |
 | `docs:lint`, `docs:check` | Checks `docs/`; `docs:check` also fails if the config or a generated page is stale |
 | `docs:review` | Has Claude bring `docs/` into line with `docs/charter/writing.md` |
 | `docs:pages` | REMOTE. Turns GitHub Pages on for `docs/` |
@@ -35,7 +35,7 @@ What `charter new` makes, and `examples/notes-go/`: these, and the tasks of [any
 | Task | What it does |
 |---|---|
 | `setup` | Installs the npm packages: `cf`, Fern, what the tests import |
-| `check` | Every local check: `lint`, `test`, `spec:check`, `sdk:publish:fresh`, `test:native`, `test:workerd`, `workflows:check`, `docs:check` |
+| `check` | Every local check: `lint`, `test`, `spec:check`, `sdk:publish:fresh`, `test:native`, `test:workerd`, `docs:check` |
 | `doctor` | Says what the tasks need and lack; Rust only with a CLI, and whether the CLI's pins agree with the `cli` group |
 | `run` | The API natively on `API_PORT`, in memory |
 | `build` | The Wasm and the Worker glue into `build/`; fails over 3,000,000 bytes gzipped |
@@ -81,7 +81,6 @@ What `charter new` makes, and `examples/notes-go/`: these, and the tasks of [any
 | `release -- vX.Y.Z [-dry-run]` | REMOTE. Cuts a release from this machine: `check`, `dist`, the tag, the GitHub Release, `release:publish`, `release:tags` ([how](../guides/release.md)) |
 | `release:publish` | REMOTE on a version tag: makes its GitHub Release if missing, attaches what of `dist/*` it lacks, writes `SHA256SUMS`. Elsewhere a dry run |
 | `release:tags` | REMOTE on a version tag: tags `sdk/go/vX.Y.Z`. Elsewhere a dry run |
-| `workflows:check` | Fails if a file of the kit (the workflows among them) differs: `charter adopt -check` |
 
 ## The other projects
 
@@ -104,12 +103,10 @@ What `charter new` makes, and `examples/notes-go/`: these, and the tasks of [any
 | `check` | `charter:check`, `go:check`, `ts:check`, `projects:check`. Needs Docker |
 | `projects:check` | `ts:build`, then `check` in every project under `examples/` and `conformance/` |
 | `charter:check` | The tool: gofmt, vet, tests, the generated workflows and docs config, the docs lint |
-| `go:check` | `go:lint` and `go:test`: the library, for the host and for Wasm |
-| `go:lint`, `go:test` | The library's lint (gofmt, vet, vet for Wasm) and its tests, on their own |
+| `go:check` | The Go library's lint (gofmt, vet, vet for Wasm) and its tests, for the host and for Wasm |
 | `ts:setup` | Installs the TypeScript library's packages and builds it |
 | `ts:build` | Compiles the TypeScript library into `ts/dist/`, which its package exports. After changing `ts/src/` |
-| `ts:check` | The TypeScript library: typecheck (`ts:lint`) and tests (`ts:test`) |
-| `ts:lint`, `ts:test` | The TypeScript library's typecheck and its tests, on their own |
+| `ts:check` | The TypeScript library's typecheck and its tests |
 | `compare` | REMOTE. The same bench against the TypeScript and the Go notes Workers |
 | `ci:scope` | In the check workflow: which Windows and macOS jobs run. All on a push to main or a version tag; on a pull request, those for what it changes (`charter ci-scope`) |
 | `catalog` | REMOTE, read-only. `charter catalog`: the owner's charter repos and who pins each ([Repos that use each other](../guides/repos.md)) |
