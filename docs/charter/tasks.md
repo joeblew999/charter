@@ -6,7 +6,7 @@ parent: How this repo is kept
 
 # Tasks
 
-Written by `charter docs` from the repo's mise tasks (`charter docs-tasks`): don't edit, change the tasks, then `mise run docs:setup`.
+Written by `charter adopt` from the repo's mise tasks (`charter docs-tasks`): don't edit, change the tasks, then `charter adopt`.
 
 Run one with `mise run <task>`; its arguments and flags go after `--`. `mise tasks` lists them, and `mise run <task> --help` shows one.
 
@@ -23,7 +23,6 @@ Run one with `mise run <task>`; its arguments and flags go after `--`. `mise tas
 | [`ci:scope`](#ciscope) | In the check workflow: which Windows and macOS jobs to run (all on a push; on a pull request, those for what it changes) |
 | [`charter:check`](#chartercheck) | The tool's own checks (gofmt, vet, tests, with the test that holds the two notes examples to one surface), the generated workflows and docs config match their templates, and docs/ passes the lint |
 | [`catalog`](#catalog) | REMOTE, read-only: the owner's charter repos, what each publishes, and the repos that pin it, as Markdown (\-\- -json for JSON, \-\- -page for a docs page) |
-| [`workflows`](#workflows) | Write .github/workflows/ from the templates in cmd/charter/workflows (edit those, never the copies) |
 | [`release`](#release) | REMOTE: cut a release of the repo from this machine: mise run release \-\- vX.Y.Z [-dry-run]. Runs check and dist, tags, pushes, makes the GitHub Release, runs release:publish and release:tags |
 | [`dist`](#dist) | HEAVY: what the notes examples ship (their SDKs, specs and CLI for every OS), each into its own dist/: what mise run release builds before the tag |
 | [`release:publish`](#releasepublish) | REMOTE on a version tag (vX.Y.Z): the TypeScript library's package, then the tool (GoReleaser), then the notes examples' dist/, onto its GitHub Release. Anywhere else: the same as a dry run |
@@ -45,13 +44,14 @@ Run one with `mise run <task>`; its arguments and flags go after `--`. `mise tas
 
 | Task | What it does |
 |---|---|
-| [`docs:setup`](#docssetup) | Write charter's pages (docs/charter/: the rules every repo shares, using charter, writing docs, the tasks) and the docs site's files, where they are charter's (GitHub Pages renders the folder), and the pages docs/_generated.toml lists |
+| [`adopt`](#adopt) | Write charter's kit into this repo as this release has it: docs/charter/, the docs site's files, the issue forms, the workflows, AGENTS.md, CLAUDE.md, renovate.json; never a file of the repo's own |
+| [`docs:setup`](#docssetup) | Write charter's kit (charter adopt), then the pages docs/_generated.toml lists |
 | [`docs:lint`](#docslint) | Check docs/ for what a program can check: front matter, links, the index, tasks and paths that don't exist |
-| [`docs:check`](#docscheck) | Fail if the docs site's config or a generated page differs from what docs:setup writes, or docs/ fails the lint |
+| [`docs:check`](#docscheck) | Fail if a file of charter's kit or a generated page differs from what docs:setup writes, or docs/ fails the lint |
 | [`docs:review`](#docsreview) | Have Claude (the claude command) bring docs/ up to date and into line with docs/charter/writing.md |
 | [`docs:pages`](#docspages) | REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself) |
-| [`repo`](#repo) | REMOTE: keep the repo in shape from charter.toml at its root: docs site and charter's pages, issue forms, labels, the workflow, description, homepage, topics, GitHub Pages; never a file of the repo's own |
-| [`repo:check`](#repocheck) | REMOTE, read-only: fail if the repo differs from charter.toml and the tool's templates (charter repo -check) |
+| [`repo`](#repo) | REMOTE: keep the repo on GitHub in shape from charter.toml at its root: labels, description, homepage, topics, GitHub Pages. It writes no file: mise run adopt writes the kit |
+| [`repo:check`](#repocheck) | REMOTE, read-only: fail if the repo on GitHub differs from charter.toml (charter repo -check) |
 | [`issues`](#issues) | REMOTE, read-only: the open issues, newest first: what is reported and what is planned (a plan is an issue) |
 | [`repo:ci`](#repoci) | Everything the charter workflow runs (charter.yml, which calls charter's repo-check), here: docs:check (the docs site and generated pages are fresh, docs/ passes the lint), repo:check (the repo is as charter.toml says), upstream:status. The workflow runs this one task and nothing else, so a pass here is a pass on GitHub. REMOTE, read-only |
 | [`issue`](#issue) | Print the body to fill in for an issue of one kind, with that form's headings, and the gh command that files it with the form's labels: mise run issue \-\- bug (or feature, upstream, plan) |
@@ -112,12 +112,6 @@ The tool's own checks (gofmt, vet, tests, with the test that holds the two notes
 - **Usage:** `catalog`
 
 REMOTE, read-only: the owner's charter repos, what each publishes, and the repos that pin it, as Markdown (-- -json for JSON, -- -page for a docs page)
-
-### `workflows`
-
-- **Usage:** `workflows`
-
-Write .github/workflows/ from the templates in cmd/charter/workflows (edit those, never the copies)
 
 ### `release`
 
@@ -215,11 +209,17 @@ REMOTE on a version tag (vX.Y.Z): attach dist/* (what ts:dist wrote) to its GitH
 
 REMOTE, once per repo: copy CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from fnox into this repo's GitHub secrets, for the deploy workflow
 
+### `adopt`
+
+- **Usage:** `adopt`
+
+Write charter's kit into this repo as this release has it: docs/charter/, the docs site's files, the issue forms, the workflows, AGENTS.md, CLAUDE.md, renovate.json; never a file of the repo's own
+
 ### `docs:setup`
 
 - **Usage:** `docs:setup`
 
-Write charter's pages (docs/charter/: the rules every repo shares, using charter, writing docs, the tasks) and the docs site's files, where they are charter's (GitHub Pages renders the folder), and the pages docs/_generated.toml lists
+Write charter's kit (charter adopt), then the pages docs/_generated.toml lists
 
 ### `docs:lint`
 
@@ -231,7 +231,7 @@ Check docs/ for what a program can check: front matter, links, the index, tasks 
 
 - **Usage:** `docs:check`
 
-Fail if the docs site's config or a generated page differs from what docs:setup writes, or docs/ fails the lint
+Fail if a file of charter's kit or a generated page differs from what docs:setup writes, or docs/ fails the lint
 
 ### `docs:review`
 
@@ -249,13 +249,13 @@ REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders th
 
 - **Usage:** `repo`
 
-REMOTE: keep the repo in shape from charter.toml at its root: docs site and charter's pages, issue forms, labels, the workflow, description, homepage, topics, GitHub Pages; never a file of the repo's own
+REMOTE: keep the repo on GitHub in shape from charter.toml at its root: labels, description, homepage, topics, GitHub Pages. It writes no file: mise run adopt writes the kit
 
 ### `repo:check`
 
 - **Usage:** `repo:check`
 
-REMOTE, read-only: fail if the repo differs from charter.toml and the tool's templates (charter repo -check)
+REMOTE, read-only: fail if the repo on GitHub differs from charter.toml (charter repo -check)
 
 ### `issues`
 

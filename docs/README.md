@@ -50,9 +50,9 @@ Never edit these: change the source and run the task.
 | `pages/*.x.go` (committed) | `mise run ui:gen`, from the gsx components (`examples/start-htmx/`, `examples/start-datastar/`) |
 | `sdk/go/` (committed), `sdk/out/` | `mise run sdk:publish`, `mise run sdk:gen` |
 | `build/`, `dist/`, `ts/dist/` | `mise run build`, `mise run sdk:dist`, `mise run ts:build` |
-| `.github/` (but `workflows/repo-check.yml`, the source of charter's reusable workflow) | `mise run workflows`; in a repo that is not a project, the issue forms and the `charter.yml` workflow by `mise run repo` |
-| `renovate.json` | `mise run repo` |
-| `docs/charter/`, `docs/_config.yml`, `docs/llms.txt`, `docs/_sass/` | `mise run docs:setup`, from `cmd/charter/kit/` |
+| `.github/` (but `workflows/check.yml`, `deploy.yml`, `release.yml`, `sdk-check.yml`, this repo's own), `renovate.json`, `AGENTS.md`, `CLAUDE.md` in a repo with no project at its root | `mise run adopt`, from `cmd/charter/kit/` |
+| `docs/charter/`, `docs/_config.yml`, `docs/llms.txt`, `docs/_sass/` | `mise run adopt`, from `cmd/charter/kit/` |
+| `docs/charter/tasks.md`, `docs/charter/using.md` | `mise run adopt`, from mise and from the tool |
 | A page that `_generated.toml` in `docs/` lists (this repo has none) | `mise run docs:setup`, from its command ([Generated pages](guides/deploy.md#generated-pages)) |
 
 ## Every page

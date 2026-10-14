@@ -1,0 +1,29 @@
+# Written by `charter adopt` from the kit (github.com/joeblew999/charter, cmd/charter/kit/.github/workflows/charter.yml):
+# don't edit: change the kit, not this file. For a repo that is not a charter project: the checks any
+# repo takes from charter (tasks/repo), in one job. Every step that does work is a mise task, so it runs locally too.
+# The repo's own checks are its own workflow's. `workflow = false` in charter.toml: charter writes none.
+name: charter
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+# What the checks read with gh, and nothing they could change: the repo and its topics, its labels
+# and whether a default one is in use (issues, pull requests), and whether Pages serves docs/.
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  pages: read
+env:
+  GH_TOKEN: ${{ github.token }}
+jobs:
+  repo-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      # One task, the same one a developer runs: what it checks is written in tasks/repo, not here,
+      # so a pass on your machine is a pass on GitHub. docs:check, repo:check, upstream:status.
+      - run: mise run repo:ci

@@ -16,13 +16,14 @@ The tasks of `tasks/repo/`, which a repo that is not a project includes on its o
 
 | Task | What it does |
 |---|---|
-| `repo`, `repo:check` | REMOTE. `charter repo` at the repo's root: keeps it as `charter.toml` says; the workflows only in a repo with projects ([Keep the repo in shape](../guides/deploy.md#keep-the-repo-in-shape)); `repo:check` changes nothing and fails on drift |
+| `repo`, `repo:check` | REMOTE. `charter repo` at the repo's root: keeps it on GitHub as `charter.toml` says (labels, description, homepage, topics, Pages) ([Keep the repo in shape](../guides/deploy.md#keep-the-repo-in-shape)) |
 | `issues` | REMOTE, read-only. The open issues, newest first: what is reported and what is planned |
 | `release` | REMOTE. `mise run release -- vX.Y.Z [-dry-run]`: the repo is clean and on the default branch, then its own `setup`, `check` and `dist` where it has them, the tag, the GitHub Release. It does not wait for GitHub's workflows; one that failed on the commit stops it |
-| `repo:ci` | REMOTE, read-only. What the `charter.yml` workflow runs (through charter's `repo-check`), and all it runs: `docs:check`, `repo:check`, `upstream:status` |
+| `repo:ci` | REMOTE, read-only. What the `charter.yml` workflow runs, and all it runs: `docs:check`, `repo:check`, `upstream:status` |
 | `issue` | Prints the body to fill in for an issue of one kind (`-- bug`, `feature`, `upstream`, `plan`), and the `gh` command that files it |
 | `upstream:status` | REMOTE, read-only. Every `Upstream:` tag in the code, with its issue's state |
-| `docs:setup` | Writes charter's pages in `docs/charter/`, the docs site's files and the [generated pages](../guides/deploy.md#generated-pages) |
+| `adopt` | Writes charter's kit into the repo as this release has it: `docs/charter/`, the docs site's files, the issue forms and labels, the workflows, `AGENTS.md`, `CLAUDE.md`, `renovate.json`; never a file of the repo's own |
+| `docs:setup` | `adopt`, then the [generated pages](../guides/deploy.md#generated-pages) |
 | `docs:lint`, `docs:check` | Checks `docs/`; `docs:check` also fails if the config or a generated page is stale |
 | `docs:review` | Has Claude bring `docs/` into line with `docs/charter/writing.md` |
 | `docs:pages` | REMOTE. Turns GitHub Pages on for `docs/` |
@@ -80,7 +81,7 @@ What `charter new` makes, and `examples/notes-go/`: these, and the tasks of [any
 | `release -- vX.Y.Z [-dry-run]` | REMOTE. Cuts a release from this machine: `check`, `dist`, the tag, the GitHub Release, `release:publish`, `release:tags` ([how](../guides/release.md)) |
 | `release:publish` | REMOTE on a version tag: makes its GitHub Release if missing, attaches what of `dist/*` it lacks, writes `SHA256SUMS`. Elsewhere a dry run |
 | `release:tags` | REMOTE on a version tag: tags `sdk/go/vX.Y.Z`. Elsewhere a dry run |
-| `workflows`, `workflows:check` | Writes `.github/` from the tool's templates; fails if it differs |
+| `workflows:check` | Fails if a file of the kit (the workflows among them) differs: `charter adopt -check` |
 
 ## The other projects
 
@@ -119,7 +120,7 @@ What `charter new` makes, and `examples/notes-go/`: these, and the tasks of [any
 | `ts:dist` | Packs the TypeScript library into `dist/charter-ts-X.Y.Z.tgz`, versioned as the tag (none: `0.0.0-dev`) |
 | `ts:release` | REMOTE on a version tag: attaches what of `dist/*` its GitHub Release lacks. Elsewhere a dry run |
 | `release:tags` | REMOTE on a version tag: tags `go/vX.Y.Z` and `examples/notes-go/sdk/go/vX.Y.Z` |
-| `setup`, `doctor`, `sdk:clean`, `workflows`, `cloudflare:secrets` | As in a project, for the whole repo |
+| `setup`, `doctor`, `sdk:clean`, `cloudflare:secrets` | As in a project, for the whole repo |
 
 ## Windows and macOS
 

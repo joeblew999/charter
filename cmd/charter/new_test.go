@@ -43,30 +43,30 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 	}
 	workerURL(t, into, "billing-api.your-subdomain.workers.dev")
 	for file, want := range map[string]string{
-		"go.mod":                        "module github.com/zeta/billing-api\n",
-		"go.mod ":                       "replace " + libraryModule + " => " + filepath.Join(repo, "go"),
-		"go.work":                       "\t" + repo + "\n",
-		"worker.mjs":                    `import { goWorker } from "./build/go.mjs";`,
-		"api/handlers.go":               `"` + libraryModule + `/humaworkers"`,
-		"main.go":                       `"github.com/zeta/billing-api/api"`,
-		"cloudflare.config.ts":          "`billing-api-${ctx.mode}` : \"billing-api\"",
-		"package.json":                  `"name": "billing-api"`,
-		"fern/fern.config.json":         `"organization": "billing-api"`,
-		"fern/generators.yml":           "path: github.com/zeta/billing-api/sdk/go\n",
-		"fern/generators.yml ":          "env: BILLING_API_ACCESS_CLIENT_ID\n",
-		"test/soak-go/main.go":          `notes "github.com/zeta/billing-api/sdk/go"`,
-		"test/soak-go/go.mod":           "github.com/zeta/billing-api/sdk/go => ../../sdk/go",
-		"mise.toml":                     `CHARTER_TOOL = "go run {{env.CHARTER}}/cmd/charter"`,
-		"mise.toml   ":                  `includes = ["` + filepath.ToSlash(repo) + `/tasks/repo", "` + filepath.ToSlash(repo) + `/tasks/shared", "` + filepath.ToSlash(repo) + `/tasks/go"]`,
-		"mise.toml ":                    "\nCHARTER = \"" + filepath.ToSlash(repo) + "\"\n",
-		".gitattributes":                "* text=auto eol=lf\n",
-		".github/workflows/check.yml":   "- run: mise run check",
-		".github/workflows/release.yml": "- run: mise run release:tags",
-		"docs/README.md":                "# billing-api",
-		"docs/README.md ":               replaceGuide,
-		"docs/rules.md":                 "`mise run spec`",
-		"README.md":                     "# billing-api",
-		"charter.toml":                  "description = \"billing-api: a contract-first API on Cloudflare Workers\"\ntopics = []\n",
+		"go.mod":                                "module github.com/zeta/billing-api\n",
+		"go.mod ":                               "replace " + libraryModule + " => " + filepath.Join(repo, "go"),
+		"go.work":                               "\t" + repo + "\n",
+		"worker.mjs":                            `import { goWorker } from "./build/go.mjs";`,
+		"api/handlers.go":                       `"` + libraryModule + `/humaworkers"`,
+		"main.go":                               `"github.com/zeta/billing-api/api"`,
+		"cloudflare.config.ts":                  "`billing-api-${ctx.mode}` : \"billing-api\"",
+		"package.json":                          `"name": "billing-api"`,
+		"fern/fern.config.json":                 `"organization": "billing-api"`,
+		"fern/generators.yml":                   "path: github.com/zeta/billing-api/sdk/go\n",
+		"fern/generators.yml ":                  "env: BILLING_API_ACCESS_CLIENT_ID\n",
+		"test/soak-go/main.go":                  `notes "github.com/zeta/billing-api/sdk/go"`,
+		"test/soak-go/go.mod":                   "github.com/zeta/billing-api/sdk/go => ../../sdk/go",
+		"mise.toml":                             `CHARTER_TOOL = "go run {{env.CHARTER}}/cmd/charter"`,
+		"mise.toml   ":                          `includes = ["` + filepath.ToSlash(repo) + `/tasks/repo", "` + filepath.ToSlash(repo) + `/tasks/shared", "` + filepath.ToSlash(repo) + `/tasks/go"]`,
+		"mise.toml ":                            "\nCHARTER = \"" + filepath.ToSlash(repo) + "\"\n",
+		".gitattributes":                        "* text=auto eol=lf\n",
+		".github/workflows/charter-check.yml":   "- run: mise run check",
+		".github/workflows/charter-release.yml": "- run: mise run release:tags",
+		"docs/README.md":                        "# billing-api",
+		"docs/README.md ":                       replaceGuide,
+		"docs/rules.md":                         "`mise run spec`",
+		"README.md":                             "# billing-api",
+		"charter.toml":                          "description = \"billing-api: a contract-first API on Cloudflare Workers\"\ntopics = []\n",
 	} {
 		content, err := os.ReadFile(filepath.Join(into, strings.TrimSpace(file)))
 		if err != nil {
@@ -79,7 +79,7 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 	// Every file new writes around the example says so: started by new and the project's from then
 	// on, or charter's to write again.
 	for file, charters := range map[string]bool{"README.md": false, "AGENTS.md": false, "CLAUDE.md": false, "docs/README.md": false, "docs/rules.md": false, "charter.toml": false, "mise.toml": false,
-		"docs/charter/writing.md": true, "docs/charter/rules.md": true, "docs/charter/using.md": true, "docs/llms.txt": true, ".github/workflows/check.yml": true, ".github/ISSUE_TEMPLATE/charter-plan.yml": true} {
+		"docs/charter/writing.md": true, "docs/charter/rules.md": true, "docs/charter/using.md": true, "docs/llms.txt": true, ".github/workflows/charter-check.yml": true, ".github/ISSUE_TEMPLATE/charter-plan.yml": true} {
 		content, _ := os.ReadFile(filepath.Join(into, filepath.FromSlash(file)))
 		if owned, command, ok := markOf(content); !ok || owned != charters || (!charters && command != "new") {
 			t.Errorf("%s: its mark says charter's %v, by %q (%v): want charter's %v", file, owned, command, ok, charters)
@@ -410,7 +410,7 @@ func TestNewProjectOnYourSubdomain(t *testing.T) {
 // anything: Claude loads each @ line as that page. Both pages say so: a project's (new) and any
 // repo's (adopt, repo).
 func TestAgentsLoadTheDocs(t *testing.T) {
-	for name, page := range map[string]string{"a project's": agentsPage, "any repo's": repoAgentsPage} {
+	for name, page := range map[string]string{"a project's": agentsPage, "any repo's": kitFile("AGENTS.md")} {
 		if !strings.Contains(page, "\n@docs/README.md\n@docs/charter/rules.md\n@docs/rules.md\n@docs/charter/using.md\n") {
 			t.Errorf("%s AGENTS.md does not load the start page and the rules:\n%s", name, page)
 		}
@@ -471,23 +471,23 @@ func TestNewTypeScriptProject(t *testing.T) {
 	}
 	workerURL(t, into, "billing-api.acme.workers.dev")
 	for file, want := range map[string]string{
-		"src/contract.ts":             "@orpc/contract",
-		"package.json":                `"@charter/ts": "file:` + filepath.ToSlash(filepath.Join(repo, "ts")) + `"`,
-		"package-lock.json":           `"name": "billing-api"`,
-		"package-lock.json ":          `"node_modules/@charter/ts": {`,
-		"mise.toml":                   `run = "npm ci --no-fund --no-audit --prefix {{env.CHARTER}}/ts && npm run build --prefix {{env.CHARTER}}/ts && npm ci --no-fund --no-audit"`,
-		"mise.toml ":                  `run = '{{env.CHARTER_TOOL}} exec -secrets node test/live-test.mjs {{env.API_URL}}`,
-		"mise.toml  ":                 `includes = ["` + filepath.ToSlash(repo) + `/tasks/repo", "` + filepath.ToSlash(repo) + `/tasks/shared", "` + filepath.ToSlash(repo) + `/tasks/ts"]`,
-		"go.work":                     "use " + filepath.ToSlash(repo) + "\n",
-		"fern/generators.yml":         "path: github.com/zeta/billing-api/sdk/go\n",
-		"fern/generators.yml ":        "env: BILLING_API_ACCESS_CLIENT_ID\n",
-		"test/live-test.mjs":          "",
-		"test/access.mjs":             "accessHeaders",
-		"test/soak-go/main.go":        `notes "github.com/zeta/billing-api/sdk/go"`,
-		".github/workflows/check.yml": "- run: mise run check",
-		"docs/README.md":              "`src/contract.ts` (oRPC and Zod)",
-		"docs/rules.md":               "`src/contract.ts`",
-		"README.md":                   "oRPC and Zod",
+		"src/contract.ts":                     "@orpc/contract",
+		"package.json":                        `"@charter/ts": "file:` + filepath.ToSlash(filepath.Join(repo, "ts")) + `"`,
+		"package-lock.json":                   `"name": "billing-api"`,
+		"package-lock.json ":                  `"node_modules/@charter/ts": {`,
+		"mise.toml":                           `run = "npm ci --no-fund --no-audit --prefix {{env.CHARTER}}/ts && npm run build --prefix {{env.CHARTER}}/ts && npm ci --no-fund --no-audit"`,
+		"mise.toml ":                          `run = '{{env.CHARTER_TOOL}} exec -secrets node test/live-test.mjs {{env.API_URL}}`,
+		"mise.toml  ":                         `includes = ["` + filepath.ToSlash(repo) + `/tasks/repo", "` + filepath.ToSlash(repo) + `/tasks/shared", "` + filepath.ToSlash(repo) + `/tasks/ts"]`,
+		"go.work":                             "use " + filepath.ToSlash(repo) + "\n",
+		"fern/generators.yml":                 "path: github.com/zeta/billing-api/sdk/go\n",
+		"fern/generators.yml ":                "env: BILLING_API_ACCESS_CLIENT_ID\n",
+		"test/live-test.mjs":                  "",
+		"test/access.mjs":                     "accessHeaders",
+		"test/soak-go/main.go":                `notes "github.com/zeta/billing-api/sdk/go"`,
+		".github/workflows/charter-check.yml": "- run: mise run check",
+		"docs/README.md":                      "`src/contract.ts` (oRPC and Zod)",
+		"docs/rules.md":                       "`src/contract.ts`",
+		"README.md":                           "oRPC and Zod",
 	} {
 		content, err := os.ReadFile(filepath.Join(into, strings.TrimSpace(file)))
 		if err != nil {

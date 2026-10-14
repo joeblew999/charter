@@ -12,7 +12,7 @@ import (
 
 func init() {
 	commands["issue"] = command{"<bug|feature|upstream|plan>", "print an issue body with the headings of that issue form, for gh issue create --body-file", issue}
-	commands["labels"] = command{"", "REMOTE: create or update this repo's GitHub labels from the tool's own list (cmd/charter/labels.tsv), and remove GitHub's default ones that are unused", labels}
+	commands["labels"] = command{"", "REMOTE: create or update this repo's GitHub labels from .github/charter-labels.tsv (the kit's), and remove GitHub's default ones that are unused", labels}
 	anywhere["issue"], anywhere["labels"] = true, true
 }
 

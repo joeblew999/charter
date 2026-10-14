@@ -22,8 +22,8 @@ import (
 // are the project's: adopt leaves them. `charter new` makes a new API project instead.
 
 func init() {
-	commands["adopt"] = command{"[-description <text>] [-from <checkout>]",
-		"take the repo you are in to the charter way, writing only what it lacks and never a file of its own: charter.toml, AGENTS.md, CLAUDE.md, docs/README.md, docs/rules.md, charter's pages (docs/charter/), the docs site, and a mise.toml with the tool's pin and the tasks any repo takes (tasks/repo), or the lines to add to the one it has", adoptCommand}
+	commands["adopt"] = command{"[-description <text>] [-from <checkout>] [-check]",
+		"write charter's kit into the repo you are in, charter's own included: docs/charter/, the docs site's files, the issue forms, the workflows, AGENTS.md, CLAUDE.md, renovate.json, never a file of the repo's own; and what it lacks of charter.toml, docs/README.md, docs/rules.md and the mise.toml lines. Run again, it brings the kit to this release; -check writes nothing and fails if the kit differs", adoptCommand}
 	anywhere["adopt"] = true
 }
 
@@ -31,7 +31,7 @@ func init() {
 // are those tasks (a test holds the list to the folder).
 const repoTasksFolder = "repo"
 
-var repoTasks = []string{"docs:check", "docs:lint", "docs:pages", "docs:review", "docs:setup", "issue", "issues", "release", "repo", "repo:check", "repo:ci", "upstream:status"}
+var repoTasks = []string{"adopt", "docs:check", "docs:lint", "docs:pages", "docs:review", "docs:setup", "issue", "issues", "release", "repo", "repo:check", "repo:ci", "upstream:status"}
 
 // The pages every repo charter keeps has, the same in a project made by new and a repo adopt took.
 const (
@@ -106,7 +106,9 @@ const anyRepoGuide = docsURL + "guides/any-repo.html"
 
 func adoptCommand(args []string) error {
 	var description, from string
+	var check bool
 	flags("adopt", args, func(f *flag.FlagSet) {
+		f.BoolVar(&check, "check", false, "write nothing: fail if a file of the kit differs from what this release writes")
 		f.StringVar(&description, "description", "", "what the repo is, in a sentence, for a new charter.toml (default: its description on GitHub, or its folder's name)")
 		f.StringVar(&from, "from", "", "a checkout of charter to include tasks/repo from, with the charter on your path as the tool (default: this tool's release, pinned)")
 	})
@@ -114,21 +116,36 @@ func adoptCommand(args []string) error {
 	if err != nil {
 		return errors.New("adopt runs in a git repo (git init first)")
 	}
-	version := toolVersion()
-	switch {
-	case from != "":
-		if !filepath.IsAbs(from) {
-			from = filepath.Join(started, from)
-		}
-	case version == "":
-		return errors.New("adopt: run a release (mise x " + toolRelease + " -- charter adopt), or pass -from <checkout of charter>")
+	if check {
+		return adoptCheck(filepath.FromSlash(root))
 	}
-	return adopt(filepath.FromSlash(root), description, version, from)
+	if from != "" && !filepath.IsAbs(from) {
+		from = filepath.Join(started, from)
+	}
+	return adopt(filepath.FromSlash(root), description, toolVersion(), from)
 }
 
 // adopt writes into the repo at root what it lacks of the charter way. version is the release the
 // tool is, which mise.toml pins and includes the tasks at; with checkout (a checkout of charter)
 // the tasks come from there instead and nothing is pinned.
+func adoptCheck(root string) error {
+	changed, kept, _, err := writeKit(root, true)
+	if err != nil {
+		return err
+	}
+	for _, file := range kept {
+		fmt.Printf("kept     %s: the repo's own (it does not carry charter's mark)\n", file)
+	}
+	for _, file := range changed {
+		fmt.Fprintf(os.Stderr, "differs  %s: charter adopt writes it\n", strings.TrimPrefix(file, "removed ")+map[bool]string{true: " (not the kit's: it goes)", false: ""}[strings.HasPrefix(file, "removed ")])
+	}
+	if len(changed) > 0 {
+		return fmt.Errorf("%d files of the kit differ from what this release writes: charter adopt", len(changed))
+	}
+	fmt.Println("ok       the kit: every file is what this release writes")
+	return nil
+}
+
 func adopt(root, description, version, checkout string) error {
 	if checkout != "" && !exists(filepath.Join(checkout, "tasks", repoTasksFolder)) {
 		return fmt.Errorf("%s is not a checkout of charter with tasks/%s", checkout, repoTasksFolder)
@@ -190,51 +207,16 @@ func adopt(root, description, version, checkout string) error {
 				say("moved", name, ": what it said is now in docs/rules.md")
 			}
 		}
-		// The pointer files: charter's, the same in every repo, written again if they differ.
-		pointers, err := syncFiles(root, agentFiles(), false)
-		if err != nil {
-			return err
-		}
-		for _, file := range pointers {
-			say("wrote", file, "")
-		}
-		if len(pointers) == 0 {
-			say("ok", "AGENTS.md, CLAUDE.md", ": what charter writes")
-		}
-	}
-
-	// charter's pages and the docs site's files: charter's, the same in every repo, so written again
-	// if stale, where the file is charter's. The pages an earlier release wrote elsewhere move here.
-	if docsOwn {
-		var site *githubRepo
-		if onGitHub {
-			site = &repo
-		}
-		stale, kept, err := keepCharters(root, docsFiles("docs", site), false)
-		if err != nil {
-			return err
-		}
-		for _, file := range stale {
-			say("wrote", file, "")
-		}
-		for _, file := range kept {
-			say("kept", file, ": yours (it does not carry charter's mark), so charter leaves it")
-		}
-		// charter's folder is what this release writes: the tasks page, which mise writes below, too.
-		files := docsFiles("docs", site)
-		files[filepath.Join("docs", charterFolder, "tasks.md")] = nil
-		moved, err := sweep(root, filepath.Join("docs", charterFolder), nil, files, false)
-		if err != nil {
-			return err
-		}
-		for _, change := range moved {
-			fmt.Println(change)
-		}
-		if len(stale)+len(moved) == 0 {
-			say("ok", "docs/", ": charter's pages and the docs site's files are what charter docs writes")
-		}
-		if !onGitHub && !exists(filepath.Join(root, "docs", "_config.yml")) {
-			say("waiting", "docs/_config.yml", ": the docs site's config needs the repo's name on GitHub; once it is there (gh repo create), mise run docs:setup")
+		// The pointer files are the kit's: what the repo's own said is in docs/rules.md now, so they go
+		// and the kit writes charter's in their place.
+		for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
+			if have, err := os.ReadFile(filepath.Join(root, name)); err == nil && docsOwn {
+				if charters, _, ok := markOf(have); !ok || !charters {
+					if err := os.Remove(filepath.Join(root, name)); err != nil {
+						return err
+					}
+				}
+			}
 		}
 	}
 
@@ -243,6 +225,8 @@ func adopt(root, description, version, checkout string) error {
 	file := filepath.Join(root, "mise.toml")
 	have, err := os.ReadFile(file)
 	switch {
+	case errors.Is(err, os.ErrNotExist) && version == "" && checkout == "":
+		return errors.New("adopt: the repo has no mise.toml, and this tool is no release to pin: run a release (mise x " + toolRelease + " -- charter adopt), or pass -from <checkout of charter>")
 	case errors.Is(err, os.ErrNotExist):
 		if err := write(file, startedBy("adopt", "mise.toml", adoptedTasks(name, pin, include, checkout != ""))); err != nil {
 			return err
@@ -267,34 +251,27 @@ func adopt(root, description, version, checkout string) error {
 			fmt.Printf("         mise.toml defines %s itself: each takes the place of charter's task of that name. Delete those you want from charter\n", strings.Join(own, ", "))
 		}
 	}
-	// The pages mise writes, now that mise.toml is there: charter's tasks page, and those the repo's
-	// docs/_generated.toml lists. Where mise cannot list the tasks yet (the tool is not installed, or
-	// the release is not out), the first mise run docs:setup or mise run repo writes them.
-	if docsOwn {
-		pages := map[string][]byte{}
-		path, page, err := tasksFile(root, "docs")
-		if err == nil {
-			pages[path] = page
-			var generated []generatedPage
-			if generated, err = readGenerated(filepath.Join(root, "docs")); err != nil {
-				return err
-			}
-			err = addGenerated(pages, root, "docs", generated)
-		}
-		if err != nil {
-			say("waiting", "docs/charter/tasks.md", ": mise could not list the tasks yet; after mise install, mise run docs:setup writes it")
+	// The kit, now that mise.toml is there (the tasks page is written from it): every file charter
+	// writes, as this release has it.
+	changed, kept, waiting, err := writeKit(root, false)
+	if err != nil {
+		return err
+	}
+	for _, file := range changed {
+		if strings.HasPrefix(file, "removed ") {
+			fmt.Println(file)
 		} else {
-			stale, kept, err := keepCharters(root, pages, false)
-			if err != nil {
-				return err
-			}
-			for _, file := range stale {
-				say("wrote", file, "")
-			}
-			for _, file := range kept {
-				say("kept", file, ": yours (it does not carry charter's mark), so charter leaves it")
-			}
+			say("wrote", file, "")
 		}
+	}
+	for _, file := range kept {
+		say("kept", file, ": yours (it does not carry charter's mark), so charter leaves it")
+	}
+	for file, why := range waiting {
+		say("waiting", filepath.ToSlash(file), ": "+why+"; charter adopt again writes it")
+	}
+	if len(changed) == 0 {
+		say("ok", "the kit", ": every file is what this release writes")
 	}
 	fmt.Printf(`
   mise install && mise tasks         # the tool, then what there is to run
@@ -331,39 +308,11 @@ var (
 	relativeLink = regexp.MustCompile(`\]\(((?:[^)#:/][^):]*|\./[^):]*))\)`)
 )
 
-// agentFiles are the two pointer files of a repo that is not a project: the same in every repo
-// charter keeps, and charter's to write again, so what agents are told first cannot drift from repo
-// to repo. What is a repo's own is in its docs/, where they point.
+// agentFiles are the two pointer files of a repo that is not a project, from the kit: the same in
+// every repo charter keeps. What is a repo's own is in its docs/, where they point.
 func agentFiles() map[string][]byte {
-	mark := "<!-- Written by `charter repo` (" + charterRepo + "): don't edit. The same in every repo charter keeps; what is this repo's own is in docs/. -->\n\n"
-	return map[string][]byte{
-		"AGENTS.md": []byte(mark + repoAgentsPage),
-		"CLAUDE.md": []byte(mark + claudePage),
-	}
+	return map[string][]byte{"AGENTS.md": []byte(kitFile("AGENTS.md")), "CLAUDE.md": []byte(kitFile("CLAUDE.md"))}
 }
-
-const repoAgentsPage = `# For agents
-
-Everything about this repo is in [docs/](docs/README.md), the same pages developers read. Nothing is kept here, so there is one source of truth.
-
-The start page, the rules, how to use charter and the tasks come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does), so nothing has to be looked up first. Any other agent: read them before anything else, in this order: [docs/README.md](docs/README.md), what this repo is and the index of every page; [docs/charter/rules.md](docs/charter/rules.md), the rules every repo shares; [docs/rules.md](docs/rules.md), this repo's own; [docs/charter/using.md](docs/charter/using.md), the tool it is kept with. The rules are binding.
-
-@docs/README.md
-@docs/charter/rules.md
-@docs/rules.md
-@docs/charter/using.md
-@docs/charter/tasks.md
-
-Then:
-
-1. The open issues, ` + "`mise run issues`" + `: what is reported and what is planned. One labelled ` + "`needs-triage`" + ` comes first.
-2. The page for the part you are changing, from the start page's index.
-3. [docs/charter/writing.md](docs/charter/writing.md) before you write or change a page in ` + "`docs/`" + `.
-
-` + "`mise tasks`" + ` lists what there is to run; ` + "`mise run check`" + `, where the repo has it, is what must pass.
-
-When you learn or change something, write it in the page in ` + "`docs/`" + ` it belongs to, and run ` + "`mise run docs:check`" + `. Don't add README files elsewhere. [docs/charter/](docs/charter/README.md) is charter's, written by it: change what is yours, not that.
-`
 
 // startPages are the files a repo that is not a project starts with and then owns, each with its
 // "Started by" mark: one list, written by adopt on the first run and put back by repo if one goes

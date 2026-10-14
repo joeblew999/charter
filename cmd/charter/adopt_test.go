@@ -36,7 +36,7 @@ func TestAdopt(t *testing.T) {
 	for file, want := range map[string]string{
 		"charter.toml":            "description = \"field-notes\"\ntopics = []\n",
 		"AGENTS.md":               "[docs/charter/rules.md](docs/charter/rules.md)",
-		"AGENTS.md ":              "Written by `charter repo`",
+		"AGENTS.md ":              "Written by `charter adopt`",
 		"AGENTS.md  ":             "\n@docs/README.md\n@docs/charter/rules.md\n@docs/rules.md\n@docs/charter/using.md\n@docs/charter/tasks.md\n",
 		"CLAUDE.md":               "@AGENTS.md\n",
 		"docs/README.md":          "# field-notes\n",
@@ -64,7 +64,12 @@ func TestAdopt(t *testing.T) {
 			}
 		}
 	}
-	for _, not := range []string{".github", "fern", "renovate.json", "docs/_config.yml", "README.md", "docs/_generated.toml", "docs/tasks.md", "docs/writing.md", "docs/repo.md"} {
+	for _, kit := range []string{".github/workflows/charter.yml", ".github/ISSUE_TEMPLATE/charter-bug.yml", ".github/charter-labels.tsv", "renovate.json", "docs/_config.yml"} {
+		if read(kit) != kitFile(kit) {
+			t.Errorf("%s is not the kit's, as it is", kit)
+		}
+	}
+	for _, not := range []string{"fern", "README.md", "docs/_generated.toml", "docs/tasks.md", "docs/writing.md", "docs/repo.md", ".github/workflows/charter-check.yml"} {
 		if exists(filepath.Join(root, not)) {
 			t.Errorf("adopt wrote %s", not)
 		}
@@ -160,8 +165,8 @@ func TestAdopt(t *testing.T) {
 	if err := adopt(root, "", "v1.2.3", ""); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(read("charter.toml"), `description = "Billing"`) || !strings.Contains(read("docs/_config.yml"), `description: "Billing"`) || !exists(filepath.Join(root, "docs", "llms.txt")) {
-		t.Error("with the repo on GitHub: no docs site from its description there")
+	if !strings.Contains(read("charter.toml"), `description = "Billing"`) || !exists(filepath.Join(root, "docs", "llms.txt")) {
+		t.Error("with the repo on GitHub: no charter.toml from its description there, or no docs site")
 	}
 	if len(github.writes) > 0 {
 		t.Errorf("adopt changed the repo on GitHub: %v", github.writes)
@@ -221,7 +226,7 @@ func TestAdoptChangesNothingOfTheRepos(t *testing.T) {
 	}
 	for file := range after {
 		_, mine := own[file]
-		if !mine && !strings.HasPrefix(file, "docs/charter/") && !slices.Contains([]string{"charter.toml", "AGENTS.md", "CLAUDE.md", "docs/rules.md", "docs/llms.txt", "docs/_sass/custom/custom.scss"}, file) {
+		if !mine && !strings.HasPrefix(file, "docs/charter/") && !strings.HasPrefix(file, ".github/ISSUE_TEMPLATE/charter-") && !slices.Contains([]string{"charter.toml", "AGENTS.md", "CLAUDE.md", "docs/rules.md", "docs/llms.txt", "docs/_sass/custom/custom.scss", ".github/ISSUE_TEMPLATE/config.yml", ".github/charter-labels.tsv", ".github/workflows/charter.yml"}, file) {
 			t.Errorf("adopt wrote %s, outside charter's own places", file)
 		}
 	}

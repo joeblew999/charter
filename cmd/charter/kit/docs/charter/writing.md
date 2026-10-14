@@ -6,7 +6,7 @@ parent: How this repo is kept
 
 # Writing docs
 
-Written by `charter docs` (the same page in every repo that uses it): don't edit it here, change `cmd/charter/kit/docs/charter/writing.md` in [charter](https://github.com/joeblew999/charter). `mise run docs:lint` checks what a program can; `mise run docs:review` has Claude check the rest.
+Written by `charter adopt` (the same page in every repo that uses it): don't edit it here, change `cmd/charter/kit/docs/charter/writing.md` in [charter](https://github.com/joeblew999/charter). `mise run docs:lint` checks what a program can; `mise run docs:review` has Claude check the rest.
 
 ## The reader
 

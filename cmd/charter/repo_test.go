@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -193,25 +194,17 @@ func TestRepoKeepsTheRepo(t *testing.T) {
 	if err := keep(true); err == nil {
 		t.Fatal("-check passed on a repo that differs")
 	}
-	if len(github.writes) > 0 || exists(filepath.Join(root, "docs")) || exists(filepath.Join(root, ".github")) {
+	if len(github.writes) > 0 {
 		t.Fatalf("-check changed something: %v", github.writes)
 	}
 
 	if err := keep(false); err != nil {
 		t.Fatal(err)
 	}
-	for _, file := range []string{"docs/_config.yml", "docs/charter/writing.md", "docs/charter/tasks.md", "docs/llms.txt", ".github/ISSUE_TEMPLATE/charter-bug.yml", ".github/ISSUE_TEMPLATE/charter-plan.yml", ".github/workflows/check.yml"} {
-		if !exists(filepath.Join(root, file)) {
-			t.Errorf("no %s", file)
+	for _, file := range []string{"docs", ".github", "renovate.json", "AGENTS.md"} {
+		if exists(filepath.Join(root, file)) {
+			t.Errorf("charter repo wrote %s: it writes no file (charter adopt writes the kit)", file)
 		}
-	}
-	var renovate struct{ Extends []string }
-	if raw, err := os.ReadFile(filepath.Join(root, "renovate.json")); err != nil || json.Unmarshal(raw, &renovate) != nil ||
-		!slices.Equal(renovate.Extends, []string{"github>joeblew999/charter//" + renovatePresetPath}) {
-		t.Errorf("renovate.json: %+v, %v", renovate, err)
-	}
-	if config, _ := os.ReadFile(filepath.Join(root, "docs", "_config.yml")); !strings.Contains(string(config), `description: "Billing"`) {
-		t.Error("the docs site does not have charter.toml's description")
 	}
 	slices.Sort(github.topics)
 	if github.description != "Billing" || github.homepage != "https://zeta.github.io/billing-api/" || !slices.Equal(github.topics, []string{"api", "billing", "charter"}) {
@@ -252,9 +245,6 @@ func TestRepoKeepsTheRepo(t *testing.T) {
 	if err := keep(false); err != nil {
 		t.Fatal(err)
 	}
-	if exists(filepath.Join(root, ".github", "workflows", "check.yml")) || !exists(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "charter-bug.yml")) || exists(filepath.Join(root, ".github", "labels.tsv")) {
-		t.Error("without projects: the issue forms, no labels file, and none of a project's workflows")
-	}
 	if *github.pages != [3]string{"legacy", "main", "/docs"} || !slices.Equal(github.topics, []string{"charter"}) {
 		t.Errorf("Pages %v, topics %v", *github.pages, github.topics)
 	}
@@ -276,7 +266,7 @@ func TestRepoKeepsTheRepo(t *testing.T) {
 // (charter.yml, unless workflow = false), beside the repo's own workflows and forms and none of a
 // project's. A file at a name the host fixes (docs/_config.yml) without charter's mark is the repo's:
 // kept, and not drift. In charter's own places, an edited file is written again.
-func TestRepoInARepoThatIsNotAProject(t *testing.T) {
+func TestKitInARepoThatIsNotAProject(t *testing.T) {
 	forms := formFiles()
 	for name, content := range forms {
 		if charters, _, ok := markOf(content); !ok || !charters {
@@ -312,7 +302,7 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := keepRepo(root, false); err != nil {
+	if err := kitKeep(root, false); err != nil {
 		t.Fatal(err)
 	}
 	for _, file := range []string{"docs/charter/README.md", "docs/charter/writing.md", "docs/charter/tasks.md", "renovate.json", ".github/workflows/charter.yml", ".github/workflows/stages.yml", ".github/ISSUE_TEMPLATE/config.yml", ".github/ISSUE_TEMPLATE/charter-plan.yml", ".github/ISSUE_TEMPLATE/charter-upstream.yml"} {
@@ -325,20 +315,14 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 			t.Errorf("charter wrote %s, where it writes nothing now", file)
 		}
 	}
-	// What adopt writes on the first run, repo puts back when it is missing: one list (startPages).
 	for _, file := range []string{"AGENTS.md", "CLAUDE.md"} {
-		if have, _ := os.ReadFile(filepath.Join(root, file)); !strings.Contains(string(have), "Written by `charter repo`") {
-			t.Errorf("charter repo did not write %s, the same in every repo", file)
+		if have, _ := os.ReadFile(filepath.Join(root, file)); string(have) != kitFile(file) {
+			t.Errorf("the kit's %s was not written, the same in every repo", file)
 		}
 	}
-	for _, file := range []string{"docs/README.md", "docs/rules.md"} {
-		if have, _ := os.ReadFile(filepath.Join(root, filepath.FromSlash(file))); !strings.Contains(string(have), "Started by `charter adopt`") {
-			t.Errorf("charter repo did not put back %s, which adopt starts a repo with", file)
-		}
-	}
-	for _, file := range []string{".github/workflows/check.yml", ".github/workflows/deploy.yml", ".github/workflows/release.yml", ".github/workflows/sdk-check.yml", "fern"} {
+	for _, file := range []string{".github/workflows/charter-check.yml", ".github/workflows/charter-deploy.yml", ".github/workflows/charter-release.yml", ".github/workflows/charter-sdk-check.yml", "fern"} {
 		if exists(filepath.Join(root, filepath.FromSlash(file))) {
-			t.Errorf("charter repo wrote %s in a repo that is not a project", file)
+			t.Errorf("the kit wrote %s in a repo that is not a project", file)
 		}
 	}
 	for file, want := range map[string]string{".github/ISSUE_TEMPLATE/charter-bug.yml": string(forms["ISSUE_TEMPLATE/charter-bug.yml"]), ".github/ISSUE_TEMPLATE/bug.yml": "name: Ours\n", "docs/_config.yml": "title: our own site\n"} {
@@ -349,50 +333,24 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 	if have, _ := os.ReadFile(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "charter-feature.yml")); string(have) != string(forms["ISSUE_TEMPLATE/charter-feature.yml"]) {
 		t.Error("a form charter wrote, edited by hand, was not written again")
 	}
-	if err := keepRepo(root, true); err != nil {
+	if err := kitKeep(root, true); err != nil {
 		t.Errorf("-check with files of the repo's own at charter's paths: %v", err)
 	}
-	// The workflow: a call to charter's own, at the release, on pull requests and pushes to the
-	// default branch, with no permission to write; the mise the repo asks for.
+	// The workflow: one job on Linux, on pull requests and pushes to main, every step a mise task of
+	// tasks/repo or an action pinned to a release, reading GitHub with the run's token, writing nothing.
 	workflow, _ := os.ReadFile(filepath.Join(root, ".github", "workflows", repoWorkflow))
 	for _, want := range []string{"name: charter\n", "    branches: [main]\n", "  pull_request:\n", "\npermissions:\n  contents: read\n  issues: read\n  pull-requests: read\n  pages: read\n",
-		"    uses: joeblew999/charter/.github/workflows/repo-check.yml@main\n"} {
+		"GH_TOKEN: ${{ github.token }}", "    runs-on: ubuntu-24.04\n", "- run: mise run repo:ci\n"} {
 		if !strings.Contains(string(workflow), want) {
 			t.Errorf("%s: no %q in\n%s", repoWorkflow, want, workflow)
 		}
 	}
-	if strings.Contains(string(workflow), ": write") || strings.Contains(string(workflow), "__") || strings.Contains(string(workflow), "runs-on:") {
-		t.Errorf("%s: a permission to write, a placeholder left, or steps of its own:\n%s", repoWorkflow, workflow)
+	if strings.Count(string(workflow), "runs-on:") != 1 || strings.Contains(string(workflow), ": write") || strings.Contains(string(workflow), "uses: joeblew999/") {
+		t.Errorf("%s: more than one job, a permission to write, or a call to another workflow:\n%s", repoWorkflow, workflow)
 	}
-	if got := string(repoWorkflowFor(t.TempDir(), "trunk", "v1.2.3")); !strings.Contains(got, "branches: [trunk]") || !strings.Contains(got, "repo-check.yml@v1.2.3\n") {
-		t.Errorf("the workflow for trunk at v1.2.3:\n%s", got)
-	}
-	write(filepath.Join(root, "mise.toml"), "min_version = \"2026.10.4\"\n")
-	if got := string(repoWorkflowFor(root, "main", "v1.2.3")); !strings.Contains(got, "repo-check.yml@v1.2.3\n    with:\n      mise-version: 2026.10.4 ") {
-		t.Errorf("the workflow does not ask for the repo's min_version:\n%s", got)
-	}
-	// charter's own workflow, which that one calls: one job on Linux, every step a mise task of
-	// tasks/repo or an action pinned to a release, reading GitHub with the run's token, writing nothing.
-	called, err := os.ReadFile("../../.github/workflows/repo-check.yml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, want := range []string{"  workflow_call:\n", "      mise-version:\n", "          version: ${{ inputs.mise-version }}\n", "GH_TOKEN: ${{ github.token }}", "    runs-on: ubuntu-24.04\n", "- run: mise run repo:ci\n"} {
-		if !strings.Contains(string(called), want) {
-			t.Errorf("repo-check.yml: no %q", want)
-		}
-	}
-	if strings.Count(string(called), "runs-on:") != 1 || strings.Contains(string(called), ": write") {
-		t.Errorf("repo-check.yml: more than one job, or a permission to write:\n%s", called)
-	}
-	for _, m := range regexp.MustCompile(`- run: (.*)`).FindAllStringSubmatch(string(called), -1) {
+	for _, m := range regexp.MustCompile(`- run: (.*)`).FindAllStringSubmatch(string(workflow), -1) {
 		if task, ok := strings.CutPrefix(m[1], "mise run "); !ok || !slices.Contains(repoTasks, task) {
-			t.Errorf("repo-check.yml runs %q, which is not a task of tasks/repo", m[1])
-		}
-	}
-	for _, m := range regexp.MustCompile(`- uses: (.*)`).FindAllStringSubmatch(string(called), -1) {
-		if !regexp.MustCompile(`^[\w.-]+/[\w.-]+@v\d+\.\d+\.\d+$`).MatchString(m[1]) {
-			t.Errorf("repo-check.yml: pin the action to an exact version, not %q", m[1])
+			t.Errorf("%s runs %q, which is not a task of tasks/repo", repoWorkflow, m[1])
 		}
 	}
 	// workflow = false: charter writes none, and one that is there is the repo's.
@@ -400,7 +358,7 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 		t.Fatal(err)
 	}
 	os.Remove(filepath.Join(root, ".github", "workflows", repoWorkflow))
-	if err := keepRepo(root, false); err != nil || exists(filepath.Join(root, ".github", "workflows", repoWorkflow)) {
+	if err := kitKeep(root, false); err != nil || exists(filepath.Join(root, ".github", "workflows", repoWorkflow)) {
 		t.Errorf("workflow = false: %v, and the workflow is there: %v", err, exists(filepath.Join(root, ".github", "workflows", repoWorkflow)))
 	}
 	// A project gets its own workflows, whose check holds its docs, and not this one.
@@ -410,21 +368,21 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := keepRepo(project, false); err != nil {
+	if err := kitKeep(project, false); err != nil {
 		t.Fatal(err)
 	}
-	if exists(filepath.Join(project, ".github", "workflows", repoWorkflow)) || !exists(filepath.Join(project, ".github", "workflows", "check.yml")) {
+	if exists(filepath.Join(project, ".github", "workflows", repoWorkflow)) || !exists(filepath.Join(project, ".github", "workflows", "charter-check.yml")) {
 		t.Error("a project: its own workflows, and no charter.yml")
 	}
 	for _, file := range []string{"AGENTS.md", "CLAUDE.md", "docs/README.md", "docs/rules.md"} {
 		if exists(filepath.Join(project, filepath.FromSlash(file))) {
-			t.Errorf("charter repo wrote %s in a project, whose own it is", file)
+			t.Errorf("the kit wrote %s in a project, whose own it is", file)
 		}
 	}
 
 	// Deleted, the form is charter's again.
 	os.Remove(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "charter-bug.yml"))
-	if err := keepRepo(root, true); err == nil {
+	if err := kitKeep(root, true); err == nil {
 		t.Error("-check passed without the bug form")
 	}
 }
@@ -432,7 +390,7 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 // charter's own places are exactly what the release writes: a page in docs/charter/ or a form
 // charter-*.yml that it does not write is removed, and one edited or without the mark is written
 // again. A form of the repo's own, under any other name, stays.
-func TestRepoOwnsItsPlaces(t *testing.T) {
+func TestKitOwnsItsPlaces(t *testing.T) {
 	root := t.TempDir()
 	github := &fakeGitHub{labels: map[string][2]string{}}
 	gh = github.gh
@@ -451,10 +409,10 @@ func TestRepoOwnsItsPlaces(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := keepRepo(root, true); err == nil {
+	if err := kitKeep(root, true); err == nil {
 		t.Error("-check passed with what charter does not write in its own places")
 	}
-	if err := keepRepo(root, false); err != nil {
+	if err := kitKeep(root, false); err != nil {
 		t.Fatal(err)
 	}
 	for _, gone := range []string{"docs/charter/old.md", ".github/ISSUE_TEMPLATE/charter-old.yml"} {
@@ -468,19 +426,18 @@ func TestRepoOwnsItsPlaces(t *testing.T) {
 	if have, _ := os.ReadFile(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "bug.yml")); string(have) != "name: Ours\n" {
 		t.Error("the repo's own form was changed")
 	}
-	if err := keepRepo(root, true); err != nil {
+	if err := kitKeep(root, true); err != nil {
 		t.Errorf("-check after a run: %v", err)
 	}
 }
 
-// The preset renovate.json takes: valid JSON, with the managers for every kind of pin catalog reads,
-// and a release's renovate.json takes it at that release.
+// The kit's renovate.json: valid JSON, with the managers for every kind of pin catalog reads.
 func TestRenovatePreset(t *testing.T) {
 	var preset struct {
 		EnabledManagers []string
 		CustomManagers  []struct{ MatchStrings []string }
 	}
-	if err := json.Unmarshal(renovatePreset, &preset); err != nil {
+	if err := json.Unmarshal([]byte(kitFile("renovate.json")), &preset); err != nil {
 		t.Fatal(err)
 	}
 	for _, manager := range []string{"mise", "gomod", "npm", "custom.regex"} {
@@ -488,15 +445,18 @@ func TestRenovatePreset(t *testing.T) {
 			t.Errorf("the preset has no %s manager", manager)
 		}
 	}
-	if !exists("../../" + renovatePresetPath + ".json") {
-		t.Errorf("renovate.json extends %s.json, which is not there", renovatePresetPath)
-	}
-	if want := `"extends": ["github>joeblew999/charter//cmd/charter/renovate/charter#v1.2.3"]`; !strings.Contains(string(renovateConfig("v1.2.3")), want) {
-		t.Errorf("renovateConfig: %s", renovateConfig("v1.2.3"))
-	}
 	include := regexp.MustCompile(strings.ReplaceAll(strings.ReplaceAll(preset.CustomManagers[0].MatchStrings[0], "(?<", "(?P<"), `\"`, `"`))
 	m := include.FindStringSubmatch(`"git::https://github.com/joeblew999/charter.git//tasks/shared?ref=v0.9.3"`)
 	if m == nil || m[1] != "joeblew999/charter" || m[2] != "v0.9.3" {
 		t.Errorf("the include manager reads %q", m)
 	}
+}
+
+// kitKeep is charter adopt's part that writes the kit: with check, an error if a file differs.
+func kitKeep(dir string, check bool) error {
+	changed, _, _, err := writeKit(dir, check)
+	if err == nil && check && len(changed) > 0 {
+		return fmt.Errorf("the kit differs: %v", changed)
+	}
+	return err
 }

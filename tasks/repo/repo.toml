@@ -5,12 +5,12 @@
 # The repo on GitHub, its issues, and the upstream issues its code works around.
 
 ["repo"]
-description = "REMOTE: keep the repo in shape from charter.toml at its root: docs site and charter's pages, issue forms, labels, the workflow, description, homepage, topics, GitHub Pages; never a file of the repo's own"
+description = "REMOTE: keep the repo on GitHub in shape from charter.toml at its root: labels, description, homepage, topics, GitHub Pages. It writes no file: mise run adopt writes the kit"
 dir = "{{config_root}}"
 run = "{{ env.CHARTER_TOOL | default(value='charter') }} repo"
 
 ["repo:check"]
-description = "REMOTE, read-only: fail if the repo differs from charter.toml and the tool's templates (charter repo -check)"
+description = "REMOTE, read-only: fail if the repo on GitHub differs from charter.toml (charter repo -check)"
 dir = "{{config_root}}"
 run = "{{ env.CHARTER_TOOL | default(value='charter') }} repo -check"
 

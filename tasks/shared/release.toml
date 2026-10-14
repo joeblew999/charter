@@ -14,12 +14,8 @@ description = "REMOTE on a version tag (vX.Y.Z): tag the committed Go SDK, a mod
 dir = "{{config_root}}"
 run = "{{env.CHARTER_TOOL}} release-tags sdk/go"
 
-["workflows"]
-description = "Write .github/workflows/ from the tool's templates (never edit the copies)"
-dir = "{{config_root}}"
-run = "{{env.CHARTER_TOOL}} workflows"
 
 ["workflows:check"]
-description = "Fail if a workflow in .github/workflows/ differs from the tool's template"
+description = "Fail if a file of charter's kit (the workflows among them) differs from what charter adopt writes"
 dir = "{{config_root}}"
-run = "{{env.CHARTER_TOOL}} workflows -check"
+run = "{{env.CHARTER_TOOL}} adopt -check"

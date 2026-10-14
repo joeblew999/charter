@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -69,53 +68,27 @@ func startedBy(command, path, content string) string {
 	return "# " + mark + "\n" + content
 }
 
-// writtenFiles are the files charter writes into the repo at root and rewrites when they differ,
-// by their path in the repo, as this release writes them; and those it cannot say without more
-// (the repo on GitHub, running a command of the repo), with what would.
+// writtenFiles are the files charter writes into the repo at root (the kit, as charter adopt
+// writes it there), by their path in the repo, as this release writes them; and those it cannot say
+// without more (the repo on GitHub, mise, running a command of the repo), with what would.
 func writtenFiles(root string) (files map[string][]byte, unknown map[string]string, err error) {
-	config := charterToml{Docs: "docs", Renovate: true, Workflow: true}
-	if text, readErr := os.ReadFile(filepath.Join(root, "charter.toml")); readErr == nil {
-		if config, err = parseCharterToml(string(text)); err != nil {
-			return nil, nil, err
-		}
-	}
-	files, unknown = map[string][]byte{}, map[string]string{}
-	projects := hasProjects(root, config)
-	github, err := githubFiles(root, projects)
+	config, err := readCharterToml(root)
 	if err != nil {
 		return nil, nil, err
 	}
-	for name, content := range github {
-		files[".github/"+filepath.ToSlash(name)] = content
+	kit, waiting, err := kitFor(root)
+	if err != nil {
+		return nil, nil, err
 	}
-	if config.Renovate {
-		files["renovate.json"] = renovateConfig(toolVersion())
-	}
-	// The docs site and charter's pages: the site's config has the repo's name and description on GitHub in it.
-	var repo githubRepo
-	out, ghErr := gh(root, "repo", "view", "--json", "nameWithOwner,name,description,defaultBranchRef")
-	onGitHub := ghErr == nil && json.Unmarshal([]byte(out), &repo) == nil && repo.Name != ""
-	repo.Description = config.Description
-	site := &repo
-	if !onGitHub {
-		site = nil
-		unknown[filepath.ToSlash(filepath.Join(config.Docs, "_config.yml"))] = "not compared: it holds the repo's name on GitHub, which gh could not read here"
-	}
-	for path, content := range docsFiles(config.Docs, site) {
-		files[filepath.ToSlash(filepath.Clean(path))] = content
-	}
-	unknown[filepath.ToSlash(filepath.Join(config.Docs, charterFolder, "tasks.md"))] = "not compared: written from what mise lists (charter docs-tasks), and mise run docs:check compares it"
-	if !projects {
-		for path, content := range agentFiles() {
+	files, unknown = map[string][]byte{}, map[string]string{}
+	for path, content := range kit {
+		path = filepath.ToSlash(filepath.Clean(path))
+		if content != nil {
 			files[path] = content
 		}
 	}
-	if !projects && config.Workflow {
-		if path := ".github/workflows/" + repoWorkflow; onGitHub {
-			files[path] = repoWorkflowFor(root, repo.DefaultBranchRef.Name, toolVersion())
-		} else {
-			unknown[path] = "not compared: it names the default branch on GitHub, which gh could not read here"
-		}
+	for path, why := range waiting {
+		unknown[filepath.ToSlash(filepath.Clean(path))] = "not compared: " + why
 	}
 	generated, err := readGenerated(filepath.Join(root, filepath.FromSlash(config.Docs)))
 	if err != nil {

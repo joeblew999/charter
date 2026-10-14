@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "charter's Renovate preset: a repo's renovate.json (written by charter repo) extends it at the release it pins. Not the workflows: charter writes those. A new release of a pinned repo opens a pull request; minor and patch ones merge themselves once its checks pass. https://joeblew999.github.io/charter/guides/repos.html",
+  "description": "Written by `charter adopt` from the kit (github.com/joeblew999/charter, cmd/charter/kit/renovate.json): don't edit, change the kit. renovate = false in charter.toml leaves this file to the repo. A new release of what the repo pins opens a pull request; minor and patch ones merge themselves once its checks pass.",
   "enabledManagers": ["mise", "gomod", "npm", "custom.regex"],
   "postUpdateOptions": ["gomodTidy"],
   "platformAutomerge": false,

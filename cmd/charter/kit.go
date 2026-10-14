@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"embed"
-	"encoding/json"
 	"errors"
 	"io/fs"
 	"os"
@@ -47,28 +46,6 @@ func kitFile(path string) string {
 	return string(content)
 }
 
-// docsFiles are the files charter writes into the repo's docs folder, by their path in the repo: its
-// pages in the folder of its own (the page on using charter is written from the tool itself), and
-// the site's files at the folder's top. The site's config holds the repo's name and description on
-// GitHub: without the repo (nil) it is left out. The tasks page is not here: mise writes it (tasksFile).
-func docsFiles(folder string, repo *githubRepo) map[string][]byte {
-	files := map[string][]byte{}
-	for path, content := range kitFiles("docs") {
-		if path == "_config.yml" {
-			if repo == nil {
-				continue
-			}
-			description, _ := json.Marshal(repo.Description) // a YAML string, safely quoted
-			content = []byte(strings.NewReplacer("__NAME__", repo.Name, "__DESCRIPTION__", string(description),
-				"__REPO__", repo.NameWithOwner, "__BRANCH__", repo.DefaultBranchRef.Name,
-				"gh_edit_source: docs", "gh_edit_source: "+folder).Replace(string(content)))
-		}
-		files[filepath.Join(folder, filepath.FromSlash(path))] = content
-	}
-	files[filepath.Join(folder, charterFolder, "using.md")] = []byte(docsUsing())
-	return files
-}
-
 // tasksFile is the tasks page in charter's folder, by its path in the repo: the repo's tasks as mise
 // lists them (charter docs-tasks), under the title and the line that say whose it is. It fails
 // where mise cannot list them yet (the tool or an include not installed).
@@ -78,7 +55,7 @@ func tasksFile(root, folder string) (string, []byte, error) {
 		return "", nil, err
 	}
 	title, rest, _ := strings.Cut(strings.ReplaceAll(out, "\r\n", "\n"), "\n")
-	note := "Written by `charter docs` from the repo's mise tasks (`charter docs-tasks`): don't edit, change the tasks, then `mise run docs:setup`."
+	note := "Written by `charter adopt` from the repo's mise tasks (`charter docs-tasks`): don't edit, change the tasks, then `charter adopt`."
 	page := "---\ntitle: Tasks\nnav_order: 4\nparent: How this repo is kept\n---\n\n" + title + "\n\n" + note + "\n" + strings.TrimRight(rest, "\n") + "\n"
 	return filepath.Join(folder, charterFolder, "tasks.md"), []byte(page), nil
 }
@@ -100,6 +77,9 @@ func formFiles() map[string][]byte {
 // named in kept. With check it writes nothing and only names them.
 func keepCharters(dir string, files map[string][]byte, check bool) (stale, kept []string, err error) {
 	for name, content := range files {
+		if content == nil {
+			continue // one that waits (the tasks page, before mise can list the tasks): what is there stays
+		}
 		path := filepath.Join(dir, name)
 		have, err := os.ReadFile(path)
 		switch {
@@ -159,6 +139,80 @@ func sweep(root, dir string, match func(name string) bool, files map[string][]by
 		return os.Remove(path)
 	})
 	return gone, err
+}
+
+// kitFor is the kit for the repo at root, by path in the repo: every file of cmd/charter/kit copied as
+// it is, but for which of them the repo takes (a project's workflows or charter.yml; AGENTS.md and
+// CLAUDE.md where it has no project of its own; renovate.json unless charter.toml says not), and the
+// two pages written from the tool and from mise. What cannot be written yet is in waiting, with why:
+// its path is in files with no content, so what is there stays.
+func kitFor(root string) (files map[string][]byte, waiting map[string]string, err error) {
+	config, err := readCharterToml(root)
+	if err != nil {
+		return nil, nil, err
+	}
+	project, projects := isProject(root), hasProjects(root, config)
+	files, waiting = map[string][]byte{}, map[string]string{}
+	err = fs.WalkDir(kit, "kit", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return err
+		}
+		rel := strings.TrimPrefix(path, "kit/")
+		base := filepath.Base(rel)
+		switch {
+		case rel == "renovate.json" && !config.Renovate,
+			(rel == "AGENTS.md" || rel == "CLAUDE.md") && projects,
+			rel == ".github/workflows/"+repoWorkflow && (project || !config.Workflow),
+			strings.HasPrefix(rel, ".github/workflows/charter-") && !project,
+			base == "charter-release-cli.yml" && !shipsCLI(root):
+			return nil
+		}
+		if docs, ok := strings.CutPrefix(rel, "docs/"); ok {
+			rel = filepath.ToSlash(filepath.Join(config.Docs, docs))
+		}
+		files[filepath.FromSlash(rel)], err = kit.ReadFile(path)
+		return err
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	files[filepath.Join(config.Docs, charterFolder, "using.md")] = []byte(docsUsing())
+	if path, page, err := tasksFile(root, config.Docs); err == nil {
+		files[path] = page
+	} else {
+		files[path] = nil
+		waiting[path] = "mise could not list the tasks yet (mise install first)"
+	}
+	return files, waiting, nil
+}
+
+// writeKit writes the kit into the repo at root (kitFor): its own places (docs/charter/, the
+// charter-*.yml forms, its workflows) as the release has them, with anything else in them removed,
+// and a file at a name the host fixes only where it is charter's (keepCharters). With check it writes
+// nothing. It returns what it wrote (or would), the repo's own files it kept, and what waits.
+func writeKit(root string, check bool) (changed, kept []string, waiting map[string]string, err error) {
+	files, waiting, err := kitFor(root)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	config, _ := readCharterToml(root)
+	if changed, kept, err = keepCharters(root, files, check); err != nil {
+		return nil, nil, nil, err
+	}
+	for _, place := range []struct {
+		dir   string
+		match func(string) bool
+	}{
+		{filepath.Join(config.Docs, charterFolder), nil},
+		{filepath.Join(".github", "ISSUE_TEMPLATE"), func(name string) bool { return strings.HasPrefix(name, "charter-") }},
+	} {
+		gone, err := sweep(root, place.dir, place.match, files, check)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		changed = append(changed, gone...)
+	}
+	return changed, kept, waiting, nil
 }
 
 // isCharter reports whether the repo at root is charter's own: its tasks run the tool from the

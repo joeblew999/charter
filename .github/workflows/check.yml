@@ -1,5 +1,5 @@
-# Written by `charter workflows` from its template (github.com/joeblew999/charter, cmd/charter/workflows/check.yml):
-# don't edit: change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# charter's own check: the jobs of a repo that holds several projects (the tool, the libraries, examples/).
+# Charter's own file, not the kit's: a project gets cmd/charter/kit/.github/workflows/charter-check.yml.
 # The local checks (no Cloudflare account): lint, tests, spec drift, the build, and the live tests natively and under workerd.
 name: check
 on:

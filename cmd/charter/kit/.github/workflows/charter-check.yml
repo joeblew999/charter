@@ -1,0 +1,43 @@
+# Written by `charter adopt` from the kit (github.com/joeblew999/charter, cmd/charter/kit/.github/workflows/charter-check.yml):
+# don't edit: change the template, not this file. Every step that does work is a mise task, so it runs locally too.
+# The local checks (no Cloudflare account): lint, tests, spec drift, the build, and the live tests natively and under workerd.
+name: check
+on:
+  push:
+    branches: [main]
+    # A release is cut from a developer's machine: this checks its tag on every OS afterwards.
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  GH_TOKEN: ${{ github.token }} # charter docs -check reads the repo's name and description with gh
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run check
+  # The same check on Windows. (The SDK tasks are not part of it: Fern generates in Linux containers,
+  # which GitHub's Windows runners do not run.)
+  check-windows:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run check
+  # And on macOS.
+  check-macos:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: mise run setup
+      - run: mise run check

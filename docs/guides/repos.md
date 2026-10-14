@@ -54,7 +54,7 @@ It fails on a breaking change unless `-tag` (or the workflow's tag) is a major r
 
 ## Propagate a release
 
-`charter repo` writes `renovate.json`, which extends charter's preset at the tool's release (`cmd/charter/renovate/charter.json`):
+`charter adopt` writes `renovate.json`, the kit's (`cmd/charter/kit/renovate.json`):
 
 | What | Renovate does |
 |---|---|
@@ -63,7 +63,7 @@ It fails on a breaking change unless `-tag` (or the workflow's tag) is a major r
 | charter's tool, task folders and Go library | One pull request for all three |
 | A minor or patch update | Merges itself once the consumer's checks (`mise run check`) pass |
 | A major update | Waits for a person |
-| `.github/workflows/` | Nothing: `mise run workflows` writes them |
+| `.github/workflows/` | Nothing: `mise run adopt` writes them |
 
 `renovate = false` in `charter.toml` leaves `renovate.json` to the repo. Limit: the release URL of `@charter/ts` in `package.json` is not updated (its version is written twice).
 

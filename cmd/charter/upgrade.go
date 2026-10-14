@@ -93,7 +93,7 @@ func upgrade(root, to string, same bool, out *os.File) error {
 	for name, content := range agentFiles() {
 		path := filepath.Join(root, name)
 		have, err := os.ReadFile(path)
-		if err != nil || !strings.Contains(strings.SplitN(string(have), "\n", 2)[0], "Written by `charter repo`") || string(have) == string(content) {
+		if charters, _, ok := markOf(have); err != nil || !ok || !charters || string(have) == string(content) {
 			continue
 		}
 		if err := write(path, string(content)); err != nil {

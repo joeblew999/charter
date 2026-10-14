@@ -17,9 +17,9 @@ import (
 // file the commands leave in a repo.
 func TestEveryFileCharterWritesSaysSo(t *testing.T) {
 	// The folders of templates, and the file in them that is not written into a repo.
-	notWritten := []string{"renovate/charter.json" /* the preset a renovate.json extends, read from GitHub */}
+	notWritten := []string{}
 	templates := 0
-	for _, folder := range []string{"kit", "workflows", "renovate"} {
+	for _, folder := range []string{"kit"} {
 		err := filepath.WalkDir(folder, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || slices.Contains(notWritten, filepath.ToSlash(path)) {
 				return err
@@ -40,9 +40,6 @@ func TestEveryFileCharterWritesSaysSo(t *testing.T) {
 	}
 	if templates < 15 {
 		t.Errorf("only %d templates found", templates)
-	}
-	if charters, command, ok := markOf(renovateConfig("v1.2.3")); !ok || !charters || command != "repo" {
-		t.Error("renovate.json has no mark")
 	}
 	page, err := generatedPageText(t.TempDir(), "docs", generatedPage{Page: "tasks.md", Run: "charter docs-tasks"}, 0, "# Tasks\n\nText.\n")
 	if charters, command, ok := markOf([]byte(page)); err != nil || !ok || !charters || command != "docs" {
@@ -74,6 +71,9 @@ func TestEveryFileCharterWritesSaysSo(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, dir := range []string{root, project} {
+		if _, _, _, err := writeKit(dir, false); err != nil {
+			t.Fatal(err)
+		}
 		if err := keepRepo(dir, false); err != nil {
 			t.Fatal(err)
 		}
@@ -107,7 +107,7 @@ func TestEveryFileCharterWritesSaysSo(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, file := range append(started, "renovate.json", "docs/charter/README.md", "docs/charter/rules.md", "docs/charter/using.md", "docs/charter/writing.md", "docs/charter/tasks.md", "docs/llms.txt", "docs/_config.yml", "docs/_sass/custom/custom.scss", ".github/ISSUE_TEMPLATE/charter-bug.yml", ".github/ISSUE_TEMPLATE/config.yml", ".github/workflows/charter.yml", ".github/workflows/check.yml") {
+	for _, file := range append(started, "renovate.json", "docs/charter/README.md", "docs/charter/rules.md", "docs/charter/using.md", "docs/charter/writing.md", "docs/charter/tasks.md", "docs/llms.txt", "docs/_config.yml", "docs/_sass/custom/custom.scss", ".github/ISSUE_TEMPLATE/charter-bug.yml", ".github/ISSUE_TEMPLATE/config.yml", ".github/charter-labels.tsv", ".github/workflows/charter.yml", ".github/workflows/charter-check.yml") {
 		if !found[file] {
 			t.Errorf("the commands wrote no %s", file)
 		}

@@ -6,7 +6,7 @@ has_children: true
 
 # How this repo is kept
 
-Written by `charter docs` (the same folder in every repo that uses it): don't edit these pages here, change `cmd/charter/kit/docs/charter/` in [charter](https://github.com/joeblew999/charter).
+Written by `charter adopt` (the same folder in every repo that uses it): don't edit these pages here, change `cmd/charter/kit/docs/charter/` in [charter](https://github.com/joeblew999/charter).
 
 Every repo that uses charter is kept the same way, so a developer or an agent who knows one knows them all. This folder is charter's: what is the same in every repo is here, and what is this repo's own is on its other pages.
 
@@ -25,9 +25,9 @@ Charter writes only these. This folder, the `charter-*.yml` forms and `charter.y
 |---|---|
 | `docs/charter/` | These pages |
 | `docs/_config.yml`, `docs/llms.txt`, `docs/_sass/` | The docs site's look and its index for agents: GitHub Pages reads them at the top of `docs/` |
-| `.github/ISSUE_TEMPLATE/charter-*.yml`, `config.yml` | The issue forms |
-| `.github/workflows/charter.yml` | The checks on GitHub, in a repo with no API: a call to charter's own workflow at the release this repo pins |
-| `.github/workflows/check.yml`, `deploy.yml`, `sdk-check.yml`, `release.yml` | In a charter project, its workflows instead |
-| `AGENTS.md`, `CLAUDE.md`, `renovate.json` | What agents read first, and the update bot's settings, which take charter's |
+| `.github/ISSUE_TEMPLATE/charter-*.yml`, `config.yml`, `.github/charter-labels.tsv` | The issue forms and the labels |
+| `.github/workflows/charter.yml` | The checks on GitHub, in a repo with no API |
+| `.github/workflows/charter-check.yml`, `charter-deploy.yml`, `charter-sdk-check.yml`, `charter-release.yml`, `charter-release-cli.yml` | In a charter project, its workflows instead (the last with a CLI) |
+| `AGENTS.md`, `CLAUDE.md`, `renovate.json` | What agents read first, and the update bot's settings |
 
-`charter files` lists them, and whether each is what this release writes. What each part needs: [Any repo](https://joeblew999.github.io/charter/guides/any-repo.html).
+`charter adopt` writes them all, copied as they are from the kit; `charter files` lists them, and whether each is what this release writes. What each part needs: [Any repo](https://joeblew999.github.io/charter/guides/any-repo.html).

@@ -51,7 +51,7 @@ Add a group under `groups:` in `fern/generators.yml`, then `mise run sdk:gen pyt
 
 A project has a CLI if and only if `fern/generators.yml` has the group `cli`: Fern writes it in Rust, and `dist` builds it for every OS ([Release](release.md#the-cli-for-every-os)). The notes examples and the showcases have it; a project made with `charter new -empty` has not, so it pins no Rust (1 to 3 GB a version), zig or cargo-zigbuild. Without the group, `dist` ships the SDKs and the specs only, the `release` workflow has no CLI jobs, `doctor` asks for no Rust, and the CLI tasks say the project has none.
 
-To have one, make the project with `charter new -empty -cli`, or copy into an existing one the `cli` group of `examples/notes-go/fern/generators.yml` (with your `binaryName`) and its `rust`, `zig` and `cargo-zigbuild` lines of `mise.toml`, then `mise install && mise run workflows`. To drop it, remove those lines, then `mise run workflows`. `mise run doctor` warns when the pins and the group disagree.
+To have one, make the project with `charter new -empty -cli`, or copy into an existing one the `cli` group of `examples/notes-go/fern/generators.yml` (with your `binaryName`) and its `rust`, `zig` and `cargo-zigbuild` lines of `mise.toml`, then `mise install && mise run adopt`. To drop it, remove those lines, then `mise run adopt`. `mise run doctor` warns when the pins and the group disagree.
 
 ## Fern features
 
@@ -78,7 +78,7 @@ The spec only describes: the server must enforce auth, and idempotency is the ha
 mise x github:joeblew999/charter@X.Y.Z -- charter upgrade   # the tool's pin, the includes' ?ref=, @charter/ts in package.json, together
 mise install && npm install                                   # npm install: in TypeScript
 go get github.com/joeblew999/charter/go@vX.Y.Z && go mod tidy  # in Go: upgrade says this line too
-mise run workflows && mise run check
+mise run adopt && mise run check
 ```
 
 `mise up --bump github:joeblew999/charter` moves only the pin, and mise takes no release younger than a day that way; `upgrade` with the version named moves everything at once, at any age. A project whose `mise.toml` still holds every task, or pins `"go:github.com/joeblew999/charter/cmd/charter"`: make a new project with `charter new` and take its `[tools]`, `CHARTER_TOOL` and `[task_config]` lines, then delete the tasks that `tasks/` now defines.

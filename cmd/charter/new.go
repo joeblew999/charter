@@ -174,17 +174,9 @@ func newProject(args []string) error {
 			return err
 		}
 	}
-	// charter's pages and the docs site's files, the same in every repo: charter docs writes them
-	// again, with the site's config once the repo is on GitHub and the tasks page once mise lists them.
-	if _, _, err := keepCharters(into, docsFiles("docs", nil), false); err != nil {
-		return err
-	}
-	if path, page, err := tasksFile(into, "docs"); err == nil {
-		if err := write(filepath.Join(into, path), string(page)); err != nil {
-			return err
-		}
-	}
-	if err := writeWorkflows(into); err != nil {
+	// The kit, as charter adopt writes it: charter's pages, the docs site's files, the issue forms and
+	// the project's workflows. The site's config waits for the repo on GitHub (charter adopt again).
+	if _, _, _, err := writeKit(into, false); err != nil {
 		return err
 	}
 

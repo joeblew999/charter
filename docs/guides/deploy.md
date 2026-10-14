@@ -38,7 +38,7 @@ Add a Go test in `api/` with the helpers in `api/api_test.go` (`server(t)`, `do(
 
 ## CI on GitHub
 
-`charter new` writes the workflows; every step is a mise task, so a failing step runs the same on your machine. Never edit them: `mise run workflows` writes them again.
+`charter new` writes the workflows (charter's kit: `charter-check.yml`, `charter-deploy.yml`, `charter-sdk-check.yml`, `charter-release.yml`, and `charter-release-cli.yml` with a CLI); every step is a mise task, so a failing step runs the same on your machine. Never edit them: `mise run adopt` writes them again.
 
 | Workflow | When | Runs |
 |---|---|---|
@@ -63,7 +63,7 @@ topics = ["api", "cloudflare-workers"]
 # homepage = "https://..."     default: the GitHub Pages URL
 # docs = "docs"                the docs folder: "docs" or "."
 # projects = ["api"]           folders that are projects, in a repo that holds several
-# renovate = false             no renovate.json (default: charter's Renovate preset)
+# renovate = false             no renovate.json (default: the kit's)
 # workflow = false             no charter.yml workflow, in a repo that is not a project
 ```
 
@@ -72,7 +72,7 @@ mise run repo          # REMOTE: brings the repo in line, printing ok or changed
 mise run repo:check    # REMOTE, read-only: fails on drift, for CI
 ```
 
-It runs at the repo's root, from any folder in it, and keeps: charter's pages in `docs/charter/`, the docs site's files and the [generated pages](#generated-pages); the issue forms; the workflows, for a repo that is a project or lists `projects`, and otherwise the one `charter.yml` workflow ([Any repo](any-repo.md#checks-on-github)); each file only where there is none or the one there carries charter's mark (a file without it is the repo's own: kept, and named in the output); the GitHub labels, removing GitHub's unused defaults; the description, homepage and topics, with `charter` added, which is how `charter catalog` finds the repo; `renovate.json` ([Repos that use each other](repos.md#propagate-a-release)); GitHub Pages for the docs folder. Running it again changes nothing. A project in a subfolder keeps its own tasks.
+It runs at the repo's root, from any folder in it, and keeps the repo on GitHub: the labels (the kit's `charter-labels.tsv`), removing GitHub's unused defaults; the description, homepage and topics, with `charter` added, which is how `charter catalog` finds the repo; GitHub Pages for the docs folder. It writes no file: `mise run adopt` writes the kit. Running it again changes nothing.
 
 ### Generated pages
 
