@@ -328,7 +328,8 @@ func startPages(name, description string) [][2]string {
 func linesToAdd(text, pin, include string, checkout bool) []string {
 	var add []string
 	if !checkout && !strings.Contains(text, `"`+toolRelease+`"`) {
-		add = append(add, "  under [tools]:\n    "+strings.TrimSpace(pin[strings.Index(pin, "\n")+1:]))
+		// The pin's own line, after its comment.
+		add = append(add, "  under [tools]:\n    "+strings.TrimSpace(pin[strings.LastIndex(strings.TrimSpace(pin), "\n")+1:]))
 	}
 	if !strings.Contains(text, "/tasks/"+repoTasksFolder+`"`) && !strings.Contains(text, "/tasks/"+repoTasksFolder+"?") {
 		add = append(add, "  in includes, under [task_config] (a list: includes = [...]):\n    \""+include+`"`)

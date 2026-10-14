@@ -75,11 +75,12 @@ The spec only describes: the server must enforce auth, and idempotency is the ha
 ## Update charter
 
 ```sh
-mise up --bump github:joeblew999/charter                    # the tool; then the same version in ?ref= of the includes in mise.toml
-go get -u github.com/joeblew999/charter/go && go mod tidy   # the Go library
+mise x github:joeblew999/charter@X.Y.Z -- charter upgrade   # the tool's pin, the includes' ?ref=, @charter/ts in package.json, together
+mise install && npm install                                   # npm install: in TypeScript
+go get github.com/joeblew999/charter/go@vX.Y.Z && go mod tidy  # in Go: upgrade says this line too
 mise run workflows && mise run check
 ```
 
-In TypeScript, change the version (it is there twice) in the URL of `@charter/ts` in `package.json`, then `npm install`. A project whose `mise.toml` still holds every task, or pins `"go:github.com/joeblew999/charter/cmd/charter"`: make a new project with `charter new` and take its `[tools]`, `CHARTER_TOOL` and `[task_config]` lines, then delete the tasks that `tasks/` now defines.
+`mise up --bump github:joeblew999/charter` moves only the pin, and mise takes no release younger than a day that way; `upgrade` with the version named moves everything at once, at any age. A project whose `mise.toml` still holds every task, or pins `"go:github.com/joeblew999/charter/cmd/charter"`: make a new project with `charter new` and take its `[tools]`, `CHARTER_TOOL` and `[task_config]` lines, then delete the tasks that `tasks/` now defines.
 
 Releases are `v0`: anything can change between them. A project made before v0.8.0 (from orpc-api) does not update: make a new one and move `api/`, `migrations/` and your bindings into it.

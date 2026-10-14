@@ -72,8 +72,8 @@ func releaseTool(args []string) error {
 	if err != nil {
 		return err
 	}
-	if tag != "" && slices.ContainsFunc(releaseAssets(tag), func(a asset) bool { return a.Name == "checksums.txt" }) {
-		fmt.Printf("release %s already has the tool (checksums.txt): building it to check, publishing nothing\n", tag)
+	if tag != "" && releaseHasTheTool(tag) {
+		fmt.Printf("release %s already has the tool (every archive checksums.txt names): building it to check, publishing nothing\n", tag)
 		tag = ""
 	}
 	if tag == "" {
@@ -612,6 +612,34 @@ func releaseNotes(target, footer string) (string, error) {
 
 // An asset of a GitHub Release, with the SHA-256 GitHub computed when it was uploaded.
 type asset struct{ Name, Digest string }
+
+// releaseHasTheTool says whether the tag's Release has every archive its checksums.txt names.
+// checksums.txt alone is not enough: an upload that stopped part way leaves it there with archives
+// missing, and publishing again is what puts them back.
+func releaseHasTheTool(tag string) bool {
+	assets := releaseAssets(tag)
+	if !slices.ContainsFunc(assets, func(a asset) bool { return a.Name == "checksums.txt" }) {
+		return false
+	}
+	sums, err := exec.Command("gh", "release", "download", tag, "--pattern", "checksums.txt", "--output", "-").Output()
+	return err == nil && hasEveryArchive(string(sums), assets)
+}
+
+// hasEveryArchive says whether every file a checksums.txt names is among the assets.
+func hasEveryArchive(sums string, assets []asset) bool {
+	named := 0
+	for _, line := range strings.Split(sums, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			continue
+		}
+		named++
+		if !slices.ContainsFunc(assets, func(a asset) bool { return a.Name == fields[1] }) {
+			return false
+		}
+	}
+	return named > 0
+}
 
 // releaseAssets are what the tag's Release carries; none if there is no Release.
 func releaseAssets(tag string) []asset {

@@ -44,7 +44,7 @@ func TestAdopt(t *testing.T) {
 		"docs/repo/rules.md": "**A plan is an issue,**",
 		"docs/rules.md ":     "[the list](README.md#what-is-generated)",
 		"docs/writing.md":    "# Writing docs",
-		"mise.toml":          "[tools]\n# The tool every task runs, the release's binary: `mise up --bump github:joeblew999/charter` moves to a newer one.\n\"github:joeblew999/charter\" = \"1.2.3\"\n",
+		"mise.toml":          "[tools]\n# The tool every task runs, the release's binary. `mise x github:joeblew999/charter@X.Y.Z -- charter upgrade` moves it,\n# and the includes of charter's tasks with it.\n\"github:joeblew999/charter\" = \"1.2.3\"\n",
 		"mise.toml ":         "[task_config]\n",
 		"mise.toml  ":        "\nincludes = [\"git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.2.3\"]\n",
 		"mise.toml   ":       "\n[settings]\n",

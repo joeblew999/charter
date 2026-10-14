@@ -421,7 +421,7 @@ func TestNewProjectFromAReleasePinsTheTool(t *testing.T) {
 		t.Fatal(err)
 	}
 	tasks, _ := os.ReadFile(filepath.Join(into, "mise.toml"))
-	for _, want := range []string{"[tools]\n# The tool every task runs, the release's binary: `mise up --bump github:joeblew999/charter` moves to a newer one.\n\"github:joeblew999/charter\" = \"1.2.3\"\n", "\nCHARTER_TOOL = \"charter\"\n", `includes = ["git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.2.3", "git::https://github.com/joeblew999/charter.git//tasks/shared?ref=v1.2.3", "git::https://github.com/joeblew999/charter.git//tasks/go?ref=v1.2.3"]`, `-run "{{env.CHARTER_TOOL}} migrate-local -port {port}"`} {
+	for _, want := range []string{"[tools]\n# The tool every task runs, the release's binary. `mise x github:joeblew999/charter@X.Y.Z -- charter upgrade` moves it,\n# and the includes of charter's tasks with it.\n\"github:joeblew999/charter\" = \"1.2.3\"\n", "\nCHARTER_TOOL = \"charter\"\n", `includes = ["git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.2.3", "git::https://github.com/joeblew999/charter.git//tasks/shared?ref=v1.2.3", "git::https://github.com/joeblew999/charter.git//tasks/go?ref=v1.2.3"]`, `-run "{{env.CHARTER_TOOL}} migrate-local -port {port}"`} {
 		if !strings.Contains(string(tasks), want) {
 			t.Errorf("mise.toml: no %q", want)
 		}

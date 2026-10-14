@@ -43,6 +43,15 @@ mise install && mise tasks
 
 It writes no workflow, no issue forms and nothing on GitHub: `mise run repo` does those.
 
+## Upgrade
+
+```sh
+mise x github:joeblew999/charter@X.Y.Z -- charter upgrade   # the pin and the include together; AGENTS.md and CLAUDE.md as X.Y.Z writes them
+mise install && mise tasks
+```
+
+`mise up --bump github:joeblew999/charter` would move only the pin, and mise takes no release younger than a day that way.
+
 ## Tell what is charter's
 
 Every file charter writes says so in its first lines: in a comment, or in `renovate.json` its `description`.

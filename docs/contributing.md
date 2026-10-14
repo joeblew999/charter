@@ -57,7 +57,7 @@ git tag vX.Y.Z && git push origin vX.Y.Z       # on main, pushed
 mise run charter:release -- -tag vX.Y.Z        # GoReleaser: the tool for every OS, onto the Release
 ```
 
-`charter:release` makes the GitHub Release if it is missing and attaches the archives and `checksums.txt`, with the token `gh` holds. It needs `-tag`: without it, it builds a snapshot into `dist/` and publishes nothing. A minute or two, and `mise up --bump github:joeblew999/charter` in the other repo takes it.
+`charter:release` makes the GitHub Release if it is missing and attaches the archives and `checksums.txt`, with the token `gh` holds. It needs `-tag`: without it, it builds a snapshot into `dist/` and publishes nothing. A minute or two, and `mise x github:joeblew999/charter@X.Y.Z -- charter upgrade` in the other repo takes it.
 
 The workflows still run on the tag and finish the release: the TypeScript package, the examples' files, `SHA256SUMS`, the module tags. They find the tool there and only build it, as a check. Nothing in the fast track waits for them.
 

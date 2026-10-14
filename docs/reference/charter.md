@@ -21,6 +21,7 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 |---|---|---|
 | `new` * | `-name <name>` (required), `-lang go` or `ts` (default `go`), `-empty`, `-ui htmx` or `datastar` (with `-empty`, in Go), `-cli` (with `-empty`), `-module <go module>` (default `github.com/<gh login>/<name>`), `-subdomain <workers.dev subdomain>` (default a placeholder), `-into <empty dir>` (default `./<name>`), `-from <checkout>` | Copies `examples/notes-go/` (without `sdk/go/`), or with `-lang ts` `examples/notes-ts/` and the tests it shares, under your name; with `-empty`, `examples/start-go/` or `examples/start-ts/` (one route, `GET /api/hello`); with `-empty -ui htmx` or `datastar`, `examples/start-htmx/` or `examples/start-datastar/` (and [pages](../guides/pages.md)); a start project has no CLI, and `-cli` adds the notes example's `cli` group and its Rust, zig and cargo-zigbuild pins ([Add the CLI](../guides/sdks.md#add-the-cli)); adds docs and workflows; pins the tool and the library to its own release (with `-from`, to the checkout). `-lang ts` needs Node |
 | `version` * | | The release the tool is |
+| `upgrade` * | `[vX.Y.Z]` (default: the release running) | Moves the repo to that release: in `mise.toml` the tool's pin and every include of charter's tasks together (adding the setting mise needs for them), `@charter/ts` in `package.json`, and, run from that release, `AGENTS.md` and `CLAUDE.md` written again; prints the `go get` line for `go.mod` |
 
 ## Build
 

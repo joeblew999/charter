@@ -552,7 +552,7 @@ With a GitHub repo: mise run repo (charter.toml: its description, topics, docs s
 // toolPin are the lines of a mise.toml's [tools] that pin the tool to a release: mise installs that
 // release's binary, and it is on the path of every task.
 func toolPin(version string) string {
-	return "# The tool every task runs, the release's binary: `mise up --bump " + toolRelease + "` moves to a newer one.\n\"" + toolRelease + "\" = \"" + strings.TrimPrefix(version, "v") + "\"\n"
+	return "# The tool every task runs, the release's binary. `mise x " + toolRelease + "@X.Y.Z -- charter upgrade` moves it,\n# and the includes of charter's tasks with it.\n\"" + toolRelease + "\" = \"" + strings.TrimPrefix(version, "v") + "\"\n"
 }
 
 // tasksInclude is one of charter's tasks/ folders as a mise.toml includes it ([task_config]
