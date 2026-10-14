@@ -1,10 +1,5 @@
 {
-	"extends": "./tsconfig.json",
-	"compilerOptions": {
-		"types": [
-			"node"
-		]
-	},
+	"extends": "charter-ts/tsconfig.node.json",
 	"include": [
 		"charter.config.ts",
 		"test",

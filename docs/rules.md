@@ -9,7 +9,7 @@ Binding, for developers and agents alike: other repos build on this one. These a
 
 | Rule | Why |
 |---|---|
-| **`docs/` is the single source of truth.** `AGENTS.md`, `CLAUDE.md` and folder READMEs only point to it. Pages follow [Writing docs](charter/writing.md); run `npm run docs:lint` | One place cannot contradict itself |
+| **`docs/` is the single source of truth.** `AGENTS.md`, `CLAUDE.md` and folder READMEs only point to it. Pages follow [Writing docs](charter/writing.md); run `npm run docs:check` | One place cannot contradict itself |
 | **Never edit what is generated** ([the list](README.md#what-is-generated)) | A hand edit is lost, and `npm run check` fails |
 | **Every npm script is one line** of programs, double quotes and `&&`, which sh and cmd.exe both take. More is a command of charter-ts (`charter-ts/src/steps.ts`), typed, which [its table](charter/using.md) lists | A script runs the same everywhere, Windows included |
 | **A project is self-contained; its steps are the same in every project:** npm scripts that run `charter-ts <step>`, set up by its `charter.config.ts`. A workflow runs one script, so what GitHub runs you can run | `charter-ts new` copies an example as it is, and CI runs what you run |

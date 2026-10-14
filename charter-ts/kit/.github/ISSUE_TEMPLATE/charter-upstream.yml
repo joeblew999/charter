@@ -10,7 +10,7 @@ body:
     attributes:
       value: |
         The upstream issues this repository tracks are its `Upstream:` tags
-        (`npm run upstream:status`), and `docs/upstream.md` where it keeps that page: if your bug
+        (`npx charter-ts upstream:status`), and `docs/upstream.md` where it keeps that page: if your bug
         is already there, add what you found to that issue instead of filing. It is upstream only
         if a correct caller, reading only that project's public documentation, would hit it.
   - type: input

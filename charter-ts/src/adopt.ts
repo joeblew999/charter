@@ -15,11 +15,8 @@ export const repoScripts: Record<string, string> = {
 	repo: "charter-ts repo",
 	issues: "charter-ts issues",
 	issue: "charter-ts issue",
-	"docs:lint": "charter-ts docs:lint",
-	"docs:check": "charter-ts adopt --check && charter-ts docs:lint",
-	"repo:check": "charter-ts repo --check",
-	"upstream:status": "charter-ts upstream:status",
-	"repo:ci": "npm run docs:check && npm run repo:check && npm run upstream:status",
+	"docs:check": "charter-ts docs:check",
+	"repo:ci": "charter-ts repo:ci",
 	"docs:review": "charter-ts docs:review",
 };
 

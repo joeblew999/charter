@@ -21,20 +21,18 @@ npm run check
 
 ## The steps
 
-In the order you run them:
+A project's `package.json` has the scripts a person runs:
 
-| Step | What it does |
+| Script | What it does |
 |---|---|
-| `npm run lint` | Typecheck the Worker (`tsconfig.json`), and the config and tests (`tsconfig.node.json`) |
-| `npm run spec` | Write `fern/openapi.json` and `fern/asyncapi.json` from the contract; `spec:check` fails if they are stale |
-| `npm run dev` | The API under workerd on the config's port; the first time, `npm run migrate:local` in another shell |
-| `npm run test:workerd` | The Worker on a free port, its database migrated, the config's tests against it |
-| `npm run check` | `lint`, `spec:check`, `test:workerd`: every local check, no Cloudflare account |
-| `npm run sdk -- <group>` | A group of `fern/generators.yml` with Fern (Docker) into `sdk/out/<group>` |
+| `npm run dev` | The API under workerd on the config's port, its local database migrated; until Ctrl-C |
+| `npm run check` | Every local check, in order, no Cloudflare account: typecheck (the Worker, the config and the tests), the specs match the contract, Fern's check, `test/*.test.ts`, the config's tests under workerd |
+| `npm run spec` | Write `fern/openapi.json` and `fern/asyncapi.json` from the contract, after a change to it |
+| `npm run sdk -- <group>` | A group of `fern/generators.yml` with Fern (Docker) into `sdk/out/<group>`; by default the TypeScript SDK |
 | `fnox exec -- npm run deploy` | REMOTE: the Worker with its secrets, then its migrations |
 | `fnox exec -- npm run live-test` | REMOTE: the config's live tests against the deployed Worker |
 
-`npx charter-ts` lists them.
+Every other step `check` is made of runs alone too: `npx charter-ts lint`, `spec:check`, `test:workerd`, `migrate:local`. `npx charter-ts` lists them all.
 
 ## charter.config.ts
 

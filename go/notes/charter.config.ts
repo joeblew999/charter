@@ -9,10 +9,13 @@ const issuer = ({ extra }: { extra: number }) => ({
 	OIDC_ISSUER: `http://localhost:${extra}`,
 	OIDC_AUDIENCE: "https://notes.test",
 });
+// The notes API is the same in Go and in TypeScript (surface/notes.test.ts holds them to it), so the
+// typed notes tests are ts/notes's; the MCP endpoint is Go's own.
+const notes = "../../ts/notes/test";
 const all = ({ origin, extra, node }: TestContext) => {
-	node("test/live-test.mjs", origin);
+	node(`${notes}/live-test.ts`, origin);
 	node("test/mcp-test.mjs", origin);
-	node("test/auth-test.mjs", origin, String(extra));
+	node(`${notes}/auth-test.ts`, origin, String(extra));
 };
 
 export default defineConfig({
@@ -39,8 +42,8 @@ export default defineConfig({
 	 * generated TypeScript SDK too (made first if the specs are newer: Docker). It writes test notes. */
 	live: ({ url, node }) => {
 		sdk("typescript-dist", { ifStale: true });
-		node("test/live-test.mjs", url);
-		node("test/sdk-live-test.mjs", url);
+		node(`${notes}/live-test.ts`, url);
+		node(`${notes}/sdk-live-test.ts`, url);
 		node("test/mcp-test.mjs", url);
 	},
 });

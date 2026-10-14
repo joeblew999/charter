@@ -21,7 +21,7 @@ npm install
 
 ```sh
 npm run check    # typecheck, the specs match the contract, the tests under workerd: no Cloudflare account
-npm run dev      # the API on charter.config.ts's port; the first time, npm run migrate:local in another shell
+npm run dev      # the API on charter.config.ts's port, its local database migrated; until Ctrl-C
 ```
 
 ## 3. Make it yours

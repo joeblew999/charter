@@ -62,6 +62,17 @@ export async function withServer<T>(server: Server, body: () => Promise<T>): Pro
 	}
 }
 
+/** untilStopped starts a server, does `ready` once it answers, and runs until the server stops (Ctrl-C). */
+export async function untilStopped(server: Server, ready: () => Promise<void>): Promise<void> {
+	console.log(`$ ${server.program} ${server.args.join(" ")}`);
+	const child = spawn(bin(server.program), server.args, { stdio: "inherit", env: { ...process.env, ...server.env }, shell: process.platform === "win32" });
+	const exited = new Promise<number | null>(resolve => child.on("exit", code => resolve(code)));
+	await answers(server.ready, child);
+	await ready();
+	const code = await exited;
+	if (code) throw new Error(`${server.program} stopped (${code})`);
+}
+
 async function answers(url: string, child: ChildProcess): Promise<void> {
 	const until = Date.now() + 120_000;
 	while (Date.now() < until) {

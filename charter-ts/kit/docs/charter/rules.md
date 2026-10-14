@@ -18,7 +18,7 @@ Binding, for developers and agents alike.
 | **Every script is safe to run again,** and says what it acts on before it acts | Nobody remembers what was run once |
 | **Start with the issues:** `npm run issues`. One labelled `needs-triage` comes before anything else | That is where a person said something is wrong |
 | **A plan is an issue,** never a page: `npm run issue -- plan` prints the form. So is a bug, and a fault in something this repo is built on | The docs say what is true now; an issue has a state, and people can see it |
-| **Workarounds name their issue:** `Upstream: <owner>/<repo>#<n> (when fixed: ...)` in the code. `npm run upstream:status` lists them | Otherwise it is never removed |
+| **Workarounds name their issue:** `Upstream: <owner>/<repo>#<n> (when fixed: ...)` in the code. `npx charter-ts upstream:status` lists them | Otherwise it is never removed |
 | **Say what failed, first, unasked.** Report as working only what you ran, and say where and when | A reader acts on it |
 | **Do the whole job in one pass:** what a change makes stale, the pages and the tests among it, changes in the same commit | A half-done change is found by someone else, later |
 | **`npm run check` before a commit that matters, `npm run release -- vX.Y.Z` to release** | The check is the same one a release and GitHub run |

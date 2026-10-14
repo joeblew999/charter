@@ -10,7 +10,7 @@ body:
     attributes:
       value: |
         **Is it ours?** A bug in a project this one is built on is fixed there. Check the
-        upstream issues this repository already tracks first (`npm run upstream:status`, and
+        upstream issues this repository already tracks first (`npx charter-ts upstream:status`, and
         `docs/upstream.md` where it keeps that page), and use the *Upstream bug* form if it is theirs.
 
         **Agents:** forms are web-only. Run `charter-ts issue bug > body.md`, fill it in, and file

@@ -1,7 +1,7 @@
 // Every charter-ts command: what it takes, what it does, and where it works. A command loads its module
 // only when it runs. Those for any repo keep the repo (its kit, its docs, its issues, its settings on
 // GitHub); the others work in a project, a folder with a charter.config.ts.
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Config, Tests } from "./config.ts";
@@ -79,6 +79,25 @@ export const steps: Record<string, Step> = {
 		anyRepo: true,
 		run: async () => (await import("./upstream.ts")).upstreamStatus(),
 	},
+	"docs:check": {
+		usage: "docs:check",
+		about: "fail if a file of charter's kit is not what this version writes, or docs/ fails the lint",
+		anyRepo: true,
+		run: async () => {
+			await steps.adopt.run(["--check"]);
+			await steps["docs:lint"].run([]);
+		},
+	},
+	"repo:ci": {
+		usage: "repo:ci",
+		about: "REMOTE, read-only: what the charter workflow runs, here: docs:check, repo --check, upstream:status. A pass here is a pass on GitHub",
+		anyRepo: true,
+		run: async () => {
+			await steps["docs:check"].run([]);
+			await steps.repo.run(["--check"]);
+			await steps["upstream:status"].run([]);
+		},
+	},
 	"docs:review": {
 		usage: "docs:review [--print]",
 		about: "have Claude (the claude command) bring docs/ up to date and into line with docs/charter/writing.md; --print only shows the prompt",
@@ -110,11 +129,16 @@ export const steps: Record<string, Step> = {
 	},
 	dev: {
 		usage: "dev",
-		about: "the API under workerd (cf dev) on the config's port, with the throwaway secrets (a Go Worker built first); the first time, in another shell: migrate:local",
+		about: "the API under workerd (cf dev) on the config's port, with the throwaway secrets (a Go Worker built first), its local database migrated once it answers; until Ctrl-C",
 		run: async () => {
 			const config = await load();
 			await built(config);
-			(await scripts()).run("cf", ["dev"], { ...config.localSecrets, PORT: String(config.port) });
+			const { migrateLocal, untilStopped } = await scripts();
+			const env = { ...config.localSecrets, PORT: String(config.port) };
+			await untilStopped({ program: "cf", args: ["dev"], env, ready: `http://localhost:${config.port}${config.test.ready ?? "/api/hello"}` }, async () => {
+				if (existsSync("migrations")) await migrateLocal(config, config.port);
+				console.log(`ready: http://localhost:${config.port}/`);
+			});
 		},
 	},
 	"migrate:local": {
@@ -138,6 +162,31 @@ export const steps: Record<string, Step> = {
 				run("tsc", []);
 			}
 			if (existsSync("tsconfig.node.json")) run("tsc", ["-p", "tsconfig.node.json"]);
+		},
+	},
+	check: {
+		usage: "check",
+		about: "every local check, in order, with no Cloudflare account. Go: lint, go test, the specs, Fern's check, the tests natively and under workerd. TypeScript: lint, the specs, Fern's check, test/*.test.ts, the tests under workerd",
+		run: async () => {
+			const config = await load();
+			const { run } = await scripts();
+			// Each part timed, and the times said at the end: where a slow check spends them.
+			const times: [string, number][] = [];
+			const timed = async (name: string, part: () => unknown) => {
+				const start = performance.now();
+				await part();
+				times.push([name, performance.now() - start]);
+			};
+			await timed("lint", () => steps.lint.run([]));
+			if (config.go) await timed("go test", () => run("go", ["test", "./..."]));
+			await timed("specs", () => specs(true));
+			if (existsSync("fern")) await timed("fern check", () => run("fern", ["check", "--warnings"]));
+			const unit = existsSync("test") ? readdirSync("test").filter(name => name.endsWith(".test.ts")).sort() : [];
+			if (unit.length > 0) await timed("unit tests", () => run("node", ["--test", ...unit.map(name => `test/${name}`)]));
+			if (config.native) await timed("native", () => steps["test:native"].run([]));
+			await timed(config.go ? "build + workerd" : "workerd", () => steps["test:workerd"].run([]));
+			const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
+			console.log(`check took ${seconds(times.reduce((sum, [, ms]) => sum + ms, 0))}: ${times.map(([name, ms]) => `${name} ${seconds(ms)}`).join(", ")}`);
 		},
 	},
 	spec: { usage: "spec", about: "write both specs from the contract into fern/", run: () => specs(false) },

@@ -34,7 +34,7 @@ For the generated clients: every constrained request field has a valid `example`
 - **No memory between requests:** a Go runtime is replaced after some requests. State goes in D1 or a Durable Object.
 - **No background goroutines,** and little work in package initialisers: they run each time a runtime starts.
 - **A binding** is declared in `cloudflare.config.ts`, read in `platform_js.go`, stubbed in `platform_other.go`, and reaches handlers through `api.Env`.
-- **TinyGo lacks parts of `reflect`, a disk and some of `net`:** `npm run test:workerd` finds it, `go test` cannot.
+- **TinyGo lacks parts of `reflect`, a disk and some of `net`:** `npm run check` finds it under workerd, `go test` cannot.
 
 ## Agents: MCP
 

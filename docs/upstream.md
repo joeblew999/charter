@@ -5,7 +5,7 @@ parent: How to help
 ---
 # Upstream issues: every workaround, and the issue it waits for
 
-`npm run upstream:status` shows each issue's state. When one closes, do what the row says, then `npm run check` and the soak.
+`npx charter-ts upstream:status` shows each issue's state. When one closes, do what the row says, then `npm run check` and the soak.
 
 | Issue | Problem | Workaround | When fixed |
 |---|---|---|---|

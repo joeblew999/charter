@@ -19,7 +19,7 @@ fnox exec -- npm run live-test   # REMOTE, writes test notes: a few seconds afte
 ```
 
 - **`cloudflare.config.ts`** declares the Worker, its database `<name>-db` (binding `DB`), the hub and `APP_NAME`. A second deploy keeps the database.
-- **Migrations** are `migrations/*.sql`, applied in name order, each once: `npm run deploy` applies them on Cloudflare, `npm run migrate:local` for `npm run dev`. Never edit one that was applied.
+- **Migrations** are `migrations/*.sql`, applied in name order, each once: `npm run deploy` applies them on Cloudflare, `npm run dev` locally. Never edit one that was applied.
 - **The URL is `url` in `charter.config.ts`** (`API_URL` overrides it): the specs name it and the live test calls it. After changing it, `npm run spec`.
 - **A Go build fails over 3,000,000 bytes gzipped,** the Workers Free limit.
 
@@ -60,7 +60,7 @@ The repo's description, topics and homepage on GitHub are `package.json`'s `desc
 
 ```sh
 npm run repo          # REMOTE: brings the repo in line, printing ok or changed per item
-npm run repo:check    # REMOTE, read-only: fails on drift, for CI
+npx charter-ts repo --check    # REMOTE, read-only: fails on drift (npm run repo:ci runs it)
 ```
 
 It keeps the labels (the kit's `charter-labels.tsv`), removing GitHub's unused defaults; the description, homepage and topics, with `charter` added; and GitHub Pages for the docs folder. It writes no file: `npm run adopt` writes the kit. Running it again changes nothing.

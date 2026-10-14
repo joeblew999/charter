@@ -1,7 +1,2 @@
-import { cloudflare } from "@cloudflare/vite-plugin";
-import { defineConfig } from "vite";
-
-export default defineConfig({
-	server: { port: Number(process.env.PORT) || 5175, strictPort: true },
-	plugins: [cloudflare()],
-});
+// The Vite config cf dev and cf deploy run the Worker through: charter-ts's, the same in every project.
+export { default } from "charter-ts/vite";

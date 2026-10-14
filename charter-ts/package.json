@@ -21,11 +21,13 @@
 		"dist",
 		"kit",
 		"review.md",
-		"templates"
+		"templates",
+		"tsconfig.node.json",
+		"tsconfig.worker.json"
 	],
 	"scripts": {
 		"build": "tsc -p tsconfig.build.json",
-		"check": "tsc && vitest run",
+		"check": "tsc && vitest run && npm run build",
 		"prepack": "npm run build && node pack-templates.ts"
 	},
 	"exports": {
@@ -68,7 +70,13 @@
 		"./package": {
 			"types": "./dist/package.d.ts",
 			"default": "./dist/package.js"
-		}
+		},
+		"./vite": {
+			"types": "./dist/vite.d.ts",
+			"default": "./dist/vite.js"
+		},
+		"./tsconfig.node.json": "./tsconfig.node.json",
+		"./tsconfig.worker.json": "./tsconfig.worker.json"
 	},
 	"peerDependencies": {
 		"@orpc/contract": "2.0.0-beta.40",
@@ -76,12 +84,15 @@
 		"@orpc/openapi": "2.0.0-beta.40",
 		"@orpc/server": "2.0.0-beta.40",
 		"@orpc/zod": "2.0.0-beta.40",
-		"zod": "^4.6.5"
+		"zod": "^4.6.5",
+		"@cloudflare/vite-plugin": "*",
+		"vite": "*"
 	},
 	"dependencies": {
 		"jose": "6.2.12"
 	},
 	"devDependencies": {
+		"@cloudflare/vite-plugin": "beta",
 		"@orpc/contract": "2.0.0-beta.40",
 		"@orpc/json-schema": "2.0.0-beta.40",
 		"@orpc/openapi": "2.0.0-beta.40",
@@ -89,7 +100,16 @@
 		"@orpc/zod": "2.0.0-beta.40",
 		"@types/node": "^22.12.0",
 		"typescript": "^7.0.2",
+		"vite": "^8.3.0",
 		"vitest": "^4.1.11",
 		"zod": "^4.6.5"
+	},
+	"peerDependenciesMeta": {
+		"@cloudflare/vite-plugin": {
+			"optional": true
+		},
+		"vite": {
+			"optional": true
+		}
 	}
 }

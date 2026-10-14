@@ -41,9 +41,9 @@ Never edit these: change the source and run the step.
 | Path | Written by |
 |---|---|
 | `fern/openapi.json`, `fern/asyncapi.json` | `npm run spec` (TypeScript), `npm run spec` (Go), from the contract |
-| `pages/*.x.go` (committed) | `go tool gsx generate`, from the gsx components (`go/start-htmx/`, `go/start-datastar/`); `npm run lint` fails while they are stale |
+| `pages/*.x.go` (committed) | `go tool gsx generate`, from the gsx components (`go/start-htmx/`, `go/start-datastar/`); `npm run check` fails while they are stale |
 | `sdk/go/` (committed), `sdk/out/` | `npm run sdk:publish`, `npm run sdk --`; in TypeScript, `npm run sdk -- <group>` |
-| `build/`, `charter-ts/dist/` | `npm run build` in a Go project; `npm ci` or `npm run build -w charter-ts` |
+| `build/`, `charter-ts/dist/` | `npx charter-ts build` in a Go project (`dev`, `check` and `deploy` run it); `npm ci` or `npm run build -w charter-ts` |
 | `.github/` (but `workflows/check.yml` and `deploy.yml`, this repo's own), `renovate.json`, `AGENTS.md`, `CLAUDE.md` | `npm run adopt`, from `charter-ts/kit/` |
 | `docs/charter/`, `docs/_config.yml`, `docs/llms.txt`, `docs/_sass/` | `npm run adopt`, from `charter-ts/kit/` |
 | `docs/charter/tasks.md`, `docs/charter/using.md` | `npm run adopt`, from `package.json`'s scripts and from charter-ts's commands |

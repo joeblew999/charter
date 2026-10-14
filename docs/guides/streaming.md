@@ -36,7 +36,7 @@ A WebSocket the client also sends on: see `go/showcase/api/contract.go` and [SDK
 ## Check it
 
 ```sh
-npm run test:native     # the live test, locally
+npx charter-ts test:native     # the live test, locally
 node test/soak.mjs <url>             # in go/notes; REMOTE, redeploys: seven kinds of client through a redeploy and a client drop
 node test/soak.mjs <url> --idle 20   # and after 20 quiet minutes
 ```
