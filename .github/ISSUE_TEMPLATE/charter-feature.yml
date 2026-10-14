@@ -1,6 +1,6 @@
-# Written by `charter adopt` from the kit (github.com/joeblew999/charter, cmd/charter/kit/.github/ISSUE_TEMPLATE): don't edit, change the kit.
+# Written by `charter-ts adopt` from the kit (github.com/joeblew999/charter, charter-ts/kit/.github/ISSUE_TEMPLATE): don't edit, change the kit.
 # For a form of the repo's own, write this file without the line above: charter then leaves it alone.
-# Each field's label is a heading in the issue body; `charter issue feature` prints the same headings.
+# Each field's label is a heading in the issue body; `charter-ts issue feature` prints the same headings.
 name: Feature request
 description: Your repository needs this project to do something it does not.
 title: "[feature] "
@@ -10,7 +10,7 @@ body:
     attributes:
       value: |
         Say what your repository is trying to get done, not only the flag you want: the right
-        change is often a different one. **Agents:** `charter issue feature > body.md`, then
+        change is often a different one. **Agents:** `charter-ts issue feature > body.md`, then
         `gh issue create --body-file body.md`.
   - type: input
     id: reporter

@@ -9,3 +9,8 @@ mise.local.toml
 
 # Release builds (mise run charter:release)
 dist/
+
+# npm, and what packing charter-ts writes (npm pack: its templates, the tarball)
+node_modules/
+charter-ts/templates/
+*.tgz

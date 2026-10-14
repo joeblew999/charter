@@ -1,0 +1,47 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Written by `charter-ts adopt` from the kit (github.com/joeblew999/charter, charter-ts/kit/renovate.json): don't edit, change the kit. \"charter\": { \"renovate\": false } in package.json leaves this file to the repo. A new release of what the repo pins opens a pull request; minor and patch ones merge themselves once its checks pass.",
+  "enabledManagers": [
+    "mise",
+    "gomod",
+    "npm",
+    "custom.regex"
+  ],
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
+  "platformAutomerge": false,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "charter-ts, which package.json installs from its GitHub Release (ts-vX.Y.Z), the version twice in the URL",
+      "managerFilePatterns": [
+        "/(^|/)package\\.json$/"
+      ],
+      "matchStrings": [
+        "\"https://github\\.com/(?<depName>joeblew999/charter)/releases/download/ts-v(?<currentValue>[0-9][0-9.]*)/charter-ts-[0-9][0-9.]*\\.tgz\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^ts-v(?<version>.+)$",
+      "autoReplaceStringTemplate": "\"https://github.com/{{{depName}}}/releases/download/ts-v{{{newValue}}}/charter-ts-{{{newValue}}}.tgz\""
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Minor and patch updates merge themselves when the checks pass; a major one waits for a person",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "charter-ts and charter's Go library move together: one pull request",
+      "matchPackageNames": [
+        "/(^|[:\\/])joeblew999\\/charter($|\\/)/"
+      ],
+      "groupName": "charter"
+    }
+  ]
+}

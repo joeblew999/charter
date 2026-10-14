@@ -1,78 +1,44 @@
 ---
-title: Using charter
+title: Using charter-ts
 nav_order: 2
 parent: How this repo is kept
 ---
 
-# Using charter
+# Using charter-ts
 
-Written by `charter adopt` from the tool itself (the same page in every repo that uses it, at the release its `mise.toml` pins): don't edit it here, change the commands in `cmd/charter/` in [charter](https://github.com/joeblew999/charter).
+Written by `charter-ts adopt` from charter-ts itself (the same page in every repo that uses it, at the version its package.json installs): don't edit it here, change the commands in `charter-ts/src/steps.ts` in [charter](https://github.com/joeblew999/charter).
 
-charter is the tool this repo is kept with. mise installs the release `mise.toml` pins, and puts it on the path of every task.
+charter-ts is the tool this repo is kept with: package.json installs it, and its npm scripts run it.
 
 | To | Run |
 |---|---|
-| See what there is to run | `mise tasks` |
-| Run a task | `mise run <task>` |
-| Run the tool | `charter <command>`; from anywhere, `mise x github:joeblew999/charter -- charter <command>` |
-| Move to another release | `mise x github:joeblew999/charter@X.Y.Z -- charter upgrade`: the pin and the includes together |
+| See what there is to run | `npm run`; in order, with what each does: [Tasks](tasks.md) |
+| Run a step | `npm run <script>` |
+| Run charter-ts | `npx charter-ts <command>` |
+| Move to another release | `npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz`, then `npm run adopt` |
 | Read more | [charter's docs](https://joeblew999.github.io/charter/); for machines, [llms.txt](https://joeblew999.github.io/charter/llms.txt) |
 
 ## The commands
 
-Those marked * work in any repo; the others in a project, a folder with a `mise.toml` beside a `fern/` folder.
+Those marked * work in any repo; the others in a project, a folder with a `charter.config.ts`.
 
 | Command | What it does |
 |---|---|
-| `access:delete` | REMOTE: delete the Worker's Access application and its machines' service tokens |
-| `access:setup [email...]` | REMOTE: put Cloudflare Access in front of the Worker (API_URL): people log in with GitHub. Needs CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_GITHUB_IDP_ID (the environment, or fnox) |
-| `access:token create <machine> <file\|fnox> \| list \| revoke <machine>` | REMOTE: a machine's own service token for the Worker behind Access: create, list or revoke it. Secrets are never printed |
-| `adopt [-description <text>] [-from <checkout>] [-check]` * | write charter's kit into the repo you are in, charter's own included: docs/charter/, the docs site's files, the issue forms, the workflows, AGENTS.md, CLAUDE.md, renovate.json, never a file of the repo's own; and what it lacks of charter.toml, docs/README.md, docs/rules.md and the mise.toml lines. Run again, it brings the kit to this release; -check writes nothing and fails if the kit differs |
-| `bench [-n 20] [-spec <file or url>] [-write] [-cpu] [-warm 45s] [-worker <name>] [-header 'Name: value']... [<url>]` * | time every operation of an API from its OpenAPI spec: wall time, and with -cpu the CPU time Cloudflare measured |
-| `build [-heap 8] [-opt z] [-stack 128kb] [-max 3000000] [-plain]` | build the project's Go Worker into build/ with TinyGo, tuned for Workers (see docs: Huma on Cloudflare Workers), and write the Go library's Worker glue beside it; -plain: TinyGo as it is |
-| `catalog [-owner <login>] [-json] [-page]` * | REMOTE, read-only: the owner's charter repos, what each publishes, and the repos that pin it (their mise.toml, go.mod, package.json), as Markdown or -json; -page adds a docs page's front matter |
-| `charter:release [-tag vX.Y.Z]` * | GoReleaser on this tool, in its own repo: on a version tag, archives and checksums go to its GitHub Release (if they are not there yet); no tag: a snapshot into dist/ |
-| `ci:scope` * | in the check workflow: which Windows and macOS jobs to run, all of them on a push, on a pull request those for what it changes |
-| `cloudflare:secrets <NAME>...` * | copy environment variables into this repo's GitHub Actions secrets (values are never printed) |
-| `deploy [cf deploy flags]` | deploy the Worker with the secrets WORKER_SECRETS names, and those of WORKER_OPTIONAL_SECRETS that are set, from the environment (values are never printed), then apply pending migrations |
-| `dist [-target <os>-<arch>,...]` | build everything the project ships into an emptied dist/: its SDKs and specs (dist-sdk), then its CLI if it has one (dist-cli) |
-| `docs:lint [-into <repo dir>]` * | check docs/ for what can be checked without reading: front matter, links, the index, tasks and paths that don't exist |
-| `docs:review [-print]` * | have Claude bring docs/ up to date and into line with docs/charter/writing.md (-print: only show the prompt) |
-| `doctor` | check what the project's tasks need: npm installs, Docker, Go, Rust (with a CLI), leftover containers |
-| `each [-only <name,...>] <task> [args]` * | run a mise task in every project below this folder that has it (a repo that holds several projects, as this tool's own does in examples/) |
-| `exec [-env NAME=VALUE]... [-quiet] [-secrets] <program> [args]` * | run a program with these variables set; one that an npm package of the project installed (cf, fern, tsc) is found in node_modules/.bin. -quiet: its output only if it fails. -secrets: with the secrets WORKER_SECRETS names, from fnox unless they are set already (as on GitHub) |
-| `flow [-no-project] [-no-deploy]` * | run the whole flow on throwaway things, every task of tasks/repo and tasks/project in the order the files have them: the repo's on a local repo (with -github, on <you>/charter-flow-test on GitHub, deleted and made again), then a project's on one charter new makes, built, with its SDKs, deployed to the Worker charter-flow-api and deleted after; a step it cannot run is named, with why; a summary at the end |
-| `flow-clean <worker>` * | REMOTE: delete the throwaway Worker charter flow deployed (charter-flow-*) and its database |
-| `harness-deploy` | REMOTE: deploy the project's Worker twice: as itself and, --mode api, as <worker>-api |
-| `harness-sync` | copy the project's compiled TypeScript SDK (sdk/out/typescript-dist) into its Worker (src/client), generating it first if the specs are newer |
-| `harness-test [-remote]` | run the SDK test inside the project's Worker: under cf dev, or the deployed one (API_URL, API_MOCK_URL) |
-| `issue <bug\|feature\|upstream\|plan>` * | print an issue body with the headings of that issue form, for gh issue create --body-file |
-| `lint [-vet <packages>] [-wasm <packages>] <file or folder>...` * | fail if gofmt would change one of the files (a * pattern is matched here, not by the shell), then go vet the packages (default ./...), and those of -wasm for Wasm (GOOS=js GOARCH=wasm) |
-| `migrate [-worker <name>]` | REMOTE: apply pending migrations/ to the Worker's D1 database (<worker>-db; the Worker: API_URL's) |
-| `migrate:local [-port <port>]` | apply migrations/*.sql to a running dev server's local D1, each once (the port: API_PORT) |
-| `need-env <NAME>...` * | fail, naming them, unless these environment variables are set (the secrets a workflow needs) |
-| `new -name <name> [-lang go\|ts] [-empty [-ui htmx\|datastar] [-cli]] [-module <go module>] [-subdomain <workers.dev subdomain>] [-into <dir>] [-from <checkout>]` * | create a new API project: a copy of a tested example (examples/notes-go in the charter repo; -empty: examples/start-go; -empty -ui htmx: examples/start-htmx; -empty -ui datastar: examples/start-datastar) under your name; -cli adds the notes example's CLI to an -empty one |
-| `perf:clean [-all]` | REMOTE: delete every scratch Worker <worker>-perf-* and its database that a perf run left |
-| `perf:try -name <experiment> [-build '<wasm-build flags>'] [-prebuilt] [-keep] [-- <bench flags>]` | REMOTE: build, deploy to a scratch Worker <worker>-perf-<experiment>, bench it from its first request, delete it (-keep: leave it) |
-| `release vX.Y.Z [-dry-run] [-prerelease] [-notes-footer <text or file>]` * | cut a release from this machine: check the repo is clean, is the default branch on GitHub and has no failed workflow there, run its setup, check, spec:diff and dist tasks, tag, push the tag, make the GitHub Release (notes: the commits since the last tag) and run its release:publish and release:tags tasks; -dry-run changes nothing |
-| `release:publish [-tag vX.Y.Z]` * | create the tag's GitHub Release if it has none, attach the files in dist/ it lacks, and write SHA256SUMS of everything on it (no tag: a dry run that lists dist/ and prints the notes) |
-| `release:tags [-tag vX.Y.Z] <module dir>...` * | tag each Go module in a subdirectory <path in the repo>/vX.Y.Z at the tag's commit (no tag: a dry run) |
-| `repo [-check]` * | keep the repo on GitHub in shape from charter.toml at its root: labels, description, homepage, topics, Pages (it writes no file: adopt writes the kit); -check changes nothing and fails on drift |
-| `sdk:check <group>` | prove a generated SDK works (sdk/out/<group>): Go = build, vet, tests against WireMock; TypeScript = typecheck |
-| `sdk:clean` | remove generated SDKs (sdk/out) and stop leftover WireMock containers |
-| `sdk:cli:build [-linux]` | HEAVY: build the generated Rust CLI (sdk/out/cli), natively or for Linux in Docker |
-| `sdk:cli:smoke` | run the CLI that dist/ holds for this machine with --version: proves a binary built elsewhere starts here |
-| `sdk:dist` | generate, check and archive the project's SDKs and its specs into dist/ (Docker) |
-| `sdk:dist:cli [-target <os>-<arch>,...]` | HEAVY: generate the project's Fern CLI and build it into dist/ for darwin, linux and windows on amd64 and arm64: every target this machine builds (a Mac builds all six) |
-| `sdk:gen <group>` | generate one SDK with Fern (Docker) into sdk/out/<group> |
-| `sdk:list` | the SDK groups the project defines (fern/generators.yml) |
-| `sdk:publish [-check [-quick]] [-into <dir>]` | generate the Go SDK, check it, and copy its sources into the committed folder another repo can go get (sdk/go); -check: fail if that copy is stale (Docker) |
-| `sdk:ready [group...]` | generate and build what the tests use, if missing: TypeScript and Go SDKs, the Fern CLI if the project has one (or only the groups named) |
-| `spec:diff [-from vX.Y.Z] [-to vX.Y.Z] [-tag vX.Y.Z] [-catalog <file or url>]` | compare fern/openapi.json and fern/asyncapi.json with the previous release's (git tags) and fail on a breaking change unless -tag is a major release; -catalog names the consumers it affects |
-| `tail [-worker <name>] [-for <duration>]` | REMOTE, read-only: stream the deployed Worker's live logs (each request, its console output and exceptions) until Ctrl-C or -for ends. The Worker: API_URL's, unless -worker names another. Needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (the environment, or fnox) |
-| `ts:dist [-tag vX.Y.Z]` * | build the TypeScript library (ts/) and pack it, versioned as the tag, into dist/charter-ts-X.Y.Z.tgz: the package a project installs from the GitHub Release's URL (no tag: version 0.0.0-dev) |
-| `unchanged -files <pattern,...> <program> [args]` | run a program that writes generated files the project commits (gsx's *.x.go), and fail, naming them, if it changed, added or removed one: the committed ones were stale |
-| `upgrade [vX.Y.Z]` * | move the repo you are in to a release of charter, by default the one running: in mise.toml the tool's pin and every include of charter's tasks together, @charter/ts in package.json, and AGENTS.md and CLAUDE.md written again; then mise run adopt writes charter's kit as it has it. Run it from the release you want: mise x github:joeblew999/charter@X.Y.Z -- charter upgrade |
-| `upstream:status` * | the upstream issues the code under this folder works around (every `Upstream:` tag) and their state |
-| `version` * | the release this tool is, which is what new pins a project to |
-| `with-server -url <url> [-env NAME=VALUE]... -start <cmd> [-show] -run <cmd>...` * | start a server with these variables, wait for <url>, run the commands, stop the server and what it started. A command is a program and its arguments, not a shell line. {port} in any of them is a free port, {port2} another. A command's output is shown only if it fails; -show streams it |
+| `adopt [--description <text>] [--check]` * | write charter's kit into the repo you are in, charter's own included: docs/charter/, the docs site's files, the issue forms, the workflow, AGENTS.md, CLAUDE.md, renovate.json, never a file of the repo's own; and what it lacks of package.json (charter-ts, the scripts), docs/README.md and docs/rules.md. Run again, it brings the kit to this version; --check writes nothing and fails if the kit differs |
+| `repo [--check]` * | keep the repo on GitHub in shape from package.json: labels, description, homepage, topics (its keywords), GitHub Pages; --check changes nothing and fails on drift |
+| `issues` * | REMOTE, read-only: the open issues, newest first: what is reported and what is planned (a plan is an issue) |
+| `issue <bug\|feature\|upstream\|plan>` * | print an issue body with the headings of that issue form, and the gh command that files it |
+| `docs:lint` * | check docs/ for what a program can check: front matter, links, the index, scripts, tasks and paths that don't exist |
+| `upstream:status` * | REMOTE, read-only: the upstream issues the code works around (every `Upstream:` tag) and their state: CLOSED means that workaround can go |
+| `docs:review [--print]` * | have Claude (the claude command) bring docs/ up to date and into line with docs/charter/writing.md; --print only shows the prompt |
+| `new <name> [--from start\|notes] [--subdomain <workers.dev subdomain>] [--into <dir>]` * | a new project: a copy of a tested example under your name, with its GitHub workflow |
+| `dev` | the API under workerd (cf dev) on the config's port, with the throwaway secrets; the first time, in another shell: migrate:local |
+| `migrate:local` | apply migrations/*.sql, each once, to the local database of a running dev |
+| `lint` | typecheck the Worker (tsconfig.json, with cf's types) and what runs in Node: the config and the tests (tsconfig.node.json) |
+| `spec` | write both specs from the contract into fern/ |
+| `spec:check` | fail if a committed spec is stale against the contract |
+| `test:workerd` | the Worker under workerd (cf dev) on a free port, its local database migrated, and the config's tests against it |
+| `sdk [group]` | generate a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>; by default the TypeScript SDK |
+| `deploy` | REMOTE: deploy the Worker with its secrets from the environment (fnox exec -- npm run deploy), then apply its migrations |
+| `live-test` | REMOTE: the config's live tests against the deployed Worker (with the secrets: fnox exec -- npm run live-test) |
+| `version` * | the version of charter-ts this is |

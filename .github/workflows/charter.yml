@@ -1,7 +1,7 @@
-# Written by `charter adopt` from the kit (github.com/joeblew999/charter, cmd/charter/kit/.github/workflows/charter.yml):
+# Written by `charter-ts adopt` from the kit (github.com/joeblew999/charter, charter-ts/kit/.github/workflows/charter.yml):
 # don't edit: change the kit, not this file. For a repo that is not a charter project: the checks any
-# repo takes from charter (tasks/repo), in one job. Every step that does work is a mise task, so it runs locally too.
-# The repo's own checks are its own workflow's. `workflow = false` in charter.toml: charter writes none.
+# repo takes from charter, in one job. Every step that does work is an npm script, so it runs locally too.
+# The repo's own checks are its own workflow's. "charter": { "workflow": false } in package.json: charter writes none.
 name: charter
 on:
   push:
@@ -22,8 +22,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: jdx/mise-action@v5.0.1
-      # One task, the same one a developer runs: what it checks is written in tasks/repo, not here,
-      # so a pass on your machine is a pass on GitHub. docs:check, repo:check, upstream:status.
-      - run: mise run repo:ci
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+      - run: npm ci
+      # One script, the same one a developer runs: what it checks is in package.json, not here, so a
+      # pass on your machine is a pass on GitHub. docs:check, repo:check, upstream:status.
+      - run: npm run repo:ci

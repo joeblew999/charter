@@ -1,5 +1,5 @@
-# Written by `charter adopt` from the kit (github.com/joeblew999/charter, cmd/charter/kit/.github/charter-labels.tsv): don't edit, change the kit.
-# The labels on GitHub: `charter repo` and `charter labels` make the repo's labels these.
+# Written by `charter-ts adopt` from the kit (github.com/joeblew999/charter, ts/packages/charter-ts/kit/.github/charter-labels.tsv): don't edit, change the kit.
+# The labels on GitHub: `charter-ts repo` makes the repo's labels these.
 name	color	description
 bug	d73a4a	it does the wrong thing
 feature	a2eeef	a calling repository needs something it does not do

@@ -1,0 +1,6 @@
+# What the TypeScript side needs installed: node runs everything (npm scripts, typed scripts), fnox
+# holds the secrets a deploy and a live test take (fnox exec -- npm run deploy). Nothing else: every
+# step is an npm script, in package.json here and in each project.
+[tools]
+node = "26.11.1"
+fnox = { version = "1.39.0", workflow = "release.yml" }

@@ -57,4 +57,4 @@ Without a stream, also remove the hub: `Hub` in `Env`, `feed`, the `HUB` binding
 
 ## In TypeScript
 
-The same API on oRPC (`src/contract.ts`, Zod) is `ts/examples/notes/`, without a native run or MCP; invalid input gets a 400. `charter-ts new my-api --from notes` makes a project from it: [TypeScript](typescript.md).
+The same API on oRPC (`src/contract.ts`, Zod) is `ts/notes/`, without a native run or MCP; invalid input gets a 400. `charter-ts new my-api --from notes` makes a project from it: [TypeScript](typescript.md).

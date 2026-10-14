@@ -11,13 +11,13 @@ A TypeScript API on Cloudflare Workers from an oRPC contract, with the specs, SD
 ## Start a project
 
 ```sh
-npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.1.0/charter-ts-0.1.0.tgz charter-ts new my-api --subdomain <your workers.dev subdomain>
+npx --package https://github.com/joeblew999/charter/releases/latest/download/charter-ts.tgz charter-ts new my-api --subdomain <your workers.dev subdomain>
 cd my-api
 npm install
 npm run check
 ```
 
-`--from notes` starts from the notes API (auth, streams, rate limits) instead of one route. The project comes with `.github/workflows/check.yml`, which runs `npm run check` on GitHub. Its `package.json` installs charter-ts from that release's URL: another release is another URL.
+`--from notes` starts from the notes API (auth, streams, rate limits) instead of one route. The project comes with `.github/workflows/check.yml`, which runs `npm run check` on GitHub. Its `package.json` installs charter-ts from that release's own URL, with its version in it: another release is another URL, and Renovate opens that pull request.
 
 ## The steps
 
@@ -56,32 +56,27 @@ export default defineConfig({
 });
 ```
 
-Every field is documented in [`Config`](https://github.com/joeblew999/charter/blob/main/ts/packages/charter-ts/src/config.ts): secrets, throwaway local secrets, more environment for the tests, more deploy modes, the SDK copied into a Worker.
+Every field is documented in [`Config`](https://github.com/joeblew999/charter/blob/main/charter-ts/src/config.ts): secrets, throwaway local secrets, more environment for the tests, more deploy modes, the SDK copied into a Worker.
 
 ## The library
 
 | Import | What it is |
 |---|---|
-| `charter-ts/specs` | Both specs from the contract, for `npm run spec` and for the Worker's `/api/openapi.json` and `/api/asyncapi.json` |
-| `charter-ts/asyncapi` | `asyncapi({...})` on a procedure: a WebSocket channel in the AsyncAPI spec |
-| `charter-ts/auth` | Bearer tokens, Cloudflare Access and an OpenID Connect issuer, with scopes ([Auth](auth.md)) |
-| `charter-ts/ratelimit` | Limits per caller on Workers Rate Limiting bindings |
-| `charter-ts/follow` | `follow()`: the gap-free feed behind the streams ([Streaming](streaming.md)) |
-| `charter-ts/config` | `defineConfig` |
-| `charter-ts/scripts` | What the steps are made of, for a script of your own: `run`, `withServer`, `migrateLocal`, `deploy`, `sdk` |
+| `"charter-ts/specs"` | Both specs from the contract, for `npm run spec` and for the Worker's `/api/openapi.json` and `/api/asyncapi.json` |
+| `"charter-ts/asyncapi"` | `asyncapi({...})` on a procedure: a WebSocket channel in the AsyncAPI spec |
+| `"charter-ts/auth"` | Bearer tokens, Cloudflare Access and an OpenID Connect issuer, with scopes ([Auth](auth.md)) |
+| `"charter-ts/ratelimit"` | Limits per caller on Workers Rate Limiting bindings |
+| `"charter-ts/follow"` | `follow()`: the gap-free feed behind the streams ([Streaming](streaming.md)) |
+| `"charter-ts/config"` | `defineConfig` |
+| `"charter-ts/scripts"` | What the steps are made of, for a script of your own: `run`, `withServer`, `migrateLocal`, `deploy`, `sdk` |
 
 ## In this repo
 
-`ts/` holds npm workspaces:
-
-- `packages/charter-ts`: the package;
-- `examples/start` and `examples/notes`: what `new` copies;
-- `examples/showcase`: every Fern feature, with the SDK tested inside a Worker.
+The root `package.json` is the npm workspace of `charter-ts/` (the package) and the projects in `ts/`: `ts/start` and `ts/notes`, which `new` copies, and `ts/showcase`, every Fern feature with the SDK tested inside a Worker.
 
 ```sh
-cd ts
 npm ci                               # everything; builds charter-ts
-npm run check                        # charter-ts's tests, then every example's check (Docker)
+npm run check                        # charter-ts's tests, every project's check (Docker), the docs
 npm run release -- X.Y.Z --dry-run   # the check, and the package into dist/
 npm run release -- X.Y.Z             # the version, the tag ts-vX.Y.Z, the GitHub Release with the package
 ```

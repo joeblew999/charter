@@ -6,7 +6,7 @@ parent: How this repo is kept
 
 # Writing docs
 
-Written by `charter adopt` (the same page in every repo that uses it): don't edit it here, change `cmd/charter/kit/docs/charter/writing.md` in [charter](https://github.com/joeblew999/charter). `mise run docs:lint` checks what a program can; `mise run docs:review` has Claude check the rest.
+Written by `charter-ts adopt` (the same page in every repo that uses it): don't edit it here, change `charter-ts/kit/docs/charter/writing.md` in [charter](https://github.com/joeblew999/charter). `npm run docs:lint` checks what a program can; `npm run docs:review` has Claude check the rest.
 
 ## The reader
 
@@ -43,4 +43,4 @@ A page belongs to one section. Nothing a user needs lives only under How to help
 
 ## When the code changes
 
-The page changes in the same commit, and a removed thing is removed from every page (`mise run docs:lint` finds the mentions).
+The page changes in the same commit, and a removed thing is removed from every page (`npm run docs:lint` finds the mentions).

@@ -1,0 +1,53 @@
+{
+	"name": "charter",
+	"private": true,
+	"type": "module",
+	"description": "Contract-first APIs on Cloudflare Workers with Huma (Go) or oRPC (TypeScript): OpenAPI and AsyncAPI generated, SDKs in any language with Fern, a CLI, MCP and real-time. Go at TypeScript's cost.",
+	"keywords": [
+		"asyncapi",
+		"cloudflare-workers",
+		"contract-first",
+		"d1",
+		"durable-objects",
+		"fern",
+		"golang",
+		"huma",
+		"mcp",
+		"openapi",
+		"orpc",
+		"sdk-generator",
+		"sse",
+		"tinygo",
+		"typescript",
+		"websocket",
+		"workers-go"
+	],
+	"homepage": "https://joeblew999.github.io/charter/",
+	"workspaces": [
+		"charter-ts",
+		"ts/start",
+		"ts/notes",
+		"ts/showcase"
+	],
+	"scripts": {
+		"prepare": "npm run build -w charter-ts",
+		"adopt": "charter-ts adopt",
+		"repo": "charter-ts repo",
+		"issues": "charter-ts issues",
+		"issue": "charter-ts issue",
+		"check": "tsc && npm run check -w charter-ts && npm run build -w charter-ts && npm run check -w ts/start && npm run check -w ts/notes && npm run check -w ts/showcase && npm run docs:check",
+		"docs:lint": "charter-ts docs:lint",
+		"docs:check": "charter-ts adopt --check && charter-ts docs:lint",
+		"repo:check": "charter-ts repo --check",
+		"upstream:status": "charter-ts upstream:status",
+		"repo:ci": "npm run docs:check && npm run repo:check && npm run upstream:status",
+		"docs:review": "charter-ts docs:review",
+		"release": "node release.ts"
+	},
+	"allowScripts": {
+		"workerd": true,
+		"esbuild": false,
+		"fsevents": false,
+		"@scarf/scarf": false
+	}
+}

@@ -1,24 +1,21 @@
-# charter-ts and the projects made with it (ts/): npm run check, the same every local check you run
-# in ts/ (Docker for Fern, no Cloudflare account). A release is cut from your machine: npm run release.
+# charter-ts and the TypeScript projects made with it (charter-ts/, ts/): npm run check, the same
+# every local check you run at the root (Docker for Fern, no Cloudflare account). A release is cut
+# from your machine: npm run release.
 name: ts
 on:
   push:
     branches: [main]
-    paths: ["ts/**", ".github/workflows/ts.yml"]
+    paths: ["charter-ts/**", "ts/**", "docs/**", "package.json", "package-lock.json", "tsconfig.json", ".github/workflows/ts.yml"]
   pull_request:
-    paths: ["ts/**", ".github/workflows/ts.yml"]
+    paths: ["charter-ts/**", "ts/**", "docs/**", "package.json", "package-lock.json", "tsconfig.json", ".github/workflows/ts.yml"]
 jobs:
   check:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ts
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 26.10.0
           cache: npm
-          cache-dependency-path: ts/package-lock.json
       - run: npm ci
       - run: npm run check

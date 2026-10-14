@@ -1,0 +1,95 @@
+{
+	"name": "charter-ts",
+	"version": "0.1.0",
+	"description": "A repo kept the charter way, and contract-first APIs on Cloudflare Workers in TypeScript, with oRPC and Fern: the charter-ts command (a repo's kit, docs lint, issues, upstream issues and GitHub settings: adopt, docs:lint, issue, upstream:status, repo; a project's steps, from its charter.config.ts: dev, lint, spec, the tests under workerd, deploy, live tests, and new to start a project), and the library: both specs from one oRPC contract, the AsyncAPI generator, follow() (the gap-free feed), auth (bearer tokens, Cloudflare Access, OpenID Connect) and rate limits per caller. Installed from its GitHub Release: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/joeblew999/charter.git",
+		"directory": "charter-ts"
+	},
+	"homepage": "https://joeblew999.github.io/charter/",
+	"type": "module",
+	"engines": {
+		"node": ">=26"
+	},
+	"bin": {
+		"charter-ts": "./bin/charter-ts.js"
+	},
+	"files": [
+		"bin",
+		"dist",
+		"kit",
+		"review.md",
+		"templates"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"check": "tsc && vitest run",
+		"prepack": "npm run build && node pack-templates.ts"
+	},
+	"exports": {
+		"./config": {
+			"types": "./dist/config.d.ts",
+			"default": "./dist/config.js"
+		},
+		"./asyncapi": {
+			"types": "./dist/asyncapi.d.ts",
+			"default": "./dist/asyncapi.js"
+		},
+		"./specs": {
+			"types": "./dist/specs.d.ts",
+			"default": "./dist/specs.js"
+		},
+		"./spec-files": {
+			"types": "./dist/spec-files.d.ts",
+			"default": "./dist/spec-files.js"
+		},
+		"./follow": {
+			"types": "./dist/follow.d.ts",
+			"default": "./dist/follow.js"
+		},
+		"./auth": {
+			"types": "./dist/auth.d.ts",
+			"default": "./dist/auth.js"
+		},
+		"./ratelimit": {
+			"types": "./dist/ratelimit.d.ts",
+			"default": "./dist/ratelimit.js"
+		},
+		"./scripts": {
+			"types": "./dist/scripts.d.ts",
+			"default": "./dist/scripts.js"
+		},
+		"./new": {
+			"types": "./dist/new.d.ts",
+			"default": "./dist/new.js"
+		},
+		"./package": {
+			"types": "./dist/package.d.ts",
+			"default": "./dist/package.js"
+		}
+	},
+	"peerDependencies": {
+		"@orpc/contract": "2.0.0-beta.40",
+		"@orpc/json-schema": "2.0.0-beta.40",
+		"@orpc/openapi": "2.0.0-beta.40",
+		"@orpc/server": "2.0.0-beta.40",
+		"@orpc/zod": "2.0.0-beta.40",
+		"zod": "^4.6.5"
+	},
+	"dependencies": {
+		"jose": "6.2.12"
+	},
+	"devDependencies": {
+		"@orpc/contract": "2.0.0-beta.40",
+		"@orpc/json-schema": "2.0.0-beta.40",
+		"@orpc/openapi": "2.0.0-beta.40",
+		"@orpc/server": "2.0.0-beta.40",
+		"@orpc/zod": "2.0.0-beta.40",
+		"@types/node": "^22.12.0",
+		"typescript": "^7.0.2",
+		"vitest": "^4.1.11",
+		"zod": "^4.6.5"
+	}
+}
