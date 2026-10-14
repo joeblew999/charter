@@ -5,11 +5,11 @@ parent: How to help
 ---
 # Upstream issues: every workaround, and the issue it waits for
 
-`mise run upstream:status` shows each issue's state. When one closes, do what the row says, then `mise run check` and the soak.
+`npm run upstream:status` shows each issue's state. When one closes, do what the row says, then `npm run check` and the soak.
 
 | Issue | Problem | Workaround | When fixed |
 |---|---|---|---|
-| [tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800) | The collector runs at every pause of a workers-go program | A runtime patch and an 8 MB heap (`cmd/charter/build.go`) | Drop the patch |
+| [tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800) | The collector runs at every pause of a workers-go program | A runtime patch and an 8 MB heap (`charter-ts/src/go.ts`) | Drop the patch |
 | [tinygo#5801](https://github.com/tinygo-org/tinygo/issues/5801) (fixed on dev) | Goroutine stacks are rarely freed | A patch reuses them | Drop it with a TinyGo release that has the fix |
 | [tinygo#5798](https://github.com/tinygo-org/tinygo/issues/5798) | Go timers stall on Cloudflare | `go/lib/worker/tinygo-clock.mjs` | Delete it |
 | [tinygo-org/net#56](https://github.com/tinygo-org/net/pull/56) | `http.ServeMux` has no method patterns | `humaworkers` routes itself | Use Huma's adapter |
@@ -24,7 +24,7 @@ parent: How to help
 | [fern#17775](https://github.com/fern-api/fern/issues/17775) | The TypeScript SDK sends only one of two header schemes (Access's two) | The tests pass both as `headers` | Drop the `headers` |
 | [fern#9559](https://github.com/fern-api/fern/issues/9559) | OpenAPI 3.2.0 is rejected | `version: "3.1.1"` in `charter-ts/src/specs.ts` | Use oRPC's default |
 | [orpc#2115](https://github.com/middleapi/orpc/issues/2115) | oRPC generates no AsyncAPI | `charter-ts/src/asyncapi.ts` | Publish it ([#23](https://github.com/joeblew999/charter/issues/23)) |
-| Fern, not filed | A named form-encoded OAuth request schema breaks the Go SDK's test | The schema is inline (`conformance/showcase-go/api/contract.go`) | Drop that `RequestBody` |
+| Fern, not filed | A named form-encoded OAuth request schema breaks the Go SDK's test | The schema is inline (`go/showcase/api/contract.go`) | Drop that `RequestBody` |
 | Huma, not filed | A `RawBody` beside a `Body` gives Fern's Go SDK an `io.Reader` | `jsonOnly` in `go/lib/humaworkers/humaworkers.go` | Delete `jsonOnly` |
 | Fern, not filed | An AsyncAPI server's `pathname` is ignored | Tests pass `baseUrl` | |
 | `cf dev`, not filed | A refused WebSocket upgrade is dropped | The showcase test accepts either | |

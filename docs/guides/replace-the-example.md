@@ -6,11 +6,11 @@ parent: Guides
 
 # Your API: change the contract, then take the notes out
 
-A new project is the notes API. Add your operations beside the notes, then take the notes out. A project made with `charter new -empty` has only `hello`: add your operations, with nothing to take out. The contract, `api/contract.go`, is the source of the validation, specs, SDKs and MCP tools.
+A Go project starts as a copy of `go/notes` (the notes API) or `go/start` (only `hello`): copy the folder, then change the module path in `go.mod` and its imports, and the Worker's name in `cloudflare.config.ts` and `charter.config.ts`. Add your operations beside the notes, then take the notes out. The contract, `api/contract.go`, is the source of the validation, specs, SDKs and MCP tools.
 
 ```sh
-mise run spec     # after every contract change
-mise run check    # fails on a stale spec, a failing test or a TinyGo gap
+npm run spec     # after every contract change
+npm run check    # fails on a stale spec, a failing test or a TinyGo gap
 ```
 
 ## Add an operation
@@ -25,7 +25,7 @@ mise run check    # fails on a stale spec, a failing test or a TinyGo gap
 
 2. **The route** in `Routes`: `Method`, `Path`, `OperationID` (the MCP tool's name), and a `huma.Register` call with `Summary`, `Errors` and `Extensions: sdk("notes", "get", nil)`, which names `client.notes.get()`. Copy `listNotes` for a paginated list.
 3. **The handler** in `api/handlers.go` gets `in` validated; return `huma.Error404NotFound("...")` to refuse.
-4. **The storage:** the method on `Store` in `api/store.go`, for `D1Store` (`api/store_js.go`, on Cloudflare) and `MemStore` (natively and in `go test`); a `-empty` project has none yet, so copy the three from `examples/notes-go/api/`. A table change is the next numbered file in `migrations/`.
+4. **The storage:** the method on `Store` in `api/store.go`, for `D1Store` (`api/store_js.go`, on Cloudflare) and `MemStore` (natively and in `go test`); a `-empty` project has none yet, so copy the three from `go/notes/api/`. A table change is the next numbered file in `migrations/`.
 
 For the generated clients: every constrained request field has a valid `example`; numbers are `int32`; a cursor is a string.
 
@@ -34,7 +34,7 @@ For the generated clients: every constrained request field has a valid `example`
 - **No memory between requests:** a Go runtime is replaced after some requests. State goes in D1 or a Durable Object.
 - **No background goroutines,** and little work in package initialisers: they run each time a runtime starts.
 - **A binding** is declared in `cloudflare.config.ts`, read in `platform_js.go`, stubbed in `platform_other.go`, and reaches handlers through `api.Env`.
-- **TinyGo lacks parts of `reflect`, a disk and some of `net`:** `mise run test:workerd` finds it, `go test` cannot.
+- **TinyGo lacks parts of `reflect`, a disk and some of `net`:** `npm run test:workerd` finds it, `go test` cannot.
 
 ## Agents: MCP
 
@@ -53,7 +53,7 @@ claude mcp add --transport http billing-api https://billing-api.<your-subdomain>
 | `api/*_test.go`, `test/` | Keep the helpers; rewrite the notes checks and the tool names |
 | `fern/generators.yml` | `namespaceExport`, `packageName`, `binaryName`; keep the Go SDK's path `<your module>/sdk/go` |
 
-Without a stream, also remove the hub: `Hub` in `Env`, `feed`, the `HUB` binding, the `Hub` export, and the live and soak programs. Then `grep -rni note api test migrations fern/generators.yml mise.toml` shows what is left.
+Without a stream, also remove the hub: `Hub` in `Env`, `feed`, the `HUB` binding, the `Hub` export, and the live and soak programs. Then `grep -rni note api test migrations fern/generators.yml charter.config.ts` shows what is left.
 
 ## In TypeScript
 

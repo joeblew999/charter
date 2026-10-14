@@ -30,8 +30,8 @@ type Env struct {
 }
 
 // Trusted is who may do what (reads are public, writing needs write):
-//   - the Worker's secrets (WORKER_SECRETS in mise.toml), each with its scopes: READ_TOKEN may not write;
-//   - Cloudflare Access, once mise run access:setup has put it in front of the Worker: a person who
+//   - the Worker's secrets (secrets in charter.config.ts), each with its scopes: READ_TOKEN may not write;
+//   - Cloudflare Access, once it is in front of the Worker: a person who
 //     logged in writes, a machine's service token reads (and writes with the write token beside it);
 //   - an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): what each token's scope claim says.
 //

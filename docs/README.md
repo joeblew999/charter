@@ -21,7 +21,7 @@ A repo with no API takes the parts that are not about one (the docs site, the re
 - **SDKs** in any language [Fern](https://buildwithfern.com) supports, and **a CLI** for every OS if you want one ([Add the CLI](guides/sdks.md#add-the-cli)).
 - **SSE and WebSocket streams** that lose nothing across deploys.
 - **Server-rendered pages** in the same Worker, with gsx and htmx 4 or Datastar, live over those streams ([Server-rendered pages](guides/pages.md)).
-- **Every step is a task:** `mise run <task>`, the same locally and on GitHub.
+- **Every step is an npm script:** `npm run <script>`, the same locally and on GitHub.
 
 ## What is where
 
@@ -32,8 +32,6 @@ A repo with no API takes the parts that are not about one (the docs site, the re
 | charter-ts | `charter-ts/` | The `charter-ts` command and its library, installed from its GitHub Release. For any repo: `adopt` (the kit, `charter-ts/kit/`), `docs:lint`, `issue`, `upstream:status`, `repo`. For a project: `new`, `dev`, `lint`, `spec`, `test:workerd`, `deploy`, `live-test` ([TypeScript](guides/typescript.md)) |
 | The TypeScript projects | `ts/start/` (one route), `ts/notes/` (the notes API: auth, streams, rate limits), `ts/showcase/` (every Fern feature, the SDK tested inside a Worker) | Each: the contract (`src/contract.ts`), `charter.config.ts`, `test/` (typed, checked against the contract's schemas), `fern/`. `charter-ts new` copies start or notes |
 | The Go library | `go/lib/` | What a Go project imports ([Go packages](reference/packages.md)), with its Worker glue in `go/lib/worker/` |
-| The Go tool | `go/cmd/charter/` | The command behind the Go projects' mise tasks ([The charter command](reference/charter.md)); `charter-ts` is taking its place |
-| The mise task files | `go/tasks/repo/`, `go/tasks/project/` | The tasks of a Go project |
 | The Go projects | `go/notes/`, `go/start/`, `go/start-htmx/`, `go/start-datastar/`, `go/showcase/` | The notes API, the start projects (with server-rendered pages: [Server-rendered pages](guides/pages.md)) and the conformance project, in Go |
 
 ## What is generated
@@ -42,11 +40,11 @@ Never edit these: change the source and run the step.
 
 | Path | Written by |
 |---|---|
-| `fern/openapi.json`, `fern/asyncapi.json` | `npm run spec` (TypeScript), `mise run spec` (Go), from the contract |
-| `pages/*.x.go` (committed) | `mise run ui:gen`, from the gsx components (`go/start-htmx/`, `go/start-datastar/`) |
-| `sdk/go/` (committed), `sdk/out/` | `mise run sdk:publish`, `mise run sdk:gen`; in TypeScript, `npm run sdk -- <group>` |
-| `build/`, `dist/`, `charter-ts/dist/` | `mise run build`, `mise run sdk:dist`; `npm ci` or `npm run build -w charter-ts` |
-| `.github/` (but `workflows/check.yml`, `deploy.yml`, `release.yml`, `sdk-check.yml`, `ts.yml`, this repo's own), `renovate.json`, `AGENTS.md`, `CLAUDE.md` | `npm run adopt`, from `charter-ts/kit/` |
+| `fern/openapi.json`, `fern/asyncapi.json` | `npm run spec` (TypeScript), `npm run spec` (Go), from the contract |
+| `pages/*.x.go` (committed) | `go tool gsx generate`, from the gsx components (`go/start-htmx/`, `go/start-datastar/`); `npm run lint` fails while they are stale |
+| `sdk/go/` (committed), `sdk/out/` | `npm run sdk:publish`, `npm run sdk --`; in TypeScript, `npm run sdk -- <group>` |
+| `build/`, `charter-ts/dist/` | `npm run build` in a Go project; `npm ci` or `npm run build -w charter-ts` |
+| `.github/` (but `workflows/check.yml` and `deploy.yml`, this repo's own), `renovate.json`, `AGENTS.md`, `CLAUDE.md` | `npm run adopt`, from `charter-ts/kit/` |
 | `docs/charter/`, `docs/_config.yml`, `docs/llms.txt`, `docs/_sass/` | `npm run adopt`, from `charter-ts/kit/` |
 | `docs/charter/tasks.md`, `docs/charter/using.md` | `npm run adopt`, from `package.json`'s scripts and from charter-ts's commands |
 
@@ -55,8 +53,8 @@ Never edit these: change the source and run the step.
 | Section | Pages |
 |---|---|
 | Start | [Getting started](getting-started.md) |
-| [Guides](guides.md) | [Your API](guides/replace-the-example.md) (the contract, MCP, TypeScript), [Streaming](guides/streaming.md), [SDKs](guides/sdks.md) (Fern features, languages, releases), [Deploy and CI](guides/deploy.md), [Auth](guides/auth.md) (tokens, Cloudflare Access, OpenID Connect), [Release](guides/release.md) (from your machine, the CLI for every OS), [Performance](guides/performance.md), [Repos that use each other](guides/repos.md) (who pins what, breaking changes, Renovate), [Server-rendered pages](guides/pages.md) (gsx, htmx 4, Datastar), [TypeScript](guides/typescript.md) (charter-ts: start a project, the steps, the config, the library), [Any repo](guides/any-repo.md) (what a repo with no API takes: `charter adopt`, `tasks/repo/`) |
-| [Reference](reference.md) | [Tasks](reference/tasks.md), [The charter command](reference/charter.md), [Go packages](reference/packages.md) |
+| [Guides](guides.md) | [Your API](guides/replace-the-example.md) (the contract, MCP, TypeScript), [Streaming](guides/streaming.md), [SDKs](guides/sdks.md) (Fern features, languages, the Go SDK for other repos), [Deploy and CI](guides/deploy.md), [Auth](guides/auth.md) (tokens, Cloudflare Access, OpenID Connect), [Repos that use each other](guides/repos.md) (who pins what, breaking changes, Renovate), [Server-rendered pages](guides/pages.md) (gsx, htmx 4, Datastar), [TypeScript](guides/typescript.md) (charter-ts: start a project, the steps, the config, the library), [Any repo](guides/any-repo.md) (what a repo with no API takes: `charter-ts adopt`) |
+| [Reference](reference.md) | [Go packages](reference/packages.md); every charter-ts command: [Using charter-ts](charter/using.md); every script of this repo: [Tasks](charter/tasks.md) |
 | [How to help](contributing.md) | [Rules](rules.md), [Benchmarks](benchmarks.md), [Upstream issues](upstream.md), [Writing docs](charter/writing.md) |
 | [How this repo is kept](charter/README.md) | What is the same in every repo charter keeps: [the rules they share](charter/rules.md) |
 

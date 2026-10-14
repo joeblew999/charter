@@ -11,11 +11,8 @@ parent: Guides
 ## Generate and check
 
 ```sh
-mise run sdk:gen typescript         # -> sdk/out/typescript (not committed)
-mise run sdk:gen go                 # -> sdk/out/go
-mise run sdk:check go               # build, vet, Fern's tests against a mock
-mise run sdk:cli:build              # HEAVY the first time: the Rust CLI (a project with one)
-mise run sdk:clean                  # after a contract change: a stale SDK is not regenerated
+npm run sdk -- typescript         # -> sdk/out/typescript (not committed)
+npm run sdk -- go                 # -> sdk/out/go
 ```
 
 ```ts
@@ -27,7 +24,7 @@ for await (const n of await client.notes.list({ limit: 50 })) console.log(n.id);
 ## Give the Go SDK to another repo
 
 ```sh
-mise run sdk:publish    # generates, checks and copies the Go SDK into sdk/go
+npm run sdk:publish    # generates, checks and copies the Go SDK into sdk/go
 git add sdk/go          # commit it with its contract change; never edit it
 ```
 
@@ -35,7 +32,7 @@ Then `go get <your module>/sdk/go@main`, or `@latest` once a release has tagged 
 
 ## Add a language
 
-Add a group under `groups:` in `fern/generators.yml`, then `mise run sdk:gen python`. A release ships it; `sdk:check` covers only Go and TypeScript.
+Add a group under `groups:` in `fern/generators.yml`, then `npm run sdk -- python`. A release ships it; `sdk:check` covers only Go and TypeScript.
 
 ```yaml
   python:
@@ -49,13 +46,11 @@ Add a group under `groups:` in `fern/generators.yml`, then `mise run sdk:gen pyt
 
 ## Add the CLI
 
-A project has a CLI if and only if `fern/generators.yml` has the group `cli`: Fern writes it in Rust, and `dist` builds it for every OS ([Release](release.md#the-cli-for-every-os)). The notes examples and the showcases have it; a project made with `charter new -empty` has not, so it pins no Rust (1 to 3 GB a version), zig or cargo-zigbuild. Without the group, `dist` ships the SDKs and the specs only, the `release` workflow has no CLI jobs, `doctor` asks for no Rust, and the CLI tasks say the project has none.
-
-To have one, make the project with `charter new -empty -cli`, or copy into an existing one the `cli` group of `examples/notes-go/fern/generators.yml` (with your `binaryName`) and its `rust`, `zig` and `cargo-zigbuild` lines of `mise.toml`, then `mise install && mise run adopt`. To drop it, remove those lines, then `mise run adopt`. `mise run doctor` warns when the pins and the group disagree.
+A project has a CLI if `fern/generators.yml` has the group `cli`: Fern writes it in Rust, and `npm run sdk -- cli` generates it into `sdk/out/cli`. The notes projects and the showcases have the group. Building it for every OS is not one of charter-ts's steps yet.
 
 ## Fern features
 
-The showcase (`conformance/showcase-go/`, and `conformance/showcase-ts/` from oRPC) switches each on; copy the lines from its contract and `api/spec.go`.
+The showcase (`go/showcase/`, and `ts/showcase/` from oRPC) switches each on; copy the lines from its contract and `api/spec.go`.
 
 | Feature | In the Go contract | The caller gets |
 |---|---|---|
@@ -68,19 +63,11 @@ The showcase (`conformance/showcase-go/`, and `conformance/showcase-ts/` from oR
 
 The spec only describes: the server must enforce auth, and idempotency is the handler's job.
 
-## Release
-
-`mise run release -- vX.Y.Z` ships the SDKs, the specs and, with a CLI, the CLI for every OS from your machine: [Release](release.md).
-
-## Update charter
+## Update charter-ts
 
 ```sh
-mise x github:joeblew999/charter@X.Y.Z -- charter upgrade   # the tool's pin, the includes' ?ref=, @charter/ts in package.json, together
-mise install && npm install                                   # npm install: in TypeScript
-go get github.com/joeblew999/charter/go@vX.Y.Z && go mod tidy  # in Go: upgrade says this line too
-mise run adopt && mise run check
+npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz
+npm run adopt && npm run check
 ```
 
-`mise up --bump github:joeblew999/charter` moves only the pin, and mise takes no release younger than a day that way; `upgrade` with the version named moves everything at once, at any age. A project whose `mise.toml` still holds every task, or pins `"go:github.com/joeblew999/charter/cmd/charter"`: make a new project with `charter new` and take its `[tools]`, `CHARTER_TOOL` and `[task_config]` lines, then delete the tasks that `tasks/` now defines.
-
-Releases are `v0`: anything can change between them. A project made before v0.8.0 (from orpc-api) does not update: make a new one and move `api/`, `migrations/` and your bindings into it.
+In Go, also the library: `go get github.com/joeblew999/charter/go@vX.Y.Z && go mod tidy`. Renovate opens these pull requests by itself ([Repos that use each other](repos.md)).

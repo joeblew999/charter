@@ -3,7 +3,7 @@
 // validation, the OpenAPI and AsyncAPI specs (spec.go), the MCP tools, and from the specs Fern's
 // SDKs, CLI and docs. OperationID and Tags name the SDK methods, and Extensions carry Fern's
 // x-fern-*. The `example` tags are what the SDKs' READMEs show (TestExamplesAreThereAndValid).
-// Add a route to Routes, then: mise run spec.
+// Add a route to Routes, then: npm run spec.
 //
 // The pages (package pages) are not in the contract: they are HTML for browsers. They call the same
 // handlers (Env.Post, Env.Recent, Env.Feed), so a message posted from a page or through the API is

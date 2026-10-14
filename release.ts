@@ -34,15 +34,17 @@ const pkg = JSON.parse(readFileSync(manifest, "utf8")) as { version: string };
 if (pkg.version !== version && !dryRun) {
 	console.log(`charter-ts ${pkg.version} -> ${version}`);
 	writeFileSync(manifest, JSON.stringify({ ...pkg, version }, null, "\t") + "\n");
-	for (const example of ["start", "notes", "showcase"]) {
-		const file = `ts/${example}/package.json`;
-		const project = JSON.parse(readFileSync(file, "utf8")) as { dependencies: Record<string, string> };
-		project.dependencies["charter-ts"] = `^${version}`;
-		writeFileSync(file, JSON.stringify(project, null, "\t") + "\n");
+	const projects = (JSON.parse(readFileSync("package.json", "utf8")) as { workspaces: string[] }).workspaces.filter(w => w !== "charter-ts");
+	for (const project of projects) {
+		const file = `${project}/package.json`;
+		const manifestOf = JSON.parse(readFileSync(file, "utf8")) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+		const deps = manifestOf.dependencies?.["charter-ts"] ? manifestOf.dependencies : (manifestOf.devDependencies ??= {});
+		deps["charter-ts"] = `^${version}`;
+		writeFileSync(file, JSON.stringify(manifestOf, null, "\t") + "\n");
 	}
 	run("npm", ["install", "--no-fund", "--no-audit"]);
 	if (!dryRun) {
-		run("git", ["add", "--", manifest, "ts/start/package.json", "ts/notes/package.json", "ts/showcase/package.json", "package-lock.json"]);
+		run("git", ["add", "--", manifest, ...projects.map(project => `${project}/package.json`), "package-lock.json"]);
 		run("git", ["commit", "-q", "-m", `charter-ts ${version}`]);
 	}
 }

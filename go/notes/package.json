@@ -2,20 +2,35 @@
 	"name": "charter-notes-go",
 	"private": true,
 	"type": "module",
-	"description": "What the tasks run: cf (Cloudflare's CLI) with Vite, Fern's CLI, TypeScript for checking generated SDKs, and what the tests in test/ import.",
+	"description": "The notes API in Go on Cloudflare Workers (workers-go, TinyGo), from a Huma contract (api/contract.go): auth, SSE and WebSocket streams, MCP, rate limits. npm run check is every local check; the steps are the scripts below, in the order you run them: each is charter-ts <step>, which reads charter.config.ts.",
+	"scripts": {
+		"lint": "charter-ts lint",
+		"test": "go test ./...",
+		"spec": "charter-ts spec",
+		"spec:check": "charter-ts spec:check",
+		"build": "charter-ts build",
+		"start": "charter-ts run",
+		"dev": "charter-ts dev",
+		"migrate:local": "charter-ts migrate:local",
+		"test:native": "charter-ts test:native",
+		"test:workerd": "charter-ts test:workerd",
+		"check": "npm run lint && npm test && npm run spec:check && npm run test:native && npm run test:workerd",
+		"sdk": "charter-ts sdk",
+		"sdk:publish": "charter-ts sdk:publish",
+		"deploy": "charter-ts deploy",
+		"live-test": "charter-ts live-test"
+	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "beta",
 		"@modelcontextprotocol/client": "2.2.0",
 		"@types/node": "^22.12.0",
 		"@types/ws": "^8.5.12",
 		"cf": "1.0.0-beta.5",
+		"charter-ts": "^0.2.0",
 		"fern-api": "5.140.0",
 		"jose": "6.2.12",
 		"typescript": "~5.9.3",
 		"vite": "^8.3.0",
 		"ws": "^8.18.0"
-	},
-	"allowScripts": {
-		"workerd@1.20260926.1": true
 	}
 }

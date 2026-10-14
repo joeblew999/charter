@@ -8,7 +8,7 @@ build/
 *.log
 .DS_Store
 
-# Generated SDKs and the CLI (mise run sdk:gen)
+# Generated SDKs and the CLI (npm run sdk)
 sdk/out/
 sdk/.work/
 target/

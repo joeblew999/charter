@@ -4,7 +4,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { Config } from "./config.ts";
+import type { Config, Tests } from "./config.ts";
 
 export interface Step {
 	usage: string;
@@ -21,6 +21,25 @@ async function load(): Promise<Config> {
 }
 
 const scripts = () => import("./scripts.ts");
+const go = () => import("./go.ts");
+
+/** In a Go project, the Worker is built with TinyGo before workerd runs it or a deploy ships it. */
+async function built(config: Config): Promise<void> {
+	if (config.go) (await go()).goBuild(config.go);
+	if (config.sdkInWorker) (await scripts()).syncSdk(config.sdkInWorker);
+}
+
+/** A server on a free port, its local database migrated, and the tests against it. */
+async function serve(config: Config, tests: Tests, program: string, args: string[]): Promise<void> {
+	const { freePort, migrateLocal, run, withServer } = await scripts();
+	const port = await freePort(), extra = await freePort();
+	const origin = `http://localhost:${port}`;
+	const env = { ...config.localSecrets, PORT: String(port), ...tests.env?.({ port, extra }) };
+	await withServer({ program, args, env, ready: origin + (tests.ready ?? "/api/hello") }, async () => {
+		if (program === "cf" && existsSync("migrations")) await migrateLocal(config, port);
+		await tests.run({ origin, port, extra, node: (file, ...a) => run("node", [file, ...a], env) });
+	});
+}
 
 /** The commands, in the order a repo and then a project run them. */
 export const steps: Record<string, Step> = {
@@ -72,14 +91,30 @@ export const steps: Record<string, Step> = {
 		anyRepo: true,
 		run: async args => (await import("./new.ts")).newProject(args),
 	},
-	dev: {
-		usage: "dev",
-		about: "the API under workerd (cf dev) on the config's port, with the throwaway secrets; the first time, in another shell: migrate:local",
+	build: {
+		usage: "build",
+		about: "Go: build the Worker into build/ with TinyGo, tuned for Workers, with the Go library's Worker glue beside it; fails over the size Workers Free allows",
 		run: async () => {
 			const config = await load();
-			const { run, syncSdk } = await scripts();
-			if (config.sdkInWorker) syncSdk(config.sdkInWorker);
-			run("cf", ["dev"], { ...config.localSecrets, PORT: String(config.port) });
+			if (!config.go) throw new Error("build is for a Go Worker: cf builds a TypeScript one itself");
+			(await go()).goBuild(config.go);
+		},
+	},
+	run: {
+		usage: "run",
+		about: "Go: the API natively (go run .) on the config's port: no Cloudflare, an in-memory store",
+		run: async () => {
+			const config = await load();
+			(await scripts()).run("go", ["run", "."], { ...config.localSecrets, PORT: String(config.port) });
+		},
+	},
+	dev: {
+		usage: "dev",
+		about: "the API under workerd (cf dev) on the config's port, with the throwaway secrets (a Go Worker built first); the first time, in another shell: migrate:local",
+		run: async () => {
+			const config = await load();
+			await built(config);
+			(await scripts()).run("cf", ["dev"], { ...config.localSecrets, PORT: String(config.port) });
 		},
 	},
 	"migrate:local": {
@@ -92,32 +127,37 @@ export const steps: Record<string, Step> = {
 	},
 	lint: {
 		usage: "lint",
-		about: "typecheck the Worker (tsconfig.json, with cf's types) and what runs in Node: the config and the tests (tsconfig.node.json)",
+		about: "Go: gofmt, go vet for the host and for Wasm, gsx's output and the Go SDK fresh. TypeScript: typecheck the Worker (tsconfig.json, with cf's types) and what runs in Node: the config and the tests (tsconfig.node.json)",
 		run: async () => {
 			const config = await load();
 			const { run, syncSdk } = await scripts();
+			if (config.go) (await go()).goLint(config.go);
 			if (config.sdkInWorker) syncSdk(config.sdkInWorker);
-			run("cf", ["workers", "types"]);
-			run("tsc", []);
+			if (existsSync("tsconfig.json")) {
+				run("cf", ["workers", "types"]);
+				run("tsc", []);
+			}
 			if (existsSync("tsconfig.node.json")) run("tsc", ["-p", "tsconfig.node.json"]);
 		},
 	},
 	spec: { usage: "spec", about: "write both specs from the contract into fern/", run: () => specs(false) },
 	"spec:check": { usage: "spec:check", about: "fail if a committed spec is stale against the contract", run: () => specs(true) },
-	"test:workerd": {
-		usage: "test:workerd",
-		about: "the Worker under workerd (cf dev) on a free port, its local database migrated, and the config's tests against it",
+	"test:native": {
+		usage: "test:native",
+		about: "Go: the API natively (go run .) on a free port, and the config's native tests against it",
 		run: async () => {
 			const config = await load();
-			const { freePort, migrateLocal, run, syncSdk, withServer } = await scripts();
-			if (config.sdkInWorker) syncSdk(config.sdkInWorker);
-			const port = await freePort(), extra = await freePort();
-			const origin = `http://localhost:${port}`;
-			const env = { ...config.localSecrets, PORT: String(port), ...config.test.env?.({ port, extra }) };
-			await withServer({ program: "cf", args: ["dev"], env, ready: origin + (config.test.ready ?? "/api/hello") }, async () => {
-				if (existsSync("migrations")) await migrateLocal(config, port);
-				await config.test.run({ origin, port, extra, node: (file, ...args) => run("node", [file, ...args], env) });
-			});
+			if (!config.native) throw new Error("charter.config.ts has no native tests");
+			await serve(config, config.native, "go", ["run", "."]);
+		},
+	},
+	"test:workerd": {
+		usage: "test:workerd",
+		about: "the Worker under workerd (cf dev) on a free port (a Go Worker built first), its local database migrated, and the config's tests against it",
+		run: async () => {
+			const config = await load();
+			await built(config);
+			await serve(config, config.test, "cf", ["dev"]);
 		},
 	},
 	sdk: {
@@ -125,13 +165,18 @@ export const steps: Record<string, Step> = {
 		about: "generate a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>; by default the TypeScript SDK",
 		run: async args => (await scripts()).sdk(args[0] ?? "typescript-dist"),
 	},
+	"sdk:publish": {
+		usage: "sdk:publish [--check]",
+		about: "Go: generate the Go SDK (Docker), prove it (build, vet, tests against WireMock) and copy its sources into sdk/go, the committed module another repo can go get; --check fails if sdk/go is not what the specs generate now",
+		run: async args => (await go()).sdkPublish(args.includes("--check")),
+	},
 	deploy: {
 		usage: "deploy",
-		about: "REMOTE: deploy the Worker with its secrets from the environment (fnox exec -- npm run deploy), then apply its migrations",
+		about: "REMOTE: deploy the Worker (a Go Worker built first) with its secrets from the environment (fnox exec -- npm run deploy), then apply its migrations",
 		run: async () => {
 			const config = await load();
-			const { deploy, syncSdk } = await scripts();
-			if (config.sdkInWorker) syncSdk(config.sdkInWorker);
+			await built(config);
+			const { deploy } = await scripts();
 			deploy(config);
 			for (const mode of config.deployModes ?? []) deploy(config, mode);
 		},
@@ -151,6 +196,11 @@ export const steps: Record<string, Step> = {
 
 async function specs(check: boolean): Promise<void> {
 	const config = await load();
+	const server = config.specServer ?? config.url;
+	if ("go" in config.specs) {
+		(await scripts()).run("go", ["run", config.specs.go, ...(check ? ["-check"] : []), "fern/openapi.json", "fern/asyncapi.json", server]);
+		return;
+	}
 	const { writeSpecs } = await import("./spec-files.ts");
-	await writeSpecs(config.specs, { server: config.specServer ?? config.url, check });
+	await writeSpecs(config.specs, { server, check });
 }

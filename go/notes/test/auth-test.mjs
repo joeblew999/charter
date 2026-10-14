@@ -5,7 +5,7 @@
 // limit on creating notes (x-rate-limit in the spec): a caller of its own may write that many times,
 // then gets 429 with Retry-After, while another caller still writes. Never point a deployed Worker
 // at it: the keys are made here, for this run.
-// Usage: node test/auth-test.mjs <origin> <keys port>   (mise run test:native, test:workerd)
+// Usage: node test/auth-test.mjs <origin> <keys port>   (npm run test:native, test:workerd)
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 const { exportJWK, generateKeyPair, SignJWT } = createRequire(`${process.cwd()}/`)("jose");

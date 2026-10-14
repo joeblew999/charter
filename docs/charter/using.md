@@ -32,13 +32,17 @@ Those marked * work in any repo; the others in a project, a folder with a `chart
 | `upstream:status` * | REMOTE, read-only: the upstream issues the code works around (every `Upstream:` tag) and their state: CLOSED means that workaround can go |
 | `docs:review [--print]` * | have Claude (the claude command) bring docs/ up to date and into line with docs/charter/writing.md; --print only shows the prompt |
 | `new <name> [--from start\|notes] [--subdomain <workers.dev subdomain>] [--into <dir>]` * | a new project: a copy of a tested example under your name, with its GitHub workflow |
-| `dev` | the API under workerd (cf dev) on the config's port, with the throwaway secrets; the first time, in another shell: migrate:local |
+| `build` | Go: build the Worker into build/ with TinyGo, tuned for Workers, with the Go library's Worker glue beside it; fails over the size Workers Free allows |
+| `run` | Go: the API natively (go run .) on the config's port: no Cloudflare, an in-memory store |
+| `dev` | the API under workerd (cf dev) on the config's port, with the throwaway secrets (a Go Worker built first); the first time, in another shell: migrate:local |
 | `migrate:local` | apply migrations/*.sql, each once, to the local database of a running dev |
-| `lint` | typecheck the Worker (tsconfig.json, with cf's types) and what runs in Node: the config and the tests (tsconfig.node.json) |
+| `lint` | Go: gofmt, go vet for the host and for Wasm, gsx's output and the Go SDK fresh. TypeScript: typecheck the Worker (tsconfig.json, with cf's types) and what runs in Node: the config and the tests (tsconfig.node.json) |
 | `spec` | write both specs from the contract into fern/ |
 | `spec:check` | fail if a committed spec is stale against the contract |
-| `test:workerd` | the Worker under workerd (cf dev) on a free port, its local database migrated, and the config's tests against it |
+| `test:native` | Go: the API natively (go run .) on a free port, and the config's native tests against it |
+| `test:workerd` | the Worker under workerd (cf dev) on a free port (a Go Worker built first), its local database migrated, and the config's tests against it |
 | `sdk [group]` | generate a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>; by default the TypeScript SDK |
-| `deploy` | REMOTE: deploy the Worker with its secrets from the environment (fnox exec -- npm run deploy), then apply its migrations |
+| `sdk:publish [--check]` | Go: generate the Go SDK (Docker), prove it (build, vet, tests against WireMock) and copy its sources into sdk/go, the committed module another repo can go get; --check fails if sdk/go is not what the specs generate now |
+| `deploy` | REMOTE: deploy the Worker (a Go Worker built first) with its secrets from the environment (fnox exec -- npm run deploy), then apply its migrations |
 | `live-test` | REMOTE: the config's live tests against the deployed Worker (with the secrets: fnox exec -- npm run live-test) |
 | `version` * | the version of charter-ts this is |

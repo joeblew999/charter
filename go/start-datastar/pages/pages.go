@@ -1,5 +1,5 @@
 // Package pages is the site: HTML pages rendered on the server from gsx components (the *.gsx files;
-// mise run ui:gen writes the *.x.go beside them), made live with Datastar. It serves:
+// go tool gsx generate writes the *.x.go beside them), made live with Datastar. It serves:
 //
 //	GET  /                  the home page: the form and the newest messages (Home)
 //	POST /messages          the form: stores the message as POST /api/messages does, answers the form again (Form)

@@ -7,7 +7,7 @@ mise.local.toml
 # Agent worktrees (Claude Code)
 .claude/worktrees/
 
-# Release builds (mise run charter:release)
+# Release builds (npm run release)
 dist/
 
 # npm, and what packing charter-ts writes (npm pack: its templates, the tarball)

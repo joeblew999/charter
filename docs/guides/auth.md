@@ -6,7 +6,7 @@ parent: Guides
 
 # Auth: who may call, and how they prove it
 
-The contract says which scopes each operation needs; one middleware checks every request against it: `go/lib/auth` in Go, `@charter/ts/auth` in TypeScript. In the notes examples, reading is public and writing needs `write`.
+The contract says which scopes each operation needs; one middleware checks every request against it: `go/lib/auth` in Go, `"charter-ts/auth"` in TypeScript. In the notes examples, reading is public and writing needs `write`.
 
 ## Three ways in
 
@@ -34,38 +34,34 @@ routes.UseMiddleware(auth.Middleware(routes, env.Var,
 	auth.OIDC{}))
 ```
 
-In TypeScript: `base: oidcScheme(accessScheme(info.title, scheme()))`, `spec: needs(["write"])`, and `await authorize(headers, securityOf(procedure), trusted)` in an oRPC middleware (`examples/notes-ts/src/index.ts`). The specs then list every way in for each operation, and a public one says `security: []`.
+In TypeScript: `base: oidcScheme(accessScheme(info.title, scheme()))`, `spec: needs(["write"])`, and `await authorize(headers, securityOf(procedure), trusted)` in an oRPC middleware (`ts/notes/src/index.ts`). The specs then list every way in for each operation, and a public one says `security: []`.
 
 ## Bearer tokens
 
 ```sh
 openssl rand -hex 32 | fnox set WRITE_TOKEN -k "<name> WRITE_TOKEN" -p keychain
 openssl rand -hex 32 | fnox set READ_TOKEN -k "<name> READ_TOKEN" -p keychain
-mise run cloudflare:secrets    # copies them, and the Cloudflare credentials, to GitHub for CI
+fnox exec -- sh -c 'gh secret set WRITE_TOKEN --body "$WRITE_TOKEN" && gh secret set READ_TOKEN --body "$READ_TOKEN"'   # for the deploy workflow
 ```
 
-They are the Worker's secrets (`WORKER_SECRETS` in `mise.toml`, `bindings.secret()` in `cloudflare.config.ts`): every `mise run deploy` sets them, through `charter exec -secrets`, from fnox unless already set, as in CI. Local runs use throwaway ones. No task prints a value.
+They are the Worker's secrets (`secrets` in `charter.config.ts`, `bindings.secret()` in `cloudflare.config.ts`): every `npm run deploy` sets them from the environment, `fnox exec --` here and GitHub's secrets in CI. Local runs use throwaway ones (`localSecrets`). Nothing prints a value.
 
 ## Cloudflare Access
 
-fnox needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_GITHUB_IDP_ID`.
+In Cloudflare's dashboard (Zero Trust, Access, Applications), make a self-hosted application for the Worker's host: a policy for the people who may log in (with GitHub), and a Service Auth policy for each machine's service token. Then give the Worker the application's two values, in fnox as the tokens are, and deploy:
 
 ```sh
-mise run deploy                                  # the Worker must exist
-mise run access:setup -- you@example.com         # who may log in with GitHub; again to change it
-mise run access:token -- create <machine> fnox   # or a file instead of fnox, readable by you alone
-mise run access:token -- list
-mise run access:token -- revoke <machine>        # Access refuses it from then on; the others are untouched
-mise run access:delete                           # the application and every token
+echo "https://<team>.cloudflareaccess.com" | fnox set ACCESS_TEAM_DOMAIN -k "<name> ACCESS_TEAM_DOMAIN" -p keychain
+echo "<the application's audience tag>" | fnox set ACCESS_AUD -k "<name> ACCESS_AUD" -p keychain
+fnox exec -- npm run deploy    # sets them: they are optionalSecrets in charter.config.ts
 ```
 
-- `access:setup` makes the Access application for `API_URL`'s host: each machine's token passes (Service Auth), the people named log in with GitHub. It sets the Worker's `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` at once, and keeps them in fnox with `ACCESS_APP_ID`, so every deploy sets them too (`WORKER_OPTIONAL_SECRETS`). Run again, it changes only what it sets: the policies, the login and the session; the rest of the application stays as it was, such as the MCP login (`oauth_configuration`) turned on in the dashboard. Machines' tokens are those named `<worker>:<machine>`; a token named otherwise is not let in by the policy it writes.
-- A token is named `<worker>:<machine>` and lasts a year. With `fnox`, it is kept as `<WORKER>_ACCESS_CLIENT_ID` and `_SECRET`, what the SDKs and `mise run live-test` read.
+- A machine's service token is kept as `<WORKER>_ACCESS_CLIENT_ID` and `_SECRET` (in fnox), what the SDKs and the live tests read.
 - Behind Access every request needs the token, even one the contract calls public. Without it, Access answers 302 to the login, and the Worker never sees the request.
 
 ## An OpenID Connect issuer
 
-Put `OIDC_ISSUER` (its discovery document is at `<issuer>/.well-known/openid-configuration`, and must name the same issuer) and `OIDC_AUDIENCE` in fnox, as the tokens are: every deploy sets them (`WORKER_OPTIONAL_SECRETS`).
+Put `OIDC_ISSUER` (its discovery document is at `<issuer>/.well-known/openid-configuration`, and must name the same issuer) and `OIDC_AUDIENCE` in fnox, as the tokens are: every deploy sets them (`optionalSecrets` in `charter.config.ts`).
 
 ## From the SDKs
 
@@ -85,7 +81,7 @@ Extensions: ratelimit.On(ratelimit.Limit{Binding: "WRITE_LIMIT", Limit: 100, Per
 routes.UseMiddleware(ratelimit.Middleware(routes, nil))                                                        // after auth.Middleware
 ```
 
-In TypeScript (`@charter/ts/ratelimit`): `spec: needs(["write"], limited(writeLimit))`, `rateLimits` in openapiSpec's options for scopes, and `await rateLimit(limitOf(procedure), keyOf(caller, headers), env)` after `authorize` (`examples/notes-ts/src/index.ts`).
+In TypeScript (`"charter-ts/ratelimit"`): `spec: needs(["write"], limited(writeLimit))`, `rateLimits` in openapiSpec's options for scopes, and `await rateLimit(limitOf(procedure), keyOf(caller, headers), env)` after `authorize` (`ts/notes/src/index.ts`).
 
 - Each limit is a [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) binding of that name. `cloudflare.config.ts` declares one per `x-rate-limit` in `fern/openapi.json`, with its limit and period, so they are written once; it holds each binding's namespace, a number unique in the account.
 - The binding counts per Cloudflare location and is eventually consistent: it stops abuse, it does not account. `cf dev` counts locally. Natively, Go counts in memory.
@@ -93,8 +89,8 @@ In TypeScript (`@charter/ts/ratelimit`): `spec: needs(["write"], limited(writeLi
 
 ## Proven
 
-- Locally (`mise run check`): `test/auth-test.mjs` serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After` after the write limit for one caller while another still writes: the Go Worker natively and as TinyGo Wasm under workerd, the TypeScript one under workerd. Rate limits were not tried on Cloudflare.
-- On Cloudflare, 2026-10-03: a project made by `charter new` behind Access, through these tasks. No token: 302. A wrong secret: 302. The machine's token: reads; writing is 403. With the write token: writes; with the read token or a JWT from an untrusted issuer: 403 and 401. The live, SDK (Go and TypeScript) and MCP tests passed through Access. An OIDC issuer was not tried there.
+- Locally (`npm run check`): the auth test (`test/auth-test.mjs` in Go, `test/auth-test.ts` in TypeScript) serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After` after the write limit for one caller while another still writes: the Go Worker natively and as TinyGo Wasm under workerd, the TypeScript one under workerd. Rate limits were not tried on Cloudflare.
+- On Cloudflare, 2026-10-03: a Go notes project behind Access, set up by the Access commands charter's Go tool had then. No token: 302. A wrong secret: 302. The machine's token: reads; writing is 403. With the write token: writes; with the read token or a JWT from an untrusted issuer: 403 and 401. The live, SDK (Go and TypeScript) and MCP tests passed through Access. An OIDC issuer was not tried there.
 
 ## Limits
 

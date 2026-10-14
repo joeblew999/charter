@@ -8,9 +8,9 @@ import (
 	"testing"
 )
 
-// The oRPC showcase's Fern folder: its specs are generated from ../showcase-ts/src/contract.ts
-// (mise run spec, there). What the Go contract must say too.
-const reference = "../../showcase-ts/fern/"
+// The oRPC showcase's Fern folder: its specs are generated from ts/showcase/src/contract.ts
+// (npm run spec, there). What the Go contract must say too.
+const reference = "../../../ts/showcase/fern/"
 
 func read(t *testing.T, path string) []byte {
 	t.Helper()

@@ -27,7 +27,12 @@
 		"charter-ts",
 		"ts/start",
 		"ts/notes",
-		"ts/showcase"
+		"ts/showcase",
+		"go/notes",
+		"go/start",
+		"go/start-htmx",
+		"go/start-datastar",
+		"go/showcase"
 	],
 	"scripts": {
 		"prepare": "npm run build -w charter-ts",
@@ -35,7 +40,7 @@
 		"repo": "charter-ts repo",
 		"issues": "charter-ts issues",
 		"issue": "charter-ts issue",
-		"check": "tsc && npm run check -w charter-ts && npm run build -w charter-ts && npm run check -w ts/start && npm run check -w ts/notes && npm run check -w ts/showcase && npm run docs:check",
+		"check": "tsc && node --test surface/*.test.ts && npm run check -w charter-ts && npm run build -w charter-ts && npm run check -w ts/start && npm run check -w ts/notes && npm run check -w ts/showcase && npm run check -w go/notes && npm run check -w go/start && npm run check -w go/start-htmx && npm run check -w go/start-datastar && npm run check -w go/showcase && npm run docs:check",
 		"docs:lint": "charter-ts docs:lint",
 		"docs:check": "charter-ts adopt --check && charter-ts docs:lint",
 		"repo:check": "charter-ts repo --check",

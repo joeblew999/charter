@@ -16,8 +16,9 @@ export interface Config {
 	optionalSecrets?: readonly string[];
 	/** Throwaway values of the secrets for the local Worker: charter-ts dev and the workerd test. */
 	localSecrets?: Readonly<Record<string, string>>;
-	/** Both specs from the contract (charter-ts spec writes them into fern/). */
-	specs: Specs;
+	/** Both specs from the contract (charter-ts spec writes them into fern/): in TypeScript, the two
+	 * generators; in Go, the package that writes them. */
+	specs: Specs | GoSpecs;
 	/** The server the specs name, if not `url`. */
 	specServer?: string;
 	/** A folder the generated TypeScript SDK is copied into before lint, the workerd test and a deploy,
@@ -26,15 +27,46 @@ export interface Config {
 	/** More modes to deploy after the default one (cf deploy --mode): the same code as another Worker. */
 	deployModes?: readonly string[];
 	/** charter-ts test:workerd: the Worker under workerd (cf dev) on a free port, and these tests against it. */
-	test: {
-		/** A path that answers once the Worker is up. Default /api/hello. */
-		ready?: string;
-		/** More environment for the Worker, given its port and another free one the tests may serve on. */
-		env?: (ports: { port: number; extra: number }) => Record<string, string>;
-		run: (context: TestContext) => void | Promise<void>;
-	};
+	test: Tests;
+	/** charter-ts test:native, in Go: the API run natively (go run .) on a free port, and these tests against it. */
+	native?: Tests;
+	/** A Go project: its lint, its build with TinyGo, what it commits that is generated. */
+	go?: GoConfig;
 	/** charter-ts live-test: tests against the deployed Worker (url). */
 	live?: (context: LiveContext) => void | Promise<void>;
+}
+
+export interface Tests {
+	/** A path that answers once the server is up. Default /api/hello. */
+	ready?: string;
+	/** More environment for the server, given its port and another free one the tests may serve on. */
+	env?: (ports: { port: number; extra: number }) => Record<string, string>;
+	run: (context: TestContext) => void | Promise<void>;
+}
+
+/** Go's specs: go run <package> [-check] fern/openapi.json fern/asyncapi.json <server>. */
+export interface GoSpecs {
+	go: string;
+}
+
+export interface GoConfig {
+	/** The folders gofmt checks beside the root's Go files. Default api, cmd. */
+	lint?: string[];
+	/** The TinyGo build of the Worker (build/app.wasm). */
+	build?: {
+		/** The starting heap, so an ordinary request never collects. Default 8. */
+		heapMB?: number;
+		/** TinyGo's optimisation: z and s for size, 1 and 2 for speed. Default z. */
+		opt?: "z" | "s" | "1" | "2";
+		/** The stack per goroutine (Huma overflows TinyGo's 64 KB). Default 128kb. */
+		stack?: string;
+		/** Fail over this many bytes gzipped (Workers Free allows 3 MB). Default 3000000. */
+		maxBytes?: number;
+	};
+	/** gsx components whose generated *.x.go are committed: lint fails if they are stale. */
+	gsx?: boolean;
+	/** The Go SDK committed in sdk/go: lint fails if the specs changed since it was made. */
+	sdk?: boolean;
 }
 
 export interface TestContext {

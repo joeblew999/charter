@@ -14,10 +14,10 @@ function bin(program: string): string {
 	return existsSync(local) ? local : program;
 }
 
-/** run runs a program with the terminal's output, and throws if it fails. */
-export function run(program: string, args: string[], env: Record<string, string> = {}): void {
-	console.log(`$ ${program} ${args.join(" ")}`);
-	const result = spawnSync(bin(program), args, { stdio: "inherit", env: { ...process.env, ...env }, shell: process.platform === "win32" });
+/** run runs a program (in cwd, by default here) with the terminal's output, and throws if it fails. */
+export function run(program: string, args: string[], env: Record<string, string> = {}, cwd?: string): void {
+	console.log(`$ ${program} ${args.join(" ")}${cwd ? `   (in ${cwd})` : ""}`);
+	const result = spawnSync(bin(program), args, { stdio: "inherit", cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" });
 	if (result.status !== 0) throw new Error(`${program} ${args.join(" ")} failed (${result.status ?? result.signal ?? result.error})`);
 }
 

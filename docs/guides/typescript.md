@@ -81,4 +81,4 @@ npm run release -- X.Y.Z --dry-run   # the check, and the package into dist/
 npm run release -- X.Y.Z             # the version, the tag ts-vX.Y.Z, the GitHub Release with the package
 ```
 
-GitHub runs the same `npm run check` (`.github/workflows/ts.yml`). Checked on 2026-10-14 on macOS: a project from each template, made by `new` from the packed package outside the repo, passed `npm run check`.
+GitHub runs the same `npm run check` (`.github/workflows/check.yml`). Checked on 2026-10-14 on macOS: a project from each template, made by `new` from the packed package outside the repo, passed `npm run check`.

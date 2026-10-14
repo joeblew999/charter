@@ -3,76 +3,56 @@ title: Getting started
 nav_order: 2
 ---
 
-# Getting started: from `charter new` to a deployed API with an SDK
+# Getting started: from `charter-ts new` to a deployed API with an SDK
 
-One tutorial. You end with a Go API ([Huma](https://huma.rocks)) on Cloudflare Workers, tested there, with a generated SDK. For oRPC: [In TypeScript](guides/replace-the-example.md#in-typescript).
+One tutorial. You end with a TypeScript API ([oRPC](https://orpc.dev)) on Cloudflare Workers, tested there, with a generated SDK. You need Node 26 and git, and from step 4 Docker and a Cloudflare account. In Go: [Your API](guides/replace-the-example.md).
 
-You need [mise](https://mise.jdx.dev) and git (macOS, Linux or Windows: [what is covered on Windows](reference/tasks.md#windows-and-macos)), and from step 5 Docker and a Cloudflare account.
-
-## 1. Create the project
+## 1. Make the project
 
 ```sh
-mise x go node github:joeblew999/charter -- charter new -name billing-api -module github.com/you/billing-api -subdomain you
+npx --package https://github.com/joeblew999/charter/releases/latest/download/charter-ts.tgz charter-ts new billing-api --from notes --subdomain you
 cd billing-api && git init
+npm install
 ```
 
-`mise x` fetches the newest charter release (a binary for your system) and Go and Node, for this one command; the project pins that release in its `mise.toml`. `-name` is the folder, the Worker and its database; `-subdomain` your account's `workers.dev` subdomain ([every flag](reference/charter.md#make-a-project)). The project is a copy of the notes example, so every check passes before you change anything. `-empty` starts from one route, `GET /api/hello`, instead, without the CLI (`-empty -cli` keeps it); `-empty -ui htmx` adds [server-rendered pages](guides/pages.md).
+`--from notes` starts from the notes API (auth, streams, rate limits); without it, one route. `billing-api` is the folder, the Worker and its database; `--subdomain` is your workers.dev subdomain.
 
-## 2. Install and check
+## 2. Check it, here
 
 ```sh
-mise install          # Go, Node, gh and the charter tool; Rust and zig for the CLI
-mise run setup        # npm packages: cf (Cloudflare's CLI), Fern
-mise run check        # what CI runs: lint, tests, spec drift, the TinyGo build, live tests natively and under workerd
+npm run check    # typecheck, the specs match the contract, the tests under workerd: no Cloudflare account
+npm run dev      # the API on charter.config.ts's port; the first time, npm run migrate:local in another shell
 ```
 
-## 3. Run it
+## 3. Make it yours
+
+The contract is `src/contract.ts`. After a change: `npm run spec`, then `npm run check`. More: [Your API](guides/replace-the-example.md), [TypeScript](guides/typescript.md).
+
+## 4. An SDK
 
 ```sh
-mise run run          # natively, in memory: http://localhost:5174
-curl -X POST localhost:5174/api/notes -H 'content-type: application/json' -d '{"body":"first"}'
-curl -N 'localhost:5174/api/notes/watch?after=0&seconds=5'   # the SSE stream
+npm run sdk          # the TypeScript SDK into sdk/out/typescript-dist (Docker)
+npm run sdk -- go    # any group of fern/generators.yml
 ```
 
-`mise run dev` runs it the way Cloudflare does (the Wasm, a local D1); the first time, `mise run migrate:local` in another shell creates the tables.
+## 5. Deploy, and test it there
 
-## 4. Change the contract
-
-The API is `api/contract.go`. After every change:
+Make the Worker's tokens first ([Auth](guides/auth.md#bearer-tokens)), then:
 
 ```sh
-mise run spec         # writes fern/openapi.json and fern/asyncapi.json
-mise run check        # fails if you forgot the line above
+npx cf auth login
+fnox exec -- npm run deploy
+fnox exec -- npm run live-test
 ```
 
-How, and how to take the notes out: [Your API](guides/replace-the-example.md).
+If you gave no `--subdomain`, put the URL the deploy printed into `charter.config.ts`'s `url`, then `npm run spec`. More: [Deploy and CI](guides/deploy.md).
 
-## 5. Deploy
+## 6. On GitHub
 
 ```sh
-npx cf auth login     # once per machine
-mise run deploy       # builds, deploys the Worker, its database and the hub, applies migrations
-mise run live-test    # always after a deploy: some failures exist only on Cloudflare
+gh repo create billing-api --private --source . --push   # its check workflow runs npm run check
 ```
 
-If you gave no `-subdomain`, put the URL the deploy printed into `mise.toml` as the default of `API_URL`, then `mise run spec`. More: [Deploy and CI](guides/deploy.md).
+Checked on 2026-10-14 on macOS: steps 1 and 2 from the published package, with each template. Steps 4 to 6 were run on this repo's projects, not on a project made this way.
 
-## 6. Generate an SDK
-
-```sh
-mise run sdk:gen typescript    # Fern, in Docker: sdk/out/typescript
-mise run sdk:publish           # the Go SDK into sdk/go: commit it, and another repo can go get it
-```
-
-More: [SDKs](guides/sdks.md).
-
-## 7. Put it on GitHub
-
-`new` already wrote the workflows. With the repo pushed:
-
-```sh
-mise run cloudflare:secrets    # once: the two Cloudflare secrets the deploy workflow needs
-mise run docs:pages            # once: turns GitHub Pages on for docs/
-```
-
-Next: a stream of your own ([Streaming](guides/streaming.md)), OAuth or webhooks ([SDKs](guides/sdks.md#fern-features)), agents ([MCP](guides/replace-the-example.md#agents-mcp): it already serves `/api/mcp`), cost ([Performance](guides/performance.md)).
+Next: a stream of your own ([Streaming](guides/streaming.md)), OAuth or webhooks ([SDKs](guides/sdks.md#fern-features)), who may call ([Auth](guides/auth.md)).

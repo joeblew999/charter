@@ -5,11 +5,11 @@ parent: How to help
 ---
 # Benchmarks: what a request costs, and what made it cheaper
 
-The only page with the numbers: CPU per request on Cloudflare, from Workers Logs. Workers Free allows 10 ms. How to measure: [Performance](guides/performance.md).
+The only page with the numbers: CPU per request on Cloudflare, from Workers Logs. Workers Free allows 10 ms.
 
 ## The two notes Workers, side by side
 
-`mise run compare` at the repo root, 2026-10-02, 30 requests each:
+Measured 2026-10-02 with the compare task charter's Go tool had, 30 requests each:
 
 | Operation | TypeScript | Go |
 |---|---|---|

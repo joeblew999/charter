@@ -28,19 +28,11 @@ charter issue bug > body.md     # or: feature, upstream, plan. Its first line is
 
 ## Make it faster
 
-A loop of about a minute and a half on a scratch Worker; it needs a Cloudflare account, and `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` for CPU figures.
-
-```sh
-cd go/notes
-mise run perf:try -- -name base      # a baseline, from the same hour
-mise run perf:try -- -name myidea    # your change: built, deployed, benched, deleted
-```
-
-How to read it: [Performance](guides/performance.md). The target is the TypeScript Worker's cost (`mise run compare` at the root); what was tried: [Benchmarks](benchmarks.md). Issues: [`perf`](https://github.com/joeblew999/charter/labels/perf).
+The target is the TypeScript Worker's cost per request; what was tried and measured is in [Benchmarks](benchmarks.md). Issues: [`perf`](https://github.com/joeblew999/charter/labels/perf).
 
 ## Pick up an issue
 
-The plan is the [open issues](https://github.com/joeblew999/charter/issues) and their milestones; [`good first issue`](https://github.com/joeblew999/charter/labels/good%20first%20issue) says what done looks like. Before a pull request: `mise run check` passes, and `docs/` says what changed.
+The plan is the [open issues](https://github.com/joeblew999/charter/issues) and their milestones; [`good first issue`](https://github.com/joeblew999/charter/labels/good%20first%20issue) says what done looks like. Before a pull request: `npm run check` passes, and `docs/` says what changed.
 
 ## A change to charter
 

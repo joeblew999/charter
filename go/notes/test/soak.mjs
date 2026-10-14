@@ -14,7 +14,7 @@
 //   node soak.mjs <origin> --idle 20
 // Run it from the project's folder. It uses that project's `ws` (node_modules) and generated SDKs:
 // the TypeScript SDK (sdk/out/typescript-dist), the CLI (sdk/out/cli) and the Go SDK (sdk/out/go)
-// through soak-go beside this file; the redeploy runs `mise run deploy` there.
+// through soak-go beside this file; the redeploy runs `npm run deploy` there.
 import { execFileSync, spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";

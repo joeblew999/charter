@@ -16,7 +16,7 @@ Run one with `npm run <script>`; its arguments go after `--`. In the order you r
 | `repo` | keep the repo on GitHub in shape from package.json: labels, description, homepage, topics (its keywords), GitHub Pages; --check changes nothing and fails on drift |
 | `issues` | REMOTE, read-only: the open issues, newest first: what is reported and what is planned (a plan is an issue) |
 | `issue` | print an issue body with the headings of that issue form, and the gh command that files it |
-| `check` | `tsc && npm run check -w charter-ts && npm run build -w charter-ts && npm run check -w ts/start && npm run check -w ts/notes && npm run check -w ts/showcase && npm run docs:check` |
+| `check` | `tsc && node --test surface/*.test.ts && npm run check -w charter-ts && npm run build -w charter-ts && npm run check -w ts/start && npm run check -w ts/notes && npm run check -w ts/showcase && npm run check -w go/notes && npm run check -w go/start && npm run check -w go/start-htmx && npm run check -w go/start-datastar && npm run check -w go/showcase && npm run docs:check` |
 | `docs:lint` | check docs/ for what a program can check: front matter, links, the index, scripts, tasks and paths that don't exist |
 | `docs:check` | `charter-ts adopt --check && charter-ts docs:lint` |
 | `repo:check` | `charter-ts repo --check` |

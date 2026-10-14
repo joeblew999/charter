@@ -1,5 +1,5 @@
 # The showcase API from the Go contract. openapi.json and asyncapi.json are written by
-# `mise run spec` from api/contract.go (never by hand).
+# `npm run spec` from api/contract.go (never by hand).
 # Every Fern feature we use, through standard options only: OAuth client credentials (auth-schemes
 # below, the token endpoint in openapi.json), idempotency (x-fern-idempotent), SSE (x-fern-streaming),
 # cursor pagination (x-fern-pagination), multipart upload, OpenAPI 3.1 webhooks with HMAC signatures
@@ -27,8 +27,8 @@ api:
       overlays: overlays.yml
     - asyncapi: asyncapi.json
 
-# The same groups, in the same order, in every API (mise run sdk:list).
-# Generate one: mise run sdk:gen showcase-go <group>   (output: sdk/out/showcase-go/<group>)
+# The same groups, in the same order, in every API.
+# Generate one: npm run sdk -- <group>   (output: sdk/out/<group>)
 groups:
   # The Go SDK.
   go:

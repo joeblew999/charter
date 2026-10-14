@@ -1,4 +1,4 @@
-# The API's reference site, made by Fern from the specs here (preview locally: mise run sdk:docs).
+# The API's reference site, made by Fern from the specs here (preview locally: npx fern docs dev).
 # Reference: https://buildwithfern.com/learn/docs/getting-started/project-structure
 instances:
   - url: charter-notes-go.docs.buildwithfern.com

@@ -8,7 +8,7 @@ parent: Guides
 A new project streams notes over Server-Sent Events (`watchNotes`) and a WebSocket (`liveNotes`). Both survive deploys and dropped connections. Code comments cite the rules below by number.
 
 ```sh
-mise run run
+npm start
 curl -N 'localhost:5174/api/notes/watch?after=0&seconds=5'   # every note after id 0, then the end marker
 ```
 
@@ -31,14 +31,14 @@ curl -N 'localhost:5174/api/notes/watch?after=0&seconds=5'   # every note after 
 3. **Add a feed to the hub:** `hub.DurableObject[Device]("HUB", "devices")` in `platform_js.go`, `hub.Memory[Device]` in `platform_other.go`. The binding stays the same.
 4. **No item may contain `[end-of-stream]`:** refuse it in the input's `Resolve`, as `CreateInput` does.
 
-A WebSocket the client also sends on: see `conformance/showcase-go/api/contract.go` and [SDKs](sdks.md#fern-features).
+A WebSocket the client also sends on: see `go/showcase/api/contract.go` and [SDKs](sdks.md#fern-features).
 
 ## Check it
 
 ```sh
-mise run test:native     # the live test, locally
-mise run soak            # REMOTE, redeploys: seven kinds of client through a redeploy and a client drop
-mise run soak -- --idle 20   # and after 20 quiet minutes
+npm run test:native     # the live test, locally
+node test/soak.mjs <url>             # in go/notes; REMOTE, redeploys: seven kinds of client through a redeploy and a client drop
+node test/soak.mjs <url> --idle 20   # and after 20 quiet minutes
 ```
 
 The soak passes when every client gets every item once, in order. Delivery time is not guaranteed: a missed wake-up costs up to 30 seconds, never an item.

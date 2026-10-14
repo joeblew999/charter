@@ -1,4 +1,4 @@
-# The notes API from the Go contract. openapi.json and asyncapi.json are written by `mise run spec`
+# The notes API from the Go contract. openapi.json and asyncapi.json are written by `npm run spec`
 # from api/contract.go (never by hand). What Fern needs (SDK names, x-fern-pagination,
 # x-fern-streaming) is declared there; the WebSocket channel comes from the Go library's asyncapi package.
 api:
@@ -29,8 +29,8 @@ api:
       - accessClientId
       - accessClientSecret
 
-# The groups (mise run sdk:list).
-# Generate one: mise run sdk:gen <group>   (output: sdk/out/<group>)
+# The groups.
+# Generate one: npm run sdk -- <group>   (output: sdk/out/<group>)
 groups:
   # The Go SDK.
   go:
@@ -41,7 +41,7 @@ groups:
           location: local-file-system
           path: ../sdk/out/go
         config:
-          # The project's module with /sdk/go added: the folder `mise run sdk:publish` commits this SDK to,
+          # The project's module with /sdk/go added: the folder `npm run sdk:publish` commits this SDK to,
           # so another repo can go get it.
           module:
             path: github.com/joeblew999/charter/examples/notes-go/sdk/go
