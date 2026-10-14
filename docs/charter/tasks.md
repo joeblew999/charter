@@ -44,43 +44,13 @@ Run one with `mise run <task>`; its arguments and flags go after `--`. `mise tas
 | [`repo`](#repo) | REMOTE: keep the repo on GitHub in shape from charter.toml at its root: labels, description, homepage, topics, GitHub Pages. It writes no file: mise run adopt writes the kit |
 | [`issues`](#issues) | REMOTE, read-only: the open issues, newest first: what is reported and what is planned (a plan is an issue) |
 | [`issue`](#issue) | Print the body to fill in for an issue of one kind, with that form's headings, and the gh command that files it with the form's labels: mise run issue \-\- bug (or feature, upstream, plan) |
-| [`build`](#build) | Build the Worker's Wasm with TinyGo into build/, tuned for Workers, with the library's Worker glue beside it; fails over 3 MB gzipped |
-| [`run`](#run) | The API natively on API_PORT: no Cloudflare, an in-memory store |
-| [`dev`](#dev) | The API under workerd on API_PORT (cf dev). First time: mise run migrate:local. After a Go change: mise run build |
-| [`spec`](#spec) | Write both specs from the contract (api/contract.go) into fern/ |
-| [`test`](#test) | Go tests: the API, the MCP endpoint, the contract's rules |
-| [`migrate:local`](#migratelocal) | Apply migrations/ to the local D1 of a running mise run dev |
 | [`docs:lint`](#docslint) | Check docs/ for what a program can check: front matter, links, the index, tasks and paths that don't exist |
 | [`docs:check`](#docscheck) | Fail if a file of charter's kit or a generated page differs from what adopt writes, or docs/ fails the lint |
 | [`repo:check`](#repocheck) | REMOTE, read-only: fail if the repo on GitHub differs from charter.toml (charter repo -check) |
 | [`upstream:status`](#upstreamstatus) | REMOTE, read-only: the upstream issues the code works around (every `Upstream:` tag): CLOSED means that workaround can go |
 | [`repo:ci`](#repoci) | Everything the charter workflow runs (charter.yml, which calls charter's repo-check), here: docs:check (the docs site and generated pages are fresh, docs/ passes the lint), repo:check (the repo is as charter.toml says), upstream:status. The workflow runs this one task and nothing else, so a pass here is a pass on GitHub. REMOTE, read-only |
-| [`spec:check`](#speccheck) | Fail if a committed spec is stale against the contract |
-| [`sdk:list`](#sdklist) | The SDK groups fern/generators.yml defines |
-| [`sdk:gen`](#sdkgen) | Generate an SDK with Fern (Docker): mise run sdk:gen &lt;group&gt; -&gt; sdk/out/&lt;group&gt; |
-| [`sdk:check`](#sdkcheck) | Prove a generated SDK works (Go: build, vet, tests against WireMock; TypeScript: typecheck): mise run sdk:check &lt;group&gt; |
-| [`sdk:check-spec`](#sdkcheck-spec) | Validate the specs and Fern's settings with Fern |
-| [`sdk:ready`](#sdkready) | Generate and build what the tests use, if missing or made from other specs (TypeScript and Go SDKs, the CLI if the project has one): mise run sdk:ready [group...] |
-| [`sdk:publish`](#sdkpublish) | Generate and check the Go SDK, then copy its sources into sdk/go, the committed module another repo can go get (Docker). Commit the result |
-| [`sdk:publish:check`](#sdkpublishcheck) | Fail if sdk/go is not what the committed specs generate now (Docker) |
-| [`sdk:publish:fresh`](#sdkpublishfresh) | Fail if the specs changed since sdk/go was made from them (no Docker: it compares a hash). sdk:publish:check proves the content |
-| [`sdk:cli:build`](#sdkclibuild) | HEAVY: build the generated Rust CLI in sdk/out/cli (a project with the cli group): mise run sdk:cli:build [-linux] |
-| [`sdk:cli:smoke`](#sdkclismoke) | Run the CLI that dist/ holds for this machine with \-\-version (the release workflow does it on Windows), in a project with the cli group |
-| [`sdk:dist`](#sdkdist) | Generate, check and archive what a release ships into dist/: Go and TypeScript SDK sources, the specs (Docker) |
-| [`sdk:dist:cli`](#sdkdistcli) | HEAVY: generate the CLI (a project with the cli group) and build it into dist/ for darwin, linux, windows x amd64, arm64 (all six on a Mac; elsewhere all but darwin): mise run sdk:dist:cli [-target linux-arm64,...] |
-| [`sdk:docs`](#sdkdocs) | Preview the API's reference site locally (fern docs dev): http://localhost:3030 |
-| [`cloudflare:token`](#cloudflaretoken) | Fail unless CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set: what a deploy from GitHub needs (locally, cf auth login is enough) |
-| [`migrate`](#migrate) | REMOTE: apply pending migrations/ to the Worker's D1 database |
-| [`tail`](#tail) | REMOTE, read-only: stream the deployed Worker's live logs (requests, console output, exceptions) until Ctrl-C; \-\- -for 30s stops by itself, \-\- -worker &lt;name&gt; tails another |
-| [`access:setup`](#accesssetup) | REMOTE, once and after changing who may log in: Cloudflare Access in front of the Worker (people log in with GitHub: mise run access:setup \-\- &lt;email&gt;...), and the Worker's ACCESS_TEAM_DOMAIN and ACCESS_AUD; the IDs in fnox. Idempotent |
-| [`access:token`](#accesstoken) | REMOTE: a machine's own Access service token: mise run access:token \-\- create &lt;machine&gt; &lt;file\|fnox&gt;, list, revoke &lt;machine&gt; |
-| [`access:delete`](#accessdelete) | REMOTE: delete the Worker's Access application and its machines' service tokens |
-| [`spec:diff`](#specdiff) | Compare fern/openapi.json and fern/asyncapi.json with the previous release's (git tags) and fail on a breaking change, unless -tag is a major release: mise run spec:diff [\-\- -from vX.Y.Z -catalog catalog.json] |
 | [`docs:review`](#docsreview) | Have Claude (the claude command) bring docs/ up to date and into line with docs/charter/writing.md |
 | [`docs:pages`](#docspages) | REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself) |
-| [`perf`](#perf) | REMOTE, writes test notes: the quick loop for performance work: build, deploy, then bench the new isolate from its first request (8 at once, then each operation). About two minutes |
-| [`perf:try`](#perftry) | REMOTE: try a change on a scratch Worker of its own and delete it after: mise run perf:try \-\- -name &lt;experiment&gt; [-build '&lt;wasm-build flags&gt;'] [-keep]. Several can run at once |
-| [`perf:clean`](#perfclean) | REMOTE: delete the scratch Workers and databases that perf:try runs left |
 
 ## Each task
 
@@ -234,42 +204,6 @@ REMOTE, read-only: the open issues, newest first: what is reported and what is p
 
 Print the body to fill in for an issue of one kind, with that form's headings, and the gh command that files it with the form's labels: mise run issue -- bug (or feature, upstream, plan)
 
-### `build`
-
-- **Usage:** `build`
-
-Build the Worker's Wasm with TinyGo into build/, tuned for Workers, with the library's Worker glue beside it; fails over 3 MB gzipped
-
-### `run`
-
-- **Usage:** `run`
-
-The API natively on API_PORT: no Cloudflare, an in-memory store
-
-### `dev`
-
-- **Usage:** `dev`
-
-The API under workerd on API_PORT (cf dev). First time: mise run migrate:local. After a Go change: mise run build
-
-### `spec`
-
-- **Usage:** `spec`
-
-Write both specs from the contract (api/contract.go) into fern/
-
-### `test`
-
-- **Usage:** `test`
-
-Go tests: the API, the MCP endpoint, the contract's rules
-
-### `migrate:local`
-
-- **Usage:** `migrate:local`
-
-Apply migrations/ to the local D1 of a running mise run dev
-
 ### `docs:lint`
 
 - **Usage:** `docs:lint`
@@ -300,132 +234,6 @@ REMOTE, read-only: the upstream issues the code works around (every `Upstream:` 
 
 Everything the charter workflow runs (charter.yml, which calls charter's repo-check), here: docs:check (the docs site and generated pages are fresh, docs/ passes the lint), repo:check (the repo is as charter.toml says), upstream:status. The workflow runs this one task and nothing else, so a pass here is a pass on GitHub. REMOTE, read-only
 
-### `spec:check`
-
-- **Usage:** `spec:check`
-
-Fail if a committed spec is stale against the contract
-
-### `sdk:list`
-
-- **Usage:** `sdk:list`
-
-The SDK groups fern/generators.yml defines
-
-### `sdk:gen`
-
-- **Usage:** `sdk:gen`
-
-Generate an SDK with Fern (Docker): mise run sdk:gen &lt;group> -> sdk/out/&lt;group>
-
-### `sdk:check`
-
-- **Usage:** `sdk:check`
-
-Prove a generated SDK works (Go: build, vet, tests against WireMock; TypeScript: typecheck): mise run sdk:check &lt;group>
-
-### `sdk:check-spec`
-
-- **Usage:** `sdk:check-spec`
-
-Validate the specs and Fern's settings with Fern
-
-### `sdk:ready`
-
-- **Usage:** `sdk:ready`
-
-Generate and build what the tests use, if missing or made from other specs (TypeScript and Go SDKs, the CLI if the project has one): mise run sdk:ready [group...]
-
-### `sdk:publish`
-
-- **Usage:** `sdk:publish`
-
-Generate and check the Go SDK, then copy its sources into sdk/go, the committed module another repo can go get (Docker). Commit the result
-
-### `sdk:publish:check`
-
-- **Usage:** `sdk:publish:check`
-
-Fail if sdk/go is not what the committed specs generate now (Docker)
-
-### `sdk:publish:fresh`
-
-- **Usage:** `sdk:publish:fresh`
-
-Fail if the specs changed since sdk/go was made from them (no Docker: it compares a hash). sdk:publish:check proves the content
-
-### `sdk:cli:build`
-
-- **Usage:** `sdk:cli:build`
-
-HEAVY: build the generated Rust CLI in sdk/out/cli (a project with the cli group): mise run sdk:cli:build [-linux]
-
-### `sdk:cli:smoke`
-
-- **Usage:** `sdk:cli:smoke`
-
-Run the CLI that dist/ holds for this machine with --version (the release workflow does it on Windows), in a project with the cli group
-
-### `sdk:dist`
-
-- **Usage:** `sdk:dist`
-
-Generate, check and archive what a release ships into dist/: Go and TypeScript SDK sources, the specs (Docker)
-
-### `sdk:dist:cli`
-
-- **Usage:** `sdk:dist:cli`
-
-HEAVY: generate the CLI (a project with the cli group) and build it into dist/ for darwin, linux, windows x amd64, arm64 (all six on a Mac; elsewhere all but darwin): mise run sdk:dist:cli [-target linux-arm64,...]
-
-### `sdk:docs`
-
-- **Usage:** `sdk:docs`
-
-Preview the API's reference site locally (fern docs dev): http://localhost:3030
-
-### `cloudflare:token`
-
-- **Usage:** `cloudflare:token`
-
-Fail unless CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set: what a deploy from GitHub needs (locally, cf auth login is enough)
-
-### `migrate`
-
-- **Usage:** `migrate`
-
-REMOTE: apply pending migrations/ to the Worker's D1 database
-
-### `tail`
-
-- **Usage:** `tail`
-
-REMOTE, read-only: stream the deployed Worker's live logs (requests, console output, exceptions) until Ctrl-C; -- -for 30s stops by itself, -- -worker &lt;name> tails another
-
-### `access:setup`
-
-- **Usage:** `access:setup`
-
-REMOTE, once and after changing who may log in: Cloudflare Access in front of the Worker (people log in with GitHub: mise run access:setup -- &lt;email>...), and the Worker's ACCESS_TEAM_DOMAIN and ACCESS_AUD; the IDs in fnox. Idempotent
-
-### `access:token`
-
-- **Usage:** `access:token`
-
-REMOTE: a machine's own Access service token: mise run access:token -- create &lt;machine> &lt;file|fnox>, list, revoke &lt;machine>
-
-### `access:delete`
-
-- **Usage:** `access:delete`
-
-REMOTE: delete the Worker's Access application and its machines' service tokens
-
-### `spec:diff`
-
-- **Usage:** `spec:diff`
-
-Compare fern/openapi.json and fern/asyncapi.json with the previous release's (git tags) and fail on a breaking change, unless -tag is a major release: mise run spec:diff [-- -from vX.Y.Z -catalog catalog.json]
-
 ### `docs:review`
 
 - **Usage:** `docs:review`
@@ -437,21 +245,3 @@ Have Claude (the claude command) bring docs/ up to date and into line with docs/
 - **Usage:** `docs:pages`
 
 REMOTE, once per repo: turn on GitHub Pages for docs/ on main (GitHub renders the markdown itself)
-
-### `perf`
-
-- **Usage:** `perf`
-
-REMOTE, writes test notes: the quick loop for performance work: build, deploy, then bench the new isolate from its first request (8 at once, then each operation). About two minutes
-
-### `perf:try`
-
-- **Usage:** `perf:try`
-
-REMOTE: try a change on a scratch Worker of its own and delete it after: mise run perf:try -- -name &lt;experiment> [-build '&lt;wasm-build flags>'] [-keep]. Several can run at once
-
-### `perf:clean`
-
-- **Usage:** `perf:clean`
-
-REMOTE: delete the scratch Workers and databases that perf:try runs left

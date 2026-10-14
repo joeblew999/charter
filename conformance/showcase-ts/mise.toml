@@ -34,7 +34,7 @@ API_MOCK_URL = "{{ get_env(name='API_MOCK_URL', default='https://charter-showcas
 [task_config]
 # The tasks any repo takes, those every project shares, and those of its language: charter's tasks/ folders (a project
 # includes them from GitHub, by tag). A task defined below takes the place of the included one.
-includes = ["../../tasks/repo"]
+includes = ["../../tasks/repo", "../../tasks/project"]
 
 # ---- the project ---------------------------------------------------------------------------------
 

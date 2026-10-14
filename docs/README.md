@@ -32,7 +32,7 @@ A repo with no API takes the parts that are not about one (the docs site, the re
 | The library | `go/` | What a Go project imports ([Go packages](reference/packages.md)) |
 | The TypeScript library | `ts/` | `@charter/ts`: the AsyncAPI generator for oRPC, both specs from one contract, `follow()`, `auth`: bearer tokens, Cloudflare Access and an OpenID Connect issuer, with scopes, and `ratelimit`: limits per caller. The TypeScript examples take it as a local package; elsewhere it is installed from a release |
 | The Worker glue | `go/worker/` | The JavaScript the library needs; the build copies it into `build/` |
-| Charter's tasks | `tasks/repo/tasks.toml` | The one task file every repo includes, project or not, at the release it pins; a repo's `mise.toml` holds only its own ([Any repo](guides/any-repo.md)) |
+| Charter's tasks | `tasks/repo/tasks.toml`, `tasks/project/tasks.toml` | The tasks every repo includes, and those a project includes beside them, at the release it pins, in the order you run them; a repo's `mise.toml` holds only its own ([Any repo](guides/any-repo.md)) |
 | The tool | `cmd/charter/` | The command behind every task ([The charter command](reference/charter.md)) |
 | The examples | `examples/notes-go/` (what `charter new` copies), `examples/notes-ts/` | The notes API, in Go and in TypeScript |
 | The start projects | `examples/start-go/`, `examples/start-ts/` (what `charter new -empty` copies) | One route, `GET /api/hello`, with the same tasks, specs, SDKs, tests and workflows, and no CLI (`-empty -cli` adds the notes example's) |

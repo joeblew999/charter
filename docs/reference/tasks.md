@@ -8,7 +8,7 @@ parent: Reference
 
 Run in the project's folder; words after the name go to the task, flags after `--`. **REMOTE**: reads or changes something on Cloudflare or GitHub. `mise tasks` lists them.
 
-Most tasks are written once, in charter's one task file, `tasks/repo/tasks.toml`. Every repo includes it (`[task_config] includes` in its `mise.toml`, from GitHub at the release it pins), and its `mise.toml` holds only its own tasks: `check`, `lint`, `deploy` and the tests. A task in `mise.toml` takes the place of the included one with its name. The tasks call the tool through the setting `CHARTER_TOOL`: `charter` in a project, this checkout's in the examples here.
+Most tasks are written once, in charter's task files: `tasks/repo/tasks.toml`, which every repo includes, and `tasks/project/tasks.toml`, which a project includes beside it (`[task_config] includes` in its `mise.toml`, from GitHub at the release it pins), and its `mise.toml` holds only its own tasks: `check`, `lint`, `deploy` and the tests. A task in `mise.toml` takes the place of the included one with its name. The tasks call the tool through the setting `CHARTER_TOOL`: `charter` in a project, this checkout's in the examples here.
 
 ## Any repo
 

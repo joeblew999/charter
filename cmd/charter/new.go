@@ -292,9 +292,11 @@ func copyExample(from, into, name, module, subdomain, version, checkout string, 
 		envPrefix(exampleWorker) + "_", envPrefix(name) + "_",
 		exampleTool, tool,
 	}
-	// The tasks the project shares with every repo: charter's one task file, from GitHub at the release,
-	// or from the checkout.
-	pairs = append(pairs, `"../../tasks/`+repoTasksFolder+`"`, `"`+tasksInclude(repoTasksFolder, version, checkout)+`"`)
+	// Charter's tasks: those of every repo and those of a project, from GitHub at the release, or from the
+	// checkout.
+	for _, folder := range []string{repoTasksFolder, "project"} {
+		pairs = append(pairs, `"../../tasks/`+folder+`"`, `"`+tasksInclude(folder, version, checkout)+`"`)
+	}
 	if ts {
 		// The TypeScript library: the release's package, or the checkout's folder (built by setup).
 		library, build := tsPackageURL(version), ""

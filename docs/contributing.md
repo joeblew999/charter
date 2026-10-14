@@ -43,7 +43,7 @@ The plan is the [open issues](https://github.com/joeblew999/charter/issues) and 
 
 ## A change to charter
 
-What to run, in order, is the order of the tasks: this repo's own in `mise.toml`, the shared ones in `tasks/repo/tasks.toml`. A change to the tool, the kit or the tasks is tried on a throwaway repo by the flow test (`cmd/charter/flow_test.go`), which `mise run charter:check` runs; then it is released, by the [fast track](#fast-track-the-tool-only).
+What to run, in order, is the order of the tasks: this repo's own in `mise.toml`, the shared ones in `tasks/repo/tasks.toml` (every repo) and `tasks/project/tasks.toml` (a project). A change to the tool, the kit or the tasks is tried on a throwaway repo by the flow test (`cmd/charter/flow_test.go`), which `mise run charter:check` runs; then it is released, by the [fast track](#fast-track-the-tool-only).
 
 ## Cut a release
 

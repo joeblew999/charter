@@ -30,7 +30,7 @@ CHARTER_TOOL = "go run ./cmd/charter"
 # from GitHub, by tag.
 includes = ["tasks/repo"]
 
-# ---- this repo's own tasks, in the order you run them; the shared ones are in tasks/repo/tasks.toml ----
+# ---- this repo's own tasks, in the order you run them; the shared ones are in tasks/repo/tasks.toml ---
 
 # ==== 1. Set up: every example's npm packages, and the TypeScript library's =======================
 
