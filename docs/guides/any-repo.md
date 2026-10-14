@@ -66,7 +66,12 @@ charter files    # every file here with either mark; charter's with matches, dif
 
 [task_config]
 includes = ["git::https://github.com/joeblew999/charter.git//tasks/repo?ref=vX.Y.Z"]
+
+[settings]
+experimental = true
 ```
+
+mise counts a task include from a `git::` source as experimental: without `experimental = true` it skips the include, with only a warning, and the repo has none of these tasks. `adopt` and `new` write it; `adopt` names it among the lines to add to a `mise.toml` you have.
 
 That folder has `release`, `repo`, `repo:check`, `repo:ci`, `issue`, `issues`, `upstream:status`, `docs:setup`, `docs:lint`, `docs:check`, `docs:review` and `docs:pages` ([Tasks](../reference/tasks.md#any-repo)), and none of a project's: no release, workflows, SDK or Cloudflare tasks. They run `charter`; a repo that runs the tool another way sets `CHARTER_TOOL` under `[env]`. A task of the same name in `mise.toml` takes the place of the included one.
 

@@ -330,6 +330,9 @@ func linesToAdd(text, pin, include string, checkout bool) []string {
 	if !strings.Contains(text, "/tasks/"+repoTasksFolder+`"`) && !strings.Contains(text, "/tasks/"+repoTasksFolder+"?") {
 		add = append(add, "  in includes, under [task_config] (a list: includes = [...]):\n    \""+include+`"`)
 	}
+	if !checkout && !strings.Contains(text, "\nexperimental = true") {
+		add = append(add, "  under [settings] (mise takes the include from GitHub only with it):\n    experimental = true")
+	}
 	return add
 }
 
@@ -342,6 +345,10 @@ func adoptedTasks(name, pin, include string, checkout bool) string {
 	} else {
 		text += "[tools]\n" + pin + "\n"
 	}
-	return text + "[task_config]\n# Charter's tasks for any repo (the docs site, the repo on GitHub, the issues, the upstream issues):\n# " +
+	text += "[task_config]\n# Charter's tasks for any repo (the docs site, the repo on GitHub, the issues, the upstream issues):\n# " +
 		anyRepoGuide + "\n# A task defined in this file takes the place of the included one with its name.\nincludes = [\"" + include + "\"]\n"
+	if checkout {
+		return text
+	}
+	return withGitIncludes(text)
 }

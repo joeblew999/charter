@@ -387,7 +387,11 @@ func copyExample(from, into, name, module, subdomain, version, checkout string, 
 			if !strings.Contains(text, header+"\n") {
 				return nil, fmt.Errorf("%s/mise.toml has no %s", source, header)
 			}
-			text = startedBy("new", rel, strings.TrimLeft(strings.Replace(text, header+"\n", which, 1), "\n"))
+			text = strings.TrimLeft(strings.Replace(text, header+"\n", which, 1), "\n")
+			if checkout == "" {
+				text = withGitIncludes(text)
+			}
+			text = startedBy("new", rel, text)
 		case "fern/fern.config.json":
 			text = fernOrganization.ReplaceAllString(text, `"organization": "`+name+`"`)
 		}
@@ -559,6 +563,19 @@ func tasksInclude(folder, version, checkout string) string {
 		return filepath.ToSlash(filepath.Join(checkout, "tasks", folder))
 	}
 	return "git::" + repoURL + ".git//tasks/" + folder + "?ref=" + version
+}
+
+// gitIncludes is the setting a mise.toml needs for the includes tasksInclude writes from GitHub
+// (git::): mise counts task includes from a git source as experimental, and without it skips them
+// with only a warning, so the repo has none of charter's tasks. A checkout's folders need nothing.
+const gitIncludes = "[settings]\n# mise takes task includes from a git:: source only with this on; without it they are skipped,\n# with a warning, and none of charter's tasks are here.\nexperimental = true\n"
+
+// withGitIncludes is a mise.toml with gitIncludes at its end, unless it says so already.
+func withGitIncludes(text string) string {
+	if strings.Contains(text, "\nexperimental = true") {
+		return text
+	}
+	return strings.TrimRight(text, "\n") + "\n\n" + gitIncludes
 }
 
 // orCheckout names the tool's version, or says that it has none.

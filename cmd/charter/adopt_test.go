@@ -46,6 +46,8 @@ func TestAdopt(t *testing.T) {
 		"mise.toml":          "[tools]\n# The tool every task runs, the release's binary: `mise up --bump github:joeblew999/charter` moves to a newer one.\n\"github:joeblew999/charter\" = \"1.2.3\"\n",
 		"mise.toml ":         "[task_config]\n",
 		"mise.toml  ":        "\nincludes = [\"git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.2.3\"]\n",
+		"mise.toml   ":       "\n[settings]\n",
+		"mise.toml    ":      "\nexperimental = true\n",
 	} {
 		if !strings.Contains(read(strings.TrimSpace(file)), want) {
 			t.Errorf("%s: no %q", file, want)
@@ -105,7 +107,7 @@ func TestAdopt(t *testing.T) {
 		t.Errorf("the mise.toml adopt wrote lacks %q", add)
 	}
 	add := strings.Join(linesToAdd("[tools]\nnode = \"26\"\n\n[task_config]\nincludes = [\"tasks.toml\"]\n", pin, include, false), "\n")
-	for _, want := range []string{"under [tools]:\n    \"github:joeblew999/charter\" = \"1.3.0\"", "under [task_config]", "    \"git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.3.0\""} {
+	for _, want := range []string{"under [tools]:\n    \"github:joeblew999/charter\" = \"1.3.0\"", "under [task_config]", "    \"git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.3.0\"", "under [settings] (mise takes the include from GitHub only with it):\n    experimental = true"} {
 		if !strings.Contains(add, want) {
 			t.Errorf("the lines to add: no %q in %q", want, add)
 		}

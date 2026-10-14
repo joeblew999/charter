@@ -415,6 +415,9 @@ func TestNewProjectFromAReleasePinsTheTool(t *testing.T) {
 			t.Errorf("mise.toml: no %q", want)
 		}
 	}
+	if !strings.Contains(string(tasks), "\n[settings]\n") || !strings.Contains(string(tasks), "\nexperimental = true\n") {
+		t.Errorf("mise.toml: its includes from GitHub need [settings] experimental = true, or mise skips them")
+	}
 	for _, gone := range []string{"go run ../../", "\nCHARTER =", "../../tasks", exampleWorker} {
 		if strings.Contains(string(tasks), gone) {
 			t.Errorf("mise.toml mentions %q", gone)
@@ -495,11 +498,12 @@ func TestNewTypeScriptProjectFromARelease(t *testing.T) {
 		t.Fatal(err)
 	}
 	for file, want := range map[string]string{
-		"package.json": `"@charter/ts": "https://github.com/joeblew999/charter/releases/download/v1.2.3/charter-ts-1.2.3.tgz"`,
-		"mise.toml":    "\"github:joeblew999/charter\" = \"1.2.3\"\n",
-		"mise.toml ":   "[tasks.setup]\ndescription = \"Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import, and @charter/ts (the TypeScript library)\"\nrun = \"npm ci --no-fund --no-audit\"\n",
-		"mise.toml  ":  "\nCHARTER_TOOL = \"charter\"\n",
-		"mise.toml   ": `includes = ["git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.2.3", "git::https://github.com/joeblew999/charter.git//tasks/shared?ref=v1.2.3", "git::https://github.com/joeblew999/charter.git//tasks/ts?ref=v1.2.3"]`,
+		"package.json":  `"@charter/ts": "https://github.com/joeblew999/charter/releases/download/v1.2.3/charter-ts-1.2.3.tgz"`,
+		"mise.toml":     "\"github:joeblew999/charter\" = \"1.2.3\"\n",
+		"mise.toml ":    "[tasks.setup]\ndescription = \"Install the npm packages: cf (Cloudflare's CLI), Fern's CLI, what the tests import, and @charter/ts (the TypeScript library)\"\nrun = \"npm ci --no-fund --no-audit\"\n",
+		"mise.toml  ":   "\nCHARTER_TOOL = \"charter\"\n",
+		"mise.toml    ": "\nexperimental = true\n",
+		"mise.toml   ":  `includes = ["git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.2.3", "git::https://github.com/joeblew999/charter.git//tasks/shared?ref=v1.2.3", "git::https://github.com/joeblew999/charter.git//tasks/ts?ref=v1.2.3"]`,
 	} {
 		content, _ := os.ReadFile(filepath.Join(into, strings.TrimSpace(file)))
 		if !strings.Contains(string(content), want) {
