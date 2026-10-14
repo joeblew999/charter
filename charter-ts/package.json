@@ -1,6 +1,6 @@
 {
 	"name": "charter-ts",
-	"version": "0.5.0",
+	"version": "0.6.0",
 	"description": "A repo kept the charter way, and APIs on Cloudflare Workers in TypeScript or Go, step by step: the charter-ts command. For any repo: adopt (the kit), docs:check, issue, upstream:status, repo, repo:ci. For a project, from its charter.config.ts: new, dev, check, spec, sdk, deploy, live-test (and in Go: run, build, sdk:publish). The library a TypeScript Worker imports is charter-lib (ts/lib). Installed from its GitHub Release: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz",
 	"license": "MIT",
 	"repository": {
