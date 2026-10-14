@@ -1,6 +1,6 @@
 {
 	"name": "charter-ts",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "A repo kept the charter way, and contract-first APIs on Cloudflare Workers in TypeScript, with oRPC and Fern: the charter-ts command (a repo's kit, docs lint, issues, upstream issues and GitHub settings: adopt, docs:lint, issue, upstream:status, repo; a project's steps, from its charter.config.ts: dev, lint, spec, the tests under workerd, deploy, live tests, and new to start a project), and the library: both specs from one oRPC contract, the AsyncAPI generator, follow() (the gap-free feed), auth (bearer tokens, Cloudflare Access, OpenID Connect) and rate limits per caller. Installed from its GitHub Release: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz",
 	"license": "MIT",
 	"repository": {
