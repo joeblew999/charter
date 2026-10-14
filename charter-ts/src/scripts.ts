@@ -2,9 +2,9 @@
 // server started and stopped around a test, the local database migrated, the Worker deployed with its
 // secrets, and an SDK generated when the specs are newer, or copied into the Worker.
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Config } from "./config.ts";
 
@@ -22,10 +22,23 @@ export function run(program: string, args: string[], env: Record<string, string>
 }
 
 /** output runs a program (in cwd, by default here) and returns what it printed, and throws if it fails. */
-export function output(program: string, args: string[], cwd?: string): string {
-	const result = spawnSync(bin(program), args, { encoding: "utf8", cwd, shell: process.platform === "win32" });
+export function output(program: string, args: string[], cwd?: string, env: Record<string, string> = {}): string {
+	const result = spawnSync(bin(program), args, { encoding: "utf8", cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" });
 	if (result.status !== 0) throw new Error(`${program} ${args.join(" ")} failed (${result.status ?? result.signal ?? result.error}): ${result.stderr}`);
 	return result.stdout;
+}
+
+/** cacheFolder is a folder in charter's own cache (the user's cache folder: ~/Library/Caches/charter on
+ * a Mac, ~/.cache/charter on Linux), made if it is not there: what a step may reuse when it did the
+ * same work before. A fresh machine, as on GitHub, has none, so it does everything. */
+export function cacheFolder(...parts: string[]): string {
+	const base =
+		process.platform === "darwin" ? join(homedir(), "Library", "Caches")
+		: process.platform === "win32" ? (process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"))
+		: (process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"));
+	const dir = join(base, "charter", ...parts);
+	mkdirSync(dir, { recursive: true });
+	return dir;
 }
 
 /** freePort is a port nothing listens on. */

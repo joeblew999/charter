@@ -37,11 +37,12 @@ async function sseEvents(headers: Record<string, string>, seconds: number, until
 		buf = blocks.pop() ?? "";
 		for (const block of blocks) {
 			const id = /^id: ?(.*)$/m.exec(block)?.[1], data = /^data: ?(.*)$/m.exec(block)?.[1];
-			if (data === END) return events;
-			if (data) {
-				events.push({ id, note: note.parse(JSON.parse(data)) });
-				if (until(events)) return events;
-			}
+			if (!data) continue;
+			// The planned end of the stream is END, sent as JSON like every item: "[end-of-stream]".
+			const value: unknown = JSON.parse(data);
+			if (value === END) return events;
+			events.push({ id, note: note.parse(value) });
+			if (until(events)) return events;
 		}
 	}
 	return events;

@@ -25,5 +25,5 @@ Binding, for developers and agents alike: other repos build on this one. These a
 ## Working in a checkout
 
 - **Local checks pick free ports,** so worktrees and agents can run at once. Give a server you start by hand its own `API_PORT`, and stop it.
-- **Heavy:** `npm run sdk` (Docker), `npm run sdk:publish` (Docker), the Go builds (TinyGo), `test/soak.mjs` (redeploys).
+- **Heavy:** `npm run sdk` (Docker), `npm run sdk:publish` (Docker), the Go builds (TinyGo, reused from charter's cache when the sources are the same), `test/soak.mjs` (redeploys).
 - **Cloudflare's CLI** is `npx cf`, pinned per example. `cf cli search "<what>"` finds a command.

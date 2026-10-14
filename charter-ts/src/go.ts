@@ -2,12 +2,11 @@
 // TinyGo tuned for Workers, and the Go SDK committed in sdk/go, made from the specs it says.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { gzipSync } from "node:zlib";
 import type { GoConfig } from "./config.ts";
-import { output, run, sdk } from "./scripts.ts";
+import { cacheFolder, output, run, sdk } from "./scripts.ts";
 
 /** lint: gofmt over the root's Go files and the config's folders, then go vet for the host and, for
  * the root package, for Wasm (GOOS=js GOARCH=wasm), where the Worker is built from. */
@@ -91,13 +90,6 @@ const patches: { file: string; old: string; new: string; unless?: string }[] = [
 	},
 ];
 
-/** The user's cache folder, where the patched TinyGo is kept. */
-function cacheDir(): string {
-	if (process.platform === "darwin") return join(homedir(), "Library", "Caches");
-	if (process.platform === "win32") return process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local");
-	return process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache");
-}
-
 /** tinygoRoot is a TinyGo root whose runtime has the patches: the installed one with its src/ copied
  * and the patched files changed, made once per TinyGo version and kept in the cache folder. What is not
  * src/ is a link to the installed one. */
@@ -105,7 +97,7 @@ function tinygoRoot(): string {
 	const installed = output(...tinygo("env", "TINYGOROOT")).trim().split("\n").at(-1)!.trim();
 	const version = output(...tinygo("version"));
 	const key = createHash("sha256").update(version + patches.map(p => p.file + p.old + p.new).join("")).digest("hex").slice(0, 12);
-	const root = join(cacheDir(), "charter", `tinygo-${key}`);
+	const root = join(cacheFolder(), `tinygo-${key}`);
 	if (existsSync(join(root, ".patched"))) return root;
 	rmSync(root, { recursive: true, force: true });
 	mkdirSync(root, { recursive: true });
@@ -144,18 +136,52 @@ function tinygoRoot(): string {
  * fills build/ with what runs it: workers-go's JavaScript and the Go library's Worker glue. The Wasm
  * has the runtime patches, a starting heap so an ordinary request never collects, a stack per
  * goroutine Huma fits in, and fails over the size Workers Free allows. */
-export function goBuild(config: GoConfig): void {
+export function goBuild(config: GoConfig, fresh = false): void {
 	const { heapMB = 8, opt = "z", stack = "128kb", maxBytes = 3_000_000 } = config.build ?? {};
 	run("go", ["run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=tinygo"]);
 	glue();
-	const target = join("build", "tinygo-target.json");
-	writeFileSync(target, `{ "inherits": ["wasm"], "ldflags": ["--initial-memory=${heapMB * 1024 * 1024}"] }\n`);
-	const [program, args] = tinygo("build", "-o", "build/app.wasm", "-target", target, "-no-debug", `-opt=${opt}`, `-stack-size=${stack}`, ".");
-	run(program, args, { TINYGOROOT: tinygoRoot() });
+	// The same sources, pins and options make the same Wasm: one made before is copied, not built.
+	const cached = join(cacheFolder("wasm"), `${buildKey(config)}.wasm`);
+	if (!fresh && existsSync(cached)) {
+		copyFileSync(cached, join("build", "app.wasm"));
+		console.log("build/app.wasm: built before from the same sources (charter's cache); --fresh builds it again");
+	} else {
+		const target = join("build", "tinygo-target.json");
+		writeFileSync(target, `{ "inherits": ["wasm"], "ldflags": ["--initial-memory=${heapMB * 1024 * 1024}"] }\n`);
+		const [program, args] = tinygo("build", "-o", "build/app.wasm", "-target", target, "-no-debug", `-opt=${opt}`, `-stack-size=${stack}`, ".");
+		run(program, args, { TINYGOROOT: tinygoRoot() });
+		copyFileSync(join("build", "app.wasm"), cached);
+	}
 	const wasm = readFileSync(join("build", "app.wasm"));
 	const gzipped = gzipSync(wasm).length;
 	console.log(`build/app.wasm: ${wasm.length} B, ${gzipped} B gzipped (limit ${maxBytes})`);
 	if (gzipped > maxBytes) throw new Error("build/app.wasm is over the limit");
+}
+
+/** buildKey names what goes into the Wasm: the Go version, TinyGo's pins and patches, the build's
+ * options, go.mod and go.sum, and every package the Worker is built from that is not the standard
+ * library's, with its files and the files it embeds. A module from the module cache counts by its path,
+ * which has its version: it never changes. */
+function buildKey(config: GoConfig): string {
+	const hash = createHash("sha256");
+	hash.update(JSON.stringify({ go: output("go", ["version"]), tinygoVersion, binaryenVersion, patches, build: config.build ?? {} }));
+	for (const name of ["go.mod", "go.sum"]) if (existsSync(name)) hash.update(readFileSync(name));
+	const modcache = output("go", ["env", "GOMODCACHE"]).trim();
+	const packages = output("go", ["list", "-deps", "-tags", "tinygo", "-f", '{{if not .Standard}}{{.Dir}}{{"\t"}}{{join .EmbedFiles " "}}{{end}}', "."], undefined, { GOOS: "js", GOARCH: "wasm" });
+	for (const line of packages.split("\n").filter(Boolean).sort()) {
+		const [dir, embeds = ""] = line.split("\t");
+		if (dir.startsWith(modcache)) {
+			hash.update(`${relative(modcache, dir)}\n`);
+			continue;
+		}
+		hash.update(`${relative(".", dir)}\n`);
+		const files = [...readdirSync(dir).filter(name => statSync(join(dir, name)).isFile()), ...embeds.split(" ").filter(Boolean)].sort();
+		for (const name of files) {
+			hash.update(`${name}\n`);
+			hash.update(readFileSync(join(dir, name)));
+		}
+	}
+	return hash.digest("hex").slice(0, 24);
 }
 
 /** glue writes the Go library's Worker glue (worker/*.mjs) into build/, taken from the library as the

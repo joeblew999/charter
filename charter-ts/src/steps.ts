@@ -24,8 +24,8 @@ const scripts = () => import("./scripts.ts");
 const go = () => import("./go.ts");
 
 /** In a Go project, the Worker is built with TinyGo before workerd runs it or a deploy ships it. */
-async function built(config: Config): Promise<void> {
-	if (config.go) (await go()).goBuild(config.go);
+async function built(config: Config, fresh = false): Promise<void> {
+	if (config.go) (await go()).goBuild(config.go, fresh);
 	if (config.sdkInWorker) (await scripts()).syncSdk(config.sdkInWorker);
 }
 
@@ -165,11 +165,12 @@ export const steps: Record<string, Step> = {
 		},
 	},
 	check: {
-		usage: "check",
-		about: "every local check, in order, with no Cloudflare account. Go: lint, go test, the specs, Fern's check, the tests natively and under workerd. TypeScript: lint, the specs, Fern's check, test/*.test.ts, the tests under workerd",
-		run: async () => {
+		usage: "check [--fresh]",
+		about: "every local check, in order, with no Cloudflare account, and how long each took. Go: lint, go test, the specs, Fern's check, the tests natively and under workerd. TypeScript: lint, the specs, Fern's check, test/*.test.ts, the tests under workerd. A TinyGo build and Fern's check done before for the same sources come from charter's cache; --fresh does them again",
+		run: async args => {
 			const config = await load();
 			const { run } = await scripts();
+			const fresh = args.includes("--fresh");
 			// Each part timed, and the times said at the end: where a slow check spends them.
 			const times: [string, number][] = [];
 			const timed = async (name: string, part: () => unknown) => {
@@ -180,11 +181,11 @@ export const steps: Record<string, Step> = {
 			await timed("lint", () => steps.lint.run([]));
 			if (config.go) await timed("go test", () => run("go", ["test", "./..."]));
 			await timed("specs", () => specs(true));
-			if (existsSync("fern")) await timed("fern check", () => run("fern", ["check", "--warnings"]));
+			if (existsSync("fern")) await timed("fern check", () => fernCheck(fresh));
 			const unit = existsSync("test") ? readdirSync("test").filter(name => name.endsWith(".test.ts")).sort() : [];
 			if (unit.length > 0) await timed("unit tests", () => run("node", ["--test", ...unit.map(name => `test/${name}`)]));
 			if (config.native) await timed("native", () => steps["test:native"].run([]));
-			await timed(config.go ? "build + workerd" : "workerd", () => steps["test:workerd"].run([]));
+			await timed(config.go ? "build + workerd" : "workerd", () => steps["test:workerd"].run(fresh ? ["--fresh"] : []));
 			const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 			console.log(`check took ${seconds(times.reduce((sum, [, ms]) => sum + ms, 0))}: ${times.map(([name, ms]) => `${name} ${seconds(ms)}`).join(", ")}`);
 		},
@@ -203,9 +204,9 @@ export const steps: Record<string, Step> = {
 	"test:workerd": {
 		usage: "test:workerd",
 		about: "the Worker under workerd (cf dev) on a free port (a Go Worker built first), its local database migrated, and the config's tests against it",
-		run: async () => {
+		run: async args => {
 			const config = await load();
-			await built(config);
+			await built(config, args.includes("--fresh"));
 			await serve(config, config.test, "cf", ["dev"]);
 		},
 	},
@@ -242,6 +243,31 @@ export const steps: Record<string, Step> = {
 	},
 	version: { usage: "version", about: "the version of charter-ts this is", anyRepo: true, run: async () => console.log((await import("./package.ts")).version()) },
 };
+
+/** fernCheck is Fern's check of the specs and its settings, skipped when it passed before for the same
+ * files in fern/ and the same Fern: most of its time is Fern starting up. */
+async function fernCheck(fresh: boolean): Promise<void> {
+	const { cacheFolder, run } = await scripts();
+	const { createHash } = await import("node:crypto");
+	const { createRequire } = await import("node:module");
+	const { readFileSync, statSync, writeFileSync } = await import("node:fs");
+	const { join } = await import("node:path");
+	const hash = createHash("sha256");
+	const fern = createRequire(join(process.cwd(), "package.json")).resolve("fern-api/package.json");
+	hash.update(`fern-api ${(JSON.parse(readFileSync(fern, "utf8")) as { version: string }).version}\n`);
+	const walk = (dir: string): string[] => readdirSync(dir).sort().flatMap(name => (statSync(join(dir, name)).isDirectory() ? walk(join(dir, name)) : [join(dir, name)]));
+	for (const file of walk("fern")) {
+		hash.update(`${file}\n`);
+		hash.update(readFileSync(file));
+	}
+	const stamp = join(cacheFolder("fern-check"), hash.digest("hex").slice(0, 24));
+	if (!fresh && existsSync(stamp)) {
+		console.log("fern check: passed before for these specs and settings (charter's cache); --fresh runs it again");
+		return;
+	}
+	run("fern", ["check", "--warnings"]);
+	writeFileSync(stamp, "");
+}
 
 async function specs(check: boolean): Promise<void> {
 	const config = await load();
