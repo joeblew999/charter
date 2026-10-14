@@ -32,7 +32,7 @@ var repoTasks = []string{"docs:check", "docs:lint", "docs:pages", "docs:review",
 
 // The pages every repo charter keeps has, the same in a project made by new and a repo adopt took.
 const (
-	agentsPage = "# For agents\n\nEverything about this repo is in [docs/](docs/README.md), the same pages developers read. The start page and the rules come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does). Any other agent: read [docs/README.md](docs/README.md) first, then the rules, which are binding: [docs/repo/rules.md](docs/repo/rules.md), the same in every repo charter keeps, and [docs/rules.md](docs/rules.md), this repo's own.\n\n@docs/README.md\n@docs/repo/rules.md\n@docs/rules.md\n"
+	agentsPage = "# For agents\n\nEverything about this repo is in [docs/](docs/README.md), the same pages developers read. The start page, the rules and how to use charter come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does). Any other agent: read [docs/README.md](docs/README.md) first, then the rules, which are binding: [docs/repo/rules.md](docs/repo/rules.md), the same in every repo charter keeps, and [docs/rules.md](docs/rules.md), this repo's own; then [docs/repo/charter.md](docs/repo/charter.md), the tool it is kept with.\n\n@docs/README.md\n@docs/repo/rules.md\n@docs/rules.md\n@docs/repo/charter.md\n"
 	claudePage = "@AGENTS.md\n"
 
 	rulesHead = `---
@@ -203,7 +203,7 @@ func adopt(root, description, version, checkout string) error {
 			say("ok", "docs/", ": the docs site's files are what charter docs writes")
 		}
 	default:
-		stale, err := syncFiles(root, map[string][]byte{"docs/writing.md": []byte(docsWriting), "docs/repo.md": []byte(docsRepo), "docs/repo/rules.md": []byte(docsRepoRules)}, false)
+		stale, err := syncFiles(root, map[string][]byte{"docs/writing.md": []byte(docsWriting), "docs/repo.md": []byte(docsRepo), "docs/repo/rules.md": []byte(docsRepoRules), "docs/repo/charter.md": []byte(docsRepoCharter())}, false)
 		if err != nil {
 			return err
 		}
@@ -288,11 +288,13 @@ const repoAgentsPage = `# For agents
 
 Everything about this repo is in [docs/](docs/README.md), the same pages developers read. Nothing is kept here, so there is one source of truth.
 
-The start page and the rules come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does), so nothing has to be looked up first. Any other agent: read them before anything else, in this order: [docs/README.md](docs/README.md), what this repo is and the index of every page; [docs/repo/rules.md](docs/repo/rules.md), the rules every repo shares; [docs/rules.md](docs/rules.md), this repo's own. The rules are binding.
+The start page, the rules, how to use charter and the tasks come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does), so nothing has to be looked up first. Any other agent: read them before anything else, in this order: [docs/README.md](docs/README.md), what this repo is and the index of every page; [docs/repo/rules.md](docs/repo/rules.md), the rules every repo shares; [docs/rules.md](docs/rules.md), this repo's own; [docs/repo/charter.md](docs/repo/charter.md), the tool it is kept with. The rules are binding.
 
 @docs/README.md
 @docs/repo/rules.md
 @docs/rules.md
+@docs/repo/charter.md
+@docs/tasks.md
 
 Then:
 

@@ -12,6 +12,7 @@ Every repo that uses charter is kept the same way, so a developer or an agent wh
 
 | Page | What it is |
 |---|---|
+| [Using charter](repo/charter.md) | The tool this repo is kept with: how to run it, how to move to another release, and every command |
 | [Rules for every repo](repo/rules.md) | The working rules, for developers and agents alike. This repo's own rules, if it has more, are in its `rules.md` |
 | [Writing docs](writing.md) | The rules a page in `docs/` is held to |
 

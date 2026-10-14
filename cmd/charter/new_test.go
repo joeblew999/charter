@@ -405,9 +405,26 @@ func TestNewProjectOnYourSubdomain(t *testing.T) {
 // repo's (adopt, repo).
 func TestAgentsLoadTheDocs(t *testing.T) {
 	for name, page := range map[string]string{"a project's": agentsPage, "any repo's": repoAgentsPage} {
-		if !strings.Contains(page, "\n@docs/README.md\n@docs/repo/rules.md\n@docs/rules.md\n") {
+		if !strings.Contains(page, "\n@docs/README.md\n@docs/repo/rules.md\n@docs/rules.md\n@docs/repo/charter.md\n") {
 			t.Errorf("%s AGENTS.md does not load the start page and the rules:\n%s", name, page)
 		}
+	}
+}
+
+// The page on using charter is written from the tool: every command is on it, as one row, and the
+// site's renderer would take none of it for template code.
+func TestUsingCharterListsEveryCommand(t *testing.T) {
+	page := docsRepoCharter()
+	if !strings.HasPrefix(page, "---\ntitle: Using charter\n") || !strings.Contains(page, "parent: How this repo is kept\n") {
+		t.Errorf("no front matter under How this repo is kept:\n%s", page[:80])
+	}
+	for name := range commands {
+		if !strings.Contains(page, "| `"+name) {
+			t.Errorf("the command %s is not on the page", name)
+		}
+	}
+	if strings.Contains(page, "{{") || strings.Contains(page, "{%") {
+		t.Error("the page has template code in it, which the site's renderer would run")
 	}
 }
 

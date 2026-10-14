@@ -7,6 +7,7 @@ The start page and the rules come with this file: each line below that starts wi
 @docs/README.md
 @docs/repo/rules.md
 @docs/rules.md
+@docs/repo/charter.md
 
 Read, in this order:
 

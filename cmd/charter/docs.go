@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -49,6 +50,39 @@ var docsReview string
 //
 //go:embed docs/llms.txt
 var docsLLMs string
+
+// docsRepoCharter is the page that says how to use charter, written from the tool itself: the same
+// in every repo, at the release its mise.toml pins, so what an agent is told matches the tool it
+// has. AGENTS.md loads it with the rules.
+func docsRepoCharter() string {
+	cell := strings.NewReplacer("|", `\|`, "\n", " ").Replace
+	var page strings.Builder
+	page.WriteString("---\ntitle: Using charter\nnav_order: 2\nparent: How this repo is kept\n---\n\n# Using charter\n\n" +
+		"Written by `charter docs` from the tool itself (the same page in every repo that uses it, at the release its `mise.toml` pins): don't edit it here, change the commands in `cmd/charter/` in [charter](https://github.com/joeblew999/charter).\n\n" +
+		"charter is the tool this repo is kept with. mise installs the release `mise.toml` pins, and puts it on the path of every task.\n\n" +
+		"| To | Run |\n|---|---|\n" +
+		"| See what there is to run | `mise tasks` |\n" +
+		"| Run a task | `mise run <task>` |\n" +
+		"| Run the tool | `charter <command>`; from anywhere, `mise x " + toolRelease + " -- charter <command>` |\n" +
+		"| Move to another release | `mise x " + toolRelease + "@X.Y.Z -- charter upgrade`: the pin and the includes together |\n" +
+		"| Read more | [charter's docs](https://joeblew999.github.io/charter/); for machines, [llms.txt](https://joeblew999.github.io/charter/llms.txt) |\n\n" +
+		"## The commands\n\nThose marked * work in any repo; the others in a project, a folder with a `mise.toml` beside a `fern/` folder.\n\n" +
+		"| Command | What it does |\n|---|---|\n")
+	names := make([]string, 0, len(commands))
+	for name := range commands {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		star := ""
+		if anywhere[name] {
+			star = " *"
+		}
+		usage := strings.TrimSpace(name + " " + commands[name].usage)
+		fmt.Fprintf(&page, "| `%s`%s | %s |\n", cell(usage), star, cell(commands[name].help))
+	}
+	return page.String()
+}
 
 // docs writes the files that make a repo's docs/ folder a site on GitHub Pages. They are the same
 // for every repo except for its name, description and URLs, which GitHub is asked for. Then the
@@ -123,7 +157,7 @@ func docsSite(repo githubRepo, folder string) map[string][]byte {
 		"__REPO__", repo.NameWithOwner, "__BRANCH__", repo.DefaultBranchRef.Name,
 		"gh_edit_source: docs", "gh_edit_source: "+folder).Replace(docsConfig)
 	files := map[string][]byte{}
-	for path, content := range map[string]string{"_config.yml": config, "_sass/custom/custom.scss": docsStyle, "writing.md": docsWriting, "repo.md": docsRepo, "repo/rules.md": docsRepoRules, "llms.txt": docsLLMs} {
+	for path, content := range map[string]string{"_config.yml": config, "_sass/custom/custom.scss": docsStyle, "writing.md": docsWriting, "repo.md": docsRepo, "repo/rules.md": docsRepoRules, "repo/charter.md": docsRepoCharter(), "llms.txt": docsLLMs} {
 		files[filepath.Join(folder, path)] = []byte(content)
 	}
 	return files
