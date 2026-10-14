@@ -3,7 +3,7 @@
 [![check](https://github.com/joeblew999/charter/actions/workflows/check.yml/badge.svg)](https://github.com/joeblew999/charter/actions/workflows/check.yml)
 [![latest release](https://img.shields.io/github/v/release/joeblew999/charter)](https://github.com/joeblew999/charter/releases/latest)
 
-**Add charter to the repo you have,** in one command: `mise x github:joeblew999/charter -- charter adopt`. It keeps what is yours: what your `CLAUDE.md` or `AGENTS.md` says moves into `docs/rules.md`. **Start a new API** with `charter new`, below.
+**Add charter to the repo you have,** in one command: `mise x github:joeblew999/charter@X.Y.Z -- charter adopt`, with X.Y.Z the [latest release](https://github.com/joeblew999/charter/releases/latest). It keeps what is yours: what your `CLAUDE.md` or `AGENTS.md` says moves into `docs/rules.md`. **Start a new API** with `charter new`, below.
 
 **Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go or [oRPC](https://orpc.dev) in TypeScript.** Write the contract once and get the server, the OpenAPI and AsyncAPI specs, typed SDKs in any language ([Fern](https://buildwithfern.com)), a CLI, an MCP endpoint and real-time streams: generated from that contract, and tested.
 

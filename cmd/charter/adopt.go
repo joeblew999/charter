@@ -152,7 +152,7 @@ func adopt(root, description, version, checkout string) error {
 	}
 	// A mise.toml adopt writes pins the release this tool is: without one to pin, stop before writing anything.
 	if !exists(filepath.Join(root, "mise.toml")) && version == "" && checkout == "" {
-		return errors.New("adopt: the repo has no mise.toml, and this tool is no release to pin: run a release (mise x " + toolRelease + " -- charter adopt), or pass -from <checkout of charter>")
+		return errors.New("adopt: the repo has no mise.toml, and this tool is no release to pin: run a release (mise x " + toolRelease + "@X.Y.Z -- charter adopt), or pass -from <checkout of charter>")
 	}
 	// The repo on GitHub, if it is there yet: its description, and what the docs site is made from.
 	var repo githubRepo
@@ -230,7 +230,7 @@ func adopt(root, description, version, checkout string) error {
 	have, err := os.ReadFile(file)
 	switch {
 	case errors.Is(err, os.ErrNotExist) && version == "" && checkout == "":
-		return errors.New("adopt: the repo has no mise.toml, and this tool is no release to pin: run a release (mise x " + toolRelease + " -- charter adopt), or pass -from <checkout of charter>")
+		return errors.New("adopt: the repo has no mise.toml, and this tool is no release to pin: run a release (mise x " + toolRelease + "@X.Y.Z -- charter adopt), or pass -from <checkout of charter>")
 	case errors.Is(err, os.ErrNotExist):
 		if err := write(file, startedBy("adopt", "mise.toml", adoptedTasks(name, pin, include, checkout != ""))); err != nil {
 			return err

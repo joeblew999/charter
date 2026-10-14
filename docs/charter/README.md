@@ -2,6 +2,7 @@
 title: How this repo is kept
 nav_order: 80
 has_children: true
+permalink: /charter/
 ---
 
 # How this repo is kept
@@ -10,11 +11,13 @@ Written by `charter adopt` (the same folder in every repo that uses it): don't e
 
 ## The flow
 
-1. **Adopt charter, once.** In the repo:
+1. **Adopt charter, once.** In the repo, with X.Y.Z the [latest release](https://github.com/joeblew999/charter/releases/latest):
 
    ```sh
-   mise x github:joeblew999/charter -- charter adopt
+   mise x github:joeblew999/charter@X.Y.Z -- charter adopt
    ```
+
+   Name the release: without it, mise takes the newest one it has cached, which can be an old one.
 
    It copies charter's kit into the repo: the files listed at the end of this page. It also starts `charter.toml`, `docs/README.md`, `docs/rules.md` and the `mise.toml` lines, if the repo lacks them. Those are yours from then on.
 

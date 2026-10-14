@@ -27,7 +27,7 @@ Most of charter is not about an API. A repo with no Worker, no contract and no F
 In the repo, which needs [mise](https://mise.jdx.dev), git and `gh`:
 
 ```sh
-mise x github:joeblew999/charter -- charter adopt    # -description "<what the repo is>" for a new charter.toml
+mise x github:joeblew999/charter@X.Y.Z -- charter adopt    # X.Y.Z: the latest release, named (mise caches the list); -description "<what the repo is>" for a new charter.toml
 mise install && mise tasks
 ```
 
