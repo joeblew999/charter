@@ -13,6 +13,3 @@ export function version(): string {
 
 /** A release of charter-ts on GitHub, by version: what a repo's package.json installs. */
 export const releaseURL = (v: string) => `https://github.com/joeblew999/charter/releases/download/ts-v${v}/charter-ts-${v}.tgz`;
-
-/** The newest release, for a page that should not go stale. */
-export const latestURL = "https://github.com/joeblew999/charter/releases/latest/download/charter-ts.tgz";

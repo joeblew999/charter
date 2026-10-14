@@ -51,4 +51,4 @@ npm run release -- X.Y.Z --dry-run   # every check, and the package into dist/
 npm run release -- X.Y.Z             # the version, the tag ts-vX.Y.Z, the GitHub Release with the package
 ```
 
-It runs `npm run check` before it tags, and never waits for GitHub. The Release carries `charter-ts-X.Y.Z.tgz`, which a repo pins, and `charter-ts.tgz`, which `releases/latest/download/charter-ts.tgz` serves.
+It runs `npm run check` before it tags, and never waits for GitHub. The Release carries `charter-ts-X.Y.Z.tgz`, which a repo pins, and the release puts that version into every command the docs show (npx keeps what it fetched for a URL, so a URL without a version would serve an old one).

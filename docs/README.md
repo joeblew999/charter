@@ -8,7 +8,7 @@ permalink: /
 
 [![latest release](https://img.shields.io/github/v/release/joeblew999/charter)](https://github.com/joeblew999/charter/releases/latest)
 
-**Add charter to the repo you have,** in one command: `npx --package https://github.com/joeblew999/charter/releases/latest/download/charter-ts.tgz charter-ts adopt`. It keeps what is yours: what your `CLAUDE.md` or `AGENTS.md` says moves into `docs/rules.md` ([Any repo](guides/any-repo.md)). **Start a new API** with `charter new`, below, or in TypeScript with `charter-ts new` ([TypeScript](guides/typescript.md)).
+**Add charter to the repo you have,** in one command: `npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.3.0/charter-ts-0.3.0.tgz charter-ts adopt`. It keeps what is yours: what your `CLAUDE.md` or `AGENTS.md` says moves into `docs/rules.md` ([Any repo](guides/any-repo.md)). **Start a new API** with `charter new`, below, or in TypeScript with `charter-ts new` ([TypeScript](guides/typescript.md)).
 
 Contract-first APIs on Cloudflare Workers, with [Huma](https://huma.rocks) in Go or [oRPC](https://orpc.dev) in TypeScript. Start with [Getting started](getting-started.md).
 

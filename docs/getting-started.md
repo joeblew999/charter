@@ -10,7 +10,7 @@ One tutorial. You end with a TypeScript API ([oRPC](https://orpc.dev)) on Cloudf
 ## 1. Make the project
 
 ```sh
-npx --package https://github.com/joeblew999/charter/releases/latest/download/charter-ts.tgz charter-ts new billing-api --from notes --subdomain you
+npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.3.0/charter-ts-0.3.0.tgz charter-ts new billing-api --from notes --subdomain you
 cd billing-api && git init
 npm install
 ```
