@@ -88,6 +88,9 @@ func TestAdopt(t *testing.T) {
 	if read("AGENTS.md") != pointer {
 		t.Error("adopt left a hand-edited AGENTS.md, which is charter's to write")
 	}
+	if rules := read("docs/rules.md"); !strings.Contains(rules, "## What AGENTS.md said before charter adopt") || !strings.Contains(rules, "\nmine\n") {
+		t.Errorf("what the repo's own AGENTS.md said was not kept in docs/rules.md:\n%s", rules)
+	}
 	before := map[string]string{}
 	files := []string{"charter.toml", "AGENTS.md", "CLAUDE.md", "docs/README.md", "docs/rules.md", "docs/writing.md", "mise.toml"}
 	for _, file := range files {

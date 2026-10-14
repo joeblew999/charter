@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -172,6 +173,18 @@ func adopt(root, description, version, checkout string) error {
 		}
 	}
 
+	// What a repo's own CLAUDE.md or AGENTS.md said is its knowledge: it moves into docs/rules.md,
+	// where charter keeps a repo's own rules, before charter's pointer files take their place.
+	for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
+		moved, err := keepAgentNotes(root, name, docsOwn)
+		if err != nil {
+			return err
+		}
+		if moved {
+			say("moved", name, ": what it said is now in docs/rules.md")
+		}
+	}
+
 	// The pointer files: charter's, the same in every repo, written again if they differ.
 	pointers, err := syncFiles(root, agentFiles(), false)
 	if err != nil {
@@ -272,6 +285,31 @@ What each part is, and what it needs: %s
 `, anyRepoGuide)
 	return nil
 }
+
+// keepAgentNotes moves what a repo's own agent file says (one without charter's mark, and more than
+// a pointer) to the end of docs/rules.md: headings one level down, links made relative to docs/.
+// True when it moved something.
+func keepAgentNotes(root, name string, docsOwn bool) (bool, error) {
+	text, err := os.ReadFile(filepath.Join(root, name))
+	if err != nil || strings.Contains(string(text), "Written by `charter") {
+		return false, nil
+	}
+	notes := strings.TrimSpace(string(text))
+	if notes == "" || notes == "@AGENTS.md" || !docsOwn {
+		return false, nil
+	}
+	notes = ownHeading.ReplaceAllString(notes, "#$1")
+	notes = relativeLink.ReplaceAllString(notes, "](../$1)")
+	rules := filepath.Join(root, "docs", "rules.md")
+	have, _ := os.ReadFile(rules)
+	section := "\n## What " + name + " said before charter adopt\n\nMoved here by `charter adopt`, as it was. Yours to edit: keep what is still true, where it belongs.\n\n" + notes + "\n"
+	return true, write(rules, strings.TrimRight(string(have), "\n")+"\n"+section)
+}
+
+var (
+	ownHeading   = regexp.MustCompile(`(?m)^(#{1,5} )`)
+	relativeLink = regexp.MustCompile(`\]\(((?:[^)#:/][^):]*|\./[^):]*))\)`)
+)
 
 // agentFiles are the two pointer files of a repo that is not a project: the same in every repo
 // charter keeps, and charter's to write again, so what agents are told first cannot drift from repo
