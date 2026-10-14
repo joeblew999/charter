@@ -181,7 +181,23 @@ func docsLint(args []string) error {
 func ignored(repo, path string) bool {
 	cmd := exec.Command("git", "check-ignore", "-q", path)
 	cmd.Dir = repo
-	return cmd.Run() == nil
+	return cmd.Run() == nil || inSubmodule(repo, path)
+}
+
+// inSubmodule says whether a path is inside one of the repo's git submodules: what is there (a
+// checkout, its node_modules) exists only once it is fetched and set up, so a fresh clone, as CI
+// has, cannot say the path is wrong.
+func inSubmodule(repo, path string) bool {
+	out, err := exec.Command("git", "-C", repo, "config", "-f", ".gitmodules", "--get-regexp", `\.path$`).Output()
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if _, sub, ok := strings.Cut(line, " "); ok && (path == sub || strings.HasPrefix(path, sub+"/")) {
+			return true
+		}
+	}
+	return false
 }
 
 // hasAnchor reports whether a heading in file makes this anchor, the way GitHub and Jekyll do:

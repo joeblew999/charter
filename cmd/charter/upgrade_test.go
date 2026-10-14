@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -77,5 +78,22 @@ func TestReleaseHasTheToolOnlyWhenEveryArchiveIsThere(t *testing.T) {
 	}
 	if hasEveryArchive("", all) {
 		t.Error("an empty checksums.txt says the tool is there")
+	}
+}
+
+// A path inside a git submodule exists only once it is fetched and set up: docs-lint cannot say it
+// is wrong in a fresh clone, as CI has.
+func TestDocsLintTrustsPathsInSubmodules(t *testing.T) {
+	repo := t.TempDir()
+	if err := os.WriteFile(filepath.Join(repo, ".gitmodules"), []byte("[submodule \"app\"]\n\tpath = vendor/app\n\turl = https://example.com/app.git\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := exec.Command("git", "-C", repo, "init", "-q").Run(); err != nil {
+		t.Fatal(err)
+	}
+	for path, want := range map[string]bool{"vendor/app": true, "vendor/app/node_modules": true, "vendor/application": false, "vendor": false} {
+		if got := inSubmodule(repo, path); got != want {
+			t.Errorf("inSubmodule(%q) = %v, want %v", path, got, want)
+		}
 	}
 }
