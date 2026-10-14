@@ -37,7 +37,7 @@ Written by `charter adopt` (the same folder in every repo that uses it): don't e
    mise run check    # where the repo has it
    ```
 
-   GitHub runs the same checks on every push.
+   GitHub runs the same checks on every push, and nothing more: what passes here passes there. Don't wait for GitHub.
 
 4. **Move to a new release of charter.**
 
