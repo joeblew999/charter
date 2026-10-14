@@ -4,7 +4,7 @@ package main
 // and every include of charter's tasks name a release and move together, as does the TypeScript
 // library a project installs from a release; then AGENTS.md and CLAUDE.md, where they carry its mark,
 // are written again as that release writes them. Charter's own places (docs/charter/, its forms, its
-// workflow) need nothing here: mise run repo writes them as the release has them.
+// workflow) need nothing here: mise run adopt writes them as the release has them.
 
 import (
 	"errors"
@@ -18,7 +18,7 @@ import (
 
 func init() {
 	commands["upgrade"] = command{"[vX.Y.Z]",
-		"move the repo you are in to a release of charter, by default the one running: in mise.toml the tool's pin and every include of charter's tasks together, @charter/ts in package.json, and AGENTS.md and CLAUDE.md written again; then mise run repo writes charter's own places as it has them. Run it from the release you want: mise x github:joeblew999/charter@X.Y.Z -- charter upgrade", upgradeCommand}
+		"move the repo you are in to a release of charter, by default the one running: in mise.toml the tool's pin and every include of charter's tasks together, @charter/ts in package.json, and AGENTS.md and CLAUDE.md written again; then mise run adopt writes charter's kit as it has it. Run it from the release you want: mise x github:joeblew999/charter@X.Y.Z -- charter upgrade", upgradeCommand}
 	anywhere["upgrade"] = true
 }
 
@@ -104,6 +104,6 @@ func upgrade(root, to string, same bool, out *os.File) error {
 	if mod, err := os.ReadFile(filepath.Join(root, "go.mod")); err == nil && strings.Contains(string(mod), repoModule+"/go ") {
 		say("waiting", "go.mod", ": go get "+repoModule+"/go@"+to+" && go mod tidy")
 	}
-	fmt.Fprintln(out, "\n  mise install && mise run repo   # the tool at "+to+", then charter's files as it writes them (docs/charter/, the forms, the workflow)")
+	fmt.Fprintln(out, "\n  mise install && mise run adopt   # the tool at "+to+", then charter's kit as it writes it (docs/charter/, the forms, the workflows)")
 	return nil
 }
