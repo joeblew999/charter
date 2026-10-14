@@ -14,9 +14,10 @@
 		"node": ">=26"
 	},
 	"bin": {
-		"charter-ts": "./dist/cli.js"
+		"charter-ts": "./bin/charter-ts.js"
 	},
 	"files": [
+		"bin",
 		"dist",
 		"templates"
 	],
