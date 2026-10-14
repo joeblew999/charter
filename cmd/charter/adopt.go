@@ -32,7 +32,7 @@ var repoTasks = []string{"docs:check", "docs:lint", "docs:pages", "docs:review",
 
 // The pages every repo charter keeps has, the same in a project made by new and a repo adopt took.
 const (
-	agentsPage = "# For agents\n\nEverything about this repo is in [docs/](docs/README.md), the same pages developers read. Read [docs/README.md](docs/README.md), then the rules, which are binding: [docs/repo/rules.md](docs/repo/rules.md), the same in every repo charter keeps, and [docs/rules.md](docs/rules.md), this repo's own.\n"
+	agentsPage = "# For agents\n\nEverything about this repo is in [docs/](docs/README.md), the same pages developers read. The start page and the rules come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does). Any other agent: read [docs/README.md](docs/README.md) first, then the rules, which are binding: [docs/repo/rules.md](docs/repo/rules.md), the same in every repo charter keeps, and [docs/rules.md](docs/rules.md), this repo's own.\n\n@docs/README.md\n@docs/repo/rules.md\n@docs/rules.md\n"
 	claudePage = "@AGENTS.md\n"
 
 	rulesHead = `---
@@ -288,14 +288,17 @@ const repoAgentsPage = `# For agents
 
 Everything about this repo is in [docs/](docs/README.md), the same pages developers read. Nothing is kept here, so there is one source of truth.
 
-Read, in this order:
+The start page and the rules come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does), so nothing has to be looked up first. Any other agent: read them before anything else, in this order: [docs/README.md](docs/README.md), what this repo is and the index of every page; [docs/repo/rules.md](docs/repo/rules.md), the rules every repo shares; [docs/rules.md](docs/rules.md), this repo's own. The rules are binding.
 
-1. [docs/README.md](docs/README.md): what this repo is, and the index of every page.
-2. [docs/repo/rules.md](docs/repo/rules.md): the rules every repo shares. They are binding.
-3. [docs/rules.md](docs/rules.md): this repo's own rules, which add to those.
-4. The open issues, ` + "`mise run issues`" + `: what is reported and what is planned. One labelled ` + "`needs-triage`" + ` comes first.
-5. The page for the part you are changing, from the index.
-6. [docs/writing.md](docs/writing.md) before you write or change a page in ` + "`docs/`" + `.
+@docs/README.md
+@docs/repo/rules.md
+@docs/rules.md
+
+Then:
+
+1. The open issues, ` + "`mise run issues`" + `: what is reported and what is planned. One labelled ` + "`needs-triage`" + ` comes first.
+2. The page for the part you are changing, from the start page's index.
+3. [docs/writing.md](docs/writing.md) before you write or change a page in ` + "`docs/`" + `.
 
 ` + "`mise tasks`" + ` lists what there is to run; ` + "`mise run check`" + `, where the repo has it, is what must pass.
 

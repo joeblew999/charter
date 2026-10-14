@@ -36,6 +36,7 @@ func TestAdopt(t *testing.T) {
 		"charter.toml":       "description = \"field-notes\"\ntopics = []\n",
 		"AGENTS.md":          "[docs/repo/rules.md](docs/repo/rules.md)",
 		"AGENTS.md ":         "Written by `charter repo`",
+		"AGENTS.md  ":        "\n@docs/README.md\n@docs/repo/rules.md\n@docs/rules.md\n",
 		"CLAUDE.md":          "@AGENTS.md\n",
 		"docs/README.md":     "# field-notes\n",
 		"docs/README.md ":    "\n## What is generated\n",

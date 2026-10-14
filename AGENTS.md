@@ -2,6 +2,12 @@
 
 Everything about this repo is in [docs/](docs/README.md), the same pages developers read. Nothing is kept here, so there is one source of truth. The same index for machines: https://joeblew999.github.io/charter/llms.txt
 
+The start page and the rules come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does), so nothing has to be looked up first. Any other agent: read them first, in the order below.
+
+@docs/README.md
+@docs/repo/rules.md
+@docs/rules.md
+
 Read, in this order:
 
 1. [docs/README.md](docs/README.md): what is what, and the index of every page. The repo has two servers, four contracts and four Fern folders, and they are easy to mix up.

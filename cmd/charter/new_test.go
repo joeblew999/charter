@@ -400,6 +400,17 @@ func TestNewProjectOnYourSubdomain(t *testing.T) {
 
 // From a release (its tag, cloned), the project pins that release of the tool under [tools], and
 // its tasks run `charter`, which mise then has on the path.
+// AGENTS.md brings the start page and the rules with it, so an agent has them before it looks at
+// anything: Claude loads each @ line as that page. Both pages say so: a project's (new) and any
+// repo's (adopt, repo).
+func TestAgentsLoadTheDocs(t *testing.T) {
+	for name, page := range map[string]string{"a project's": agentsPage, "any repo's": repoAgentsPage} {
+		if !strings.Contains(page, "\n@docs/README.md\n@docs/repo/rules.md\n@docs/rules.md\n") {
+			t.Errorf("%s AGENTS.md does not load the start page and the rules:\n%s", name, page)
+		}
+	}
+}
+
 func TestNewProjectFromAReleasePinsTheTool(t *testing.T) {
 	repo, err := filepath.Abs("../..")
 	if err != nil {
