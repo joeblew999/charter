@@ -4,9 +4,10 @@
 
 Everything about this repo is in [docs/](docs/README.md), the same pages developers read. Nothing is kept here, so there is one source of truth.
 
-The start page, the rules, how to use charter and the tasks come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does), so nothing has to be looked up first. Any other agent: read them before anything else, in this order: [docs/README.md](docs/README.md), what this repo is and the index of every page; [docs/charter/rules.md](docs/charter/rules.md), the rules every repo shares; [docs/rules.md](docs/rules.md), this repo's own; [docs/charter/using.md](docs/charter/using.md), the tool it is kept with. The rules are binding.
+The start page, the flow, the rules, how to use charter and the tasks come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does), so nothing has to be looked up first. Any other agent: read them before anything else, in this order: [docs/README.md](docs/README.md), what this repo is and the index of every page; [docs/charter/README.md](docs/charter/README.md), the flow and what is charter's; [docs/charter/rules.md](docs/charter/rules.md), the rules every repo shares; [docs/rules.md](docs/rules.md), this repo's own; [docs/charter/using.md](docs/charter/using.md), the tool it is kept with. The rules are binding.
 
 @docs/README.md
+@docs/charter/README.md
 @docs/charter/rules.md
 @docs/rules.md
 @docs/charter/using.md
