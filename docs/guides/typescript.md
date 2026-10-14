@@ -38,7 +38,7 @@ Every other step `check` is made of runs alone too: `npx charter-ts lint`, `spec
 
 ```ts
 import { defineConfig } from "charter-ts/config";
-import { asyncapiSpec, openapiSpec } from "charter-ts/specs";
+import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
 import { asyncInfo, contract, info } from "./src/contract.ts";
 
 export default defineConfig({
@@ -58,19 +58,26 @@ Every field is documented in [`Config`](https://github.com/joeblew999/charter/bl
 
 ## The library
 
+What the Worker imports is `charter-lib` (`ts/lib/`), in `dependencies`; `charter-ts`, the tool, is in `devDependencies`. Both come from the same release, at the same version. The library is built with the web's globals and no Node types, so nothing in it can need Node: it runs on Workers.
+
 | Import | What it is |
 |---|---|
-| `"charter-ts/specs"` | Both specs from the contract, for `npm run spec` and for the Worker's `/api/openapi.json` and `/api/asyncapi.json` |
-| `"charter-ts/asyncapi"` | `asyncapi({...})` on a procedure: a WebSocket channel in the AsyncAPI spec |
-| `"charter-ts/auth"` | Bearer tokens, Cloudflare Access and an OpenID Connect issuer, with scopes ([Auth](auth.md)) |
-| `"charter-ts/ratelimit"` | Limits per caller on Workers Rate Limiting bindings |
-| `"charter-ts/follow"` | `follow()`: the gap-free feed behind the streams ([Streaming](streaming.md)) |
+| `"charter-lib/specs"` | Both specs from the contract, for `npm run spec` and for the Worker's `/api/openapi.json` and `/api/asyncapi.json` |
+| `"charter-lib/asyncapi"` | `asyncapi({...})` on a procedure: a WebSocket channel in the AsyncAPI spec |
+| `"charter-lib/auth"` | Bearer tokens, Cloudflare Access and an OpenID Connect issuer, with scopes ([Auth](auth.md)) |
+| `"charter-lib/ratelimit"` | Limits per caller on Workers Rate Limiting bindings |
+| `"charter-lib/follow"` | `follow()`: the gap-free feed behind the streams ([Streaming](streaming.md)) |
+
+From the tool, for `charter.config.ts` and scripts of your own:
+
+| Import | What it is |
+|---|---|
 | `"charter-ts/config"` | `defineConfig` |
-| `"charter-ts/scripts"` | What the steps are made of, for a script of your own: `run`, `withServer`, `migrateLocal`, `deploy`, `sdk` |
+| `"charter-ts/scripts"` | What the steps are made of: `run`, `withServer`, `migrateLocal`, `deploy`, `sdk` |
 
 ## In this repo
 
-The root `package.json` is the npm workspace of `charter-ts/` (the package) and the projects in `ts/`: `ts/start` and `ts/notes`, which `new` copies, and `ts/showcase`, every Fern feature with the SDK tested inside a Worker.
+The root `package.json` is the npm workspace of `charter-ts/` (the tool), `ts/lib/` (the library) and the projects in `ts/` and `go/`: `ts/start` and `ts/notes`, which `new` copies, and `ts/showcase`, every Fern feature with the SDK tested inside a Worker.
 
 ```sh
 npm ci                               # everything; builds charter-ts

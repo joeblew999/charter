@@ -6,7 +6,7 @@ parent: Guides
 
 # Auth: who may call, and how they prove it
 
-The contract says which scopes each operation needs; one middleware checks every request against it: `go/lib/auth` in Go, `"charter-ts/auth"` in TypeScript. In the notes examples, reading is public and writing needs `write`.
+The contract says which scopes each operation needs; one middleware checks every request against it: `go/lib/auth` in Go, `"charter-lib/auth"` in TypeScript. In the notes examples, reading is public and writing needs `write`.
 
 ## Three ways in
 
@@ -81,7 +81,7 @@ Extensions: ratelimit.On(ratelimit.Limit{Binding: "WRITE_LIMIT", Limit: 100, Per
 routes.UseMiddleware(ratelimit.Middleware(routes, nil))                                                        // after auth.Middleware
 ```
 
-In TypeScript (`"charter-ts/ratelimit"`): `spec: needs(["write"], limited(writeLimit))`, `rateLimits` in openapiSpec's options for scopes, and `await rateLimit(limitOf(procedure), keyOf(caller, headers), env)` after `authorize` (`ts/notes/src/index.ts`).
+In TypeScript (`"charter-lib/ratelimit"`): `spec: needs(["write"], limited(writeLimit))`, `rateLimits` in openapiSpec's options for scopes, and `await rateLimit(limitOf(procedure), keyOf(caller, headers), env)` after `authorize` (`ts/notes/src/index.ts`).
 
 - Each limit is a [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) binding of that name. `cloudflare.config.ts` declares one per `x-rate-limit` in `fern/openapi.json`, with its limit and period, so they are written once; it holds each binding's namespace, a number unique in the account.
 - The binding counts per Cloudflare location and is eventually consistent: it stops abuse, it does not account. `cf dev` counts locally. Natively, Go counts in memory.

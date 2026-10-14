@@ -5,10 +5,10 @@ import { call, implement, ORPCError, withEventMeta } from "@orpc/server";
 import { ResponseHeadersPlugin } from "@orpc/server/plugins";
 import type { z } from "zod";
 import { asyncInfo, contract, END, info, type note } from "./contract.ts";
-import { asyncapiSpec, openapiSpec } from "charter-ts/specs";
-import { follow, type FollowSource } from "charter-ts/follow";
-import { accessScheme, authorize, discoveryURL, oidcScheme, scheme, securityOf, type Caller } from "charter-ts/auth";
-import { keyOf, limitOf, rateLimit } from "charter-ts/ratelimit";
+import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
+import { follow, type FollowSource } from "charter-lib/follow";
+import { accessScheme, authorize, discoveryURL, oidcScheme, scheme, securityOf, type Caller } from "charter-lib/auth";
+import { keyOf, limitOf, rateLimit } from "charter-lib/ratelimit";
 export { NotesHub } from "./hub.ts";
 
 type Note = z.infer<typeof note>;

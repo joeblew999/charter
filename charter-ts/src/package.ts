@@ -11,5 +11,6 @@ export function version(): string {
 	return (JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8")) as { version: string }).version;
 }
 
-/** A release of charter-ts on GitHub, by version: what a repo's package.json installs. */
-export const releaseURL = (v: string) => `https://github.com/joeblew999/charter/releases/download/ts-v${v}/charter-ts-${v}.tgz`;
+/** A package of a release on GitHub, by version: what a repo's package.json installs. Each release
+ * carries both packages at its version: charter-ts (the tool) and charter-lib (what a Worker imports). */
+export const releaseURL = (v: string, name: "charter-ts" | "charter-lib" = "charter-ts") => `https://github.com/joeblew999/charter/releases/download/ts-v${v}/${name}-${v}.tgz`;

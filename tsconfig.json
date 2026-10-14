@@ -17,7 +17,6 @@
 		"skipLibCheck": true
 	},
 	"include": [
-		"release.ts",
-		"surface"
+		"release.ts"
 	]
 }

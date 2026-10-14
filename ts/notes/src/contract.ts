@@ -1,8 +1,8 @@
 import { asyncIteratorObject, oc } from "@orpc/contract";
 import { openapi, type OpenAPIV3_2 } from "@orpc/openapi";
-import { asyncapi } from "charter-ts/asyncapi";
-import { needs } from "charter-ts/auth";
-import { limited, type Limit } from "charter-ts/ratelimit";
+import { asyncapi } from "charter-lib/asyncapi";
+import { needs } from "charter-lib/auth";
+import { limited, type Limit } from "charter-lib/ratelimit";
 import { z } from "zod";
 
 // The API, contract first: every route with its method, path, input and output as Zod 4 schemas.

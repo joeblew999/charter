@@ -96,8 +96,11 @@ export function newProject(args: string[]): void {
 			.replaceAll(".gedw99.workers.dev", `.${subdomain}.workers.dev`)
 			.replace(/github\.com\/joeblew999\/charter\/[^\s"]+\/sdk\/go/g, `${name}/sdk/go`);
 		if (basename(file) === "package.json" && file === join(into, "package.json")) {
-			const pkg = JSON.parse(next) as { dependencies?: Record<string, string> };
-			if (pkg.dependencies?.["charter-ts"]) pkg.dependencies["charter-ts"] = releaseURL(version());
+			const pkg = JSON.parse(next) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+			for (const deps of [pkg.dependencies, pkg.devDependencies]) {
+				if (deps?.["charter-lib"]) deps["charter-lib"] = releaseURL(version(), "charter-lib");
+				if (deps?.["charter-ts"]) deps["charter-ts"] = releaseURL(version());
+			}
 			next = JSON.stringify(pkg, null, "\t") + "\n";
 		}
 		return next;

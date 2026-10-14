@@ -26,7 +26,7 @@ export interface OpenAPISpecOptions {
 	 * makes to its users. Each procedure is one webhook, named by its key; its input is the payload.
 	 */
 	webhooks?: RouterContract;
-	/** Rate limits per scope (charter-ts/ratelimit): every operation that needs one's scope has it, unless it has its own. */
+	/** Rate limits per scope (charter-lib/ratelimit): every operation that needs one's scope has it, unless it has its own. */
 	rateLimits?: Limit[];
 }
 
@@ -43,7 +43,7 @@ export const openapiSpec = async (router: RouterContract | AnyRouter, { info, se
 	return webhooks ? addWebhooks(doc, webhooks) : doc;
 };
 
-// Each operation's security names every scheme the document declares (charter-ts/auth's expand), and
+// Each operation's security names every scheme the document declares (charter-lib/auth's expand), and
 // an operation that is public says so.
 function withEveryScheme(doc: OpenAPIV3_1.OpenAPIObject) {
 	const declared = doc.components?.securitySchemes;

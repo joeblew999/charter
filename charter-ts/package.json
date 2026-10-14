@@ -1,7 +1,7 @@
 {
 	"name": "charter-ts",
 	"version": "0.4.0",
-	"description": "A repo kept the charter way, and contract-first APIs on Cloudflare Workers in TypeScript, with oRPC and Fern: the charter-ts command (a repo's kit, docs lint, issues, upstream issues and GitHub settings: adopt, docs:lint, issue, upstream:status, repo; a project's steps, from its charter.config.ts: dev, lint, spec, the tests under workerd, deploy, live tests, and new to start a project), and the library: both specs from one oRPC contract, the AsyncAPI generator, follow() (the gap-free feed), auth (bearer tokens, Cloudflare Access, OpenID Connect) and rate limits per caller. Installed from its GitHub Release: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz",
+	"description": "A repo kept the charter way, and APIs on Cloudflare Workers in TypeScript or Go, step by step: the charter-ts command. For any repo: adopt (the kit), docs:check, issue, upstream:status, repo, repo:ci. For a project, from its charter.config.ts: new, dev, check, spec, sdk, deploy, live-test (and in Go: run, build, sdk:publish). The library a TypeScript Worker imports is charter-lib (ts/lib). Installed from its GitHub Release: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -27,7 +27,7 @@
 	],
 	"scripts": {
 		"build": "tsc -p tsconfig.build.json",
-		"check": "tsc && vitest run && npm run build",
+		"check": "tsc && npm run build",
 		"prepack": "npm run build && node pack-templates.ts"
 	},
 	"exports": {
@@ -35,29 +35,9 @@
 			"types": "./dist/config.d.ts",
 			"default": "./dist/config.js"
 		},
-		"./asyncapi": {
-			"types": "./dist/asyncapi.d.ts",
-			"default": "./dist/asyncapi.js"
-		},
-		"./specs": {
-			"types": "./dist/specs.d.ts",
-			"default": "./dist/specs.js"
-		},
 		"./spec-files": {
 			"types": "./dist/spec-files.d.ts",
 			"default": "./dist/spec-files.js"
-		},
-		"./follow": {
-			"types": "./dist/follow.d.ts",
-			"default": "./dist/follow.js"
-		},
-		"./auth": {
-			"types": "./dist/auth.d.ts",
-			"default": "./dist/auth.js"
-		},
-		"./ratelimit": {
-			"types": "./dist/ratelimit.d.ts",
-			"default": "./dist/ratelimit.js"
 		},
 		"./scripts": {
 			"types": "./dist/scripts.d.ts",
@@ -79,30 +59,14 @@
 		"./tsconfig.worker.json": "./tsconfig.worker.json"
 	},
 	"peerDependencies": {
-		"@orpc/contract": "2.0.0-beta.40",
-		"@orpc/json-schema": "2.0.0-beta.40",
-		"@orpc/openapi": "2.0.0-beta.40",
-		"@orpc/server": "2.0.0-beta.40",
-		"@orpc/zod": "2.0.0-beta.40",
-		"zod": "^4.6.5",
 		"@cloudflare/vite-plugin": "*",
 		"vite": "*"
 	},
-	"dependencies": {
-		"jose": "6.2.12"
-	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "beta",
-		"@orpc/contract": "2.0.0-beta.40",
-		"@orpc/json-schema": "2.0.0-beta.40",
-		"@orpc/openapi": "2.0.0-beta.40",
-		"@orpc/server": "2.0.0-beta.40",
-		"@orpc/zod": "2.0.0-beta.40",
 		"@types/node": "^22.12.0",
 		"typescript": "^7.0.2",
-		"vite": "^8.3.0",
-		"vitest": "^4.1.11",
-		"zod": "^4.6.5"
+		"vite": "^8.3.0"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/vite-plugin": {

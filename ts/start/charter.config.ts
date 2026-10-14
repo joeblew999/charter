@@ -1,6 +1,6 @@
 // What charter-ts needs to know about this project (npm run <step> runs charter-ts <step>), typed, in one place.
 import { defineConfig } from "charter-ts/config";
-import { asyncapiSpec, openapiSpec } from "charter-ts/specs";
+import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
 import { asyncInfo, contract, info } from "./src/contract.ts";
 
 export default defineConfig({

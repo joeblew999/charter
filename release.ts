@@ -1,7 +1,8 @@
 // npm run release -- X.Y.Z [--dry-run]: a release of charter-ts, cut from this machine, onto GitHub.
 //   1. The version: charter-ts's package.json and the examples' dependency on it, committed.
 //   2. npm run check: every local check (Docker), the same one GitHub runs.
-//   3. The package (npm pack: the command, the library, the templates) into dist/.
+//   3. The packages (npm pack) into dist/: charter-ts (the command, the kit, the templates) and
+//      charter-lib (what a TypeScript Worker imports), at the same version.
 //   4. The tag ts-vX.Y.Z, pushed with main, and the GitHub Release, marked latest, with the package
 //      on it: charter-ts-X.Y.Z.tgz, which a repo installs.
 // The version goes into every command README.md and docs/ show too: npx keeps what it fetched for a
@@ -30,17 +31,19 @@ if (git("branch", "--show-current") !== "main") throw new Error("a release is cu
 if (git("status", "--porcelain") !== "") throw new Error("the repo has changes that are not committed: commit them first");
 
 // 1. The version.
-const manifest = "charter-ts/package.json";
-const pkg = JSON.parse(readFileSync(manifest, "utf8")) as { version: string };
+// Both packages are released together, at one version: the tool and the library.
+const manifests = ["charter-ts/package.json", "ts/lib/package.json"];
+const pkg = JSON.parse(readFileSync(manifests[0], "utf8")) as { version: string };
 if (pkg.version !== version && !dryRun) {
-	console.log(`charter-ts ${pkg.version} -> ${version}`);
-	writeFileSync(manifest, JSON.stringify({ ...pkg, version }, null, "\t") + "\n");
-	const projects = (JSON.parse(readFileSync("package.json", "utf8")) as { workspaces: string[] }).workspaces.filter(w => w !== "charter-ts");
+	console.log(`charter-ts and charter-lib ${pkg.version} -> ${version}`);
+	for (const manifest of manifests) writeFileSync(manifest, JSON.stringify({ ...JSON.parse(readFileSync(manifest, "utf8")), version }, null, "\t") + "\n");
+	const projects = (JSON.parse(readFileSync("package.json", "utf8")) as { workspaces: string[] }).workspaces.filter(w => w !== "charter-ts" && w !== "ts/lib");
 	for (const project of projects) {
 		const file = `${project}/package.json`;
 		const manifestOf = JSON.parse(readFileSync(file, "utf8")) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
-		const deps = manifestOf.dependencies?.["charter-ts"] ? manifestOf.dependencies : (manifestOf.devDependencies ??= {});
-		deps["charter-ts"] = `^${version}`;
+		for (const deps of [manifestOf.dependencies, manifestOf.devDependencies]) {
+			for (const name of ["charter-ts", "charter-lib"]) if (deps?.[name]) deps[name] = `^${version}`;
+		}
 		writeFileSync(file, JSON.stringify(manifestOf, null, "\t") + "\n");
 	}
 	// The commands the docs show, at this version.
@@ -53,7 +56,7 @@ if (pkg.version !== version && !dryRun) {
 	});
 	run("npm", ["install", "--no-fund", "--no-audit"]);
 	if (!dryRun) {
-		run("git", ["add", "--", manifest, ...projects.map(project => `${project}/package.json`), "package-lock.json", ...changed]);
+		run("git", ["add", "--", ...manifests, ...projects.map(project => `${project}/package.json`), "package-lock.json", ...changed]);
 		run("git", ["commit", "-q", "-m", `charter-ts ${version}`]);
 	}
 }
@@ -61,13 +64,14 @@ if (pkg.version !== version && !dryRun) {
 // 2. Every local check.
 run("npm", ["run", "check"]);
 
-// 3. The package (a dry run packs the version there is).
-const tarball = `dist/charter-ts-${dryRun ? pkg.version : version}.tgz`;
+// 3. The packages (a dry run packs the version there is).
+const packed = dryRun ? pkg.version : version;
+const tarballs = [`dist/charter-ts-${packed}.tgz`, `dist/charter-lib-${packed}.tgz`];
 mkdirSync("dist", { recursive: true });
-run("npm", ["pack", "-w", "charter-ts", "--pack-destination", resolve("dist")]);
-if (!existsSync(tarball)) throw new Error(`npm pack wrote no ${tarball}`);
+run("npm", ["pack", "-w", "charter-ts", "-w", "ts/lib", "--pack-destination", resolve("dist")]);
+for (const tarball of tarballs) if (!existsSync(tarball)) throw new Error(`npm pack wrote no ${tarball}`);
 if (dryRun) {
-	console.log(`dry run: ${tarball} is what the release would carry; nothing tagged, pushed or published`);
+	console.log(`dry run: ${tarballs.join(" and ")} are what the release would carry; nothing tagged, pushed or published`);
 	process.exit(0);
 }
 
@@ -96,9 +100,13 @@ Or move a repo to this release:
 
     npm i -D ${releaseURL(version)} && npm run adopt
 
+A TypeScript Worker's library, charter-lib, is on the same release:
+
+    npm i ${releaseURL(version, "charter-lib")}
+
 Docs: https://joeblew999.github.io/charter/guides/typescript.html`;
-if (!exists) run("gh", ["release", "create", tag, tarball, "--title", `charter-ts ${version}`, "--notes", notes, "--latest"]);
-else run("gh", ["release", "upload", tag, tarball, "--clobber"]);
+if (!exists) run("gh", ["release", "create", tag, ...tarballs, "--title", `charter-ts ${version}`, "--notes", notes, "--latest"]);
+else run("gh", ["release", "upload", tag, ...tarballs, "--clobber"]);
 console.log(`released: ${releaseURL(version)}`);
 
 function walk(dir: string): string[] {

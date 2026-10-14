@@ -9,7 +9,7 @@ const issuer = ({ extra }: { extra: number }) => ({
 	OIDC_ISSUER: `http://localhost:${extra}`,
 	OIDC_AUDIENCE: "https://notes.test",
 });
-// The notes API is the same in Go and in TypeScript (surface/notes.test.ts holds them to it), so the
+// The notes API is the same in Go and in TypeScript (test/surface.test.ts holds them to it), so the
 // typed notes tests are ts/notes's; the MCP endpoint is Go's own.
 const notes = "../../ts/notes/test";
 const all = ({ origin, extra, node }: TestContext) => {

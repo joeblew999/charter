@@ -1,14 +1,15 @@
-// The notes API exists twice here, from a Go contract (go/notes) and from an oRPC one (ts/notes).
-// Each project's check holds its committed specs to its contract (spec:check); these tests hold the
-// two to each other: the same SDK surface, the same database, the same ways in. They are the repo's,
-// not a project's: a project has one contract.
-//   node --test surface/*.test.ts   (npm run check runs them)
+// The notes API exists twice in this repo, from this Go contract and from the oRPC one in ts/notes.
+// Each project's check holds its committed specs to its contract (spec:check); these tests hold this
+// one to ts/notes: the same SDK surface, the same database, the same ways in.
+//   node --test test/surface.test.ts   (npm run check runs it)
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
 type Json = Record<string, unknown>;
 const read = (file: string): Json => JSON.parse(readFileSync(file, "utf8")) as Json;
+/** The oRPC notes project, beside this one. */
+const ts = "../../ts/notes";
 const at = (doc: unknown, ...path: string[]): unknown => path.reduce<unknown>((node, key) => (node && typeof node === "object" ? (node as Json)[key] : undefined), doc);
 const asMap = (value: unknown): Json => (value && typeof value === "object" && !Array.isArray(value) ? (value as Json) : {});
 
@@ -43,10 +44,10 @@ function sorted(value: unknown): unknown {
 }
 
 test("the Go and the oRPC contract give the SDKs the same operations and channels", () => {
-	const want = surface(read("ts/notes/fern/openapi.json")), got = surface(read("go/notes/fern/openapi.json"));
+	const want = surface(read(`${ts}/fern/openapi.json`)), got = surface(read("fern/openapi.json"));
 	for (const [key, w] of want) assert.equal(got.get(key), w, `${key}\n  oRPC: ${w}\n  Go:   ${got.get(key)}`);
 	for (const key of got.keys()) assert.ok(want.has(key), `${key} is in the Go contract only`);
-	const orpc = read("ts/notes/fern/asyncapi.json"), go = read("go/notes/fern/asyncapi.json");
+	const orpc = read(`${ts}/fern/asyncapi.json`), go = read("fern/asyncapi.json");
 	for (const path of [
 		["channels", "liveNotes", "address"],
 		["channels", "liveNotes", "summary"],
@@ -63,10 +64,10 @@ test("the Go and the oRPC contract give the SDKs the same operations and channel
 
 test("both notes projects serve the same API from the same table: their migrations/ are the same files", () => {
 	const files = (dir: string) => new Map(readdirSync(dir).map(name => [name, readFileSync(`${dir}/${name}`, "utf8")]));
-	const go = files("go/notes/migrations"), ts = files("ts/notes/migrations");
-	assert.ok(go.size > 0, "go/notes/migrations: no files");
-	assert.deepEqual([...go.keys()].sort(), [...ts.keys()].sort(), "the same migration files");
-	for (const [name, content] of go) assert.equal(ts.get(name), content, `migrations/${name} differs between go/notes and ts/notes`);
+	const go = files("migrations"), other = files(`${ts}/migrations`);
+	assert.ok(go.size > 0, "migrations: no files");
+	assert.deepEqual([...go.keys()].sort(), [...other.keys()].sort(), "the same migration files");
+	for (const [name, content] of go) assert.equal(other.get(name), content, `migrations/${name} differs between go/notes and ts/notes`);
 });
 
 // Fern sends only the credentials fern/generators.yml restates (auth-schemes, auth: any), so each
@@ -74,9 +75,9 @@ test("both notes projects serve the same API from the same table: their migratio
 // (an OIDC token goes as the bearer token), and the two declare the same schemes and security.
 test("Fern restates the schemes, and both notes projects declare the same ones", () => {
 	const security = new Map<string, string>();
-	for (const project of ["go/notes", "ts/notes"]) {
-		const doc = read(`${project}/fern/openapi.json`);
-		const yml = readFileSync(`${project}/fern/generators.yml`, "utf8");
+	for (const [project, dir] of [["go/notes", "."], ["ts/notes", ts]]) {
+		const doc = read(`${dir}/fern/openapi.json`);
+		const yml = readFileSync(`${dir}/fern/generators.yml`, "utf8");
 		const schemes = asMap(at(doc, "components", "securitySchemes"));
 		assert.ok(Object.keys(schemes).length === 4 && schemes.oidc, `${project}: want bearer, Access's two and oidc`);
 		for (const [name, raw] of Object.entries(schemes)) {

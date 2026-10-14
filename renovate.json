@@ -14,16 +14,16 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "charter-ts, which package.json installs from its GitHub Release (ts-vX.Y.Z), the version twice in the URL",
+      "description": "charter-ts and charter-lib, which package.json installs from charter's GitHub Release (ts-vX.Y.Z), the version twice in the URL",
       "managerFilePatterns": [
         "/(^|/)package\\.json$/"
       ],
       "matchStrings": [
-        "\"https://github\\.com/(?<depName>joeblew999/charter)/releases/download/ts-v(?<currentValue>[0-9][0-9.]*)/charter-ts-[0-9][0-9.]*\\.tgz\""
+        "\"https://github\\.com/(?<depName>joeblew999/charter)/releases/download/ts-v(?<currentValue>[0-9][0-9.]*)/(?<packageName>charter-(?:ts|lib))-[0-9][0-9.]*\\.tgz\""
       ],
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^ts-v(?<version>.+)$",
-      "autoReplaceStringTemplate": "\"https://github.com/{{{depName}}}/releases/download/ts-v{{{newValue}}}/charter-ts-{{{newValue}}}.tgz\""
+      "autoReplaceStringTemplate": "\"https://github.com/{{{depName}}}/releases/download/ts-v{{{newValue}}}/{{{packageName}}}-{{{newValue}}}.tgz\""
     }
   ],
   "packageRules": [

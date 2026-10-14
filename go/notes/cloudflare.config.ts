@@ -9,7 +9,7 @@ import { optionalSecrets } from "./secrets.ts";
 // A mode that starts with "perf-" deploys a scratch Worker of that name, with a
 // database and a hub of its own.
 
-// Who else may call (go/auth, charter-ts/auth): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD)
+// Who else may call (go/auth, charter-lib/auth): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD)
 // and an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): the Worker's optional secrets
 // (secrets.ts), declared where the environment that deploys or runs the Worker has them; npm run
 // deploy sets them, cf dev takes them from the environment. Unset, the Worker trusts no one that way.

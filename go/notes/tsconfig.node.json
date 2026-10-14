@@ -1,6 +1,7 @@
 {
 	"extends": "charter-ts/tsconfig.node.json",
 	"include": [
-		"charter.config.ts"
+		"charter.config.ts",
+		"test/surface.test.ts"
 	]
 }

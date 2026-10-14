@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { implement } from "@orpc/server";
 import { asyncInfo, contract, info } from "./contract.ts";
-import { asyncapiSpec, openapiSpec } from "charter-ts/specs";
+import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
 
 // The contract (src/contract.ts) implemented, served by oRPC's OpenAPIHandler as plain REST. The
 // D1 database is env.DB (cloudflare.config.ts).

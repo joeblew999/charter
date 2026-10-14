@@ -24,6 +24,7 @@
 	],
 	"homepage": "https://joeblew999.github.io/charter/",
 	"workspaces": [
+		"ts/lib",
 		"charter-ts",
 		"ts/start",
 		"ts/notes",
@@ -35,12 +36,12 @@
 		"go/showcase"
 	],
 	"scripts": {
-		"prepare": "npm run build -w charter-ts",
+		"prepare": "npm run build -w ts/lib -w charter-ts",
 		"adopt": "charter-ts adopt",
 		"repo": "charter-ts repo",
 		"issues": "charter-ts issues",
 		"issue": "charter-ts issue",
-		"check": "tsc && node --test surface/*.test.ts && npm run check --workspaces && charter-ts docs:check",
+		"check": "tsc && npm run check --workspaces && charter-ts docs:check",
 		"docs:check": "charter-ts docs:check",
 		"repo:ci": "charter-ts repo:ci",
 		"docs:review": "charter-ts docs:review",

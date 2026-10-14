@@ -1,8 +1,8 @@
 // What charter-ts needs to know about this project (npm run <step> runs charter-ts <step>), typed, in one place.
-import { accessScheme, oidcScheme, scheme } from "charter-ts/auth";
+import { accessScheme, oidcScheme, scheme } from "charter-lib/auth";
 import { defineConfig } from "charter-ts/config";
 import { sdk } from "charter-ts/scripts";
-import { asyncapiSpec, openapiSpec } from "charter-ts/specs";
+import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
 import { optionalSecrets, secrets } from "./secrets.ts";
 import { asyncInfo, contract, info } from "./src/contract.ts";
 

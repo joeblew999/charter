@@ -7,14 +7,14 @@ import { optionalSecrets } from "./secrets.ts";
 // new note out to the Worker's follow() loops. The Worker, not the hub, holds the clients' SSE
 // streams and WebSockets (docs/guides/streaming.md).
 
-// Who else may call (charter-ts/auth): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD) and an
+// Who else may call (charter-lib/auth): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD) and an
 // OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): the Worker's optional secrets (secrets.ts),
 // declared where the environment that deploys or runs the Worker has them; scripts/deploy.ts sets
 // them, cf dev takes them from the environment. Unset, the Worker trusts no one that way.
 declare const process: { env: Record<string, string | undefined> };
 const optional = Object.fromEntries(optionalSecrets.filter(name => process.env[name]).map(name => [name, bindings.secret()]));
 
-// How often a caller may call (go/ratelimit, charter-ts/ratelimit): each limit the contract declares
+// How often a caller may call (go/ratelimit, charter-lib/ratelimit): each limit the contract declares
 // (limited() in src/contract.ts; x-rate-limit in fern/openapi.json) is a Workers Rate Limiting
 // binding with the same limit and period. Its namespace is the counter's id, unique in the
 // Cloudflare account.
