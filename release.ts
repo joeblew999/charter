@@ -8,10 +8,14 @@
 // The version goes into every command README.md and docs/ show too: npx keeps what it fetched for a
 // URL, so only a URL with the version in it gives the version it names.
 // Safe to run again: a step already done is skipped. --dry-run does steps 2 and 3 only, and changes no file.
+import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { releaseURL } from "charter-ts/package";
 import { output, run } from "charter-ts/scripts";
+
+// The Mac stays awake while the release runs (its check is minutes), and no longer.
+if (process.platform === "darwin") spawn("caffeinate", ["-i", "-w", String(process.pid)], { stdio: "ignore", detached: true }).unref();
 
 process.on("uncaughtException", error => {
 	console.error(`release: ${error.message}`);
