@@ -10,6 +10,6 @@ pages/static/datastar-*.js   linguist-vendored=true
 package-lock.json            linguist-generated=true
 .github/workflows/*.yml      linguist-generated=true
 docs/_config.yml             linguist-generated=true
-docs/writing.md              linguist-generated=true
+docs/charter/**              linguist-generated=true
 docs/llms.txt                linguist-generated=true
 docs/_sass/**                linguist-generated=true

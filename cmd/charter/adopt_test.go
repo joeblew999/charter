@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -33,22 +34,24 @@ func TestAdopt(t *testing.T) {
 		t.Fatal(err)
 	}
 	for file, want := range map[string]string{
-		"charter.toml":       "description = \"field-notes\"\ntopics = []\n",
-		"AGENTS.md":          "[docs/repo/rules.md](docs/repo/rules.md)",
-		"AGENTS.md ":         "Written by `charter repo`",
-		"AGENTS.md  ":        "\n@docs/README.md\n@docs/repo/rules.md\n@docs/rules.md\n@docs/repo/charter.md\n@docs/tasks.md\n",
-		"CLAUDE.md":          "@AGENTS.md\n",
-		"docs/README.md":     "# field-notes\n",
-		"docs/README.md ":    "\n## What is generated\n",
-		"docs/rules.md":      "[Rules for every repo](repo/rules.md)",
-		"docs/repo/rules.md": "**A plan is an issue,**",
-		"docs/rules.md ":     "[the list](README.md#what-is-generated)",
-		"docs/writing.md":    "# Writing docs",
-		"mise.toml":          "[tools]\n# The tool every task runs, the release's binary. `mise x github:joeblew999/charter@X.Y.Z -- charter upgrade` moves it,\n# and the includes of charter's tasks with it.\n\"github:joeblew999/charter\" = \"1.2.3\"\n",
-		"mise.toml ":         "[task_config]\n",
-		"mise.toml  ":        "\nincludes = [\"git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.2.3\"]\n",
-		"mise.toml   ":       "\n[settings]\n",
-		"mise.toml    ":      "\nexperimental = true\n",
+		"charter.toml":            "description = \"field-notes\"\ntopics = []\n",
+		"AGENTS.md":               "[docs/charter/rules.md](docs/charter/rules.md)",
+		"AGENTS.md ":              "Written by `charter repo`",
+		"AGENTS.md  ":             "\n@docs/README.md\n@docs/charter/rules.md\n@docs/rules.md\n@docs/charter/using.md\n@docs/charter/tasks.md\n",
+		"CLAUDE.md":               "@AGENTS.md\n",
+		"docs/README.md":          "# field-notes\n",
+		"docs/README.md ":         "\n## What is generated\n",
+		"docs/rules.md":           "[Rules for every repo](charter/rules.md)",
+		"docs/charter/rules.md":   "**A plan is an issue,**",
+		"docs/rules.md ":          "[the list](charter/README.md#what-is-charters)",
+		"docs/charter/writing.md": "# Writing docs",
+		"docs/charter/README.md":  "# How this repo is kept",
+		"docs/charter/using.md":   "# Using charter",
+		"mise.toml":               "[tools]\n# The tool every task runs, the release's binary. `mise x github:joeblew999/charter@X.Y.Z -- charter upgrade` moves it,\n# and the includes of charter's tasks with it.\n\"github:joeblew999/charter\" = \"1.2.3\"\n",
+		"mise.toml ":              "[task_config]\n",
+		"mise.toml  ":             "\nincludes = [\"git::https://github.com/joeblew999/charter.git//tasks/repo?ref=v1.2.3\"]\n",
+		"mise.toml   ":            "\n[settings]\n",
+		"mise.toml    ":           "\nexperimental = true\n",
 	} {
 		if !strings.Contains(read(strings.TrimSpace(file)), want) {
 			t.Errorf("%s: no %q", file, want)
@@ -61,7 +64,7 @@ func TestAdopt(t *testing.T) {
 			}
 		}
 	}
-	for _, not := range []string{".github", "fern", "renovate.json", "docs/_config.yml", "README.md"} {
+	for _, not := range []string{".github", "fern", "renovate.json", "docs/_config.yml", "README.md", "docs/_generated.toml", "docs/tasks.md", "docs/writing.md", "docs/repo.md"} {
 		if exists(filepath.Join(root, not)) {
 			t.Errorf("adopt wrote %s", not)
 		}
@@ -92,7 +95,7 @@ func TestAdopt(t *testing.T) {
 		t.Errorf("what the repo's own AGENTS.md said was not kept in docs/rules.md:\n%s", rules)
 	}
 	before := map[string]string{}
-	files := []string{"charter.toml", "AGENTS.md", "CLAUDE.md", "docs/README.md", "docs/rules.md", "docs/writing.md", "mise.toml"}
+	files := []string{"charter.toml", "AGENTS.md", "CLAUDE.md", "docs/README.md", "docs/rules.md", "docs/charter/writing.md", "mise.toml"}
 	for _, file := range files {
 		before[file] = read(file)
 	}
@@ -162,5 +165,101 @@ func TestAdopt(t *testing.T) {
 	}
 	if len(github.writes) > 0 {
 		t.Errorf("adopt changed the repo on GitHub: %v", github.writes)
+	}
+}
+
+// charter adopt writes charter's own files and nothing of the repo's: in a repo with pages, forms and
+// a site of its own at the paths charter writes, none of them change; in a project, and in charter's
+// own repo, AGENTS.md, CLAUDE.md and the start pages are the project's. Run again, it changes nothing.
+func TestAdoptChangesNothingOfTheRepos(t *testing.T) {
+	github := &fakeGitHub{description: "Billing"}
+	gh = github.gh
+	t.Cleanup(func() { gh = func(string, ...string) (string, error) { return "", errors.New("no gh in tests") } })
+	snapshot := func(root string) map[string]string {
+		files := map[string]string{}
+		filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+			if err == nil && !entry.IsDir() {
+				content, _ := os.ReadFile(path)
+				rel, _ := filepath.Rel(root, path)
+				files[filepath.ToSlash(rel)] = string(content)
+			}
+			return err
+		})
+		return files
+	}
+	seed := func(files map[string]string) string {
+		root := filepath.Join(t.TempDir(), "billing-api")
+		for file, content := range files {
+			if err := write(filepath.Join(root, filepath.FromSlash(file)), content); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return root
+	}
+
+	// A repo with its own docs and .github, at the names charter writes or once wrote.
+	own := map[string]string{
+		"docs/README.md":                 "# Our docs\n",
+		"docs/writing.md":                "# How we write\n",
+		"docs/repo.md":                   "# Our repo\n",
+		"docs/tasks.md":                  "# Our tasks\n",
+		"docs/_config.yml":               "title: our site\n",
+		"renovate.json":                  "{}\n",
+		".github/ISSUE_TEMPLATE/bug.yml": "name: Bug\n",
+		".github/workflows/ci.yml":       "name: ci\n",
+		"mise.toml":                      "[tasks.test]\nrun = \"true\"\n",
+	}
+	root := seed(own)
+	if err := adopt(root, "", "v1.2.3", ""); err != nil {
+		t.Fatal(err)
+	}
+	after := snapshot(root)
+	for file, content := range own {
+		if after[file] != content {
+			t.Errorf("adopt changed the repo's own %s:\n%s", file, after[file])
+		}
+	}
+	for file := range after {
+		_, mine := own[file]
+		if !mine && !strings.HasPrefix(file, "docs/charter/") && !slices.Contains([]string{"charter.toml", "AGENTS.md", "CLAUDE.md", "docs/rules.md", "docs/llms.txt", "docs/_sass/custom/custom.scss"}, file) {
+			t.Errorf("adopt wrote %s, outside charter's own places", file)
+		}
+	}
+	if err := adopt(root, "", "v1.2.3", ""); err != nil {
+		t.Fatal(err)
+	}
+	if again := snapshot(root); !maps.Equal(again, after) {
+		t.Error("a second adopt changed something")
+	}
+
+	// A project, as charter's own repo is one: what it wrote for itself stays as it is.
+	project := map[string]string{
+		"go.mod":                 "module " + repoModule + "\n\ngo 1.26\n",
+		"charter.toml":           "description = \"Billing\"\nprojects = [\"examples/api\"]\n",
+		"examples/api/fern/x":    "",
+		"examples/api/mise.toml": "",
+		"AGENTS.md":              "# For agents\n\nOur own, with no mark.\n",
+		"CLAUDE.md":              "@AGENTS.md\n",
+		"docs/README.md":         "---\ntitle: Home\nnav_order: 1\npermalink: /\n---\n\n# Billing\n",
+		"docs/rules.md":          "# Our rules\n",
+		"mise.toml":              "[task_config]\nincludes = [\"tasks/repo\"]\n",
+	}
+	root = seed(project)
+	if err := adopt(root, "", "v1.2.3", ""); err != nil {
+		t.Fatal(err)
+	}
+	after = snapshot(root)
+	for file, content := range project {
+		if after[file] != content {
+			t.Errorf("adopt changed the project's own %s:\n%s", file, after[file])
+		}
+	}
+	for _, not := range []string{"docs/_generated.toml", "docs/tasks.md"} {
+		if _, ok := after[not]; ok {
+			t.Errorf("adopt wrote %s in a project", not)
+		}
+	}
+	if !strings.Contains(after["docs/charter/README.md"], "# How this repo is kept") {
+		t.Error("adopt did not write charter's pages in a project")
 	}
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"embed"
 	"flag"
 	"fmt"
@@ -21,37 +20,38 @@ import (
 //go:embed workflows/*.yml
 var workflowFiles embed.FS
 
-// Beside the workflows go the files that make a repo ready for other people and agents: issue
-// forms (a bug, a feature, a bug in a project this one is built on), blank issues turned off, and
-// the labels the forms use. The same for every repo, so they carry no repo's name.
+// Beside the workflows go the issue forms (a bug, a feature, a bug in a project this one is built
+// on, a plan) and blank issues turned off: the kit's .github/ISSUE_TEMPLATE (formFiles), the same in
+// every repo. The labels the forms use are the tool's own (labels.tsv), which charter repo and charter
+// labels give the repo on GitHub.
 //
-//go:embed github/ISSUE_TEMPLATE/*.yml github/labels.tsv
-var collaborationFiles embed.FS
+//go:embed labels.tsv
+var labelsFile []byte
 
-// The workflow of a repo that is not a project (cmd/charter/repoworkflows): the checks any repo
-// takes from charter, in one job. A project's workflows run its own check, which holds its docs to
-// the same, so a repo gets this one or those, never both.
-//
-//go:embed repoworkflows/repo-check.yml
-var repoWorkflowTemplate string
+// repoWorkflow is the workflow of a repo that is not a project: the checks any repo takes from
+// charter, as a call to charter's own reusable workflow (.github/workflows/repo-check.yml in the
+// charter repo) at the release the repo pins. A project's workflows run its own check, which holds
+// its docs to the same, so a repo gets this one or those, never both.
+const repoWorkflow = "charter.yml"
 
-const repoWorkflow = "repo-check.yml"
-
-// repoWorkflowFor is that workflow for the repo at root, whose default branch is branch. The mise
-// it installs is the one the repo's mise.toml asks for (min_version): one place says which mise,
-// and a runner's own may be older (seen: a repo that needs 2026.10.4 on a runner with 2026.10.3).
-func repoWorkflowFor(root, branch string) []byte {
+// repoWorkflowFor is that workflow for the repo at root, whose default branch is branch, calling
+// charter's at release (a checkout: main). The mise it installs is the one the repo's mise.toml asks
+// for (min_version): one place says which mise, and a runner's own may be older (seen: a repo that
+// needs 2026.10.4 on a runner with 2026.10.3).
+func repoWorkflowFor(root, branch, release string) []byte {
 	if branch == "" {
 		branch = "main"
 	}
-	text := strings.Replace(repoWorkflowTemplate, "__BRANCH__", branch, 1)
+	if release == "" {
+		release = "main"
+	}
 	with := ""
 	if config, err := os.ReadFile(filepath.Join(root, "mise.toml")); err == nil {
 		if m := regexp.MustCompile(`(?m)^min_version\s*=\s*"([0-9][0-9A-Za-z.-]*)"`).FindStringSubmatch(string(config)); m != nil {
-			with = "\n        with:\n          version: " + m[1] + " # the repo's mise.toml: min_version"
+			with = "\n    with:\n      mise-version: " + m[1] + " # the repo's mise.toml: min_version"
 		}
 	}
-	return []byte(strings.Replace(text, "__MISE__", with, 1))
+	return []byte(strings.NewReplacer("__BRANCH__", branch, "__REF__", release, "__WITH__", with).Replace(kitFile(".github/workflows/" + repoWorkflow)))
 }
 
 // hasProjects reports whether the repo at root is a project or lists some: it gets the projects'
@@ -60,22 +60,9 @@ func hasProjects(root string, config charterToml) bool {
 	return len(config.Projects) > 0 || isProject(root)
 }
 
-// collaboration are those files, by their path below .github.
-func collaboration() (map[string][]byte, error) {
-	files := map[string][]byte{}
-	err := fs.WalkDir(collaborationFiles, "github", func(path string, entry fs.DirEntry, err error) error {
-		if err != nil || entry.IsDir() {
-			return err
-		}
-		files[strings.TrimPrefix(path, "github/")], err = collaborationFiles.ReadFile(path)
-		return err
-	})
-	return files, err
-}
-
 func init() {
 	commands["workflows"] = command{"[-check] [-into <repo dir>]",
-		"write a repo's .github: the workflows (check, deploy, sdk-check, release), the issue forms (not one the repo wrote itself) and the labels file; -check fails if they differ", workflows}
+		"write a project's .github: the workflows (check, deploy, sdk-check, release) and charter's issue forms (charter-*.yml), each where the file there is missing or charter's; -check fails if one differs", workflows}
 	anywhere["workflows"] = true
 }
 
@@ -150,39 +137,10 @@ func workflowsFor(dir string) (map[string][]byte, error) {
 	return templates, nil
 }
 
-// formHeader starts every file charter writes into .github/ISSUE_TEMPLATE. A file there with one of
-// those names that starts otherwise is the repo's own form.
-const formHeader = "# Written by `charter"
-
-// ownForms are the issue forms of the repo in dir that are its own, by their path below .github: a
-// file where charter writes one of its forms, which does not start with formHeader. Charter leaves
-// them as they are, so a repo keeps a form of its own by writing it, and hands it back by deleting it.
-func ownForms(dir string) []string {
-	files, _ := collaboration()
-	var own []string
-	for name := range files {
-		if !strings.HasPrefix(name, "ISSUE_TEMPLATE/") {
-			continue
-		}
-		if have, err := os.ReadFile(filepath.Join(dir, ".github", filepath.FromSlash(name))); err == nil && !bytes.HasPrefix(have, []byte(formHeader)) {
-			own = append(own, name)
-		}
-	}
-	slices.Sort(own)
-	return own
-}
-
 // githubFiles are the files charter writes into the .github folder of the repo in dir, by their path
-// below it: the issue forms (not where the repo has its own, ownForms) and the labels file, and with
-// workflows the workflows as the repo needs them.
+// below it: the issue forms, and with workflows a project's workflows as the repo needs them.
 func githubFiles(dir string, workflows bool) (map[string][]byte, error) {
-	files, err := collaboration()
-	if err != nil {
-		return nil, err
-	}
-	for _, own := range ownForms(dir) {
-		delete(files, own)
-	}
+	files := formFiles()
 	if !workflows {
 		return files, nil
 	}
@@ -196,18 +154,14 @@ func githubFiles(dir string, workflows bool) (map[string][]byte, error) {
 	return files, nil
 }
 
-// writeWorkflows writes the workflows, the issue forms and the labels file into dir/.github.
+// writeWorkflows writes the workflows and the issue forms into dir/.github, where charter may.
 func writeWorkflows(dir string) error {
 	files, err := githubFiles(dir, true)
 	if err != nil {
 		return err
 	}
-	for name, content := range files {
-		if err := write(filepath.Join(dir, ".github", name), string(content)); err != nil {
-			return err
-		}
-	}
-	return nil
+	_, _, err = keepCharters(filepath.Join(dir, ".github"), files, false)
+	return err
 }
 
 func workflows(args []string) error {
@@ -235,31 +189,32 @@ func workflows(args []string) error {
 		fmt.Println("no .github/workflows here: mise run workflows writes them (GitHub reads them at a repo's root)")
 		return nil
 	}
-	var stale []string
-	for name, template := range templates {
-		if have, err := os.ReadFile(filepath.Join(dir, name)); err != nil || !bytes.Equal(have, template) {
-			stale = append(stale, name)
-		}
+	stale, kept, err := keepCharters(dir, templates, check)
+	if err != nil {
+		return err
 	}
-	slices.Sort(stale)
+	moved, err := sweep(dir, "ISSUE_TEMPLATE", func(name string) bool { return strings.HasPrefix(name, "charter-") }, templates, check)
+	if err != nil {
+		return err
+	}
+	for _, name := range kept {
+		fmt.Printf("kept %s: the repo's own (it does not carry charter's mark)\n", filepath.Join(dir, name))
+	}
 	if check {
-		if len(stale) > 0 {
-			return fmt.Errorf("%s: %s differ from the tool's templates (cmd/charter/workflows in the charter repo): mise run workflows writes them again",
-				dir, strings.Join(stale, ", "))
+		if len(stale)+len(moved) > 0 {
+			return fmt.Errorf("%s: %s differ from the tool's templates (cmd/charter/workflows and cmd/charter/kit/.github in the charter repo): mise run workflows writes them again",
+				dir, strings.Join(append(stale, moved...), ", "))
 		}
-		fmt.Printf("%s: %d workflows, issue forms and labels match their templates\n", dir, len(templates))
+		fmt.Printf("%s: %d workflows and issue forms match their templates\n", dir, len(templates)-len(kept))
 		return nil
 	}
 	for _, name := range stale {
-		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755); err != nil {
-			return err
-		}
-		if err := os.WriteFile(filepath.Join(dir, name), templates[name], 0o644); err != nil {
-			return err
-		}
 		fmt.Println("wrote", filepath.Join(dir, name))
 	}
-	fmt.Printf("%s: %d workflows, issue forms and labels, %d written\n", dir, len(templates), len(stale))
+	for _, change := range moved {
+		fmt.Println(change)
+	}
+	fmt.Printf("%s: %d workflows and issue forms, %d written\n", dir, len(templates), len(stale))
 	if len(stale) > 0 && !exists(filepath.Join(into, "mise.toml")) {
 		fmt.Println("note: the workflows only call mise tasks, and there is no mise.toml here: they are for a project (charter new makes one)")
 	}

@@ -2,10 +2,10 @@
 # whether or not it is a charter project, and gets these tasks and no others. They run at the repo's
 # root (dir) and call the tool as CHARTER_TOOL, or as charter when the repo does not set it (it pins
 # the tool under [tools]). Not here: releases, workflows, SDKs, Cloudflare (tasks/shared).
-# The docs site in docs/, which GitHub Pages renders.
+# The docs site in docs/, which GitHub Pages renders, and charter's own pages in docs/charter/.
 
 ["docs:setup"]
-description = "Write the docs site's config and docs/writing.md (the same for every repo; GitHub Pages renders the folder), and the pages docs/_generated.toml lists"
+description = "Write charter's pages (docs/charter/: the rules every repo shares, using charter, writing docs, the tasks) and the docs site's files, where they are charter's (GitHub Pages renders the folder), and the pages docs/_generated.toml lists"
 dir = "{{config_root}}"
 run = "{{ env.CHARTER_TOOL | default(value='charter') }} docs"
 
@@ -20,7 +20,7 @@ dir = "{{config_root}}"
 run = "{{ env.CHARTER_TOOL | default(value='charter') }} docs -check && {{ env.CHARTER_TOOL | default(value='charter') }} docs-lint"
 
 ["docs:review"]
-description = "Have Claude (the claude command) bring docs/ up to date and into line with docs/writing.md"
+description = "Have Claude (the claude command) bring docs/ up to date and into line with docs/charter/writing.md"
 dir = "{{config_root}}"
 run = "{{ env.CHARTER_TOOL | default(value='charter') }} docs-review"
 

@@ -91,19 +91,20 @@ func writtenFiles(root string) (files map[string][]byte, unknown map[string]stri
 	if config.Renovate {
 		files["renovate.json"] = renovateConfig(toolVersion())
 	}
-	// The docs site: its config has the repo's name and description on GitHub in it.
+	// The docs site and charter's pages: the site's config has the repo's name and description on GitHub in it.
 	var repo githubRepo
 	out, ghErr := gh(root, "repo", "view", "--json", "nameWithOwner,name,description,defaultBranchRef")
 	onGitHub := ghErr == nil && json.Unmarshal([]byte(out), &repo) == nil && repo.Name != ""
 	repo.Description = config.Description
-	for path, content := range docsSite(repo, config.Docs) {
-		path = filepath.ToSlash(filepath.Clean(path))
-		if strings.HasSuffix(path, "_config.yml") && !onGitHub {
-			unknown[path] = "not compared: it holds the repo's name on GitHub, which gh could not read here"
-			continue
-		}
-		files[path] = content
+	site := &repo
+	if !onGitHub {
+		site = nil
+		unknown[filepath.ToSlash(filepath.Join(config.Docs, "_config.yml"))] = "not compared: it holds the repo's name on GitHub, which gh could not read here"
 	}
+	for path, content := range docsFiles(config.Docs, site) {
+		files[filepath.ToSlash(filepath.Clean(path))] = content
+	}
+	unknown[filepath.ToSlash(filepath.Join(config.Docs, charterFolder, "tasks.md"))] = "not compared: written from what mise lists (charter docs-tasks), and mise run docs:check compares it"
 	if !projects {
 		for path, content := range agentFiles() {
 			files[path] = content
@@ -111,7 +112,7 @@ func writtenFiles(root string) (files map[string][]byte, unknown map[string]stri
 	}
 	if !projects && config.Workflow {
 		if path := ".github/workflows/" + repoWorkflow; onGitHub {
-			files[path] = repoWorkflowFor(root, repo.DefaultBranchRef.Name)
+			files[path] = repoWorkflowFor(root, repo.DefaultBranchRef.Name, toolVersion())
 		} else {
 			unknown[path] = "not compared: it names the default branch on GitHub, which gh could not read here"
 		}
@@ -146,8 +147,8 @@ func filesCommand(args []string) error {
 }
 
 // filesReport is what charter files prints for the repo at root, a line per file: charter's files
-// first (matches, differs, missing, not compared), then those it started, then what carries the
-// mark where charter writes nothing, and the issue forms that are the repo's own.
+// first (matches, differs, missing, not compared), then those it started and those of the repo's
+// own at a path charter writes, then what carries the mark where charter writes nothing.
 func filesReport(root string) ([]string, error) {
 	want, unknown, err := writtenFiles(root)
 	if err != nil {
@@ -173,8 +174,10 @@ func filesReport(root string) ([]string, error) {
 		seen[path] = true
 		by := "charter " + command
 		switch {
-		case !ok && (written || later):
-			charters = append(charters, row("charter's", "differs", path, "it carries no mark (an earlier release wrote it, or you did): mise run repo, or for a page mise run docs:setup, writes charter's"))
+		case (!ok || !owned) && (written || later) && ownPlace(path):
+			charters = append(charters, row("charter's", "differs", path, "in charter's own place, without its mark: mise run repo writes charter's"))
+		case (!ok || !owned) && (written || later):
+			yours = append(yours, row("yours", "own", path, "at a path charter writes, without its mark: charter leaves it alone (delete it for charter's)"))
 		case !ok:
 		case !owned:
 			yours = append(yours, row("yours", "started", path, by+" wrote it once: edit it"))
@@ -199,9 +202,7 @@ func filesReport(root string) ([]string, error) {
 		}
 	}
 	slices.Sort(charters)
-	for _, form := range ownForms(root) {
-		yours = append(yours, row("yours", "own form", ".github/"+form, "it does not start with charter's mark: charter leaves it alone"))
-	}
+	slices.Sort(yours)
 	lines := append(append(charters, yours...), elsewhere...)
 	if len(lines) == 0 {
 		return []string{"no file here says charter wrote it: charter adopt starts a repo, mise run repo keeps it"}, nil

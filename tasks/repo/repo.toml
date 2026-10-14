@@ -5,7 +5,7 @@
 # The repo on GitHub, its issues, and the upstream issues its code works around.
 
 ["repo"]
-description = "REMOTE: keep the repo in shape from charter.toml at its root: docs site, issue forms, labels, description, homepage, topics, GitHub Pages; the workflows only in a repo with charter projects"
+description = "REMOTE: keep the repo in shape from charter.toml at its root: docs site and charter's pages, issue forms, labels, the workflow, description, homepage, topics, GitHub Pages; never a file of the repo's own"
 dir = "{{config_root}}"
 run = "{{ env.CHARTER_TOOL | default(value='charter') }} repo"
 
@@ -20,7 +20,7 @@ dir = "{{config_root}}"
 run = "gh issue list --state open --limit 30"
 
 ["repo:ci"]
-description = "Everything the repo-check workflow runs, here: docs:check (the docs site and generated pages are fresh, docs/ passes the lint), repo:check (the repo is as charter.toml says), upstream:status. The workflow runs this one task and nothing else, so a pass here is a pass on GitHub. REMOTE, read-only"
+description = "Everything the charter workflow runs (charter.yml, which calls charter's repo-check), here: docs:check (the docs site and generated pages are fresh, docs/ passes the lint), repo:check (the repo is as charter.toml says), upstream:status. The workflow runs this one task and nothing else, so a pass here is a pass on GitHub. REMOTE, read-only"
 dir = "{{config_root}}"
 depends = ["docs:check", "repo:check", "upstream:status"]
 

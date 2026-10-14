@@ -6,7 +6,7 @@ parent: How this repo is kept
 
 # Rules for every repo
 
-Written by `charter docs` (the same page in every repo that uses it): don't edit it here, change `cmd/charter/docs/repo/rules.md` in [charter](https://github.com/joeblew999/charter). A repo's own rules are in its `rules.md`, and add to these.
+Written by `charter docs` (the same page in every repo that uses it): don't edit it here, change `cmd/charter/kit/docs/charter/rules.md` in [charter](https://github.com/joeblew999/charter). A repo's own rules are in its `docs/rules.md`, and add to these.
 
 Binding, for developers and agents alike.
 

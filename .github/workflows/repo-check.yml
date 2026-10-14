@@ -1,0 +1,31 @@
+# charter's reusable workflow: the checks any repo takes from charter (tasks/repo), in one job. A repo
+# that is not a charter project calls it from the charter.yml that `charter repo` writes there
+# (cmd/charter/kit/.github/workflows/charter.yml), at the release it pins, so the steps are charter's
+# and change with a release, not in every repo. This file is the source: it is not written from a template.
+name: repo-check
+on:
+  workflow_call:
+    inputs:
+      mise-version:
+        description: The mise the calling repo's mise.toml asks for (min_version). Empty, the latest.
+        type: string
+        default: ""
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  pages: read
+jobs:
+  repo-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+        with:
+          version: ${{ inputs.mise-version }}
+      # One task, the same one a developer runs: what it checks is written in tasks/repo, not here,
+      # so a pass on your machine is a pass on GitHub. docs:check, repo:check, upstream:status.
+      - run: mise run repo:ci

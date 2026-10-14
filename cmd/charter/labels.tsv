@@ -1,4 +1,5 @@
-# Written by `charter repo` and `charter workflows` (github.com/joeblew999/charter): don't edit. `charter labels` makes the repo's labels these.
+# The labels charter gives every repo it keeps, on GitHub: `charter repo` and `charter labels` make the repo's labels these.
+# The tool's own, not written into a repo: change them here, in github.com/joeblew999/charter.
 name	color	description
 bug	d73a4a	it does the wrong thing
 feature	a2eeef	a calling repository needs something it does not do

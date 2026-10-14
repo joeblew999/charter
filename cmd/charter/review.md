@@ -3,7 +3,7 @@ Bring the documentation in `docs/` of this repository up to date and into line w
 ## Read first
 
 1. `AGENTS.md`, then `docs/README.md` (the start page) and `docs/rules.md`.
-2. `docs/writing.md`: the rules every page is held to. They are the standard for this job.
+2. `docs/charter/writing.md`: the rules every page is held to. They are the standard for this job.
 
 ## What a program already found
 
@@ -17,11 +17,11 @@ Fix every one of these. Fix the page, not the checker.
 
 ## Then, page by page
 
-For every page under `docs/` (leave `_config.yml`, `_sass/` and `writing.md` alone: they are generated):
+For every page under `docs/` (leave `_config.yml`, `llms.txt`, `_sass/` and `charter/` alone: charter writes them):
 
 1. **Check each statement against the repo as it is now.** For a command, look in `mise.toml` (`mise tasks`). For a path, look for the file. For how something works, read the code it names. For a number or a result, find it in `docs/findings.md` or the benchmarks page. If a statement is wrong, correct it from what the code says. If it can't be confirmed, cut it or say plainly that it is unverified.
 2. **Find what is missing.** Look at what the part actually has (its files, its tasks in `mise.toml`, its flags, its limits) and add what a reader of that page needs and can't currently find there.
-3. **Make the page do its one job** as `docs/writing.md` defines it for that kind of page: restructure, cut history and repetition, move facts to the page that owns them and link.
+3. **Make the page do its one job** as `docs/charter/writing.md` defines it for that kind of page: restructure, cut history and repetition, move facts to the page that owns them and link.
 4. **Keep the start page's index and "What is what" table complete and correct:** every page has a row, every name in the table is the name used everywhere.
 
 ## Limits

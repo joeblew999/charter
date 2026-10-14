@@ -64,7 +64,7 @@ topics = ["api", "cloudflare-workers"]
 # docs = "docs"                the docs folder: "docs" or "."
 # projects = ["api"]           folders that are projects, in a repo that holds several
 # renovate = false             no renovate.json (default: charter's Renovate preset)
-# workflow = false             no repo-check workflow, in a repo that is not a project
+# workflow = false             no charter.yml workflow, in a repo that is not a project
 ```
 
 ```sh
@@ -72,7 +72,7 @@ mise run repo          # REMOTE: brings the repo in line, printing ok or changed
 mise run repo:check    # REMOTE, read-only: fails on drift, for CI
 ```
 
-It runs at the repo's root, from any folder in it, and keeps: the docs site's config, `docs/writing.md` and the [generated pages](#generated-pages); the issue forms (not one the repo wrote itself: a file in `.github/ISSUE_TEMPLATE/` that does not start with charter's `# Written by` line is kept, and named in the output) and `labels.tsv`; the workflows, for a repo that is a project or lists `projects`, and otherwise the one `repo-check` workflow ([Any repo](any-repo.md#checks-on-github)); the GitHub labels, removing GitHub's unused defaults; the description, homepage and topics, with `charter` added, which is how `charter catalog` finds the repo; `renovate.json` ([Repos that use each other](repos.md#propagate-a-release)); GitHub Pages for the docs folder. Running it again changes nothing. A project in a subfolder keeps its own tasks.
+It runs at the repo's root, from any folder in it, and keeps: charter's pages in `docs/charter/`, the docs site's files and the [generated pages](#generated-pages); the issue forms; the workflows, for a repo that is a project or lists `projects`, and otherwise the one `charter.yml` workflow ([Any repo](any-repo.md#checks-on-github)); each file only where there is none or the one there carries charter's mark (a file without it is the repo's own: kept, and named in the output); the GitHub labels, removing GitHub's unused defaults; the description, homepage and topics, with `charter` added, which is how `charter catalog` finds the repo; `renovate.json` ([Repos that use each other](repos.md#propagate-a-release)); GitHub Pages for the docs folder. Running it again changes nothing. A project in a subfolder keeps its own tasks.
 
 ### Generated pages
 

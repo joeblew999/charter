@@ -174,9 +174,15 @@ func newProject(args []string) error {
 			return err
 		}
 	}
-	// The writing rules are charter's in every repo: charter docs writes them again.
-	if err := write(filepath.Join(into, "docs", "writing.md"), docsWriting); err != nil {
+	// charter's pages and the docs site's files, the same in every repo: charter docs writes them
+	// again, with the site's config once the repo is on GitHub and the tasks page once mise lists them.
+	if _, _, err := keepCharters(into, docsFiles("docs", nil), false); err != nil {
 		return err
+	}
+	if path, page, err := tasksFile(into, "docs"); err == nil {
+		if err := write(filepath.Join(into, path), string(page)); err != nil {
+			return err
+		}
 	}
 	if err := writeWorkflows(into); err != nil {
 		return err

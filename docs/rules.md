@@ -5,11 +5,11 @@ parent: How to help
 ---
 # Rules for working in this repo
 
-Binding, for developers and agents alike: other repos build on this one. These are this repo's own; the rules every repo shares are in [Rules for every repo](repo/rules.md).
+Binding, for developers and agents alike: other repos build on this one. These are this repo's own; the rules every repo shares are in [Rules for every repo](charter/rules.md).
 
 | Rule | Why |
 |---|---|
-| **`docs/` is the single source of truth.** `AGENTS.md`, `CLAUDE.md` and folder READMEs only point to it. Pages follow [Writing docs](writing.md); run `mise run docs:lint` | One place cannot contradict itself |
+| **`docs/` is the single source of truth.** `AGENTS.md`, `CLAUDE.md` and folder READMEs only point to it. Pages follow [Writing docs](charter/writing.md); run `mise run docs:lint` | One place cannot contradict itself |
 | **Never edit what is generated** ([the list](README.md#what-is-generated)) | A hand edit is lost, and `mise run check` fails |
 | **Every task is one line** of programs, double quotes and `&&`, which sh and cmd.exe both take. More is a command of the tool in `cmd/charter/`, added to [its table](reference/charter.md) | A task runs the same everywhere, Windows included |
 | **A project is self-contained; task names are the same in every project.** Workflows only call mise, one task a job, so what GitHub runs you can run | `charter new` copies an example as it is, and CI runs what you run |

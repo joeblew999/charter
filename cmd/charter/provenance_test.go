@@ -16,10 +16,10 @@ import (
 // without the mark fails here: every template in the tool's folders carries it, and so does every
 // file the commands leave in a repo.
 func TestEveryFileCharterWritesSaysSo(t *testing.T) {
-	// The folders of templates, and the two files in them that are not written into a repo.
-	notWritten := []string{"docs/review.md" /* the prompt docs-review hands Claude */, "renovate/charter.json" /* the preset a renovate.json extends, read from GitHub */}
+	// The folders of templates, and the file in them that is not written into a repo.
+	notWritten := []string{"renovate/charter.json" /* the preset a renovate.json extends, read from GitHub */}
 	templates := 0
-	for _, folder := range []string{"docs", "github", "workflows", "repoworkflows", "renovate"} {
+	for _, folder := range []string{"kit", "workflows", "renovate"} {
 		err := filepath.WalkDir(folder, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || slices.Contains(notWritten, filepath.ToSlash(path)) {
 				return err
@@ -78,7 +78,7 @@ func TestEveryFileCharterWritesSaysSo(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	started := []string{"charter.toml", "docs/README.md", "docs/rules.md", "mise.toml", "docs/_generated.toml"}
+	started := []string{"charter.toml", "docs/README.md", "docs/rules.md", "mise.toml"}
 	found := map[string]bool{}
 	for _, dir := range []string{root, project} {
 		err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
@@ -107,7 +107,7 @@ func TestEveryFileCharterWritesSaysSo(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, file := range append(started, ".github/labels.tsv", "renovate.json", "docs/writing.md", "docs/llms.txt", "docs/_config.yml", "docs/_sass/custom/custom.scss", ".github/ISSUE_TEMPLATE/bug.yml", ".github/workflows/repo-check.yml", ".github/workflows/check.yml") {
+	for _, file := range append(started, "renovate.json", "docs/charter/README.md", "docs/charter/rules.md", "docs/charter/using.md", "docs/charter/writing.md", "docs/charter/tasks.md", "docs/llms.txt", "docs/_config.yml", "docs/_sass/custom/custom.scss", ".github/ISSUE_TEMPLATE/charter-bug.yml", ".github/ISSUE_TEMPLATE/config.yml", ".github/workflows/charter.yml", ".github/workflows/check.yml") {
 		if !found[file] {
 			t.Errorf("the commands wrote no %s", file)
 		}
@@ -128,9 +128,9 @@ func TestEveryFileCharterWritesSaysSo(t *testing.T) {
 	if out, err := exec.Command("git", "-C", root, "init", "-q").CombinedOutput(); err != nil {
 		t.Skipf("git init: %v\n%s", err, out)
 	}
-	os.WriteFile(filepath.Join(root, "docs", "writing.md"), []byte(docsWriting+"\nMine.\n"), 0o644)
+	os.WriteFile(filepath.Join(root, "docs", "charter", "writing.md"), []byte(kitFile("docs/charter/writing.md")+"\nMine.\n"), 0o644)
 	os.Remove(filepath.Join(root, "renovate.json"))
-	write(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "bug.yml"), "name: Our own\n")
+	write(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "charter-bug.yml"), "name: Our own\n")
 	write(filepath.Join(root, "notes.md"), "# Notes\n")
 	lines, err := filesReport(root)
 	if err != nil {
@@ -138,9 +138,9 @@ func TestEveryFileCharterWritesSaysSo(t *testing.T) {
 	}
 	report := strings.Join(lines, "\n")
 	for path, state := range map[string]string{
-		".github/labels.tsv": "charter's  matches ", ".github/workflows/repo-check.yml": "charter's  matches ", "docs/_config.yml": "charter's  matches ",
-		"docs/writing.md": "charter's  differs ", "renovate.json": "charter's  missing ", "AGENTS.md": "charter's  matches ", "CLAUDE.md": "charter's  matches ", "mise.toml": "yours      started ",
-		".github/ISSUE_TEMPLATE/bug.yml": "yours      own form",
+		".github/workflows/charter.yml": "charter's  matches ", "docs/_config.yml": "charter's  matches ", "docs/charter/using.md": "charter's  matches ",
+		"docs/charter/writing.md": "charter's  differs ", "renovate.json": "charter's  missing ", "AGENTS.md": "charter's  matches ", "CLAUDE.md": "charter's  matches ", "mise.toml": "yours      started ",
+		".github/ISSUE_TEMPLATE/charter-bug.yml": "charter's  differs ",
 	} {
 		if !slices.ContainsFunc(lines, func(line string) bool { return strings.HasPrefix(line, state+"  "+path+" ") }) {
 			t.Errorf("charter files: no %q for %s in:\n%s", state, path, report)

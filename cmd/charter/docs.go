@@ -18,43 +18,21 @@ import (
 
 func init() {
 	commands["docs"] = command{"[-into <repo dir>] [-check]",
-		"write the docs site's config, the writing rules and the pages docs/_generated.toml lists into a repo's docs/ folder (GitHub Pages renders it; any repo, same look); -check fails if one is stale", docs}
+		"write charter's pages (docs/charter/: the rules every repo shares, using charter, writing docs, the tasks) and the docs site's files into a repo's docs/ folder (GitHub Pages renders it; any repo, same look), then the pages docs/_generated.toml lists; a file without charter's mark is kept; -check fails if one is stale", docs}
 	commands["docs-review"] = command{"[-print]",
-		"have Claude bring docs/ up to date and into line with docs/writing.md (-print: only show the prompt)", docsReviewRun}
+		"have Claude bring docs/ up to date and into line with docs/charter/writing.md (-print: only show the prompt)", docsReviewRun}
 	anywhere["docs"], anywhere["docs-review"] = true, true
 }
 
-//go:embed docs/_config.yml
-var docsConfig string
-
-//go:embed docs/custom.scss
-var docsStyle string
-
-//go:embed docs/writing.md
-var docsWriting string
-
-// The pages that say how every repo is kept: the same in each, as writing.md is.
+// The prompt docs-review hands Claude: the same for every repo.
 //
-//go:embed docs/repo.md
-var docsRepo string
-
-//go:embed docs/repo/rules.md
-var docsRepoRules string
-
-//go:embed docs/review.md
+//go:embed review.md
 var docsReview string
 
-// llms.txt: the docs' index for agents, each page linked as Markdown. A template the site's
-// renderer fills in. (An all-in-one llms-full.txt can't be made this way: the renderer hands a
-// template the pages as HTML.)
-//
-//go:embed docs/llms.txt
-var docsLLMs string
-
-// docsRepoCharter is the page that says how to use charter, written from the tool itself: the same
-// in every repo, at the release its mise.toml pins, so what an agent is told matches the tool it
-// has. AGENTS.md loads it with the rules.
-func docsRepoCharter() string {
+// docsUsing is the page in charter's folder that says how to use charter, written from the tool
+// itself: the same in every repo, at the release its mise.toml pins, so what an agent is told matches
+// the tool it has. AGENTS.md loads it with the rules.
+func docsUsing() string {
 	cell := strings.NewReplacer("|", `\|`, "\n", " ").Replace
 	var page strings.Builder
 	page.WriteString("---\ntitle: Using charter\nnav_order: 2\nparent: How this repo is kept\n---\n\n# Using charter\n\n" +
@@ -84,9 +62,12 @@ func docsRepoCharter() string {
 	return page.String()
 }
 
-// docs writes the files that make a repo's docs/ folder a site on GitHub Pages. They are the same
-// for every repo except for its name, description and URLs, which GitHub is asked for. Then the
-// pages its docs/_generated.toml lists, each from its command's output. With -check
+// docs writes the files that make a repo's docs/ folder a site on GitHub Pages, and charter's own
+// pages in docs/charter/. They are the same for every repo except for its name, description and URLs,
+// which GitHub is asked for, and the tasks page, which mise is. Then the pages its
+// docs/_generated.toml lists, each from its command's output. docs/charter/ is charter's: written as
+// this release has it, and what else is in it removed. The site's files at the top of docs/ are
+// written where they are charter's: one without its mark is the repo's own, and kept. With -check
 // nothing is written, and it fails if a file differs.
 func docs(args []string) error {
 	into, check := ".", false
@@ -106,36 +87,48 @@ func docs(args []string) error {
 	if err := json.Unmarshal([]byte(out), &repo); err != nil {
 		return err
 	}
-	files, generated, err := siteFiles(into, "docs", repo)
+	files, generated, list, err := siteFiles(into, "docs", &repo)
 	if err != nil {
 		return err
 	}
 	writer := map[string]string{} // a generated page: its command
-	for _, g := range generated {
-		writer[filepath.Join(into, "docs", filepath.FromSlash(g.Page))] = g.Run
+	for _, g := range list {
+		writer[filepath.ToSlash(filepath.Join("docs", filepath.FromSlash(g.Page)))] = g.Run
 	}
-	stale := 0
-	for path, content := range files {
-		path = filepath.Join(into, path)
-		if current, _ := os.ReadFile(path); bytes.Equal(current, content) {
-			continue
+	stale, kept, err := keepCharters(into, files, check)
+	if err != nil {
+		return err
+	}
+	pages, err := syncFiles(into, generated, check) // the repo's own list: written whatever is there
+	if err != nil {
+		return err
+	}
+	moved, err := sweep(into, filepath.Join("docs", charterFolder), nil, files, check)
+	if err != nil {
+		return err
+	}
+	for _, path := range kept {
+		fmt.Printf("kept %s: the repo's own (it does not carry charter's mark)\n", path)
+	}
+	for _, path := range append(stale, pages...) {
+		switch run, ok := writer[path]; {
+		case check && ok:
+			fmt.Fprintf(os.Stderr, "%s is stale: `%s` now prints something else (mise run docs:setup)\n", path, run)
+		case check:
+			fmt.Fprintf(os.Stderr, "%s differs from what `charter docs` writes: mise run docs:setup\n", path)
+		default:
+			fmt.Println("wrote", path)
 		}
-		stale++
+	}
+	for _, change := range moved {
 		if check {
-			if run, ok := writer[path]; ok {
-				fmt.Fprintf(os.Stderr, "%s is stale: `%s` now prints something else (mise run docs:setup)\n", path, run)
-			} else {
-				fmt.Fprintf(os.Stderr, "%s differs from what `charter docs` writes: mise run docs:setup\n", path)
-			}
-			continue
+			fmt.Fprintf(os.Stderr, "%s, which this release does not write: mise run docs:setup removes it\n", strings.TrimPrefix(change, "removed "))
+		} else {
+			fmt.Println(change)
 		}
-		if err := write(path, string(content)); err != nil {
-			return err
-		}
-		fmt.Println("wrote", path)
 	}
-	if check && stale > 0 {
-		return errors.New("the docs site's config or a generated page is stale")
+	if check && len(stale)+len(pages)+len(moved) > 0 {
+		return errors.New("the docs site's files, charter's pages or a generated page are stale")
 	}
 	owner, name, _ := strings.Cut(repo.NameWithOwner, "/")
 	fmt.Printf("docs site: https://%s.github.io/%s/ (first time: mise run docs:pages)\n", owner, name)
@@ -149,29 +142,21 @@ type githubRepo struct {
 	RepositoryTopics                              []struct{ Name string }
 }
 
-// docsSite are the files that make a repo's docs folder a site, by their path in the repo: the same
-// for every repo but for its name, description, URLs and the folder.
-func docsSite(repo githubRepo, folder string) map[string][]byte {
-	description, _ := json.Marshal(repo.Description) // a YAML string, safely quoted
-	config := strings.NewReplacer("__NAME__", repo.Name, "__DESCRIPTION__", string(description),
-		"__REPO__", repo.NameWithOwner, "__BRANCH__", repo.DefaultBranchRef.Name,
-		"gh_edit_source: docs", "gh_edit_source: "+folder).Replace(docsConfig)
-	files := map[string][]byte{}
-	for path, content := range map[string]string{"_config.yml": config, "_sass/custom/custom.scss": docsStyle, "writing.md": docsWriting, "repo.md": docsRepo, "repo/rules.md": docsRepoRules, "repo/charter.md": docsRepoCharter(), "llms.txt": docsLLMs} {
-		files[filepath.Join(folder, path)] = []byte(content)
-	}
-	return files
-}
-
-// siteFiles are every file charter writes into the docs folder of the repo at root, by their path in
-// the repo: the site's own (docsSite) and the pages its _generated.toml lists, which are returned too.
-func siteFiles(root, folder string, repo githubRepo) (map[string][]byte, []generatedPage, error) {
-	files := docsSite(repo, folder)
-	generated, err := readGenerated(filepath.Join(root, filepath.FromSlash(folder)))
+// siteFiles are the files charter writes into the docs folder of the repo at root, by their path in
+// the repo: charter's own (docsFiles and the tasks page), and apart from them the pages the repo's
+// _generated.toml lists, each from its command, which are returned too.
+func siteFiles(root, folder string, repo *githubRepo) (charters, generated map[string][]byte, list []generatedPage, err error) {
+	charters = docsFiles(folder, repo)
+	path, page, err := tasksFile(root, folder)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, fmt.Errorf("the tasks page, %s: %w", filepath.ToSlash(filepath.Join(folder, charterFolder, "tasks.md")), err)
 	}
-	return files, generated, addGenerated(files, root, folder, generated)
+	charters[path] = page
+	if list, err = readGenerated(filepath.Join(root, filepath.FromSlash(folder))); err != nil {
+		return nil, nil, nil, err
+	}
+	generated = map[string][]byte{}
+	return charters, generated, list, addGenerated(generated, root, folder, list)
 }
 
 // addGenerated adds the generated pages to files (by their path in the repo at root, below the
@@ -272,7 +257,7 @@ func splitCommand(line string) []string {
 
 // docsReviewRun hands Claude (the claude command, Claude Code) the review prompt with what
 // docs-lint found, in this repo, allowed to edit files. The prompt is the same for every repo; the
-// standard it applies is docs/writing.md.
+// standard it applies is docs/charter/writing.md.
 func docsReviewRun(args []string) error {
 	show := false
 	flags("docs-review", args, func(f *flag.FlagSet) { f.BoolVar(&show, "print", false, "print the prompt, don't run Claude") })

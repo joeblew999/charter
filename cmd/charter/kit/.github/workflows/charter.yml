@@ -1,0 +1,21 @@
+# Written by `charter repo` from its template (github.com/joeblew999/charter, cmd/charter/kit/.github/workflows/charter.yml):
+# don't edit: change the template, not this file. For a repo that is not a charter project: the checks
+# any repo takes from charter (tasks/repo). The steps are charter's own workflow, at the release this
+# repo pins: `charter upgrade` moves it with the pin. Each is a mise task, so it runs locally too.
+# The repo's own checks are its own workflow's. `workflow = false` in charter.toml: charter writes none.
+name: charter
+on:
+  push:
+    branches: [__BRANCH__]
+  pull_request:
+  workflow_dispatch:
+# What the checks read with gh, and nothing they could change: the repo and its topics, its labels
+# and whether a default one is in use (issues, pull requests), and whether Pages serves docs/.
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  pages: read
+jobs:
+  repo-check:
+    uses: joeblew999/charter/.github/workflows/repo-check.yml@__REF____WITH__

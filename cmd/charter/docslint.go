@@ -119,7 +119,9 @@ func docsLint(args []string) error {
 		}
 		rel, _ := filepath.Rel(docs, page)
 		rel = filepath.ToSlash(rel)
-		if rel != "README.md" && !linked[page] {
+		// charter's folder starts a section of its own: the sidebar and AGENTS.md reach it, so a repo's
+		// own pages need not link it.
+		if rel != "README.md" && rel != charterFolder+"/README.md" && !linked[page] {
 			say(page, "no other page links to it: add it to its section's table (or the home page's)")
 		}
 		// Links and paths are read from the prose: an example inside code is not a link.
@@ -142,9 +144,9 @@ func docsLint(args []string) error {
 			}
 		}
 		// Plans and findings describe what isn't built or what once was: only their links are checked.
-		// writing.md is the same page in every repo, with example names of its own.
+		// Charter's pages are the same in every repo, with example names of their own.
 		// A generated page is fixed in the code that writes it, and checked by charter docs -check.
-		if strings.Contains(rel, "plans/") || rel == "findings.md" || rel == "writing.md" || rel == "repo.md" || strings.HasPrefix(rel, "repo/") || generated[page] {
+		if strings.Contains(rel, "plans/") || rel == "findings.md" || strings.HasPrefix(rel, charterFolder+"/") || generated[page] {
 			continue
 		}
 		for _, m := range pinnedVersion.FindAllString(text, -1) {

@@ -13,7 +13,7 @@ import (
 func TestUpgradeMovesEverythingTogether(t *testing.T) {
 	root := t.TempDir()
 	put := func(name, content string) {
-		if err := os.WriteFile(filepath.Join(root, name), []byte(content), 0o644); err != nil {
+		if err := write(filepath.Join(root, filepath.FromSlash(name)), content); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -79,7 +79,7 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 	// Every file new writes around the example says so: started by new and the project's from then
 	// on, or charter's to write again.
 	for file, charters := range map[string]bool{"README.md": false, "AGENTS.md": false, "CLAUDE.md": false, "docs/README.md": false, "docs/rules.md": false, "charter.toml": false, "mise.toml": false,
-		"docs/writing.md": true, ".github/labels.tsv": true, ".github/workflows/check.yml": true, ".github/ISSUE_TEMPLATE/plan.yml": true} {
+		"docs/charter/writing.md": true, "docs/charter/rules.md": true, "docs/charter/using.md": true, "docs/llms.txt": true, ".github/workflows/check.yml": true, ".github/ISSUE_TEMPLATE/charter-plan.yml": true} {
 		content, _ := os.ReadFile(filepath.Join(into, filepath.FromSlash(file)))
 		if owned, command, ok := markOf(content); !ok || owned != charters || (!charters && command != "new") {
 			t.Errorf("%s: its mark says charter's %v, by %q (%v): want charter's %v", file, owned, command, ok, charters)
@@ -98,7 +98,7 @@ func TestNewProjectIsTheExampleUnderItsOwnName(t *testing.T) {
 		}
 	}
 	filepath.WalkDir(into, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil || d.IsDir() || inCharters(path) {
 			return err
 		}
 		content, _ := os.ReadFile(path)
@@ -365,12 +365,18 @@ func TestNewEmptyTypeScriptProject(t *testing.T) {
 	notMentioned(t, into, "notes", "charter-start", startDirTS)
 }
 
+// inCharters reports whether a file of a new project is in charter's own folder of its docs: the same
+// pages in every repo, which name the tool's commands and the tasks it shares, examples and all.
+func inCharters(path string) bool {
+	return strings.Contains(filepath.ToSlash(path), "/docs/"+charterFolder+"/")
+}
+
 // notMentioned fails for every file of the project (but the lockfile, which holds the relative path
-// to this checkout's library) that mentions one of gone, in any case.
+// to this checkout's library, and charter's own pages) that mentions one of gone, in any case.
 func notMentioned(t *testing.T, into string, gone ...string) {
 	t.Helper()
 	filepath.WalkDir(into, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() || filepath.Base(path) == "package-lock.json" {
+		if err != nil || d.IsDir() || filepath.Base(path) == "package-lock.json" || inCharters(path) {
 			return err
 		}
 		content, _ := os.ReadFile(path)
@@ -405,7 +411,7 @@ func TestNewProjectOnYourSubdomain(t *testing.T) {
 // repo's (adopt, repo).
 func TestAgentsLoadTheDocs(t *testing.T) {
 	for name, page := range map[string]string{"a project's": agentsPage, "any repo's": repoAgentsPage} {
-		if !strings.Contains(page, "\n@docs/README.md\n@docs/repo/rules.md\n@docs/rules.md\n@docs/repo/charter.md\n") {
+		if !strings.Contains(page, "\n@docs/README.md\n@docs/charter/rules.md\n@docs/rules.md\n@docs/charter/using.md\n") {
 			t.Errorf("%s AGENTS.md does not load the start page and the rules:\n%s", name, page)
 		}
 	}
@@ -414,7 +420,7 @@ func TestAgentsLoadTheDocs(t *testing.T) {
 // The page on using charter is written from the tool: every command is on it, as one row, and the
 // site's renderer would take none of it for template code.
 func TestUsingCharterListsEveryCommand(t *testing.T) {
-	page := docsRepoCharter()
+	page := docsUsing()
 	if !strings.HasPrefix(page, "---\ntitle: Using charter\n") || !strings.Contains(page, "parent: How this repo is kept\n") {
 		t.Errorf("no front matter under How this repo is kept:\n%s", page[:80])
 	}
@@ -500,7 +506,7 @@ func TestNewTypeScriptProject(t *testing.T) {
 		}
 	}
 	filepath.WalkDir(into, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil || d.IsDir() || inCharters(path) {
 			return err
 		}
 		content, _ := os.ReadFile(path)

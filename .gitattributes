@@ -10,8 +10,9 @@ examples/*/package-lock.json           linguist-generated=true
 ts/package-lock.json                   linguist-generated=true
 .github/workflows/*.yml                linguist-generated=true
 docs/_config.yml                       linguist-generated=true
-docs/writing.md                        linguist-generated=true
+docs/charter/**                        linguist-generated=true
 docs/llms.txt                          linguist-generated=true
 docs/_sass/**                          linguist-generated=true
 .github/ISSUE_TEMPLATE/*.yml            linguist-generated=true
-.github/labels.tsv                     linguist-generated=true
+# charter's own reusable workflow is source, not generated: repos call it from their charter.yml.
+.github/workflows/repo-check.yml       -linguist-generated

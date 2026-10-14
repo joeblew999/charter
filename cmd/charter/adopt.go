@@ -15,13 +15,15 @@ import (
 // `charter adopt` takes a repo that exists to the charter way: the parts of charter any repo can
 // use, whether or not it has an API. It writes what the repo lacks and keeps what it has, so
 // running it again changes nothing: charter.toml, AGENTS.md, CLAUDE.md, the docs' start page and
-// rules, then what `charter docs` writes, and a mise.toml that pins the tool and includes
-// tasks/repo. A mise.toml the repo has is its own: adopt prints the lines to add to it. `charter
-// new` makes a new API project instead, which has all of this and more.
+// rules, then what `charter docs` writes (charter's pages in docs/charter/, the docs site's files),
+// and a mise.toml that pins the tool and includes tasks/repo. A file of charter's that does not carry
+// its mark is the repo's own, and kept. A mise.toml the repo has is its own: adopt prints the lines
+// to add to it. In a project (charter's own repo among them) AGENTS.md, CLAUDE.md and the start pages
+// are the project's: adopt leaves them. `charter new` makes a new API project instead.
 
 func init() {
 	commands["adopt"] = command{"[-description <text>] [-from <checkout>]",
-		"take the repo you are in to the charter way, writing only what it lacks: charter.toml, AGENTS.md, CLAUDE.md, docs/README.md, docs/rules.md, the docs site, and a mise.toml with the tool's pin and the tasks any repo takes (tasks/repo), or the lines to add to the one it has", adoptCommand}
+		"take the repo you are in to the charter way, writing only what it lacks and never a file of its own: charter.toml, AGENTS.md, CLAUDE.md, docs/README.md, docs/rules.md, charter's pages (docs/charter/), the docs site, and a mise.toml with the tool's pin and the tasks any repo takes (tasks/repo), or the lines to add to the one it has", adoptCommand}
 	anywhere["adopt"] = true
 }
 
@@ -33,7 +35,7 @@ var repoTasks = []string{"docs:check", "docs:lint", "docs:pages", "docs:review",
 
 // The pages every repo charter keeps has, the same in a project made by new and a repo adopt took.
 const (
-	agentsPage = "# For agents\n\nEverything about this repo is in [docs/](docs/README.md), the same pages developers read. The start page, the rules and how to use charter come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does). Any other agent: read [docs/README.md](docs/README.md) first, then the rules, which are binding: [docs/repo/rules.md](docs/repo/rules.md), the same in every repo charter keeps, and [docs/rules.md](docs/rules.md), this repo's own; then [docs/repo/charter.md](docs/repo/charter.md), the tool it is kept with.\n\n@docs/README.md\n@docs/repo/rules.md\n@docs/rules.md\n@docs/repo/charter.md\n"
+	agentsPage = "# For agents\n\nEverything about this repo is in [docs/](docs/README.md), the same pages developers read. The start page, the rules and how to use charter come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does). Any other agent: read [docs/README.md](docs/README.md) first, then the rules, which are binding: [docs/charter/rules.md](docs/charter/rules.md), the same in every repo charter keeps, and [docs/rules.md](docs/rules.md), this repo's own; then [docs/charter/using.md](docs/charter/using.md), the tool it is kept with. Charter's part of the repo is [docs/charter/](docs/charter/README.md).\n\n@docs/README.md\n@docs/charter/rules.md\n@docs/rules.md\n@docs/charter/using.md\n"
 	claudePage = "@AGENTS.md\n"
 
 	rulesHead = `---
@@ -44,15 +46,15 @@ nav_order: 2
 # Rules for working in this repo
 
 `
-	ruleDocs     = "- **`docs/` is the single source of truth.** Write things down in a page here, following [writing.md](writing.md). `mise run docs:lint` checks what a program can, `mise run docs:review` has Claude check the rest.\n"
+	ruleDocs     = "- **`docs/` is the single source of truth.** Write things down in a page here, following [Writing docs](charter/writing.md). `mise run docs:lint` checks what a program can, `mise run docs:review` has Claude check the rest.\n"
 	ruleUpstream = "- **Workarounds name their upstream issue:** `Upstream: <owner>/<repo>#<n> (when fixed: ...)` in the code; `mise run upstream:status` lists them.\n"
 
 	// The rules every repo shares. A project's (goRules) add those of an API on Workers.
-	// A repo's own rules: the rules every repo shares are charter's page, repo/rules.md, the same
+	// A repo's own rules: the rules every repo shares are charter's page, charter/rules.md, the same
 	// everywhere, so this one starts with the pointer and is the repo's to add to.
 	repoRules = rulesHead +
-		"The rules every repo shares are in [Rules for every repo](repo/rules.md), which charter writes: the same page in each. Add here what is this repo's own.\n\n" +
-		"- **What is generated here:** [the list](README.md#what-is-generated).\n"
+		"The rules every repo shares are in [Rules for every repo](charter/rules.md), which charter writes: the same page in each. Add here what is this repo's own.\n\n" +
+		"- **What charter writes is charter's:** [the list](charter/README.md#what-is-charters). Never edit it here.\n"
 )
 
 // startPage is the top of a repo's docs/README.md, the docs site's home page: its front matter, its
@@ -71,9 +73,8 @@ Everything written about this repo lives in this folder. ` + "`AGENTS.md`" + ` o
 | Page | What it covers |
 |---|---|
 | This page | What is what |
-| [repo.md](repo.md) | How every repo charter keeps is kept: [the rules they share](repo/rules.md) |
 | [rules.md](rules.md) | This repo's own rules |
-| [writing.md](writing.md) | The rules a page in ` + "`docs/`" + ` is held to |
+| [charter/](charter/README.md) | Charter's part, the same in every repo it keeps: [the rules they share](charter/rules.md), [using charter](charter/using.md), [writing docs](charter/writing.md), [the tasks](charter/tasks.md) |
 
 ## What is what
 `
@@ -87,7 +88,7 @@ Say here what this repo is, and where its parts are: a row per part.
 
 | Name | Where | What it is |
 |---|---|---|
-| The tasks | ` + "`mise.toml`" + ` | [Tasks](tasks.md) lists them, written from the tasks themselves; those any repo takes come from [charter](` + anyRepoGuide + `) |
+| The tasks | ` + "`mise.toml`" + ` | [Tasks](charter/tasks.md) lists them, written from the tasks themselves; those any repo takes come from [charter](` + anyRepoGuide + `) |
 
 ## What is generated
 
@@ -95,9 +96,9 @@ Never edit these: change the source and run the task.
 
 | Path | Written by |
 |---|---|
-| ` + "`docs/writing.md`" + `, and the docs site's ` + "`_config.yml`, `llms.txt` and `_sass/`" + ` | ` + "`mise run docs:setup`" + ` |
+| ` + "`docs/charter/`" + `, and the docs site's ` + "`_config.yml`, `llms.txt` and `_sass/`" + ` | ` + "`mise run docs:setup`" + ` |
 | A page that ` + "`_generated.toml`" + ` in ` + "`docs/`" + ` lists | ` + "`mise run docs:setup`" + `, from its command |
-| The issue forms and ` + "`labels.tsv`" + ` in ` + "`.github/`, `renovate.json`" + ` | ` + "`mise run repo`" + ` |
+| ` + "`.github/ISSUE_TEMPLATE/charter-*.yml`, `config.yml`, `.github/workflows/charter.yml`, `renovate.json`, `AGENTS.md`, `CLAUDE.md`" + ` | ` + "`mise run repo`" + ` |
 `
 }
 
@@ -149,20 +150,22 @@ func adopt(root, description, version, checkout string) error {
 	}
 	say := func(did, path, why string) { fmt.Printf("%-7s  %s%s\n", did, path, why) }
 
-	// What a repo writes itself from here on: only if it is not there.
-	docsOwn := true
+	// What a repo writes itself from here on: only if it is not there. A project's start pages are
+	// what charter new wrote (and charter's own repo has its own): only charter.toml, if it lacks one.
+	config := charterToml{Docs: "docs", Renovate: true, Workflow: true}
 	if text, err := os.ReadFile(filepath.Join(root, "charter.toml")); err == nil {
-		config, err := parseCharterToml(string(text))
-		if err != nil {
+		if config, err = parseCharterToml(string(text)); err != nil {
 			return err
 		}
-		docsOwn = config.Docs == "docs"
 	}
+	docsOwn, project := config.Docs == "docs", hasProjects(root, config)
 	for _, page := range startPages(name, description) {
 		path := filepath.Join(root, filepath.FromSlash(page[0]))
 		switch {
 		case exists(path):
 			say("kept", page[0], "")
+		case project && page[0] != "charter.toml":
+			say("skipped", page[0], ": a project's start pages are its own")
 		case strings.HasPrefix(page[0], "docs/") && !docsOwn:
 			say("skipped", page[0], `: charter.toml says docs = ".", so the pages are at the root and yours`)
 		default:
@@ -173,57 +176,66 @@ func adopt(root, description, version, checkout string) error {
 		}
 	}
 
-	// What a repo's own CLAUDE.md or AGENTS.md said is its knowledge: it moves into docs/rules.md,
-	// where charter keeps a repo's own rules, before charter's pointer files take their place.
-	for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
-		moved, err := keepAgentNotes(root, name, docsOwn)
+	if project {
+		say("kept", "AGENTS.md, CLAUDE.md", ": a project's own")
+	} else {
+		// What a repo's own CLAUDE.md or AGENTS.md said is its knowledge: it moves into docs/rules.md,
+		// where charter keeps a repo's own rules, before charter's pointer files take their place.
+		for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
+			moved, err := keepAgentNotes(root, name, docsOwn)
+			if err != nil {
+				return err
+			}
+			if moved {
+				say("moved", name, ": what it said is now in docs/rules.md")
+			}
+		}
+		// The pointer files: charter's, the same in every repo, written again if they differ.
+		pointers, err := syncFiles(root, agentFiles(), false)
 		if err != nil {
 			return err
 		}
-		if moved {
-			say("moved", name, ": what it said is now in docs/rules.md")
+		for _, file := range pointers {
+			say("wrote", file, "")
+		}
+		if len(pointers) == 0 {
+			say("ok", "AGENTS.md, CLAUDE.md", ": what charter writes")
 		}
 	}
 
-	// The pointer files: charter's, the same in every repo, written again if they differ.
-	pointers, err := syncFiles(root, agentFiles(), false)
-	if err != nil {
-		return err
-	}
-	for _, file := range pointers {
-		say("wrote", file, "")
-	}
-	if len(pointers) == 0 {
-		say("ok", "AGENTS.md, CLAUDE.md", ": what charter writes")
-	}
-
-	// What charter docs writes: charter's own files, the same in every repo, so written again if stale.
-	switch {
-	case !docsOwn:
-	case onGitHub:
-		files, _, err := siteFiles(root, "docs", repo)
-		if err != nil {
-			return err
+	// charter's pages and the docs site's files: charter's, the same in every repo, so written again
+	// if stale, where the file is charter's. The pages an earlier release wrote elsewhere move here.
+	if docsOwn {
+		var site *githubRepo
+		if onGitHub {
+			site = &repo
 		}
-		stale, err := syncFiles(root, files, false)
+		stale, kept, err := keepCharters(root, docsFiles("docs", site), false)
 		if err != nil {
 			return err
 		}
 		for _, file := range stale {
 			say("wrote", file, "")
 		}
-		if len(stale) == 0 {
-			say("ok", "docs/", ": the docs site's files are what charter docs writes")
+		for _, file := range kept {
+			say("kept", file, ": yours (it does not carry charter's mark), so charter leaves it")
 		}
-	default:
-		stale, err := syncFiles(root, map[string][]byte{"docs/writing.md": []byte(docsWriting), "docs/repo.md": []byte(docsRepo), "docs/repo/rules.md": []byte(docsRepoRules), "docs/repo/charter.md": []byte(docsRepoCharter())}, false)
+		// charter's folder is what this release writes: the tasks page, which mise writes below, too.
+		files := docsFiles("docs", site)
+		files[filepath.Join("docs", charterFolder, "tasks.md")] = nil
+		moved, err := sweep(root, filepath.Join("docs", charterFolder), nil, files, false)
 		if err != nil {
 			return err
 		}
-		for _, file := range stale {
-			say("wrote", file, "")
+		for _, change := range moved {
+			fmt.Println(change)
 		}
-		say("waiting", "docs/_config.yml", ": the docs site's config needs the repo's name on GitHub; once it is there (gh repo create), mise run docs:setup")
+		if len(stale)+len(moved) == 0 {
+			say("ok", "docs/", ": charter's pages and the docs site's files are what charter docs writes")
+		}
+		if !onGitHub && !exists(filepath.Join(root, "docs", "_config.yml")) {
+			say("waiting", "docs/_config.yml", ": the docs site's config needs the repo's name on GitHub; once it is there (gh repo create), mise run docs:setup")
+		}
 	}
 
 	// mise.toml: written if there is none; one the repo has is its own, and gets the lines to add.
@@ -240,7 +252,7 @@ func adopt(root, description, version, checkout string) error {
 		return err
 	default:
 		text := string(have)
-		if add := linesToAdd(text, pin, include, checkout != ""); len(add) == 0 {
+		if add := linesToAdd(text, pin, include, checkout != "" || isCharter(root)); len(add) == 0 {
 			say("kept", "mise.toml", ": it has charter's lines (tasks/"+repoTasksFolder+" included)")
 		} else {
 			say("kept", "mise.toml", ": it is yours. Add to it:\n"+strings.Join(add, "\n"))
@@ -255,24 +267,32 @@ func adopt(root, description, version, checkout string) error {
 			fmt.Printf("         mise.toml defines %s itself: each takes the place of charter's task of that name. Delete those you want from charter\n", strings.Join(own, ", "))
 		}
 	}
-	// The pages a command writes (docs/_generated.toml: the tasks page), now that mise.toml is there.
+	// The pages mise writes, now that mise.toml is there: charter's tasks page, and those the repo's
+	// docs/_generated.toml lists. Where mise cannot list the tasks yet (the tool is not installed, or
+	// the release is not out), the first mise run docs:setup or mise run repo writes them.
 	if docsOwn {
-		generated, err := readGenerated(filepath.Join(root, "docs"))
-		if err != nil {
-			return err
-		}
 		pages := map[string][]byte{}
-		if err := addGenerated(pages, root, "docs", generated); err != nil {
-			// mise cannot list the tasks yet (the tool is not installed, or the release is not out):
-			// the first mise run docs:setup or mise run repo writes the page.
-			say("waiting", "docs/tasks.md", ": mise could not list the tasks yet; after mise install, mise run docs:setup writes it")
+		path, page, err := tasksFile(root, "docs")
+		if err == nil {
+			pages[path] = page
+			var generated []generatedPage
+			if generated, err = readGenerated(filepath.Join(root, "docs")); err != nil {
+				return err
+			}
+			err = addGenerated(pages, root, "docs", generated)
+		}
+		if err != nil {
+			say("waiting", "docs/charter/tasks.md", ": mise could not list the tasks yet; after mise install, mise run docs:setup writes it")
 		} else {
-			stale, err := syncFiles(root, pages, false)
+			stale, kept, err := keepCharters(root, pages, false)
 			if err != nil {
 				return err
 			}
 			for _, file := range stale {
 				say("wrote", file, "")
+			}
+			for _, file := range kept {
+				say("kept", file, ": yours (it does not carry charter's mark), so charter leaves it")
 			}
 		}
 	}
@@ -326,23 +346,23 @@ const repoAgentsPage = `# For agents
 
 Everything about this repo is in [docs/](docs/README.md), the same pages developers read. Nothing is kept here, so there is one source of truth.
 
-The start page, the rules, how to use charter and the tasks come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does), so nothing has to be looked up first. Any other agent: read them before anything else, in this order: [docs/README.md](docs/README.md), what this repo is and the index of every page; [docs/repo/rules.md](docs/repo/rules.md), the rules every repo shares; [docs/rules.md](docs/rules.md), this repo's own; [docs/repo/charter.md](docs/repo/charter.md), the tool it is kept with. The rules are binding.
+The start page, the rules, how to use charter and the tasks come with this file: each line below that starts with @ is that page itself, for an agent that reads them (Claude does), so nothing has to be looked up first. Any other agent: read them before anything else, in this order: [docs/README.md](docs/README.md), what this repo is and the index of every page; [docs/charter/rules.md](docs/charter/rules.md), the rules every repo shares; [docs/rules.md](docs/rules.md), this repo's own; [docs/charter/using.md](docs/charter/using.md), the tool it is kept with. The rules are binding.
 
 @docs/README.md
-@docs/repo/rules.md
+@docs/charter/rules.md
 @docs/rules.md
-@docs/repo/charter.md
-@docs/tasks.md
+@docs/charter/using.md
+@docs/charter/tasks.md
 
 Then:
 
 1. The open issues, ` + "`mise run issues`" + `: what is reported and what is planned. One labelled ` + "`needs-triage`" + ` comes first.
 2. The page for the part you are changing, from the start page's index.
-3. [docs/writing.md](docs/writing.md) before you write or change a page in ` + "`docs/`" + `.
+3. [docs/charter/writing.md](docs/charter/writing.md) before you write or change a page in ` + "`docs/`" + `.
 
 ` + "`mise tasks`" + ` lists what there is to run; ` + "`mise run check`" + `, where the repo has it, is what must pass.
 
-When you learn or change something, write it in the page in ` + "`docs/`" + ` it belongs to, and run ` + "`mise run docs:check`" + `. Don't add README files elsewhere.
+When you learn or change something, write it in the page in ` + "`docs/`" + ` it belongs to, and run ` + "`mise run docs:check`" + `. Don't add README files elsewhere. [docs/charter/](docs/charter/README.md) is charter's, written by it: change what is yours, not that.
 `
 
 // startPages are the files a repo that is not a project starts with and then owns, each with its
@@ -353,9 +373,6 @@ func startPages(name, description string) [][2]string {
 		{"charter.toml", charterTomlFor(description)},
 		{"docs/README.md", repoDocs(name)},
 		{"docs/rules.md", repoRules},
-		// Every repo has mise tasks, so every repo has the page of them: written by charter from
-		// the tasks themselves (charter docs-tasks), fresh or the check fails.
-		{"docs/_generated.toml", "# Pages a command writes: mise run docs:setup runs each and writes the page; docs:check fails on a stale one.\n[[generated]]\npage = \"tasks.md\"\nrun = \"charter docs-tasks\"\n"},
 	}
 	for i := range pages {
 		pages[i][1] = startedBy("adopt", pages[i][0], pages[i][1])
@@ -371,7 +388,7 @@ func linesToAdd(text, pin, include string, checkout bool) []string {
 		// The pin's own line, after its comment.
 		add = append(add, "  under [tools]:\n    "+strings.TrimSpace(pin[strings.LastIndex(strings.TrimSpace(pin), "\n")+1:]))
 	}
-	if !strings.Contains(text, "/tasks/"+repoTasksFolder+`"`) && !strings.Contains(text, "/tasks/"+repoTasksFolder+"?") {
+	if !strings.Contains(text, "/tasks/"+repoTasksFolder+`"`) && !strings.Contains(text, "/tasks/"+repoTasksFolder+"?") && !strings.Contains(text, `"tasks/`+repoTasksFolder+`"`) {
 		add = append(add, "  in includes, under [task_config] (a list: includes = [...]):\n    \""+include+`"`)
 	}
 	if !checkout && !strings.Contains(text, "\nexperimental = true") {

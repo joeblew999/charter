@@ -16,10 +16,13 @@ import (
 	"strings"
 )
 
-// `charter repo` keeps a repo in shape from charter.toml at its root: the docs site, the issue forms
-// and labels, the workflows when it has projects, the repo's description, homepage and topics on
-// GitHub, and GitHub Pages. Any repo: one that is not a project and lists none gets everything but
-// the workflows. An issue form of the repo's own (ownForms) is kept. Each item prints ok or changed, and running it again changes nothing.
+// `charter repo` keeps a repo in shape from charter.toml at its root: the docs site and charter's
+// pages, the issue forms and labels, the workflows (a project's, or the one any repo takes), the
+// repo's description, homepage and topics on GitHub, and GitHub Pages. Any repo, charter's own
+// included. Its own places (docs/charter/, the charter-*.yml forms, charter.yml) are written as this
+// release has them, and what else is in them removed; another file it writes only where there is none
+// or the one there carries charter's mark (keepCharters): one without it is the repo's, kept and
+// named. Each item prints ok or changed, and running it again changes nothing.
 // With -check it changes nothing and fails if an item differs, for CI. It calls the steps that
 // `charter docs`, `charter workflows` and `charter labels` are on their own.
 
@@ -37,7 +40,7 @@ type charterToml struct {
 	Docs        string   // the docs folder, default "docs"
 	Projects    []string // folders that are charter projects; with any, the repo gets the workflows
 	Renovate    bool     // write renovate.json, which takes charter's Renovate preset; default true
-	Workflow    bool     // in a repo that is not a project: write the repo-check workflow; default true
+	Workflow    bool     // in a repo that is not a project: write the charter.yml workflow; default true
 }
 
 var (
@@ -237,11 +240,19 @@ func keepRepo(root string, check bool) error {
 		run  func() ([]string, error)
 	}
 	steps := []step{}
-	if len(config.Projects) == 0 && !isProject(root) {
+	var kept []string // files at charter's paths that are the repo's own
+	keep := func(dir string, files map[string][]byte) ([]string, error) {
+		stale, own, err := keepCharters(filepath.Join(root, dir), files, check)
+		for _, file := range own {
+			kept = append(kept, filepath.ToSlash(filepath.Join(dir, file)))
+		}
+		return stale, err
+	}
+	if !hasProjects(root, config) {
 		// What adopt wrote on the first run: the same list (startPages). One that has gone missing is
-		// put back; one that is there is the repo's own, whatever it says.
+		// put back; one that is there is the repo's own, whatever it says. In a project, its own.
 		steps = append(steps, step{"AGENTS.md and CLAUDE.md", func() ([]string, error) {
-			return syncFiles(root, agentFiles(), check)
+			return keep(".", agentFiles())
 		}})
 		steps = append(steps, step{"what the repo starts with (charter adopt)", func() ([]string, error) {
 			var missing []string
@@ -264,24 +275,38 @@ func keepRepo(root string, check bool) error {
 		}})
 	}
 	steps = append(steps, []step{
-		{"docs site (" + config.Docs + "/)", func() ([]string, error) {
-			files, _, err := siteFiles(root, config.Docs, site)
+		{"docs site and charter's pages (" + config.Docs + "/)", func() ([]string, error) {
+			files, generated, _, err := siteFiles(root, config.Docs, &site)
 			if err != nil {
 				return nil, err
 			}
-			return syncFiles(root, files, check)
+			changes, err := keep(".", files)
+			if err != nil {
+				return nil, err
+			}
+			pages, err := syncFiles(root, generated, check) // the repo's own list: written whatever is there
+			if err != nil {
+				return nil, err
+			}
+			gone, err := sweep(root, filepath.Join(config.Docs, charterFolder), nil, files, check)
+			return append(append(changes, pages...), gone...), err
 		}},
-		{".github issue forms and labels.tsv", func() ([]string, error) {
+		{".github issue forms", func() ([]string, error) {
 			files, err := githubFiles(root, false)
 			if err != nil {
 				return nil, err
 			}
-			return syncFiles(filepath.Join(root, ".github"), files, check)
+			changes, err := keep(".github", files)
+			if err != nil {
+				return nil, err
+			}
+			gone, err := sweep(filepath.Join(root, ".github"), "ISSUE_TEMPLATE", func(name string) bool { return strings.HasPrefix(name, "charter-") }, files, check)
+			return append(changes, gone...), err
 		}},
 	}...)
 	if config.Renovate {
 		steps = append(steps, step{"renovate.json", func() ([]string, error) {
-			return syncFiles(root, map[string][]byte{"renovate.json": renovateConfig(toolVersion())}, check)
+			return keep(".", map[string][]byte{"renovate.json": renovateConfig(toolVersion())})
 		}})
 	}
 	switch {
@@ -291,12 +316,12 @@ func keepRepo(root string, check bool) error {
 			if err != nil {
 				return nil, err
 			}
-			return syncFiles(filepath.Join(root, ".github", "workflows"), workflows, check)
+			return keep(filepath.Join(".github", "workflows"), workflows)
 		}})
 	case config.Workflow:
 		// Not a project: the one workflow any repo takes. Its other workflows are its own.
 		steps = append(steps, step{".github/workflows/" + repoWorkflow, func() ([]string, error) {
-			return syncFiles(root, map[string][]byte{".github/workflows/" + repoWorkflow: repoWorkflowFor(root, repo.DefaultBranchRef.Name)}, check)
+			return keep(".github", map[string][]byte{"workflows/" + repoWorkflow: repoWorkflowFor(root, repo.DefaultBranchRef.Name, toolVersion())})
 		}})
 	}
 	steps = append(steps,
@@ -306,9 +331,6 @@ func keepRepo(root string, check bool) error {
 		step{"topics", func() ([]string, error) { return syncTopics(root, repo, config.Topics, check) }},
 		step{"GitHub Pages", func() ([]string, error) { return syncPages(root, repo, config.Docs, check) }},
 	)
-	for _, form := range ownForms(root) {
-		fmt.Printf("kept     .github/%s: the repo's own (it does not start with %q)\n", form, formHeader)
-	}
 	drift := 0
 	for _, step := range steps {
 		changes, err := step.run()
@@ -323,6 +345,10 @@ func keepRepo(root string, check bool) error {
 		default:
 			fmt.Printf("changed  %s: %s\n", step.name, strings.Join(changes, "; "))
 		}
+	}
+	slices.Sort(kept)
+	for _, file := range slices.Compact(kept) {
+		fmt.Printf("kept     %s: the repo's own (it does not carry charter's mark)\n", file)
 	}
 	if drift > 0 {
 		return fmt.Errorf("%d items differ from charter.toml and the tool's templates: mise run repo", drift)
@@ -351,10 +377,7 @@ func syncFiles(dir string, files map[string][]byte, check bool) ([]string, error
 
 // labelRows are the labels in labels.tsv: name, color, description.
 func labelRows() ([][3]string, error) {
-	rows, err := collaborationFiles.ReadFile("github/labels.tsv")
-	if err != nil {
-		return nil, err
-	}
+	rows := labelsFile
 	var labels [][3]string
 	// A line that starts with # says where the file comes from; the first of the others names the columns.
 	header := true

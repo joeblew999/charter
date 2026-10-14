@@ -200,7 +200,7 @@ func TestRepoKeepsTheRepo(t *testing.T) {
 	if err := keep(false); err != nil {
 		t.Fatal(err)
 	}
-	for _, file := range []string{"docs/_config.yml", "docs/writing.md", "docs/llms.txt", ".github/labels.tsv", ".github/ISSUE_TEMPLATE/bug.yml", ".github/ISSUE_TEMPLATE/plan.yml", ".github/workflows/check.yml"} {
+	for _, file := range []string{"docs/_config.yml", "docs/charter/writing.md", "docs/charter/tasks.md", "docs/llms.txt", ".github/ISSUE_TEMPLATE/charter-bug.yml", ".github/ISSUE_TEMPLATE/charter-plan.yml", ".github/workflows/check.yml"} {
 		if !exists(filepath.Join(root, file)) {
 			t.Errorf("no %s", file)
 		}
@@ -252,8 +252,8 @@ func TestRepoKeepsTheRepo(t *testing.T) {
 	if err := keep(false); err != nil {
 		t.Fatal(err)
 	}
-	if exists(filepath.Join(root, ".github", "workflows", "check.yml")) || !exists(filepath.Join(root, ".github", "labels.tsv")) {
-		t.Error("without projects: the issue forms and labels, and none of a project's workflows")
+	if exists(filepath.Join(root, ".github", "workflows", "check.yml")) || !exists(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "charter-bug.yml")) || exists(filepath.Join(root, ".github", "labels.tsv")) {
+		t.Error("without projects: the issue forms, no labels file, and none of a project's workflows")
 	}
 	if *github.pages != [3]string{"legacy", "main", "/docs"} || !slices.Equal(github.topics, []string{"charter"}) {
 		t.Errorf("Pages %v, topics %v", *github.pages, github.topics)
@@ -272,23 +272,23 @@ func TestRepoKeepsTheRepo(t *testing.T) {
 }
 
 // charter repo in a repo that is not a project and lists none (what charter adopt leaves): the docs
-// site, the issue forms, labels.tsv, renovate.json and the one workflow any repo takes (repo-check,
-// unless workflow = false), beside the repo's own workflows and none of a project's. A form the repo wrote
-// itself (it does not start with charter's header) is kept and is not drift; one charter wrote and
-// someone edited is written again.
+// site and charter's pages, the issue forms, renovate.json and the one workflow any repo takes
+// (charter.yml, unless workflow = false), beside the repo's own workflows and forms and none of a
+// project's. A file at a name the host fixes (docs/_config.yml) without charter's mark is the repo's:
+// kept, and not drift. In charter's own places, an edited file is written again.
 func TestRepoInARepoThatIsNotAProject(t *testing.T) {
-	forms, err := collaboration()
-	if err != nil {
-		t.Fatal(err)
-	}
+	forms := formFiles()
 	for name, content := range forms {
-		if strings.HasPrefix(name, "ISSUE_TEMPLATE/") && !strings.HasPrefix(string(content), formHeader) {
-			t.Errorf("cmd/charter/github/%s does not start with %q: a repo's own form is known by lacking it", name, formHeader)
+		if charters, _, ok := markOf(content); !ok || !charters {
+			t.Errorf("cmd/charter/kit/.github/%s has no mark: a repo's own form is known by lacking it", name)
+		}
+		if name != "ISSUE_TEMPLATE/config.yml" && !strings.HasPrefix(name, "ISSUE_TEMPLATE/charter-") {
+			t.Errorf("cmd/charter/kit/.github/%s: charter's forms are named charter-*.yml, beside the repo's own", name)
 		}
 		// YAML ends an unquoted value at a colon and a space, and GitHub then offers no such form.
 		for _, m := range regexp.MustCompile(`(?m)^ *(?:description|label|name|title): ([^"'|\n].*)$`).FindAllStringSubmatch(string(content), -1) {
 			if strings.Contains(m[1], ": ") {
-				t.Errorf("cmd/charter/github/%s: a colon and a space in an unquoted value: %s", name, m[1])
+				t.Errorf("cmd/charter/kit/.github/%s: a colon and a space in an unquoted value: %s", name, m[1])
 			}
 		}
 	}
@@ -298,14 +298,15 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 	t.Cleanup(func() {
 		gh = func(string, ...string) (string, error) { return "", errors.New("no gh in tests") }
 	})
-	own := "# This repo's own bug form.\nname: Bug report\n"
-	edited := formHeader + " workflows`\nname: Mine now\n"
+	edited := "# Written by `charter repo`: don't edit.\nname: Mine now\n"
 	for file, content := range map[string]string{
-		"charter.toml":                       "description = \"Field notes\"\n",
-		"mise.toml":                          "[tasks.test]\nrun = \"true\"\n",
-		".github/ISSUE_TEMPLATE/bug.yml":     own,
-		".github/ISSUE_TEMPLATE/feature.yml": edited,
-		".github/workflows/stages.yml":       "name: stages\n",
+		"charter.toml":                               "description = \"Field notes\"\n",
+		"mise.toml":                                  "[tasks.test]\nrun = \"true\"\n",
+		".github/ISSUE_TEMPLATE/charter-bug.yml":     "name: no mark\n",
+		".github/ISSUE_TEMPLATE/charter-feature.yml": edited,
+		".github/ISSUE_TEMPLATE/bug.yml":             "name: Ours\n", // the repo's, at the name charter once used
+		".github/workflows/stages.yml":               "name: stages\n",
+		"docs/_config.yml":                           "title: our own site\n",
 	} {
 		if err := write(filepath.Join(root, filepath.FromSlash(file)), content); err != nil {
 			t.Fatal(err)
@@ -314,9 +315,14 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 	if err := keepRepo(root, false); err != nil {
 		t.Fatal(err)
 	}
-	for _, file := range []string{"docs/_config.yml", "docs/writing.md", "renovate.json", ".github/labels.tsv", ".github/workflows/repo-check.yml", ".github/workflows/stages.yml", ".github/ISSUE_TEMPLATE/config.yml", ".github/ISSUE_TEMPLATE/plan.yml", ".github/ISSUE_TEMPLATE/upstream.yml"} {
+	for _, file := range []string{"docs/charter/README.md", "docs/charter/writing.md", "docs/charter/tasks.md", "renovate.json", ".github/workflows/charter.yml", ".github/workflows/stages.yml", ".github/ISSUE_TEMPLATE/config.yml", ".github/ISSUE_TEMPLATE/charter-plan.yml", ".github/ISSUE_TEMPLATE/charter-upstream.yml"} {
 		if !exists(filepath.Join(root, filepath.FromSlash(file))) {
 			t.Errorf("no %s", file)
+		}
+	}
+	for _, file := range []string{".github/labels.tsv", ".github/workflows/repo-check.yml", "docs/writing.md", "docs/repo.md"} {
+		if exists(filepath.Join(root, filepath.FromSlash(file))) {
+			t.Errorf("charter wrote %s, where it writes nothing now", file)
 		}
 	}
 	// What adopt writes on the first run, repo puts back when it is missing: one list (startPages).
@@ -335,38 +341,58 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 			t.Errorf("charter repo wrote %s in a repo that is not a project", file)
 		}
 	}
-	if have, _ := os.ReadFile(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "bug.yml")); string(have) != own {
-		t.Errorf("the repo's own bug form was replaced:\n%s", have)
+	for file, want := range map[string]string{".github/ISSUE_TEMPLATE/charter-bug.yml": string(forms["ISSUE_TEMPLATE/charter-bug.yml"]), ".github/ISSUE_TEMPLATE/bug.yml": "name: Ours\n", "docs/_config.yml": "title: our own site\n"} {
+		if have, _ := os.ReadFile(filepath.Join(root, filepath.FromSlash(file))); string(have) != want {
+			t.Errorf("%s:\n%s", file, have)
+		}
 	}
-	if have, _ := os.ReadFile(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "feature.yml")); string(have) != string(forms["ISSUE_TEMPLATE/feature.yml"]) {
+	if have, _ := os.ReadFile(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "charter-feature.yml")); string(have) != string(forms["ISSUE_TEMPLATE/charter-feature.yml"]) {
 		t.Error("a form charter wrote, edited by hand, was not written again")
 	}
-	if got := ownForms(root); !slices.Equal(got, []string{"ISSUE_TEMPLATE/bug.yml"}) {
-		t.Errorf("the repo's own forms: %v", got)
-	}
 	if err := keepRepo(root, true); err != nil {
-		t.Errorf("-check with a form of the repo's own: %v", err)
+		t.Errorf("-check with files of the repo's own at charter's paths: %v", err)
 	}
-	// The workflow: one job on Linux, on pull requests and pushes to the default branch, every step a
-	// mise task of tasks/repo, reading GitHub with the run's own token and no permission to write.
+	// The workflow: a call to charter's own, at the release, on pull requests and pushes to the
+	// default branch, with no permission to write; the mise the repo asks for.
 	workflow, _ := os.ReadFile(filepath.Join(root, ".github", "workflows", repoWorkflow))
-	for _, want := range []string{"name: repo-check\n", "    branches: [main]\n", "  pull_request:\n", "\npermissions:\n  contents: read\n  issues: read\n  pull-requests: read\n  pages: read\n",
-		"GH_TOKEN: ${{ github.token }}", "    runs-on: ubuntu-24.04\n", "- run: mise run repo:ci\n"} {
+	for _, want := range []string{"name: charter\n", "    branches: [main]\n", "  pull_request:\n", "\npermissions:\n  contents: read\n  issues: read\n  pull-requests: read\n  pages: read\n",
+		"    uses: joeblew999/charter/.github/workflows/repo-check.yml@main\n"} {
 		if !strings.Contains(string(workflow), want) {
-			t.Errorf("%s: no %q", repoWorkflow, want)
+			t.Errorf("%s: no %q in\n%s", repoWorkflow, want, workflow)
 		}
 	}
-	if strings.Count(string(workflow), "runs-on:") != 1 || strings.Contains(string(workflow), ": write") || strings.Contains(string(workflow), "__") {
-		t.Errorf("%s: more than one job, a permission to write, or a placeholder left:\n%s", repoWorkflow, workflow)
+	if strings.Contains(string(workflow), ": write") || strings.Contains(string(workflow), "__") || strings.Contains(string(workflow), "runs-on:") {
+		t.Errorf("%s: a permission to write, a placeholder left, or steps of its own:\n%s", repoWorkflow, workflow)
 	}
-	for _, m := range regexp.MustCompile(`- run: (.*)`).FindAllStringSubmatch(string(workflow), -1) {
+	if got := string(repoWorkflowFor(t.TempDir(), "trunk", "v1.2.3")); !strings.Contains(got, "branches: [trunk]") || !strings.Contains(got, "repo-check.yml@v1.2.3\n") {
+		t.Errorf("the workflow for trunk at v1.2.3:\n%s", got)
+	}
+	write(filepath.Join(root, "mise.toml"), "min_version = \"2026.10.4\"\n")
+	if got := string(repoWorkflowFor(root, "main", "v1.2.3")); !strings.Contains(got, "repo-check.yml@v1.2.3\n    with:\n      mise-version: 2026.10.4 ") {
+		t.Errorf("the workflow does not ask for the repo's min_version:\n%s", got)
+	}
+	// charter's own workflow, which that one calls: one job on Linux, every step a mise task of
+	// tasks/repo or an action pinned to a release, reading GitHub with the run's token, writing nothing.
+	called, err := os.ReadFile("../../.github/workflows/repo-check.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"  workflow_call:\n", "      mise-version:\n", "          version: ${{ inputs.mise-version }}\n", "GH_TOKEN: ${{ github.token }}", "    runs-on: ubuntu-24.04\n", "- run: mise run repo:ci\n"} {
+		if !strings.Contains(string(called), want) {
+			t.Errorf("repo-check.yml: no %q", want)
+		}
+	}
+	if strings.Count(string(called), "runs-on:") != 1 || strings.Contains(string(called), ": write") {
+		t.Errorf("repo-check.yml: more than one job, or a permission to write:\n%s", called)
+	}
+	for _, m := range regexp.MustCompile(`- run: (.*)`).FindAllStringSubmatch(string(called), -1) {
 		if task, ok := strings.CutPrefix(m[1], "mise run "); !ok || !slices.Contains(repoTasks, task) {
-			t.Errorf("%s runs %q, which is not a task of tasks/repo", repoWorkflow, m[1])
+			t.Errorf("repo-check.yml runs %q, which is not a task of tasks/repo", m[1])
 		}
 	}
-	for _, m := range regexp.MustCompile(`- uses: (.*)`).FindAllStringSubmatch(string(workflow), -1) {
+	for _, m := range regexp.MustCompile(`- uses: (.*)`).FindAllStringSubmatch(string(called), -1) {
 		if !regexp.MustCompile(`^[\w.-]+/[\w.-]+@v\d+\.\d+\.\d+$`).MatchString(m[1]) {
-			t.Errorf("%s: pin the action to an exact version, not %q", repoWorkflow, m[1])
+			t.Errorf("repo-check.yml: pin the action to an exact version, not %q", m[1])
 		}
 	}
 	// workflow = false: charter writes none, and one that is there is the repo's.
@@ -388,13 +414,62 @@ func TestRepoInARepoThatIsNotAProject(t *testing.T) {
 		t.Fatal(err)
 	}
 	if exists(filepath.Join(project, ".github", "workflows", repoWorkflow)) || !exists(filepath.Join(project, ".github", "workflows", "check.yml")) {
-		t.Error("a project: its own workflows, and no repo-check")
+		t.Error("a project: its own workflows, and no charter.yml")
+	}
+	for _, file := range []string{"AGENTS.md", "CLAUDE.md", "docs/README.md", "docs/rules.md"} {
+		if exists(filepath.Join(project, filepath.FromSlash(file))) {
+			t.Errorf("charter repo wrote %s in a project, whose own it is", file)
+		}
 	}
 
 	// Deleted, the form is charter's again.
-	os.Remove(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "bug.yml"))
+	os.Remove(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "charter-bug.yml"))
 	if err := keepRepo(root, true); err == nil {
 		t.Error("-check passed without the bug form")
+	}
+}
+
+// charter's own places are exactly what the release writes: a page in docs/charter/ or a form
+// charter-*.yml that it does not write is removed, and one edited or without the mark is written
+// again. A form of the repo's own, under any other name, stays.
+func TestRepoOwnsItsPlaces(t *testing.T) {
+	root := t.TempDir()
+	github := &fakeGitHub{labels: map[string][2]string{}}
+	gh = github.gh
+	t.Cleanup(func() {
+		gh = func(string, ...string) (string, error) { return "", errors.New("no gh in tests") }
+	})
+	for file, content := range map[string]string{
+		"charter.toml":                           "description = \"Field notes\"\n",
+		"mise.toml":                              "[tasks.test]\nrun = \"true\"\n",
+		"docs/charter/old.md":                    "# a page an earlier release wrote\n",
+		"docs/charter/rules.md":                  "# no mark\n",
+		".github/ISSUE_TEMPLATE/charter-old.yml": "name: Old\n",
+		".github/ISSUE_TEMPLATE/bug.yml":         "name: Ours\n",
+	} {
+		if err := write(filepath.Join(root, filepath.FromSlash(file)), content); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := keepRepo(root, true); err == nil {
+		t.Error("-check passed with what charter does not write in its own places")
+	}
+	if err := keepRepo(root, false); err != nil {
+		t.Fatal(err)
+	}
+	for _, gone := range []string{"docs/charter/old.md", ".github/ISSUE_TEMPLATE/charter-old.yml"} {
+		if exists(filepath.Join(root, filepath.FromSlash(gone))) {
+			t.Errorf("%s is still in charter's place", gone)
+		}
+	}
+	if have, _ := os.ReadFile(filepath.Join(root, "docs", "charter", "rules.md")); string(have) != kitFile("docs/charter/rules.md") {
+		t.Error("docs/charter/rules.md is not charter's")
+	}
+	if have, _ := os.ReadFile(filepath.Join(root, ".github", "ISSUE_TEMPLATE", "bug.yml")); string(have) != "name: Ours\n" {
+		t.Error("the repo's own form was changed")
+	}
+	if err := keepRepo(root, true); err != nil {
+		t.Errorf("-check after a run: %v", err)
 	}
 }
 

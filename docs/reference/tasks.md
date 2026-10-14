@@ -19,12 +19,12 @@ The tasks of `tasks/repo/`, which a repo that is not a project includes on its o
 | `repo`, `repo:check` | REMOTE. `charter repo` at the repo's root: keeps it as `charter.toml` says; the workflows only in a repo with projects ([Keep the repo in shape](../guides/deploy.md#keep-the-repo-in-shape)); `repo:check` changes nothing and fails on drift |
 | `issues` | REMOTE, read-only. The open issues, newest first: what is reported and what is planned |
 | `release` | REMOTE. `mise run release -- vX.Y.Z [-dry-run]`: the repo is clean and on the default branch, then its own `setup`, `check` and `dist` where it has them, the tag, the GitHub Release. It does not wait for GitHub's workflows; one that failed on the commit stops it |
-| `repo:ci` | REMOTE, read-only. What the `repo-check` workflow runs, and all it runs: `docs:check`, `repo:check`, `upstream:status` |
+| `repo:ci` | REMOTE, read-only. What the `charter.yml` workflow runs (through charter's `repo-check`), and all it runs: `docs:check`, `repo:check`, `upstream:status` |
 | `issue` | Prints the body to fill in for an issue of one kind (`-- bug`, `feature`, `upstream`, `plan`), and the `gh` command that files it |
 | `upstream:status` | REMOTE, read-only. Every `Upstream:` tag in the code, with its issue's state |
-| `docs:setup` | Writes the docs site's config, `docs/writing.md`, `docs/llms.txt` and the [generated pages](../guides/deploy.md#generated-pages) |
+| `docs:setup` | Writes charter's pages in `docs/charter/`, the docs site's files and the [generated pages](../guides/deploy.md#generated-pages) |
 | `docs:lint`, `docs:check` | Checks `docs/`; `docs:check` also fails if the config or a generated page is stale |
-| `docs:review` | Has Claude bring `docs/` into line with `docs/writing.md` |
+| `docs:review` | Has Claude bring `docs/` into line with `docs/charter/writing.md` |
 | `docs:pages` | REMOTE. Turns GitHub Pages on for `docs/` |
 
 ## A Go project
