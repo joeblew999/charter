@@ -16,7 +16,7 @@
 		"@orpc/openapi": "2.0.0-beta.40",
 		"@orpc/server": "2.0.0-beta.40",
 		"@orpc/zod": "2.0.0-beta.40",
-		"charter-ts": "^0.3.0",
+		"charter-ts": "^0.4.0",
 		"zod": "^4.6.5"
 	},
 	"devDependencies": {
