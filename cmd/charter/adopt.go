@@ -150,6 +150,10 @@ func adopt(root, description, version, checkout string) error {
 	if checkout != "" && !exists(filepath.Join(checkout, "tasks", repoTasksFolder)) {
 		return fmt.Errorf("%s is not a checkout of charter with tasks/%s", checkout, repoTasksFolder)
 	}
+	// A mise.toml adopt writes pins the release this tool is: without one to pin, stop before writing anything.
+	if !exists(filepath.Join(root, "mise.toml")) && version == "" && checkout == "" {
+		return errors.New("adopt: the repo has no mise.toml, and this tool is no release to pin: run a release (mise x " + toolRelease + " -- charter adopt), or pass -from <checkout of charter>")
+	}
 	// The repo on GitHub, if it is there yet: its description, and what the docs site is made from.
 	var repo githubRepo
 	onGitHub := false

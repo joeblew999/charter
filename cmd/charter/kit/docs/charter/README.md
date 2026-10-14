@@ -8,6 +8,43 @@ has_children: true
 
 Written by `charter adopt` (the same folder in every repo that uses it): don't edit these pages here, change `cmd/charter/kit/docs/charter/` in [charter](https://github.com/joeblew999/charter).
 
+## The flow
+
+1. **Adopt charter, once.** In the repo:
+
+   ```sh
+   mise x github:joeblew999/charter -- charter adopt
+   ```
+
+   It copies charter's kit into the repo: the files listed at the end of this page. It also starts `charter.toml`, `docs/README.md`, `docs/rules.md` and the `mise.toml` lines, if the repo lacks them. Those are yours from then on.
+
+2. **Install, and set the repo on GitHub.**
+
+   ```sh
+   mise install
+   mise run repo
+   ```
+
+   `repo` sets the labels, description, topics and Pages from `charter.toml`.
+
+3. **Check before every commit.**
+
+   ```sh
+   mise run docs:check
+   mise run check    # where the repo has it
+   ```
+
+   GitHub runs the same checks on every push.
+
+4. **Move to a new release of charter.**
+
+   ```sh
+   mise x github:joeblew999/charter@X.Y.Z -- charter upgrade
+   mise run adopt
+   ```
+
+   `upgrade` moves the pin, and `adopt` writes the kit again as that release has it.
+
 Every repo that uses charter is kept the same way, so a developer or an agent who knows one knows them all. This folder is charter's: what is the same in every repo is here, and what is this repo's own is on its other pages.
 
 | Page | What it is |
