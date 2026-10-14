@@ -43,7 +43,7 @@ The Go Worker's median CPU, 2026-10-01 and 2026-10-02:
 |---|---|---|---|
 | TinyGo and workers-go as they come | 55 ms | 71 ms | about 265 ms |
 | 1. The collector no longer runs at every pause: a runtime patch, an 8 MB heap | 6 to 19 | 8 to 29 | 61 to 66 |
-| 2. Go runtimes reused between requests (`go/worker/go.mjs`) | 3 | 7 | 10 to 13 |
+| 2. Go runtimes reused between requests (`go/lib/worker/go.mjs`) | 3 | 7 | 10 to 13 |
 | 3. Goroutine stacks reused: a second patch | 1 | 3 | 4 |
 | 4. One crossing into Go and one out; D1 rows as one JSON string; the hub published to by RPC | 0 | 1 to 2 | 2 |
 | 5. Two runtimes started and warmed while the module loads (a new isolate's first request) | 7 to 11, was 90 to 170 | | |

@@ -105,10 +105,10 @@ What `charter new` makes, and `examples/notes-go/`: these, and the tasks of [any
 | `charter:check` | The tool: gofmt, vet, tests, the generated workflows and docs config, the docs lint |
 | `go:check` | The Go library's lint (gofmt, vet, vet for Wasm) and its tests, for the host and for Wasm |
 | `ts:setup` | Installs the TypeScript library's packages and builds it |
-| `ts:build` | Compiles the TypeScript library into `ts/dist/`, which its package exports. After changing `ts/src/` |
+| `ts:build` | Compiles the TypeScript library into `ts/lib/dist/`, which its package exports. After changing `ts/packages/charter-ts/src/` |
 | `ts:check` | The TypeScript library's typecheck and its tests |
 | `compare` | REMOTE. The same bench against the TypeScript and the Go notes Workers |
-| `ci:scope` | In the check workflow: which Windows and macOS jobs run. All on a push to main or a version tag; on a pull request, those for what it changes (`charter ci-scope`) |
+| `ci:scope` | In the check workflow: which Windows and macOS jobs run. All on a push to main or a version tag; on a pull request, those for what it changes (`charter ci:scope`) |
 | `catalog` | REMOTE, read-only. `charter catalog`: the owner's charter repos and who pins each ([Repos that use each other](../guides/repos.md)) |
 | `release -- vX.Y.Z [-dry-run]` | REMOTE. Cuts a release of the repo, as in a project; [how](../contributing.md#cut-a-release) |
 | `dist` | HEAVY. `dist` in `examples/notes-go/` and `examples/notes-ts/` |

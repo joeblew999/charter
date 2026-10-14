@@ -31,7 +31,7 @@ GET /api/hello, 8 at once     3 6n 5w 74n 13w 110n 83n 101n
 ```sh
 mise run perf:try -- -name base                     # a baseline, from the same hour
 mise run perf:try -- -name myidea                   # your change: built, deployed to a scratch Worker, benched, deleted
-mise run perf:try -- -name heap4 -build '-heap 4'   # other build flags (those of charter wasm-build)
+mise run perf:try -- -name heap4 -build '-heap 4'   # other build flags (those of charter build)
 mise run perf:clean                                 # deletes scratch Workers a run left
 ```
 

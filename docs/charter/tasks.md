@@ -16,12 +16,13 @@ Run one with `mise run <task>`; its arguments and flags go after `--`. `mise tas
 |---|---|
 | [`setup`](#setup) | Install every example's npm packages (its own mise run setup) |
 | [`ts:setup`](#tssetup) | Install the TypeScript library's npm packages and build it (each TypeScript example's setup does it too) |
-| [`ts:build`](#tsbuild) | Compile the TypeScript library into ts/dist/ (JavaScript and types), which its package exports: after changing ts/src, before an example uses it |
+| [`ts:build`](#tsbuild) | Compile the TypeScript library into ts/lib/dist/ (JavaScript and types), which its package exports: after changing ts/lib/src, before an example uses it |
 | [`charter:check`](#chartercheck) | The tool's own checks (gofmt, vet, tests, with the test that holds the two notes examples to one surface), the generated workflows and docs config match their templates, and docs/ passes the lint |
 | [`go:check`](#gocheck) | LOCAL: the Go library's lint (gofmt, go vet, for the host and for Wasm) and tests |
 | [`ts:check`](#tscheck) | LOCAL: the TypeScript library's typecheck and tests |
 | [`projects:check`](#projectscheck) | LOCAL: mise run check in every project (examples/ and conformance/), one after the other, against the TypeScript library as built now |
 | [`check`](#check) | Every LOCAL check (no Cloudflare account; needs Docker): the tool, the Go library, the TypeScript library, then each project's own check |
+| [`flow`](#flow) | The whole flow on throwaway things, every step shown: every task of tasks/repo on a local repo (with \-\- -github, on a throwaway repo on GitHub too), then tasks/project on a project charter new makes, built, with its SDKs (Docker), deployed to the Worker charter-flow-api and deleted after. Steps it cannot run are named, with why |
 | [`ci:scope`](#ciscope) | In the check workflow: which Windows and macOS jobs to run (all on a push; on a pull request, those for what it changes) |
 | [`release`](#release) | REMOTE: cut a release of the repo from this machine: mise run release \-\- vX.Y.Z [-dry-run]. Runs check and dist, tags, pushes, makes the GitHub Release, runs release:publish and release:tags |
 | [`dist`](#dist) | HEAVY: what the notes examples ship (their SDKs, specs and CLI for every OS), each into its own dist/: what mise run release builds before the tag |
@@ -70,7 +71,7 @@ Install the TypeScript library's npm packages and build it (each TypeScript exam
 
 - **Usage:** `ts:build`
 
-Compile the TypeScript library into ts/dist/ (JavaScript and types), which its package exports: after changing ts/src, before an example uses it
+Compile the TypeScript library into ts/lib/dist/ (JavaScript and types), which its package exports: after changing ts/lib/src, before an example uses it
 
 ### `charter:check`
 
@@ -101,6 +102,12 @@ LOCAL: mise run check in every project (examples/ and conformance/), one after t
 - **Usage:** `check`
 
 Every LOCAL check (no Cloudflare account; needs Docker): the tool, the Go library, the TypeScript library, then each project's own check
+
+### `flow`
+
+- **Usage:** `flow`
+
+The whole flow on throwaway things, every step shown: every task of tasks/repo on a local repo (with -- -github, on a throwaway repo on GitHub too), then tasks/project on a project charter new makes, built, with its SDKs (Docker), deployed to the Worker charter-flow-api and deleted after. Steps it cannot run are named, with why
 
 ### `ci:scope`
 

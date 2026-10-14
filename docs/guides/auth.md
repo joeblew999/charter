@@ -6,7 +6,7 @@ parent: Guides
 
 # Auth: who may call, and how they prove it
 
-The contract says which scopes each operation needs; one middleware checks every request against it: `go/auth` in Go, `@charter/ts/auth` in TypeScript. In the notes examples, reading is public and writing needs `write`.
+The contract says which scopes each operation needs; one middleware checks every request against it: `go/lib/auth` in Go, `@charter/ts/auth` in TypeScript. In the notes examples, reading is public and writing needs `write`.
 
 ## Three ways in
 

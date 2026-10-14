@@ -27,7 +27,7 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 
 | Command | Flags | What it does |
 |---|---|---|
-| `wasm-build` | below | Writes the Worker glue into `build/`, patches a copy of TinyGo's runtime once per TinyGo version, builds `build/app.wasm` and checks its size |
+| `build` | below | Writes the Worker glue into `build/`, patches a copy of TinyGo's runtime once per TinyGo version, builds `build/app.wasm` and checks its size |
 | `size` * | `-max <bytes> <file>` | The size check on its own |
 | `unchanged` | `-files <pattern,...>`, then `<program> [args]` | Runs a generator whose output the project commits (gsx's `*.x.go`) and fails, naming them, if it changed, added or removed a matching file; what it wrote stays |
 
@@ -54,11 +54,13 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 | `with-server` * | `-url <url>`, `-env NAME=VALUE`, `-start <cmd>`, `-run <cmd>`, `-show` | Starts a server, waits for the URL, runs the commands, stops the server and what it started. `{port}`, `{port2}`: free ports. Output only on failure, or with `-show` |
 | `exec` * | `-env NAME=VALUE`, `-quiet`, `-secrets`, then `<program> [args]` | Runs a program with those variables; `-quiet` shows its output only if it fails; `-secrets` adds the secrets `WORKER_SECRETS` names, from fnox unless already set |
 | `lint` * | `-vet <packages>`, `-wasm <packages>`, then `<file or folder>...` | Fails if `gofmt` would change a file, then `go vet` for the host and for Wasm |
-| `migrate-local` | `-port <port>`, `-worker <name>` | Applies `migrations/*.sql` to a running dev server's local D1 |
+| `migrate:local` | `-port <port>`, `-worker <name>` | Applies `migrations/*.sql` to a running dev server's local D1 |
 | `deploy` | `cf deploy` flags | REMOTE. Deploys the Worker with the secrets `WORKER_SECRETS` names, and those of `WORKER_OPTIONAL_SECRETS` that are set, from the environment through a private file (never printed), then `migrate` |
 | `migrate` | `-worker <name>` | REMOTE. Applies pending migrations to `<worker>-db` |
 | `tail` | `-worker <name>` (default: `API_URL`'s), `-for <duration>` (default: until Ctrl-C) | REMOTE, read-only. Streams the Worker's live logs with Cloudflare's tail API (no wrangler): a line per request (UTC time, method, URL, status, outcome), then its console output and exceptions. Deletes the tail when it stops. Needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (the environment, or fnox) |
-| `access` | `setup [email...]`, `token create <machine> <file\|fnox>`, `token list`, `token revoke <machine>`, `delete` | REMOTE. Cloudflare Access in front of the Worker (`API_URL`): people log in with GitHub, each machine has a service token of its own; the Worker's `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`, and the IDs in fnox ([Auth](../guides/auth.md#cloudflare-access)). Needs `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_GITHUB_IDP_ID` |
+| `access:setup` | `[email...]` | REMOTE. Puts Cloudflare Access in front of the Worker (`API_URL`): people log in with GitHub ([Auth](../guides/auth.md)) |
+| `access:token` | `create <machine> <file\|fnox>`, `list`, `revoke <machine>` | REMOTE. A machine's own service token for the Worker behind Access. Secrets are never printed |
+| `access:delete` | | REMOTE. Deletes the Worker's Access application and its machines' service tokens |
 | `doctor` | | Says what the project's tasks need and lack: Rust and cargo-zigbuild only with a CLI; warns when the CLI's pins in `mise.toml` and the `cli` group disagree |
 | `harness-sync`, `harness-test`, `harness-deploy` | `harness-test -remote` | For a Worker that imports its own generated SDK (`conformance/showcase-ts/`): copy it in, test it under `cf dev` or deployed, deploy it twice |
 
@@ -69,8 +71,8 @@ The tool the tasks run (`cmd/charter/`). `charter help` lists the commands. A co
 | Command | Flags | What it does |
 |---|---|---|
 | `bench` * | below, then `[<url>]` (default `API_URL`) | Times every GET operation with examples in the spec, plus one missing path |
-| `perf` | `-name <experiment>`, `-build '<wasm-build flags>'`, `-prebuilt`, `-keep`, then `-- <bench flags>` | REMOTE. Builds, deploys to `<worker>-perf-<experiment>`, benches it from its first request, deletes it |
-| `perf-clean` | `-all` | REMOTE. Deletes scratch Workers and databases; without `-all`, not those of the last 20 minutes |
+| `perf:try` | `-name <experiment>`, `-build '<wasm-build flags>'`, `-prebuilt`, `-keep`, then `-- <bench flags>` | REMOTE. Builds, deploys to `<worker>-perf-<experiment>`, benches it from its first request, deletes it |
+| `perf:clean` | `-all` | REMOTE. Deletes scratch Workers and databases; without `-all`, not those of the last 20 minutes |
 
 ### bench
 
@@ -93,20 +95,20 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 
 | Command | Arguments and flags |
 |---|---|
-| `sdk-list`, `sdk-clean`, `dist-sdk` | none |
-| `sdk-gen`, `sdk-check` | `<group>` |
-| `sdk-ready` | `[group...]`: default `typescript-dist`, `go`, and `cli` if the project has it |
-| `sdk-publish` | `-check` (fail if `sdk/go` is stale), `-quick` (with it: by a hash), `-into <dir>` |
-| `cli-build` | `-linux`: for Linux, in Docker. This, `dist-cli` and `cli-smoke` fail in a project without the `cli` group, saying it has no CLI |
-| `dist-cli` | `-target <os>-<arch>,...`: of `darwin`, `linux`, `windows` × `amd64`, `arm64`; default every one this machine builds (darwin only on a Mac). Writes `dist/<project>-cli-<os>-<arch>[.exe]` and runs this machine's |
-| `cli-smoke` | none: runs the CLI in `dist/` for this machine with `--version` |
+| `sdk:list`, `sdk-clean`, `dist-sdk` | none |
+| `sdk:gen`, `sdk-check` | `<group>` |
+| `sdk:ready` | `[group...]`: default `typescript-dist`, `go`, and `cli` if the project has it |
+| `sdk:publish` | `-check` (fail if `sdk/go` is stale), `-quick` (with it: by a hash), `-into <dir>` |
+| `sdk:cli:build` | `-linux`: for Linux, in Docker. This, `dist-cli` and `cli-smoke` fail in a project without the `cli` group, saying it has no CLI |
+| `sdk:dist:cli` | `-target <os>-<arch>,...`: of `darwin`, `linux`, `windows` × `amd64`, `arm64`; default every one this machine builds (darwin only on a Mac). Writes `dist/<project>-cli-<os>-<arch>[.exe]` and runs this machine's |
+| `sdk:cli:smoke` | none: runs the CLI in `dist/` for this machine with `--version` |
 | `dist` | `-target` as `dist-cli`: empties `dist/`, then `dist-sdk` and, with a CLI, `dist-cli` |
 | `release` * | `vX.Y.Z`, `-dry-run`, `-prerelease`, `-notes-footer <text or file>`, in any order. At the repo's root: fails unless the tree is clean, `HEAD` is the default branch on `origin`, every workflow run on it passed and the tag is new; runs the tasks `setup`, `check`, `spec:diff` (a breaking change needs a major release) and `dist`, tags, pushes the tag, makes the GitHub Release (notes: the commits since the last version tag), runs `release:publish` and `release:tags`. A task the repo lacks is skipped (no `dist`: it ships no files). `-dry-run` stops before the tag |
-| `publish` * | `-tag vX.Y.Z`: makes the Release if missing, attaches the files in `dist/` it lacks, writes `SHA256SUMS` of every file on it. Without a tag (or one from `release` or a workflow), a dry run |
-| `dist-ts` * | `-tag vX.Y.Z`: builds `ts/` and packs it as `dist/charter-ts-X.Y.Z.tgz`, in this repo |
-| `release-tags` * | `-tag vX.Y.Z`, then `<module dir>...` |
-| `release-tool` * | `-tag vX.Y.Z`: GoReleaser on the tool, in this repo; a Release that has its files already gets a build only |
-| `ci-scope` | none: in the check workflow, writes `tool`, `library`, `library-ts` and `examples` to `$GITHUB_OUTPUT`: all of them on a push, on a pull request those for what it changes ([which](tasks.md#windows-and-macos)) |
+| `release:publish` * | `-tag vX.Y.Z`: makes the Release if missing, attaches the files in `dist/` it lacks, writes `SHA256SUMS` of every file on it. Without a tag (or one from `release` or a workflow), a dry run |
+| `ts:dist` * | `-tag vX.Y.Z`: builds `ts/` and packs it as `dist/charter-ts-X.Y.Z.tgz`, in this repo |
+| `release:tags` * | `-tag vX.Y.Z`, then `<module dir>...` |
+| `charter:release` * | `-tag vX.Y.Z`: GoReleaser on the tool, in this repo; a Release that has its files already gets a build only |
+| `ci:scope` | none: in the check workflow, writes `tool`, `library`, `library-ts` and `examples` to `$GITHUB_OUTPUT`: all of them on a push, on a pull request those for what it changes ([which](tasks.md#windows-and-macos)) |
 
 ## Repos that use each other
 
@@ -115,7 +117,7 @@ The task `sdk:gen` runs `sdk-gen`, and so on ([Tasks](tasks.md)).
 | Command | Flags | What it does |
 |---|---|---|
 | `catalog` * | `-owner <login>` (default: the token's), `-json`, `-page` | REMOTE, read-only. The owner's charter repos, what each publishes, and the repos that pin it, read from their `mise.toml`, `go.mod` and `package.json`. Markdown; `-page` adds a docs page's front matter |
-| `spec-diff` | `-from vX.Y.Z` (default: the newest version tag before `-tag`), `-to vX.Y.Z` (default: the working tree), `-tag vX.Y.Z` (default: the workflow's tag), `-catalog <file or url>` | Compares `fern/openapi.json` and `fern/asyncapi.json`, marking breaking changes `!`. Fails on one unless `-tag` is a major release; with `-catalog`, names the repos that pin this one |
+| `spec:diff` | `-from vX.Y.Z` (default: the newest version tag before `-tag`), `-to vX.Y.Z` (default: the working tree), `-tag vX.Y.Z` (default: the workflow's tag), `-catalog <file or url>` | Compares `fern/openapi.json` and `fern/asyncapi.json`, marking breaking changes `!`. Fails on one unless `-tag` is a major release; with `-catalog`, names the repos that pin this one |
 
 ## Any repo
 
@@ -130,11 +132,11 @@ What a repo takes whether or not it holds a project ([the guide](../guides/any-r
 | `docs` * | `-check`, `-into <repo dir>` | Writes each page that `_generated.toml` in `docs/` lists, from its command's output; `-check` fails if one is stale ([how](../guides/deploy.md#generated-pages)). Charter's own pages are the kit's: `adopt` |
 | `docs-tasks` * | `-only <source,...>`, `-not <source,...>` (a source: `mise.toml`, an included file or folder as written, a git include as `owner/repo//folder`; a part of the name is enough), `-title <text>` (default `Tasks`) | Prints the repo's mise tasks as a page, for `_generated.toml`: a table per source in the order the tasks are written, then each task's usage, arguments and flags. No hidden tasks, none of a mise config outside the repo ([how](../guides/any-repo.md#the-tasks-page)) |
 | `files` * | | Lists every file in the repo whose first lines say charter wrote it: charter's (`matches`, `differs`, `missing`, or not compared and why) and those `adopt` or `new` started, which are the repo's. Changes nothing; reads GitHub only for the two files that hold the repo's name or branch ([how](../guides/any-repo.md#tell-what-is-charters)) |
-| `docs-lint` * | `-into <repo dir>` | Fails on missing front matter, an unlinked page, a dead link or anchor, an unknown task, a missing path, a release version; in a generated page, only the first three |
-| `docs-review` * | `-print` | Hands Claude the review prompt with what the lint found |
-| `upstream` * | | Every `Upstream:` tag in the code, with its issue's state |
+| `docs:lint` * | `-into <repo dir>` | Fails on missing front matter, an unlinked page, a dead link or anchor, an unknown task, a missing path, a release version; in a generated page, only the first three |
+| `docs:review` * | `-print` | Hands Claude the review prompt with what the lint found |
+| `upstream:status` * | | Every `Upstream:` tag in the code, with its issue's state |
 | `need-env` * | `<NAME>...` | Fails unless these variables are set |
-| `github-secrets` * | `<NAME>...` | Copies variables into the repo's GitHub secrets, never printing them |
+| `cloudflare:secrets` * | `<NAME>...` | Copies variables into the repo's GitHub secrets, never printing them |
 
 ## A repo that holds projects
 

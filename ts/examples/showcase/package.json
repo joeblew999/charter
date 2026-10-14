@@ -1,0 +1,40 @@
+{
+	"name": "charter-showcase-ts",
+	"private": true,
+	"type": "module",
+	"description": "The showcase API in TypeScript on Cloudflare Workers: every Fern feature charter uses, in one small API, from an oRPC contract (src/contract.ts). The Worker serves that API (/api/mock) and is also the harness that runs the generated TypeScript SDK against it inside workerd (/api/sdk-test). npm run check is every local check; the steps are the scripts below, in the order you run them: each is charter-ts <step>, which reads charter.config.ts.",
+	"scripts": {
+		"lint": "charter-ts lint",
+		"spec": "charter-ts spec",
+		"spec:check": "charter-ts spec:check",
+		"dev": "charter-ts dev",
+		"test:workerd": "charter-ts test:workerd",
+		"sdk:check-spec": "fern check --warnings",
+		"test": "node --test test/*.test.ts",
+		"check": "npm run spec:check && npm run sdk:check-spec && npm test && npm run lint && npm run test:workerd",
+		"sdk": "charter-ts sdk",
+		"deploy": "charter-ts deploy",
+		"live-test": "charter-ts live-test"
+	},
+	"dependencies": {
+		"@orpc/contract": "2.0.0-beta.40",
+		"@orpc/openapi": "2.0.0-beta.40",
+		"@orpc/server": "2.0.0-beta.40",
+		"@orpc/zod": "2.0.0-beta.40",
+		"charter-ts": "^0.1.0",
+		"zod": "^4.6.5"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "beta",
+		"@cloudflare/vitest-pool-workers": "^0.22.0",
+		"@types/node": "^22.12.0",
+		"@types/ws": "^8.5.12",
+		"cf": "1.0.0-beta.5",
+		"fern-api": "5.140.0",
+		"typescript": "^7.0.2",
+		"typescript-sdk": "npm:typescript@~5.9.3",
+		"vite": "^8.3.0",
+		"vitest": "^4.1.11",
+		"ws": "^8.18.0"
+	}
+}

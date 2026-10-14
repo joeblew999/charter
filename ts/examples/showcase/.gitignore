@@ -1,0 +1,20 @@
+# npm packages, and what cf writes
+node_modules/
+.cloudflare/
+.wrangler/
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
+.secrets/
+*.log
+*.cpuprofile
+.DS_Store
+
+# Generated SDKs (npm run sdk), and the SDK copy the Worker imports (npm run lint, test:workerd)
+sdk/out/
+sdk/.work/
+src/client/
+target/
+dist/
+

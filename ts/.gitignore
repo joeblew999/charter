@@ -1,4 +1,4 @@
-# npm packages
+# What npm writes, and what packing charter-ts writes (npm pack: the templates, the tarball).
 node_modules/
-# What npm run build writes (tsconfig.build.json)
-dist/
+packages/charter-ts/templates/
+*.tgz

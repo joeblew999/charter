@@ -57,4 +57,4 @@ Without a stream, also remove the hub: `Hub` in `Env`, `feed`, the `HUB` binding
 
 ## In TypeScript
 
-`examples/notes-ts/` is the same API on oRPC (`src/contract.ts`, Zod), without a native run or MCP; invalid input gets a 400. `charter new -lang ts` makes a project from it, as [Getting started](../getting-started.md) does in Go: the tests it shares with the Go example go into `test/`, and `@charter/ts` comes from the release. Then `src/contract.ts` is the contract, `src/index.ts` the server and `mise run dev` runs it.
+The same API on oRPC (`src/contract.ts`, Zod) is `ts/examples/notes/`, without a native run or MCP; invalid input gets a 400. `charter-ts new my-api --from notes` makes a project from it: [TypeScript](typescript.md).

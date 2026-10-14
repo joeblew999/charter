@@ -12,7 +12,7 @@ on:
 permissions:
   contents: read
 env:
-  GH_TOKEN: ${{ github.token }} # charter docs -check reads the repo's name and description with gh
+  GH_TOKEN: ${{ github.token }} # charter adopt -check and repo -check read the repo with gh
 jobs:
   # A repo that holds several projects: the tool, the Go and the TypeScript library, and each example
   # in a job of its own, so a failure names its part.

@@ -1,14 +1,10 @@
 {
 	"compilerOptions": {
 		"target": "es2024",
-		"lib": [
-			"es2024"
-		],
+		"lib": ["es2024"],
 		"module": "preserve",
 		"moduleResolution": "bundler",
-		"types": [
-			"node"
-		],
+		"types": ["node"],
 		"strict": true,
 		"noEmit": true,
 		"allowImportingTsExtensions": true,
@@ -16,9 +12,5 @@
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true
 	},
-	"include": [
-		"src",
-		"test",
-		"vitest.config.ts"
-	]
+	"include": ["release.ts"]
 }

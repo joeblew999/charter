@@ -22,7 +22,7 @@ The packages of `github.com/joeblew999/charter/go`. The rest is in the doc comme
 | `ratelimit` | How often a caller may call, beside `auth`: a limit per operation or per scope, declared in the contract (`x-rate-limit` and a 429 with Retry-After in the specs), counted per caller by a Workers Rate Limiting binding, in memory on the host ([Auth](../guides/auth.md#rate-limits)) | `ratelimit.Declare(config.OpenAPI, perScope...)`, `Extensions: ratelimit.On(limit, nil)`, `routes.UseMiddleware(ratelimit.Middleware(routes, nil))` after auth's |
 | `specfile` | The body of a project's `./cmd/spec` | `specfile.Main(api.OpenAPI, api.AsyncAPI)` |
 
-The Worker glue, in `go/worker/`, written into `build/` by the build:
+The Worker glue, in `go/lib/worker/`, written into `build/` by the build:
 
 | File | What it gives |
 |---|---|

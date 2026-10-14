@@ -1,61 +1,23 @@
 {
-	"name": "@charter/ts",
+	"name": "charter-ts-workspace",
 	"private": true,
 	"type": "module",
-	"version": "0.0.0",
-	"description": "charter's TypeScript library, the counterpart of go/: the AsyncAPI generator for oRPC, both specs from one contract, the command behind a spec.ts, follow(), the gap-free feed, auth: bearer tokens, Cloudflare Access and an OpenID Connect issuer, verified with jose, and rate limits per caller on Workers Rate Limiting bindings. It ships compiled (dist/, written by npm run build: Node won't strip the types of a package in node_modules). A project brings oRPC and Zod itself (peerDependencies; jose comes with the library) and takes the library as the package attached to each GitHub release (mise run ts:dist writes it; the version is the release's), or in this repo as \"file:../../ts\"; devDependencies are what the library's own build and checks use.",
-	"files": [
-		"dist"
+	"description": "charter's TypeScript side, as npm workspaces: the package charter-ts (packages/charter-ts: the charter-ts command and the library) and the projects made with it (examples/: start, one route; notes, the notes API with auth, streams and rate limits; showcase, every Fern feature with the SDK tested inside a Worker). npm ci installs them all and builds charter-ts; npm run check is every local check (Docker, no Cloudflare account); npm run release -- X.Y.Z cuts a release of charter-ts onto GitHub.",
+	"workspaces": [
+		"packages/charter-ts",
+		"examples/start",
+		"examples/notes",
+		"examples/showcase"
 	],
 	"scripts": {
-		"build": "tsc -p tsconfig.build.json"
+		"prepare": "npm run build -w charter-ts",
+		"check": "tsc && npm run check -w charter-ts && npm run build -w charter-ts && npm run check -w examples/start && npm run check -w examples/notes && npm run check -w examples/showcase",
+		"release": "node release.ts"
 	},
-	"exports": {
-		"./asyncapi": {
-			"types": "./dist/asyncapi.d.ts",
-			"default": "./dist/asyncapi.js"
-		},
-		"./specs": {
-			"types": "./dist/specs.d.ts",
-			"default": "./dist/specs.js"
-		},
-		"./spec-files": {
-			"types": "./dist/spec-files.d.ts",
-			"default": "./dist/spec-files.js"
-		},
-		"./follow": {
-			"types": "./dist/follow.d.ts",
-			"default": "./dist/follow.js"
-		},
-		"./auth": {
-			"types": "./dist/auth.d.ts",
-			"default": "./dist/auth.js"
-		},
-		"./ratelimit": {
-			"types": "./dist/ratelimit.d.ts",
-			"default": "./dist/ratelimit.js"
-		}
-	},
-	"peerDependencies": {
-		"@orpc/contract": "2.0.0-beta.40",
-		"@orpc/json-schema": "2.0.0-beta.40",
-		"@orpc/openapi": "2.0.0-beta.40",
-		"@orpc/server": "2.0.0-beta.40",
-		"@orpc/zod": "2.0.0-beta.40",
-		"zod": "^4.6.5"
-	},
-	"devDependencies": {
-		"@orpc/contract": "2.0.0-beta.40",
-		"@orpc/json-schema": "2.0.0-beta.40",
-		"@orpc/openapi": "2.0.0-beta.40",
-		"@orpc/server": "2.0.0-beta.40",
-		"@orpc/zod": "2.0.0-beta.40",
-		"@types/node": "^22.12.0",
-		"typescript": "^7.0.2",
-		"vitest": "^4.1.11",
-		"zod": "^4.6.5"
-	},
-	"dependencies": {
-		"jose": "6.2.12"
+	"allowScripts": {
+		"workerd": true,
+		"esbuild": false,
+		"fsevents": false,
+		"@scarf/scarf": false
 	}
 }
