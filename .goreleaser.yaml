@@ -36,3 +36,7 @@ release:
   # The release workflow's SDK jobs may have created the Release first: add to it.
   mode: append
   replace_existing_artifacts: true
+  # A run whose upload stopped part way leaves its Release a draft (every GitHub release is one
+  # until its files are up), and the workflow may already have attached files to it. Running again
+  # finishes that draft and publishes it, instead of making a second Release for the same tag.
+  use_existing_draft: true
