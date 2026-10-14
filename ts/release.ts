@@ -5,7 +5,8 @@
 //   4. The tag ts-vX.Y.Z, pushed with main, and the GitHub Release with the package on it, which a
 //      project installs: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz
 // Safe to run again: a step already done is skipped. --dry-run does steps 2 and 3 only, and changes no file.
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { releaseURL } from "charter-ts/new";
 import { output, run } from "charter-ts/scripts";
 
@@ -50,7 +51,8 @@ run("npm", ["run", "check"]);
 
 // 3. The package (a dry run packs the version there is).
 const tarball = `dist/charter-ts-${dryRun ? pkg.version : version}.tgz`;
-run("npm", ["pack", "-w", "charter-ts", "--pack-destination", "dist"]);
+mkdirSync("dist", { recursive: true });
+run("npm", ["pack", "-w", "charter-ts", "--pack-destination", resolve("dist")]);
 if (!existsSync(tarball)) throw new Error(`npm pack wrote no ${tarball}`);
 if (dryRun) {
 	console.log(`dry run: ${tarball} is what the release would carry; nothing tagged, pushed or published`);
