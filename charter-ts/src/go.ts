@@ -6,7 +6,7 @@ import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, readdirSync, re
 import { join, relative } from "node:path";
 import { gzipSync } from "node:zlib";
 import type { GoConfig } from "./config.ts";
-import { cacheFolder, output, run, sdk } from "./scripts.ts";
+import { cacheFolder, output, run, sdk, specsHash } from "./scripts.ts";
 
 /** lint: gofmt over the root's Go files and the config's folders, then go vet for the host and, for
  * the root package, for Wasm (GOOS=js GOARCH=wasm), where the Worker is built from. */
@@ -208,19 +208,6 @@ function glue(): void {
 
 const madeFrom = ".made-from";
 const sdkDir = join("sdk", "go");
-
-/** The hash of what an SDK is made from: every file in fern/ but the docs site's settings. */
-function specsHash(): string {
-	const hash = createHash("sha256");
-	for (const name of readdirSync("fern").sort()) {
-		const file = join("fern", name);
-		if (name === "docs.yml" || !statSync(file).isFile()) continue;
-		const content = readFileSync(file);
-		hash.update(`${name} ${content.length}\n`);
-		hash.update(content);
-	}
-	return `sha256:${hash.digest("hex")} fern`;
-}
 
 /** sdkFresh fails if the specs changed since sdk/go was made from them (no Docker: it compares a hash). */
 export function sdkFresh(): void {

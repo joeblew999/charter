@@ -1,0 +1,24 @@
+# Written by `charter-ts ci:write` from ci.config.ts: don't edit, change ci.config.ts, then npx charter-ts ci:write.
+# A project's Worker deployed to Cloudflare, then its live tests against it. The same job here: npx charter-ts ci deploy [<project>]; on GitHub, from here: npx charter-ts ci:remote deploy [<project>].
+name: self-deploy
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: The project
+        type: choice
+        required: true
+        options: [go/conformance, ts/conformance, go/examples-notes, go/examples-start, go/examples-start-htmx, go/examples-start-datastar, ts/examples-notes, ts/examples-start]
+jobs:
+  deploy:
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(inputs.project && format('["{0}"]', inputs.project) || '["go/conformance","ts/conformance","go/examples-notes","go/examples-start","go/examples-start-htmx","go/examples-start-datastar","ts/examples-notes","ts/examples-start"]') }}
+    uses: ./.github/workflows/charter-ci.yml
+    with:
+      job: deploy
+      project: ${{ matrix.project }}
+      runs-on: ubuntu-24.04
+      timeout-minutes: 30
+    secrets: inherit

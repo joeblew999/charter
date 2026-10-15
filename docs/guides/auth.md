@@ -8,7 +8,7 @@ parent: Guides
 
 The contract says which scopes each operation needs; one middleware checks every request against it: `go/lib/auth` in Go, `"charter-lib/auth"` in TypeScript. In the notes examples, reading is public and writing needs `write`.
 
-## Three ways in
+## The ways in
 
 | Caller | Proves it with | Checked by | May do |
 |---|---|---|---|
@@ -16,6 +16,9 @@ The contract says which scopes each operation needs; one middleware checks every
 | A person | a GitHub login through Cloudflare Access | Access at the edge, then the Worker: the JWT Access sends (`Cf-Access-Jwt-Assertion`) against the team's keys and the application's AUD tag | `People` |
 | A machine | its own Access service token (`CF-Access-Client-Id`, `CF-Access-Client-Secret`) | the same; the JWT names the token's Client ID | `Machines` |
 | A user of an app | an access token from an OpenID Connect issuer (`Authorization: Bearer`) | the Worker, against the issuer's keys, found by its discovery document | its `scope` claim |
+| A client of the API's own OAuth endpoint | a bearer token the API issued (client credentials) | the API's own check: `auth.Issued{Scheme, Check}` in Go, `issued: { scheme, check }` in TypeScript | what that check says |
+
+The notes examples take the first four. The conformance projects take all five: Fern's OAuth client credentials beside charter's ways, each operation's security naming OAuth with the same scopes (`needs` in `go/conformance/api/contract.go` and `ts/conformance/src/contract.ts`).
 
 No credentials, or credentials that do not verify: 401. Known, without the scope: 403. The handler finds the caller (email, Client ID, subject) with `auth.CallerOf(ctx)` in Go, `context.caller` in TypeScript. An unset setting trusts no one that way.
 
@@ -34,7 +37,7 @@ routes.UseMiddleware(auth.Middleware(routes, env.Var,
 	auth.OIDC{}))
 ```
 
-In TypeScript: `base: oidcScheme(accessScheme(info.title, scheme()))`, `spec: needs(["write"])`, and `await authorize(headers, securityOf(procedure), trusted)` in an oRPC middleware (`ts/notes/src/index.ts`). The specs then list every way in for each operation, and a public one says `security: []`.
+In TypeScript: `base: oidcScheme(accessScheme(info.title, scheme()))`, `spec: needs(["write"])`, and `await authorize(headers, securityOf(procedure), trusted)` in an oRPC middleware (`ts/examples-notes/src/index.ts`). The specs then list every way in for each operation, and a public one says `security: []`.
 
 ## Bearer tokens
 
@@ -68,7 +71,7 @@ Put `OIDC_ISSUER` (its discovery document is at `<issuer>/.well-known/openid-con
 | SDK | Bearer or OIDC token | Access service token |
 |---|---|---|
 | Go | `option.WithToken(token)` | `<WORKER>_ACCESS_CLIENT_ID` and `_SECRET`, or `option.WithAccessClientID`, `WithAccessClientSecret`. Every credential given goes on every request |
-| TypeScript | `bearer: { token }` | both as `headers` (fern-api/fern#17775). A client with no credentials for the WebSocket channel passes `auth: false` |
+| TypeScript | `bearer: { token }`; an API with OAuth too: `oauth: { clientId, clientSecret }` beside it | both as `headers` (fern-api/fern#17775). A client with no credentials for the WebSocket channel passes `auth: false` |
 | CLI | `NOTES_TOKEN` | the flags `--access-client-id`, `--access-client-secret` or the variables, but it sends only one of the two: it cannot pass Access yet |
 
 ## Rate limits
@@ -81,7 +84,7 @@ Extensions: ratelimit.On(ratelimit.Limit{Binding: "WRITE_LIMIT", Limit: 100, Per
 routes.UseMiddleware(ratelimit.Middleware(routes, nil))                                                        // after auth.Middleware
 ```
 
-In TypeScript (`"charter-lib/ratelimit"`): `spec: needs(["write"], limited(writeLimit))`, `rateLimits` in openapiSpec's options for scopes, and `await rateLimit(limitOf(procedure), keyOf(caller, headers), env)` after `authorize` (`ts/notes/src/index.ts`).
+In TypeScript (`"charter-lib/ratelimit"`): `spec: needs(["write"], limited(writeLimit))`, `rateLimits` in openapiSpec's options for scopes, and `await rateLimit(limitOf(procedure), keyOf(caller, headers), env)` after `authorize` (`ts/examples-notes/src/index.ts`).
 
 - Each limit is a [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) binding of that name. `cloudflare.config.ts` declares one per `x-rate-limit` in `fern/openapi.json`, with its limit and period, so they are written once; it holds each binding's namespace, a number unique in the account.
 - The binding counts per Cloudflare location and is eventually consistent: it stops abuse, it does not account. `cf dev` counts locally. Natively, Go counts in memory.
@@ -89,7 +92,7 @@ In TypeScript (`"charter-lib/ratelimit"`): `spec: needs(["write"], limited(write
 
 ## Proven
 
-- Locally (`npm run check`): the auth test (`test/auth-test.mjs` in Go, `test/auth-test.ts` in TypeScript) serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After` after the write limit for one caller while another still writes: the Go Worker natively and as TinyGo Wasm under workerd, the TypeScript one under workerd. Rate limits were not tried on Cloudflare.
+- Locally (`npm run check`): the auth test serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After` after the write limit for one caller while another still writes. The notes examples' test is `ts/examples-notes/test/auth-test.ts`; the conformance projects' is `ts/conformance/test/auth-test.ts`, with OAuth tokens beside the others. Each runs against the Go server natively and as TinyGo Wasm under workerd, and the TypeScript one under workerd. Rate limits were not tried on Cloudflare.
 - On Cloudflare, 2026-10-03: a Go notes project behind Access, set up by the Access commands charter's Go tool had then. No token: 302. A wrong secret: 302. The machine's token: reads; writing is 403. With the write token: writes; with the read token or a JWT from an untrusted issuer: 403 and 401. The live, SDK (Go and TypeScript) and MCP tests passed through Access. An OIDC issuer was not tried there.
 
 ## Limits

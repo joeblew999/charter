@@ -46,6 +46,10 @@ Those marked * work in any repo; the others in a project, a folder with a `chart
 | `test:workerd` | the Worker under workerd (cf dev) on a free port (a Go Worker built first), its local database migrated, and the config's tests against it |
 | `sdk [group]` | generate a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>; by default the TypeScript SDK |
 | `go:check <folder>` * | a Go module's check, for one that is not a project (go/lib): gofmt, go vet for the host and for Wasm, go test |
+| `clients [group...]` | every client fern/generators.yml declares (or the groups named), generated with Fern (Docker) and proven in its language: Go built, vetted and tested against WireMock, TypeScript typechecked, the Rust CLI built; then a committed Go SDK checked against the specs |
+| `ci [<job> [<project>]]` * | a job of ci.config.ts, as GitHub runs it: in one project, or in each; with no job, every job GitHub runs on a push or a pull request, one after another |
+| `ci:remote <job> [<project>]` * | REMOTE: start a job's workflow on GitHub, on this branch (pushed), and say where the run is; it does not wait for it |
+| `ci:write [--check]` * | write a workflow per job (.github/workflows/self-<job>.yml) from ci.config.ts: each calls the job runner (charter-ci.yml, from the kit), which installs the tools with mise and runs npx charter-ts ci <job>; --check writes nothing and fails if one differs |
 | `sdk:publish [--check]` | Go: generate the Go SDK (Docker), prove it (build, vet, tests against WireMock) and copy its sources into sdk/go, the committed module another repo can go get; --check fails if sdk/go is not what the specs generate now |
 | `deploy` | REMOTE: deploy the Worker (a Go Worker built first) with its secrets from the environment (fnox exec -- npm run deploy), then apply its migrations |
 | `live-test` | REMOTE: the config's live tests against the deployed Worker (with the secrets: fnox exec -- npm run live-test) |

@@ -2,7 +2,7 @@
 // what each operation needs (its `spec`), and one check enforces that, so the specs, the SDKs and the
 // server agree.
 //
-// A caller proves who it is in one of three ways, and the API lists those it trusts (`Trusted`):
+// A caller proves who it is in one of these ways, and the API lists those it trusts (`Trusted`):
 //   - a bearer token, one of the Worker's secrets (READ_TOKEN, WRITE_TOKEN), with the scopes it grants;
 //   - Cloudflare Access in front of the Worker: a person logs in, a machine shows its own service
 //     token; Access sends the Worker a JWT (Cf-Access-Jwt-Assertion), verified here against the
@@ -10,7 +10,9 @@
 //     get the scopes the API gives them;
 //   - an OpenID Connect issuer's access token (Authorization: Bearer), verified here against the
 //     issuer's keys, found by its discovery document (OIDC_ISSUER, OIDC_AUDIENCE). Its scope claim is
-//     what it may do.
+//     what it may do;
+//   - a bearer token the API issued itself, at an OAuth token endpoint of its own (`issued`): the API
+//     checks it, and says what it may do.
 //
 // `scheme()`, `accessScheme()` and `oidcScheme()` go into openapiSpec's `base`. An operation needs the
 // scopes its security lists (`needs`; the API's default when it lists none; nothing when its security
@@ -122,16 +124,28 @@ export interface OIDC {
 	audience: string | undefined; // OIDC_AUDIENCE
 }
 
+/**
+ * Bearer tokens the API issues itself, at an OAuth token endpoint of its own: `check` says whether a
+ * token is one of them and still good, and what it may do (undefined: it is not). `scheme` is that
+ * endpoint's security scheme in the specs (an oauth2 one), which an operation's security names beside
+ * this library's schemes, with the same scopes.
+ */
+export interface Issued {
+	scheme: string;
+	check(token: string): string[] | undefined | Promise<string[] | undefined>;
+}
+
 /** The ways in the API accepts. */
 export interface Trusted {
 	tokens?: Token[];
 	access?: Access;
 	oidc?: OIDC;
+	issued?: Issued;
 }
 
 /** Who a request comes from, once its credentials are verified, and what it may do. */
 export interface Caller {
-	scheme: "bearer" | "access" | "oidc";
+	scheme: "bearer" | "access" | "oidc" | "issued";
 	email?: string; // a person: from Access, or an OIDC token that has it
 	machine?: string; // an Access service token's Client ID
 	subject?: string; // the token's sub
@@ -173,7 +187,7 @@ export async function authorize(headers: Headers, security: Security | undefined
 function ways(trusted: Trusted) {
 	const ways = [];
 	if (trusted.access?.team) ways.push("a Cloudflare Access login or service token (CF-Access-Client-Id, CF-Access-Client-Secret)");
-	if (trusted.tokens?.length || trusted.oidc) ways.push("Authorization: Bearer <token>");
+	if (trusted.tokens?.length || trusted.oidc || trusted.issued) ways.push("Authorization: Bearer <token>");
 	return ways.join(", or ");
 }
 
@@ -200,8 +214,10 @@ async function identify(headers: Headers, trusted: Trusted): Promise<Caller[]> {
 		return [...callers, { scheme: "oidc", email: typeof claims.email === "string" ? claims.email : undefined, subject: claims.sub, scopes }];
 	}
 	const matching = (trusted.tokens ?? []).filter(t => t.value && same(bearer, t.value));
-	if (!matching.length) throw new Error("not a token this API knows");
-	return [...callers, { scheme: "bearer", token: matching[0]!.secret, scopes: matching.flatMap(t => t.scopes) }];
+	if (matching.length) return [...callers, { scheme: "bearer", token: matching[0]!.secret, scopes: matching.flatMap(t => t.scopes) }];
+	const scopes = trusted.issued && (await trusted.issued.check(bearer));
+	if (scopes) return [...callers, { scheme: "issued", subject: `${trusted.issued!.scheme} client`, scopes }];
+	throw new Error("not a token this API knows");
 }
 
 // The keys of each issuer (createRemoteJWKSet keeps them; an unknown kid refetches after its cooldown),

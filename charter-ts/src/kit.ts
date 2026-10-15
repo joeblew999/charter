@@ -101,7 +101,7 @@ ${rows.join("\n")}
 }
 
 /** The kit for the repo at root, by path in the repo: every file of the kit as it is, but those the
- * repo does not take (renovate.json, the workflow), and the two pages written from charter-ts and from
+ * repo does not take (renovate.json, the workflow, the job runner without a ci.config.ts), and the two pages written from charter-ts and from
  * the repo's scripts. */
 export function kitFor(root: string): Map<string, string> {
 	const s = settings(root);
@@ -109,6 +109,7 @@ export function kitFor(root: string): Map<string, string> {
 	for (const rel of walk(kitDir)) {
 		if (rel === "renovate.json" && !s.renovate) continue;
 		if (rel === ".github/workflows/charter.yml" && (!s.workflow || isProject(root))) continue;
+		if (rel === ".github/workflows/charter-ci.yml" && !existsSync(join(root, "ci.config.ts"))) continue;
 		const to = rel.startsWith("docs/") ? posix.join(s.docs, rel.slice("docs/".length)) : rel;
 		files.set(to, readFileSync(join(kitDir, rel), "utf8"));
 	}

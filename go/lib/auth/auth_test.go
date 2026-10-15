@@ -87,6 +87,37 @@ func TestUnsetSecretsMatchNothing(t *testing.T) {
 	}
 }
 
+// Tokens the API issued itself (an OAuth token endpoint of its own): what Check says, beside the
+// secrets; a token neither knows is refused.
+func TestIssuedTokens(t *testing.T) {
+	issued := Issued{Scheme: "OAuth", Check: func(token string) ([]string, bool) {
+		switch token {
+		case "issued-reader":
+			return []string{"read"}, true
+		case "issued-writer":
+			return []string{"read", "write"}, true
+		}
+		return nil, false
+	}}
+	api := testAPI(t, map[string]string{"WRITE_TOKEN": "w"}, Token{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}}, issued)
+	for _, c := range []struct {
+		method, token string
+		want          int
+		who           string
+	}{
+		{"GET", "issued-reader", 200, "OAuth client"},
+		{"POST", "issued-reader", 403, ""},
+		{"POST", "issued-writer", 200, "OAuth client"},
+		{"POST", "w", 200, "the token WRITE_TOKEN"},
+		{"GET", "never-issued", 401, ""},
+	} {
+		resp := api.Do(c.method, "/notes", "Authorization: Bearer "+c.token)
+		if resp.Code != c.want || (c.who != "" && !strings.Contains(resp.Body.String(), c.who)) {
+			t.Errorf("%s with %q: %d %s, want %d %s", c.method, c.token, resp.Code, resp.Body, c.want, c.who)
+		}
+	}
+}
+
 // Access and an OIDC issuer, with the same scopes as the tokens: a person reads, a machine writes,
 // an OIDC token does what its scope claim says. Each is refused (401) when it does not verify.
 func TestAccessAndOIDC(t *testing.T) {

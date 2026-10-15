@@ -5,15 +5,15 @@ parent: Guides
 ---
 # Server-rendered pages: gsx with htmx 4 or Datastar
 
-`go/start-htmx` is a project whose one Worker serves HTML pages beside the API, its specs and MCP. The pages are written in [gsx](https://github.com/gsxhq/gsx) and made live with [htmx 4](https://four.htmx.org), in Go, built with TinyGo like the rest. A message posted on one page shows on every open page at once, as HTML over SSE. `go/start-datastar` is the same project with [Datastar](https://data-star.dev) in place of htmx.
+`go/examples-start-htmx` is a project whose one Worker serves HTML pages beside the API, its specs and MCP. The pages are written in [gsx](https://github.com/gsxhq/gsx) and made live with [htmx 4](https://four.htmx.org), in Go, built with TinyGo like the rest. A message posted on one page shows on every open page at once, as HTML over SSE. `go/examples-start-datastar` is the same project with [Datastar](https://data-star.dev) in place of htmx.
 
 ```sh
 npm ci                       # at this repo's root
-npm run check -w go/start-htmx
-npm start -w go/start-htmx   # http://localhost:5179/ : open it in two windows, post in one
+npm run check -w go/examples-start-htmx
+npm start -w go/examples-start-htmx   # http://localhost:5179/ : open it in two windows, post in one
 ```
 
-The projects are `go/start-htmx/` and `go/start-datastar/` (port 5180) in this repo.
+The projects are `go/examples-start-htmx/` and `go/examples-start-datastar/` (port 5180) in this repo.
 
 ## What is where
 

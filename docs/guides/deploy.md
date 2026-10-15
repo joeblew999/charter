@@ -33,19 +33,15 @@ fnox exec -- npm run live-test   # REMOTE, writes test notes: a few seconds afte
 |---|---|---|
 | `npm run check` | Local | Go: gofmt and vet, Go tests, fresh specs, the tests natively (`test:native`) and as Wasm under workerd (`test:workerd`). TypeScript: typecheck, fresh specs, the tests under workerd |
 | `npm run live-test` | Cloudflare | The config's live tests on the deployed Worker |
-| `node test/soak.mjs <url>` in `go/notes` | Cloudflare, redeploys | No stream loses, repeats or reorders an item ([Streaming](streaming.md)) |
+| `node test/soak.mjs <url>` in `go/examples-notes` | Cloudflare, redeploys | No stream loses, repeats or reorders an item ([Streaming](streaming.md)) |
 
 A test is a Node program that takes the server's URL and exits 1 on a failure, run from `test`, `native` or `live` in `charter.config.ts`. In Go, add a Go test in `api/` with the helpers in `api/api_test.go` (`server(t)`, `do(t, method, url, body)`).
 
 ## CI on GitHub
 
-| Workflow | When | Runs |
-|---|---|---|
-| `check.yml` | Pushes to main and pull requests | `npm ci`, then `npm run check` |
-| `deploy.yml` (this repo) | By hand: `gh workflow run deploy.yml -f project=go/notes` | `npm run deploy`, then `npm run live-test`, for one project |
-| `charter.yml` | Pushes to main and pull requests, in a repo with no API | `npm ci`, then `npm run repo:ci` ([Any repo](any-repo.md#checks-on-github)) |
+In this repo the workflows are written from `ci.config.ts`, and each runs the command that runs the same job on your machine ([The CI](../contributing.md#the-ci)): `self-deploy.yml`, by hand (`npx charter-ts ci:remote deploy go/examples-notes`), runs a project's deploy, then its live tests. In a repo with no API, `charter.yml` runs `npm ci`, then `npm run repo:ci` ([Any repo](any-repo.md#checks-on-github)).
 
-A project `charter-ts new` makes has its own `check.yml`. The deploy workflow's secrets:
+A project `charter-ts new` makes has its own `self-check.yml`. The deploy workflow's secrets:
 
 ```sh
 fnox exec -- sh -c 'gh secret set CLOUDFLARE_API_TOKEN --body "$CLOUDFLARE_API_TOKEN"'

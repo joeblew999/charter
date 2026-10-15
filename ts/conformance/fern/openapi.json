@@ -1,0 +1,585 @@
+{
+  "info": {
+    "title": "Conformance",
+    "version": "1.0.0",
+    "description": "Every Fern feature we care about, via standard OpenAPI + x-fern-* extensions."
+  },
+  "servers": [
+    {
+      "url": "https://charter-conformance-ts-api.gedw99.workers.dev/api/mock",
+      "description": "The deployed mock of this API (mode api). Fern's CLI takes its OAuth token URL from here; --base-url doesn't move it."
+    }
+  ],
+  "security": [
+    {
+      "bearer": [
+        "read"
+      ]
+    },
+    {
+      "accessClientId": [
+        "read"
+      ],
+      "accessClientSecret": []
+    },
+    {
+      "oidc": [
+        "read"
+      ]
+    },
+    {
+      "OAuth": [
+        "read"
+      ]
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "accessClientId": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "CF-Access-Client-Id",
+        "description": "A Cloudflare Access service token's Client ID: a machine's own (charter access token create)",
+        "x-fern-header": {
+          "name": "accessClientId",
+          "env": "CONFORMANCE_ACCESS_CLIENT_ID"
+        }
+      },
+      "accessClientSecret": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "CF-Access-Client-Secret",
+        "description": "The service token's Client Secret",
+        "x-fern-header": {
+          "name": "accessClientSecret",
+          "env": "CONFORMANCE_ACCESS_CLIENT_SECRET"
+        }
+      },
+      "oidc": {
+        "type": "openIdConnect",
+        "openIdConnectUrl": "/.well-known/openid-configuration",
+        "description": "An access token from the OpenID Connect issuer the deployment trusts (OIDC_ISSUER), with the operation's scopes"
+      },
+      "OAuth": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "/oauth/token",
+            "scopes": {
+              "read": "Read notes",
+              "write": "Create notes and upload files"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Note": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "Chunk": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "x-fern-idempotency-headers": [
+    {
+      "header": "Idempotency-Key",
+      "name": "idempotency_key"
+    }
+  ],
+  "x-fern-webhook-signature": {
+    "type": "hmac",
+    "header": "x-webhook-signature",
+    "algorithm": "sha256",
+    "encoding": "hex"
+  },
+  "openapi": "3.1.1",
+  "paths": {
+    "/oauth/token": {
+      "post": {
+        "operationId": "getToken",
+        "summary": "OAuth client-credentials token (used by the SDK itself)",
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "client_id",
+                  "client_secret"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "expires_in": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "access_token",
+                    "expires_in"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-fern-audiences": [
+          "public",
+          "internal"
+        ],
+        "security": []
+      }
+    },
+    "/notes": {
+      "get": {
+        "operationId": "listNotes",
+        "summary": "List notes (cursor pagination)",
+        "tags": [
+          "notes"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "a page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Note"
+                      }
+                    },
+                    "next_cursor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-fern-audiences": [
+          "public",
+          "internal"
+        ],
+        "x-fern-pagination": {
+          "cursor": "$request.cursor",
+          "next_cursor": "$response.next_cursor",
+          "results": "$response.data"
+        }
+      },
+      "post": {
+        "operationId": "createNote",
+        "summary": "Create a note (idempotent: safe to retry with an Idempotency-Key)",
+        "tags": [
+          "notes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests: more than 100 calls in 60 s by this caller",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before calling again",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-fern-audiences": [
+          "public",
+          "internal"
+        ],
+        "x-fern-idempotent": true,
+        "security": [
+          {
+            "bearer": [
+              "write"
+            ]
+          },
+          {
+            "accessClientId": [
+              "write"
+            ],
+            "accessClientSecret": []
+          },
+          {
+            "oidc": [
+              "write"
+            ]
+          },
+          {
+            "OAuth": [
+              "write"
+            ]
+          }
+        ],
+        "x-rate-limit": {
+          "binding": "WRITE_LIMIT",
+          "limit": 100,
+          "period": 60
+        }
+      }
+    },
+    "/notes/watch": {
+      "get": {
+        "operationId": "watchNotes",
+        "summary": "Stream notes (Server-Sent Events) for `seconds`; call again with `after` = the last event's id to continue without gaps",
+        "tags": [
+          "notes"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "description": "Resume after this event id (the last one you received). Absent: only notes created from now on",
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "in": "query",
+            "name": "seconds",
+            "schema": {
+              "default": 30,
+              "description": "How long to keep the stream open",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "notes",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          }
+        },
+        "x-fern-audiences": [
+          "public",
+          "internal"
+        ],
+        "x-fern-sdk-group-name": "notes",
+        "x-fern-sdk-method-name": "watch",
+        "x-fern-streaming": {
+          "format": "sse",
+          "terminator": "[end-of-stream]",
+          "resumable": true
+        }
+      }
+    },
+    "/files": {
+      "post": {
+        "operationId": "uploadFile",
+        "summary": "Upload a file (multipart)",
+        "tags": [
+          "files"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "contentEncoding": "binary"
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "size": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "size"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-fern-audiences": [
+          "internal"
+        ],
+        "security": [
+          {
+            "bearer": [
+              "write"
+            ]
+          },
+          {
+            "accessClientId": [
+              "write"
+            ],
+            "accessClientSecret": []
+          },
+          {
+            "oidc": [
+              "write"
+            ]
+          },
+          {
+            "OAuth": [
+              "write"
+            ]
+          }
+        ]
+      }
+    },
+    "/chat": {
+      "post": {
+        "operationId": "chat",
+        "summary": "Stream a reply (Server-Sent Events)",
+        "tags": [
+          "chat"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "prompt"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "chunks",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chunk"
+                }
+              }
+            }
+          }
+        },
+        "x-fern-audiences": [
+          "public",
+          "internal"
+        ],
+        "x-fern-streaming": {
+          "format": "sse"
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "noteCreated": {
+      "post": {
+        "operationId": "noteCreatedWebhook",
+        "summary": "Sent to you when a note is created",
+        "tags": [
+          "notes"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "event": {
+                    "type": "string"
+                  },
+                  "note": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                },
+                "required": [
+                  "event",
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "received"
+          }
+        }
+      }
+    }
+  }
+}

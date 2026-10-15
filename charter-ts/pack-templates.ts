@@ -6,7 +6,7 @@ import { copyProject, templates } from "./src/new.ts";
 const { allowScripts } = JSON.parse(readFileSync("../package.json", "utf8")) as { allowScripts?: Record<string, boolean> };
 rmSync("templates", { recursive: true, force: true });
 for (const template of templates) {
-	copyProject(`../ts/${template}`, `templates/${template}`, "gitignore");
+	copyProject(`../ts/examples-${template}`, `templates/${template}`, "gitignore");
 	const file = `templates/${template}/package.json`;
 	writeFileSync(file, JSON.stringify({ ...JSON.parse(readFileSync(file, "utf8")), allowScripts }, null, "\t") + "\n");
 }

@@ -1,7 +1,7 @@
 // Package auth is who may call a Huma API, and with what scopes: the contract declares what each
 // operation needs, and one middleware enforces it, so the specs, the SDKs and the server agree.
 //
-// A caller proves who it is in one of three ways, and the API lists those it trusts:
+// A caller proves who it is in one of these ways, and the API lists those it trusts:
 //
 //   - [Token]: a bearer token, one of the Worker's secrets (READ_TOKEN, WRITE_TOKEN), with the
 //     scopes it grants.
@@ -12,6 +12,8 @@
 //   - [OIDC]: an access token from an OpenID Connect issuer, in Authorization: Bearer, verified
 //     here against the issuer's keys, found by its discovery document (the settings OIDC_ISSUER and
 //     OIDC_AUDIENCE). The token's own scope claim is what it may do.
+//   - [Issued]: a bearer token the API issued itself, at an OAuth token endpoint of its own; the API
+//     checks it, and says what it may do.
 //
 // The schemes go into the specs with [Scheme], [AccessScheme] and [OIDCScheme]; an operation needs
 // the scopes its Security lists ([Needs]; the API's default when it lists none; nothing when its
@@ -60,7 +62,7 @@ const (
 // AccessHeader is the header Cloudflare Access puts its JWT in, on every request it lets through.
 const AccessHeader = "Cf-Access-Jwt-Assertion"
 
-// Trusted is a way in that Middleware accepts: a Token, Access or OIDC.
+// Trusted is a way in that Middleware accepts: a Token, Access, OIDC or Issued.
 type Trusted interface{ trusted() }
 
 // Token is one secret and the scopes it grants.
@@ -81,13 +83,23 @@ type Access struct {
 // A token grants the scopes in its scope claim (or scp).
 type OIDC struct{}
 
+// Issued trusts bearer tokens the API issues itself, at an OAuth token endpoint of its own: Check
+// says whether a token is one of them and still good, and what it may do. Scheme is that endpoint's
+// security scheme in the specs (an oauth2 one), which an operation's Security names beside this
+// package's schemes, with the same scopes.
+type Issued struct {
+	Scheme string
+	Check  func(token string) (scopes []string, ok bool)
+}
+
 func (Token) trusted()  {}
 func (Access) trusted() {}
 func (OIDC) trusted()   {}
+func (Issued) trusted() {}
 
 // Caller is who a request comes from, once its credentials are verified, and what it may do.
 type Caller struct {
-	Scheme  string   // what vouched for it: Name (a token), "access" or OIDCName
+	Scheme  string   // what vouched for it: Name (a token), "access", OIDCName, or an Issued's Scheme
 	Email   string   // a person: from Access, or from an OIDC token that has it
 	Machine string   // an Access service token's Client ID (the JWT's common_name)
 	Subject string   // the token's sub: a user's id at the issuer
@@ -269,6 +281,8 @@ func Middleware(api huma.API, setting func(name string) string, trusted ...Trust
 			g.access = &t
 		case OIDC:
 			g.oidc = &t
+		case Issued:
+			g.issued = append(g.issued, t)
 		}
 	}
 	return func(ctx huma.Context, next func(huma.Context)) {
@@ -310,6 +324,7 @@ type gate struct {
 	tokens  []Token
 	access  *Access
 	oidc    *OIDC
+	issued  []Issued
 	keys    *keyCache
 }
 
@@ -319,7 +334,7 @@ func (g gate) ways() string {
 	if g.access != nil && g.setting(AccessTeam) != "" {
 		ways = append(ways, "a Cloudflare Access login or service token (CF-Access-Client-Id, CF-Access-Client-Secret)")
 	}
-	if len(g.tokens) > 0 || g.oidc != nil {
+	if len(g.tokens) > 0 || g.oidc != nil || len(g.issued) > 0 {
 		ways = append(ways, "Authorization: Bearer <token>")
 	}
 	return strings.Join(ways, ", or ")
@@ -360,6 +375,11 @@ func (g gate) identify(ctx context.Context, header func(string) string) ([]Calle
 	}
 	if c, known := scopesOf(token, g.setting, g.tokens); known {
 		return append(callers, c), nil
+	}
+	for _, issued := range g.issued {
+		if scopes, ok := issued.Check(token); ok {
+			return append(callers, Caller{Scheme: issued.Scheme, Subject: issued.Scheme + " client", Scopes: scopes}), nil
+		}
 	}
 	return nil, errUnknownToken
 }

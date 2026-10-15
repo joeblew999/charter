@@ -1,0 +1,25 @@
+{
+	"name": "charter-conformance-go",
+	"private": true,
+	"type": "module",
+	"description": "The conformance API in Go: every Fern feature charter uses, in one small API, with the generated SDKs tested against it. npm run check is every local check (no Cloudflare account); npm run dev runs it locally; npx charter-ts lists every step.",
+	"scripts": {
+		"start": "charter-ts run",
+		"dev": "charter-ts dev",
+		"check": "charter-ts check",
+		"spec": "charter-ts spec",
+		"sdk": "charter-ts sdk",
+		"deploy": "charter-ts deploy"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "beta",
+		"@types/node": "^22.12.0",
+		"@types/ws": "^8.5.12",
+		"cf": "1.0.0-beta.5",
+		"charter-ts": "^0.7.0",
+		"fern-api": "5.140.0",
+		"typescript": "~5.9.3",
+		"vite": "^8.3.0",
+		"ws": "^8.18.0"
+	}
+}

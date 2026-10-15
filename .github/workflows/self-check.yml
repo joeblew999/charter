@@ -1,0 +1,20 @@
+# Written by `charter-ts ci:write` from ci.config.ts: don't edit, change ci.config.ts, then npx charter-ts ci:write.
+# charter-ts and charter-lib with their tests, the Go library, this repo's own TypeScript, the docs, and these workflows (written from here, and linted). The same job here: npx charter-ts ci check; on GitHub, from here: npx charter-ts ci:remote check.
+name: self-check
+on:
+  push:
+    branches: [main]
+    tags: ["ts-v*"]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    uses: ./.github/workflows/charter-ci.yml
+    with:
+      job: check
+      runs-on: ${{ matrix.os }}
+      timeout-minutes: 20

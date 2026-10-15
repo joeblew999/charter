@@ -6,7 +6,7 @@ has_children: true
 
 # Guides
 
-One job per page, in a project. Paths and scripts are a project's: `api/contract.go` is `go/notes/api/contract.go` in this repo.
+One job per page, in a project. Paths and scripts are a project's: `api/contract.go` is `go/examples-notes/api/contract.go` in this repo.
 
 | For | Pages |
 |---|---|

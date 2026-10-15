@@ -21,7 +21,7 @@ Measured 2026-10-02 with the compare task charter's Go tool had, 30 requests eac
 | A request of a burst that starts its own Go runtime, several at once | | about 100 ms |
 | An SSE stream of 15 to 60 seconds, over its life | | 40 to 150 ms |
 
-The showcase Workers (every Fern feature, a bearer token checked on every request), 2026-10-03: Go list about 1 ms, create about 1 ms, 404 0 ms. The TypeScript one keeps its notes in memory (no database), so it is not a like-for-like comparison: list and create 0 ms. Its API is at `/api/mock`; the Worker's other paths are a web page.
+The conformance Workers (every Fern feature, a bearer token checked on every request), 2026-10-03: Go list about 1 ms, create about 1 ms, 404 0 ms. The TypeScript one kept its notes in memory then (no database), so it was not a like-for-like comparison: list and create 0 ms. Both have kept their notes in D1, with the hub, since 2026-10-15: not measured since. Its API is at `/api/mock`; the Worker's other paths are a web page.
 
 ## The Wasm's size
 

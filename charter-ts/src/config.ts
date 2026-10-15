@@ -39,8 +39,11 @@ export interface Config {
 export interface Tests {
 	/** A path that answers once the server is up. Default /api/hello. */
 	ready?: string;
-	/** More environment for the server, given its port and another free one the tests may serve on. */
-	env?: (ports: { port: number; extra: number }) => Record<string, string>;
+	/** More environment for the server, given its port and the free ones the tests may serve on. */
+	env?: (ports: { port: number; extra: number; extras: Extras }) => Record<string, string>;
+	/** What the tests serve beside the server for its whole run (a webhook's receiver): each started
+	 * before it, with the server's environment, waited for at its `ready` URL, and stopped after. */
+	serve?: (ports: { port: number; extra: number; extras: Extras }) => Helper[];
 	run: (context: TestContext) => void | Promise<void>;
 }
 
@@ -69,12 +72,25 @@ export interface GoConfig {
 	sdk?: boolean;
 }
 
+/** A program the tests serve beside the server, answering at `ready` once it is up. */
+export interface Helper {
+	program: string;
+	args: string[];
+	ready: string;
+}
+
+/** Three free ports, all different. */
+export type Extras = readonly [number, number, number];
+
 export interface TestContext {
 	/** The local Worker, http://localhost:<port>. */
 	origin: string;
 	port: number;
-	/** Another free port, for something a test serves (a test issuer of tokens). */
+	/** Another free port, for something a test serves (a test issuer of tokens): extras[0]. */
 	extra: number;
+	/** Three free ports, all different, for what the tests serve: one each (an issuer of tokens, a
+	 * webhook's receiver). The first is `extra`. */
+	extras: Extras;
 	/** node <file> <args>, with the Worker's environment; throws if it fails. */
 	node: (file: string, ...args: string[]) => void;
 }

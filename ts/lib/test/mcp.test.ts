@@ -1,5 +1,6 @@
 // charter-lib/mcp: which procedures are tools and what they say, and that a call runs the procedure
-// with its middleware, through the official SDK's handler (the stateless 2026-07-28 exchange).
+// with its middleware, through the official SDK's handler (the stateless 2026-07-28 exchange, and
+// the 2025-11-25 one for what differs).
 import { asyncIteratorObject, oc } from "@orpc/contract";
 import { openapi } from "@orpc/openapi";
 import { implement, ORPCError } from "@orpc/server";
@@ -8,7 +9,8 @@ import { z } from "zod";
 import { asyncapi } from "../src/asyncapi.ts";
 import { mcpHandler, notATool, toolsOf } from "../src/mcp.ts";
 
-const note = z.object({ id: z.number(), body: z.string() });
+// A named schema, as a contract's are: zod writes it as a $ref at the root.
+const note = z.object({ id: z.number(), body: z.string() }).meta({ id: "Note" });
 const contract = {
 	list: oc.meta(openapi({ method: "GET", path: "/api/notes", summary: "List notes", operationId: "listNotes" })).input(z.object({ limit: z.number().int().min(1).max(100) })).output(z.object({ data: z.array(note) })),
 	create: oc.meta(openapi({ method: "POST", path: "/api/notes", summary: "Create a note", operationId: "createNote" })).input(z.object({ body: z.string().min(1) })).output(note),
@@ -69,5 +71,24 @@ describe("mcpHandler", () => {
 		expect(refused?.content?.[0]?.text).toContain("needs x-may-write");
 		const allowed = (await rpc("tools/call", { name: "createNote", arguments: { body: "x" } }, { "x-may-write": "yes" })).result;
 		expect(allowed?.structuredContent).toEqual({ id: 2, body: "x" });
+	});
+	it("answers a named object as itself on a 2025 connection too, not wrapped as { result }", async () => {
+		const legacy = async (id: number, method: string, params: Record<string, unknown>) => {
+			const request = new Request("http://localhost/api/mcp", {
+				method: "POST",
+				headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2025-11-25", "x-may-write": "yes" },
+				body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
+			});
+			// Streamable HTTP answers as JSON or as one Server-Sent Event; this era, as an event.
+			const response = await mcp(request, { headers: request.headers });
+			const text = await response.text();
+			const json = response.headers.get("content-type")?.startsWith("text/event-stream") ? (/^data: ?(.*)$/m.exec(text)?.[1] ?? "") : text;
+			return JSON.parse(json) as { result?: { tools?: { name: string; outputSchema?: { type?: string } }[]; structuredContent?: unknown } };
+		};
+		await legacy(1, "initialize", { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "test", version: "1" } });
+		const created = await legacy(2, "tools/call", { name: "createNote", arguments: { body: "x" } });
+		expect(created.result?.structuredContent).toEqual({ id: 2, body: "x" });
+		const listed = await legacy(3, "tools/list", {});
+		expect(listed.result?.tools?.find(tool => tool.name === "createNote")?.outputSchema?.type).toBe("object");
 	});
 });

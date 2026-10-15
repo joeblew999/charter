@@ -70,6 +70,28 @@ export function toolsOf(router: Router<any>): Tool[] {
 	return tools;
 }
 
+type JsonSchema = Record<string, unknown>;
+type Standard = { "~standard": { jsonSchema?: { input(options: unknown): JsonSchema; output(options: unknown): JsonSchema } } & Record<string, unknown> };
+
+/** objectRoot is the schema with its root's $ref resolved. zod writes a schema that has an id (a
+ * named one: `.meta({ id: "Note" })`) as `{ $ref: "#/$defs/Note", $defs }`, and the MCP SDK takes a
+ * root that does not say `type: "object"` for one that is no object: on a 2025 connection it then
+ * wraps the result as `{ result }`, where humamcp answers the object itself.
+ * Upstream: modelcontextprotocol/typescript-sdk, not filed (when fixed: drop objectRoot) */
+function objectRoot(schema: unknown): unknown {
+	const standard = (schema as Partial<Standard> | undefined)?.["~standard"];
+	const json = standard?.jsonSchema;
+	if (!standard || !json) return schema;
+	const inline = (root: JsonSchema): JsonSchema => {
+		const name = typeof root.$ref === "string" && root.$ref.startsWith("#/$defs/") ? root.$ref.slice("#/$defs/".length) : undefined;
+		const named = name ? (root.$defs as Record<string, JsonSchema> | undefined)?.[name] : undefined;
+		if (!named) return root;
+		const { $ref: _, ...rest } = root;
+		return { ...rest, ...named };
+	};
+	return { "~standard": { ...standard, jsonSchema: { input: (options: unknown) => inline(json.input(options)), output: (options: unknown) => inline(json.output(options)) } } };
+}
+
 /** What a refused call says: oRPC's error (its code, status, message and, for a validation failure,
  * the issues with their paths), so a model can correct itself. */
 const refusal = (error: unknown) =>
@@ -84,7 +106,7 @@ export function mcpHandler<T extends Context>(router: Router<T>, { info }: { inf
 		for (const tool of tools) {
 			server.registerTool(
 				tool.name,
-				{ description: tool.description, inputSchema: tool.input as never, outputSchema: tool.output as never, annotations: tool.annotations },
+				{ description: tool.description, inputSchema: objectRoot(tool.input) as never, outputSchema: objectRoot(tool.output) as never, annotations: tool.annotations },
 				(async (args: unknown) => {
 					try {
 						const output = await call(tool.procedure, (args ?? {}) as never, { context } as never);

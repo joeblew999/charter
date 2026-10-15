@@ -17,7 +17,7 @@ npm install
 npm run check
 ```
 
-`--from notes` starts from the notes API (auth, streams, rate limits) instead of one route. The project comes with `.github/workflows/check.yml`, which runs `npm run check` on GitHub. Its `package.json` installs charter-ts from that release's own URL, with its version in it: another release is another URL, and Renovate opens that pull request.
+`--from notes` starts from the notes API (auth, streams, rate limits) instead of one route. The project comes with `.github/workflows/self-check.yml`, which runs `npm run check` on GitHub. Its `package.json` installs charter-ts from that release's own URL, with its version in it: another release is another URL, and Renovate opens that pull request.
 
 ## The steps
 
@@ -54,7 +54,7 @@ export default defineConfig({
 });
 ```
 
-Every field is documented in [`Config`](https://github.com/joeblew999/charter/blob/main/charter-ts/src/config.ts): secrets, throwaway local secrets, more environment for the tests, more deploy modes, the SDK copied into a Worker.
+Every field is documented in [`Config`](https://github.com/joeblew999/charter/blob/main/charter-ts/src/config.ts): secrets, throwaway local secrets, more environment for the tests, more deploy modes, the SDK copied into a Worker. A test run gets the server's port and three more free ones (`extras`) for what the tests serve, and `serve` names programs that run beside the server for its whole run, such as a webhook's receiver: the conformance projects serve a token issuer on one port and a receiver on another (`ts/conformance/charter.config.ts`).
 
 ## The library
 
@@ -64,7 +64,7 @@ What the Worker imports is `charter-lib` (`ts/lib/`), in `dependencies`; `charte
 |---|---|
 | `"charter-lib/specs"` | Both specs from the contract, for `npm run spec` and for the Worker's `/api/openapi.json` and `/api/asyncapi.json` |
 | `"charter-lib/asyncapi"` | `asyncapi({...})` on a procedure: a WebSocket channel in the AsyncAPI spec |
-| `"charter-lib/auth"` | Bearer tokens, Cloudflare Access and an OpenID Connect issuer, with scopes ([Auth](auth.md)) |
+| `"charter-lib/auth"` | Bearer tokens, Cloudflare Access, an OpenID Connect issuer and tokens the API issued itself (`issued`, for an OAuth endpoint of its own), with scopes ([Auth](auth.md)) |
 | `"charter-lib/ratelimit"` | Limits per caller on Workers Rate Limiting bindings |
 | `"charter-lib/follow"` | `follow()`: the gap-free feed behind the streams ([Streaming](streaming.md)) |
 | `"charter-lib/mcp"` | `mcpHandler(router, { info })`: every procedure that answers once as an MCP tool at `/api/mcp`, on the official MCP SDK ([Agents: MCP](replace-the-example.md#agents-mcp)) |
@@ -78,13 +78,14 @@ From the tool, for `charter.config.ts` and scripts of your own:
 
 ## In this repo
 
-The root `package.json` is the npm workspace of `charter-ts/` (the tool), `ts/lib/` (the library) and the projects in `ts/` and `go/`: `ts/start` and `ts/notes`, which `new` copies, and `ts/showcase`, every Fern feature with the SDK tested inside a Worker.
+The root `package.json` is the npm workspace of `charter-ts/` (the tool), `ts/lib/` (the library) and the projects in `ts/` and `go/`: `ts/examples-start` and `ts/examples-notes`, which `new` copies, and `ts/conformance`, every Fern feature with the SDK tested inside a Worker.
 
 ```sh
 npm ci                               # everything; builds charter-ts
 npm run check                        # charter-ts's tests, every project's check (Docker), the docs
+npm run ci                           # every job GitHub runs, the clients in every language among them
 npm run release -- X.Y.Z --dry-run   # the check, and the package into dist/
 npm run release -- X.Y.Z             # the version, the tag ts-vX.Y.Z, the GitHub Release with the package
 ```
 
-GitHub runs the same `npm run check` (`.github/workflows/check.yml`). Checked on 2026-10-14 on macOS: a project from each template, made by `new` from the packed package outside the repo, passed `npm run check`.
+GitHub runs the same jobs (`ci.config.ts`, [The CI](../contributing.md#the-ci)). Checked on 2026-10-14 on macOS: a project from each template, made by `new` from the packed package outside the repo, passed `npm run check`.

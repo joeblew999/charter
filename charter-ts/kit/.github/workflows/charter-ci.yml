@@ -1,0 +1,41 @@
+# Written by `charter-ts adopt` from the kit (github.com/joeblew999/charter, charter-ts/kit/.github/workflows/charter-ci.yml):
+# don't edit: change the kit, not this file. charter's job runner, the same in every repo with a
+# ci.config.ts. The repo's workflows (written by `charter-ts ci:write` from ci.config.ts) call it to run
+# one of its jobs on GitHub exactly as `npx charter-ts ci <job> [<project>]` runs it on a machine: mise
+# installs the tools the repo's mise.toml pins, npm the packages, then the job. The repo's secrets reach
+# the job as CHARTER_SECRETS (GitHub masks them); charter-ts gives each job only those ci.config.ts names.
+name: charter-ci
+on:
+  workflow_call:
+    inputs:
+      job:
+        description: The job of the repo's ci.config.ts
+        type: string
+        required: true
+      project:
+        description: The project to run it in, for a job that runs in each
+        type: string
+        default: ""
+      runs-on:
+        description: The runner
+        type: string
+        default: ubuntu-24.04
+      timeout-minutes:
+        type: number
+        default: 60
+jobs:
+  run:
+    name: ${{ inputs.job }} ${{ inputs.project }}
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - run: npm ci
+      - name: npx charter-ts ci ${{ inputs.job }} ${{ inputs.project }}
+        shell: bash
+        env:
+          JOB: ${{ inputs.job }}
+          PROJECT: ${{ inputs.project }}
+          CHARTER_SECRETS: ${{ toJSON(secrets) }}
+        run: npx charter-ts ci "$JOB" ${PROJECT:+"$PROJECT"}

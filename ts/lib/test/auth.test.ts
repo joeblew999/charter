@@ -61,6 +61,16 @@ describe("auth", () => {
 		}
 	});
 
+	it("takes tokens the API issued itself (an OAuth token endpoint of its own), beside the secrets", async () => {
+		const issued = { scheme: "OAuth", check: (token: string) => ({ "issued-reader": ["read"], "issued-writer": ["read", "write"] })[token] };
+		const as = async (procedure: unknown, token: string) => decide(procedure, { authorization: `Bearer ${token}` }, { tokens, issued });
+		expect(await as(contract.list, "issued-reader")).toEqual({ status: 200, caller: { scheme: "issued", subject: "OAuth client", scopes: ["read"] } });
+		expect((await as(contract.create, "issued-reader")).status).toBe(403);
+		expect((await as(contract.create, "issued-writer")).status).toBe(200);
+		expect((await as(contract.create, "w")).status).toBe(200);
+		expect((await as(contract.list, "never-issued")).status).toBe(401);
+	});
+
 	it("takes Access and an OIDC issuer, with the same scopes", async () => {
 		const trusted: Trusted = {
 			tokens: [{ value: "w", scopes: ["read", "write"] }],

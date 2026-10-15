@@ -4,7 +4,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { Config, Tests } from "./config.ts";
+import type { Config, Extras, Tests } from "./config.ts";
 
 export interface Step {
 	usage: string;
@@ -32,13 +32,20 @@ async function built(config: Config, fresh = false): Promise<void> {
 /** A server on a free port, its local database migrated, and the tests against it. */
 async function serve(config: Config, tests: Tests, program: string, args: string[]): Promise<void> {
 	const { freePort, migrateLocal, run, withServer } = await scripts();
-	const port = await freePort(), extra = await freePort();
+	// The server's port and three for what the tests serve, all different.
+	const ports = new Set<number>();
+	while (ports.size < 4) ports.add(await freePort());
+	const [port, ...rest] = [...ports] as [number, number, number, number];
+	const extras = rest as unknown as Extras, extra = extras[0];
 	const origin = `http://localhost:${port}`;
-	const env = { ...config.localSecrets, PORT: String(port), ...tests.env?.({ port, extra }) };
-	await withServer({ program, args, env, ready: origin + (tests.ready ?? "/api/hello") }, async () => {
+	const env = { ...config.localSecrets, PORT: String(port), ...tests.env?.({ port, extra, extras }) };
+	const server = () => withServer({ program, args, env, ready: origin + (tests.ready ?? "/api/hello") }, async () => {
 		if (program === "cf" && existsSync("migrations")) await migrateLocal(config, port);
-		await tests.run({ origin, port, extra, node: (file, ...a) => run("node", [file, ...a], env) });
+		await tests.run({ origin, port, extra, extras, node: (file, ...a) => run("node", [file, ...a], env) });
 	});
+	// What the tests serve, up before the server and down after it: each wraps the next.
+	const helpers = tests.serve?.({ port, extra, extras }) ?? [];
+	await helpers.reduceRight<() => Promise<void>>((inner, helper) => () => withServer({ ...helper, env }, inner), server)();
 }
 
 /** The commands, in the order a repo and then a project run them. */
@@ -186,7 +193,7 @@ export const steps: Record<string, Step> = {
 			if (unit.length > 0) await timed("unit tests", () => run("node", ["--test", ...unit.map(name => `test/${name}`)]));
 			if (config.native) await timed("native", () => steps["test:native"].run([]));
 			await timed(config.go ? "build + workerd" : "workerd", () => steps["test:workerd"].run(fresh ? ["--fresh"] : []));
-			const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
+			const { seconds } = await scripts();
 			console.log(`check took ${seconds(times.reduce((sum, [, ms]) => sum + ms, 0))}: ${times.map(([name, ms]) => `${name} ${seconds(ms)}`).join(", ")}`);
 		},
 	},
@@ -223,6 +230,32 @@ export const steps: Record<string, Step> = {
 			if (!args[0]) throw new Error("go:check needs the module's folder: charter-ts go:check go/lib");
 			(await go()).goCheck(args[0]);
 		},
+	},
+	clients: {
+		usage: "clients [group...]",
+		about: "every client fern/generators.yml declares (or the groups named), generated with Fern (Docker) and proven in its language: Go built, vetted and tested against WireMock, TypeScript typechecked, the Rust CLI built; then a committed Go SDK checked against the specs",
+		run: async args => {
+			const config = await load();
+			await (await import("./clients.ts")).clients(args, config.go?.sdk === true);
+		},
+	},
+	ci: {
+		usage: "ci [<job> [<project>]]",
+		about: "a job of ci.config.ts, as GitHub runs it: in one project, or in each; with no job, every job GitHub runs on a push or a pull request, one after another",
+		anyRepo: true,
+		run: async args => (await import("./ci.ts")).ci(args),
+	},
+	"ci:remote": {
+		usage: "ci:remote <job> [<project>]",
+		about: "REMOTE: start a job's workflow on GitHub, on this branch (pushed), and say where the run is; it does not wait for it",
+		anyRepo: true,
+		run: async args => (await import("./ci.ts")).ciRemote(args),
+	},
+	"ci:write": {
+		usage: "ci:write [--check]",
+		about: "write a workflow per job (.github/workflows/self-<job>.yml) from ci.config.ts: each calls the job runner (charter-ci.yml, from the kit), which installs the tools with mise and runs npx charter-ts ci <job>; --check writes nothing and fails if one differs",
+		anyRepo: true,
+		run: async args => (await import("./ci.ts")).ciWrite(args),
 	},
 	"sdk:publish": {
 		usage: "sdk:publish [--check]",

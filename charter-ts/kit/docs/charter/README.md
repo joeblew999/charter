@@ -30,6 +30,7 @@ Charter writes only these. This folder, the `charter-*.yml` forms and `charter.y
 | `docs/_config.yml`, `docs/llms.txt`, `docs/_sass/` | The docs site's look and its index for agents: GitHub Pages reads them at the top of `docs/` |
 | `.github/ISSUE_TEMPLATE/charter-*.yml`, `config.yml`, `.github/charter-labels.tsv` | The issue forms and the labels |
 | `.github/workflows/charter.yml` | The checks on GitHub, in a repo with no API |
+| `.github/workflows/charter-ci.yml` | The job runner, in a repo with a `ci.config.ts`: the workflows `charter-ts ci:write` writes from it call this one |
 | `AGENTS.md`, `CLAUDE.md`, `renovate.json` | What agents read first, and the update bot's settings |
 
 `charter-ts adopt` (`npm run adopt`) writes them all, copied as they are from the kit, and adds to `package.json` what it lacks: charter-ts and the scripts, never changing one the repo has. `npm run docs:check` fails if a file of the kit is not what this version writes. What each part needs: [Any repo](https://joeblew999.github.io/charter/guides/any-repo.html).

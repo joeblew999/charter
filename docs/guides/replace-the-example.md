@@ -6,7 +6,7 @@ parent: Guides
 
 # Your API: change the contract, then take the notes out
 
-A Go project starts as a copy of `go/notes` (the notes API) or `go/start` (only `hello`): copy the folder, then change the module path in `go.mod` and its imports, and the Worker's name in `cloudflare.config.ts` and `charter.config.ts`. Add your operations beside the notes, then take the notes out. The contract, `api/contract.go`, is the source of the validation, specs, SDKs and MCP tools.
+A Go project starts as a copy of `go/examples-notes` (the notes API) or `go/examples-start` (only `hello`): copy the folder, then change the module path in `go.mod` and its imports, and the Worker's name in `cloudflare.config.ts` and `charter.config.ts`. Add your operations beside the notes, then take the notes out. The contract, `api/contract.go`, is the source of the validation, specs, SDKs and MCP tools.
 
 ```sh
 npm run spec     # after every contract change
@@ -25,7 +25,7 @@ npm run check    # fails on a stale spec, a failing test or a TinyGo gap
 
 2. **The route** in `Routes`: `Method`, `Path`, `OperationID` (the MCP tool's name), and a `huma.Register` call with `Summary`, `Errors` and `Extensions: sdk("notes", "get", nil)`, which names `client.notes.get()`. Copy `listNotes` for a paginated list.
 3. **The handler** in `api/handlers.go` gets `in` validated; return `huma.Error404NotFound("...")` to refuse.
-4. **The storage:** the method on `Store` in `api/store.go`, for `D1Store` (`api/store_js.go`, on Cloudflare) and `MemStore` (natively and in `go test`); a `-empty` project has none yet, so copy the three from `go/notes/api/`. A table change is the next numbered file in `migrations/`.
+4. **The storage:** the method on `Store` in `api/store.go`, for `D1Store` (`api/store_js.go`, on Cloudflare) and `MemStore` (natively and in `go test`); a `-empty` project has none yet, so copy the three from `go/examples-notes/api/`. A table change is the next numbered file in `migrations/`.
 
 For the generated clients: every constrained request field has a valid `example`; numbers are `int32`; a cursor is a string.
 
@@ -45,7 +45,7 @@ Every operation that answers once is also a tool at `/api/mcp`, named by its `op
 | Go | `go/lib/humamcp` | `humamcp.Expose(op, false)` |
 | TypeScript | `charter-lib/mcp`, on the official MCP SDK | `.meta(notATool())` on the procedure |
 
-The same test holds both to it: `ts/notes/test/mcp-test.ts`, which `go/notes` runs too.
+The same test holds both to it: `ts/examples-notes/test/mcp-test.ts`, which `go/examples-notes` runs too.
 
 ```sh
 claude mcp add --transport http billing-api https://billing-api.<your-subdomain>.workers.dev/api/mcp
@@ -64,4 +64,4 @@ Without a stream, also remove the hub: `Hub` in `Env`, `feed`, the `HUB` binding
 
 ## In TypeScript
 
-The same API on oRPC (`src/contract.ts`, Zod) is `ts/notes/`, without a native run; invalid input gets a 400. `charter-ts new my-api --from notes` makes a project from it: [TypeScript](typescript.md).
+The same API on oRPC (`src/contract.ts`, Zod) is `ts/examples-notes/`, without a native run; invalid input gets a 400. `charter-ts new my-api --from notes` makes a project from it: [TypeScript](typescript.md).

@@ -3,6 +3,7 @@
 // secrets, and an SDK generated when the specs are newer, or copied into the Worker.
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { createServer } from "node:net";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,17 +15,37 @@ function bin(program: string): string {
 	return existsSync(local) ? local : program;
 }
 
-/** run runs a program (in cwd, by default here) with the terminal's output, and throws if it fails. */
+/** seconds is a duration as charter-ts prints every one: 12.3 s. */
+export const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
+
+/** The shortest run worth a line of its own: anything this long or longer says how long it took. */
+const worthSaying = 1000;
+
+/** A command line, short enough for a line that says how long it took. */
+const shortly = (program: string, args: string[]) => {
+	const line = `${program} ${args.join(" ")}`;
+	return line.length > 100 ? `${line.slice(0, 97)}...` : line;
+};
+
+/** run runs a program (in cwd, by default here) with the terminal's output, and throws if it fails.
+ * A run of a second or more says how long it took, so what is slow shows wherever it runs. */
 export function run(program: string, args: string[], env: Record<string, string> = {}, cwd?: string): void {
 	console.log(`$ ${program} ${args.join(" ")}${cwd ? `   (in ${cwd})` : ""}`);
+	const start = performance.now();
 	const result = spawnSync(bin(program), args, { stdio: "inherit", cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" });
-	if (result.status !== 0) throw new Error(`${program} ${args.join(" ")} failed (${result.status ?? result.signal ?? result.error})`);
+	const took = performance.now() - start;
+	if (result.status !== 0) throw new Error(`${program} ${args.join(" ")} failed (${result.status ?? result.signal ?? result.error}) after ${seconds(took)}`);
+	if (took >= worthSaying) console.log(`took ${seconds(took)}: ${shortly(program, args)}`);
 }
 
-/** output runs a program (in cwd, by default here) and returns what it printed, and throws if it fails. */
+/** output runs a program (in cwd, by default here) and returns what it printed, and throws if it fails.
+ * A run of a second or more says how long it took, on stderr: what it printed is the caller's. */
 export function output(program: string, args: string[], cwd?: string, env: Record<string, string> = {}): string {
+	const start = performance.now();
 	const result = spawnSync(bin(program), args, { encoding: "utf8", cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" });
-	if (result.status !== 0) throw new Error(`${program} ${args.join(" ")} failed (${result.status ?? result.signal ?? result.error}): ${result.stderr}`);
+	const took = performance.now() - start;
+	if (result.status !== 0) throw new Error(`${program} ${args.join(" ")} failed (${result.status ?? result.signal ?? result.error}) after ${seconds(took)}: ${result.stderr}`);
+	if (took >= worthSaying) console.error(`took ${seconds(took)}: ${shortly(program, args)}`);
 	return result.stdout;
 }
 
@@ -66,9 +87,11 @@ export interface Server {
  * server and everything it started, whether body passed or failed. */
 export async function withServer<T>(server: Server, body: () => Promise<T>): Promise<T> {
 	console.log(`$ ${server.program} ${server.args.join(" ")}   (started)`);
+	const start = performance.now();
 	const child = spawn(bin(server.program), server.args, { stdio: "inherit", env: { ...process.env, ...server.env }, detached: process.platform !== "win32", shell: process.platform === "win32" });
 	try {
 		await answers(server.ready, child);
+		console.log(`took ${seconds(performance.now() - start)}: ${server.program} answering at ${server.ready}`);
 		return await body();
 	} finally {
 		stop(child);
@@ -131,7 +154,8 @@ export async function migrateLocal(project: Pick<Config, "worker">, port: number
 
 /** deploy deploys the Worker with its secrets from the environment (never printed: they reach cf in a
  * file only this user can read, removed after), then applies migrations/ to its D1 database, if the
- * project has migrations. `mode` deploys another of the config's modes (cf deploy --mode). */
+ * project has migrations. `mode` deploys another of the config's modes (cf deploy --mode): the Worker
+ * <worker>-<mode>, as cloudflare.config.ts names it, with a database of its own. */
 export function deploy(project: Pick<Config, "worker" | "secrets" | "optionalSecrets">, mode?: string): void {
 	const secrets: Record<string, string> = {};
 	for (const name of project.secrets ?? []) {
@@ -156,22 +180,71 @@ export function deploy(project: Pick<Config, "worker" | "secrets" | "optionalSec
 		rmSync(folder, { recursive: true, force: true });
 	}
 	if (!existsSync("migrations")) return;
-	const database = `${project.worker}-db`;
+	const database = `${project.worker}${mode ? `-${mode}` : ""}-db`;
 	const found = (JSON.parse(output("cf", ["d1", "list", "--name", database, "--per-page", "100"])) as { name: string; uuid: string }[]).find(d => d.name === database);
 	if (!found) throw new Error(`no D1 database ${database} after the deploy`);
 	run("cf", ["d1", "migrations", "apply", found.uuid, "--dir", "migrations"]);
 }
 
-/** sdk generates a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>. With
- * ifStale, only when there is no SDK yet or something in fern/ (the specs, Fern's settings) is
- * newer than it: the specs come from the contract, so a contract change reaches the SDK. */
-export function sdk(group: string, options: { ifStale?: boolean } = {}): void {
-	const made = join("sdk", "out", group);
-	if (options.ifStale && existsSync(made)) {
-		const at = statSync(made).mtimeMs;
-		if (readdirSync("fern").every(file => statSync(join("fern", file)).mtimeMs <= at)) return;
+/** The hash of what an SDK is made from: every file in fern/ but the docs site's settings. */
+export function specsHash(): string {
+	const hash = createHash("sha256");
+	for (const name of readdirSync("fern").sort()) {
+		const file = join("fern", name);
+		if (name === "docs.yml" || !statSync(file).isFile()) continue;
+		const content = readFileSync(file);
+		hash.update(`${name} ${content.length}\n`);
+		hash.update(content);
 	}
-	run("fern", ["generate", "--local", "--group", group, "--force", "--log-level", "warn"]);
+	return `sha256:${hash.digest("hex")} fern`;
+}
+
+/** sdk generates a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>, and records
+ * the hash of fern/ it was made from beside it. With ifStale, only when there is no SDK yet or fern/
+ * (the specs, Fern's settings) is not what it was made from: the specs come from the contract, so a
+ * contract change reaches the SDK. */
+export function sdk(group: string, options: { ifStale?: boolean } = {}): void {
+	if (options.ifStale && upToDate(group)) {
+		console.log(`sdk ${group}: up to date (made from fern/ as it is), not generated again`);
+		return;
+	}
+	run("fern", fernGenerate(group));
+	madeFrom(group);
+}
+
+/** generateQuietly generates a group as sdk does, with Fern's output kept rather than shown, so that
+ * several can run at once (each in a Docker container of its own) without their lines mixing. It
+ * resolves with how long it took, and rejects with Fern's output if it fails. */
+export async function generateQuietly(group: string): Promise<number> {
+	const { ms } = await runQuietly("fern", fernGenerate(group));
+	madeFrom(group);
+	return ms;
+}
+
+const fernGenerate = (group: string) => ["generate", "--local", "--group", group, "--force", "--log-level", "warn"];
+const stampOf = (group: string) => join("sdk", "out", `.${group}.made-from`);
+const upToDate = (group: string) => existsSync(join("sdk", "out", group)) && existsSync(stampOf(group)) && readFileSync(stampOf(group), "utf8").trim() === specsHash();
+function madeFrom(group: string): void {
+	mkdirSync(join("sdk", "out"), { recursive: true });
+	writeFileSync(stampOf(group), `${specsHash()}\n`);
+}
+
+/** runQuietly runs a program with its output kept, not shown: for what runs beside others. It
+ * resolves with that output and how long it took, and rejects with them if the program fails. */
+export function runQuietly(program: string, args: string[], env: Record<string, string> = {}, cwd?: string): Promise<{ output: string; ms: number }> {
+	const start = performance.now();
+	return new Promise((resolve, reject) => {
+		const child = spawn(bin(program), args, { cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" });
+		let output = "";
+		child.stdout.on("data", chunk => { output += chunk; });
+		child.stderr.on("data", chunk => { output += chunk; });
+		child.on("error", reject);
+		child.on("close", code => {
+			const ms = performance.now() - start;
+			if (code === 0) resolve({ output, ms });
+			else reject(new Error(`${program} ${args.join(" ")} failed (${code}) after ${seconds(ms)}:\n${output}`));
+		});
+	});
 }
 
 /** syncSdk copies the TypeScript SDK (typescript-dist) into folder, for a Worker that runs it, generating

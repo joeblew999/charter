@@ -1,0 +1,26 @@
+# Written by `charter-ts ci:write` from ci.config.ts: don't edit, change ci.config.ts, then npx charter-ts ci:write.
+# Every client the conformance projects' fern/generators.yml declares, generated with Fern and proven in its language. The same job here: npx charter-ts ci clients [<project>]; on GitHub, from here: npx charter-ts ci:remote clients [<project>].
+name: self-clients
+on:
+  push:
+    branches: [main]
+    tags: ["ts-v*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: One project (none, every project)
+        type: string
+        default: ""
+jobs:
+  clients:
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(inputs.project && format('["{0}"]', inputs.project) || '["go/conformance","ts/conformance"]') }}
+    uses: ./.github/workflows/charter-ci.yml
+    with:
+      job: clients
+      project: ${{ matrix.project }}
+      runs-on: ubuntu-24.04
+      timeout-minutes: 60

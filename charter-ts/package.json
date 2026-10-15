@@ -56,7 +56,11 @@
 			"default": "./dist/vite.js"
 		},
 		"./tsconfig.node.json": "./tsconfig.node.json",
-		"./tsconfig.worker.json": "./tsconfig.worker.json"
+		"./tsconfig.worker.json": "./tsconfig.worker.json",
+		"./ci": {
+			"types": "./dist/ci.d.ts",
+			"default": "./dist/ci.js"
+		}
 	},
 	"peerDependencies": {
 		"@cloudflare/vite-plugin": "*",

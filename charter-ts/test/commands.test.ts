@@ -76,6 +76,17 @@ describe("adopt", () => {
 		assert.equal(read(dir, page), kept);
 	});
 
+	it("writes the job runner only in a repo with a ci.config.ts", () => {
+		const runner = ".github/workflows/charter-ci.yml";
+		assert.ok(!existsSync(join(dir, runner)), `${runner} is not written without a ci.config.ts`);
+		write(dir, "ci.config.ts", "export default { jobs: {} };\n");
+		assert.equal(charter(dir, "adopt").code, 0);
+		assert.match(read(dir, runner), /^# Written by `charter-ts adopt`/);
+		rmSync(join(dir, "ci.config.ts"));
+		assert.equal(charter(dir, "adopt").code, 0);
+		assert.ok(!existsSync(join(dir, runner)), `${runner} goes with the ci.config.ts`);
+	});
+
 	it("docs:lint passes on what adopt wrote, and names a broken link", () => {
 		assert.equal(charter(dir, "docs:lint").code, 0);
 		write(dir, "docs/guide.md", "---\ntitle: Guide\nnav_order: 3\n---\n\n# Guide\n\n[Nowhere](nowhere.md).\n");
@@ -91,7 +102,7 @@ describe("new", () => {
 		const into = join(scratch, "made");
 		const made = charter(scratch, "new", "demo-api", "--from", "notes", "--subdomain", "example", "--into", into);
 		assert.equal(made.code, 0, made.out);
-		for (const file of ["charter.config.ts", "cloudflare.config.ts", "src/contract.ts", "test/mcp-test.ts", ".gitignore", ".github/workflows/check.yml"]) {
+		for (const file of ["charter.config.ts", "cloudflare.config.ts", "src/contract.ts", "test/mcp-test.ts", ".gitignore", ".github/workflows/self-check.yml"]) {
 			assert.ok(existsSync(join(into, file)), `${file} is there`);
 		}
 		const pkg = JSON.parse(read(into, "package.json")) as { name: string; dependencies: Record<string, string>; devDependencies: Record<string, string> };

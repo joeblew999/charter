@@ -26,14 +26,14 @@
 	"workspaces": [
 		"ts/lib",
 		"charter-ts",
-		"ts/start",
-		"ts/notes",
-		"ts/showcase",
-		"go/notes",
-		"go/start",
-		"go/start-htmx",
-		"go/start-datastar",
-		"go/showcase"
+		"ts/examples-start",
+		"ts/examples-notes",
+		"ts/conformance",
+		"go/examples-notes",
+		"go/examples-start",
+		"go/examples-start-htmx",
+		"go/examples-start-datastar",
+		"go/conformance"
 	],
 	"scripts": {
 		"prepare": "npm run build -w ts/lib -w charter-ts",
@@ -41,11 +41,12 @@
 		"repo": "charter-ts repo",
 		"issues": "charter-ts issues",
 		"issue": "charter-ts issue",
-		"check": "tsc && npm run check --workspaces && charter-ts go:check go/lib && charter-ts docs:check",
+		"check": "charter-ts ci check && charter-ts ci projects",
 		"docs:check": "charter-ts docs:check",
 		"repo:ci": "charter-ts repo:ci",
 		"docs:review": "charter-ts docs:review",
-		"release": "node release.ts"
+		"release": "node release.ts",
+		"ci": "charter-ts ci"
 	},
 	"allowScripts": {
 		"workerd": true,

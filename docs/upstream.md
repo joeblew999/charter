@@ -24,10 +24,11 @@ parent: How to help
 | [fern#17775](https://github.com/fern-api/fern/issues/17775) | The TypeScript SDK sends only one of two header schemes (Access's two) | The tests pass both as `headers` | Drop the `headers` |
 | [fern#9559](https://github.com/fern-api/fern/issues/9559) | OpenAPI 3.2.0 is rejected | `version: "3.1.1"` in `ts/lib/src/specs.ts` | Use oRPC's default |
 | [orpc#2115](https://github.com/middleapi/orpc/issues/2115) | oRPC generates no AsyncAPI | `ts/lib/src/asyncapi.ts` | Publish it ([#23](https://github.com/joeblew999/charter/issues/23)) |
-| Fern, not filed | A named form-encoded OAuth request schema breaks the Go SDK's test | The schema is inline (`go/showcase/api/contract.go`) | Drop that `RequestBody` |
+| Fern, not filed | A named form-encoded OAuth request schema breaks the Go SDK's test | The schema is inline (`go/conformance/api/contract.go`) | Drop that `RequestBody` |
 | Huma, not filed | A `RawBody` beside a `Body` gives Fern's Go SDK an `io.Reader` | `jsonOnly` in `go/lib/humaworkers/humaworkers.go` | Delete `jsonOnly` |
 | Fern, not filed | An AsyncAPI server's `pathname` is ignored | Tests pass `baseUrl` | |
-| `cf dev`, not filed | A refused WebSocket upgrade is dropped | The showcase test accepts either | |
+| `cf dev`, not filed | A refused WebSocket upgrade is dropped | The conformance test accepts either | |
+| MCP's TypeScript SDK, not filed | A schema whose root is a `$ref` (a named zod schema) is not taken for an object: on a 2025 connection the result is wrapped as `{ result }` | `objectRoot` in `ts/lib/src/mcp.ts` | Drop `objectRoot` |
 | [fern#17997](https://github.com/fern-api/fern/issues/17997) | With `endpoint-security`, the TypeScript SDK's WebSocket client uses `_metadata` it never declares, and the SDK is not written | `auth: any` in the notes examples' `fern/generators.yml` | Route credentials per operation |
 | [fern#17998](https://github.com/fern-api/fern/issues/17998) | An `auth` setting in `fern/generators.yml` marks every AsyncAPI channel as needing credentials | A TypeScript client with none passes `auth: false` (`test/sdk-live-test.mjs`, `test/soak.mjs`) | Drop `auth: false` |
 | [fern#17996](https://github.com/fern-api/fern/issues/17996) | The CLI sends only the first credential it has (`AuthStrategy::Any`) | None: the CLI cannot pass Access | |

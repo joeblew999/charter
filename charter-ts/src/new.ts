@@ -1,6 +1,6 @@
 // charter-ts new: a new project, a copy of a tested example (start: one route; notes: the notes API,
 // with auth, streams and rate limits) under its own name. The package carries the examples in
-// templates/ (written when it is packed); in the charter repo they are read from ts/.
+// templates/ (written when it is packed); in the charter repo they are read from ts/examples-<template>.
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -33,7 +33,7 @@ export function copyProject(from: string, to: string, gitignore: ".gitignore" | 
 function templateDir(template: Template): string {
 	const packed = join(packageDir, "templates", template);
 	if (existsSync(packed)) return packed;
-	const repo = join(packageDir, "..", "ts", template);
+	const repo = join(packageDir, "..", "ts", `examples-${template}`);
 	if (existsSync(repo)) return repo;
 	throw new Error(`no template ${template} in ${packed}`);
 }
@@ -54,7 +54,7 @@ function rewrite(dir: string, change: (content: string, file: string) => string)
 
 const screaming = (name: string) => name.toUpperCase().replaceAll("-", "_");
 
-// The project's checks on GitHub: the same npm run check as on your machine.
+// The project's checks on GitHub (self-check.yml: self- names the repo's own workflows), the same npm run check as on your machine.
 const workflow = `# The project's checks on every push and pull request: npm run check, the same as on your machine.
 name: check
 on:
@@ -106,7 +106,7 @@ export function newProject(args: string[]): void {
 		return next;
 	});
 	mkdirSync(join(into, ".github", "workflows"), { recursive: true });
-	writeFileSync(join(into, ".github", "workflows", "check.yml"), workflow);
+	writeFileSync(join(into, ".github", "workflows", "self-check.yml"), workflow);
 
 	console.log(`made ${into}, from the ${from} example, as the Worker ${name}`);
 	console.log(`next:

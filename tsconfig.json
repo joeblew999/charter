@@ -17,6 +17,7 @@
 		"skipLibCheck": true
 	},
 	"include": [
-		"release.ts"
+		"release.ts",
+		"ci.config.ts"
 	]
 }
