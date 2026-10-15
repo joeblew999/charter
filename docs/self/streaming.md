@@ -28,7 +28,7 @@ curl -N 'localhost:<port>/api/notes/watch?after=0&seconds=5'   # every note afte
 In Go (the TypeScript notes API has the same parts in `api/contract.ts`, `api/handlers.ts` and `api/store.ts`):
 
 1. **Copy** `watchNotes` and `liveNotes` in `api/contract.go`, `watch`, `live` and `feed` in `api/handlers.go`, and rename.
-2. **Give your item `Position() int64`,** and your store `Since(ctx, after, limit)` and `Latest(ctx)`. The ids must come from one ordered log with no gap filled later: a SQLite row id does.
+2. **Give your item `Position() int64`,** and your store `Since(ctx, after, limit)` and `Latest(ctx)`, on D1 two queries in `api/queries.sql` as `NotesAfter` and `NewestNote` are ([The database](api.md#the-database)). The ids must come from one ordered log with no gap filled later: a SQLite row id does.
 3. **Add a feed to the hub:** `hub.DurableObject[Device]("HUB", "devices")` in `platform_js.go`, and a `hub.Memory[Device]` in the memory store, as `MemStore` holds `hub.Memory[Note]` (`api/store.go`). The binding stays the same.
 4. **No item may contain `[end-of-stream]`:** refuse it in the input's `Resolve`, as `CreateInput` does.
 
