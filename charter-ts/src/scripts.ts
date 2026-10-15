@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { createServer } from "node:net";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 import type { Config } from "./config.ts";
 
 /** A program npm installed (cf, fern, tsc) runs from node_modules/.bin; any other from the path. */
@@ -17,6 +18,19 @@ function bin(program: string): string {
 
 /** seconds is a duration as charter-ts prints every one: 12.3 s. */
 export const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
+
+/** megabytes is a size as charter-ts prints every one: 1.20 MB. */
+export const megabytes = (bytes: number) => `${(bytes / 1e6).toFixed(2)} MB`;
+
+/** made says what a step made, as every artifact charter-ts makes says it, so what grows shows where it
+ * is made: its size, gzipped (what Cloudflare counts), and the limit it is held to, if any. It returns
+ * the gzipped size. */
+export function made(path: string, what: string, limit?: number): number {
+	const content = readFileSync(path);
+	const gzipped = gzipSync(content).length;
+	console.log(`made ${path} (${what}): ${megabytes(content.length)}, ${megabytes(gzipped)} gzipped${limit ? ` (limit ${megabytes(limit)})` : ""}`);
+	return gzipped;
+}
 
 /** The shortest run worth a line of its own: anything this long or longer says how long it took. */
 const worthSaying = 1000;

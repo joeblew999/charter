@@ -4,9 +4,8 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { gzipSync } from "node:zlib";
 import type { GoConfig } from "./config.ts";
-import { cacheFolder, output, run, sdk, specsHash } from "./scripts.ts";
+import { cacheFolder, made, output, run, sdk, specsHash } from "./scripts.ts";
 
 /** lint: gofmt over the root's Go files and the config's folders, then go vet for the host and, for
  * the root package, for Wasm (GOOS=js GOARCH=wasm), where the Worker is built from. */
@@ -58,46 +57,23 @@ export function gsxCheck(): void {
 	console.log("gsx: the committed *.x.go are what the components generate");
 }
 
-// The TinyGo the build uses, and the wasm-opt it runs: the compiler and the patches below are one
+// The TinyGo the build uses, and the wasm-opt it runs: the compiler and the patch below are one
 // thing, so they are pinned here together. mise installs them the first time.
-const tinygoVersion = "0.42.0", binaryenVersion = "133";
+const tinygoVersion = "0.43.0", binaryenVersion = "133";
 const tinygo = (...args: string[]): [string, string[]] => ["mise", ["exec", `tinygo@${tinygoVersion}`, `aqua:WebAssembly/binaryen@${binaryenVersion}`, "--", "tinygo", ...args]];
 
-// The changes made to TinyGo's runtime source (read at build time: the compiler is not rebuilt).
+// The change made to TinyGo's runtime source (read at build time: the compiler is not rebuilt).
 //
-// 1. No collection at every pause. TinyGo runs a full collection whenever the scheduler goes idle once
-// 32 finalizers were registered since the last one. Every JavaScript reference registers one, and a
-// Worker goes idle at every await: measured on Cloudflare, 38 to 71 ms of CPU per request against 9
-// to 13 ms without it (docs/benchmarks.md). The collector still runs when the heap is full.
+// No collection at every pause. TinyGo runs a full collection whenever the scheduler goes idle once 32
+// finalizers were registered since the last one. Every JavaScript reference registers one, and a
+// Worker goes idle at every await: measured on Cloudflare, 38 to 71 ms of CPU per request against 9 to
+// 13 ms without it (docs/benchmarks.md). The collector still runs when the heap is full.
 //
-// 2. Goroutine stacks are reused. TinyGo allocates a stack for every goroutine and every call from
-// JavaScript into Go, and leaves the finished ones to the collector, which rarely frees them. A
-// finished goroutine's cleared stack now goes on a list, and the next goroutine takes it.
-//
-// Upstream: tinygo-org/tinygo#5800 (when fixed: drop the first patch)
-// Upstream: tinygo-org/tinygo#5801 (closed: fixed on TinyGo's dev branch. The stack patches leave
-// themselves out with a TinyGo that has the fix; delete them when this pins one)
-const freesStacks = "runtime_freeTaskStack";
+// (TinyGo 0.43.0 frees the stacks of finished goroutines itself, tinygo-org/tinygo#5801: the patches
+// that made it reuse them are gone.)
+// Upstream: tinygo-org/tinygo#5800 (when fixed: drop the patch)
 const patches: { file: string; old: string; new: string; unless?: string }[] = [
 	{ file: "src/runtime/gc_finalizer.go", old: "const finalizerGCThreshold = 32", new: "const finalizerGCThreshold = 0" },
-	{
-		file: "src/internal/task/task_asyncify.go",
-		old: "\t// Create a stack.\n\tstack := runtime_alloc(stackSize, nil)\n",
-		new: "\t// Take the stack of a finished goroutine (Resume keeps them), or create one.\n\tstack := freeStack\n\tif stack != nil && freeStackSize == stackSize {\n\t\tfreeStack = *(*unsafe.Pointer)(stack)\n\t\t*(*unsafe.Pointer)(stack) = nil\n\t} else {\n\t\tstack = runtime_alloc(stackSize, nil)\n\t}\n",
-		unless: freesStacks,
-	},
-	{
-		file: "src/internal/task/task_asyncify.go",
-		old: "\t\tt.clearStack()\n\t\tt.state.args = nil\n",
-		new: "\t\tt.clearStack()\n\t\tt.state.args = nil\n\t\t// Keep the cleared stack for the next goroutine: a list through the first word of each.\n\t\tbase := unsafe.Pointer(t.state.canaryPtr)\n\t\tif size := uintptr(t.state.top) - uintptr(base); freeStack == nil || size == freeStackSize {\n\t\t\t*(*unsafe.Pointer)(base) = freeStack\n\t\t\tfreeStack, freeStackSize = base, size\n\t\t\tt.state.stackState = stackState{}\n\t\t}\n",
-		unless: freesStacks,
-	},
-	{
-		file: "src/internal/task/task_asyncify.go",
-		old: "// currentTask is the current running task, or nil if currently in the scheduler.\n",
-		new: "// freeStack is a list of the stacks of finished goroutines, all of freeStackSize bytes.\nvar (\n\tfreeStack     unsafe.Pointer\n\tfreeStackSize uintptr\n)\n\n// currentTask is the current running task, or nil if currently in the scheduler.\n",
-		unless: freesStacks,
-	},
 ];
 
 /** tinygoRoot is a TinyGo root whose runtime has the patches: the installed one with its src/ copied
@@ -162,10 +138,7 @@ export function goBuild(config: GoConfig, fresh = false): void {
 		run(program, args, { TINYGOROOT: tinygoRoot() });
 		copyFileSync(join("build", "app.wasm"), cached);
 	}
-	const wasm = readFileSync(join("build", "app.wasm"));
-	const gzipped = gzipSync(wasm).length;
-	console.log(`build/app.wasm: ${wasm.length} B, ${gzipped} B gzipped (limit ${maxBytes})`);
-	if (gzipped > maxBytes) throw new Error("build/app.wasm is over the limit");
+	if (made(join("build", "app.wasm"), "the Worker, TinyGo", maxBytes) > maxBytes) throw new Error("build/app.wasm is over the limit");
 }
 
 /** buildKey names what goes into the Wasm: the Go version, TinyGo's pins and patches, the build's

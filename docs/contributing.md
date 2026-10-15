@@ -49,7 +49,7 @@ npx --package /tmp/try/charter-ts-X.Y.Z.tgz charter-ts adopt
 
 `ci.config.ts` at the root says the jobs and when GitHub runs them, typed. `npx charter-ts ci:write` writes a workflow per job from it (`.github/workflows/self-<job>.yml`: `self-` names this repo's own workflows, `charter-` those charter writes into every repo), and `npm run check` fails while one differs. Each workflow installs the tools with mise, the packages with npm, and runs `npx charter-ts ci <job>`: the command that runs the same job here. One job in one project: `npx charter-ts ci clients go/examples-notes`.
 
-Everything says how long it took, so what is slow shows where it runs: each program charter-ts runs that takes a second or more (`took 19.8 s: fern generate --local --group typescript-dist ...`), a server's start (`took 2.6 s: cf answering at ...`), every command and every step of a job, and each job; `check` sums its parts, and `clients` each language's generation and proof. An SDK that is up to date says so instead of being made again.
+Everything charter-ts makes says how big it is (`made build/app.wasm (the Worker, TinyGo): 3.28 MB, 1.20 MB gzipped (limit 3.00 MB)`), the Rust CLI and the release's packages too, so what grows shows where it is made. Everything says how long it took, so what is slow shows where it runs: each program charter-ts runs that takes a second or more (`took 19.8 s: fern generate --local --group typescript-dist ...`), a server's start (`took 2.6 s: cf answering at ...`), every command and every step of a job, and each job; `check` sums its parts, and `clients` each language's generation and proof. An SDK that is up to date says so instead of being made again.
 
 | Job | When | What |
 |---|---|---|

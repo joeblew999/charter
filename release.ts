@@ -12,7 +12,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { releaseURL } from "charter-ts/package";
-import { output, run } from "charter-ts/scripts";
+import { made, output, run } from "charter-ts/scripts";
 
 // The Mac stays awake while the release runs (its check is minutes), and no longer.
 if (process.platform === "darwin") spawn("caffeinate", ["-i", "-w", String(process.pid)], { stdio: "ignore", detached: true }).unref();
@@ -73,7 +73,10 @@ const packed = dryRun ? pkg.version : version;
 const tarballs = [`dist/charter-ts-${packed}.tgz`, `dist/charter-lib-${packed}.tgz`];
 mkdirSync("dist", { recursive: true });
 run("npm", ["pack", "-w", "charter-ts", "-w", "ts/lib", "--pack-destination", resolve("dist")]);
-for (const tarball of tarballs) if (!existsSync(tarball)) throw new Error(`npm pack wrote no ${tarball}`);
+for (const tarball of tarballs) {
+	if (!existsSync(tarball)) throw new Error(`npm pack wrote no ${tarball}`);
+	made(tarball, "a package the release carries");
+}
 if (dryRun) {
 	console.log(`dry run: ${tarballs.join(" and ")} are what the release would carry; nothing tagged, pushed or published`);
 	process.exit(0);

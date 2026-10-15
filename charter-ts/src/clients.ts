@@ -5,7 +5,7 @@
 // toolchains a proof needs are mise's, at the versions pinned here, in mise's own folder.
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { cacheFolder, generateQuietly, output, runQuietly, seconds } from "./scripts.ts";
+import { cacheFolder, generateQuietly, made, output, runQuietly, seconds } from "./scripts.ts";
 
 /** The Rust the CLI is built with: mise loads it when a CLI is built, as it loads TinyGo. */
 const rustVersion = "1.98.1";
@@ -100,6 +100,8 @@ export async function check(group: string): Promise<void> {
 		// depends on are built once, and its own fingerprints say what to build again. A fresh machine,
 		// as on GitHub, builds everything.
 		await runQuietly("mise", ["exec", `rust@${rustVersion}`, "--", "cargo", "build", ...(bin ? ["--bin", bin] : []), "--no-default-features", "--features", "rustls"], { CARGO_TARGET_DIR: cacheFolder("cargo") }, dir);
+		const binary = join(cacheFolder("cargo"), "debug", `${bin ?? "cli"}${process.platform === "win32" ? ".exe" : ""}`);
+		if (existsSync(binary)) made(binary, "the CLI, a debug build");
 		return;
 	}
 	console.log(`${dir}: generated; charter-ts proves Go, TypeScript, Python and the Rust CLI, not this language`);

@@ -35,6 +35,25 @@ The notes Worker's `build/app.wasm`, gzipped, TinyGo 0.42, 2026-10-03 (the limit
 
 Both libraries passed the same tests under workerd. go-jose was kept: smaller, no dependencies of its own, keys fetched only in a request (keyfunc keeps them fresh from a goroutine of its own, which a Worker cannot run between requests; without it, they are never fetched again).
 
+## Building the Worker
+
+How long a fresh TinyGo build of the notes Worker takes (`go/examples-notes`, past charter's cache, TinyGo's own caches warm, on the owner's Mac), and what it makes, 2026-10-15:
+
+| TinyGo | Optimization | Build | `build/app.wasm` | Gzipped |
+|---|---|---|---|---|
+| 0.42.0 | `-opt=z` (what charter uses) | 21.8 s | 3.28 MB | 1.20 MB |
+| 0.42.0 | `-opt=s` | 38.9 s | 3.53 MB | 1.26 MB |
+| 0.42.0 | `-opt=2` | 45.9 s | 4.17 MB | 1.48 MB |
+| 0.42.0 | `-opt=1` | 40.8 s | 4.39 MB | 1.50 MB |
+| 0.42.0 | `-opt=0` | fails | | |
+| 0.43.0 | `-opt=z` (what charter uses) | 22.9 s, 23.0 s | 3.81 MB | 1.38 MB |
+| 0.43.0 | `-opt=s` | 39.8 s | 4.30 MB | 1.49 MB |
+| 0.43.0 | `-opt=2` | 48.3 s | 5.23 MB | 1.79 MB |
+| 0.43.0 | `-opt=1` | 43.1 s | 5.36 MB | 1.76 MB |
+| 0.43.0 | `-opt=0` | 22.2 s | 17.22 MB | 7.47 MB (over the 3 MB limit) |
+
+The smallest build is also the quickest: most of a build is wasm-opt's asyncify pass, and it takes longer the bigger the Wasm. So there is no faster build for local checks to switch to; a build is quick when charter's cache has it (the same sources make the same Wasm). TinyGo 0.43.0 builds in the same time as 0.42.0 and makes a Wasm 15 % bigger. Its first build after the upgrade took 38.7 s, while TinyGo filled its own caches.
+
 ## What closed the gap
 
 The Go Worker's median CPU, 2026-10-01 and 2026-10-02:
