@@ -75,8 +75,8 @@ for (const [era, mode, version] of [["stateless", { pin: "2026-07-28" }, "2026-0
 // 401 whose challenge points to the API's metadata, which names an authorization server (the API's
 // own), whose metadata names its token endpoint. The chain is followed here as an OAuth client does,
 // by hand: MCP's own client (ClientCredentialsProvider) refuses an authorization server without an
-// authorization endpoint, which RFC 8414 does not ask of one with only client credentials
-// (docs/self/upstream.md).
+// authorization endpoint, which RFC 8414 does not ask of one with only client credentials.
+// Upstream: modelcontextprotocol/typescript-sdk#3033 (when fixed: sign in with ClientCredentialsProvider here)
 const meta = { "io.modelcontextprotocol/protocolVersion": "2026-07-28", "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: "mcp-test", version: "1" } };
 const refused = await fetch(endpoint, {
 	method: "POST",

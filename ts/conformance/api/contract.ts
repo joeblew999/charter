@@ -78,7 +78,7 @@ export const contract = {
 			// (client_secret_basic, what an OAuth client sends first, an MCP client among them).
 			.input(z.strictObject({
 				// A string, not an enum: with an enum here, Fern's Go SDK does not compile (the handler checks it).
-				// Upstream: Fern, not filed (when fixed: z.enum(["client_credentials"]))
+				// Upstream: fern-api/fern#18316 (when fixed: z.enum(["client_credentials"]))
 				grant_type: z.string().optional().describe("client_credentials, the one grant").meta({ examples: ["client_credentials"] }),
 				client_id: z.string().optional().meta({ examples: ["id-1"] }),
 				client_secret: z.string().optional().meta({ examples: ["secret-1"] }),

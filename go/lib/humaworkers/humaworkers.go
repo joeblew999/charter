@@ -227,9 +227,9 @@ func match(pattern, path string) (map[string]string, bool) {
 // jsonOnly takes application/octet-stream out of op's request body when it is there only because
 // the input has a RawBody []byte next to its typed Body (the request as posted, kept beside the
 // validated one). Huma 2.39.1 then documents both content types, though only the Body's is read,
-// and Fern's Go generator takes the binary one: the method's request becomes an io.Reader
-// (docs/self/upstream.md). op is the one in the OpenAPI document. An input with a
-// RawBody alone keeps it: it is its only content.
+// and Fern's Go generator takes the binary one: the method's request becomes an io.Reader. op is
+// the one in the OpenAPI document. An input with a RawBody alone keeps it: it is its only content.
+// Upstream: danielgtaylor/huma#1132 (when fixed: delete jsonOnly)
 func jsonOnly(op *huma.Operation) {
 	const raw = "application/octet-stream"
 	if op.RequestBody == nil || len(op.RequestBody.Content) < 2 {

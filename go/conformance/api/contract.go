@@ -75,7 +75,7 @@ type NoteEvent struct {
 // Basic header (client_secret_basic, what an OAuth client sends first, an MCP client among them).
 type TokenRequest struct {
 	// A string, not an enum: with an enum here, Fern's Go SDK does not compile (the handler checks it).
-	// Upstream: Fern, not filed (when fixed: enum:"client_credentials")
+	// Upstream: fern-api/fern#18316 (when fixed: enum:"client_credentials")
 	GrantType    string `json:"grant_type,omitempty" required:"false" example:"client_credentials" doc:"client_credentials, the one grant"`
 	ClientID     string `json:"client_id,omitempty" required:"false" example:"id-1"`
 	ClientSecret string `json:"client_secret,omitempty" required:"false" example:"secret-1"`
@@ -233,8 +233,8 @@ func Routes(env Env) []humaworkers.Route {
 				Errors: []int{http.StatusUnauthorized},
 				// The body's schema is written into the operation, not referred to by name. With a
 				// named one, the test Fern's Go generator writes for a form-encoded token
-				// endpoint doesn't compile (it names a type `Request` that doesn't exist). Not filed
-				// yet: docs/self/upstream.md.
+				// endpoint doesn't compile (it names a type `Request` that doesn't exist).
+				// Upstream: fern-api/fern#18200 (when fixed: drop this RequestBody, the schema named)
 				RequestBody: &huma.RequestBody{Content: map[string]*huma.MediaType{humaworkers.FormContentType: {
 					Schema: api.OpenAPI().Components.Schemas.Schema(reflect.TypeFor[TokenRequest](), false, ""),
 				}}},

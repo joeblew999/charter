@@ -226,7 +226,9 @@ await check("a call without a token, or with a forged one, is 401", async () => 
 });
 
 await check("a websocket without a token is refused, and a message the channel refuses closes it (1008)", async () => {
-	// The refusal is a 401. cf dev's server drops the connection instead of passing it on (an error, no status).
+	// The refusal is a 401. cf dev's server (the Vite plugin) drops the connection instead of passing it
+	// on (an error, no status).
+	// Upstream: cloudflare/workers-sdk#15170 (when fixed: expect only the 401)
 	const refused = await new Promise<number | string>(resolve => {
 		const socket = new RawWebSocket(`${wsBase}/api/notes/live`);
 		socket.on("unexpected-response", (_, response) => { resolve(response.statusCode ?? "no status"); socket.terminate(); });

@@ -345,9 +345,10 @@ export function serve<C extends object>(router: Router<C & Served>, { document, 
 	const scopes = scopesOf(router, security);
 	return async (request, context) => {
 		const response = await answer(request, context);
-		// A body the answer did not read is read to its end: answered first, cf dev's proxy fails the
-		// next request on the connection (fetch failed). Upstream: cloudflare/workers-sdk, not filed
-		// (when fixed: drop this).
+		// A body the answer did not read is read to its end: answered first, cf dev fails the next
+		// request on the connection (fetch failed): workerd up to 1.20261013.1 closes it, and miniflare
+		// does not retry.
+		// Upstream: cloudflare/workers-sdk#16199 (when fixed: drop this; workerd 1.20261014.1 or later fixes it)
 		if (request.body && !request.bodyUsed) await request.arrayBuffer().catch(() => {});
 		return response;
 	};

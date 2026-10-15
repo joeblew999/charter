@@ -68,7 +68,9 @@ type Standard = { "~standard": { jsonSchema?: { input(options: unknown): JsonSch
  * named one: `.meta({ id: "Note" })`) as `{ $ref: "#/$defs/Note", $defs }`, and the MCP SDK takes a
  * root that does not say `type: "object"` for one that is no object: on a 2025 connection it then
  * wraps the result as `{ result }`, where go/lib/mcp answers the object itself.
- * Upstream: modelcontextprotocol/typescript-sdk, not filed (when fixed: drop objectRoot) */
+ * It also strips the bounds no JSON number can break (withoutSafeBounds), and lets an input through
+ * unchecked: those two stay.
+ * Upstream: modelcontextprotocol/typescript-sdk#3032 (when fixed: drop the inlining of the root's $ref, in inline) */
 function objectRoot(schema: unknown, checked: boolean): unknown {
 	const standard = (schema as Partial<Standard> | undefined)?.["~standard"];
 	const json = standard?.jsonSchema;
