@@ -12,6 +12,8 @@ export default defineConfig({
 	url: process.env.API_URL ?? "https://charter-start-htmx.gedw99.workers.dev",
 	/** npm run dev's port. */
 	port: Number(process.env.API_PORT ?? 5179),
+	/** The SDKs Fern makes (npm run spec writes fern/generators.yml from this and the spec). */
+	sdks: { name: "Api" },
 	/** Both specs, from the contract (api/contract.go). */
 	specs: { go: "./cmd/spec" },
 	go: { lint: ["api", "cmd", "pages"], gsx: true },

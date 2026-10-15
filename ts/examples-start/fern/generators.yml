@@ -1,13 +1,13 @@
-# The API from the oRPC contract. openapi.json and asyncapi.json are written by `npm run spec`
-# from api/contract.ts (never by hand). What Fern needs (SDK names, x-fern-*) is declared there.
+# Written by `charter-ts spec` from fern/openapi.json and charter.config.ts (sdks): don't edit, change
+# those and run npm run spec. Fern's generators are charter-ts's, at the versions it pins.
 api:
   specs:
     - openapi: openapi.json
     - asyncapi: asyncapi.json
 
-# The groups. Generate one: npm run sdk -- <group>   (output: sdk/out/<group>)
+# The SDKs. Generate one: npm run sdk -- <group>   (into sdk/out/<group>)
 groups:
-  # The Go SDK.
+  # Go: the module npm run sdk -- --publish commits in sdk/go, in a project that keeps it.
   go:
     generators:
       - name: fernapi/fern-go-sdk
@@ -16,14 +16,12 @@ groups:
           location: local-file-system
           path: ../sdk/out/go
         config:
-          # The Go SDK's module: the project's own with /sdk/go, the folder npm run sdk -- --publish
-          # commits it to in a Go project that keeps its Go SDK (charter.config.ts: go.sdk).
           module:
-            path: github.com/joeblew999/charter/ts/examples-start/sdk/go
+            path: charter-start-ts/sdk/go
             version: "1.22"
           packageName: api
 
-  # The TypeScript SDK as sources (.ts): what a release ships.
+  # TypeScript, as sources (.ts).
   typescript:
     generators:
       - name: fernapi/fern-typescript-sdk
@@ -34,10 +32,10 @@ groups:
         config:
           namespaceExport: Api
           generateWebSocketClients: true
-          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
+          # Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.
           guardProcessEnvAccess: true
 
-  # The TypeScript SDK compiled (.js + .d.ts): what a Worker or a Node program imports.
+  # TypeScript, compiled (.js and .d.ts): what a Worker or a Node program imports.
   typescript-dist:
     generators:
       - name: fernapi/fern-typescript-sdk
@@ -48,6 +46,6 @@ groups:
         config:
           namespaceExport: Api
           generateWebSocketClients: true
-          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
+          # Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.
           guardProcessEnvAccess: true
           outputSourceFiles: false

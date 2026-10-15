@@ -1,11 +1,12 @@
 import { bindings, defineConfig } from "cf/config";
+import { compatibilityDate } from "charter-ts/cloudflare";
 import * as entrypoint from "./worker.ts" with { type: "cf-worker" };
 
 // The oRPC API (api/contract.ts), with a D1 database (DB).
 export default defineConfig({
 	worker: {
 		name: "charter-start-ts",
-		compatibilityDate: "2026-09-25",
+		compatibilityDate,
 		entrypoint,
 		// Workers Logs is off unless enabled.
 		observability: { enabled: true },

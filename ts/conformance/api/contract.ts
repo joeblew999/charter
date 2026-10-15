@@ -28,7 +28,7 @@ export const writeLimit: Limit = { binding: "WRITE_LIMIT", limit: 100, period: 6
 const int32 = (examples: number[]) => ({ format: "int32", examples });
 
 type Operation = OpenAPIV3_2.OperationObject;
-/** Fern's audiences: group `typescript-public` in generators.yml keeps only the "public" operations. */
+/** Fern's audiences: the group `typescript-public` (charter.config.ts: sdks.audiences) keeps only the "public" operations. */
 const everyone = { "x-fern-audiences": ["public", "internal"] };
 const internal = { "x-fern-audiences": ["internal"] };
 const fern = (extensions: Record<string, unknown>) => (op: Operation): Operation => ({ ...op, ...extensions });
@@ -37,7 +37,7 @@ const fern = (extensions: Record<string, unknown>) => (op: Operation): Operation
  * Four ways in, any of them: OAuth client credentials (the SDKs fetch the token themselves), and
  * charter's three (charter-lib/auth): the API's own tokens, Cloudflare Access and an OpenID Connect
  * issuer. Reading needs read and writing write, by any of them: an OAuth token has both.
- * `auth-schemes` in generators.yml tells Fern which operation is the token endpoint.
+ * The OAuth scheme's tokenUrl, which fern/generators.yml restates, tells Fern which operation is the token endpoint.
  */
 const ways = oidcScheme(accessScheme(info.title, scheme("read")));
 const oauth = { type: "oauth2" as const, flows: { clientCredentials: { tokenUrl: "/api/oauth/token", scopes: { read: "Read notes", write: "Create notes and upload files" } } } };

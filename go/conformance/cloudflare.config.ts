@@ -1,13 +1,12 @@
 import { bindings, defineConfig, exports } from "cf/config";
 import * as entrypoint from "./worker.mjs" with { type: "cf-worker" };
 import spec from "./fern/openapi.json" with { type: "json" };
-import { rateLimits } from "charter-ts/cloudflare";
+import { compatibilityDate, rateLimits, secretsFromEnv } from "charter-ts/cloudflare";
 import { optionalSecrets } from "./secrets.ts";
 
 // Who else may call (api/handlers.go: trusted): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD) and
 // an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE), declared where the environment that deploys or
 // runs the Worker has them. Unset, the Worker trusts no one that way.
-const optional = Object.fromEntries(optionalSecrets.filter(name => process.env[name]).map(name => [name, bindings.secret()]));
 
 // How often a caller may call (go/lib/ratelimit, charter-lib/ratelimit): each limit the contract
 // declares (x-rate-limit in fern/openapi.json) is a Workers Rate Limiting binding with the same limit
@@ -21,7 +20,7 @@ const name = "charter-conformance-go";
 export default defineConfig({
 	worker: {
 		name,
-		compatibilityDate: "2026-09-25",
+		compatibilityDate,
 		entrypoint,
 		exports: {
 			Hub: exports.durableObject({ storage: "sqlite" }),
@@ -34,7 +33,7 @@ export default defineConfig({
 			READ_TOKEN: bindings.secret(),
 			WRITE_TOKEN: bindings.secret(),
 			...rateLimits(spec, name, bindings.rateLimit),
-			...optional,
+			...secretsFromEnv(optionalSecrets, bindings.secret),
 			// Where the noteCreated webhook is sent; empty: nowhere. The other settings (CLIENT_ID,
 			// CLIENT_SECRET, TOKEN_SECRET, WEBHOOK_SECRET) have the tests' defaults (api/handlers.go):
 			// an API of its own would keep them as secrets.

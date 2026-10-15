@@ -24,19 +24,20 @@ for await (const n of await client.notes.list({ limit: 50 })) console.log(n.id);
 
 `npm run sdk -- --prove` generates every group of `fern/generators.yml` at once, each in a Docker container of its own, and proves each in its language as soon as it is generated: Go built, vetted and tested against WireMock; TypeScript typechecked; Python checked by mypy and its own tests; the Rust CLI built. Each says how long it took. The toolchains come from mise, at versions charter-ts pins. This repo's CI proves the conformance projects' clients, which carry every Fern feature.
 
-A language is a group under `groups:` in `fern/generators.yml`, with Fern's generator for it (a version from Fern's releases):
+Which SDKs a project has is `sdks` in `charter.config.ts`; `npm run spec` writes Fern's settings, `fern/generators.yml`, from it and the spec, with the generators charter-ts pins:
 
-```yaml
-  python:
-    generators:
-      - name: fernapi/fern-python-sdk
-        version: <a version of fern-python-sdk>
-        output:
-          location: local-file-system
-          path: ../sdk/out/python
+```ts
+sdks: { name: "Notes", more: ["python", "cli"] },
 ```
 
-A project has a CLI if it has the group `cli`: Fern writes it in Rust, and `npm run sdk -- --prove cli` builds it.
+| Field | Gives |
+|---|---|
+| `name` | The TypeScript SDK's namespace; in lower case, the Go package and the CLI's command |
+| (always) | The groups `go`, `typescript` (sources) and `typescript-dist` (compiled); the Go SDK's module is the project's Go module, or in TypeScript the Worker's name, with `/sdk/go` |
+| `more` | `python`, and `cli`: a command-line client in Rust (Fern's early access), which `npm run sdk -- --prove cli` builds |
+| `audiences` | For each, a TypeScript SDK of only what the contract tags for it (`x-fern-audiences`): the group `typescript-<audience>` |
+
+The credentials each SDK sends are the spec's security schemes, restated there: bearer tokens, header keys (a Cloudflare Access service token) and OAuth client credentials, any of them.
 
 ## Give the Go SDK to another repo
 

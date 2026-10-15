@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
 import { deploy, migrateLocal } from "./cloudflare.ts";
 import type { Config, Extras, Tests } from "./config.ts";
 import { cacheFolder, freePort, run, seconds, untilStopped, withServer } from "./run.ts";
-import { prove, sdk, syncSdk, unstatedSchemes } from "./sdk.ts";
+import { prove, sdk, syncSdk, writeFernSettings } from "./sdk.ts";
 import { bundle, madeThisRun, megabytes } from "./sizes.ts";
 
 export interface Command {
@@ -90,7 +90,7 @@ export const commands: Record<string, Command> = {
 			});
 		},
 	},
-	spec: { usage: "spec", where: "project", about: "write both specs (fern/openapi.json, fern/asyncapi.json) from the contract", when: "After every change to the contract", run: () => specs(false) },
+	spec: { usage: "spec", where: "project", about: "write both specs (fern/openapi.json, fern/asyncapi.json) from the contract, and Fern's settings (fern/generators.yml) from them and charter.config.ts", when: "After every change to the contract, or to charter.config.ts's sdks", run: () => specs(false) },
 	check: {
 		usage: "check [<folder>] [--fresh]",
 		where: "both",
@@ -121,7 +121,7 @@ export const commands: Record<string, Command> = {
 		usage: "sdk [<group>] [--prove [<group>...]] [--publish]",
 		where: "project",
 		about: "an SDK with Fern (Docker), by default the TypeScript one, into sdk/out; --prove: every client, proven in its language; --publish, in Go: the Go SDK into sdk/go",
-		when: "When a caller needs an SDK; --prove after changing fern/generators.yml; --publish after a contract change, where the repo commits its Go SDK",
+		when: "When a caller needs an SDK; --prove after changing charter.config.ts's sdks; --publish after a contract change, where the repo commits its Go SDK",
 		run: async args => {
 			const config = await load();
 			const groups = args.filter(arg => !arg.startsWith("--"));
@@ -238,8 +238,6 @@ async function projectCheck(fresh: boolean): Promise<void> {
 	};
 	await timed("lint", async () => {
 		if (config.go) (await go()).goLint(config.go);
-		const unstated = unstatedSchemes();
-		if (unstated.length) throw new Error(`fern/generators.yml does not restate the spec's security schemes, so the SDKs would not send them:\n  ${unstated.join("\n  ")}`);
 		if (config.sdkInWorker) syncSdk(config.sdkInWorker);
 		if (existsSync("tsconfig.json")) {
 			run("cf", ["workers", "types"]);
@@ -287,10 +285,8 @@ async function fernCheck(fresh: boolean): Promise<void> {
 async function specs(check: boolean): Promise<void> {
 	const config = await load();
 	const server = config.specServer ?? config.url;
-	if ("go" in config.specs) {
-		run("go", ["run", config.specs.go, ...(check ? ["-check"] : []), "fern/openapi.json", "fern/asyncapi.json", server]);
-		return;
-	}
-	const { writeSpecs } = await import("./specs.ts");
-	await writeSpecs(config.specs, { server, check });
+	if ("go" in config.specs) run("go", ["run", config.specs.go, ...(check ? ["-check"] : []), "fern/openapi.json", "fern/asyncapi.json", server]);
+	else await (await import("./specs.ts")).writeSpecs(config.specs, { server, check });
+	writeFernSettings(config, check);
+	console.log(check ? "fern/generators.yml is what the spec and charter.config.ts give" : "fern/generators.yml: from the spec and charter.config.ts (sdks)");
 }

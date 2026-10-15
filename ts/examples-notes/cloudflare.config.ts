@@ -1,7 +1,7 @@
 import { bindings, defineConfig, exports } from "cf/config";
 import * as entrypoint from "./worker.ts" with { type: "cf-worker" };
 import spec from "./fern/openapi.json" with { type: "json" };
-import { rateLimits } from "charter-ts/cloudflare";
+import { compatibilityDate, rateLimits, secretsFromEnv } from "charter-ts/cloudflare";
 import { optionalSecrets } from "./secrets.ts";
 
 // The oRPC API (api/contract.ts) on D1, plus Hub: a hibernating Durable Object that fans every
@@ -12,8 +12,6 @@ import { optionalSecrets } from "./secrets.ts";
 // OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): the Worker's optional secrets (secrets.ts),
 // declared where the environment that deploys or runs the Worker has them; npm run deploy sets
 // them, cf dev takes them from the environment. Unset, the Worker trusts no one that way.
-declare const process: { env: Record<string, string | undefined> };
-const optional = Object.fromEntries(optionalSecrets.filter(name => process.env[name]).map(name => [name, bindings.secret()]));
 
 // How often a caller may call (go/lib/ratelimit, charter-lib/ratelimit): each limit the contract
 // declares (x-rate-limit in fern/openapi.json) is a Workers Rate Limiting binding with the same limit
@@ -22,7 +20,7 @@ const optional = Object.fromEntries(optionalSecrets.filter(name => process.env[n
 export default defineConfig({
 	worker: {
 		name: "charter-notes-ts",
-		compatibilityDate: "2026-09-25",
+		compatibilityDate,
 		entrypoint,
 		exports: {
 			Hub: exports.durableObject({ storage: "sqlite" }),
@@ -37,7 +35,7 @@ export default defineConfig({
 			READ_TOKEN: bindings.secret(),
 			WRITE_TOKEN: bindings.secret(),
 			...rateLimits(spec, "charter-notes-ts", bindings.rateLimit),
-			...optional,
+			...secretsFromEnv(optionalSecrets, bindings.secret),
 		},
 	},
 });

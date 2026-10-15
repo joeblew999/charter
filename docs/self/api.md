@@ -64,6 +64,6 @@ What charter needs to know about the project, typed: its Worker's name and URL, 
 | The contract, handlers and storage | Replace the notes; keep `hello` and the wiring |
 | `migrations/0001_init.sql` | Replace it if never deployed; otherwise add a file |
 | `test/` | Rewrite the notes checks |
-| `fern/generators.yml` | Your SDKs' names: `namespaceExport`, `packageName`, `binaryName` |
+| `charter.config.ts` | Your SDKs' name: `sdks.name`, then `npm run spec` |
 
-Without a stream, remove the hub too: the `Hub` export, the `HUB` binding and the stream's code. `grep -rni note api test migrations fern/generators.yml charter.config.ts` shows what is left.
+Without a stream, remove the hub too: the `Hub` export, the `HUB` binding and the stream's code. `grep -rni note api test migrations charter.config.ts` shows what is left.

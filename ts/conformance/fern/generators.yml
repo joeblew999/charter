@@ -1,10 +1,5 @@
-# The conformance API from the oRPC contract. openapi.json and asyncapi.json are written by
-# `npm run spec` from api/contract.ts (never by hand); the harness Worker serves it.
-# Every Fern feature we use, through standard options only: OAuth client credentials beside charter's
-# three ways in, any of them (api.auth-schemes below, the token endpoint in openapi.json), idempotency
-# (x-fern-idempotent), SSE (x-fern-streaming), cursor pagination (x-fern-pagination), multipart upload, OpenAPI 3.1 webhooks with HMAC signatures
-# (x-fern-webhook-signature), the WebSocket both ways (asyncapi.json), an overlay (overlays.yml) and
-# audiences (the typescript-public group).
+# Written by `charter-ts spec` from fern/openapi.json and charter.config.ts (sdks): don't edit, change
+# those and run npm run spec. Fern's generators are charter-ts's, at the versions it pins.
 api:
   specs:
     - openapi: openapi.json
@@ -24,10 +19,6 @@ api:
         response-properties:
           access-token: $response.access_token
           expires-in: $response.expires_in
-    # charter's three ways in, as the examples have them (go/lib/auth, charter-lib/auth): a bearer token
-    # (one of the API's, or an OpenID Connect access token: the same header, so the spec's oidc scheme
-    # is not restated) and a Cloudflare Access service token. They restate the contract's schemes,
-    # which Fern needs here or it keeps only the first.
     bearer:
       scheme: bearer
       token:
@@ -40,8 +31,6 @@ api:
       header: CF-Access-Client-Secret
       name: accessClientSecret
       env: CONFORMANCE_ACCESS_CLIENT_SECRET
-  # Any of the four: the SDKs send whichever credentials they were given.
-  # Upstream: fern-api/fern#17997 (when fixed: route credentials per operation, endpoint-security)
   auth:
     any:
       - OAuth
@@ -49,9 +38,9 @@ api:
       - accessClientId
       - accessClientSecret
 
-# The SDKs. Generate one: npm run sdk -- <group>   (output: sdk/out/<group>)
+# The SDKs. Generate one: npm run sdk -- <group>   (into sdk/out/<group>)
 groups:
-  # The Go SDK.
+  # Go: the module npm run sdk -- --publish commits in sdk/go, in a project that keeps it.
   go:
     generators:
       - name: fernapi/fern-go-sdk
@@ -61,11 +50,11 @@ groups:
           path: ../sdk/out/go
         config:
           module:
-            path: example.com/conformance
+            path: charter-conformance-ts/sdk/go
             version: "1.22"
           packageName: conformance
 
-  # The TypeScript SDK as sources (.ts): what a release ships.
+  # TypeScript, as sources (.ts).
   typescript:
     generators:
       - name: fernapi/fern-typescript-sdk
@@ -76,10 +65,10 @@ groups:
         config:
           namespaceExport: Conformance
           generateWebSocketClients: true
-          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
+          # Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.
           guardProcessEnvAccess: true
 
-  # The TypeScript SDK compiled (.js + .d.ts): what a Worker or a Node program imports, and what the tests use.
+  # TypeScript, compiled (.js and .d.ts): what a Worker or a Node program imports.
   typescript-dist:
     generators:
       - name: fernapi/fern-typescript-sdk
@@ -90,11 +79,11 @@ groups:
         config:
           namespaceExport: Conformance
           generateWebSocketClients: true
-          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
+          # Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.
           guardProcessEnvAccess: true
           outputSourceFiles: false
 
-  # The Python SDK: what AI and data code calls the API from.
+  # Python.
   python:
     generators:
       - name: fernapi/fern-python-sdk
@@ -103,7 +92,7 @@ groups:
           location: local-file-system
           path: ../sdk/out/python
 
-  # A Rust CLI for the API (Fern's CLI generator, early access).
+  # A command-line client, in Rust (Fern's early access).
   cli:
     generators:
       - name: fernapi/fern-cli-generator
@@ -114,7 +103,7 @@ groups:
         config:
           binaryName: conformance
 
-  # Only the conformance projects have this group. Audiences: the same spec, minus everything not tagged "public" (here: the internal file upload).
+  # TypeScript, only what the contract tags for the audience public.
   typescript-public:
     audiences:
       - public
@@ -127,5 +116,5 @@ groups:
         config:
           namespaceExport: Conformance
           generateWebSocketClients: true
-          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
+          # Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.
           guardProcessEnvAccess: true

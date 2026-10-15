@@ -1,15 +1,9 @@
-# The notes API from the oRPC contract. openapi.json and asyncapi.json are written by `npm run spec`
-# from api/contract.ts (never by hand). What Fern needs (SDK names, x-fern-pagination,
-# x-fern-streaming) is declared there; the WebSocket channel comes from asyncapi() of charter-lib.
+# Written by `charter-ts spec` from fern/openapi.json and charter.config.ts (sdks): don't edit, change
+# those and run npm run spec. Fern's generators are charter-ts's, at the versions it pins.
 api:
   specs:
     - openapi: openapi.json
     - asyncapi: asyncapi.json
-  # How the SDKs authenticate: a bearer token (one of the API's, or an OpenID Connect access token:
-  # the same header, so the spec's oidc scheme is not restated) and a Cloudflare Access service token,
-  # any of them, each sent on every request when given (Access wants its token on every request, even
-  # one the contract calls public). They restate the contract's schemes (charter-lib/auth's), which Fern needs
-  # here or it keeps only the first; charter-ts check holds them to the spec.
   auth-schemes:
     bearer:
       scheme: bearer
@@ -23,16 +17,15 @@ api:
       header: CF-Access-Client-Secret
       name: accessClientSecret
       env: CHARTER_NOTES_TS_ACCESS_CLIENT_SECRET
-  # Upstream: fern-api/fern#17997 (when fixed: route credentials per operation, endpoint-security)
   auth:
     any:
       - bearer
       - accessClientId
       - accessClientSecret
 
-# The SDKs. Generate one: npm run sdk -- <group>   (output: sdk/out/<group>)
+# The SDKs. Generate one: npm run sdk -- <group>   (into sdk/out/<group>)
 groups:
-  # The Go SDK.
+  # Go: the module npm run sdk -- --publish commits in sdk/go, in a project that keeps it.
   go:
     generators:
       - name: fernapi/fern-go-sdk
@@ -41,14 +34,12 @@ groups:
           location: local-file-system
           path: ../sdk/out/go
         config:
-          # The Go example's module path: the two APIs have the same surface, so the soak test's Go client
-          # (test/soak-go, shared with the Go example) builds against either SDK under this one import path.
           module:
-            path: github.com/joeblew999/charter/go/examples-notes/sdk/go
+            path: charter-notes-ts/sdk/go
             version: "1.22"
           packageName: notes
 
-  # The TypeScript SDK as sources (.ts): what a release ships.
+  # TypeScript, as sources (.ts).
   typescript:
     generators:
       - name: fernapi/fern-typescript-sdk
@@ -59,10 +50,10 @@ groups:
         config:
           namespaceExport: Notes
           generateWebSocketClients: true
-          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
+          # Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.
           guardProcessEnvAccess: true
 
-  # The TypeScript SDK compiled (.js + .d.ts): what a Worker or a Node program imports, and what the tests use.
+  # TypeScript, compiled (.js and .d.ts): what a Worker or a Node program imports.
   typescript-dist:
     generators:
       - name: fernapi/fern-typescript-sdk
@@ -73,11 +64,11 @@ groups:
         config:
           namespaceExport: Notes
           generateWebSocketClients: true
-          # Workers (without nodejs_compat) have no `process`: guard the SDK's env lookups.
+          # Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.
           guardProcessEnvAccess: true
           outputSourceFiles: false
 
-  # The Python SDK: what AI and data code calls the API from.
+  # Python.
   python:
     generators:
       - name: fernapi/fern-python-sdk
@@ -86,7 +77,7 @@ groups:
           location: local-file-system
           path: ../sdk/out/python
 
-  # A Rust CLI for the API (Fern's CLI generator, early access).
+  # A command-line client, in Rust (Fern's early access).
   cli:
     generators:
       - name: fernapi/fern-cli-generator

@@ -1,14 +1,13 @@
 import { bindings, defineConfig, exports } from "cf/config";
 import * as entrypoint from "./worker.ts" with { type: "cf-worker" };
 import spec from "./fern/openapi.json" with { type: "json" };
-import { rateLimits } from "charter-ts/cloudflare";
+import { compatibilityDate, rateLimits, secretsFromEnv } from "charter-ts/cloudflare";
 import { optionalSecrets } from "./secrets.ts";
 
 // Who else may call (api/handlers.ts: trusted): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD)
 // and an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE), declared where the environment that
 // deploys or runs the Worker has them. Unset, the Worker trusts no one that way.
 declare const process: { env: Record<string, string | undefined> };
-const optional = Object.fromEntries(optionalSecrets.filter(name => process.env[name]).map(name => [name, bindings.secret()]));
 
 // How often a caller may call (go/lib/ratelimit, charter-lib/ratelimit): each limit the contract
 // declares (x-rate-limit in fern/openapi.json) is a Workers Rate Limiting binding with the same limit
@@ -24,7 +23,7 @@ export default defineConfig(ctx => {
 	return {
 		worker: {
 			name,
-			compatibilityDate: "2026-09-25",
+			compatibilityDate,
 			// Lets this Worker call another Worker on the same workers.dev zone (else Cloudflare error 1042).
 			compatibilityFlags: ["global_fetch_strictly_public"],
 			entrypoint,
@@ -44,7 +43,7 @@ export default defineConfig(ctx => {
 				READ_TOKEN: bindings.secret(),
 				WRITE_TOKEN: bindings.secret(),
 				...rateLimits(spec, name, bindings.rateLimit),
-				...optional,
+				...secretsFromEnv(optionalSecrets, bindings.secret),
 			},
 		},
 	};

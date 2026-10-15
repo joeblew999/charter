@@ -211,7 +211,7 @@ export async function sdkPublish(check: boolean): Promise<void> {
 	rmSync(out, { recursive: true, force: true });
 	sdk("go");
 	const module = /^module\s+(\S+)/m.exec(readFileSync(join(out, "go.mod"), "utf8"))?.[1];
-	if (!module?.endsWith("/sdk/go")) throw new Error(`${out}/go.mod declares ${module}: set config.module.path of the go group in fern/generators.yml to <the project's module>/sdk/go`);
+	if (!module?.endsWith("/sdk/go")) throw new Error(`${out}/go.mod declares ${module}: npm run spec writes the go group's module as <the project's module>/sdk/go`);
 	const generated = sdkSources(out);
 	const readme = generated.get("README.md") ?? Buffer.from("");
 	generated.set("README.md", Buffer.concat([Buffer.from("> **Generated code.** Fern generated this Go client from the API's contract (the specs in `fern/`). Don't edit it: change the contract, then `npm run sdk -- --publish` writes this folder again.\n\n"), readme]));

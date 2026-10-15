@@ -19,6 +19,9 @@ export interface Config {
 	/** Both specs from the contract (charter-ts spec writes them into fern/): in TypeScript, the two
 	 * generators; in Go, the package that writes them. */
 	specs: Specs | GoSpecs;
+	/** The SDKs Fern makes from the specs: charter-ts spec writes fern/generators.yml from this and the
+	 * spec's security schemes. */
+	sdks: Sdks;
 	/** The server the specs name, if not `url`. */
 	specServer?: string;
 	/** A folder the generated TypeScript SDK is copied into before the Worker runs (dev, check, twins)
@@ -46,6 +49,19 @@ export interface Tests {
 	 * before it, with the server's environment, waited for at its `ready` URL, and stopped after. */
 	serve?: (ports: { port: number; extras: Extras }) => Helper[];
 	run: (context: TestContext) => void | Promise<void>;
+}
+
+/** The SDKs: Go and TypeScript always (the groups go, typescript, typescript-dist), and what is asked
+ * for here. The Go SDK's module is the project's Go module with /sdk/go, or in TypeScript the Worker's
+ * name with /sdk/go. */
+export interface Sdks {
+	/** Their name: the TypeScript SDK's namespace (Notes); in lower case, the Go package and the CLI's command. */
+	name: string;
+	/** More languages: python, and cli (a command-line client in Rust, Fern's early access). */
+	more?: readonly ("python" | "cli")[];
+	/** For each, a TypeScript SDK of only what the contract tags for that audience (x-fern-audiences):
+	 * the group typescript-<audience>. */
+	audiences?: readonly string[];
 }
 
 /** Go's specs: go run <package> [-check] fern/openapi.json fern/asyncapi.json <server>. */

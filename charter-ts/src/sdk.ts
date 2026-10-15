@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { made } from "./sizes.ts";
+import type { Sdks } from "./config.ts";
 import { cacheFolder, output, run, runQuietly, seconds } from "./run.ts";
 
 /** The hash of what an SDK is made from: every file in fern/. */
@@ -199,25 +200,111 @@ export async function prove(only: string[], committedGoSdk: boolean): Promise<vo
 	console.log(`sdk --prove took ${seconds(performance.now() - start)}, all at once: ${times.join(", ")} (generated + proven)`);
 }
 
-// What a project's fern/generators.yml must say that its spec already says: Fern sends only the
-// credentials generators.yml restates (api.auth-schemes, and auth: any of them), so each security
-// scheme of the spec is restated there, an API key with the spec's header, option name and variable.
-// An OpenID Connect scheme is not: its token goes as the bearer token.
-type Scheme = { type?: string; name?: string; "x-fern-header"?: { name?: string; env?: string } };
+// Fern's settings, fern/generators.yml, are written by charter-ts spec beside the specs, from the
+// spec's security schemes and charter.config.ts (sdks). The generators are pinned here, the one place.
+const generators = {
+	go: { name: "fernapi/fern-go-sdk", version: "1.70.5" },
+	typescript: { name: "fernapi/fern-typescript-sdk", version: "3.106.1" },
+	python: { name: "fernapi/fern-python-sdk", version: "5.41.2" },
+	cli: { name: "fernapi/fern-cli-generator", version: "0.54.0" },
+};
 
-/** What fern/generators.yml lacks of the spec's schemes, one line each; none: nothing. */
-export function unstatedSchemes(dir = "."): string[] {
-	if (!existsSync(`${dir}/fern/openapi.json`) || !existsSync(`${dir}/fern/generators.yml`)) return [];
-	const spec = JSON.parse(readFileSync(`${dir}/fern/openapi.json`, "utf8")) as { components?: { securitySchemes?: Record<string, Scheme> } };
-	const yml = readFileSync(`${dir}/fern/generators.yml`, "utf8");
-	const schemes = Object.entries(spec.components?.securitySchemes ?? {}).filter(([, scheme]) => scheme.type !== "openIdConnect");
-	if (!schemes.length) return [];
-	const missing: string[] = [];
-	if (!/^ {2}auth:\n {4}any:\n/m.test(yml)) missing.push("api.auth is not `any:` of the schemes");
-	for (const [name, scheme] of schemes) {
-		const want = [`    ${name}:\n`, `      - ${name}\n`];
-		if (scheme.type === "apiKey") want.push(`header: ${scheme.name}\n`, `name: ${scheme["x-fern-header"]?.name}\n`, `env: ${scheme["x-fern-header"]?.env}\n`);
-		for (const line of want) if (!yml.includes(line)) missing.push(`the scheme ${name} has no ${JSON.stringify(line.trim())}`);
+/** A security scheme as the spec declares it: what Fern's settings restate of it. */
+type Scheme = {
+	type?: string;
+	scheme?: string;
+	name?: string;
+	"x-fern-header"?: { name?: string; env?: string };
+	flows?: { clientCredentials?: { tokenUrl?: string } };
+};
+
+/** What fern/generators.yml is for these specs and this project: its SDKs (sdks), the Go SDK's module
+ * (goModule), and whether fern/ has an overlay of the OpenAPI spec (overlays.yml). */
+export function fernSettings(spec: { components?: { securitySchemes?: Record<string, Scheme> } }, sdks: Sdks, goModule: string, overlays: boolean): string {
+	const lines = [
+		"# Written by `charter-ts spec` from fern/openapi.json and charter.config.ts (sdks): don't edit, change",
+		"# those and run npm run spec. Fern's generators are charter-ts's, at the versions it pins.",
+		"api:",
+		"  specs:",
+		"    - openapi: openapi.json",
+		...(overlays ? ["      overlays: overlays.yml"] : []),
+		"    - asyncapi: asyncapi.json",
+	];
+	// Each scheme of the spec, restated: Fern sends only the credentials its settings name, and keeps
+	// only the first scheme otherwise. OpenID Connect's token is not one: it goes as the bearer token.
+	// Any of them, each sent on every request when given (Cloudflare Access wants its token on every
+	// request, even one the contract calls public).
+	// Upstream: fern-api/fern#17997 (when fixed: route credentials per operation, endpoint-security)
+	const declared = Object.entries(spec.components?.securitySchemes ?? {});
+	const kind = (scheme: Scheme) => ["oauth2", "http", "apiKey"].indexOf(scheme.type ?? "");
+	const schemes = declared.filter(([, scheme]) => kind(scheme) >= 0).sort(([, a], [, b]) => kind(a) - kind(b));
+	if (schemes.length > 0) {
+		// An OAuth client's variables have the API's prefix, the one its access token's have.
+		const access = declared.map(([, scheme]) => scheme["x-fern-header"]?.env).find(env => env?.endsWith("_ACCESS_CLIENT_ID"));
+		const prefix = access ? access.slice(0, -"ACCESS_CLIENT_ID".length) : `${sdks.name.toUpperCase()}_`;
+		lines.push("  auth-schemes:");
+		for (const [name, scheme] of schemes) {
+			lines.push(`    ${name}:`);
+			if (scheme.type === "http" && scheme.scheme === "bearer") lines.push("      scheme: bearer", "      token:", "        name: token");
+			else if (scheme.type === "apiKey") lines.push(`      header: ${scheme.name}`, `      name: ${scheme["x-fern-header"]?.name ?? name}`, ...(scheme["x-fern-header"]?.env ? [`      env: ${scheme["x-fern-header"].env}`] : []));
+			else if (scheme.type === "oauth2") {
+				const tokenUrl = scheme.flows?.clientCredentials?.tokenUrl;
+				if (!tokenUrl) throw new Error(`the spec's OAuth scheme ${name} has no client credentials flow with a tokenUrl: the only OAuth flow the SDKs take`);
+				lines.push(
+					"      scheme: oauth",
+					"      type: client-credentials",
+					`      client-id-env: ${prefix}CLIENT_ID`,
+					`      client-secret-env: ${prefix}CLIENT_SECRET`,
+					"      get-token:",
+					`        endpoint: "POST ${tokenUrl}"`,
+					"        request-properties:",
+					"          client-id: $request.client_id",
+					"          client-secret: $request.client_secret",
+					"        response-properties:",
+					"          access-token: $response.access_token",
+					"          expires-in: $response.expires_in",
+				);
+			} else throw new Error(`the spec's scheme ${name} is ${scheme.type} ${scheme.scheme ?? ""}: the SDKs take bearer tokens, header keys and OAuth client credentials`);
+		}
+		lines.push("  auth:", "    any:", ...schemes.map(([name]) => `      - ${name}`));
 	}
-	return missing;
+	const lower = sdks.name.toLowerCase();
+	const group = (name: string, about: string, generator: { name: string; version: string }, config: string[], extra: string[] = []) => [
+		"",
+		`  # ${about}`,
+		`  ${name}:`,
+		...extra,
+		"    generators:",
+		`      - name: ${generator.name}`,
+		`        version: ${generator.version}`,
+		"        output:",
+		"          location: local-file-system",
+		`          path: ../sdk/out/${name}`,
+		...(config.length ? ["        config:", ...config.map(line => `          ${line}`)] : []),
+	];
+	const typescript = [`namespaceExport: ${sdks.name}`, "generateWebSocketClients: true", "# Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.", "guardProcessEnvAccess: true"];
+	lines.push(
+		"",
+		"# The SDKs. Generate one: npm run sdk -- <group>   (into sdk/out/<group>)",
+		"groups:",
+		...group("go", "Go: the module npm run sdk -- --publish commits in sdk/go, in a project that keeps it.", generators.go, ["module:", `  path: ${goModule}`, '  version: "1.22"', `packageName: ${lower}`]).slice(1),
+		...group("typescript", "TypeScript, as sources (.ts).", generators.typescript, typescript),
+		...group("typescript-dist", "TypeScript, compiled (.js and .d.ts): what a Worker or a Node program imports.", generators.typescript, [...typescript, "outputSourceFiles: false"]),
+		...(sdks.more?.includes("python") ? group("python", "Python.", generators.python, []) : []),
+		...(sdks.more?.includes("cli") ? group("cli", "A command-line client, in Rust (Fern's early access).", generators.cli, [`binaryName: ${lower}`]) : []),
+		...(sdks.audiences ?? []).flatMap(audience => group(`typescript-${audience}`, `TypeScript, only what the contract tags for the audience ${audience}.`, generators.typescript, typescript, ["    audiences:", `      - ${audience}`])),
+	);
+	return lines.join("\n") + "\n";
+}
+
+/** writeFernSettings writes fern/generators.yml for the project's specs; with check, it writes nothing
+ * and fails if the one there is not that. */
+export function writeFernSettings(config: { worker: string; sdks: Sdks }, check: boolean): void {
+	const spec = JSON.parse(readFileSync(join("fern", "openapi.json"), "utf8")) as Parameters<typeof fernSettings>[0];
+	// The Go SDK's module: the project's own Go module, or the Worker's name, with /sdk/go.
+	const goModule = `${existsSync("go.mod") ? /^module\s+(\S+)/m.exec(readFileSync("go.mod", "utf8"))![1] : config.worker}/sdk/go`;
+	const text = fernSettings(spec, config.sdks, goModule, existsSync(join("fern", "overlays.yml")));
+	const file = join("fern", "generators.yml");
+	if (!check) writeFileSync(file, text);
+	else if (!existsSync(file) || readFileSync(file, "utf8") !== text) throw new Error(`${file} is not what the spec and charter.config.ts give: npm run spec`);
 }

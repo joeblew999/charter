@@ -32,7 +32,7 @@ const (
 	LiveTitle   = "Conformance live"
 )
 
-// OAuth is the security scheme's name: generators.yml's auth-schemes names it too.
+// OAuth is the security scheme's name: npm run spec restates it in fern/generators.yml, for the SDKs.
 const OAuth = "OAuth"
 
 // The webhook's signature: x-fern-webhook-signature in the spec, and what notify sends.
@@ -219,7 +219,7 @@ const livePath = "/api/notes/live"
 // Routes is the contract with its implementation on env.
 func Routes(env Env) []humaworkers.Route {
 	return []humaworkers.Route{
-		// OAuth client credentials: generators.yml's auth-schemes points the SDKs at this operation,
+		// OAuth client credentials: the scheme's tokenUrl, which fern/generators.yml restates, points the SDKs at this operation,
 		// and they call it themselves. It is the one operation that needs no token.
 		{Method: http.MethodPost, Path: "/api/oauth/token", OperationID: "getToken", Register: func(api huma.API) {
 			// Not a tool: an MCP client sends its token as a header, as the SDKs do.

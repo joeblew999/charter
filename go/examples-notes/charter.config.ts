@@ -21,6 +21,8 @@ export default defineConfig({
 	optionalSecrets,
 	/** Throwaway tokens for the local API and its tests. */
 	localSecrets: { READ_TOKEN: "local-read-token", WRITE_TOKEN: "local-write-token" },
+	/** The SDKs Fern makes (npm run spec writes fern/generators.yml from this and the spec). */
+	sdks: { name: "Notes", more: ["python", "cli"] },
 	/** Both specs, from the contract (api/contract.go). */
 	specs: { go: "./cmd/spec" },
 	go: { lint: ["api", "cmd", "test"], sdk: true },

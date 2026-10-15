@@ -121,8 +121,7 @@ export async function newProject(args: string[]): Promise<void> {
 			.replaceAll(screaming(old), screaming(name))
 			.replaceAll(".gedw99.workers.dev", `.${subdomain}.workers.dev`)
 			// In Go: the project's module is its name, and the Go library is the release's, not the repo's.
-			.replaceAll(`github.com/joeblew999/charter/go/examples-${from}`, name)
-			.replace(/github\.com\/joeblew999\/charter\/[^\s"]+\/sdk\/go/g, `${name}/sdk/go`);
+			.replaceAll(`github.com/joeblew999/charter/go/examples-${from}`, name);
 		if (basename(file) === "go.mod") next = next.replace(/\nreplace github\.com\/joeblew999\/charter\/go\/lib => \S+\n/, "\n").replace(/(github\.com\/joeblew999\/charter\/go\/lib) v0\.0\.0/, `$1 v${version()}`);
 		if (basename(file) === "package.json" && file === join(into, "package.json")) {
 			const pkg = JSON.parse(next) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };

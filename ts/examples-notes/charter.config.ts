@@ -16,6 +16,8 @@ export default defineConfig({
 	optionalSecrets,
 	/** Throwaway tokens for the local Worker and its tests. */
 	localSecrets: { READ_TOKEN: "local-read-token", WRITE_TOKEN: "local-write-token" },
+	/** The SDKs Fern makes (npm run spec writes fern/generators.yml from this and the spec). */
+	sdks: { name: "Notes", more: ["python", "cli"] },
 	/** Both specs, with the same generators the Worker serves /api/openapi.json and /api/asyncapi.json with. */
 	specs,
 	/** npm run check, under workerd: the live test. Auth, rate limits and MCP are charter-lib/serve's, which the

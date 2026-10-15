@@ -1,13 +1,27 @@
-// A project on Cloudflare: what its cloudflare.config.ts takes from charter (its Workers Rate Limiting
-// bindings, one for each limit its spec declares, x-rate-limit: go/lib/ratelimit, charter-lib/ratelimit,
-// each counting in a namespace named from the Worker's name), its deploy with its secrets, and its
-// migrations, on Cloudflare and on the local database of cf dev.
+// A project on Cloudflare: what its cloudflare.config.ts takes from charter (the compatibility date, its
+// optional secrets, and its Workers Rate Limiting bindings, one for each limit its spec declares,
+// x-rate-limit: go/lib/ratelimit, charter-lib/ratelimit, each counting in a namespace named from the
+// Worker's name), its deploy with its secrets, and its migrations, on Cloudflare and on the local
+// database of cf dev.
 //   env: { ...rateLimits(spec, name, bindings.rateLimit) }
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Config } from "./config.ts";
 import { output, run } from "./run.ts";
+
+/** The Workers runtime's compatibility date every project runs on: the one charter's projects are
+ * tested with, here so that it moves for all of them at once.
+ *   worker: { compatibilityDate, ... } */
+export const compatibilityDate = "2026-09-25";
+
+/** The optional secrets the environment has, each a secret binding (secret: cf/config's
+ * bindings.secret): a deploy sets those, cf dev takes them from the environment, and a Worker without
+ * one does without what it is for.
+ *   env: { ...secretsFromEnv(optionalSecrets, bindings.secret) } */
+export function secretsFromEnv<B>(names: readonly string[], secret: () => B): Record<string, B> {
+	return Object.fromEntries(names.filter(name => process.env[name]).map(name => [name, secret()]));
+}
 
 /** A limit as the spec declares it. */
 type Limit = { binding: string; limit: number; period: 10 | 60 };

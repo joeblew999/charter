@@ -1,4 +1,5 @@
 import { bindings, defineConfig } from "cf/config";
+import { compatibilityDate } from "charter-ts/cloudflare";
 import * as entrypoint from "./worker.mjs" with { type: "cf-worker" };
 
 // The Go Worker, written in Go on workers-go and built with TinyGo, with a D1 database (DB).
@@ -7,7 +8,7 @@ export default defineConfig(() => {
 	return {
 		worker: {
 			name,
-			compatibilityDate: "2026-09-25",
+			compatibilityDate,
 			entrypoint,
 			observability: { enabled: true },
 			env: {

@@ -9,6 +9,8 @@ export default defineConfig({
 	url: process.env.API_URL ?? "https://charter-start-ts.gedw99.workers.dev",
 	/** npm run dev's port. */
 	port: Number(process.env.API_PORT ?? 5178),
+	/** The SDKs Fern makes (npm run spec writes fern/generators.yml from this and the spec). */
+	sdks: { name: "Api" },
 	/** Both specs, with the same generators the Worker serves /api/openapi.json and /api/asyncapi.json with. */
 	specs,
 	/** npm run check: the live test against the Worker under workerd. */
