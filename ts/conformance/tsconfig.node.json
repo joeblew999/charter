@@ -3,6 +3,7 @@
 	"include": [
 		"charter.config.ts",
 		"test",
+		"api/**/*.test.ts",
 		".cloudflare/types"
 	]
 }

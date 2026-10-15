@@ -1,10 +1,10 @@
 import { bindings, defineConfig, exports } from "cf/config";
-import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+import * as entrypoint from "./worker.ts" with { type: "cf-worker" };
 import spec from "./fern/openapi.json" with { type: "json" };
 import { rateLimits } from "charter-ts/cloudflare";
 import { optionalSecrets } from "./secrets.ts";
 
-// The oRPC API (src/contract.ts) on D1, plus Hub: a hibernating Durable Object that fans every
+// The oRPC API (api/contract.ts) on D1, plus Hub: a hibernating Durable Object that fans every
 // new note out to the Worker's follow() loops. The Worker, not the hub, holds the clients' SSE
 // streams and WebSockets (docs/guides/streaming.md).
 
@@ -33,7 +33,7 @@ export default defineConfig({
 			APP_NAME: bindings.text("charter-notes-ts"),
 			DB: bindings.d1(),
 			HUB: bindings.durableObject({ worker: "charter-notes-ts", exportName: "Hub" }),
-			// The tokens (src/index.ts): set by every npm run deploy, from the environment under cf dev.
+			// The tokens (api/handlers.ts): set by every npm run deploy, from the environment under cf dev.
 			READ_TOKEN: bindings.secret(),
 			WRITE_TOKEN: bindings.secret(),
 			...rateLimits(spec, "charter-notes-ts", bindings.rateLimit),

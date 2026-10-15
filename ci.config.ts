@@ -53,6 +53,14 @@ export default defineCI({
 				["charter-ts", "twins", "ts/examples-start", "go/examples-start"],
 			],
 		},
+		// What a user gets: a project made by charter-ts new from the package as a release packs it,
+		// installed, and its own check passing (each template).
+		new: {
+			about: "A project made by charter-ts new from the packed package, as a release ships it, installed, and its check passing",
+			on: ["push", "pull_request", "tag"],
+			timeoutMinutes: 20,
+			run: [["node", "charter-ts/test/new-from-package.ts"]],
+		},
 		// The conformance projects carry every Fern feature, so their clients prove the generators; an
 		// example's specs are checked by Fern in its own check, and its committed Go SDK by a hash.
 		clients: {

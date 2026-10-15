@@ -1,9 +1,8 @@
 // What charter-ts needs to know about this project (npm run <step> runs charter-ts <step>), typed, in one place.
-import { specsOf } from "charter-lib/serve";
 import { defineConfig } from "charter-ts/config";
 import { sdk } from "charter-ts/scripts";
 import { optionalSecrets, secrets } from "./secrets.ts";
-import { contract, document } from "./src/contract.ts";
+import { specs } from "./api/spec.ts";
 
 export default defineConfig({
 	/** The Worker, as in cloudflare.config.ts. */
@@ -18,15 +17,15 @@ export default defineConfig({
 	/** Throwaway tokens for the local Worker and its tests. */
 	localSecrets: { READ_TOKEN: "local-read-token", WRITE_TOKEN: "local-write-token" },
 	/** Both specs, with the same generators the Worker serves /api/openapi.json and /api/asyncapi.json with. */
-	specs: specsOf(contract, document),
+	specs,
 	/** npm run test:workerd: the live test. Auth, rate limits and MCP are charter-lib/serve's, which the
 	 * conformance projects test every way. */
-	test: { run: ({ origin, node }) => node("test/live-test.ts", origin) },
+	test: { run: ({ origin, node }) => node("test/live.ts", origin) },
 	/** npm run live-test (fnox exec -- npm run live-test): the live test and the generated TypeScript SDK
 	 * (made first if the specs are newer: Docker) against the deployed Worker. It writes test notes. */
 	live: ({ url, node }) => {
 		sdk("typescript-dist", { ifStale: true });
-		node("test/live-test.ts", url);
-		node("test/sdk-live-test.ts", url);
+		node("test/live.ts", url);
+		node("test/sdk.ts", url);
 	},
 });

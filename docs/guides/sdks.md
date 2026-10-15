@@ -61,7 +61,7 @@ The conformance (`go/conformance/`, and `ts/conformance/` from oRPC) switches ea
 | A WebSocket both ways | `asyncapi.Operation` on the GET, `asyncapi.SendOperation` on a POST to the same path | A typed `sendSubscribe()` (TypeScript) |
 | Audiences | `x-fern-audiences`; a group with `audiences: [public]` | A public SDK without internal operations |
 | Resumable SSE | A `text/event-stream` response; `x-fern-streaming` with `terminator` and `resumable`; each event's `id` its place in the log, and the handler resuming from the newer of `after` and `Last-Event-ID` | `notes.watch({ after, seconds })`, which reconnects on a drop and stops at the terminator |
-| MCP tools | `serve.API` serves them; `humamcp.Expose(op, false)` for what is no tool | Any MCP client: the operations as tools at `/api/mcp` |
+| MCP tools | `serve.API` serves them; `mcp.Expose(op, false)` for what is no tool | Any MCP client: the operations as tools at `/api/mcp` |
 
 The spec only describes: the server must enforce auth, and idempotency is the handler's job (the conformance projects keep the first note under each key, in D1).
 

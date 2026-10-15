@@ -19,7 +19,7 @@ type Entry struct {
 func (e Entry) Position() int64 { return e.Seq }
 func (e Entry) Note() Note      { return Note{ID: e.ID, Body: e.Body} }
 
-// Store is the notes' log: D1 on Cloudflare (D1Store, store_js.go), memory natively and in the
+// Store is the notes' log: D1 on Cloudflare (D1Store, store_d1.go), memory natively and in the
 // tests (MemStore). It starts with the five notes migrations/0001_init.sql seeds.
 type Store interface {
 	// Page returns the notes in the log's order from offset, at most limit.

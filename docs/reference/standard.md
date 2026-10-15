@@ -56,6 +56,10 @@ A handler that refuses what the contract lets through says where: `refused("quer
 
 Both libraries write the OpenAPI document the same way, so the SDKs Fern makes from either are the same: OpenAPI 3.1.0; a request or response body inline (as Fern names its type from the operation); every operation's refusals declared as problem details (401 when it needs credentials, 422 when it takes input, its 429 when it is limited, any other it declares, and a default); a parameter's description on it and on its schema; a file as `contentMediaType: application/octet-stream`; examples on every field.
 
+## Checked
+
+`charter-ts`'s standard test checks a running API from outside, against its own spec: both specs name its address; an unknown path is a 404 and a method a path lacks a 405, as problem details; `/api/mcp` lists tools that are the spec's operations and answers MCP's protocol errors; an operation that needs credentials, called without them, is a 401 whose challenge leads to the API's metadata, through MCP too. Every project's `check` runs it on its own server, and `live-test` on the deployed Worker, before the project's own tests.
+
 ## Held the same
 
 Each API that is here in TypeScript and in Go (conformance, notes, start) answers the same in both, with the TypeScript project as the reference:
@@ -64,7 +68,7 @@ Each API that is here in TypeScript and in Go (conformance, notes, start) answer
 npx charter-ts twins ts/conformance go/conformance
 ```
 
-It runs both under workerd, as deployed, and sends both the requests the reference's specs give rise to: for each operation the right one and each kind of wrong one, for each channel one that is no upgrade, and what every API serves. It prints every answer that differs and fails if one does; the `twins` job runs it for each pair. The requests come from the spec, so a new route is covered without editing anything.
+It runs both under workerd, as deployed, and sends both the requests the reference's specs give rise to: for each operation the right one and each kind of wrong one, for each channel one that is no upgrade, and what every API serves. It prints every answer that differs and fails if one does, or if their saved specs (`fern/`) or migrations differ; the `twins` job runs it for each pair. The requests come from the spec, so a new route is covered without editing anything.
 
 ## Go
 
@@ -79,8 +83,8 @@ func Handler(env Env) http.Handler { return API(env).Handler() }
 
 // cmd/spec/main.go
 spec := api.API(api.Env{})
-specfile.Must(spec.Tools())
-specfile.Main(spec.OpenAPI, spec.AsyncAPI)
+specs.Must(spec.Tools())
+specs.Main(spec.OpenAPI, spec.AsyncAPI)
 ```
 
 `Trusted` empty: no credentials are checked and `/.well-known/` is 404. `Document` adds what no route says (the webhooks).

@@ -38,8 +38,8 @@ Those marked * work in any repo; the others in a project, a folder with a `chart
 | `run` | Go: the API natively (go run .) on the config's port: no Cloudflare, an in-memory store |
 | `dev` | the API under workerd (cf dev) on the config's port, with the throwaway secrets (a Go Worker built first), its local database migrated once it answers; until Ctrl-C |
 | `migrate:local` | apply migrations/*.sql, each once, to the local database of a running dev |
-| `lint` | Go: gofmt, go vet for the host and for Wasm, gsx's output and the Go SDK fresh. TypeScript: typecheck the Worker (tsconfig.json, with cf's types) and what runs in Node: the config and the tests (tsconfig.node.json) |
-| `check [--fresh]` | every local check, in order, with no Cloudflare account, and how long each took. Go: lint, go test, the specs, Fern's check, the tests natively and under workerd. TypeScript: lint, the specs, Fern's check, test/*.test.ts, the tests under workerd. A TinyGo build and Fern's check done before for the same sources come from charter's cache; --fresh does them again |
+| `lint` | Go: gofmt, go vet for the host and for Wasm, gsx's output and the Go SDK fresh. Both: fern/generators.yml restates the spec's security schemes. TypeScript: typecheck the Worker (tsconfig.json, with cf's types) and what runs in Node: the config and the tests (tsconfig.node.json) |
+| `check [--fresh]` | every local check, in order, with no Cloudflare account, and how long each took. Go: lint, go test, the specs, Fern's check, the tests natively and under workerd. TypeScript: lint, the specs, Fern's check, the unit tests beside the code (api/*.test.ts), the tests under workerd. A TinyGo build and Fern's check done before for the same sources come from charter's cache; --fresh does them again |
 | `spec` | write both specs from the contract into fern/ |
 | `spec:check` | fail if a committed spec is stale against the contract |
 | `test:native` | Go: the API natively (go run .) on a free port, and the config's native tests against it |
@@ -54,5 +54,5 @@ Those marked * work in any repo; the others in a project, a folder with a `chart
 | `ci:write [--check]` * | write a workflow per job (.github/workflows/self-<job>.yml) from ci.config.ts: each calls the job runner (charter-ci.yml, from the kit), which installs the tools with mise and runs npx charter-ts ci <job>; --check writes nothing and fails if one differs |
 | `sdk:publish [--check]` | Go: generate the Go SDK (Docker), prove it (build, vet, tests against WireMock) and copy its sources into sdk/go, the committed module another repo can go get; --check fails if sdk/go is not what the specs generate now |
 | `deploy` | REMOTE: deploy the Worker (a Go Worker built first) with its secrets from the environment (fnox exec -- npm run deploy), then apply its migrations |
-| `live-test` | REMOTE: the config's live tests against the deployed Worker (with the secrets: fnox exec -- npm run live-test) |
+| `live-test` | REMOTE: the standard test and the config's live tests against the deployed Worker (with the secrets: fnox exec -- npm run live-test) |
 | `version` * | the version of charter-ts this is |

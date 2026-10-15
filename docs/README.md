@@ -31,7 +31,7 @@ A repo with no API takes the parts that are not about one (the docs site, the re
 |---|---|---|
 | charter-ts | `charter-ts/` | The tool, installed from its GitHub Release. For any repo: `adopt` (the kit, `charter-ts/kit/`), `docs:check`, `issue`, `upstream:status`, `repo`. For a project, from its `charter.config.ts`: `new`, `dev`, `check`, `spec`, `sdk`, `deploy`, `live-test`, and in Go `run`, `build`, `sdk:publish` ([TypeScript](guides/typescript.md)) |
 | The TypeScript library | `ts/lib/` | `charter-lib`, what a TypeScript Worker imports, the counterpart of `go/lib/`: `serve` (the API the standard way: [The standard API](reference/standard.md)), and what it is made of: `specs`, `asyncapi`, `auth`, `ratelimit`, `follow`, `mcp`. Built with no Node types: it runs on Workers |
-| The TypeScript projects | `ts/examples-start/` (one route), `ts/examples-notes/` (the notes API: auth, streams, rate limits), `ts/conformance/` (every Fern feature, its notes in D1 behind the hub, its operations as MCP tools; the SDK tested inside a Worker) | Each: the contract (`src/contract.ts`), `charter.config.ts`, `test/` (typed, checked against the contract's schemas), `fern/`. `charter-ts new` copies start or notes |
+| The TypeScript projects | `ts/examples-start/` (one route), `ts/examples-notes/` (the notes API: auth, streams, rate limits), `ts/conformance/` (every Fern feature, its notes in D1 behind the hub, its operations as MCP tools; the SDK tested inside a Worker) | Each, as each Go project: `api/` (`contract.ts`, `handlers.ts`, `spec.ts`, `store.ts`, unit tests beside them), `worker.ts` (the Worker), `test/` (its tests against a server, typed, which its Go twin runs too), `charter.config.ts`, `fern/`. `charter-ts new` copies start or notes |
 | The Go library | `go/lib/` | What a Go project imports ([Go packages](reference/packages.md)), with its Worker glue in `go/lib/worker/` |
 | The Go projects | `go/examples-notes/`, `go/examples-start/`, `go/examples-start-htmx/`, `go/examples-start-datastar/`, `go/conformance/` | The notes API, the start projects (with server-rendered pages: [Server-rendered pages](guides/pages.md)) and the conformance project, in Go |
 
@@ -45,7 +45,7 @@ Never edit these: change the source and run the step.
 | `pages/*.x.go` (committed) | `go tool gsx generate`, from the gsx components (`go/examples-start-htmx/`, `go/examples-start-datastar/`); `npm run check` fails while they are stale |
 | `sdk/go/` (committed), `sdk/out/` | `npm run sdk:publish`, `npm run sdk --`; in TypeScript, `npm run sdk -- <group>` |
 | `build/`, `charter-ts/dist/`, `ts/lib/dist/` | `npx charter-ts build` in a Go project (`dev`, `check` and `deploy` run it); `npm ci` (it builds both packages) |
-| `.github/workflows/self-*.yml` (`self-check.yml`, `self-repo.yml`, `self-projects.yml`, `self-twins.yml`, `self-clients.yml`, `self-deploy.yml`) | `npx charter-ts ci:write`, from `ci.config.ts` |
+| `.github/workflows/self-*.yml` (`self-check.yml`, `self-repo.yml`, `self-projects.yml`, `self-twins.yml`, `self-new.yml`, `self-clients.yml`, `self-deploy.yml`) | `npx charter-ts ci:write`, from `ci.config.ts` |
 | The rest of `.github/`, `renovate.json`, `AGENTS.md`, `CLAUDE.md` | `npm run adopt`, from `charter-ts/kit/` |
 | `docs/charter/`, `docs/_config.yml`, `docs/llms.txt`, `docs/_sass/` | `npm run adopt`, from `charter-ts/kit/` |
 | `docs/charter/tasks.md`, `docs/charter/using.md` | `npm run adopt`, from `package.json`'s scripts and from charter-ts's commands |

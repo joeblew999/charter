@@ -1,10 +1,10 @@
 import { bindings, defineConfig, exports } from "cf/config";
-import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+import * as entrypoint from "./worker.ts" with { type: "cf-worker" };
 import spec from "./fern/openapi.json" with { type: "json" };
 import { rateLimits } from "charter-ts/cloudflare";
 import { optionalSecrets } from "./secrets.ts";
 
-// Who else may call (src/conformance.ts: trusted): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD)
+// Who else may call (api/handlers.ts: trusted): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD)
 // and an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE), declared where the environment that
 // deploys or runs the Worker has them. Unset, the Worker trusts no one that way.
 declare const process: { env: Record<string, string | undefined> };
@@ -40,7 +40,7 @@ export default defineConfig(ctx => {
 				WEBHOOK_URL: bindings.text(process.env.CONFORMANCE_WEBHOOK_URL ?? ""),
 				DB: bindings.d1(),
 				HUB: bindings.durableObject({ worker: name, exportName: "Hub" }),
-				// The API's tokens (src/conformance.ts): set by every npm run deploy, from the environment under cf dev.
+				// The API's tokens (api/handlers.ts): set by every npm run deploy, from the environment under cf dev.
 				READ_TOKEN: bindings.secret(),
 				WRITE_TOKEN: bindings.secret(),
 				...rateLimits(spec, name, bindings.rateLimit),

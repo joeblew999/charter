@@ -7,17 +7,17 @@
 // someone changed the contract and didn't run `npm run spec`. The same functions the Worker
 // serves /api/openapi.json and /api/asyncapi.json with (api/spec.go, go/lib/serve).
 //
-// Either way it first fails if an operation cannot be the MCP tool it would be (humamcp.Check): the
+// Either way it first fails if an operation cannot be the MCP tool it would be (mcp.Check): the
 // specs don't show that, and otherwise the first client to list the tools finds out.
 package main
 
 import (
 	"github.com/joeblew999/charter/go/examples-start/api"
-	"github.com/joeblew999/charter/go/specfile"
+	"github.com/joeblew999/charter/go/specs"
 )
 
 func main() {
 	spec := api.API(api.Env{})
-	specfile.Must(spec.Tools())
-	specfile.Main(spec.OpenAPI, spec.AsyncAPI)
+	specs.Must(spec.Tools())
+	specs.Main(spec.OpenAPI, spec.AsyncAPI)
 }

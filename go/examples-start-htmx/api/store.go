@@ -8,7 +8,7 @@ import (
 	"github.com/joeblew999/charter/go/hub"
 )
 
-// Store is the log: D1 on Cloudflare (D1Store, store_js.go), memory for `go run .` and the tests
+// Store is the log: D1 on Cloudflare (D1Store, store_d1.go), memory for `go run .` and the tests
 // (MemStore).
 type Store interface {
 	Create(ctx context.Context, body string) (Message, error)

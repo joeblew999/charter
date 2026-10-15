@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/joeblew999/charter/go/humaworkers"
-	"github.com/joeblew999/charter/go/specfile"
+	"github.com/joeblew999/charter/go/specs"
 )
 
 // What a spec does not show and a client would find first. These hold for any contract: they name
@@ -19,7 +19,7 @@ func TestEveryOperationCanBeItsMCPTool(t *testing.T) {
 // Fern shows an example of every request in each SDK's README and reference, and makes up what the
 // contract doesn't say: a made-up value fails a pattern or a bound, and whoever copies it gets a 422.
 func TestExamplesAreThereAndValid(t *testing.T) {
-	for _, problem := range specfile.Examples(humaworkers.New(config(), Routes(Env{}))) {
+	for _, problem := range specs.Examples(humaworkers.New(config(), Routes(Env{}))) {
 		t.Error(problem)
 	}
 }

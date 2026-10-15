@@ -25,7 +25,7 @@ npm run check    # fails on a stale spec, a failing test or a TinyGo gap
 
 2. **The route** in `Routes`: `Method`, `Path`, `OperationID` (the MCP tool's name), and a `huma.Register` call with `Summary`, `Errors` and `Extensions: sdk("notes", "get", nil)`, which names `client.notes.get()`. Copy `listNotes` for a paginated list.
 3. **The handler** in `api/handlers.go` gets `in` validated; return `huma.Error404NotFound("...")` to refuse.
-4. **The storage:** the method on `Store` in `api/store.go`, for `D1Store` (`api/store_js.go`, on Cloudflare) and `MemStore` (natively and in `go test`); a `-empty` project has none yet, so copy the three from `go/examples-notes/api/`. A table change is the next numbered file in `migrations/`.
+4. **The storage:** the method on `Store` in `api/store.go`, for `D1Store` (`api/store_d1.go`, on Cloudflare) and `MemStore` (natively and in `go test`); a `-empty` project has none yet, so copy the three from `go/examples-notes/api/`. A table change is the next numbered file in `migrations/`.
 
 For the generated clients: every constrained request field has a valid `example`; numbers are `int32`; a cursor is a string.
 
@@ -42,7 +42,7 @@ Every operation that answers once is also a tool at `/api/mcp`, named by its `op
 
 | | Served by | Hide one |
 |---|---|---|
-| Go | `go/lib/serve`, with `go/lib/humamcp` | `humamcp.Expose(op, false)` |
+| Go | `go/lib/serve`, with `go/lib/mcp` | `mcp.Expose(op, false)` |
 | TypeScript | `charter-lib/serve`, with `charter-lib/mcp` on the official MCP SDK | `.meta(notATool())` on the procedure |
 
 The conformance projects test both, with MCP's own client ([The standard API](../reference/standard.md)).
@@ -55,7 +55,7 @@ claude mcp add --transport http billing-api https://billing-api.<your-subdomain>
 
 | File | What to do |
 |---|---|
-| `api/contract.go`, `api/handlers.go`, `api/store.go`, `api/store_js.go` | Replace the notes; keep `hello`, `Handler` and `API` (`api/spec.go`) |
+| `api/contract.go`, `api/handlers.go`, `api/store.go`, `api/store_d1.go` | Replace the notes; keep `hello`, `Handler` and `API` (`api/spec.go`) |
 | `migrations/0001_init.sql` | Replace it if never deployed; otherwise add a file |
 | `api/*_test.go`, `test/` | Keep the helpers; rewrite the notes checks and the tool names |
 | `fern/generators.yml` | `namespaceExport`, `packageName`, `binaryName`; keep the Go SDK's path `<your module>/sdk/go` |
@@ -64,4 +64,4 @@ Without a stream, also remove the hub: `Hub` in `Env`, `feed`, the `HUB` binding
 
 ## In TypeScript
 
-The same API on oRPC (`src/contract.ts`, Zod) is `ts/examples-notes/`, without a native run; invalid input gets a 400. `charter-ts new my-api --from notes` makes a project from it: [TypeScript](typescript.md).
+The same API on oRPC (`api/contract.ts`, Zod) is `ts/examples-notes/`, without a native run; invalid input gets a 400. `charter-ts new my-api --from notes` makes a project from it: [TypeScript](typescript.md).

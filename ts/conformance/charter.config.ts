@@ -2,7 +2,7 @@
 import { defineConfig } from "charter-ts/config";
 import { sdk } from "charter-ts/scripts";
 import { optionalSecrets, secrets } from "./secrets.ts";
-import { specs } from "./src/specs.ts";
+import { specs } from "./api/spec.ts";
 
 /** The second Worker, the same code deployed with --mode api, which serves the API the specs describe:
  * on Cloudflare a Worker can't open a WebSocket to itself. On another account: set API_SERVER_URL. */
@@ -22,8 +22,8 @@ export default defineConfig({
 	localSecrets: { READ_TOKEN: "local-read-token", WRITE_TOKEN: "local-write-token" },
 	specs,
 	specServer: apiUrl,
-	/** The Worker runs the generated SDK itself: it is copied into src/client first. */
-	sdkInWorker: "src/client",
+	/** The Worker runs the generated SDK itself: it is copied into client/ first. */
+	sdkInWorker: "client",
 	deployModes: ["api"],
 	/** npm run test:workerd: the SDK test inside the Worker, then from Node the SDK, MCP and every way in,
 	 * the tests go/conformance runs too (the public SDK made first if fern/ changed: Docker). The tests
@@ -40,20 +40,20 @@ export default defineConfig({
 		/** The webhook's receiver, for the Worker's whole run: every note the tests create is delivered. */
 		serve: ({ extras: [, webhook] }) => [{ program: "node", args: ["test/webhook-receiver.ts", String(webhook)], ready: `http://localhost:${webhook}/` }],
 		run: ({ origin, extras: [issuer, webhook], node }) => {
-			node("test/harness-test.ts", origin);
+			node("test/harness.ts", origin);
 			sdk("typescript-public", { ifStale: true });
-			node("test/sdk-test.ts", origin, "--webhooks", `http://localhost:${webhook}`);
-			node("test/mcp-test.ts", origin);
-			node("test/auth-test.ts", origin, String(issuer));
+			node("test/sdk.ts", origin, "--webhooks", `http://localhost:${webhook}`);
+			node("test/mcp.ts", origin);
+			node("test/auth.ts", origin, String(issuer));
 		},
 	},
 	/** npm run live-test (fnox exec -- npm run live-test): the SDK test inside the deployed Worker, against
 	 * the second one, then the SDK and MCP from here against that one (never the auth test: its issuer
 	 * is local). It writes test notes. */
 	live: ({ url, node }) => {
-		node("test/harness-test.ts", url, apiUrl);
+		node("test/harness.ts", url, apiUrl);
 		sdk("typescript-public", { ifStale: true });
-		node("test/sdk-test.ts", apiUrl);
-		node("test/mcp-test.ts", apiUrl);
+		node("test/sdk.ts", apiUrl);
+		node("test/mcp.ts", apiUrl);
 	},
 });

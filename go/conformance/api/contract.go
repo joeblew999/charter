@@ -19,8 +19,8 @@ import (
 
 	"github.com/joeblew999/charter/go/asyncapi"
 	"github.com/joeblew999/charter/go/auth"
-	"github.com/joeblew999/charter/go/humamcp"
 	"github.com/joeblew999/charter/go/humaworkers"
+	"github.com/joeblew999/charter/go/mcp"
 	"github.com/joeblew999/charter/go/ratelimit"
 )
 
@@ -223,7 +223,7 @@ func Routes(env Env) []humaworkers.Route {
 		// and they call it themselves. It is the one operation that needs no token.
 		{Method: http.MethodPost, Path: "/api/oauth/token", OperationID: "getToken", Register: func(api huma.API) {
 			// Not a tool: an MCP client sends its token as a header, as the SDKs do.
-			huma.Register(api, humamcp.Expose(huma.Operation{
+			huma.Register(api, mcp.Expose(huma.Operation{
 				OperationID: "getToken", Method: http.MethodPost, Path: "/api/oauth/token",
 				Responses: map[string]*huma.Response{"200": {Description: "token"}},
 				Summary:   "OAuth client-credentials token (used by the SDK itself)", Tags: []string{"auth"},
@@ -283,7 +283,7 @@ func Routes(env Env) []humaworkers.Route {
 		// Multipart upload, and the one operation that is not public (audiences).
 		{Method: http.MethodPost, Path: "/api/files", OperationID: "uploadFile", Register: func(api huma.API) {
 			// Not a tool: a tool's arguments are JSON, and a file is not.
-			huma.Register(api, humamcp.Expose(huma.Operation{
+			huma.Register(api, mcp.Expose(huma.Operation{
 				OperationID: "uploadFile", Method: http.MethodPost, Path: "/api/files",
 				Responses: map[string]*huma.Response{"200": {Description: "stored"}},
 				Summary:   "Upload a file (multipart)", Tags: []string{"files"},

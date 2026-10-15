@@ -41,6 +41,8 @@ async function serve(config: Config, tests: Tests, program: string, args: string
 	const env = { ...config.localSecrets, PORT: String(port), ...tests.env?.({ port, extra, extras }) };
 	const server = () => withServer({ program, args, env, ready: origin + (tests.ready ?? "/api/openapi.json") }, async () => {
 		if (program === "cf" && existsSync("migrations")) await migrateLocal(config, port);
+		// What every API must serve, first (the standard test, docs/reference/standard.md); then the project's own tests.
+		await (await import("./standard.ts")).standard(origin);
 		await tests.run({ origin, port, extra, extras, node: (file, ...a) => run("node", [file, ...a], env) });
 	});
 	// What the tests serve, up before the server and down after it: each wraps the next.
@@ -158,11 +160,13 @@ export const steps: Record<string, Step> = {
 	},
 	lint: {
 		usage: "lint",
-		about: "Go: gofmt, go vet for the host and for Wasm, gsx's output and the Go SDK fresh. TypeScript: typecheck the Worker (tsconfig.json, with cf's types) and what runs in Node: the config and the tests (tsconfig.node.json)",
+		about: "Go: gofmt, go vet for the host and for Wasm, gsx's output and the Go SDK fresh. Both: fern/generators.yml restates the spec's security schemes. TypeScript: typecheck the Worker (tsconfig.json, with cf's types) and what runs in Node: the config and the tests (tsconfig.node.json)",
 		run: async () => {
 			const config = await load();
 			const { run, syncSdk } = await scripts();
 			if (config.go) (await go()).goLint(config.go);
+			const unstated = (await import("./fern.ts")).unstatedSchemes();
+			if (unstated.length) throw new Error(`fern/generators.yml does not restate the spec's security schemes, so the SDKs would not send them:\n  ${unstated.join("\n  ")}`);
 			if (config.sdkInWorker) syncSdk(config.sdkInWorker);
 			if (existsSync("tsconfig.json")) {
 				run("cf", ["workers", "types"]);
@@ -173,7 +177,7 @@ export const steps: Record<string, Step> = {
 	},
 	check: {
 		usage: "check [--fresh]",
-		about: "every local check, in order, with no Cloudflare account, and how long each took. Go: lint, go test, the specs, Fern's check, the tests natively and under workerd. TypeScript: lint, the specs, Fern's check, test/*.test.ts, the tests under workerd. A TinyGo build and Fern's check done before for the same sources come from charter's cache; --fresh does them again",
+		about: "every local check, in order, with no Cloudflare account, and how long each took. Go: lint, go test, the specs, Fern's check, the tests natively and under workerd. TypeScript: lint, the specs, Fern's check, the unit tests beside the code (api/*.test.ts), the tests under workerd. A TinyGo build and Fern's check done before for the same sources come from charter's cache; --fresh does them again",
 		run: async args => {
 			const config = await load();
 			const { run } = await scripts();
@@ -189,8 +193,9 @@ export const steps: Record<string, Step> = {
 			if (config.go) await timed("go test", () => run("go", ["test", "./..."]));
 			await timed("specs", () => specs(true));
 			if (existsSync("fern")) await timed("fern check", () => fernCheck(fresh));
-			const unit = existsSync("test") ? readdirSync("test").filter(name => name.endsWith(".test.ts")).sort() : [];
-			if (unit.length > 0) await timed("unit tests", () => run("node", ["--test", ...unit.map(name => `test/${name}`)]));
+			// Unit tests sit beside the code they test (api/*.test.ts), as Go's _test.go files do.
+			const unit = existsSync("api") ? readdirSync("api").filter(name => name.endsWith(".test.ts")).sort() : [];
+			if (unit.length > 0) await timed("unit tests", () => run("node", ["--test", ...unit.map(name => `api/${name}`)]));
 			if (config.native) await timed("native", () => steps["test:native"].run([]));
 			await timed(config.go ? "build + workerd" : "workerd", () => steps["test:workerd"].run(fresh ? ["--fresh"] : []));
 			// The Worker was built for workerd: measured as a deploy would upload it.
@@ -294,11 +299,12 @@ export const steps: Record<string, Step> = {
 	},
 	"live-test": {
 		usage: "live-test",
-		about: "REMOTE: the config's live tests against the deployed Worker (with the secrets: fnox exec -- npm run live-test)",
+		about: "REMOTE: the standard test and the config's live tests against the deployed Worker (with the secrets: fnox exec -- npm run live-test)",
 		run: async () => {
 			const config = await load();
 			if (!config.live) throw new Error("charter.config.ts has no live tests");
 			const { run } = await scripts();
+			await (await import("./standard.ts")).standard(config.url);
 			await config.live({ url: config.url, node: (file, ...args) => run("node", [file, ...args]) });
 		},
 	},

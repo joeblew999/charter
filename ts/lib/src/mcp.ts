@@ -1,4 +1,4 @@
-// MCP: a Worker's API as tools at one endpoint (/api/mcp), as go/lib/humamcp serves a Huma API. The
+// MCP: a Worker's API as tools at one endpoint (/api/mcp), as go/lib/mcp serves a Huma API. The
 // protocol is the official SDK's (@modelcontextprotocol/server): Streamable HTTP, no state, the
 // 2026-07-28 era and the 2025 handshake. What this adds is the tools themselves, from what the
 // contract already says, so nothing is declared twice: every procedure that answers once is a tool
@@ -17,7 +17,7 @@ import { withoutSafeBounds, withoutUnusedDefs } from "./schema.ts";
 /** Where the endpoint is, beside the API's specs. */
 export const mcpPath = "/api/mcp";
 
-/** notATool leaves a procedure out of the tools, as humamcp.Expose(op, false) does. */
+/** notATool leaves a procedure out of the tools, as mcp.Expose(op, false) does. */
 export const notATool = (): MetaPlugin<any, any, any> => ({
 	name: "~charter-mcp",
 	init: (current: Meta) => ({ ...current, "~charter-mcp": false }),
@@ -36,7 +36,7 @@ export interface Tool {
 }
 
 /** toolOf is the tool a procedure is, or nothing: a stream, a channel, a procedure that is no API
- * route, or one left out. It says what humamcp says of an operation: the name is the operationId; the
+ * route, or one left out. It says what go/lib/mcp says of an operation: the name is the operationId; the
  * description the summary, then the description; GET is read-only, and every method but POST may
  * overwrite or delete. Its schemas are the procedure's own (one input, one output). */
 export function toolOf(procedure: AnyProcedure): Tool | undefined {
@@ -77,7 +77,7 @@ type Standard = { "~standard": { jsonSchema?: { input(options: unknown): JsonSch
 /** objectRoot is the schema with its root's $ref resolved. zod writes a schema that has an id (a
  * named one: `.meta({ id: "Note" })`) as `{ $ref: "#/$defs/Note", $defs }`, and the MCP SDK takes a
  * root that does not say `type: "object"` for one that is no object: on a 2025 connection it then
- * wraps the result as `{ result }`, where humamcp answers the object itself.
+ * wraps the result as `{ result }`, where go/lib/mcp answers the object itself.
  * Upstream: modelcontextprotocol/typescript-sdk, not filed (when fixed: drop objectRoot) */
 function objectRoot(schema: unknown, checked: boolean): unknown {
 	const standard = (schema as Partial<Standard> | undefined)?.["~standard"];
@@ -91,7 +91,7 @@ function objectRoot(schema: unknown, checked: boolean): unknown {
 		return withoutSafeBounds(withoutUnusedDefs({ ...rest, ...named }));
 	};
 	// An input the SDK passes on unchecked: the procedure checks it, so a refused argument is refused as
-	// the REST route refuses it (charter-lib/serve's problem details), as humamcp does.
+	// the REST route refuses it (charter-lib/serve's problem details), as go/lib/mcp does.
 	const validate = checked ? standard.validate : (value: unknown) => ({ value });
 	return { "~standard": { ...standard, validate, jsonSchema: { input: (options: unknown) => inline(json.input(options)), output: (options: unknown) => inline(json.output(options)) } } };
 }
@@ -113,7 +113,7 @@ const emptyObject = { $schema: "https://json-schema.org/draft/2020-12/schema", t
 const noArguments = { "~standard": { version: 1, vendor: "charter", validate: (value: unknown) => ({ value }), jsonSchema: { input: () => emptyObject, output: () => emptyObject } } };
 
 /** How long a client may keep the tool list, and who may (the 2026-07-28 revision's cache hints), as
- * humamcp says. */
+ * go/lib/mcp says. */
 const listCache = { ttlMs: 300_000, cacheScope: "public" as const };
 
 /** A call refused for its credentials: a 401 or 403 whose ORPCError carries the challenge

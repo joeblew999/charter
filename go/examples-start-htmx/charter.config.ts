@@ -2,7 +2,7 @@
 import { defineConfig, type TestContext } from "charter-ts/config";
 
 // The start API is the same in Go and in TypeScript, so its test is ts/examples-start's, typed.
-const both = ({ origin, node }: Pick<TestContext, "origin" | "node">) => node("../../ts/examples-start/test/live-test.ts", origin);
+const both = ({ origin, node }: Pick<TestContext, "origin" | "node">) => node("../../ts/examples-start/test/live.ts", origin);
 
 export default defineConfig({
 	/** The Worker, as in cloudflare.config.ts. */

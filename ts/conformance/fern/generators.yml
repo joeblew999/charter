@@ -1,5 +1,5 @@
 # The conformance API from the oRPC contract. openapi.json and asyncapi.json are written by
-# `npm run spec` from src/contract.ts (never by hand); the harness Worker serves it.
+# `npm run spec` from api/contract.ts (never by hand); the harness Worker serves it.
 # Every Fern feature we use, through standard options only: OAuth client credentials beside charter's
 # three ways in, any of them (api.auth-schemes below, the token endpoint in openapi.json), idempotency
 # (x-fern-idempotent), SSE (x-fern-streaming), cursor pagination (x-fern-pagination), multipart upload, OpenAPI 3.1 webhooks with HMAC signatures

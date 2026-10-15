@@ -7,8 +7,9 @@
 // missing, of the wrong type or out of bounds, a body that is not JSON, of a media type the operation
 // does not take, with a property it does not have, a method the path does not have); for each channel,
 // a request that is no upgrade; and what every API serves (docs/reference/standard.md): /.well-known/,
-// MCP, both specs, an unknown path.
-import { mkdtempSync, rmSync } from "node:fs";
+// MCP, both specs, an unknown path. Then what is saved in each project, which no request shows: the
+// specs in fern/ (the files the SDKs are made from) and the database's migrations/.
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -195,6 +196,23 @@ function differences(a: unknown, b: unknown, path = ""): string[] {
 	return [`${path || "/"}: ${show(a)}  |  other: ${show(b)}`];
 }
 
+/** What the two projects keep in files and no request shows: the specs the SDKs are made from (fern/,
+ * their servers apart: each names its own deployment) and the database's migrations, which must be the
+ * same files. */
+function savedDifferences(reference: string, refName: string, other: string, otherName: string): string[] {
+	const found: string[] = [];
+	for (const file of ["fern/openapi.json", "fern/asyncapi.json"]) {
+		const spec = (dir: string, name: string) => {
+			const { servers: _, ...rest } = JSON.parse(readFileSync(join(dir, file), "utf8")) as Record<string, unknown>;
+			return normalize({ status: 200, headers: {}, body: rest }, "http://saved.invalid", name).body;
+		};
+		found.push(...differences(spec(reference, refName), spec(other, otherName)).map(line => `${file}: ${line}`));
+	}
+	const migrations = (dir: string) => (existsSync(join(dir, "migrations")) ? Object.fromEntries(readdirSync(join(dir, "migrations")).sort().map(name => [name, readFileSync(join(dir, "migrations", name), "utf8")])) : {});
+	found.push(...differences(migrations(reference), migrations(other)).map(line => `migrations/${line}`));
+	return found;
+}
+
 const configOf = async (dir: string) => ((await import(pathToFileURL(resolve(dir, "charter.config.ts")).href)) as { default: Config }).default;
 
 export async function twins(args: string[]): Promise<void> {
@@ -227,7 +245,9 @@ export async function twins(args: string[]): Promise<void> {
 				console.log(`\nDIFFERS  ${probe.name}  (${probe.method ?? "GET"} ${probe.path})\n  ${reference} ${found.join(`\n  ${reference} `)}`);
 			}
 			console.log(`\n${differ ? `${differ} of ${probes.length}` : `none of ${probes.length}`} requests answered differently by ${other} than by ${reference}, the reference`);
-			if (differ) throw new Error(`${other} differs from ${reference}: ${differ} of ${probes.length} requests`);
+			const saved = savedDifferences(reference, refConfig.worker, other, otherConfig.worker);
+			for (const line of saved) console.log(`DIFFERS  ${line}`);
+			if (differ || saved.length) throw new Error(`${other} differs from ${reference}: ${differ} of ${probes.length} requests, ${saved.length} saved files`);
 		}));
 	} finally {
 		rmSync(state, { recursive: true, force: true });

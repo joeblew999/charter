@@ -22,7 +22,7 @@ export interface Config {
 	/** The server the specs name, if not `url`. */
 	specServer?: string;
 	/** A folder the generated TypeScript SDK is copied into before lint, the workerd test and a deploy,
-	 * for a Worker that runs the SDK itself (src/client). */
+	 * for a Worker that runs the SDK itself (client/). */
 	sdkInWorker?: string;
 	/** More modes to deploy after the default one (cf deploy --mode): the same code as another Worker. */
 	deployModes?: readonly string[];

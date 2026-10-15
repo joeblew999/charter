@@ -1,7 +1,7 @@
 import { bindings, defineConfig } from "cf/config";
-import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+import * as entrypoint from "./worker.ts" with { type: "cf-worker" };
 
-// The oRPC API (src/contract.ts), with a D1 database (DB).
+// The oRPC API (api/contract.ts), with a D1 database (DB).
 export default defineConfig({
 	worker: {
 		name: "charter-start-ts",

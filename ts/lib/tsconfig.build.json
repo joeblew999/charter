@@ -15,5 +15,8 @@
 	"include": [
 		"src"
 	],
-	"//": "The build: src/ only, with the web's globals (fetch, Headers, URL, TextEncoder) and no Node types, as a Worker has them, so nothing a Worker imports can use Node."
+	"//": "The build: src/ only, with the web's globals (fetch, Headers, URL, TextEncoder) and no Node types, as a Worker has them, so nothing a Worker imports can use Node.",
+	"exclude": [
+		"src/**/*.test.ts"
+	]
 }

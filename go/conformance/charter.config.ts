@@ -14,9 +14,9 @@ const sdks = () => {
 };
 const conformance = ({ origin, extras: [issuer, webhook], node }: TestContext) => {
 	sdks();
-	node(`${tests}/sdk-test.ts`, origin, "--webhooks", `http://localhost:${webhook}`);
-	node(`${tests}/mcp-test.ts`, origin);
-	node(`${tests}/auth-test.ts`, origin, String(issuer));
+	node(`${tests}/sdk.ts`, origin, "--webhooks", `http://localhost:${webhook}`);
+	node(`${tests}/mcp.ts`, origin);
+	node(`${tests}/auth.ts`, origin, String(issuer));
 };
 /** The webhook's receiver, for the server's whole run: every note the tests create is delivered. */
 const receiver = ({ extras: [, webhook] }: { extras: Extras }) => [{ program: "node", args: [`${tests}/webhook-receiver.ts`, String(webhook)], ready: `http://localhost:${webhook}/` }];
@@ -53,7 +53,7 @@ export default defineConfig({
 	 * (never the auth test: its issuer is local). It writes test notes. */
 	live: ({ url, node }) => {
 		sdks();
-		node(`${tests}/sdk-test.ts`, url);
-		node(`${tests}/mcp-test.ts`, url);
+		node(`${tests}/sdk.ts`, url);
+		node(`${tests}/mcp.ts`, url);
 	},
 });

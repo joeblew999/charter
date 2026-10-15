@@ -1,5 +1,5 @@
 # The API from the oRPC contract. openapi.json and asyncapi.json are written by `npm run spec`
-# from src/contract.ts (never by hand). What Fern needs (SDK names, x-fern-*) is declared there.
+# from api/contract.ts (never by hand). What Fern needs (SDK names, x-fern-*) is declared there.
 api:
   specs:
     - openapi: openapi.json

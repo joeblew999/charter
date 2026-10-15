@@ -4,7 +4,7 @@
 //   - its operations under /api, each call checked by the contract's security (auth) and limited by
 //     its rate limits (ratelimit);
 //   - its specs at /api/openapi.json and /api/asyncapi.json, with the request's origin as their server;
-//   - its operations as MCP tools at /api/mcp (humamcp);
+//   - its operations as MCP tools at /api/mcp (go/lib/mcp);
 //   - how to get in, at /.well-known/ (auth.WellKnown);
 //   - a WebSocket channel's token as ?access_token=, on the channel only, for a client that cannot send
 //     headers (a browser, a Worker);
@@ -25,8 +25,8 @@ import (
 
 	"github.com/joeblew999/charter/go/asyncapi"
 	"github.com/joeblew999/charter/go/auth"
-	"github.com/joeblew999/charter/go/humamcp"
 	"github.com/joeblew999/charter/go/humaworkers"
+	"github.com/joeblew999/charter/go/mcp"
 	"github.com/joeblew999/charter/go/ratelimit"
 	"github.com/joeblew999/charter/go/transport"
 )
@@ -84,7 +84,7 @@ func (a API) Handler() http.Handler {
 	routes.UseMiddleware(ratelimit.Middleware(routes, nil))
 	// Then the body's media type: one the operation does not take is 415, as in charter-lib.
 	routes.UseMiddleware(mediaTypes(routes))
-	mcp := humamcp.Handler(routes)
+	tools := mcp.Handler(routes)
 	wellKnown := auth.WellKnown(routes, a.Setting, a.Trusted...)
 	// The channels' paths: where a token may come as ?access_token=.
 	var channels []string
@@ -112,7 +112,7 @@ func (a API) Handler() http.Handler {
 		case path == AsyncAPIPath:
 			a.write(w, a.AsyncAPI, Origin(r))
 		case path == MCPPath:
-			mcp.ServeHTTP(w, r)
+			tools.ServeHTTP(w, r)
 		case len(a.Trusted) > 0 && strings.HasPrefix(path, "/.well-known/"):
 			// An API that takes credentials says how to get in; one that takes none has nothing to say.
 			wellKnown.ServeHTTP(w, r)
@@ -243,10 +243,10 @@ func (a API) AsyncAPI(server string) ([]byte, error) {
 	return json.Marshal(doc)
 }
 
-// Tools is what keeps an operation from being the MCP tool it would be (humamcp.Check): cmd/spec
+// Tools is what keeps an operation from being the MCP tool it would be (mcp.Check): cmd/spec
 // fails on it before it writes a spec.
 func (a API) Tools() []error {
-	return humamcp.Check(humaworkers.New(a.Config(), a.Routes))
+	return mcp.Check(humaworkers.New(a.Config(), a.Routes))
 }
 
 // Origin is a request's scheme and host: absolute in its URL on Workers, from Host natively, https

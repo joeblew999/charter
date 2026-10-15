@@ -26,7 +26,7 @@ npm run dev      # the API on charter.config.ts's port, its local database migra
 
 ## 3. Make it yours
 
-The contract is `src/contract.ts`. After a change: `npm run spec`, then `npm run check`. More: [Your API](guides/replace-the-example.md), [TypeScript](guides/typescript.md).
+The contract is `api/contract.ts`. After a change: `npm run spec`, then `npm run check`. More: [Your API](guides/replace-the-example.md), [TypeScript](guides/typescript.md).
 
 ## 4. An SDK
 

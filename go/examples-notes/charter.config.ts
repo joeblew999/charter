@@ -3,11 +3,11 @@ import { defineConfig, type TestContext } from "charter-ts/config";
 import { sdk } from "charter-ts/scripts";
 import { optionalSecrets, secrets } from "./secrets.ts";
 
-// The notes API is the same in Go and in TypeScript (test/surface.test.ts holds them to it), so its
+// The notes API is the same in Go and in TypeScript (charter-ts twins holds them to it), so its
 // tests are ts/examples-notes's, typed. Auth, rate limits and MCP are go/lib/serve's, which the
 // conformance projects test every way.
 const notes = "../../ts/examples-notes/test";
-const live = ({ origin, node }: Pick<TestContext, "origin" | "node">) => node(`${notes}/live-test.ts`, origin);
+const live = ({ origin, node }: Pick<TestContext, "origin" | "node">) => node(`${notes}/live.ts`, origin);
 
 export default defineConfig({
 	/** The Worker, as in cloudflare.config.ts. */
@@ -31,7 +31,7 @@ export default defineConfig({
 	 * generated TypeScript SDK too (made first if the specs are newer: Docker). It writes test notes. */
 	live: ({ url, node }) => {
 		sdk("typescript-dist", { ifStale: true });
-		node(`${notes}/live-test.ts`, url);
-		node(`${notes}/sdk-live-test.ts`, url);
+		node(`${notes}/live.ts`, url);
+		node(`${notes}/sdk.ts`, url);
 	},
 });

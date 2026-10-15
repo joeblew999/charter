@@ -11,7 +11,7 @@ export type Template = (typeof templates)[number];
 
 /** What a copy leaves out: what npm, cf, Fern and the build write, and local secrets. */
 const left = new Set(["node_modules", ".wrangler", ".cloudflare", "dist", "package-lock.json", ".DS_Store"]);
-const leftPaths = new Set(["sdk/out", "sdk/.work", "src/client"]);
+const leftPaths = new Set(["sdk/out", "sdk/.work", "client"]);
 const leftFile = (name: string) => name.startsWith(".dev.vars") || name.endsWith(".log") || name.endsWith(".tsbuildinfo");
 
 /** copyProject copies a project's own files from one folder to another. npm drops a package's
@@ -30,11 +30,13 @@ export function copyProject(from: string, to: string, gitignore: ".gitignore" | 
 	}
 }
 
+/** Where a template is: the example itself in the charter repo (a templates/ left there by a pack is
+ * never read: it would be what an older commit packed), or else the copy the package carries. */
 function templateDir(template: Template): string {
-	const packed = join(packageDir, "templates", template);
-	if (existsSync(packed)) return packed;
 	const repo = join(packageDir, "..", "ts", `examples-${template}`);
 	if (existsSync(repo)) return repo;
+	const packed = join(packageDir, "templates", template);
+	if (existsSync(packed)) return packed;
 	throw new Error(`no template ${template} in ${packed}`);
 }
 

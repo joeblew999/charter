@@ -26,7 +26,7 @@ A project's `package.json` has the scripts a person runs:
 | Script | What it does |
 |---|---|
 | `npm run dev` | The API under workerd on the config's port, its local database migrated; until Ctrl-C |
-| `npm run check` | Every local check, in order, no Cloudflare account, and how long each part took: typecheck (the Worker, the config and the tests), the specs match the contract, Fern's check, `test/*.test.ts`, the config's tests under workerd. Fern's check, and in Go the TinyGo build, done before for the same sources come from charter's cache (`~/Library/Caches/charter` on a Mac); `npm run check -- --fresh` does everything again |
+| `npm run check` | Every local check, in order, no Cloudflare account, and how long each part took: typecheck (the Worker, the config and the tests), the specs match the contract, Fern's check, the unit tests beside the code (`api/*.test.ts`), the standard test and the config's tests under workerd. Fern's check, and in Go the TinyGo build, done before for the same sources come from charter's cache (`~/Library/Caches/charter` on a Mac); `npm run check -- --fresh` does everything again |
 | `npm run spec` | Write `fern/openapi.json` and `fern/asyncapi.json` from the contract, after a change to it |
 | `npm run sdk -- <group>` | A group of `fern/generators.yml` with Fern (Docker) into `sdk/out/<group>`; by default the TypeScript SDK |
 | `fnox exec -- npm run deploy` | REMOTE: the Worker with its secrets, then its migrations |
@@ -38,16 +38,15 @@ Every other step `check` is made of runs alone too: `npx charter-ts lint`, `spec
 
 ```ts
 import { defineConfig } from "charter-ts/config";
-import { specsOf } from "charter-lib/serve";
-import { contract, document } from "./src/contract.ts";
+import { specs } from "./api/spec.ts";
 
 export default defineConfig({
 	worker: "my-api",
 	url: process.env.API_URL ?? "https://my-api.me.workers.dev",
 	port: 5178,
-	specs: specsOf(contract, document),
-	test: { run: ({ origin, node }) => node("test/live-test.ts", origin) },
-	live: ({ url, node }) => node("test/live-test.ts", url),
+	specs,
+	test: { run: ({ origin, node }) => node("test/live.ts", origin) },
+	live: ({ url, node }) => node("test/live.ts", url),
 });
 ```
 

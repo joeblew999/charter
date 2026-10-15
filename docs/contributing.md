@@ -55,9 +55,23 @@ Everything charter-ts makes says how big it is, gzipped, against its limit, and 
 |---|---|---|
 | `check` | Push, pull request, tag; Linux and macOS | charter-ts and charter-lib with their tests, the Go library, the projects kept alike (`projects.test.ts`), the docs, the workflows |
 | `projects` | The same; one runner per project | Every project's check |
-| `twins` | The same | Each API that is here in TypeScript and in Go, both under workerd, the same requests to both: no answer may differ (`npx charter-ts twins ts/conformance go/conformance`; [The standard API](reference/standard.md#held-the-same)) |
+| `twins` | The same | Each API that is here in TypeScript and in Go, both under workerd, the same requests to both: no answer may differ, nor their saved specs and migrations (`npx charter-ts twins ts/conformance go/conformance`; [The standard API](reference/standard.md#held-the-same)) |
+| `new` | The same | A project made by `charter-ts new` from the packed package, as a release ships it, installed, and its check passing (`node charter-ts/test/new-from-package.ts`) |
 | `clients` | The same; one runner per conformance project | Every client its `fern/generators.yml` declares, generated and proven in its language. The conformance projects carry every Fern feature, so this proves the generators; an example's specs get Fern's check in its own `check` |
 | `deploy` | By hand: `npx charter-ts ci:remote deploy go/examples-notes` | A project's deploy, then its live tests |
+
+## Where the tests are
+
+Each test checks one thing, at one level, and the same level is in the same place in Go and in TypeScript:
+
+| # | Level | Who needs it | Where | When it runs |
+|---|---|---|---|---|
+| 1 | **The standard:** a running API serves its specs, lists its MCP tools, leads a client to sign in, refuses with problem details | Every API | Built into charter-ts (`charter-ts/src/standard.ts`): it reads the API's own spec, so nothing is written or copied | Every project's `check` and `live-test`, first |
+| 2 | **The API's own:** it does what it is for | Every API | The project's `test/` (`test/live.ts`, `test/sdk.ts`…); a Go twin runs its TypeScript reference's, as its `charter.config.ts` says | The project's `check` and `live-test` |
+| 3 | **Unit tests:** a handler on its own | Where wanted | Beside the code: `api/*_test.go`, `api/*.test.ts` | The project's `check` |
+| 4 | **Twins:** the Go project answers as its TypeScript reference | An API in both languages | Built into charter-ts (`charter-ts twins`) | The `twins` job |
+| 5 | **The libraries** | charter's developers | Beside the code: `go/lib/*/*_test.go`, `ts/lib/src/*.test.ts`, `charter-ts/src/*.test.ts` | The `check` job |
+| 6 | **This repo only:** the projects are alike; a project made from the release works | charter's developers | `projects.test.ts`, `charter-ts/test/new-from-package.ts` | The `check` and `new` jobs |
 
 ## Cut a release
 

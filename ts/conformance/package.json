@@ -2,7 +2,7 @@
 	"name": "charter-conformance-ts",
 	"private": true,
 	"type": "module",
-	"description": "The conformance API in TypeScript on Cloudflare Workers: every Fern feature charter uses, in one small API, from an oRPC contract (src/contract.ts). The Worker serves that API the standard way (/api) and is also the harness that runs the generated TypeScript SDK against it inside workerd (/harness/sdk-test). npm run check is every local check (no Cloudflare account); npm run dev runs it locally; npx charter-ts lists every step.",
+	"description": "The conformance API in TypeScript on Cloudflare Workers: every Fern feature charter uses, in one small API, from an oRPC contract (api/contract.ts). The Worker serves that API the standard way (/api) and is also the harness that runs the generated TypeScript SDK against it inside workerd (/harness/sdk-test). npm run check is every local check (no Cloudflare account); npm run dev runs it locally; npx charter-ts lists every step.",
 	"scripts": {
 		"dev": "charter-ts dev",
 		"check": "charter-ts check",

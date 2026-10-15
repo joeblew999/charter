@@ -1,0 +1,16 @@
+# Written by `charter-ts ci:write` from ci.config.ts: don't edit, change ci.config.ts, then npx charter-ts ci:write.
+# A project made by charter-ts new from the packed package, as a release ships it, installed, and its check passing. The same job here: npx charter-ts ci new; on GitHub, from here: npx charter-ts ci:remote new.
+name: self-new
+on:
+  push:
+    branches: [main]
+    tags: ["ts-v*"]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  new:
+    uses: ./.github/workflows/charter-ci.yml
+    with:
+      job: new
+      runs-on: ubuntu-24.04
+      timeout-minutes: 20

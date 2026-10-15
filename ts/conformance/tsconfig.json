@@ -1,8 +1,14 @@
 {
 	"extends": "charter-ts/tsconfig.worker.json",
 	"include": [
-		"src",
+		"api",
+		"worker.ts",
+		"harness.ts",
+		"client",
 		"cloudflare.config.ts",
 		".cloudflare/types"
+	],
+	"exclude": [
+		"api/**/*.test.ts"
 	]
 }

@@ -14,7 +14,7 @@ node_modules/
 # Generated SDKs (npm run sdk), and the SDK copy the Worker imports (npm run lint, test:workerd)
 sdk/out/
 sdk/.work/
-src/client/
+client/
 target/
 dist/
 
