@@ -18,7 +18,7 @@
 		"@modelcontextprotocol/client": "2.2.0",
 		"@types/node": "^22.12.0",
 		"cf": "1.0.0-beta.5",
-		"charter-ts": "^0.6.0",
+		"charter-ts": "^0.7.0",
 		"fern-api": "5.140.0",
 		"typescript": "~5.9.3",
 		"vite": "^8.3.0"

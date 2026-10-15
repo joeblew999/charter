@@ -18,7 +18,7 @@
 		"@orpc/openapi": "2.0.0-beta.40",
 		"@orpc/server": "2.0.0-beta.40",
 		"@orpc/zod": "2.0.0-beta.40",
-		"charter-lib": "^0.6.0",
+		"charter-lib": "^0.7.0",
 		"zod": "^4.6.5"
 	},
 	"devDependencies": {
@@ -27,7 +27,7 @@
 		"@types/node": "^22.12.0",
 		"@types/ws": "^8.5.12",
 		"cf": "1.0.0-beta.5",
-		"charter-ts": "^0.6.0",
+		"charter-ts": "^0.7.0",
 		"fern-api": "5.140.0",
 		"jose": "6.2.12",
 		"typescript": "^7.0.2",

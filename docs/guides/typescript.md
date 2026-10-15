@@ -11,7 +11,7 @@ A TypeScript API on Cloudflare Workers from an oRPC contract, with the specs, SD
 ## Start a project
 
 ```sh
-npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.6.0/charter-ts-0.6.0.tgz charter-ts new my-api --subdomain <your workers.dev subdomain>
+npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.7.0/charter-ts-0.7.0.tgz charter-ts new my-api --subdomain <your workers.dev subdomain>
 cd my-api
 npm install
 npm run check
