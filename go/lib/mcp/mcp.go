@@ -6,8 +6,13 @@
 // It is MCP's Streamable HTTP transport written out by hand: JSON-RPC 2.0, one POST per message,
 // one application/json answer. No MCP SDK: the Go ones don't build with TinyGo, and nothing here
 // needs one. The official one (github.com/modelcontextprotocol/go-sdk v1.8.0) still did not on
-// 2026-10-15: hash/maphash first, then seven more gaps, which the issue lists.
-// Upstream: tinygo-org/tinygo#5684 (when fixed: build the official SDK again, and use it if it fits)
+// 2026-10-15, with TinyGo 0.43.0: five gaps, each an issue. When they are all closed, build the
+// official SDK again, and use it if it fits.
+// Upstream: tinygo-org/tinygo#5684 (when fixed: hash/maphash compiles with Go 1.27)
+// Upstream: tinygo-org/tinygo#5888 (when fixed: reflect.VisibleFields gives usable types)
+// Upstream: tinygo-org/tinygo#5889 (when fixed: os.OpenRoot exists)
+// Upstream: tinygo-org/net#106 (when fixed: http.Transport.DialTLSContext and CrossOriginProtection exist)
+// Upstream: tinygo-org/net#95 (when fixed: net.Dialer.Control exists)
 // It keeps no state, which is what workers-go needs (a fresh Go runtime per request) and
 // what MCP became in revision 2026-07-28 (no handshake, no sessions). Both eras are served on the
 // one endpoint:
