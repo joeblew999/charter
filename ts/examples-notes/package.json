@@ -18,7 +18,7 @@
 		"@orpc/openapi": "2.0.0-beta.40",
 		"@orpc/server": "2.0.0-beta.40",
 		"@orpc/zod": "2.0.0-beta.40",
-		"charter-lib": "^0.9.0",
+		"charter-lib": "^0.9.1",
 		"drizzle-orm": "0.45.4",
 		"zod": "^4.6.5"
 	},
@@ -27,7 +27,7 @@
 		"@types/node": "^22.12.0",
 		"@types/ws": "^8.5.12",
 		"cf": "1.0.0-beta.5",
-		"charter-ts": "^0.9.0",
+		"charter-ts": "^0.9.1",
 		"fern-api": "5.158.0",
 		"typescript": "^7.0.2",
 		"typescript-sdk": "npm:typescript@~5.9.3",
