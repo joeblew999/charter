@@ -40,7 +40,7 @@ export interface Config {
 }
 
 export interface Tests {
-	/** A path that answers once the server is up. Default /api/hello. */
+	/** A path that answers once the server is up. Default /api/openapi.json, which every API serves (docs/reference/standard.md). */
 	ready?: string;
 	/** More environment for the server, given its port and the free ones the tests may serve on. */
 	env?: (ports: { port: number; extra: number; extras: Extras }) => Record<string, string>;

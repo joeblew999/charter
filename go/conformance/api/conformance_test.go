@@ -75,7 +75,7 @@ const (
 // token gets an access token the way the SDKs do.
 func token(t *testing.T, base string) string {
 	t.Helper()
-	status, body, _ := do(t, "POST", base+"/oauth/token", form, "client_id=id-1&client_secret=secret-1")
+	status, body, _ := do(t, "POST", base+"/api/oauth/token", form, "client_id=id-1&client_secret=secret-1")
 	var out struct {
 		AccessToken string `json:"access_token"`
 		ExpiresIn   int    `json:"expires_in"`
@@ -95,22 +95,22 @@ func TestTheTokenEndpointTakesAFormAndRefusesAnotherClient(t *testing.T) {
 		"client_id=id-1":                                            401,
 		"grant_type=password&client_id=id-1&client_secret=secret-1": 400,
 	} {
-		if status, out, _ := do(t, "POST", srv.URL+"/oauth/token", form, body); status != want {
+		if status, out, _ := do(t, "POST", srv.URL+"/api/oauth/token", form, body); status != want {
 			t.Errorf("%s: HTTP %d %s, want %d", body, status, out, want)
 		}
 	}
 	// client_secret_basic, as an OAuth client (an MCP client among them) sends it: the credentials in
 	// a Basic header, form-encoded first; the form has the grant, and what the client asks for.
 	basic := "Basic " + base64.StdEncoding.EncodeToString([]byte("id-1:secret-1"))
-	if status, out, _ := do(t, "POST", srv.URL+"/oauth/token", form, "grant_type=client_credentials&scope=read+write&resource=https%3A%2F%2Fapi.example", "Authorization", basic); status != 200 || !strings.Contains(out, "access_token") {
+	if status, out, _ := do(t, "POST", srv.URL+"/api/oauth/token", form, "grant_type=client_credentials&scope=read+write&resource=https%3A%2F%2Fapi.example", "Authorization", basic); status != 200 || !strings.Contains(out, "access_token") {
 		t.Errorf("client_secret_basic: HTTP %d %s", status, out)
 	}
 	// The client is a setting: on Cloudflare a secret.
 	other := server(t, map[string]string{"CLIENT_ID": "other", "CLIENT_SECRET": "s3"})
-	if status, _, _ := do(t, "POST", other.URL+"/oauth/token", form, "client_id=id-1&client_secret=secret-1"); status != 401 {
+	if status, _, _ := do(t, "POST", other.URL+"/api/oauth/token", form, "client_id=id-1&client_secret=secret-1"); status != 401 {
 		t.Errorf("the default client on a server with its own: HTTP %d, want 401", status)
 	}
-	if status, _, _ := do(t, "POST", other.URL+"/oauth/token", form, "client_id=other&client_secret=s3"); status != 200 {
+	if status, _, _ := do(t, "POST", other.URL+"/api/oauth/token", form, "client_id=other&client_secret=s3"); status != 200 {
 		t.Errorf("the server's own client: HTTP %d, want 200", status)
 	}
 }
@@ -122,10 +122,10 @@ func TestEveryOperationButTheTokenOneNeedsAValidToken(t *testing.T) {
 	expired := env.newToken(time.Now().Add(-2 * tokenLife))
 	foreign := Env{Var: func(string) string { return "another secret" }}.newToken(time.Now())
 	for _, c := range []struct{ method, path, contentType, body string }{
-		{"GET", "/notes", "", ""},
-		{"POST", "/notes", js, `{"body":"x"}`},
-		{"POST", "/files", "multipart/form-data; boundary=x", "--x--\r\n"},
-		{"POST", "/chat", js, `{"prompt":"x"}`},
+		{"GET", "/api/notes", "", ""},
+		{"POST", "/api/notes", js, `{"body":"x"}`},
+		{"POST", "/api/files", "multipart/form-data; boundary=x", "--x--\r\n"},
+		{"POST", "/api/chat", js, `{"prompt":"x"}`},
 		{"GET", livePath, "", ""},
 		{"POST", livePath, js, `{"topic":"x"}`},
 	} {
@@ -141,7 +141,7 @@ func TestEveryOperationButTheTokenOneNeedsAValidToken(t *testing.T) {
 		}
 	}
 	// ?access_token= is for the WebSocket only.
-	if status, _, _ := do(t, "GET", srv.URL+"/notes?access_token="+good, "", ""); status != 401 {
+	if status, _, _ := do(t, "GET", srv.URL+"/api/notes?access_token="+good, "", ""); status != 401 {
 		t.Errorf("GET /notes with ?access_token=: HTTP %d, want 401", status)
 	}
 }
@@ -150,18 +150,18 @@ func TestListPagesWithACursor(t *testing.T) {
 	srv := server(t, nil)
 	auth := []string{"Authorization", "Bearer " + token(t, srv.URL)}
 	for path, want := range map[string]string{
-		"/notes":                  `{"data":[{"id":"n1","body":"note n1"},{"id":"n2","body":"note n2"}],"next_cursor":"2"}`,
-		"/notes?cursor=2":         `{"data":[{"id":"n3","body":"note n3"},{"id":"n4","body":"note n4"}],"next_cursor":"4"}`,
-		"/notes?cursor=4":         `{"data":[{"id":"n5","body":"note n5"}]}`,
-		"/notes?cursor=5":         `{"data":[]}`,
-		"/notes?cursor=6":         `{"data":[]}`,
-		"/notes?limit=4&cursor=1": `{"data":[{"id":"n2","body":"note n2"},{"id":"n3","body":"note n3"},{"id":"n4","body":"note n4"},{"id":"n5","body":"note n5"}]}`,
+		"/api/notes":                  `{"data":[{"id":"n1","body":"note n1"},{"id":"n2","body":"note n2"}],"next_cursor":"2"}`,
+		"/api/notes?cursor=2":         `{"data":[{"id":"n3","body":"note n3"},{"id":"n4","body":"note n4"}],"next_cursor":"4"}`,
+		"/api/notes?cursor=4":         `{"data":[{"id":"n5","body":"note n5"}]}`,
+		"/api/notes?cursor=5":         `{"data":[]}`,
+		"/api/notes?cursor=6":         `{"data":[]}`,
+		"/api/notes?limit=4&cursor=1": `{"data":[{"id":"n2","body":"note n2"},{"id":"n3","body":"note n3"},{"id":"n4","body":"note n4"},{"id":"n5","body":"note n5"}]}`,
 	} {
 		if status, body, _ := do(t, "GET", srv.URL+path, "", "", auth...); status != 200 || strings.TrimSpace(body) != want {
 			t.Errorf("%s: HTTP %d %s\nwant %s", path, status, body, want)
 		}
 	}
-	for path, location := range map[string]string{"/notes?cursor=x": "query.cursor", "/notes?cursor=-1": "query.cursor", "/notes?limit=0": "query.limit", "/notes?limit=101": "query.limit"} {
+	for path, location := range map[string]string{"/api/notes?cursor=x": "query.cursor", "/api/notes?cursor=-1": "query.cursor", "/api/notes?limit=0": "query.limit", "/api/notes?limit=101": "query.limit"} {
 		if status, body, _ := do(t, "GET", srv.URL+path, "", "", auth...); status != 422 || !strings.Contains(body, `"location":"`+location+`"`) {
 			t.Errorf("%s: HTTP %d %s, want 422 at %s", path, status, body, location)
 		}
@@ -171,20 +171,20 @@ func TestListPagesWithACursor(t *testing.T) {
 func TestCreateIsIdempotentByItsKey(t *testing.T) {
 	srv := server(t, nil)
 	auth := []string{"Authorization", "Bearer " + token(t, srv.URL)}
-	_, first, _ := do(t, "POST", srv.URL+"/notes", js, `{"body":"hello"}`, append(auth, "Idempotency-Key", "key-1")...)
-	_, again, _ := do(t, "POST", srv.URL+"/notes", js, `{"body":"something else"}`, append(auth, "Idempotency-Key", "key-1")...)
+	_, first, _ := do(t, "POST", srv.URL+"/api/notes", js, `{"body":"hello"}`, append(auth, "Idempotency-Key", "key-1")...)
+	_, again, _ := do(t, "POST", srv.URL+"/api/notes", js, `{"body":"something else"}`, append(auth, "Idempotency-Key", "key-1")...)
 	if strings.TrimSpace(first) != `{"id":"key-1","body":"hello"}` || again != first {
 		t.Errorf("first %s, again (the first answer) %s", first, again)
 	}
-	_, without, _ := do(t, "POST", srv.URL+"/notes", js, `{"body":"hello"}`, auth...)
+	_, without, _ := do(t, "POST", srv.URL+"/api/notes", js, `{"body":"hello"}`, auth...)
 	var note Note
 	if json.Unmarshal([]byte(without), &note) != nil || !strings.HasPrefix(note.ID, "note-") || note.Body != "hello" {
 		t.Errorf("without a key: %s", without)
 	}
-	if _, body, _ := do(t, "GET", srv.URL+"/notes?cursor=5", "", "", auth...); !strings.Contains(body, `"id":"key-1"`) || !strings.Contains(body, `"id":"`+note.ID+`"`) {
+	if _, body, _ := do(t, "GET", srv.URL+"/api/notes?cursor=5", "", "", auth...); !strings.Contains(body, `"id":"key-1"`) || !strings.Contains(body, `"id":"`+note.ID+`"`) {
 		t.Errorf("the log after n5: %s, want key-1 once and %s", body, note.ID)
 	}
-	if status, body, _ := do(t, "POST", srv.URL+"/notes", js, `{}`, auth...); status != 422 {
+	if status, body, _ := do(t, "POST", srv.URL+"/api/notes", js, `{}`, auth...); status != 422 {
 		t.Errorf("without a body field: HTTP %d %s, want 422", status, body)
 	}
 }
@@ -200,7 +200,7 @@ func TestCreateSendsTheSignedWebhook(t *testing.T) {
 	}))
 	defer receiver.Close()
 	srv := server(t, map[string]string{"WEBHOOK_URL": receiver.URL, "WEBHOOK_SECRET": "shared"})
-	do(t, "POST", srv.URL+"/notes", js, `{"body":"hello"}`, "Authorization", "Bearer "+token(t, srv.URL), "Idempotency-Key", "key-1")
+	do(t, "POST", srv.URL+"/api/notes", js, `{"body":"hello"}`, "Authorization", "Bearer "+token(t, srv.URL), "Idempotency-Key", "key-1")
 	select {
 	case got := <-deliveries:
 		mac := hmac.New(sha256.New, []byte("shared"))
@@ -215,7 +215,7 @@ func TestCreateSendsTheSignedWebhook(t *testing.T) {
 
 func TestCreateWorksWhenTheWebhookReceiverIsDown(t *testing.T) {
 	srv := server(t, map[string]string{"WEBHOOK_URL": "http://127.0.0.1:1/nobody"})
-	if status, body, _ := do(t, "POST", srv.URL+"/notes", js, `{"body":"hello"}`, "Authorization", "Bearer "+token(t, srv.URL)); status != 200 {
+	if status, body, _ := do(t, "POST", srv.URL+"/api/notes", js, `{"body":"hello"}`, "Authorization", "Bearer "+token(t, srv.URL)); status != 200 {
 		t.Errorf("HTTP %d %s, want 200", status, body)
 	}
 }
@@ -226,7 +226,7 @@ func upload(t *testing.T, base, auth string, write func(*multipart.Writer)) (int
 	form := multipart.NewWriter(&body)
 	write(form)
 	form.Close()
-	status, out, _ := do(t, "POST", base+"/files", form.FormDataContentType(), body.String(), "Authorization", auth)
+	status, out, _ := do(t, "POST", base+"/api/files", form.FormDataContentType(), body.String(), "Authorization", auth)
 	return status, out
 }
 
@@ -257,7 +257,7 @@ func TestUploadTakesAMultipartForm(t *testing.T) {
 
 func TestChatStreamsChunksAsSSE(t *testing.T) {
 	srv := server(t, nil)
-	status, body, header := do(t, "POST", srv.URL+"/chat", js, `{"prompt":"from go"}`, "Authorization", "Bearer "+token(t, srv.URL))
+	status, body, header := do(t, "POST", srv.URL+"/api/chat", js, `{"prompt":"from go"}`, "Authorization", "Bearer "+token(t, srv.URL))
 	want := "data: {\"text\":\"echo\",\"done\":false}\n\ndata: {\"text\":\"from\",\"done\":false}\n\ndata: {\"text\":\"go\",\"done\":true}\n\n"
 	if status != 200 || header.Get("Content-Type") != "text/event-stream" || body != want {
 		t.Errorf("HTTP %d %s\n%q\nwant\n%q", status, header.Get("Content-Type"), body, want)
@@ -273,7 +273,7 @@ func TestWatchResumesAndEndsWithTheTerminator(t *testing.T) {
 	// events reads a whole stream: each event's id and data, and whether it ended with the terminator.
 	events := func(query string, headers ...string) (ids []string, bodies []string, ended bool) {
 		t.Helper()
-		status, body, header := do(t, "GET", srv.URL+"/notes/watch?"+query, "", "", append([]string{"Authorization", "Bearer " + good}, headers...)...)
+		status, body, header := do(t, "GET", srv.URL+"/api/notes/watch?"+query, "", "", append([]string{"Authorization", "Bearer " + good}, headers...)...)
 		if status != 200 || !strings.HasPrefix(header.Get("Content-Type"), "text/event-stream") {
 			t.Fatalf("%s: HTTP %d %s", query, status, body)
 		}
@@ -305,12 +305,12 @@ func TestWatchResumesAndEndsWithTheTerminator(t *testing.T) {
 	// Without a position, only what is created from now on: here, one note, through the hub.
 	go func() {
 		time.Sleep(300 * time.Millisecond)
-		do(t, "POST", srv.URL+"/notes", js, `{"body":"while watching"}`, "Authorization", "Bearer "+good, "Idempotency-Key", "watched")
+		do(t, "POST", srv.URL+"/api/notes", js, `{"body":"while watching"}`, "Authorization", "Bearer "+good, "Idempotency-Key", "watched")
 	}()
 	if _, notes, ended := events("seconds=1"); strings.Join(notes, ",") != "watched" || !ended {
 		t.Errorf("from now on: %v (terminator %v), want watched", notes, ended)
 	}
-	if status, body, _ := do(t, "POST", srv.URL+"/notes", js, `{"body":"a [end-of-stream] inside"}`, "Authorization", "Bearer "+good); status != 422 {
+	if status, body, _ := do(t, "POST", srv.URL+"/api/notes", js, `{"body":"a [end-of-stream] inside"}`, "Authorization", "Bearer "+good); status != 422 {
 		t.Errorf("a note with the terminator in it: HTTP %d %s, want 422", status, body)
 	}
 }
@@ -375,7 +375,7 @@ func TestTheWebSocketBothWays(t *testing.T) {
 		}
 		// A note created now reaches the open socket through the hub.
 		key := "live-" + name
-		do(t, "POST", srv.URL+"/notes", js, `{"body":"live"}`, "Authorization", "Bearer "+good, "Idempotency-Key", key)
+		do(t, "POST", srv.URL+"/api/notes", js, `{"body":"live"}`, "Authorization", "Bearer "+good, "Idempotency-Key", key)
 		for event := read(); event.ID != key; event = read() {
 			if !strings.HasPrefix(event.ID, "live-") {
 				t.Errorf("%s: %s, want %s", name, event.ID, key)
@@ -399,15 +399,15 @@ func TestUnknownPathAndMethod(t *testing.T) {
 	if status, _, _ := do(t, "GET", srv.URL+"/nope", "", ""); status != 404 {
 		t.Errorf("unknown path: HTTP %d, want 404", status)
 	}
-	if status, _, header := do(t, "DELETE", srv.URL+"/notes", "", ""); status != 405 || header.Get("Allow") != "GET, POST" {
+	if status, _, header := do(t, "DELETE", srv.URL+"/api/notes", "", ""); status != 405 || header.Get("Allow") != "GET, POST" {
 		t.Errorf("DELETE /notes: HTTP %d Allow %q, want 405 GET, POST", status, header.Get("Allow"))
 	}
 }
 
 func TestTheServerGivesBothSpecsWithItsOriginAsServer(t *testing.T) {
 	srv := server(t, nil)
-	_, openapi, _ := do(t, "GET", srv.URL+"/openapi.json", "", "")
-	_, asyncapi, _ := do(t, "GET", srv.URL+"/asyncapi.json", "", "")
+	_, openapi, _ := do(t, "GET", srv.URL+"/api/openapi.json", "", "")
+	_, asyncapi, _ := do(t, "GET", srv.URL+"/api/asyncapi.json", "", "")
 	if !strings.Contains(openapi, `"servers":[{"url":"`+srv.URL+`"}]`) {
 		t.Errorf("openapi servers: %s", openapi)
 	}

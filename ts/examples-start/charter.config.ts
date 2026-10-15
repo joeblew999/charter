@@ -1,12 +1,7 @@
 // What charter-ts needs to know about this project (npm run <step> runs charter-ts <step>), typed, in one place.
 import { defineConfig } from "charter-ts/config";
-import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
-import { asyncInfo, contract, info } from "./src/contract.ts";
-
-const tests = (origin: string, node: (file: string, ...args: string[]) => void) => {
-	node("test/live-test.ts", origin);
-	node("test/mcp-test.ts", origin);
-};
+import { specsOf } from "charter-lib/serve";
+import { contract, document } from "./src/contract.ts";
 
 export default defineConfig({
 	/** The Worker, as in cloudflare.config.ts. */
@@ -16,12 +11,9 @@ export default defineConfig({
 	/** npm run dev's port. */
 	port: Number(process.env.API_PORT ?? 5178),
 	/** Both specs, with the same generators the Worker serves /api/openapi.json and /api/asyncapi.json with. */
-	specs: {
-		openapi: server => openapiSpec(contract, { info, server }),
-		asyncapi: server => asyncapiSpec(contract, { info: asyncInfo, server }),
-	},
-	/** npm run check: the live test and the MCP test against the Worker under workerd. */
-	test: { run: ({ origin, node }) => tests(origin, node) },
+	specs: specsOf(contract, document),
+	/** npm run check: the live test against the Worker under workerd. */
+	test: { run: ({ origin, node }) => node("test/live-test.ts", origin) },
 	/** npm run live-test: the same against the deployed Worker. */
-	live: ({ url, node }) => tests(url, node),
+	live: ({ url, node }) => node("test/live-test.ts", url),
 });

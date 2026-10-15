@@ -2,7 +2,7 @@
   "asyncapi": "3.0.0",
   "channels": {
     "liveNotes": {
-      "address": "/notes/live",
+      "address": "/api/notes/live",
       "bindings": {
         "ws": {
           "query": {

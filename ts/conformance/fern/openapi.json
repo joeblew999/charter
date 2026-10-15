@@ -6,8 +6,8 @@
   },
   "servers": [
     {
-      "url": "https://charter-conformance-ts-api.gedw99.workers.dev/api/mock",
-      "description": "The deployed mock of this API (mode api). Fern's CLI takes its OAuth token URL from here; --base-url doesn't move it."
+      "url": "https://charter-conformance-ts-api.gedw99.workers.dev",
+      "description": "The deployed API (mode api). Fern's CLI takes its OAuth token URL from here; --base-url doesn't move it."
     }
   ],
   "security": [
@@ -68,7 +68,7 @@
         "type": "oauth2",
         "flows": {
           "clientCredentials": {
-            "tokenUrl": "/oauth/token",
+            "tokenUrl": "/api/oauth/token",
             "scopes": {
               "read": "Read notes",
               "write": "Create notes and upload files"
@@ -125,7 +125,7 @@
   },
   "openapi": "3.1.1",
   "paths": {
-    "/oauth/token": {
+    "/api/oauth/token": {
       "post": {
         "operationId": "getToken",
         "summary": "OAuth client-credentials token (used by the SDK itself)",
@@ -200,7 +200,7 @@
         "security": []
       }
     },
-    "/notes": {
+    "/api/notes": {
       "get": {
         "operationId": "listNotes",
         "summary": "List notes (cursor pagination)",
@@ -366,7 +366,7 @@
         }
       }
     },
-    "/notes/watch": {
+    "/api/notes/watch": {
       "get": {
         "operationId": "watchNotes",
         "summary": "Stream notes (Server-Sent Events) for `seconds`; call again with `after` = the last event's id to continue without gaps",
@@ -424,7 +424,7 @@
         }
       }
     },
-    "/files": {
+    "/api/files": {
       "post": {
         "operationId": "uploadFile",
         "summary": "Upload a file (multipart)",
@@ -509,7 +509,7 @@
         ]
       }
     },
-    "/chat": {
+    "/api/chat": {
       "post": {
         "operationId": "chat",
         "summary": "Stream a reply (Server-Sent Events)",

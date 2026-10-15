@@ -16,9 +16,6 @@ import (
 
 	"github.com/joeblew999/charter/go/auth"
 	"github.com/joeblew999/charter/go/follow"
-	"github.com/joeblew999/charter/go/humamcp"
-	"github.com/joeblew999/charter/go/humaworkers"
-	"github.com/joeblew999/charter/go/ratelimit"
 )
 
 // Env is what the platform supplies: bindings on Cloudflare (platform_js.go), memory elsewhere.
@@ -43,54 +40,11 @@ var Trusted = []auth.Trusted{
 	auth.OIDC{},
 }
 
-// Handler serves the contract on env, each call allowed (auth) and limited (ratelimit) as its
-// operation says, plus the two specs with the request's origin as their server, plus the contract
-// as MCP tools (/api/mcp: a tool call runs the same operation as the REST route).
+// Handler serves the contract on env the standard way (go/lib/serve): each call allowed (auth) and
+// limited (ratelimit) as its operation says, the specs at /api/openapi.json and /api/asyncapi.json,
+// the operations as MCP tools at /api/mcp, and how to get in at /.well-known/.
 func Handler(env Env) http.Handler {
-	routes := humaworkers.New(config(), Routes(env))
-	routes.UseMiddleware(auth.Middleware(routes, env.Var, Trusted...))
-	// After auth: a limit counts per caller (WriteLimit).
-	routes.UseMiddleware(ratelimit.Middleware(routes, nil))
-	mcp := humamcp.Handler(routes)
-	// How a client finds out how to get in: the API's metadata (RFC 9728), which a 401's challenge
-	// names, and the specs' openIdConnectUrl, on to the issuer's discovery document.
-	wellKnown := auth.WellKnown(routes, env.Var, Trusted...)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var spec func(server string) ([]byte, error)
-		switch r.URL.Path {
-		case auth.OpenIDPath, auth.ResourcePath:
-			wellKnown.ServeHTTP(w, r)
-			return
-		case "/api/openapi.json":
-			spec = OpenAPI
-		case "/api/asyncapi.json":
-			spec = AsyncAPI
-		case "/api/mcp":
-			mcp.ServeHTTP(w, r)
-			return
-		default:
-			routes.ServeHTTP(w, r)
-			return
-		}
-		body, err := spec(origin(r))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(body)
-	})
-}
-
-// origin is the request's scheme and host: absolute in r.URL on Workers, from Host on net/http.
-func origin(r *http.Request) string {
-	if r.URL.Scheme != "" && r.URL.Host != "" {
-		return r.URL.Scheme + "://" + r.URL.Host
-	}
-	if r.TLS != nil {
-		return "https://" + r.Host
-	}
-	return "http://" + r.Host
+	return API(env).Handler()
 }
 
 func (env Env) hello(context.Context, *struct{}) (*HelloOutput, error) {

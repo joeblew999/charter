@@ -1,15 +1,16 @@
 // Does the Fern-generated TypeScript SDK (src/client, from fern) work on Cloudflare
-// Workers? This Worker serves the conformance API itself under /api/mock/* (src/conformance.ts: the oRPC
-// contract the SDK's specs are generated from, on D1 and the hub: src/hub.ts), and /api/sdk-test runs
-// the SDK against it inside workerd, through the SDK's own `fetch` option (no network round trip).
+// Workers? This Worker serves the conformance API itself, the standard way under /api (src/conformance.ts:
+// the oRPC contract the SDK's specs are generated from, on D1 and the hub: src/hub.ts), and the harness,
+// /harness/sdk-test, runs the SDK against it inside workerd, through the SDK's own `fetch` option (no
+// network round trip).
 import { ConformanceClient } from "./client/index.mjs";
 import { WebhooksHelper } from "./client/webhooks/index.mjs";
 import type { Report } from "./report.ts";
 import { env } from "cloudflare:workers";
-import { type Deployment, mockApi, seen, type Settings, trusted, webhookOf, wellKnownOf } from "./conformance.ts";
+import { conformance, type Deployment, seen, type Settings, trusted, webhookOf } from "./conformance.ts";
 import { d1Notes } from "./hub.ts";
 import { seeds } from "./notes.ts";
-export { ConformanceHub } from "./hub.ts";
+export { Hub } from "./hub.ts";
 
 // The notes in D1 behind the hub; whom the API trusts, from the Worker's secrets; its Rate Limiting
 // bindings; where its webhook goes. The four settings
@@ -26,12 +27,12 @@ async function hmacHex(secret: string, body: string) {
 async function sdkTest(): Promise<Response> {
 	let pages = 0;
 	const client = new ConformanceClient({
-		baseUrl: "https://mock.invalid/api/mock",
+		baseUrl: "https://conformance.invalid",
 		oauth: { clientId: "id-1", clientSecret: "secret-1" },
 		fetch: (input, init) => {
 			const request = new Request(input, init);
 			if (request.method === "GET" && new URL(request.url).pathname.endsWith("/notes")) pages++;
-			return mockApi(request, deployment);
+			return conformance(request, deployment);
 		},
 	} as ConformanceClient.Options);
 	const results: Report["results"] = {};
@@ -90,9 +91,9 @@ async function sdkTest(): Promise<Response> {
 
 async function wsTest(origin: string): Promise<Response> {
 	const client = new ConformanceClient({
-		baseUrl: `${origin.replace(/^http/, "ws")}/api/mock`,
+		baseUrl: origin.replace(/^http/, "ws"),
 		oauth: { clientId: "id-1", clientSecret: "secret-1" },
-		fetch: (input, init) => mockApi(new Request(input, init), deployment),
+		fetch: (input, init) => conformance(new Request(input, init), deployment),
 	} as ConformanceClient.Options);
 	try {
 		// Workers can't send WebSocket headers, where the SDK puts the token: get it with the SDK's own
@@ -126,12 +127,9 @@ async function wsTest(origin: string): Promise<Response> {
 export default {
 	async fetch(request) {
 		const url = new URL(request.url);
-		if (url.pathname === "/api/sdk-test") return sdkTest();
-		// ?target= another Worker serving the mock API: on Cloudflare a Worker can't call its own URL (error 1042).
-		if (url.pathname === "/api/ws-test") return wsTest(url.searchParams.get("target") ?? url.origin);
-		if (url.pathname.startsWith("/api/mock/")) return mockApi(request, deployment);
-		// What a client reads to find out how to get in: the metadata of the API at /api/mock.
-		if (url.pathname.startsWith("/.well-known/")) return wellKnownOf(request, deployment) ?? new Response("not found", { status: 404 });
-		return new Response("not found", { status: 404 });
+		if (url.pathname === "/harness/sdk-test") return sdkTest();
+		// ?target= another Worker serving the API: on Cloudflare a Worker can't call its own URL (error 1042).
+		if (url.pathname === "/harness/ws-test") return wsTest(url.searchParams.get("target") ?? url.origin);
+		return conformance(request, deployment);
 	},
 } satisfies ExportedHandler;

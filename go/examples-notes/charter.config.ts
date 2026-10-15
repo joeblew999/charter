@@ -3,20 +3,11 @@ import { defineConfig, type TestContext } from "charter-ts/config";
 import { sdk } from "charter-ts/scripts";
 import { optionalSecrets, secrets } from "./secrets.ts";
 
-const issuer = ({ extra }: { extra: number }) => ({
-	ACCESS_TEAM_DOMAIN: `http://localhost:${extra}`,
-	ACCESS_AUD: "test-aud",
-	OIDC_ISSUER: `http://localhost:${extra}`,
-	OIDC_AUDIENCE: "https://notes.test",
-});
 // The notes API is the same in Go and in TypeScript (test/surface.test.ts holds them to it), so its
-// tests are ts/examples-notes's, typed: the MCP test included, against this API's go/lib/humamcp.
+// tests are ts/examples-notes's, typed. Auth, rate limits and MCP are go/lib/serve's, which the
+// conformance projects test every way.
 const notes = "../../ts/examples-notes/test";
-const all = ({ origin, extra, node }: TestContext) => {
-	node(`${notes}/live-test.ts`, origin);
-	node(`${notes}/mcp-test.ts`, origin);
-	node(`${notes}/auth-test.ts`, origin, String(extra));
-};
+const live = ({ origin, node }: Pick<TestContext, "origin" | "node">) => node(`${notes}/live-test.ts`, origin);
 
 export default defineConfig({
 	/** The Worker, as in cloudflare.config.ts. */
@@ -33,17 +24,14 @@ export default defineConfig({
 	/** Both specs, from the contract (api/contract.go). */
 	specs: { go: "./cmd/spec" },
 	go: { lint: ["api", "cmd", "test"], sdk: true },
-	/** npm run test:native and test:workerd: the real-time live test, the MCP client test, and the auth
-	 * test, which serves a test issuer of tokens on the extra port: the Worker trusts it as Cloudflare
-	 * Access and as an OpenID Connect issuer. */
-	native: { env: issuer, run: all },
-	test: { env: issuer, run: all },
+	/** npm run test:native and test:workerd: the real-time live test. */
+	native: { run: live },
+	test: { run: live },
 	/** npm run live-test (fnox exec -- npm run live-test): against the deployed Worker, through the
 	 * generated TypeScript SDK too (made first if the specs are newer: Docker). It writes test notes. */
 	live: ({ url, node }) => {
 		sdk("typescript-dist", { ifStale: true });
 		node(`${notes}/live-test.ts`, url);
 		node(`${notes}/sdk-live-test.ts`, url);
-		node(`${notes}/mcp-test.ts`, url);
 	},
 });

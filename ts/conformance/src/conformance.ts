@@ -1,15 +1,14 @@
-// The conformance API: the contract (src/contract.ts) implemented with oRPC and served under /api/mock.
-// The notes are a log (src/notes.ts: D1 and the hub in the Worker), which starts with five seeded
-// notes; every call is allowed by any of the four ways in (charter-lib/auth); it records what the
-// SDK sent (`seen`) so that the test in src/index.ts can check it.
-import { OpenAPIHandler } from "@orpc/openapi/fetch";
-import { call, implement, ORPCError, withEventMeta } from "@orpc/server";
-import { ResponseHeadersPlugin } from "@orpc/server/plugins";
-import { authorize, scopesOf, securityOf, type Trusted, wellKnown } from "charter-lib/auth";
+// The conformance API: the contract (src/contract.ts) implemented with oRPC and served the standard way
+// (charter-lib/serve): the routes under /api, both specs, the routes as MCP tools at /api/mcp, how to
+// get in at /.well-known/, and the WebSocket channel at its address. The notes are a log (src/notes.ts:
+// D1 and the hub in the Worker), which starts with five seeded notes; every call is allowed by any of
+// the four ways in (charter-lib/auth); it records what the SDK sent (`seen`) so that the test in
+// src/index.ts can check it.
+import { implement, ORPCError, withEventMeta } from "@orpc/server";
+import type { Trusted } from "charter-lib/auth";
 import { follow } from "charter-lib/follow";
-import { mcpHandler } from "charter-lib/mcp";
-import { keyOf, limitOf, rateLimit } from "charter-lib/ratelimit";
-import { contract, document, END, info } from "./contract.ts";
+import { guard, serve, type Served } from "charter-lib/serve";
+import { contract, document, END } from "./contract.ts";
 import type { Notes } from "./notes.ts";
 
 /** What a deployment gives the API: its notes' log, whom it trusts, the Rate Limiting bindings that
@@ -51,13 +50,13 @@ async function notify(webhook: Webhook, payload: unknown): Promise<void> {
 	if (!res.ok) throw new Error(`${webhook.url} answered HTTP ${res.status}`);
 }
 
-/** The OAuth token /oauth/token issues: the one there is, as there is one client. */
+/** The OAuth token /api/oauth/token issues: the one there is, as there is one client. */
 const issuedToken = "tok-1";
 
 /**
  * Who may do what, by every way in: the API's tokens (READ_TOKEN may only read), Cloudflare Access (a
  * person writes, a machine's service token reads), an OpenID Connect issuer (its token's scope claim),
- * and the OAuth tokens /oauth/token issues, which read and write. An unset setting trusts no one that way.
+ * and the OAuth tokens /api/oauth/token issues, which read and write. An unset setting trusts no one that way.
  */
 export const trusted = (settings: Settings): Trusted => ({
 	tokens: [
@@ -66,12 +65,8 @@ export const trusted = (settings: Settings): Trusted => ({
 	],
 	access: { team: settings.ACCESS_TEAM_DOMAIN, aud: settings.ACCESS_AUD, people: ["read", "write"], machines: ["read"] },
 	oidc: { issuer: settings.OIDC_ISSUER, audience: settings.OIDC_AUDIENCE },
-	issued: { scheme: "OAuth", tokenPath: "/oauth/token", check: token => (token === issuedToken ? ["read", "write"] : undefined) },
+	issued: { scheme: "OAuth", tokenPath: "/api/oauth/token", check: token => (token === issuedToken ? ["read", "write"] : undefined) },
 });
-
-/** Where the API is mounted in the Worker: its own URL, the resource its challenges and metadata name. */
-const mount = "/api/mock";
-const resourceOf = (request: Request) => `${new URL(request.url).origin}${mount}`;
 
 /** A client's id and secret from an Authorization: Basic header, each form-encoded before the base64
  * (RFC 6749, 2.3.1). */
@@ -88,16 +83,6 @@ function basicCredentials(request: Request): { id: string; secret: string } | un
 	}
 }
 
-/** A request's credentials: its headers, where on the channel a token sent as ?access_token= (Workers
- * and browsers can't set WebSocket headers) is the Authorization header. */
-function credentials(request: Request): Headers {
-	const url = new URL(request.url), token = url.searchParams.get("access_token");
-	if (!token || request.headers.has("authorization") || !url.pathname.endsWith("/notes/live")) return request.headers;
-	const headers = new Headers(request.headers);
-	headers.set("authorization", `Bearer ${token}`);
-	return headers;
-}
-
 export const seen = { tokenCalls: 0, tokenContentType: "", authOnCreate: "", idempotencyKey: "" };
 
 /** The one topic the WebSocket channel has. */
@@ -105,32 +90,17 @@ const topic = "notes";
 
 // What the contract doesn't describe travels in the request: the credentials and the idempotency key
 // are headers the SDK adds by itself (the document's security schemes and x-fern-idempotency-headers).
-// Every call is allowed as its contract's security says (the document's, read, when it says none):
-// 401 without credentials it knows, 403 without the scope, each with the challenge that says where
-// the API tells a client how to get in (charter-lib/auth: an MCP client reads it to sign in); then
-// limited as its contract says, per caller (429 with Retry-After: writeLimit). The router is built
-// from `os`, without the checks: oRPC would otherwise run them twice per call.
-const os = implement(contract).$context<{ request: Request; resHeaders?: Headers } & Deployment>();
-const api = os.use(async ({ context, procedure, next }) => {
-	const headers = credentials(context.request);
-	const decision = await authorize(headers, securityOf(procedure, document.security), context.trusted, resourceOf(context.request));
-	if (decision.status !== 200) {
-		context.resHeaders?.set("WWW-Authenticate", decision.challenge);
-		throw new ORPCError(decision.status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", { message: decision.message, data: { challenge: decision.challenge } });
-	}
-	const verdict = await rateLimit(limitOf(procedure), keyOf(decision.caller, headers), context.limits);
-	if (verdict.status === 429) {
-		context.resHeaders?.set("Retry-After", String(verdict.retryAfter));
-		throw new ORPCError("TOO_MANY_REQUESTS", { message: verdict.message });
-	}
-	return next();
-});
+// Every call goes through the guard (charter-lib/serve): allowed as its contract's security says (the
+// document's, read, when it says none), 401 without credentials it knows, 403 without the scope, each
+// with the challenge an MCP client reads to sign in; then limited as its contract says, per caller (429
+// with Retry-After: writeLimit). The router is built from `os`, without the guard: oRPC would otherwise
+// run it twice per call.
+const os = implement(contract).$context<Served & Deployment>();
+const api = os.use(guard);
 
-/** The token as the client sent it. The SDK sends a header (Node); Workers and browsers can't set WebSocket headers, so it may come as ?access_token= instead. */
-function authorization(request: Request) {
-	const token = new URL(request.url).searchParams.get("access_token");
-	return request.headers.get("authorization") ?? (token ? `Bearer ${token}` : "");
-}
+/** The token as the client sent it: on the channel, serve() takes one sent as ?access_token= (Workers
+ * and browsers can't set WebSocket headers) for the Authorization header. */
+const authorization = (request: Request) => request.headers.get("authorization") ?? "";
 
 export const router = os.router({
 	auth: {
@@ -184,7 +154,7 @@ export const router = os.router({
 			}
 			return END;
 		}),
-		// The WebSocket channel's two streams; live() below carries them over the socket. The feed is
+		// The WebSocket channel's two streams, which serve() carries over the socket. The feed is
 		// the log from its start, then each new note as the hub announces it (follow(), as in the notes
 		// example); what the client sends is checked as it comes: the one topic is taken, any other
 		// ends the stream with an error, which closes the socket with 1008.
@@ -222,56 +192,6 @@ export const router = os.router({
 	}),
 });
 
-const handler = new OpenAPIHandler(router, { plugins: [new ResponseHeadersPlugin()] });
-// The contract's procedures that answer once, as MCP tools: a call runs in the REST handler's context.
-const mcp = mcpHandler(router, { info });
-
-// WebSocket transport for the contract's notes.live (AsyncAPI channel liveNotes): the socket's
-// messages are the procedure's input stream, each validated by the contract, and what it yields is
-// sent as plain JSON. A message the contract or the channel refuses closes the socket with 1008.
-async function live(request: Request, deployment: Deployment): Promise<Response> {
-	if (request.headers.get("upgrade") !== "websocket") return new Response("expected a WebSocket upgrade", { status: 426 });
-	// Refused before the upgrade: no socket opens.
-	const decision = await authorize(credentials(request), securityOf(router.notes.live, document.security), deployment.trusted, resourceOf(request));
-	if (decision.status !== 200) return new Response(decision.message, { status: decision.status, headers: { "www-authenticate": decision.challenge } });
-	const [client, server] = Object.values(new WebSocketPair());
-	server.accept();
-	const closed = new AbortController();
-	const messages = new ReadableStream<{ topic: string }>({
-		start(controller) {
-			server.addEventListener("message", event => {
-				try { controller.enqueue(JSON.parse(String(event.data))); } catch (error) { controller.error(error); }
-			});
-			server.addEventListener("close", () => { closed.abort(); try { controller.close(); } catch {} });
-		},
-	});
-	const events = await call(router.notes.live, messages.values(), { context: { request, ...deployment }, signal: closed.signal });
-	void (async () => {
-		try {
-			for await (const event of events) server.send(JSON.stringify(event));
-		} catch (error) {
-			if (!closed.signal.aborted) server.close(1008, String((error as Error).message).slice(0, 100));
-		}
-	})();
-	return new Response(null, { status: 101, webSocket: client });
-}
-
-/** How a client finds out how to get in (charter-lib/auth's wellKnown): the API's metadata at
- * /.well-known/oauth-protected-resource/api/mock, its token endpoint's at
- * /.well-known/oauth-authorization-server/api/mock, and the specs' openIdConnectUrl. The Worker routes
- * /.well-known/ here too. */
-export function wellKnownOf(request: Request, deployment: Deployment): Response | undefined {
-	return wellKnown(request, { resource: resourceOf(request), title: info.title, scopes: scopesOf(router, document.security), trusted: deployment.trusted });
-}
-
 /** The conformance API on a deployment, as a fetch function, so the SDK test can also call it without
  * the network. */
-export async function mockApi(request: Request, deployment: Deployment): Promise<Response> {
-	const path = new URL(request.url).pathname;
-	if (path === "/api/mock/notes/live") return live(request, deployment);
-	if (path === "/api/mock/mcp") return mcp(request, { request, ...deployment });
-	const known = wellKnownOf(request, deployment);
-	if (known) return known;
-	const { matched, response } = await handler.handle(request, { prefix: "/api/mock", context: { request, ...deployment } });
-	return matched ? response : new Response("not found", { status: 404 });
-}
+export const conformance = serve<Deployment>(router, { document, trusted: deployment => deployment.trusted, limits: deployment => deployment.limits });

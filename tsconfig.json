@@ -18,6 +18,7 @@
 	},
 	"include": [
 		"release.ts",
-		"ci.config.ts"
+		"ci.config.ts",
+		"projects.test.ts"
 	]
 }

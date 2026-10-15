@@ -1,20 +1,16 @@
 import { env } from "cloudflare:workers";
-import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { DurablePublisher } from "@orpc/cloudflare";
-import { call, implement, ORPCError, withEventMeta } from "@orpc/server";
-import { ResponseHeadersPlugin } from "@orpc/server/plugins";
+import { implement, withEventMeta } from "@orpc/server";
 import type { z } from "zod";
-import { asyncInfo, contract, END, info, type note } from "./contract.ts";
-import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
+import { contract, document, END, type note } from "./contract.ts";
+import type { Trusted } from "charter-lib/auth";
 import { follow, type FollowSource } from "charter-lib/follow";
-import { accessScheme, authorize, oidcScheme, scheme, scopesOf, securityOf, wellKnown, type Caller } from "charter-lib/auth";
-import { mcpHandler, mcpPath } from "charter-lib/mcp";
-import { keyOf, limitOf, rateLimit } from "charter-lib/ratelimit";
-export { NotesHub } from "./hub.ts";
+import { guard, serve, type Served } from "charter-lib/serve";
+export { Hub } from "./hub.ts";
 
 type Note = z.infer<typeof note>;
 
-// New notes go through oRPC's publisher on the NotesHub Durable Object (live fan-out only).
+// New notes go through oRPC's publisher on the Hub Durable Object (live fan-out only).
 const publisher = () => new DurablePublisher<{ note: Note }>(env.HUB);
 
 // The feed both transports serve (docs/guides/streaming.md): D1 is the log, the hub only wakes followers.
@@ -37,7 +33,7 @@ const followNotes = (after: string | undefined, signal: AbortSignal | undefined)
 // An unset secret or setting trusts no one. The four settings are optional secrets
 // (cloudflare.config.ts), so the generated Env may not name them.
 const settings = env as typeof env & Partial<Record<"ACCESS_TEAM_DOMAIN" | "ACCESS_AUD" | "OIDC_ISSUER" | "OIDC_AUDIENCE", string>>;
-const trusted = () => ({
+const trusted = (): Trusted => ({
 	tokens: [
 		{ secret: "WRITE_TOKEN", value: env.WRITE_TOKEN, scopes: ["read", "write"] },
 		{ secret: "READ_TOKEN", value: env.READ_TOKEN, scopes: ["read"] },
@@ -46,31 +42,15 @@ const trusted = () => ({
 	oidc: { issuer: settings.OIDC_ISSUER, audience: settings.OIDC_AUDIENCE },
 });
 
-// The specs' security schemes (scripts/spec.ts writes the same).
-const base = oidcScheme(accessScheme(info.title, scheme()));
-
-// The contract (src/contract.ts) implemented on D1, served by oRPC's OpenAPIHandler as plain REST,
-// each call allowed by the credentials it carries (401 without any it knows, 403 without the scope,
-// each with the challenge that says where the API tells a client how to get in: an MCP client reads it
-// to sign in), then limited as its contract says, per caller (429 with Retry-After: writeLimit); the
-// handler finds its caller in the context. The router is built from `os`, without the middleware: oRPC
-// would otherwise run it twice per call, once for the router and once for the procedure.
-const os = implement(contract).$context<{ headers?: Headers; resHeaders?: Headers; origin?: string; caller?: Caller }>();
-const api = os
-	.use(async ({ context, procedure, next }) => {
-		const headers = context.headers ?? new Headers();
-		const decision = await authorize(headers, securityOf(procedure), trusted(), context.origin);
-		if (decision.status !== 200) {
-			context.resHeaders?.set("WWW-Authenticate", decision.challenge);
-			throw new ORPCError(decision.status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", { message: decision.message, data: { challenge: decision.challenge } });
-		}
-		const verdict = await rateLimit(limitOf(procedure), keyOf(decision.caller, headers), env);
-		if (verdict.status === 429) {
-			context.resHeaders?.set("Retry-After", String(verdict.retryAfter));
-			throw new ORPCError("TOO_MANY_REQUESTS", { message: verdict.message });
-		}
-		return next({ context: { caller: decision.caller } });
-	});
+// The contract (src/contract.ts) implemented on D1, and served the standard way (charter-lib/serve):
+// the routes under /api, both specs, the routes as MCP tools at /api/mcp, how to get in at
+// /.well-known/, and the channel at its address. Each call goes through the guard: allowed by the
+// credentials it carries (401 without any it knows, 403 without the scope, each with the challenge an
+// MCP client reads to sign in), then limited as its contract says, per caller (429 with Retry-After:
+// writeLimit); the handler finds its caller in the context. The router is built from `os`, without
+// the guard: oRPC would otherwise run it twice per call.
+const os = implement(contract).$context<Served>();
+const api = os.use(guard);
 
 export const router = os.router({
 	hello: api.hello.handler(() => ({ message: `Hello from ${env.APP_NAME}` })),
@@ -102,7 +82,9 @@ export const router = os.router({
 			}
 			return END;
 		}),
-		// The WebSocket channel's feed; the Worker's live() below carries it over the socket.
+		// The WebSocket channel's feed, which serve() carries over the socket: if follow() gives up (hub
+		// down), the socket closes with 1011 so the client reconnects with `after`: it never stays open
+		// with nothing behind it.
 		live: api.notes.live.handler(async function* ({ input, signal }) {
 			yield* followNotes(input.after, signal);
 		}),
@@ -114,57 +96,9 @@ export const router = os.router({
 	},
 });
 
-// ResponseHeadersPlugin: a 429's Retry-After.
-const handler = new OpenAPIHandler(router, { plugins: [new ResponseHeadersPlugin()] });
-
-// The same procedures as MCP tools at /api/mcp (charter-lib/mcp): a tool call runs the procedure with
-// the request's headers, through the same auth and rate limit as the REST route.
-const mcp = mcpHandler(router, { info });
-
-// WebSocket transport for the contract's notes.live (AsyncAPI channel liveNotes): the procedure is
-// called with the query as its input (validated by the contract, 400 before upgrading), and each
-// note it yields is sent as plain JSON. The Worker holds the socket; the hub behind follow()
-// hibernates. If follow() gives up (hub down), the socket is closed with 1011 so the client
-// reconnects with `after`: it never stays open with nothing behind it.
-async function live(request: Request): Promise<Response> {
-	if (request.headers.get("upgrade") !== "websocket") return new Response("expected a WebSocket upgrade", { status: 426 });
-	const closed = new AbortController();
-	let feed: AsyncIterable<Note>;
-	try {
-		feed = await call(router.notes.live, Object.fromEntries(new URL(request.url).searchParams), { signal: closed.signal, context: {} });
-	} catch (error) {
-		return new Response(`bad request: ${(error as Error).message}`, { status: 400 });
-	}
-	const [client, server] = Object.values(new WebSocketPair());
-	server.accept();
-	server.addEventListener("close", () => closed.abort());
-	server.addEventListener("error", () => closed.abort());
-	void (async () => {
-		try {
-			for await (const note of feed) server.send(JSON.stringify(note));
-		} catch (error) {
-			if (closed.signal.aborted) return;
-			console.error("live: follow gave up", String(error));
-			try { server.close(1011, "hub unavailable; reconnect with after"); } catch {}
-		}
-	})();
-	return new Response(null, { status: 101, webSocket: client });
-}
+// The Rate Limiting bindings are the Worker's own (cloudflare.config.ts).
+const served = serve(router, { document, trusted, limits: () => env });
 
 export default {
-	async fetch(request) {
-		const url = new URL(request.url);
-		// The specs, generated from the same router as fern/{openapi,asyncapi}.json.
-		if (url.pathname === "/api/openapi.json") return Response.json(await openapiSpec(router, { info, server: url.origin, base }));
-		if (url.pathname === "/api/asyncapi.json") return Response.json(await asyncapiSpec(router, { info: asyncInfo, server: url.origin }));
-		// How a client finds out how to get in: the API's metadata (RFC 9728), which a 401's challenge
-		// names, and the specs' openIdConnectUrl, on to the issuer's discovery document.
-		if (url.pathname.startsWith("/.well-known/")) {
-			return wellKnown(request, { resource: url.origin, title: info.title, scopes: scopesOf(router), trusted: trusted() }) ?? new Response("not found", { status: 404 });
-		}
-		if (url.pathname === mcpPath) return mcp(request, { headers: request.headers, origin: url.origin });
-		if (url.pathname === "/api/notes/live") return live(request);
-		const { matched, response } = await handler.handle(request, { context: { headers: request.headers, origin: url.origin } });
-		return matched ? response : new Response("not found", { status: 404 });
-	},
+	fetch: request => served(request, {}),
 } satisfies ExportedHandler;

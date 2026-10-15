@@ -131,8 +131,8 @@ describe("auth", () => {
 	});
 
 	it("says how to get in when it refuses: where the API's metadata is, and what scope a 403 lacks", async () => {
-		const refuse = (headers: Record<string, string>, procedure: unknown) => authorize(new Headers(headers), securityOf(procedure, defaults), { tokens }, "https://api.test/api/mock");
-		expect(await refuse({}, contract.list)).toMatchObject({ status: 401, challenge: 'Bearer resource_metadata="https://api.test/.well-known/oauth-protected-resource/api/mock"' });
+		const refuse = (headers: Record<string, string>, procedure: unknown) => authorize(new Headers(headers), securityOf(procedure, defaults), { tokens }, "https://api.test/v2");
+		expect(await refuse({}, contract.list)).toMatchObject({ status: 401, challenge: 'Bearer resource_metadata="https://api.test/.well-known/oauth-protected-resource/v2"' });
 		expect(await refuse({ authorization: "Bearer wrong" }, contract.list)).toMatchObject({ status: 401, challenge: expect.stringMatching(/^Bearer error="invalid_token", resource_metadata=/) });
 		expect(await refuse({ authorization: "Bearer r" }, contract.create)).toMatchObject({ status: 403, challenge: expect.stringMatching(/^Bearer error="insufficient_scope", scope="write", resource_metadata=/) });
 		expect(resourceMetadataURL("https://api.test")).toBe("https://api.test/.well-known/oauth-protected-resource");
@@ -140,19 +140,19 @@ describe("auth", () => {
 
 	it("tells a client how to get in: the API's metadata, and its own token endpoint's", async () => {
 		const trusted: Trusted = { tokens, oidc: { issuer: "https://issuer.test/", audience: "a" }, access: { team: "team.cloudflareaccess.com", aud: "x", people: [], machines: [] }, issued: { scheme: "OAuth", check: () => undefined, tokenPath: "/oauth/token" } };
-		const api = { resource: "https://api.test/api/mock", title: "Test", scopes: scopesOf(contract, defaults), trusted };
+		const api = { resource: "https://api.test/v2", title: "Test", scopes: scopesOf(contract, defaults), trusted };
 		const get = async (path: string) => wellKnown(new Request(`https://api.test${path}`), api);
 		expect(api.scopes).toEqual(["read", "write"]);
-		expect(await (await get(`${RESOURCE_PATH}/api/mock`))?.json()).toEqual({
-			resource: "https://api.test/api/mock",
-			authorization_servers: ["https://api.test/api/mock", "https://issuer.test", "https://team.cloudflareaccess.com"],
+		expect(await (await get(`${RESOURCE_PATH}/v2`))?.json()).toEqual({
+			resource: "https://api.test/v2",
+			authorization_servers: ["https://api.test/v2", "https://issuer.test", "https://team.cloudflareaccess.com"],
 			scopes_supported: ["read", "write"],
 			bearer_methods_supported: ["header"],
 			resource_name: "Test",
 		});
-		expect(await (await get(`${SERVER_PATH}/api/mock`))?.json()).toMatchObject({ issuer: "https://api.test/api/mock", token_endpoint: "https://api.test/api/mock/oauth/token", grant_types_supported: ["client_credentials"] });
+		expect(await (await get(`${SERVER_PATH}/v2`))?.json()).toMatchObject({ issuer: "https://api.test/v2", token_endpoint: "https://api.test/v2/oauth/token", grant_types_supported: ["client_credentials"] });
 		expect(await get("/.well-known/nothing")).toBeUndefined();
-		expect(await wellKnown(new Request(`https://api.test${SERVER_PATH}/api/mock`), { ...api, trusted: { tokens } })).toBeUndefined();
+		expect(await wellKnown(new Request(`https://api.test${SERVER_PATH}/v2`), { ...api, trusted: { tokens } })).toBeUndefined();
 	});
 
 	it("puts what it enforces in the spec, by every scheme", async () => {

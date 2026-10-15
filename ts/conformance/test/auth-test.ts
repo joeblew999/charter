@@ -6,15 +6,15 @@
 // the server verifies a JWT. Then the rate limit on creating notes (writeLimit in the contract, the same
 // in Go): a caller of its own may write that many times, then gets 429 with Retry-After, while another
 // caller still writes. Never point a deployed server at it: the keys are made here, for this run.
-// Usage: node test/auth-test.ts <api> <keys port>   (the origin of the Go server, <origin>/api/mock of the oRPC one)
+// Usage: node test/auth-test.ts <origin> <keys port>
 import { createServer } from "node:http";
 import { exportJWK, generateKeyPair, type JWTPayload, SignJWT } from "jose";
 import { writeLimit } from "../src/contract.ts";
 
-const api = process.argv[2], keysPort = Number(process.argv[3]);
+const origin = process.argv[2], keysPort = Number(process.argv[3]);
 const { READ_TOKEN, WRITE_TOKEN } = process.env;
-if (!api || !keysPort || !READ_TOKEN || !WRITE_TOKEN) {
-	console.log("FAIL  usage: node test/auth-test.ts <api> <keys port>, with READ_TOKEN and WRITE_TOKEN set");
+if (!origin || !keysPort || !READ_TOKEN || !WRITE_TOKEN) {
+	console.log("FAIL  usage: node test/auth-test.ts <origin> <keys port>, with READ_TOKEN and WRITE_TOKEN set");
 	process.exit(1);
 }
 const issuer = `http://localhost:${keysPort}`;
@@ -40,7 +40,7 @@ const report = (name: string, ok: boolean, why: string) => {
 };
 try {
 	// OAuth client credentials, as the SDKs do it.
-	const issued = await fetch(`${api}/oauth/token`, { method: "POST", body: new URLSearchParams({ client_id: "id-1", client_secret: "secret-1" }) });
+	const issued = await fetch(`${origin}/api/oauth/token`, { method: "POST", body: new URLSearchParams({ client_id: "id-1", client_secret: "secret-1" }) });
 	const { access_token } = (await issued.json()) as { access_token: string };
 
 	const writes: [name: string, headers: Headers, want: number, says?: string][] = [
@@ -60,16 +60,16 @@ try {
 	];
 	// A refusal says how to get in (the challenge, RFC 9728): where the API's metadata is, and a 403
 	// what scope it lacks.
-	const metadataURL = `${new URL(api).origin}/.well-known/oauth-protected-resource${new URL(api).pathname === "/" ? "" : new URL(api).pathname}`;
+	const metadataURL = `${origin}/.well-known/oauth-protected-resource`;
 	for (const [name, headers, want, says] of writes) {
-		const res = await fetch(`${api}/notes`, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify({ body: `auth test: ${name}` }) });
+		const res = await fetch(`${origin}/api/notes`, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify({ body: `auth test: ${name}` }) });
 		const text = await res.text(), challenge = res.headers.get("www-authenticate") ?? "";
 		const challenged = want === 200 || (challenge.startsWith("Bearer ") && challenge.includes(`resource_metadata="${metadataURL}"`) && (want !== 403 || challenge.includes('error="insufficient_scope", scope="write"')));
 		const ok = res.status === want && (!says || text.includes(says)) && challenged;
 		report(`create: ${name}`, ok, `: ${res.status}${ok ? "" : ` ${text} ${challenge}`}`);
 	}
 	const metadata = (await (await fetch(metadataURL)).json()) as { resource?: string; authorization_servers?: string[]; scopes_supported?: string[] };
-	report("the API's metadata names every issuer it trusts, its own first, and its scopes", metadata.resource === api && metadata.authorization_servers?.join() === [api, issuer].join() && metadata.scopes_supported?.join() === "read,write", `: ${JSON.stringify(metadata)}`);
+	report("the API's metadata names every issuer it trusts, its own first, and its scopes", metadata.resource === origin && metadata.authorization_servers?.join() === [origin, issuer].join() && metadata.scopes_supported?.join() === "read,write", `: ${JSON.stringify(metadata)}`);
 	const reads: [name: string, headers: Headers, want: number][] = [
 		["the read token reads", bearer(READ_TOKEN), 200],
 		["a machine's service token reads", await access(machine), 200],
@@ -77,15 +77,15 @@ try {
 		["nothing", {}, 401],
 	];
 	for (const [name, headers, want] of reads) {
-		const res = await fetch(`${api}/notes`, { headers });
+		const res = await fetch(`${origin}/api/notes`, { headers });
 		report(`list: ${name}`, res.status === want, `: ${res.status}${res.status === want ? "" : ` ${await res.text()}`}`);
 	}
-	const res = await fetch(`${api}/.well-known/openid-configuration`, { redirect: "manual" });
+	const res = await fetch(`${origin}/.well-known/openid-configuration`, { redirect: "manual" });
 	report("the spec's openIdConnectUrl sends a client on to the issuer", res.status === 302 && res.headers.get("location") === `${issuer}/.well-known/openid-configuration`, `: ${res.status} ${res.headers.get("location")}`);
 
 	// The rate limit, per caller: each a subject of its own, so the other tests' writes do not count.
 	const { limit, period } = writeLimit;
-	const write = async (sub: string, n: number) => fetch(`${api}/notes`, { method: "POST", headers: { "content-type": "application/json", ...(await oidc({ sub, scope: "write" })) }, body: JSON.stringify({ body: `rate limit test ${n}` }) });
+	const write = async (sub: string, n: number) => fetch(`${origin}/api/notes`, { method: "POST", headers: { "content-type": "application/json", ...(await oidc({ sub, scope: "write" })) }, body: JSON.stringify({ body: `rate limit test ${n}` }) });
 	// The window is fixed: writes that cross its end start a new count. So write until the first
 	// refusal, at most two windows' worth: before it, at least limit writes went through, and none was
 	// refused.

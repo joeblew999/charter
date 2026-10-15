@@ -1,13 +1,9 @@
 // What charter-ts needs to know about this project (npm run <step> runs charter-ts <step>), typed, in one place.
-import { accessScheme, oidcScheme, scheme } from "charter-lib/auth";
+import { specsOf } from "charter-lib/serve";
 import { defineConfig } from "charter-ts/config";
 import { sdk } from "charter-ts/scripts";
-import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
 import { optionalSecrets, secrets } from "./secrets.ts";
-import { asyncInfo, contract, info } from "./src/contract.ts";
-
-// Who may call: bearer tokens, Cloudflare Access and an OpenID Connect issuer (src/index.ts).
-const base = oidcScheme(accessScheme(info.title, scheme()));
+import { contract, document } from "./src/contract.ts";
 
 export default defineConfig({
 	/** The Worker, as in cloudflare.config.ts. */
@@ -22,31 +18,15 @@ export default defineConfig({
 	/** Throwaway tokens for the local Worker and its tests. */
 	localSecrets: { READ_TOKEN: "local-read-token", WRITE_TOKEN: "local-write-token" },
 	/** Both specs, with the same generators the Worker serves /api/openapi.json and /api/asyncapi.json with. */
-	specs: {
-		openapi: server => openapiSpec(contract, { info, server, base }),
-		asyncapi: server => asyncapiSpec(contract, { info: asyncInfo, server }),
-	},
-	/** npm run test:workerd: the live test, then the auth test, which serves a test issuer of tokens on
-	 * the extra port: the Worker trusts it as Cloudflare Access and as an OpenID Connect issuer. */
-	test: {
-		env: ({ extra }) => ({
-			ACCESS_TEAM_DOMAIN: `http://localhost:${extra}`,
-			ACCESS_AUD: "test-aud",
-			OIDC_ISSUER: `http://localhost:${extra}`,
-			OIDC_AUDIENCE: "https://notes.test",
-		}),
-		run: ({ origin, extra, node }) => {
-			node("test/live-test.ts", origin);
-			node("test/mcp-test.ts", origin);
-			node("test/auth-test.ts", origin, String(extra));
-		},
-	},
+	specs: specsOf(contract, document),
+	/** npm run test:workerd: the live test. Auth, rate limits and MCP are charter-lib/serve's, which the
+	 * conformance projects test every way. */
+	test: { run: ({ origin, node }) => node("test/live-test.ts", origin) },
 	/** npm run live-test (fnox exec -- npm run live-test): the live test and the generated TypeScript SDK
 	 * (made first if the specs are newer: Docker) against the deployed Worker. It writes test notes. */
 	live: ({ url, node }) => {
 		sdk("typescript-dist", { ifStale: true });
 		node("test/live-test.ts", url);
 		node("test/sdk-live-test.ts", url);
-		node("test/mcp-test.ts", url);
 	},
 });

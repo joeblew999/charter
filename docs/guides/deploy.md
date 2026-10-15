@@ -33,7 +33,7 @@ fnox exec -- npm run live-test   # REMOTE, writes test notes: a few seconds afte
 |---|---|---|
 | `npm run check` | Local | Go: gofmt and vet, Go tests, fresh specs, the tests natively (`test:native`) and as Wasm under workerd (`test:workerd`). TypeScript: typecheck, fresh specs, the tests under workerd |
 | `npm run live-test` | Cloudflare | The config's live tests on the deployed Worker |
-| `node test/soak.mjs <url>` in `go/examples-notes` | Cloudflare, redeploys | No stream loses, repeats or reorders an item ([Streaming](streaming.md)) |
+| `fnox exec -- node test/soak.ts <url>` in `go/examples-notes` | Cloudflare, redeploys | No stream loses, repeats or reorders an item ([Streaming](streaming.md)) |
 
 A test is a Node program that takes the server's URL and exits 1 on a failure, run from `test`, `native` or `live` in `charter.config.ts`. In Go, add a Go test in `api/` with the helpers in `api/api_test.go` (`server(t)`, `do(t, method, url, body)`).
 

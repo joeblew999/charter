@@ -1,3 +1,3 @@
-# examples/notes-go/
+# go/examples-notes/
 
 Documented in [docs/guides/replace-the-example.md](../../docs/guides/replace-the-example.md). All docs are in [docs/](../../docs/README.md).

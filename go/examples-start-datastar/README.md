@@ -1,3 +1,3 @@
-# examples/start-datastar/
+# go/examples-start-datastar/
 
 Documented in [docs/guides/pages.md](../../docs/guides/pages.md). All docs are in [docs/](../../docs/README.md).

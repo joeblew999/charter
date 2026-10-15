@@ -6,11 +6,11 @@ info:
   title: Conformance SDK naming
   version: 1.0.0
 actions:
-  - target: $.paths['/notes'].get
+  - target: $.paths['/api/notes'].get
     update:
       x-fern-sdk-group-name: notes
       x-fern-sdk-method-name: list
-  - target: $.paths['/notes'].post
+  - target: $.paths['/api/notes'].post
     update:
       x-fern-sdk-group-name: notes
       x-fern-sdk-method-name: create

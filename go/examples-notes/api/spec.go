@@ -1,14 +1,12 @@
 package api
 
 import (
-	"encoding/json"
-
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/asyncapi"
 	"github.com/joeblew999/charter/go/auth"
 	"github.com/joeblew999/charter/go/humaworkers"
 	"github.com/joeblew999/charter/go/ratelimit"
+	"github.com/joeblew999/charter/go/serve"
 )
 
 func init() {
@@ -30,20 +28,8 @@ func config() huma.Config {
 	return config
 }
 
-// OpenAPI is the OpenAPI spec of the contract, with server as its server: what cmd/spec writes
-// for Fern and what the Worker serves at /api/openapi.json.
-func OpenAPI(server string) ([]byte, error) {
-	config := config()
-	config.Servers = []*huma.Server{{URL: server}}
-	return json.Marshal(humaworkers.New(config, Routes(Env{})).OpenAPI())
-}
-
-// AsyncAPI is the AsyncAPI spec of the contract's WebSocket channels (/api/asyncapi.json).
-func AsyncAPI(server string) ([]byte, error) {
-	api := humaworkers.New(config(), Routes(Env{}))
-	doc, err := asyncapi.Generate(api.Operations(), api.OpenAPI().Components.Schemas, asyncapi.Info{Title: LiveTitle, Version: Version}, server)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(doc)
+// API is the contract on env as go/lib/serve serves it: what the Worker serves (Handler), and the
+// specs cmd/spec writes for Fern (API(Env{}).OpenAPI and .AsyncAPI).
+func API(env Env) serve.API {
+	return serve.API{Config: config, Routes: Routes(env), LiveTitle: LiveTitle, Setting: env.Var, Trusted: Trusted}
 }

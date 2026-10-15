@@ -1,31 +1,22 @@
 import { env } from "cloudflare:workers";
-import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { implement } from "@orpc/server";
-import { asyncInfo, contract, info } from "./contract.ts";
-import { mcpHandler, mcpPath } from "charter-lib/mcp";
-import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
+import { guard, serve, type Served } from "charter-lib/serve";
+import { contract, document } from "./contract.ts";
 
-// The contract (src/contract.ts) implemented, served by oRPC's OpenAPIHandler as plain REST. The
-// D1 database is env.DB (cloudflare.config.ts).
-const api = implement(contract);
+// The contract (src/contract.ts) implemented, and served the standard way (charter-lib/serve): the
+// routes under /api, both specs, the routes as MCP tools at /api/mcp. Each call goes through the guard
+// (auth and rate limits, once the API trusts anyone: serve's `trusted`). The D1 database is env.DB
+// (cloudflare.config.ts). The router is built from `os`, without the guard: oRPC would otherwise run
+// it twice per call.
+const os = implement(contract).$context<Served>();
+const api = os.use(guard);
 
-export const router = api.router({
+export const router = os.router({
 	hello: api.hello.handler(() => ({ message: `Hello from ${env.APP_NAME}` })),
 });
 
-const handler = new OpenAPIHandler(router);
-
-// The same procedures as MCP tools at /api/mcp (charter-lib/mcp): an agent calls them as tools.
-const mcp = mcpHandler(router, { info });
+const served = serve(router, { document });
 
 export default {
-	async fetch(request) {
-		const url = new URL(request.url);
-		// The specs, generated from the same router as fern/{openapi,asyncapi}.json.
-		if (url.pathname === "/api/openapi.json") return Response.json(await openapiSpec(router, { info, server: url.origin }));
-		if (url.pathname === "/api/asyncapi.json") return Response.json(await asyncapiSpec(router, { info: asyncInfo, server: url.origin }));
-		if (url.pathname === mcpPath) return mcp(request, {});
-		const { matched, response } = await handler.handle(request, { context: {} });
-		return matched ? response : new Response("not found", { status: 404 });
-	},
+	fetch: request => served(request, {}),
 } satisfies ExportedHandler;

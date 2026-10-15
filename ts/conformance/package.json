@@ -2,7 +2,7 @@
 	"name": "charter-conformance-ts",
 	"private": true,
 	"type": "module",
-	"description": "The conformance API in TypeScript on Cloudflare Workers: every Fern feature charter uses, in one small API, from an oRPC contract (src/contract.ts). The Worker serves that API (/api/mock) and is also the harness that runs the generated TypeScript SDK against it inside workerd (/api/sdk-test). npm run check is every local check (no Cloudflare account); npm run dev runs it locally; npx charter-ts lists every step.",
+	"description": "The conformance API in TypeScript on Cloudflare Workers: every Fern feature charter uses, in one small API, from an oRPC contract (src/contract.ts). The Worker serves that API the standard way (/api) and is also the harness that runs the generated TypeScript SDK against it inside workerd (/harness/sdk-test). npm run check is every local check (no Cloudflare account); npm run dev runs it locally; npx charter-ts lists every step.",
 	"scripts": {
 		"dev": "charter-ts dev",
 		"check": "charter-ts check",
@@ -12,7 +12,9 @@
 		"live-test": "charter-ts live-test"
 	},
 	"dependencies": {
+		"@orpc/cloudflare": "2.0.0-beta.40",
 		"@orpc/contract": "2.0.0-beta.40",
+		"@orpc/json-schema": "2.0.0-beta.40",
 		"@orpc/openapi": "2.0.0-beta.40",
 		"@orpc/server": "2.0.0-beta.40",
 		"@orpc/zod": "2.0.0-beta.40",
@@ -21,7 +23,6 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "beta",
-		"@cloudflare/vitest-pool-workers": "^0.22.0",
 		"@modelcontextprotocol/client": "2.3.1",
 		"@types/node": "^22.12.0",
 		"@types/ws": "^8.5.12",
@@ -32,7 +33,6 @@
 		"typescript": "^7.0.2",
 		"typescript-sdk": "npm:typescript@~5.9.3",
 		"vite": "^8.3.0",
-		"vitest": "^4.1.11",
 		"ws": "^8.18.0"
 	}
 }

@@ -30,7 +30,7 @@ A repo with no API takes the parts that are not about one (the docs site, the re
 | Name | Where | What it is |
 |---|---|---|
 | charter-ts | `charter-ts/` | The tool, installed from its GitHub Release. For any repo: `adopt` (the kit, `charter-ts/kit/`), `docs:check`, `issue`, `upstream:status`, `repo`. For a project, from its `charter.config.ts`: `new`, `dev`, `check`, `spec`, `sdk`, `deploy`, `live-test`, and in Go `run`, `build`, `sdk:publish` ([TypeScript](guides/typescript.md)) |
-| The TypeScript library | `ts/lib/` | `charter-lib`, what a TypeScript Worker imports, the counterpart of `go/lib/`: `specs`, `asyncapi`, `auth`, `ratelimit`, `follow`, `mcp`. Built with no Node types: it runs on Workers |
+| The TypeScript library | `ts/lib/` | `charter-lib`, what a TypeScript Worker imports, the counterpart of `go/lib/`: `serve` (the API the standard way: [The standard API](reference/standard.md)), and what it is made of: `specs`, `asyncapi`, `auth`, `ratelimit`, `follow`, `mcp`. Built with no Node types: it runs on Workers |
 | The TypeScript projects | `ts/examples-start/` (one route), `ts/examples-notes/` (the notes API: auth, streams, rate limits), `ts/conformance/` (every Fern feature, its notes in D1 behind the hub, its operations as MCP tools; the SDK tested inside a Worker) | Each: the contract (`src/contract.ts`), `charter.config.ts`, `test/` (typed, checked against the contract's schemas), `fern/`. `charter-ts new` copies start or notes |
 | The Go library | `go/lib/` | What a Go project imports ([Go packages](reference/packages.md)), with its Worker glue in `go/lib/worker/` |
 | The Go projects | `go/examples-notes/`, `go/examples-start/`, `go/examples-start-htmx/`, `go/examples-start-datastar/`, `go/conformance/` | The notes API, the start projects (with server-rendered pages: [Server-rendered pages](guides/pages.md)) and the conformance project, in Go |
@@ -56,7 +56,7 @@ Never edit these: change the source and run the step.
 |---|---|
 | Start | [Getting started](getting-started.md) |
 | [Guides](guides.md) | [Your API](guides/replace-the-example.md) (the contract, MCP, TypeScript), [Streaming](guides/streaming.md), [SDKs](guides/sdks.md) (Fern features, languages, the Go SDK for other repos), [Deploy and CI](guides/deploy.md), [Auth](guides/auth.md) (tokens, Cloudflare Access, OpenID Connect), [Repos that use each other](guides/repos.md) (who pins what, breaking changes, Renovate), [Server-rendered pages](guides/pages.md) (gsx, htmx 4, Datastar), [TypeScript](guides/typescript.md) (charter-ts: start a project, the steps, the config, the library), [Any repo](guides/any-repo.md) (what a repo with no API takes: `charter-ts adopt`) |
-| [Reference](reference.md) | [Go packages](reference/packages.md); every charter-ts command: [Using charter-ts](charter/using.md); every script of this repo: [Tasks](charter/tasks.md) |
+| [Reference](reference.md) | [The standard API](reference/standard.md) (what every API serves, and where), [Go packages](reference/packages.md); every charter-ts command: [Using charter-ts](charter/using.md); every script of this repo: [Tasks](charter/tasks.md) |
 | [How to help](contributing.md) | [Rules](rules.md), [Benchmarks](benchmarks.md), [Upstream issues](upstream.md), [Writing docs](charter/writing.md) |
 | [How this repo is kept](charter/README.md) | What is the same in every repo charter keeps: [the rules they share](charter/rules.md) |
 

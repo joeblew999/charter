@@ -240,7 +240,7 @@
               "read": "Read notes",
               "write": "Create notes and upload files"
             },
-            "tokenUrl": "/oauth/token"
+            "tokenUrl": "/api/oauth/token"
           }
         },
         "type": "oauth2"
@@ -283,7 +283,7 @@
   },
   "openapi": "3.1.0",
   "paths": {
-    "/chat": {
+    "/api/chat": {
       "post": {
         "operationId": "chat",
         "requestBody": {
@@ -351,7 +351,7 @@
         }
       }
     },
-    "/files": {
+    "/api/files": {
       "post": {
         "operationId": "uploadFile",
         "requestBody": {
@@ -451,7 +451,7 @@
         ]
       }
     },
-    "/notes": {
+    "/api/notes": {
       "get": {
         "operationId": "listNotes",
         "parameters": [
@@ -651,7 +651,7 @@
         }
       }
     },
-    "/notes/watch": {
+    "/api/notes/watch": {
       "get": {
         "operationId": "watchNotes",
         "parameters": [
@@ -746,7 +746,7 @@
         }
       }
     },
-    "/oauth/token": {
+    "/api/oauth/token": {
       "post": {
         "operationId": "getToken",
         "requestBody": {

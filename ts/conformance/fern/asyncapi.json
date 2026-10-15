@@ -7,13 +7,12 @@
   "servers": {
     "production": {
       "host": "charter-conformance-ts-api.gedw99.workers.dev",
-      "pathname": "/api/mock",
       "protocol": "wss"
     }
   },
   "channels": {
     "liveNotes": {
-      "address": "/notes/live",
+      "address": "/api/notes/live",
       "messages": {
         "NoteEvent": {
           "$ref": "#/components/messages/NoteEvent"

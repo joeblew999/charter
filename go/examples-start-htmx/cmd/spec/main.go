@@ -5,7 +5,7 @@
 //
 // With -check it writes nothing and fails if either file differs from what the contract gives:
 // someone changed the contract and didn't run `npm run spec`. The same functions the Worker
-// serves /api/openapi.json and /api/asyncapi.json with (api/spec.go).
+// serves /api/openapi.json and /api/asyncapi.json with (api/spec.go, go/lib/serve).
 //
 // Either way it first fails if an operation cannot be the MCP tool it would be (humamcp.Check): the
 // specs don't show that, and otherwise the first client to list the tools finds out.
@@ -13,12 +13,11 @@ package main
 
 import (
 	"github.com/joeblew999/charter/go/examples-start-htmx/api"
-	"github.com/joeblew999/charter/go/humamcp"
-	"github.com/joeblew999/charter/go/humaworkers"
 	"github.com/joeblew999/charter/go/specfile"
 )
 
 func main() {
-	specfile.Must(humamcp.Check(humaworkers.New(humaworkers.Config(api.Title, api.Version), api.Routes(api.Env{}))))
-	specfile.Main(api.OpenAPI, api.AsyncAPI)
+	spec := api.API(api.Env{})
+	specfile.Must(spec.Tools())
+	specfile.Main(spec.OpenAPI, spec.AsyncAPI)
 }

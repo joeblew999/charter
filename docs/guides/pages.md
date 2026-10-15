@@ -55,7 +55,7 @@ The server is the same; the attributes and the events differ:
 
 1. Write a component in a `.gsx` file in `pages/`, inside `Layout`.
 2. Add a case to the switch in `Handler` (`pages/pages.go`) that renders it with `render`. Not `ServeMux` patterns such as `GET /about`: TinyGo's `net/http` matches no methods in them.
-3. Run `go tool gsx generate`, add a check to `test/live-test.mjs`, then `npm run check`.
+3. Run `go tool gsx generate`, add a test to `pages/pages_test.go`, then `npm run check`.
 
 To push another fragment, write a function like `htmxEvent` or `datastarEvent` that renders it, and pass it to `serveStream`.
 

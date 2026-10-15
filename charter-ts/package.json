@@ -35,6 +35,10 @@
 			"types": "./dist/config.d.ts",
 			"default": "./dist/config.js"
 		},
+		"./cloudflare": {
+			"types": "./dist/cloudflare.d.ts",
+			"default": "./dist/cloudflare.js"
+		},
 		"./spec-files": {
 			"types": "./dist/spec-files.d.ts",
 			"default": "./dist/spec-files.js"

@@ -22,9 +22,6 @@ import (
 
 	"github.com/joeblew999/charter/go/auth"
 	"github.com/joeblew999/charter/go/follow"
-	"github.com/joeblew999/charter/go/humamcp"
-	"github.com/joeblew999/charter/go/humaworkers"
-	"github.com/joeblew999/charter/go/ratelimit"
 	"github.com/joeblew999/charter/go/transport"
 )
 
@@ -43,7 +40,7 @@ type Env struct {
 }
 
 // The settings and their defaults. The client and the webhook secret default to what the oRPC
-// conformance in ../conformance-ts uses, so the same test runs against either; a real deployment sets them
+// conformance in ts/conformance uses, so the same test runs against either; a real deployment sets them
 // all as secrets.
 var defaults = map[string]string{
 	"CLIENT_ID":      "id-1",
@@ -64,7 +61,7 @@ func (env Env) setting(name string) string {
 
 // trusted is who may do what, by every way in: the API's tokens (READ_TOKEN may only read), Cloudflare
 // Access (a person writes, a machine's service token reads), an OpenID Connect issuer (its token's
-// scope claim), and the OAuth tokens /oauth/token issued, which read and write. An unset secret or
+// scope claim), and the OAuth tokens /api/oauth/token issued, which read and write. An unset secret or
 // setting trusts no one that way.
 func (env Env) trusted() []auth.Trusted {
 	return []auth.Trusted{
@@ -72,67 +69,19 @@ func (env Env) trusted() []auth.Trusted {
 		auth.Token{Secret: "READ_TOKEN", Scopes: []string{"read"}},
 		auth.Access{People: []string{"read", "write"}, Machines: []string{"read"}},
 		auth.OIDC{},
-		auth.Issued{Scheme: OAuth, TokenPath: "/oauth/token", Check: func(token string) ([]string, bool) {
+		auth.Issued{Scheme: OAuth, TokenPath: "/api/oauth/token", Check: func(token string) ([]string, bool) {
 			return []string{"read", "write"}, env.validToken(token, time.Now())
 		}},
 	}
 }
 
-// Handler serves the contract on env, each call allowed by any of the four ways in (auth) and
-// limited as its operation says, per caller (ratelimit), plus the
-// two specs with the request's origin as their server, plus the contract as MCP tools (/mcp: a tool
-// call runs the same operation as the REST route, with the credentials the MCP request carries).
+// Handler serves the contract on env the standard way (go/lib/serve): each call allowed by any of the
+// four ways in (auth) and limited as its operation says, per caller (ratelimit), the specs at
+// /api/openapi.json and /api/asyncapi.json, the operations as MCP tools at /api/mcp (a tool call runs
+// the same operation as the REST route, with the credentials the MCP request carries), and how to get
+// in at /.well-known/.
 func Handler(env Env) http.Handler {
-	routes := humaworkers.New(config(), Routes(env))
-	routes.UseMiddleware(auth.Middleware(routes, env.setting, env.trusted()...))
-	// After auth: a limit counts per caller (WriteLimit).
-	routes.UseMiddleware(ratelimit.Middleware(routes, nil))
-	mcp := humamcp.Handler(routes)
-	// How a client finds out how to get in: the API's metadata, its token endpoint's, and the OpenID
-	// Connect issuer's (go/lib/auth), each named by the challenge of a 401 or 403.
-	wellKnown := auth.WellKnown(routes, env.setting, env.trusted()...)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// A WebSocket client that can't send headers (a browser, a Worker) sends its token as
-		// ?access_token=: on the channel, and only there, it is the Authorization header.
-		if token := r.URL.Query().Get("access_token"); r.URL.Path == livePath && token != "" && r.Header.Get("Authorization") == "" {
-			r = r.Clone(r.Context())
-			r.Header.Set("Authorization", "Bearer "+token)
-		}
-		var spec func(server string) ([]byte, error)
-		switch r.URL.Path {
-		case auth.OpenIDPath, auth.ResourcePath, auth.ServerPath:
-			wellKnown.ServeHTTP(w, r)
-			return
-		case "/openapi.json":
-			spec = OpenAPI
-		case "/asyncapi.json":
-			spec = AsyncAPI
-		case mcpPath:
-			mcp.ServeHTTP(w, r)
-			return
-		default:
-			routes.ServeHTTP(w, r)
-			return
-		}
-		body, err := spec(origin(r))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(body)
-	})
-}
-
-// origin is the request's scheme and host: absolute in r.URL on Workers, from Host on net/http.
-func origin(r *http.Request) string {
-	if r.URL.Scheme != "" && r.URL.Host != "" {
-		return r.URL.Scheme + "://" + r.URL.Host
-	}
-	if r.TLS != nil {
-		return "https://" + r.Host
-	}
-	return "http://" + r.Host
+	return API(env).Handler()
 }
 
 // ---- OAuth client credentials ----

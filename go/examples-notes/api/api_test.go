@@ -349,10 +349,10 @@ func TestTheWorkerServesBothSpecsWithItsOriginAsServer(t *testing.T) {
 }
 
 func TestTheWebSocketChannelIsInAsyncAPINotOpenAPI(t *testing.T) {
-	if at(spec(t, OpenAPI), "paths", "/api/notes/live") != nil {
+	if at(spec(t, API(Env{}).OpenAPI), "paths", "/api/notes/live") != nil {
 		t.Error("/api/notes/live is in OpenAPI")
 	}
-	asyncapi := spec(t, AsyncAPI)
+	asyncapi := spec(t, API(Env{}).AsyncAPI)
 	if at(asyncapi, "channels", "liveNotes", "address") != "/api/notes/live" {
 		t.Errorf("channel liveNotes: %v", at(asyncapi, "channels", "liveNotes"))
 	}

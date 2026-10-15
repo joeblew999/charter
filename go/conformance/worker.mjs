@@ -9,6 +9,6 @@ import { goWorker } from "./build/go.mjs";
 export { Hub } from "./build/hub.mjs";
 
 const go = goWorker();
-await go.warm({ paths: ["/openapi.json"] });
+await go.warm({ paths: ["/api/openapi.json"] });
 
 export default { fetch: go.fetch };

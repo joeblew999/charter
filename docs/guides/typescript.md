@@ -38,17 +38,14 @@ Every other step `check` is made of runs alone too: `npx charter-ts lint`, `spec
 
 ```ts
 import { defineConfig } from "charter-ts/config";
-import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
-import { asyncInfo, contract, info } from "./src/contract.ts";
+import { specsOf } from "charter-lib/serve";
+import { contract, document } from "./src/contract.ts";
 
 export default defineConfig({
 	worker: "my-api",
 	url: process.env.API_URL ?? "https://my-api.me.workers.dev",
 	port: 5178,
-	specs: {
-		openapi: server => openapiSpec(contract, { info, server }),
-		asyncapi: server => asyncapiSpec(contract, { info: asyncInfo, server }),
-	},
+	specs: specsOf(contract, document),
 	test: { run: ({ origin, node }) => node("test/live-test.ts", origin) },
 	live: ({ url, node }) => node("test/live-test.ts", url),
 });
@@ -62,6 +59,7 @@ What the Worker imports is `charter-lib` (`ts/lib/`), in `dependencies`; `charte
 
 | Import | What it is |
 |---|---|
+| `"charter-lib/serve"` | `serve(router, { document, trusted, limits })`: the API the standard way, every part below wired ([The standard API](../reference/standard.md)); `guard`, the middleware that allows and limits each call; `specsOf(contract, document)` for `charter.config.ts`'s `specs` |
 | `"charter-lib/specs"` | Both specs from the contract, for `npm run spec` and for the Worker's `/api/openapi.json` and `/api/asyncapi.json` |
 | `"charter-lib/asyncapi"` | `asyncapi({...})` on a procedure: a WebSocket channel in the AsyncAPI spec |
 | `"charter-lib/auth"` | Bearer tokens, Cloudflare Access, an OpenID Connect issuer and tokens the API issued itself (`issued`, for an OAuth endpoint of its own), with scopes; each refusal's challenge, and `wellKnown`: what a client reads to find out how to get in ([Auth](auth.md)) |
@@ -74,6 +72,7 @@ From the tool, for `charter.config.ts` and scripts of your own:
 | Import | What it is |
 |---|---|
 | `"charter-ts/config"` | `defineConfig` |
+| `"charter-ts/cloudflare"` | `rateLimits(spec, worker, bindings.rateLimit)`: a Rate Limiting binding per limit the spec declares, for `cloudflare.config.ts` |
 | `"charter-ts/scripts"` | What the steps are made of: `run`, `withServer`, `migrateLocal`, `deploy`, `sdk` |
 
 ## In this repo

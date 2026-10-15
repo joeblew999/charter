@@ -31,13 +31,14 @@ auth.Scheme(config.OpenAPI)              // bearer tokens
 auth.AccessScheme(config.OpenAPI, Title) // the service token's headers; SDKs read <TITLE>_ACCESS_CLIENT_ID and _SECRET
 auth.OIDCScheme(config.OpenAPI)          // openIdConnectUrl: the API's /.well-known/openid-configuration (auth.Discovery)
 Security: auth.Needs("write")            // in an operation: write, by any of them
-routes.UseMiddleware(auth.Middleware(routes, env.Var,
+serve.API{..., Setting: env.Var, Trusted: []auth.Trusted{ // api/spec.go: who may call
 	auth.Token{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}},
 	auth.Access{People: []string{"read", "write"}, Machines: []string{"read"}},
-	auth.OIDC{}))
+	auth.OIDC{},
+}}
 ```
 
-In TypeScript: `base: oidcScheme(accessScheme(info.title, scheme()))`, `spec: needs(["write"])`, and `await authorize(headers, securityOf(procedure), trusted)` in an oRPC middleware (`ts/examples-notes/src/index.ts`). The specs then list every way in for each operation, and a public one says `security: []`.
+In TypeScript: `base: oidcScheme(accessScheme(info.title, scheme()))` in the document, `spec: needs(["write"])`, and `trusted` in `serve`'s options, whose `guard` runs `authorize` before each call (`ts/examples-notes/src/index.ts`). The specs then list every way in for each operation, and a public one says `security: []`.
 
 ## Bearer tokens
 
@@ -68,13 +69,9 @@ Put `OIDC_ISSUER` (its discovery document is at `<issuer>/.well-known/openid-con
 
 ## How a client finds out how to get in
 
-A refusal says how to get in, as MCP's authorization asks: every 401 carries `WWW-Authenticate: Bearer resource_metadata="<the API>/.well-known/oauth-protected-resource"`, and a 403 adds `error="insufficient_scope", scope="write"`. That document (RFC 9728) names the API, its scopes and the authorization servers it trusts, in the order a client should try them: the API itself when it issues tokens, the OpenID Connect issuer, the Cloudflare Access team. An API that issues its own tokens (`auth.Issued{..., TokenPath: "/oauth/token"}` in Go, `issued: { ..., tokenPath }` in TypeScript) also says how, at `/.well-known/oauth-authorization-server` (RFC 8414): its token endpoint, the client-credentials grant, and Basic or form credentials.
+A refusal says how to get in, as MCP's authorization asks: every 401 carries `WWW-Authenticate: Bearer resource_metadata="<the API>/.well-known/oauth-protected-resource"`, and a 403 adds `error="insufficient_scope", scope="write"`. That document (RFC 9728) names the API, its scopes and the authorization servers it trusts, in the order a client should try them: the API itself when it issues tokens, the OpenID Connect issuer, the Cloudflare Access team. An API that issues its own tokens (`auth.Issued{..., TokenPath: "/api/oauth/token"}` in Go, `issued: { ..., tokenPath }` in TypeScript) also says how, at `/.well-known/oauth-authorization-server` (RFC 8414): its token endpoint, the client-credentials grant, and Basic or form credentials.
 
-| | Go | TypeScript |
-|---|---|---|
-| The documents | `auth.WellKnown(routes, env.Var, trusted...)`, mounted for `auth.ResourcePath`, `auth.ServerPath`, `auth.OpenIDPath` | `wellKnown(request, { resource, title, scopes: scopesOf(router), trusted })` for `/.well-known/` |
-| The challenge | `auth.Middleware` sets it | `authorize(headers, security, trusted, resource)` returns it as `challenge`: set it as `WWW-Authenticate`, and put it in the `ORPCError`'s `data` |
-| MCP | `humamcp`: a tool call refused that way is that 401 or 403, with its challenge, not a tool error | `mcpHandler`: the same, from the `ORPCError`'s `data.challenge` |
+`go/lib/serve` and `charter-lib/serve` serve all of it for an API that trusts anyone ([The standard API](../reference/standard.md)): the documents at `/.well-known/`, the challenge on every refusal, and at `/api/mcp` a tool call refused that way as that 401 or 403 with its challenge, not a tool error. Underneath, in Go: `auth.WellKnown`, `auth.Middleware`, `humamcp`; in TypeScript: `wellKnown`, `authorize` (its `challenge`, set by the guard as `WWW-Authenticate` and in the `ORPCError`'s `data`), `mcpHandler`.
 
 The conformance projects check the whole chain against both servers, natively, under workerd and on Cloudflare (`ts/conformance/test/mcp-test.ts`, `auth-test.ts`): a tool call without credentials is a 401 whose challenge points to the metadata, which points to the API's own authorization server, whose token endpoint gives a token for the client's credentials, with which the call goes through. MCP's own TypeScript client cannot follow the last steps by itself yet ([Upstream issues](../upstream.md)).
 
@@ -93,18 +90,17 @@ A limited operation takes at most `limit` calls per caller in each `period` (10 
 ```go
 ratelimit.Declare(config.OpenAPI, ratelimit.Limit{Binding: "READ_LIMIT", Limit: 600, Period: 60, Scope: "read"}) // per scope; none: only operations' own
 Extensions: ratelimit.On(ratelimit.Limit{Binding: "WRITE_LIMIT", Limit: 100, Period: 60}, nil)                   // in an operation: its own
-routes.UseMiddleware(ratelimit.Middleware(routes, nil))                                                        // after auth.Middleware
 ```
 
-In TypeScript (`"charter-lib/ratelimit"`): `spec: needs(["write"], limited(writeLimit))`, `rateLimits` in openapiSpec's options for scopes, and `await rateLimit(limitOf(procedure), keyOf(caller, headers), env)` after `authorize` (`ts/examples-notes/src/index.ts`).
+In TypeScript (`"charter-lib/ratelimit"`): `spec: needs(["write"], limited(writeLimit))`, and `rateLimits` in the document for scopes; `charter-lib/serve`'s guard counts after auth, on the bindings `serve`'s `limits` gives (`ts/examples-notes/src/index.ts`).
 
-- Each limit is a [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) binding of that name. `cloudflare.config.ts` declares one per `x-rate-limit` in `fern/openapi.json`, with its limit and period, so they are written once; it holds each binding's namespace, a number unique in the account.
+- Each limit is a [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) binding of that name, after auth (`serve` does both). `cloudflare.config.ts` declares one per `x-rate-limit` in `fern/openapi.json`, with its limit and period, so they are written once: `...rateLimits(spec, name, bindings.rateLimit)` from `"charter-ts/cloudflare"`, which names each counter (a number unique in the account) from the Worker's name.
 - The binding counts per Cloudflare location and is eventually consistent: it stops abuse, it does not account. `cf dev` counts locally. Natively, Go counts in memory.
 - A Worker without the binding lets every call through, and logs it once.
 
 ## Proven
 
-- Locally (`npm run check`): the auth test serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After` after the write limit for one caller while another still writes. The notes examples' test is `ts/examples-notes/test/auth-test.ts`; the conformance projects' is `ts/conformance/test/auth-test.ts`, with OAuth tokens beside the others. Each runs against the Go server natively and as TinyGo Wasm under workerd, and the TypeScript one under workerd. Rate limits were not tried on Cloudflare.
+- Locally (`npm run check`): the auth test serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After` after the write limit for one caller while another still writes. The test is `ts/conformance/test/auth-test.ts`, with OAuth tokens beside the others; it runs against go/conformance natively and as TinyGo Wasm under workerd, and ts/conformance under workerd. The notes examples are served by the same `serve`. Rate limits were not tried on Cloudflare.
 - On Cloudflare, 2026-10-03: a Go notes project behind Access, set up by the Access commands charter's Go tool had then. No token: 302. A wrong secret: 302. The machine's token: reads; writing is 403. With the write token: writes; with the read token or a JWT from an untrusted issuer: 403 and 401. The live, SDK (Go and TypeScript) and MCP tests passed through Access. An OIDC issuer was not tried there.
 
 ## Limits

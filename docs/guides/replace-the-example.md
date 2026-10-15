@@ -42,10 +42,10 @@ Every operation that answers once is also a tool at `/api/mcp`, named by its `op
 
 | | Served by | Hide one |
 |---|---|---|
-| Go | `go/lib/humamcp` | `humamcp.Expose(op, false)` |
-| TypeScript | `charter-lib/mcp`, on the official MCP SDK | `.meta(notATool())` on the procedure |
+| Go | `go/lib/serve`, with `go/lib/humamcp` | `humamcp.Expose(op, false)` |
+| TypeScript | `charter-lib/serve`, with `charter-lib/mcp` on the official MCP SDK | `.meta(notATool())` on the procedure |
 
-The same test holds both to it: `ts/examples-notes/test/mcp-test.ts`, which `go/examples-notes` runs too.
+The conformance projects test both, with MCP's own client ([The standard API](../reference/standard.md)).
 
 ```sh
 claude mcp add --transport http billing-api https://billing-api.<your-subdomain>.workers.dev/api/mcp
@@ -55,7 +55,7 @@ claude mcp add --transport http billing-api https://billing-api.<your-subdomain>
 
 | File | What to do |
 |---|---|
-| `api/contract.go`, `api/handlers.go`, `api/store.go`, `api/store_js.go` | Replace the notes; keep `hello`, `Handler` and `origin` |
+| `api/contract.go`, `api/handlers.go`, `api/store.go`, `api/store_js.go` | Replace the notes; keep `hello`, `Handler` and `API` (`api/spec.go`) |
 | `migrations/0001_init.sql` | Replace it if never deployed; otherwise add a file |
 | `api/*_test.go`, `test/` | Keep the helpers; rewrite the notes checks and the tool names |
 | `fern/generators.yml` | `namespaceExport`, `packageName`, `binaryName`; keep the Go SDK's path `<your module>/sdk/go` |

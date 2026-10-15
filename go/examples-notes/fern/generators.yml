@@ -8,8 +8,8 @@ api:
   # How the SDKs authenticate: a bearer token (one of the API's, or an OpenID Connect access token:
   # the same header, so the spec's oidc scheme is not restated) and a Cloudflare Access service token,
   # any of them, each sent on every request when given (Access wants its token on every request, even
-  # one the contract calls public). They restate the contract's schemes (go/auth's), which Fern needs
-  # here or it keeps only the first; examples/surface_test.go keeps the two the same.
+  # one the contract calls public). They restate the contract's schemes (go/lib/auth's), which Fern needs
+  # here or it keeps only the first; test/surface.test.ts (go/examples-notes) keeps the two the same.
   auth-schemes:
     bearer:
       scheme: bearer

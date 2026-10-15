@@ -10,69 +10,82 @@
 // not judged: the generated CLI prints json/jsonl only when a stream ends.
 // Upstream: fern-api/fern#17939 (when fixed: the CLI's latency drops to ~0 like the SDKs'; judge it)
 //
-//   node soak.mjs <origin> [--no-deploy] [--seconds 100] [--deploy-at 30] [--drop-at 65] [--stream-seconds 15]
-//   node soak.mjs <origin> --idle 20
-// Run it from the project's folder. It uses that project's `ws` (node_modules) and generated SDKs:
+//   node test/soak.ts <origin> [--no-deploy] [--seconds 100] [--deploy-at 30] [--drop-at 65] [--stream-seconds 15]
+//   node test/soak.ts <origin> --idle 20
+// Run it from the project's folder, with WRITE_TOKEN set (fnox exec --). It uses the generated SDKs:
 // the TypeScript SDK (sdk/out/typescript-dist), the CLI (sdk/out/cli) and the Go SDK (sdk/out/go)
 // through soak-go beside this file; the redeploy runs `npm run deploy` there.
 import { execFileSync, spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import WebSocket from "ws";
+
+type Note = { id: number; body: string };
+/** What a client's run says when its stream or socket ends. */
+type Run = (after: number, signal: AbortSignal, onNote: (note: Note) => void) => Promise<string>;
+/** The part of the generated TypeScript SDK the soak uses. */
+type NotesClient = new (options: { baseUrl: string; auth?: false }) => {
+	notes: { watch(input: { after: string; seconds: number }, options: { abortSignal: AbortSignal }): Promise<AsyncIterable<Note>> };
+	liveNotes: { connect(options: { after: string; reconnectAttempts: number }): Promise<{ close(): void; on(event: "message", listener: (note: Note) => void): void; on(event: "close", listener: (event?: { code?: number }) => void): void }> };
+};
+
 // Paths with forward slashes on every system (Windows takes them, and go.work wants them), and the
 // name a built program has there.
-const slashes = path => path.replaceAll("\\", "/");
+const slashes = (path: string) => path.replaceAll("\\", "/");
 const exe = process.platform === "win32" ? ".exe" : "";
 const root = `${slashes(process.cwd())}/`; // the project
-const WebSocket = createRequire(root)("ws");
 
 const args = process.argv.slice(2);
 const origin = args[0];
-const str = (name, def) => { const i = args.indexOf(`--${name}`); return i < 0 ? def : args[i + 1]; };
-const opt = (name, def) => Number(str(name, def));
+if (!origin || !process.env.WRITE_TOKEN) {
+  console.log("FAIL  usage: node test/soak.ts <origin> [options], with WRITE_TOKEN set (fnox exec --)");
+  process.exit(1);
+}
+const str = (name: string, def: number) => { const i = args.indexOf(`--${name}`); return i < 0 ? def : args[i + 1]; };
+const opt = (name: string, def: number) => Number(str(name, def));
 const idleMinutes = opt("idle", 0);
 const total = (idleMinutes ? idleMinutes * 60 + 15 : opt("seconds", 100)) * 1000;
 const deployAt = idleMinutes || args.includes("--no-deploy") ? Infinity : opt("deploy-at", 30) * 1000;
 const dropAt = idleMinutes ? Infinity : opt("drop-at", 65) * 1000;
 const streamSeconds = opt("stream-seconds", idleMinutes ? 60 : 15);
-const { NotesClient } = await import(pathToFileURL(`${root}sdk/out/typescript-dist/esm/index.mjs`));
+const { NotesClient } = (await import(pathToFileURL(`${root}sdk/out/typescript-dist/esm/index.mjs`).href)) as { NotesClient: NotesClient };
 const t0 = Date.now();
 const t = () => ((Date.now() - t0) / 1000).toFixed(1);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 const tag = `soak ${t0}`;
 let stopping = false;
 
 // The position every client starts from: the newest note now.
-const baseline = (await (await fetch(`${origin}/api/notes?limit=1`)).json()).data[0]?.id ?? 0;
+const baseline = ((await (await fetch(`${origin}/api/notes?limit=1`)).json()) as { data: Note[] }).data[0]?.id ?? 0;
 
 // ---- clients: run(after, signal, onNote) resolves when its stream/socket ends ----
 
-async function* sseBlocks(res) {
+async function* sseBlocks(res: Response) {
   const decoder = new TextDecoder(); let buf = "";
-  for await (const chunk of res.body) {
+  for await (const chunk of res.body ?? []) {
     buf += decoder.decode(chunk, { stream: true });
-    const blocks = buf.split("\n\n"); buf = blocks.pop();
+    const blocks = buf.split("\n\n"); buf = blocks.pop() ?? "";
     for (const block of blocks) {
-      const field = f => new RegExp(`^${f}: ?(.*)$`, "m").exec(block)?.[1];
+      const field = (f: string) => new RegExp(`^${f}: ?(.*)$`, "m").exec(block)?.[1];
       yield { id: field("id"), event: field("event"), data: field("data") };
     }
   }
 }
-async function sseRun(url, headers, signal, onNote) {
+async function sseRun(url: string, headers: Record<string, string>, signal: AbortSignal, onNote: (note: Note) => void): Promise<string> {
   const res = await fetch(url, { headers: { accept: "text/event-stream", ...headers }, signal });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   for await (const e of sseBlocks(res)) {
-    if (e.event === "message" && e.data) onNote(JSON.parse(e.data));
+    if (e.event === "message" && e.data) onNote(JSON.parse(e.data) as Note);
     else if (e.event === "error") return `event: error ${e.data ?? ""}`;
   }
   return "end";
 }
-function lines(proc, signal, onLine) {
+function lines(proc: ReturnType<typeof spawn>, signal: AbortSignal, onLine: (line: string) => void): Promise<string> {
   signal.addEventListener("abort", () => proc.kill());
-  createInterface({ input: proc.stdout }).on("line", onLine);
-  let err = ""; proc.stderr.on("data", d => err += d);
+  createInterface({ input: proc.stdout! }).on("line", onLine);
+  let err = ""; proc.stderr!.on("data", (d: Buffer) => err += d);
   return new Promise(resolve => proc.on("exit", code => resolve(`exit ${code}${err.trim() ? ` ${err.trim().slice(0, 100)}` : ""}`)));
 }
 const ws = origin.replace(/^http/, "ws");
@@ -80,7 +93,7 @@ const soakGo = slashes(fileURLToPath(new URL("soak-go/", import.meta.url)));
 const goBin = `${soakGo}soak-go${exe}`;
 const cliBin = `${root}sdk/out/cli/target/release/notes${exe}`;
 
-const clients = [
+const clients: { name: string; run: Run }[] = [
   { name: "SSE raw (after)", run: (after, signal, onNote) =>
       sseRun(`${origin}/api/notes/watch?after=${after}&seconds=${streamSeconds}`, {}, signal, onNote) },
   { name: "SSE EventSource-style (Last-Event-ID)", run: (after, signal, onNote) =>
@@ -91,15 +104,15 @@ const clients = [
       return "end";
     } },
   { name: "Go SDK Notes.Watch()", run: (after, signal, onNote) =>
-      lines(spawn(goBin, ["-base", origin, "-after", String(after), "-seconds", String(streamSeconds)]), signal, l => onNote(JSON.parse(l))) },
+      lines(spawn(goBin, ["-base", origin, "-after", String(after), "-seconds", String(streamSeconds)]), signal, l => onNote(JSON.parse(l) as Note)) },
   { name: "CLI notes watch", run: (after, signal, onNote) =>
       lines(spawn(cliBin, ["--base-url", origin, "notes", "watch", "--after", String(after), "--seconds", String(streamSeconds), "--format", "jsonl"]), signal, l => {
-        if (l.startsWith("{")) onNote(JSON.parse(l));
+        if (l.startsWith("{")) onNote(JSON.parse(l) as Note);
       }) },
-  { name: "WebSocket raw (?after)", run: (after, signal, onNote) => new Promise(resolve => {
+  { name: "WebSocket raw (?after)", run: (after, signal, onNote) => new Promise<string>(resolve => {
       const sock = new WebSocket(`${ws}/api/notes/live?after=${after}`);
       signal.addEventListener("abort", () => sock.terminate());
-      sock.on("message", data => onNote(JSON.parse(String(data))));
+      sock.on("message", data => onNote(JSON.parse(String(data)) as Note));
       sock.on("error", () => {});
       sock.on("close", code => resolve(`closed ${code}`));
     }) },
@@ -107,28 +120,29 @@ const clients = [
       const sock = await new NotesClient({ baseUrl: ws, auth: false }).liveNotes.connect({ after: String(after), reconnectAttempts: 0 });
       signal.addEventListener("abort", () => sock.close());
       sock.on("message", onNote);
-      return new Promise(resolve => sock.on("close", e => resolve(`closed ${e?.code ?? ""}`)));
+      return new Promise<string>(resolve => sock.on("close", e => resolve(`closed ${e?.code ?? ""}`)));
     } },
 ];
 
 // ---- the client rule, the same driver for every client ----
 
-for (const c of clients) Object.assign(c, { last: baseline, seen: new Map(), at: new Map(), order: true, runs: 0, ends: {}, pausedUntil: 0, abort: () => {} });
-function record(c, note) {
+type Driven = { name: string; run: Run; last: number; seen: Map<number, number>; at: Map<number, number>; order: boolean; runs: number; ends: Record<string, number>; pausedUntil: number; abort: () => void };
+const driven: Driven[] = clients.map(c => ({ ...c, last: baseline, seen: new Map(), at: new Map(), order: true, runs: 0, ends: {}, pausedUntil: 0, abort: () => {} }));
+function record(c: Driven, note: Note) {
   if (!note?.body?.startsWith(tag)) return;
   if (note.id <= c.last) c.order = c.order && c.seen.has(note.id); // an older id that was never seen = out of order
   if (!c.seen.has(note.id)) c.at.set(note.id, Date.now());
   c.seen.set(note.id, (c.seen.get(note.id) ?? 0) + 1);
   if (note.id > c.last) c.last = note.id;
 }
-async function drive(c) {
+async function drive(c: Driven) {
   while (!stopping) {
     if (Date.now() < c.pausedUntil) { await sleep(200); continue; }
     const ac = new AbortController();
     c.abort = () => ac.abort();
-    let why;
+    let why: string;
     // Upstream: fern-api/fern#17937 (when fixed: resumable SDKs survive resets themselves; the catch stays for the rule)
-    try { why = await c.run(c.last, ac.signal, note => record(c, note)); } catch (error) { why = ac.signal.aborted ? "dropped" : `error: ${error.message}`; }
+    try { why = await c.run(c.last, ac.signal, note => record(c, note)); } catch (error) { why = ac.signal.aborted ? "dropped" : `error: ${(error as Error).message}`; }
     c.runs++;
     const key = String(why).replace(/\d{3,}/g, "N").slice(0, 60);
     c.ends[key] = (c.ends[key] ?? 0) + 1;
@@ -136,10 +150,10 @@ async function drive(c) {
   }
 }
 
-function redeploy() {
+function redeploy(): Promise<void> {
   console.log(`${t()}s hub restart: redeploying...`);
   return new Promise(resolve => {
-    const proc = spawn("mise", ["run", "deploy"], { cwd: root });
+    const proc = spawn("npm", ["run", "deploy"], { cwd: root, shell: process.platform === "win32" });
     let out = ""; proc.stdout.on("data", d => out += d); proc.stderr.on("data", d => out += d);
     proc.on("exit", code => { console.log(`${t()}s redeploy exited ${code}, version ${/Current Version ID: (\S+)/.exec(out)?.[1] ?? "?"}`); resolve(); });
   });
@@ -150,21 +164,21 @@ function redeploy() {
 // The Go client against the generated SDK: a workspace file that points the SDK's module path (the
 // one its go.mod declares, which soak-go imports) at it.
 const work = `${mkdtempSync(`${tmpdir()}/soak-go-`)}/go.work`;
-const goModule = /^module\s+(\S+)/m.exec(readFileSync(`${root}sdk/out/go/go.mod`, "utf8"))[1];
+const goModule = /^module\s+(\S+)/m.exec(readFileSync(`${root}sdk/out/go/go.mod`, "utf8"))?.[1];
 writeFileSync(work, `go 1.27.1\n\nuse ${soakGo.replace(/\/$/, "")}\n\nreplace ${goModule} => ${root}sdk/out/go\n`);
 execFileSync("go", ["build", "-o", goBin, "."], { cwd: soakGo, env: { ...process.env, GOWORK: work } });
-console.log(`baseline note ${baseline}; ${clients.length} clients; SSE streams end every ${streamSeconds}s`);
-const driving = clients.map(drive);
+console.log(`baseline note ${baseline}; ${driven.length} clients; SSE streams end every ${streamSeconds}s`);
+const driving = driven.map(drive);
 await sleep(3000);
 
-const created = [];
-const create = async n => {
+const created: { id: number; at: string; ms: number }[] = [];
+const create = async (n: number) => {
   try {
     const res = await fetch(`${origin}/api/notes`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${process.env.WRITE_TOKEN}` }, body: JSON.stringify({ body: `${tag} #${n}` }) });
-    if (res.ok) created.push({ id: (await res.json()).id, at: t(), ms: Date.now() }); else console.log(`${t()}s create failed ${res.status}`);
-  } catch (error) { console.log(`${t()}s create error ${error.message}`); }
+    if (res.ok) created.push({ id: ((await res.json()) as Note).id, at: t(), ms: Date.now() }); else console.log(`${t()}s create failed ${res.status}`);
+  } catch (error) { console.log(`${t()}s create error ${(error as Error).message}`); }
 };
-let deploying, dropped = false;
+let deploying: Promise<void> | undefined, dropped = false;
 if (idleMinutes) {
   console.log(`${t()}s idle for ${idleMinutes} min, then one note`);
   await sleep(idleMinutes * 60_000);
@@ -175,7 +189,7 @@ if (idleMinutes) {
     if (!deploying && Date.now() - t0 >= deployAt) deploying = redeploy();
     if (!dropped && Date.now() - t0 >= dropAt) {
       dropped = true; console.log(`${t()}s client drop: every client offline for 6s`);
-      for (const c of clients) { c.pausedUntil = Date.now() + 6000; c.abort(); }
+      for (const c of driven) { c.pausedUntil = Date.now() + 6000; c.abort(); }
     }
     await create(n);
     await sleep(2000);
@@ -185,20 +199,20 @@ await deploying;
 // Let the last notes arrive: the CLI prints json/jsonl only when a stream ends, so wait out one stream.
 await sleep((streamSeconds + 5) * 1000);
 stopping = true;
-for (const c of clients) c.abort();
+for (const c of driven) c.abort();
 await Promise.race([Promise.allSettled(driving), sleep(5000)]);
 
 // ---- report ----
 console.log(`\n${created.length} notes created (ids ${created[0]?.id}..${created.at(-1)?.id})\n`);
 let failed = 0;
-for (const c of clients) {
+for (const c of driven) {
   const missing = created.filter(n => !c.seen.has(n.id));
   const dupes = [...c.seen.values()].filter(n => n > 1).length;
   const ok = missing.length === 0 && dupes === 0 && c.order;
-  const lat = created.filter(n => c.at.has(n.id)).map(n => c.at.get(n.id) - n.ms).sort((a, b) => a - b);
-  const p = q => lat.length ? `${(Math.max(0, lat[Math.min(lat.length - 1, Math.floor(q * lat.length))]) / 1000).toFixed(1)}s` : "-";
+  const lat = created.filter(n => c.at.has(n.id)).map(n => c.at.get(n.id)! - n.ms).sort((a, b) => a - b);
+  const p = (q: number) => lat.length ? `${(Math.max(0, lat[Math.min(lat.length - 1, Math.floor(q * lat.length))]!) / 1000).toFixed(1)}s` : "-";
   if (!ok) failed++;
-  console.log(`${ok ? "PASS" : "FAIL"}  ${c.name}: ${c.seen.size}/${created.length}, missing ${missing.length}${missing.length ? ` (first at ${missing[0].at}s)` : ""}, duplicates ${dupes}, ${c.order ? "in order" : "OUT OF ORDER"}, latency p50 ${p(0.5)} max ${p(1)}, ${c.runs} connections`);
+  console.log(`${ok ? "PASS" : "FAIL"}  ${c.name}: ${c.seen.size}/${created.length}, missing ${missing.length}${missing.length ? ` (first at ${missing[0]!.at}s)` : ""}, duplicates ${dupes}, ${c.order ? "in order" : "OUT OF ORDER"}, latency p50 ${p(0.5)} max ${p(1)}, ${c.runs} connections`);
   console.log(`        ends: ${Object.entries(c.ends).map(([k, v]) => `${k} ×${v}`).join(", ")}`);
 }
 process.exit(failed ? 1 : 0);

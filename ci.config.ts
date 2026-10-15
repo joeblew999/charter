@@ -7,12 +7,14 @@ import { defineCI } from "charter-ts/ci";
 export default defineCI({
 	jobs: {
 		check: {
-			about: "charter-ts and charter-lib with their tests, the Go library, this repo's own TypeScript, the docs, and these workflows (written from here, and linted)",
+			about: "charter-ts and charter-lib with their tests, the Go library, this repo's own TypeScript, the projects kept the same, the docs, and these workflows (written from here, and linted)",
 			on: ["push", "pull_request", "tag"],
 			os: ["linux", "macos"],
 			timeoutMinutes: 20,
 			run: [
 				["tsc"],
+				// The projects, kept the same: their scripts and the versions they share.
+				["node", "--test", "projects.test.ts"],
 				["npm", "run", "check", "-w", "ts/lib"],
 				["npm", "run", "check", "-w", "charter-ts"],
 				["charter-ts", "go:check", "go/lib"],

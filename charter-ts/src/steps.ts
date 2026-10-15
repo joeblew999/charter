@@ -39,7 +39,7 @@ async function serve(config: Config, tests: Tests, program: string, args: string
 	const extras = rest as unknown as Extras, extra = extras[0];
 	const origin = `http://localhost:${port}`;
 	const env = { ...config.localSecrets, PORT: String(port), ...tests.env?.({ port, extra, extras }) };
-	const server = () => withServer({ program, args, env, ready: origin + (tests.ready ?? "/api/hello") }, async () => {
+	const server = () => withServer({ program, args, env, ready: origin + (tests.ready ?? "/api/openapi.json") }, async () => {
 		if (program === "cf" && existsSync("migrations")) await migrateLocal(config, port);
 		await tests.run({ origin, port, extra, extras, node: (file, ...a) => run("node", [file, ...a], env) });
 	});
@@ -142,7 +142,7 @@ export const steps: Record<string, Step> = {
 			await built(config);
 			const { migrateLocal, untilStopped } = await scripts();
 			const env = { ...config.localSecrets, PORT: String(config.port) };
-			await untilStopped({ program: "cf", args: ["dev"], env, ready: `http://localhost:${config.port}${config.test.ready ?? "/api/hello"}` }, async () => {
+			await untilStopped({ program: "cf", args: ["dev"], env, ready: `http://localhost:${config.port}${config.test.ready ?? "/api/openapi.json"}` }, async () => {
 				if (existsSync("migrations")) await migrateLocal(config, config.port);
 				console.log(`ready: http://localhost:${config.port}/`);
 			});

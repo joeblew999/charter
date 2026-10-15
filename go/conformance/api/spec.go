@@ -1,16 +1,14 @@
 package api
 
 import (
-	"encoding/json"
 	"reflect"
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/asyncapi"
 	"github.com/joeblew999/charter/go/auth"
-	"github.com/joeblew999/charter/go/humamcp"
 	"github.com/joeblew999/charter/go/humaworkers"
 	"github.com/joeblew999/charter/go/ratelimit"
+	"github.com/joeblew999/charter/go/serve"
 )
 
 func init() {
@@ -28,7 +26,7 @@ func config() huma.Config {
 	// issuer. Reading needs read and writing write, by any of them: an OAuth token has both.
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{OAuth: {
 		Type:  "oauth2",
-		Flows: &huma.OAuthFlows{ClientCredentials: &huma.OAuthFlow{TokenURL: "/oauth/token", Scopes: map[string]string{"read": "Read notes", "write": "Create notes and upload files"}}},
+		Flows: &huma.OAuthFlows{ClientCredentials: &huma.OAuthFlow{TokenURL: "/api/oauth/token", Scopes: map[string]string{"read": "Read notes", "write": "Create notes and upload files"}}},
 	}}
 	auth.Scheme(config.OpenAPI, "read")
 	auth.AccessScheme(config.OpenAPI, Title)
@@ -45,13 +43,16 @@ func config() huma.Config {
 	return config
 }
 
-// document is the whole API registered, with server as its server, plus the webhooks: what the
-// server sends, which no route describes. Huma has the field but builds nothing for it, so the
-// operation is written out here, with the payload's schema from the struct notify sends.
-func document(server string) *humaworkers.API {
-	config := config()
-	config.Servers = []*huma.Server{{URL: server}}
-	api := humaworkers.New(config, Routes(Env{}))
+// API is the contract on env as go/lib/serve serves it: what the server serves (Handler), and the
+// specs cmd/spec writes for Fern (API(Env{}).OpenAPI and .AsyncAPI).
+func API(env Env) serve.API {
+	return serve.API{Config: config, Routes: Routes(env), LiveTitle: LiveTitle, Setting: env.setting, Trusted: env.trusted(), Document: webhooks}
+}
+
+// webhooks are what the server sends, which no route describes. Huma has the field but builds
+// nothing for it, so the operation is written out here, with the payload's schema from the struct
+// notify sends.
+func webhooks(api *humaworkers.API) {
 	doc := api.OpenAPI()
 	doc.Webhooks = map[string]*huma.PathItem{"noteCreated": {Post: &huma.Operation{
 		OperationID: "noteCreatedWebhook",
@@ -62,27 +63,4 @@ func document(server string) *humaworkers.API {
 		}},
 		Responses: map[string]*huma.Response{"200": {Description: "received"}},
 	}}}
-	return api
-}
-
-// OpenAPI is the OpenAPI spec of the contract, with server as its server: what cmd/spec writes
-// for Fern and what the server gives at /openapi.json.
-func OpenAPI(server string) ([]byte, error) {
-	return json.Marshal(document(server).OpenAPI())
-}
-
-// Tools says what keeps an operation from being the MCP tool it would be (humamcp.Check): cmd/spec
-// fails on it, before it writes a spec.
-func Tools() []error {
-	return humamcp.Check(humaworkers.New(config(), Routes(Env{})))
-}
-
-// AsyncAPI is the AsyncAPI spec of the contract's WebSocket channel (/asyncapi.json).
-func AsyncAPI(server string) ([]byte, error) {
-	api := document(server)
-	doc, err := asyncapi.Generate(api.Operations(), api.OpenAPI().Components.Schemas, asyncapi.Info{Title: LiveTitle, Version: Version}, server)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(doc)
 }

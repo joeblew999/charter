@@ -2,6 +2,7 @@
 	"extends": "charter-ts/tsconfig.node.json",
 	"include": [
 		"charter.config.ts",
-		"test/surface.test.ts"
+		"test/surface.test.ts",
+		"test/soak.ts"
 	]
 }

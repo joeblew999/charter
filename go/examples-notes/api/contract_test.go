@@ -3,7 +3,6 @@ package api
 import (
 	"testing"
 
-	"github.com/joeblew999/charter/go/humamcp"
 	"github.com/joeblew999/charter/go/humaworkers"
 	"github.com/joeblew999/charter/go/specfile"
 )
@@ -12,7 +11,7 @@ import (
 // no operation, so they stay as they are when the contract changes.
 
 func TestEveryOperationCanBeItsMCPTool(t *testing.T) {
-	for _, problem := range humamcp.Check(humaworkers.New(config(), Routes(Env{}))) {
+	for _, problem := range API(Env{}).Tools() {
 		t.Error(problem)
 	}
 }

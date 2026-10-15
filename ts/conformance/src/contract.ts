@@ -5,18 +5,18 @@ import { asyncapi } from "charter-lib/asyncapi";
 import { accessScheme, oidcScheme, scheme, type Security } from "charter-lib/auth";
 import { type Limit, limited } from "charter-lib/ratelimit";
 import { notATool } from "charter-lib/mcp";
+import type { Document } from "charter-lib/serve";
 
-// The conformance API, contract first: one API with every Fern feature we use (docs/guides/sdks.md). The harness
-// Worker implements it (src/conformance.ts, under /api/mock) and both specs are generated from it
-// (scripts/spec.ts -> fern/{openapi,asyncapi}.json). Each feature is switched on here:
+// The conformance API, contract first: one API with every Fern feature we use (docs/guides/sdks.md). The
+// Worker implements it (src/conformance.ts, served the standard way under /api) and both specs are
+// generated from it (npm run spec -> fern/{openapi,asyncapi}.json). Each feature is switched on here:
 // - on an operation, by `openapi({ operationId, tags, spec })`: the SDK names and Fern's x-fern-*;
-// - for the whole document, by `document` below: oRPC's contract has no place for those;
+// - for the whole document, by `base` below: oRPC's contract has no place for those;
 // - the WebSocket by `asyncapi({...})` (charter-lib/asyncapi), and the webhooks by `webhooks` below.
-// A Go server of the same API (../conformance-go/api, ../conformance-go/fern) compares its spec with
+// A Go server of the same API (go/conformance/api, go/conformance/fern) compares its spec with
 // these names: operation ids, paths, parameters, x-fern-* values, the channel and its messages.
 
 export const info = { title: "Conformance", version: "1.0.0", description: "Every Fern feature we care about, via standard OpenAPI + x-fern-* extensions." };
-export const asyncInfo = { title: "Conformance live", version: "1.0.0" };
 
 /**
  * How often one caller may create notes: the Worker's WRITE_LIMIT binding, which cloudflare.config.ts
@@ -50,7 +50,7 @@ const fern = (extensions: Record<string, unknown>) => (op: Operation): Operation
  * `auth-schemes` in generators.yml tells Fern which operation is the token endpoint.
  */
 const ways = oidcScheme(accessScheme(info.title, scheme("read")));
-const oauth = { type: "oauth2" as const, flows: { clientCredentials: { tokenUrl: "/oauth/token", scopes: { read: "Read notes", write: "Create notes and upload files" } } } };
+const oauth = { type: "oauth2" as const, flows: { clientCredentials: { tokenUrl: "/api/oauth/token", scopes: { read: "Read notes", write: "Create notes and upload files" } } } };
 
 /** An operation's security: these scopes, by any of the four ways in (charter-lib/specs says each of charter's). */
 export const needs = (scopes: string[]): Security => [{ bearer: scopes }, { OAuth: scopes }];
@@ -59,7 +59,7 @@ export const needs = (scopes: string[]): Security => [{ bearer: scopes }, { OAut
  * What the document says and no operation does: who may call, the idempotency header (an SDK request
  * option, not a parameter), and how webhooks are signed.
  */
-export const document = {
+export const base = {
 	security: needs(["read"]),
 	components: { securitySchemes: { ...ways.components!.securitySchemes, OAuth: oauth } },
 	"x-fern-idempotency-headers": [{ header: "Idempotency-Key", name: "idempotency_key" }],
@@ -70,7 +70,7 @@ export const contract = {
 	auth: {
 		getToken: oc
 			.meta(openapi({
-				method: "POST", path: "/oauth/token", summary: "OAuth client-credentials token (used by the SDK itself)", tags: ["auth"], operationId: "getToken", successDescription: "token",
+				method: "POST", path: "/api/oauth/token", summary: "OAuth client-credentials token (used by the SDK itself)", tags: ["auth"], operationId: "getToken", successDescription: "token",
 				// The token endpoint takes no token, and OAuth sends it a form: oRPC's handler reads one, but
 				// its generator always writes the body as application/json.
 				// (charter-lib/auth's securityOf calls this with an empty operation, for its security alone.)
@@ -99,14 +99,14 @@ export const contract = {
 	notes: {
 		list: oc
 			.meta(openapi({
-				method: "GET", path: "/notes", summary: "List notes (cursor pagination)", tags: ["notes"], operationId: "listNotes", successDescription: "a page",
+				method: "GET", path: "/api/notes", summary: "List notes (cursor pagination)", tags: ["notes"], operationId: "listNotes", successDescription: "a page",
 				spec: fern({ ...everyone, "x-fern-pagination": { cursor: "$request.cursor", next_cursor: "$response.next_cursor", results: "$response.data" } }),
 			}))
 			.input(z.object({ cursor: z.string().optional(), limit: z.coerce.number().int().optional() }))
 			.output(z.object({ data: z.array(note), next_cursor: z.string().optional() })),
 		create: oc
 			.meta(openapi({
-				method: "POST", path: "/notes", summary: "Create a note (idempotent: safe to retry with an Idempotency-Key)", tags: ["notes"], operationId: "createNote", successDescription: "created",
+				method: "POST", path: "/api/notes", summary: "Create a note (idempotent: safe to retry with an Idempotency-Key)", tags: ["notes"], operationId: "createNote", successDescription: "created",
 				spec: limited(writeLimit, op => ({ ...fern({ ...everyone, "x-fern-idempotent": true })(op), security: needs(["write"]) })),
 			}))
 			.input(z.object({ body: z.string().refine(body => !body.includes(END), `a note may not contain ${END}`) }))
@@ -115,7 +115,7 @@ export const contract = {
 		// Last-Event-ID a client resends are the same position; a planned end (`seconds`) sends END.
 		watch: oc
 			.meta(openapi({
-				method: "GET", path: "/notes/watch", summary: "Stream notes (Server-Sent Events) for `seconds`; call again with `after` = the last event's id to continue without gaps", tags: ["notes"], operationId: "watchNotes", successDescription: "notes",
+				method: "GET", path: "/api/notes/watch", summary: "Stream notes (Server-Sent Events) for `seconds`; call again with `after` = the last event's id to continue without gaps", tags: ["notes"], operationId: "watchNotes", successDescription: "notes",
 				// Upstream: fern-api/fern#17938 (when fixed: Fern could read oRPC's envelope, event: message|close|error, as is)
 				// oRPC describes the stream as its SSE envelope; tell Fern its `data:` payloads are notes.
 				spec: op => {
@@ -134,8 +134,8 @@ export const contract = {
 		// The WebSocket channel: in the AsyncAPI spec, not in OpenAPI. Both ways are streams of plain JSON
 		// messages: the client sends Subscribe, the server sends NoteEvent.
 		live: oc
-			.meta(openapi({ method: "GET", path: "/notes/live" }))
-			.meta(asyncapi({ channel: "liveNotes", address: "/notes/live", operationId: "receiveNoteEvent", message: "NoteEvent", send: { message: "Subscribe", operationId: "sendSubscribe" } }))
+			.meta(openapi({ method: "GET", path: "/api/notes/live" }))
+			.meta(asyncapi({ channel: "liveNotes", address: "/api/notes/live", operationId: "receiveNoteEvent", message: "NoteEvent", send: { message: "Subscribe", operationId: "sendSubscribe" } }))
 			.input(asyncIteratorObject(z.object({ topic: z.string() })))
 			.output(asyncIteratorObject(z.object({
 				event: z.string(),
@@ -147,7 +147,7 @@ export const contract = {
 	files: {
 		// A file in the input makes oRPC write (and read) the body as multipart/form-data.
 		upload: oc
-			.meta(openapi({ method: "POST", path: "/files", summary: "Upload a file (multipart)", tags: ["files"], operationId: "uploadFile", successDescription: "stored", spec: op => ({ ...fern(internal)(op), security: needs(["write"]) }) }))
+			.meta(openapi({ method: "POST", path: "/api/files", summary: "Upload a file (multipart)", tags: ["files"], operationId: "uploadFile", successDescription: "stored", spec: op => ({ ...fern(internal)(op), security: needs(["write"]) }) }))
 			// Not a tool: a tool's arguments are JSON, and a file is not.
 			.meta(notATool())
 			.input(z.object({ file: z.file(), note: z.string().optional() }))
@@ -155,7 +155,7 @@ export const contract = {
 	},
 	chat: oc
 		.meta(openapi({
-			method: "POST", path: "/chat", summary: "Stream a reply (Server-Sent Events)", tags: ["chat"], operationId: "chat", successDescription: "chunks",
+			method: "POST", path: "/api/chat", summary: "Stream a reply (Server-Sent Events)", tags: ["chat"], operationId: "chat", successDescription: "chunks",
 			// Upstream: fern-api/fern#17938 (when fixed: Fern could read oRPC's envelope, event: message|close|error, as is)
 			// oRPC describes the stream as its SSE envelope; tell Fern its `data:` payloads are chunks.
 			spec: op => {
@@ -174,3 +174,7 @@ export const webhooks = {
 		.meta(openapi({ method: "POST", summary: "Sent to you when a note is created", tags: ["notes"], operationId: "noteCreatedWebhook" }))
 		.input(z.object({ event: z.string(), note })),
 };
+
+/** What both specs say beside the routes (charter-lib/serve): the API's name, its channel's, the
+ * document's fields, and the webhooks. */
+export const document: Document = { info, asyncInfo: { title: "Conformance live", version: "1.0.0" }, base, webhooks };

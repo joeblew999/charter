@@ -217,7 +217,7 @@ const OPENID_PATH = "/.well-known/openid-configuration";
 
 /** What wellKnown answers from: the API's own URL, its name, its scopes, and whom it trusts. */
 export interface API {
-	/** The API's own URL: its origin, or where it is mounted (https://host/api/mock). */
+	/** The API's own URL: its origin, or where it is mounted (https://host/v2). */
 	resource: string;
 	title: string;
 	scopes: string[];

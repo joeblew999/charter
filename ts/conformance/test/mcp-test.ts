@@ -1,18 +1,18 @@
-// The conformance API's MCP endpoint (<api>/mcp) with a real MCP client, the official TypeScript one,
+// The conformance API's MCP endpoint (<origin>/mcp) with a real MCP client, the official TypeScript one,
 // over Streamable HTTP, in both protocol eras: the stateless 2026-07-28 and the 2025-11-25 handshake.
 // The tools are the contract's operations that answer once, less the token endpoint and the upload;
 // a tool call does what the REST route does, with the token the MCP request carries. The same test
 // runs against go/conformance (go/lib/humamcp) and ts/conformance (charter-lib/mcp), so it checks
 // what both must do, not either one's wording.
-// Usage: node test/mcp-test.ts <api> (the origin of the Go server, <origin>/api/mock of the oRPC one)
+// Usage: node test/mcp-test.ts <origin>
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 
-const api = process.argv[2];
-if (!api) {
-	console.log("FAIL  usage: node test/mcp-test.ts <api>");
+const origin = process.argv[2];
+if (!origin) {
+	console.log("FAIL  usage: node test/mcp-test.ts <origin>");
 	process.exit(1);
 }
-const endpoint = new URL(`${api}/mcp`);
+const endpoint = new URL(`${origin}/api/mcp`);
 let failed = 0;
 function check(name: string, ok: boolean, detail: unknown): void {
 	console.log(`${ok ? "PASS" : "FAIL"}  ${name}${ok ? "" : `: ${typeof detail === "string" ? detail : JSON.stringify(detail)}`}`);
@@ -27,7 +27,7 @@ const resolved = (schema: Schema | undefined, root: Schema | undefined): Schema 
 	schema?.$ref ? root?.$defs?.[schema.$ref.replace("#/$defs/", "")] : schema;
 
 // A token as the SDKs get one (OAuth client credentials): every operation but the token endpoint needs it.
-const issued = await fetch(`${api}/oauth/token`, { method: "POST", body: new URLSearchParams({ client_id: "id-1", client_secret: "secret-1" }) });
+const issued = await fetch(`${origin}/api/oauth/token`, { method: "POST", body: new URLSearchParams({ client_id: "id-1", client_secret: "secret-1" }) });
 const { access_token } = (await issued.json()) as { access_token: string };
 const authorization = `Bearer ${access_token}`;
 
@@ -53,7 +53,7 @@ for (const [era, mode, version] of [["stateless", { pin: "2026-07-28" }, "2026-0
 	check(label("createNote"), !created.isError && created.structuredContent?.body === body && typeof created.structuredContent?.id === "string", created);
 
 	// The tool's answer is the REST route's answer.
-	const rest: unknown = await (await fetch(`${api}/notes?limit=3`, { headers: { authorization } })).json();
+	const rest: unknown = await (await fetch(`${origin}/api/notes?limit=3`, { headers: { authorization } })).json();
 	const listed = (await client.callTool({ name: "listNotes", arguments: { limit: 3 } })) as Result;
 	check(label("listNotes answers what GET /notes answers"), !listed.isError && JSON.stringify(listed.structuredContent) === JSON.stringify(rest), { listed: listed.structuredContent, rest });
 
@@ -88,10 +88,9 @@ const metadataURL = /resource_metadata="([^"]+)"/.exec(challenge)?.[1];
 check("a tool call without credentials is a 401 whose challenge points to the API's metadata", refused.status === 401 && !!metadataURL, { status: refused.status, challenge });
 type Metadata = { resource?: string; authorization_servers?: string[]; scopes_supported?: string[]; issuer?: string; token_endpoint?: string };
 const metadata = metadataURL ? ((await (await fetch(metadataURL)).json()) as Metadata) : undefined;
-check("the API's metadata names it, its own authorization server first, and its scopes", metadata?.resource === api && metadata.authorization_servers?.[0] === api && ["read", "write"].every(scope => metadata.scopes_supported?.includes(scope)), metadata);
-const issuer = new URL(api);
-const server = (await (await fetch(`${issuer.origin}/.well-known/oauth-authorization-server${issuer.pathname === "/" ? "" : issuer.pathname}`)).json()) as Metadata;
-check("its authorization server's metadata names the token endpoint", server.issuer === api && server.token_endpoint === `${api}/oauth/token`, server);
+check("the API's metadata names it, its own authorization server first, and its scopes", metadata?.resource === origin && metadata.authorization_servers?.[0] === origin && ["read", "write"].every(scope => metadata.scopes_supported?.includes(scope)), metadata);
+const server = (await (await fetch(`${origin}/.well-known/oauth-authorization-server`)).json()) as Metadata;
+check("its authorization server's metadata names the token endpoint", server.issuer === origin && server.token_endpoint === `${origin}/api/oauth/token`, server);
 // The token endpoint, with the client's credentials as an OAuth client sends them first (Basic), the
 // grant, the scopes the metadata names and the resource (RFC 8707).
 const granted = server.token_endpoint

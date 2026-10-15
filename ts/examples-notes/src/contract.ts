@@ -1,18 +1,26 @@
 import { asyncIteratorObject, oc } from "@orpc/contract";
 import { openapi, type OpenAPIV3_2 } from "@orpc/openapi";
 import { asyncapi } from "charter-lib/asyncapi";
-import { needs } from "charter-lib/auth";
+import { accessScheme, needs, oidcScheme, scheme } from "charter-lib/auth";
 import { limited, type Limit } from "charter-lib/ratelimit";
+import type { Document } from "charter-lib/serve";
 import { z } from "zod";
 
 // The API, contract first: every route with its method, path, input and output as Zod 4 schemas.
-// The Worker implements it (src/index.ts) and the OpenAPI spec is generated from it (scripts/spec.ts ->
+// The Worker implements it (src/index.ts) and the OpenAPI spec is generated from it (npm run spec ->
 // fern/openapi.json), from which Fern makes SDKs, a CLI and docs. Everything the SDKs
 // need is said here too: operationId/tags name the SDK methods, and `spec` adds Fern's extensions
 // (x-fern-*) to the generated operation, so nothing is patched afterwards.
 
-export const info = { title: "charter-notes-ts", version: "1.0.0", description: "Notes API: oRPC contract -> OpenAPI -> Fern." };
-export const asyncInfo = { title: "charter-notes-ts live", version: "1.0.0" };
+const info = { title: "charter-notes-ts", version: "1.0.0", description: "Notes API: oRPC contract -> OpenAPI -> Fern." };
+
+/** What both specs say beside the routes (charter-lib/serve): the API's name, its channels', and who may
+ * call: bearer tokens, Cloudflare Access and an OpenID Connect issuer (src/index.ts). */
+export const document: Document = {
+	info,
+	asyncInfo: { title: "charter-notes-ts live", version: "1.0.0" },
+	base: oidcScheme(accessScheme(info.title, scheme())),
+};
 
 export const note = z.object({
 	id: z.number().int(),

@@ -1,42 +1,45 @@
 # The conformance API from the oRPC contract. openapi.json and asyncapi.json are written by
 # `npm run spec` from src/contract.ts (never by hand); the harness Worker serves it.
 # Every Fern feature we use, through standard options only: OAuth client credentials beside charter's
-# three ways in, any of them (auth-schemes below, the token endpoint in openapi.json), idempotency
+# three ways in, any of them (api.auth-schemes below, the token endpoint in openapi.json), idempotency
 # (x-fern-idempotent), SSE (x-fern-streaming), cursor pagination (x-fern-pagination), multipart upload, OpenAPI 3.1 webhooks with HMAC signatures
 # (x-fern-webhook-signature), the WebSocket both ways (asyncapi.json), an overlay (overlays.yml) and
 # audiences (the typescript-public group).
-auth-schemes:
-  OAuth:
-    scheme: oauth
-    type: client-credentials
-    client-id-env: CONFORMANCE_CLIENT_ID
-    client-secret-env: CONFORMANCE_CLIENT_SECRET
-    get-token:
-      endpoint: "POST /oauth/token"
-      request-properties:
-        client-id: $request.client_id
-        client-secret: $request.client_secret
-      response-properties:
-        access-token: $response.access_token
-        expires-in: $response.expires_in
-  # charter's three ways in, as the examples have them (go/lib/auth, charter-lib/auth): a bearer token
-  # (one of the API's, or an OpenID Connect access token: the same header, so the spec's oidc scheme
-  # is not restated) and a Cloudflare Access service token. They restate the contract's schemes,
-  # which Fern needs here or it keeps only the first.
-  bearer:
-    scheme: bearer
-    token:
-      name: token
-  accessClientId:
-    header: CF-Access-Client-Id
-    name: accessClientId
-    env: CONFORMANCE_ACCESS_CLIENT_ID
-  accessClientSecret:
-    header: CF-Access-Client-Secret
-    name: accessClientSecret
-    env: CONFORMANCE_ACCESS_CLIENT_SECRET
-
 api:
+  specs:
+    - openapi: openapi.json
+      overlays: overlays.yml
+    - asyncapi: asyncapi.json
+  auth-schemes:
+    OAuth:
+      scheme: oauth
+      type: client-credentials
+      client-id-env: CONFORMANCE_CLIENT_ID
+      client-secret-env: CONFORMANCE_CLIENT_SECRET
+      get-token:
+        endpoint: "POST /api/oauth/token"
+        request-properties:
+          client-id: $request.client_id
+          client-secret: $request.client_secret
+        response-properties:
+          access-token: $response.access_token
+          expires-in: $response.expires_in
+    # charter's three ways in, as the examples have them (go/lib/auth, charter-lib/auth): a bearer token
+    # (one of the API's, or an OpenID Connect access token: the same header, so the spec's oidc scheme
+    # is not restated) and a Cloudflare Access service token. They restate the contract's schemes,
+    # which Fern needs here or it keeps only the first.
+    bearer:
+      scheme: bearer
+      token:
+        name: token
+    accessClientId:
+      header: CF-Access-Client-Id
+      name: accessClientId
+      env: CONFORMANCE_ACCESS_CLIENT_ID
+    accessClientSecret:
+      header: CF-Access-Client-Secret
+      name: accessClientSecret
+      env: CONFORMANCE_ACCESS_CLIENT_SECRET
   # Any of the four: the SDKs send whichever credentials they were given.
   auth:
     any:
@@ -44,10 +47,6 @@ api:
       - bearer
       - accessClientId
       - accessClientSecret
-  specs:
-    - openapi: openapi.json
-      overlays: overlays.yml
-    - asyncapi: asyncapi.json
 
 # The same groups, in the same order, in every API. Generate one: npm run sdk -- <group>   (output: sdk/out/<group>)
 groups:

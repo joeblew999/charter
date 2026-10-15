@@ -1,5 +1,5 @@
 // Package api is the conformance: every Fern feature we use, in one small API, contract first in Go: the
-// counterpart of the oRPC conformance contract (../conformance-ts/src/contract.ts) and its implementation
+// counterpart of the oRPC conformance contract (ts/conformance/src/contract.ts) and its implementation
 // there. Each operation is a Huma operation whose input and output are Go structs; from this one
 // definition come the handlers' validation, the OpenAPI spec and the AsyncAPI spec (spec.go), and
 // from those Fern makes the SDKs. docs/guides/sdks.md says, feature by feature, what switches it
@@ -214,20 +214,17 @@ func with(extensions map[string]any, others ...map[string]any) map[string]any {
 }
 
 // The channel's path: one GET (the upgrade) and one POST (a message from the client).
-const livePath = "/notes/live"
-
-// mcpPath serves the contract's operations as MCP tools (humamcp).
-const mcpPath = "/mcp"
+const livePath = "/api/notes/live"
 
 // Routes is the contract with its implementation on env.
 func Routes(env Env) []humaworkers.Route {
 	return []humaworkers.Route{
 		// OAuth client credentials: generators.yml's auth-schemes points the SDKs at this operation,
 		// and they call it themselves. It is the one operation that needs no token.
-		{Method: http.MethodPost, Path: "/oauth/token", OperationID: "getToken", Register: func(api huma.API) {
+		{Method: http.MethodPost, Path: "/api/oauth/token", OperationID: "getToken", Register: func(api huma.API) {
 			// Not a tool: an MCP client sends its token as a header, as the SDKs do.
 			huma.Register(api, humamcp.Expose(huma.Operation{
-				OperationID: "getToken", Method: http.MethodPost, Path: "/oauth/token",
+				OperationID: "getToken", Method: http.MethodPost, Path: "/api/oauth/token",
 				Summary: "OAuth client-credentials token (used by the SDK itself)", Tags: []string{"auth"},
 				Security: []map[string][]string{},
 				// Wrong credentials. The other operations' 401 and 422 are declared for every route
@@ -243,18 +240,18 @@ func Routes(env Env) []humaworkers.Route {
 				Extensions: audiences("public", "internal"),
 			}, false), env.token)
 		}},
-		{Method: http.MethodGet, Path: "/notes", OperationID: "listNotes", Register: func(api huma.API) {
+		{Method: http.MethodGet, Path: "/api/notes", OperationID: "listNotes", Register: func(api huma.API) {
 			huma.Register(api, huma.Operation{
-				OperationID: "listNotes", Method: http.MethodGet, Path: "/notes",
+				OperationID: "listNotes", Method: http.MethodGet, Path: "/api/notes",
 				Summary: "List notes (cursor pagination)", Tags: []string{"notes"},
 				Extensions: with(audiences("public", "internal"), map[string]any{
 					"x-fern-pagination": map[string]any{"cursor": "$request.cursor", "next_cursor": "$response.next_cursor", "results": "$response.data"},
 				}),
 			}, env.list)
 		}},
-		{Method: http.MethodPost, Path: "/notes", OperationID: "createNote", Register: func(api huma.API) {
+		{Method: http.MethodPost, Path: "/api/notes", OperationID: "createNote", Register: func(api huma.API) {
 			huma.Register(api, huma.Operation{
-				OperationID: "createNote", Method: http.MethodPost, Path: "/notes",
+				OperationID: "createNote", Method: http.MethodPost, Path: "/api/notes",
 				Summary: "Create a note (idempotent: safe to retry with an Idempotency-Key)", Tags: []string{"notes"},
 				Security:   needs("write"),
 				Extensions: ratelimit.On(WriteLimit, with(audiences("public", "internal"), map[string]any{"x-fern-idempotent": true})),
@@ -262,9 +259,9 @@ func Routes(env Env) []humaworkers.Route {
 		}},
 		// A resumable SSE feed of the log: every event's id is its place there, so `after` and the
 		// Last-Event-ID a client resends are the same position; a planned end (`seconds`) sends END.
-		{Method: http.MethodGet, Path: "/notes/watch", OperationID: "watchNotes", Register: func(api huma.API) {
+		{Method: http.MethodGet, Path: "/api/notes/watch", OperationID: "watchNotes", Register: func(api huma.API) {
 			huma.Register(api, huma.Operation{
-				OperationID: "watchNotes", Method: http.MethodGet, Path: "/notes/watch",
+				OperationID: "watchNotes", Method: http.MethodGet, Path: "/api/notes/watch",
 				Summary: "Stream notes (Server-Sent Events) for `seconds`; call again with `after` = the last event's id to continue without gaps", Tags: []string{"notes"},
 				// An SSE stream whose `data:` payloads are notes.
 				Responses: map[string]*huma.Response{"200": {
@@ -281,19 +278,19 @@ func Routes(env Env) []humaworkers.Route {
 			}, env.watch)
 		}},
 		// Multipart upload, and the one operation that is not public (audiences).
-		{Method: http.MethodPost, Path: "/files", OperationID: "uploadFile", Register: func(api huma.API) {
+		{Method: http.MethodPost, Path: "/api/files", OperationID: "uploadFile", Register: func(api huma.API) {
 			// Not a tool: a tool's arguments are JSON, and a file is not.
 			huma.Register(api, humamcp.Expose(huma.Operation{
-				OperationID: "uploadFile", Method: http.MethodPost, Path: "/files",
+				OperationID: "uploadFile", Method: http.MethodPost, Path: "/api/files",
 				Summary: "Upload a file (multipart)", Tags: []string{"files"},
 				RequestBody: uploadForm(),
 				Security:    needs("write"),
 				Extensions:  audiences("internal"),
 			}, false), env.upload)
 		}},
-		{Method: http.MethodPost, Path: "/chat", OperationID: "chat", Register: func(api huma.API) {
+		{Method: http.MethodPost, Path: "/api/chat", OperationID: "chat", Register: func(api huma.API) {
 			huma.Register(api, huma.Operation{
-				OperationID: "chat", Method: http.MethodPost, Path: "/chat",
+				OperationID: "chat", Method: http.MethodPost, Path: "/api/chat",
 				Summary: "Stream a reply (Server-Sent Events)", Tags: []string{"chat"},
 				// An SSE stream whose `data:` payloads are chunks.
 				Responses: map[string]*huma.Response{"200": {

@@ -5,8 +5,8 @@
 //
 // With -check it writes nothing and fails if either file differs from what the contract gives:
 // someone changed the contract and didn't run `npm run spec`. The same functions the
-// server gives /openapi.json and /asyncapi.json with (api/spec.go). Either way it first fails if an
-// operation cannot be the MCP tool it would be (api.Tools).
+// server gives /api/openapi.json and /api/asyncapi.json with (api/spec.go, go/lib/serve). Either way
+// it first fails if an operation cannot be the MCP tool it would be (Tools).
 package main
 
 import (
@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
-	specfile.Must(api.Tools())
-	specfile.Main(api.OpenAPI, api.AsyncAPI)
+	spec := api.API(api.Env{})
+	specfile.Must(spec.Tools())
+	specfile.Main(spec.OpenAPI, spec.AsyncAPI)
 }

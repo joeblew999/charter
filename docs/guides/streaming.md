@@ -14,7 +14,7 @@ curl -N 'localhost:5174/api/notes/watch?after=0&seconds=5'   # every note after 
 
 ## The client rule
 
-**When a stream ends or fails, call again with `after` set to the id of the last item received.** A browser's `EventSource` needs no loop: its `Last-Event-ID` is read the same way. The generated SDKs reconnect only after a clean end, so other clients keep a loop: `test/soak.mjs` and `test/soak-go/main.go` have one for each kind.
+**When a stream ends or fails, call again with `after` set to the id of the last item received.** A browser's `EventSource` needs no loop: its `Last-Event-ID` is read the same way. The generated SDKs reconnect only after a clean end, so other clients keep a loop: `test/soak.ts` and `test/soak-go/main.go` have one for each kind.
 
 ## The rules
 
@@ -37,8 +37,8 @@ A WebSocket the client also sends on: see `go/conformance/api/contract.go` and [
 
 ```sh
 npx charter-ts test:native     # the live test, locally
-node test/soak.mjs <url>             # in go/examples-notes; REMOTE, redeploys: seven kinds of client through a redeploy and a client drop
-node test/soak.mjs <url> --idle 20   # and after 20 quiet minutes
+fnox exec -- node test/soak.ts <url>             # in go/examples-notes; REMOTE, redeploys: seven kinds of client through a redeploy and a client drop
+fnox exec -- node test/soak.ts <url> --idle 20   # and after 20 quiet minutes
 ```
 
 The soak passes when every client gets every item once, in order. Delivery time is not guaranteed: a missed wake-up costs up to 30 seconds, never an item.

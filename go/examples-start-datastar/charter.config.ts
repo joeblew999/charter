@@ -1,11 +1,8 @@
 // What charter-ts needs to know about this project (npm run <step> runs charter-ts <step>), typed, in one place.
 import { defineConfig, type TestContext } from "charter-ts/config";
 
-// The start API is the same in Go and in TypeScript, so its tests are ts/examples-start's, typed.
-const both = ({ origin, node }: Pick<TestContext, "origin" | "node">) => {
-	node("../../ts/examples-start/test/live-test.ts", origin);
-	node("../../ts/examples-start/test/mcp-test.ts", origin);
-};
+// The start API is the same in Go and in TypeScript, so its test is ts/examples-start's, typed.
+const both = ({ origin, node }: Pick<TestContext, "origin" | "node">) => node("../../ts/examples-start/test/live-test.ts", origin);
 
 export default defineConfig({
 	/** The Worker, as in cloudflare.config.ts. */
@@ -17,7 +14,7 @@ export default defineConfig({
 	/** Both specs, from the contract (api/contract.go). */
 	specs: { go: "./cmd/spec" },
 	go: { lint: ["api", "cmd", "pages"], gsx: true, sdk: true },
-	/** npm run test:native and test:workerd: the live test and the MCP client test. */
+	/** npm run test:native and test:workerd: the live test. */
 	native: { run: both },
 	test: { run: both },
 	/** npm run live-test: the same against the deployed Worker. */

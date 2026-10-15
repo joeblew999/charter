@@ -1,9 +1,9 @@
 // The generated TypeScript SDK against a running conformance server, over the real network: every Fern
-// feature the conformance API has must work. The same test runs against go/conformance (its origin) and
-// this project's (<origin>/api/mock), each with the SDK made from its own specs: the one in the folder
+// feature the conformance API has must work. The same test runs against go/conformance and this
+// project's, each by its origin, each with the SDK made from its own specs: the one in the folder
 // it runs in (sdk/out/typescript-dist). It is typed by this project's copy (src/client), which the
 // surface test (go/conformance/api/surface_test.go) holds to the same specs.
-// Usage: node test/sdk-test.ts <api> [--webhooks <receiver>]
+// Usage: node test/sdk-test.ts <origin> [--webhooks <receiver>]
 //   --webhooks  the receiver the server sends the noteCreated webhook to (test/webhook-receiver.ts):
 //               its deliveries are read at <receiver>/deliveries
 import { existsSync } from "node:fs";
@@ -18,7 +18,7 @@ const receiver = option("--webhooks");
 const [base] = args;
 const { READ_TOKEN, WRITE_TOKEN } = process.env;
 if (!base || !READ_TOKEN || !WRITE_TOKEN) {
-	console.log("FAIL  usage: node test/sdk-test.ts <api> [--webhook-port <port>], with READ_TOKEN and WRITE_TOKEN set");
+	console.log("FAIL  usage: node test/sdk-test.ts <origin> [--webhooks <receiver>], with READ_TOKEN and WRITE_TOKEN set");
 	process.exit(1);
 }
 const out = pathToFileURL(`${process.cwd()}/sdk/out/`);
@@ -49,15 +49,15 @@ async function check(name: string, run: () => Promise<[boolean, unknown]>): Prom
 const sent: { method: string; path: string; headers: Headers }[] = [];
 const recordingFetch: typeof fetch = (input, init = {}) => {
 	const request = new Request(input, init);
-	sent.push({ method: request.method, path: new URL(request.url).pathname.slice(new URL(base).pathname.replace(/\/$/, "").length), headers: request.headers });
+	sent.push({ method: request.method, path: new URL(request.url).pathname, headers: request.headers });
 	return fetch(input, { ...init, signal: init.signal ?? AbortSignal.timeout(TIMEOUT) });
 };
 const requests = (method: string, path: string) => sent.filter(request => request.method === method && request.path === path);
-// One environment: `base` is the REST API, `production` (the AsyncAPI server's name) the WebSocket.
+// One environment: `base` is the REST API's origin, `production` (the AsyncAPI server's name) the WebSocket's.
 // The SDK takes any of the API's ways in, each under its own name: here OAuth client credentials.
 const environment = { base, production: wsBase };
 const client = new ConformanceClient({ environment, oauth: credentials, fetch: recordingFetch });
-const bearer = () => requests("POST", "/notes").at(-1)?.headers.get("authorization") ?? "";
+const bearer = () => requests("POST", "/api/notes").at(-1)?.headers.get("authorization") ?? "";
 
 /** What the webhook's receiver (a customer's, test/webhook-receiver.ts) has been sent. */
 const deliveries = async () => (await (await fetch(`${receiver}/deliveries`)).json()) as { body: string; signature: string }[];
@@ -70,22 +70,22 @@ const key = `key-${run}`;
 await check("pagination (auto-paging: the seeded five over 3 pages)", async () => {
 	const ids: string[] = [];
 	for await (const note of await client.notes.list()) if (ids.push(note.id) === 5) break;
-	const pages = requests("GET", "/notes").length;
+	const pages = requests("GET", "/api/notes").length;
 	return [ids.join() === "n1,n2,n3,n4,n5" && pages === 3, { ids, pages }];
 });
 
 await check("idempotent create (Idempotency-Key + bearer token sent; a retry gets the first answer)", async () => {
 	const note = await client.notes.create({ body: "hello" }, { idempotencyKey: key });
 	const again = await client.notes.create({ body: "something else" }, { idempotencyKey: key });
-	const request = requests("POST", "/notes").at(-1);
+	const request = requests("POST", "/api/notes").at(-1);
 	const ok = note.id === key && again.id === key && again.body === "hello" && request?.headers.get("idempotency-key") === key && bearer().startsWith("Bearer ");
 	return [ok, { note, again, authorization: bearer() }];
 });
 
 await check("oauth client credentials (token fetched, form-encoded, reused)", async () => {
-	const tokens = requests("POST", "/oauth/token");
+	const tokens = requests("POST", "/api/oauth/token");
 	const contentType = tokens[0]?.headers.get("content-type") ?? "";
-	const authorized = sent.filter(request => request.path !== "/oauth/token").every(request => request.headers.get("authorization") === bearer());
+	const authorized = sent.filter(request => request.path !== "/api/oauth/token").every(request => request.headers.get("authorization") === bearer());
 	return [tokens.length === 1 && contentType.includes("application/x-www-form-urlencoded") && authorized, { tokenCalls: tokens.length, contentType, authorized }];
 });
 
@@ -113,7 +113,7 @@ await check("resumable SSE (typed notes after a position, ended by the terminato
 });
 
 await check("SSE resumes from the newer of after and Last-Event-ID (what a reconnecting SDK sends)", async () => {
-	const response = await fetch(`${base}/notes/watch?after=1&seconds=1`, { headers: { authorization: bearer(), "last-event-id": "4" } });
+	const response = await fetch(`${base}/api/notes/watch?after=1&seconds=1`, { headers: { authorization: bearer(), "last-event-id": "4" } });
 	const ids = [...(await response.text()).matchAll(/^id: (\d+)$/gm)].map(match => match[1]);
 	return [ids[0] === "5", ids.slice(0, 5)];
 });
@@ -197,7 +197,7 @@ await check("websocket: a note created while connected arrives through the hub, 
 await check("websocket with the token as ?access_token= (what a browser or a Worker can send)", async () => {
 	const { access_token } = await client.auth.getToken({ client_id: credentials.clientId, client_secret: credentials.clientSecret });
 	// A browser's WebSocket: no headers.
-	const socket = new WebSocket(`${wsBase}/notes/live?access_token=${encodeURIComponent(access_token)}`);
+	const socket = new WebSocket(`${wsBase}/api/notes/live?access_token=${encodeURIComponent(access_token)}`);
 	const events = await new Promise<NoteEvent[]>((resolve, reject) => {
 		const events: NoteEvent[] = [];
 		socket.addEventListener("open", () => socket.send(JSON.stringify({ topic: "notes" })));
@@ -218,24 +218,24 @@ await check("audiences: the public SDK has notes and auth, not the internal uplo
 // The contract's security is enforced, not only declared.
 const raw = (path: string, init: RequestInit = {}) => fetch(`${base}${path}`, { ...init, signal: AbortSignal.timeout(TIMEOUT) });
 await check("a call without a token, or with a forged one, is 401", async () => {
-	const none = await raw("/notes");
-	const forged = await raw("/notes", { headers: { authorization: `${bearer().slice(0, -4)}0000` } });
-	const wrong = await raw("/oauth/token", { method: "POST", body: new URLSearchParams({ client_id: "id-1", client_secret: "nope" }) });
-	const valid = await raw("/notes", { headers: { authorization: bearer() } });
+	const none = await raw("/api/notes");
+	const forged = await raw("/api/notes", { headers: { authorization: `${bearer().slice(0, -4)}0000` } });
+	const wrong = await raw("/api/oauth/token", { method: "POST", body: new URLSearchParams({ client_id: "id-1", client_secret: "nope" }) });
+	const valid = await raw("/api/notes", { headers: { authorization: bearer() } });
 	return [none.status === 401 && forged.status === 401 && wrong.status === 401 && valid.status === 200, { none: none.status, forged: forged.status, wrongSecret: wrong.status, valid: valid.status }];
 });
 
 await check("a websocket without a token is refused, and a message the channel refuses closes it (1008)", async () => {
 	// The refusal is a 401. cf dev's server drops the connection instead of passing it on (an error, no status).
 	const refused = await new Promise<number | string>(resolve => {
-		const socket = new RawWebSocket(`${wsBase}/notes/live`);
+		const socket = new RawWebSocket(`${wsBase}/api/notes/live`);
 		socket.on("unexpected-response", (_, response) => { resolve(response.statusCode ?? "no status"); socket.terminate(); });
 		socket.on("open", () => { resolve("opened"); socket.close(); });
 		socket.on("error", error => resolve(String(error.message)));
 	});
 	// The feed's frames come first; then the refused message closes the socket.
 	const closedBy = (message: unknown) => new Promise<number | string>(resolve => {
-		const socket = new RawWebSocket(`${wsBase}/notes/live`, { headers: { authorization: bearer() } });
+		const socket = new RawWebSocket(`${wsBase}/api/notes/live`, { headers: { authorization: bearer() } });
 		socket.on("open", () => socket.send(JSON.stringify(message)));
 		socket.on("close", code => resolve(code));
 		socket.on("error", error => resolve(String(error.message)));

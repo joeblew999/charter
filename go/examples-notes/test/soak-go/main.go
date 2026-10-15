@@ -1,11 +1,11 @@
-// One notes.watch() call through the generated Go SDK, for the soak matrix (test/soak.mjs): prints
+// One notes.watch() call through the generated Go SDK, for the soak matrix (test/soak.ts): prints
 // each note as a JSON line and exits when the stream ends (0) or fails (1). The caller follows the
 // client rule: run again with -after <last id>.
 //
 //	go run . -base <origin> [-after <id>] [-seconds 15]
 //
 // It imports the Go SDK by its module path. On its own it builds against the committed SDK (sdk/go,
-// see go.mod); test/soak.mjs builds it with a workspace file of its own that points that module path
+// see go.mod); test/soak.ts builds it with a workspace file of its own that points that module path
 // at the generated SDK under test (sdk/out/go).
 package main
 

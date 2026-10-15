@@ -112,4 +112,22 @@ for (const name of ["sse", "ws", "resume"] as const) {
 	console.log(`${ok ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got[name])}`);
 	if (!ok) failed++;
 }
+
+// The routes as MCP tools (charter-lib/serve, go/lib/serve): an agent lists them at /api/mcp, and a
+// call without credentials to write is refused with the challenge that tells it how to sign in (401;
+// 403 behind Access, whose service token only reads).
+const mcp = (method: string, params: Record<string, unknown>, headers: Record<string, string> = {}) => fetch(`${origin}/api/mcp`, {
+	method: "POST",
+	headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2026-07-28", "mcp-method": method, ...(params.name ? { "mcp-name": String(params.name) } : {}), ...edge, ...headers },
+	body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: { ...params, _meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28", "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: "live-test", version: "1" } } } }),
+});
+const listed = await mcp("tools/list", {});
+const tools = ((await listed.json().catch(() => null)) as { result?: { tools?: { name: string }[] } } | null)?.result?.tools?.map(tool => tool.name).sort();
+const toolsOk = listed.status === 200 && tools?.join() === "createNote,hello,listNotes";
+console.log(`${toolsOk ? "PASS" : "FAIL"}  POST /api/mcp lists the tools: ${listed.status} ${JSON.stringify(tools)}`);
+if (!toolsOk) failed++;
+const unsigned = await mcp("tools/call", { name: "createNote", arguments: { body: "no credentials" } });
+const signIn = unsigned.status === (Object.keys(edge).length ? 403 : 401) && (unsigned.headers.get("www-authenticate") ?? "").includes("resource_metadata=");
+console.log(`${signIn ? "PASS" : "FAIL"}  an MCP tool call without credentials to write is refused, saying how to sign in: ${unsigned.status} ${unsigned.headers.get("www-authenticate")}`);
+if (!signIn) failed++;
 process.exit(failed ? 1 : 0);

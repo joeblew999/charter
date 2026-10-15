@@ -214,7 +214,7 @@ func TestSameSurfaceAsTheORPCConformance(t *testing.T) {
 	differences := []difference{
 		{"`limit` has bounds and a default in the Go contract (1 to 100, 2). The oRPC contract leaves it open, and its handler gives two",
 			func(openapi, _ map[string]any) {
-				for _, p := range asList(at(openapi, "paths", "/notes", "get", "parameters")) {
+				for _, p := range asList(at(openapi, "paths", "/api/notes", "get", "parameters")) {
 					if at(p, "name") == "limit" {
 						set(asMap(p), map[string]any{"type": "integer", "minimum": 1.0, "maximum": 100.0, "default": 2.0}, "schema")
 					}
@@ -252,8 +252,8 @@ func TestSameSurfaceAsTheORPCConformance(t *testing.T) {
 			}
 		}
 	}
-	compare("openapi", surface(openapi), surface(spec(t, OpenAPI)))
-	compare("asyncapi", channels(asyncapi), channels(spec(t, AsyncAPI)))
+	compare("openapi", surface(openapi), surface(spec(t, API(Env{}).OpenAPI)))
+	compare("asyncapi", channels(asyncapi), channels(spec(t, API(Env{}).AsyncAPI)))
 }
 
 // Fern applies an overlay to each API's OpenAPI spec (generators.yml), and it names the two notes
@@ -274,7 +274,7 @@ func TestSameOverlayAsTheORPCConformance(t *testing.T) {
 	}
 	// The names are the overlay's alone: a contract that also said them would hide a broken overlay.
 	for _, method := range []string{"get", "post"} {
-		if name := at(spec(t, OpenAPI), "paths", "/notes", method, "x-fern-sdk-method-name"); name != nil {
+		if name := at(spec(t, API(Env{}).OpenAPI), "paths", "/api/notes", method, "x-fern-sdk-method-name"); name != nil {
 			t.Errorf("%s /notes names its SDK method in the contract (%v): the overlay does that", method, name)
 		}
 	}
@@ -282,15 +282,15 @@ func TestSameOverlayAsTheORPCConformance(t *testing.T) {
 
 // The parts of the spec that Huma has no struct tag for are written in code (spec.go, contract.go).
 func TestTheSpecHasWhatHumaHasNoTagFor(t *testing.T) {
-	doc := spec(t, OpenAPI)
+	doc := spec(t, API(Env{}).OpenAPI)
 	for _, path := range [][]string{
 		{"webhooks", "noteCreated", "post", "requestBody", "content", "application/json", "schema"},
 		{"x-fern-webhook-signature"},
 		{"x-fern-idempotency-headers"},
 		{"components", "securitySchemes", OAuth, "flows", "clientCredentials", "tokenUrl"},
-		{"paths", "/oauth/token", "post", "requestBody", "content", "application/x-www-form-urlencoded", "schema"},
-		{"paths", "/files", "post", "requestBody", "content", "multipart/form-data", "schema", "properties", "file"},
-		{"paths", "/chat", "post", "responses", "200", "content", "text/event-stream", "schema"},
+		{"paths", "/api/oauth/token", "post", "requestBody", "content", "application/x-www-form-urlencoded", "schema"},
+		{"paths", "/api/files", "post", "requestBody", "content", "multipart/form-data", "schema", "properties", "file"},
+		{"paths", "/api/chat", "post", "responses", "200", "content", "text/event-stream", "schema"},
 	} {
 		if at(doc, path...) == nil {
 			t.Errorf("the spec has no %s", strings.Join(path, "."))
@@ -298,11 +298,11 @@ func TestTheSpecHasWhatHumaHasNoTagFor(t *testing.T) {
 	}
 	// The token endpoint is the one operation without security; the Idempotency-Key header is not a
 	// parameter (the document-level extension declares it); the channel is not in OpenAPI.
-	if security, ok := at(doc, "paths", "/oauth/token", "post", "security").([]any); !ok || len(security) != 0 {
-		t.Errorf("getToken's security: %v, want []", at(doc, "paths", "/oauth/token", "post", "security"))
+	if security, ok := at(doc, "paths", "/api/oauth/token", "post", "security").([]any); !ok || len(security) != 0 {
+		t.Errorf("getToken's security: %v, want []", at(doc, "paths", "/api/oauth/token", "post", "security"))
 	}
-	if at(doc, "paths", "/notes", "post", "parameters") != nil {
-		t.Errorf("createNote has parameters: %v", at(doc, "paths", "/notes", "post", "parameters"))
+	if at(doc, "paths", "/api/notes", "post", "parameters") != nil {
+		t.Errorf("createNote has parameters: %v", at(doc, "paths", "/api/notes", "post", "parameters"))
 	}
 	if at(doc, "paths", livePath) != nil {
 		t.Errorf("%s is in OpenAPI", livePath)
