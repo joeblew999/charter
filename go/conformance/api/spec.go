@@ -44,7 +44,7 @@ func config() huma.Config {
 }
 
 // API is the contract on env as go/lib/serve serves it: what the server serves (Handler), and the
-// specs cmd/spec writes for Fern (API(Env{}).OpenAPI and .AsyncAPI).
+// specs npm run spec writes for Fern (API(Env{}).OpenAPI and .AsyncAPI).
 func API(env Env) serve.API {
 	return serve.API{Config: config, Routes: Routes(env), LiveTitle: LiveTitle, Setting: env.setting, Trusted: env.trusted(), Document: webhooks}
 }

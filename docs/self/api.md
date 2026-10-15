@@ -20,7 +20,7 @@ npm run check    # fails on a stale spec, a failing test, or (in Go) a TinyGo ga
 | The handlers | `api/handlers.ts` | `api/handlers.go` |
 | The storage | `api/store.ts` (D1, with Drizzle on `api/tables.ts`) | `api/store.go` (`Store`, and `MemStore` for `go test` and `--native`), `api/store_d1.go` (D1, through `api/queries.go`) |
 | The schema and its typed code | `migrations/*.sql`; `api/tables.ts`, written from them | `migrations/*.sql` and `api/queries.sql`; `api/queries.go`, written from them ([below](#the-database)) |
-| The specs' document | `api/spec.ts` | `api/spec.go`; `cmd/spec` writes the specs from it |
+| The specs' document | `api/spec.ts` | `api/spec.go`: `API(Env)`, which `npm run spec` writes the specs from |
 | The Worker | `worker.ts` | `main.go`, with the bindings in `platform_js.go`; `worker.mjs`, the Worker's entry. Its module (`go.mod`) is the project's name, on the Go library `github.com/joeblew999/charter/go/lib` |
 | The tests | `test/`, and unit tests beside the code (`api/*.test.ts`) | `test/`, the TypeScript twin's tests, with the schemas they check answers against (`test/schemas.ts`); unit tests in `api/*_test.go` |
 | Cloudflare's | `cloudflare.config.ts` (the Worker, its database `DB`, and with a stream the hub `HUB`), `migrations/*.sql` | the same |

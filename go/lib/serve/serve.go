@@ -10,7 +10,7 @@
 //     headers (a browser, a Worker);
 //   - every refusal as RFC 9457 problem details (Huma's, and go/lib/problem's), as charter-lib answers.
 //
-// The same API gives the specs cmd/spec writes (OpenAPI, AsyncAPI) and the MCP check it runs (Tools).
+// The same API gives the specs charter-ts spec writes (OpenAPI, AsyncAPI) and the MCP check it runs (Tools).
 // The platform carries the WebSocket (transport) and runs the handler (transport.Run).
 package serve
 
@@ -221,13 +221,13 @@ func standardDocument(doc *huma.OpenAPI) {
 		delete(schemas, name)
 	}
 	// A problem's status is Huma's `int`: 32 bits under TinyGo, so the Worker's own spec would say
-	// int32 where the one cmd/spec writes natively says int64. The standard's is int64.
+	// int32 where the one charter-ts spec writes natively says int64. The standard's is int64.
 	if model := schemas["ErrorModel"]; model != nil && model.Properties["status"] != nil {
 		model.Properties["status"].Format = "int64"
 	}
 }
 
-// OpenAPI is the API's OpenAPI spec, with server as its server: what cmd/spec writes for Fern and
+// OpenAPI is the API's OpenAPI spec, with server as its server: what charter-ts spec writes for Fern and
 // what the Worker serves at /api/openapi.json.
 func (a API) OpenAPI(server string) ([]byte, error) {
 	return json.Marshal(a.document(server).OpenAPI())
@@ -243,7 +243,7 @@ func (a API) AsyncAPI(server string) ([]byte, error) {
 	return json.Marshal(doc)
 }
 
-// Tools is what keeps an operation from being the MCP tool it would be (mcp.Check): cmd/spec
+// Tools is what keeps an operation from being the MCP tool it would be (mcp.Check): charter-ts spec
 // fails on it before it writes a spec.
 func (a API) Tools() []error {
 	return mcp.Check(humaworkers.New(a.Config(), a.Routes))

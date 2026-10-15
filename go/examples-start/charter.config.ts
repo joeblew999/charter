@@ -13,8 +13,6 @@ export default defineConfig({
 	port: Number(process.env.API_PORT ?? 5177),
 	/** The SDKs Fern makes (npm run spec writes fern/generators.yml from this and the spec). */
 	sdks: { name: "Api" },
-	/** Both specs, from the contract (api/contract.go). */
-	specs: { go: "./cmd/spec" },
 	go: {},
 	/** npm run check, natively and under workerd: the live test. */
 	native: { run: both },

@@ -79,7 +79,7 @@ func API(env Env) serve.API {
 // api/handlers.go
 func Handler(env Env) http.Handler { return API(env).Handler() }
 
-// cmd/spec/main.go
+// what npm run spec runs (charter-ts writes it into build/)
 spec := api.API(api.Env{})
 specs.Must(specs.Problems(spec))
 specs.Main(spec.OpenAPI, spec.AsyncAPI)

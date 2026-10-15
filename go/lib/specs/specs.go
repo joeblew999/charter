@@ -1,7 +1,7 @@
 // Package specs is the body of a spec command: it writes the specs a contract generates to
-// files, for Fern, or checks that the committed files are what the contract gives. One command per
-// contract calls Main with the contract's spec functions (each project's cmd/spec), after
-// Must(Problems(api)): what else is wrong with the contract that no spec shows.
+// files, for Fern, or checks that the committed files are what the contract gives. charter-ts spec
+// writes that command for a Go project (build/_spec) and runs it: it calls Main with the contract's
+// spec functions, after Must(Problems(api)), what else is wrong with the contract that no spec shows.
 package specs
 
 import (

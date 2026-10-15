@@ -4,7 +4,7 @@
 // and docs. Everything the SDKs need is said here too: OperationID and Tags name the SDK methods,
 // and Extensions carry Fern's x-fern-*. The `example` tags are what the SDKs' READMEs and references
 // show: without one Fern makes a value up, which a pattern or a bound then refuses
-// (cmd/spec checks them: specs.Problems).
+// (npm run spec checks them: specs.Problems).
 package api
 
 import (

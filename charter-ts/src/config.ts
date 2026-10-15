@@ -16,9 +16,9 @@ export interface Config {
 	optionalSecrets?: readonly string[];
 	/** Throwaway values of the secrets for the API on this machine: dev, check's tests, and twins. */
 	localSecrets?: Readonly<Record<string, string>>;
-	/** Both specs from the contract (charter-ts spec writes them into fern/): in TypeScript, the two
-	 * generators; in Go, the package that writes them. */
-	specs: Specs | GoSpecs;
+	/** Both specs from the contract (charter-ts spec writes them into fern/), in TypeScript: the two
+	 * generators. A Go project has none here: charter-ts runs its contract's API (api.API). */
+	specs?: Specs;
 	/** The SDKs Fern makes from the specs: charter-ts spec writes fern/generators.yml from this and the
 	 * spec's security schemes. */
 	sdks: Sdks;
@@ -68,13 +68,8 @@ export interface Sdks {
 	audiences?: readonly string[];
 }
 
-/** Go's specs: go run <package> [-check] fern/openapi.json fern/asyncapi.json <server>. */
-export interface GoSpecs {
-	go: string;
-}
-
 export interface GoConfig {
-	/** The folders gofmt checks beside the root's Go files. Default api, cmd. */
+	/** The folders gofmt checks beside the root's Go files. Default api. */
 	lint?: string[];
 	/** The TinyGo build of the Worker (build/app.wasm). */
 	build?: {

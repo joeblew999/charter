@@ -18,10 +18,38 @@ function vetted(dir: string, paths: string[], wasm: string): void {
 	run("go", ["vet", wasm], { GOOS: "js", GOARCH: "wasm" }, dir);
 }
 
+/** goSpecProgram writes the program that writes a Go project's specs, and returns its package: the
+ * contract's API (api.API in the project's module) given to go/lib/specs, which first stops on what
+ * the specs don't show (specs.Problems), then writes both specs or, with -check, compares them. It is
+ * the same in every project, so charter-ts writes it, into build/ (charter's); go vet and go test
+ * leave out a folder whose name starts with _. */
+export function goSpecProgram(): string {
+	const module = /^module\s+(\S+)/m.exec(readFileSync("go.mod", "utf8"))?.[1];
+	if (!module) throw new Error("go.mod names no module");
+	const dir = join("build", "_spec");
+	mkdirSync(dir, { recursive: true });
+	writeFileSync(join(dir, "main.go"), `// Written by charter-ts spec, each time it runs: don't edit. The program that writes the API's
+// specs (go run ./build/_spec [-check] <openapi.json> <asyncapi.json> <server>).
+package main
+
+import (
+	"${module}/api"
+	"github.com/joeblew999/charter/go/lib/specs"
+)
+
+func main() {
+	spec := api.API(api.Env{})
+	specs.Must(specs.Problems(spec))
+	specs.Main(spec.OpenAPI, spec.AsyncAPI)
+}
+`);
+	return `./build/_spec`;
+}
+
 /** A project's lint: its root's Go files and the config's folders vetted (the root package, the
  * Worker, for Wasm too), gsx's output and the committed Go SDK fresh. */
 export function goLint(config: GoConfig): void {
-	vetted(".", [...readdirSync(".").filter(name => name.endsWith(".go")), ...(config.lint ?? ["api", "cmd"]).filter(dir => existsSync(dir))], ".");
+	vetted(".", [...readdirSync(".").filter(name => name.endsWith(".go")), ...(config.lint ?? ["api"]).filter(dir => existsSync(dir))], ".");
 	if (config.gsx) gsxCheck();
 	if (config.sdk) sdkFresh();
 }

@@ -285,8 +285,9 @@ async function fernCheck(fresh: boolean): Promise<void> {
 async function specs(check: boolean): Promise<void> {
 	const config = await load();
 	const server = config.specServer ?? config.url;
-	if ("go" in config.specs) run("go", ["run", config.specs.go, ...(check ? ["-check"] : []), "fern/openapi.json", "fern/asyncapi.json", server]);
-	else await (await import("./specs.ts")).writeSpecs(config.specs, { server, check });
+	if (config.go) run("go", ["run", (await go()).goSpecProgram(), ...(check ? ["-check"] : []), "fern/openapi.json", "fern/asyncapi.json", server]);
+	else if (config.specs) await (await import("./specs.ts")).writeSpecs(config.specs, { server, check });
+	else throw new Error("charter.config.ts has no specs: a TypeScript project gives its two generators");
 	writeFernSettings(config, check);
 	console.log(check ? "fern/generators.yml is what the spec and charter.config.ts give" : "fern/generators.yml: from the spec and charter.config.ts (sdks)");
 	if (config.db) (await import("./db.ts")).writeDatabaseCode(config.db, check);

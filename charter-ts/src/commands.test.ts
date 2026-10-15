@@ -160,7 +160,7 @@ describe("new", () => {
 		const into = join(scratch, "made-go");
 		const made = charter(scratch, "new", "demo-go", "--from", "start", "--go", "--into", into);
 		assert.equal(made.code, 0, made.out);
-		for (const file of ["main.go", "api/contract.go", "cmd/spec/main.go", "charter.config.ts", "test/live.ts", "test/schemas.ts", "ci.config.ts", ".github/workflows/self-check.yml"]) assert.ok(existsSync(join(into, file)), `${file} is there`);
+		for (const file of ["main.go", "api/contract.go", "charter.config.ts", "test/live.ts", "test/schemas.ts", "ci.config.ts", ".github/workflows/self-check.yml"]) assert.ok(existsSync(join(into, file)), `${file} is there`);
 		const mod = read(into, "go.mod");
 		assert.match(mod, /^module demo-go$/m);
 		assert.match(mod, new RegExp(`github\\.com/joeblew999/charter/go/lib v${version.replaceAll(".", "\\.")}`));

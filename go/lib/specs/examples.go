@@ -21,7 +21,7 @@ import (
 //   - every example, in requests and responses, must be valid against its own schema.
 //
 // Hidden operations are checked too: a WebSocket channel's parameters are in the AsyncAPI spec.
-// cmd/spec calls it, through specs.Problems.
+// charter-ts spec calls it, through specs.Problems.
 func exampleProblems(api *humaworkers.API) []error {
 	ops := api.Operations()
 	e := examples{registry: api.API.OpenAPI().Components.Schemas, seen: map[seen]bool{}, said: map[string]bool{}}
