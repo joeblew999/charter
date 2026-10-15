@@ -27,7 +27,7 @@
 	],
 	"scripts": {
 		"build": "tsc -p tsconfig.build.json",
-		"check": "tsc && npm run build",
+		"check": "tsc && node --test test/*.test.ts && npm run build",
 		"prepack": "npm run build && node pack-templates.ts"
 	},
 	"exports": {

@@ -45,6 +45,7 @@ Those marked * work in any repo; the others in a project, a folder with a `chart
 | `test:native` | Go: the API natively (go run .) on a free port, and the config's native tests against it |
 | `test:workerd` | the Worker under workerd (cf dev) on a free port (a Go Worker built first), its local database migrated, and the config's tests against it |
 | `sdk [group]` | generate a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>; by default the TypeScript SDK |
+| `go:check <folder>` * | a Go module's check, for one that is not a project (go/lib): gofmt, go vet for the host and for Wasm, go test |
 | `sdk:publish [--check]` | Go: generate the Go SDK (Docker), prove it (build, vet, tests against WireMock) and copy its sources into sdk/go, the committed module another repo can go get; --check fails if sdk/go is not what the specs generate now |
 | `deploy` | REMOTE: deploy the Worker (a Go Worker built first) with its secrets from the environment (fnox exec -- npm run deploy), then apply its migrations |
 | `live-test` | REMOTE: the config's live tests against the deployed Worker (with the secrets: fnox exec -- npm run live-test) |

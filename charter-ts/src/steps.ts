@@ -215,6 +215,15 @@ export const steps: Record<string, Step> = {
 		about: "generate a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>; by default the TypeScript SDK",
 		run: async args => (await scripts()).sdk(args[0] ?? "typescript-dist"),
 	},
+	"go:check": {
+		usage: "go:check <folder>",
+		about: "a Go module's check, for one that is not a project (go/lib): gofmt, go vet for the host and for Wasm, go test",
+		anyRepo: true,
+		run: async args => {
+			if (!args[0]) throw new Error("go:check needs the module's folder: charter-ts go:check go/lib");
+			(await go()).goCheck(args[0]);
+		},
+	},
 	"sdk:publish": {
 		usage: "sdk:publish [--check]",
 		about: "Go: generate the Go SDK (Docker), prove it (build, vet, tests against WireMock) and copy its sources into sdk/go, the committed module another repo can go get; --check fails if sdk/go is not what the specs generate now",

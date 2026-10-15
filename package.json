@@ -41,7 +41,7 @@
 		"repo": "charter-ts repo",
 		"issues": "charter-ts issues",
 		"issue": "charter-ts issue",
-		"check": "tsc && npm run check --workspaces && charter-ts docs:check",
+		"check": "tsc && npm run check --workspaces && charter-ts go:check go/lib && charter-ts docs:check",
 		"docs:check": "charter-ts docs:check",
 		"repo:ci": "charter-ts repo:ci",
 		"docs:review": "charter-ts docs:review",

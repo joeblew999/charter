@@ -20,6 +20,16 @@ export function goLint(config: GoConfig): void {
 	if (config.sdk) sdkFresh();
 }
 
+/** goCheck is a Go module's check, for one that is not a project (go/lib): gofmt over every file,
+ * go vet for the host and for Wasm (GOOS=js GOARCH=wasm, as a Worker builds it), then go test. */
+export function goCheck(dir: string): void {
+	const unformatted = output("gofmt", ["-l", "."], dir).trim();
+	if (unformatted) throw new Error(`not formatted in ${dir} (gofmt -w writes them as they should be):\n${unformatted}`);
+	run("go", ["vet", "./..."], {}, dir);
+	run("go", ["vet", "./..."], { GOOS: "js", GOARCH: "wasm" }, dir);
+	run("go", ["test", "./..."], {}, dir);
+}
+
 /** Not looked in for generated files: what is installed or built. */
 const notSources = new Set(["node_modules", "build", "dist", "target", "out"]);
 

@@ -36,7 +36,7 @@ The plan is the [open issues](https://github.com/joeblew999/charter/issues) and 
 
 ## A change to charter
 
-charter-ts is `charter-ts/`: its commands are in `charter-ts/src/steps.ts`, the kit it writes in `charter-ts/kit/`. Try a change on this repo (`npm run adopt`, `npm run docs:check`) and on a throwaway repo, with the package you pack:
+charter-ts is `charter-ts/`: its commands are in `charter-ts/src/steps.ts`, the kit it writes in `charter-ts/kit/`. `npm run check -w charter-ts` runs its tests (`charter-ts/test/`): `adopt`, `new` and `docs:lint`, run in throwaway folders. Try a change on this repo too (`npm run adopt`, `npm run docs:check`), and on a throwaway repo with the package you pack:
 
 ```sh
 npm pack -w charter-ts --pack-destination /tmp/try
