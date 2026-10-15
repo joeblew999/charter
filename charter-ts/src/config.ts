@@ -22,6 +22,10 @@ export interface Config {
 	/** The SDKs Fern makes from the specs: charter-ts spec writes fern/generators.yml from this and the
 	 * spec's security schemes. */
 	sdks: Sdks;
+	/** The database's typed code, from its schema (migrations/*.sql), which charter-ts spec writes:
+	 * "sqlc" in Go (api/queries.go, the queries of api/queries.sql as functions over go/lib/d1) or
+	 * "drizzle" in TypeScript (api/tables.ts, the tables for Drizzle). */
+	db?: "sqlc" | "drizzle";
 	/** The server the specs name, if not `url`. */
 	specServer?: string;
 	/** A folder the generated TypeScript SDK is copied into before the Worker runs (dev, check, twins)

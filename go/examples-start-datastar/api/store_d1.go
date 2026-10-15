@@ -4,38 +4,39 @@ package api
 
 import (
 	"context"
-	"errors"
 
 	"github.com/joeblew999/charter/go/lib/d1"
 )
 
-// D1Store is the messages table (migrations/) on the D1 binding: one awaited call per statement,
-// and the rows reach Go as one string (package d1).
+// D1Store is the messages table (migrations/) on the D1 binding, through the queries of
+// api/queries.sql, which npm run spec writes as typed Go (api/queries.go): one awaited call per
+// statement, and the rows reach Go as one string (package d1).
 type D1Store struct{ DB d1.DB }
 
 func (s D1Store) Create(_ context.Context, body string) (Message, error) {
-	messages, err := d1.Query[Message](s.DB, "INSERT INTO messages (body) VALUES (?) RETURNING id, body, created_at", body)
-	if err != nil {
-		return Message{}, err
-	}
-	if len(messages) != 1 {
-		return Message{}, errors.New("the insert returned no message")
-	}
-	return messages[0], nil
+	row, err := CreateMessage(s.DB, body)
+	return Message(row), err
 }
 
 func (s D1Store) Before(_ context.Context, before int64, limit int) ([]Message, error) {
-	return d1.Query[Message](s.DB, "SELECT id, body, created_at FROM messages WHERE id < ? ORDER BY id DESC LIMIT ?", before, limit)
+	rows, err := MessagesBefore(s.DB, before, int64(limit))
+	return messages(rows), err
 }
 
 func (s D1Store) Since(_ context.Context, after int64, limit int) ([]Message, error) {
-	return d1.Query[Message](s.DB, "SELECT id, body, created_at FROM messages WHERE id > ? ORDER BY id LIMIT ?", after, limit)
+	rows, err := MessagesAfter(s.DB, after, int64(limit))
+	return messages(rows), err
 }
 
 func (s D1Store) Latest(context.Context) (int64, error) {
-	newest, err := d1.Query[Message](s.DB, "SELECT COALESCE(MAX(id), 0) AS id FROM messages")
-	if err != nil || len(newest) != 1 {
-		return 0, err
+	return NewestMessage(s.DB)
+}
+
+// messages are the table's rows as the API's messages: the same fields.
+func messages(rows []MessagesRow) []Message {
+	out := make([]Message, len(rows))
+	for i, row := range rows {
+		out[i] = Message(row)
 	}
-	return newest[0].ID, nil
+	return out
 }

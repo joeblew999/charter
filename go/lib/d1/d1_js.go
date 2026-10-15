@@ -9,10 +9,14 @@
 //
 //	db, err := d1.Open("DB") // per request: a binding belongs to the request's environment
 //	notes, err := d1.Query[Note](db, "SELECT id, body FROM notes WHERE id < ? LIMIT ?", before, limit)
+//
+// npm run spec writes a project's queries (api/queries.sql) as functions over these, typed by sqlc
+// (charter.config.ts: db: "sqlc").
 package d1
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"syscall/js"
 
@@ -51,4 +55,36 @@ func Query[T any](db DB, query string, args ...any) ([]T, error) {
 		return nil, fmt.Errorf("d1: a row is not a %T: %w", *new(T), err)
 	}
 	return rows, nil
+}
+
+// ErrNoRows is One's error for a statement that returned no row.
+var ErrNoRows = errors.New("d1: no rows")
+
+// One runs one statement and returns its first row: a SELECT that finds it, or a statement with a
+// RETURNING clause. No row is ErrNoRows.
+func One[T any](db DB, query string, args ...any) (T, error) {
+	rows, err := Query[T](db, query, args...)
+	if err != nil {
+		return *new(T), err
+	}
+	if len(rows) == 0 {
+		return *new(T), ErrNoRows
+	}
+	return rows[0], nil
+}
+
+// Exec runs one statement whose rows, if it has any, are not wanted.
+func Exec(db DB, query string, args ...any) error {
+	if _, err := promise.Await(db.binding.Call("prepare", query).Call("bind", args...).Call("run")); err != nil {
+		return fmt.Errorf("d1: %w", err)
+	}
+	return nil
+}
+
+// OrNull is a nullable argument as a statement binds it: its value, or nil (NULL).
+func OrNull[T any](value *T) any {
+	if value == nil {
+		return nil
+	}
+	return *value
 }

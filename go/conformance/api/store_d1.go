@@ -9,40 +9,42 @@ import (
 	"github.com/joeblew999/charter/go/lib/d1"
 )
 
-// D1Store is the notes table (migrations/) on the D1 binding: what runs on Cloudflare.
+// D1Store is the notes table (migrations/) on the D1 binding, through the queries of
+// api/queries.sql, which npm run spec writes as typed Go (api/queries.go): what runs on Cloudflare.
 type D1Store struct{ DB d1.DB }
 
 func (s D1Store) Page(_ context.Context, offset, limit int) ([]Entry, error) {
-	return d1.Query[Entry](s.DB, "SELECT seq, id, body FROM notes ORDER BY seq LIMIT ? OFFSET ?", limit, offset)
+	rows, err := NotesPage(s.DB, int64(limit), int64(offset))
+	return entries(rows), err
 }
 
-// Put inserts the note unless its id is taken; RETURNING gives no row then, and the stored one is read.
+// Put stores the note unless its id is taken; then the stored one is read.
 func (s D1Store) Put(_ context.Context, note Note) (Entry, bool, error) {
-	added, err := d1.Query[Entry](s.DB, "INSERT INTO notes (id, body) VALUES (?, ?) ON CONFLICT (id) DO NOTHING RETURNING seq, id, body", note.ID, note.Body)
-	if err != nil {
+	added, err := AddNote(s.DB, note.ID, note.Body)
+	if err == nil {
+		return Entry(added), true, nil
+	}
+	if !errors.Is(err, d1.ErrNoRows) {
 		return Entry{}, false, err
 	}
-	if len(added) == 1 {
-		return added[0], true, nil
-	}
-	stored, err := d1.Query[Entry](s.DB, "SELECT seq, id, body FROM notes WHERE id = ?", note.ID)
-	if err != nil {
-		return Entry{}, false, err
-	}
-	if len(stored) != 1 {
-		return Entry{}, false, errors.New("the note is neither new nor stored")
-	}
-	return stored[0], false, nil
+	stored, err := NoteByID(s.DB, note.ID)
+	return Entry(stored), false, err
 }
 
 func (s D1Store) Since(_ context.Context, after int64, limit int) ([]Entry, error) {
-	return d1.Query[Entry](s.DB, "SELECT seq, id, body FROM notes WHERE seq > ? ORDER BY seq LIMIT ?", after, limit)
+	rows, err := NotesAfter(s.DB, after, int64(limit))
+	return entries(rows), err
 }
 
 func (s D1Store) Latest(context.Context) (int64, error) {
-	newest, err := d1.Query[Entry](s.DB, "SELECT COALESCE(MAX(seq), 0) AS seq FROM notes")
-	if err != nil || len(newest) != 1 {
-		return 0, err
+	return NewestSeq(s.DB)
+}
+
+// entries are the table's rows as the log's entries: the same fields.
+func entries(rows []NotesRow) []Entry {
+	out := make([]Entry, len(rows))
+	for i, row := range rows {
+		out[i] = Entry(row)
 	}
-	return newest[0].Seq, nil
+	return out
 }

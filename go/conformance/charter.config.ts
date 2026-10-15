@@ -49,6 +49,8 @@ export default defineConfig({
 	sdks: { name: "Conformance", more: ["python", "cli"], audiences: ["public"] },
 	/** Both specs, from the contract (api/contract.go). */
 	specs: { go: "./cmd/spec" },
+	/** The queries of api/queries.sql as Go (api/queries.go), typed by sqlc against migrations/. */
+	db: "sqlc",
 	go: {},
 	/** npm run check, natively and under workerd: the generated SDKs against the API, with a webhook
 	 * receiver the test serves on the extra port. */

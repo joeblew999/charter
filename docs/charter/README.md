@@ -25,7 +25,7 @@ In a project (`ts/examples-start`, `ts/examples-notes`, `ts/conformance`, `go/ex
 | When | Run | What it does |
 |---|---|---|
 | To try the API on your machine | `npm run dev` | the API on your machine, as on Cloudflare (workerd), its local database migrated, until Ctrl-C; --native, in Go: go run . |
-| After every change to the contract, or to charter.config.ts's sdks | `npm run spec` | write both specs (fern/openapi.json, fern/asyncapi.json) from the contract, and Fern's settings (fern/generators.yml) from them and charter.config.ts |
+| After every change to the contract, to charter.config.ts's sdks, or to migrations/ or api/queries.sql | `npm run spec` | write both specs (fern/openapi.json, fern/asyncapi.json) from the contract, Fern's settings (fern/generators.yml) from them and charter.config.ts, and the database's typed code from migrations/ (db: sqlc in Go, drizzle in TypeScript) |
 | When a caller needs an SDK; --prove after changing charter.config.ts's sdks; --publish after a contract change, where the repo commits its Go SDK | `npm run sdk` | an SDK with Fern (Docker), by default the TypeScript one, into sdk/out; --prove: every client, proven in its language; --publish, in Go: the Go SDK into sdk/go |
 | To put the API on Cloudflare | `npm run deploy` | REMOTE: the Worker on Cloudflare with its secrets (fnox exec -- npm run deploy), then its migrations |
 | After every deploy | `npm run live-test` | REMOTE: the standard test and the project's tests against the deployed Worker |

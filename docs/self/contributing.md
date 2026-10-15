@@ -39,6 +39,7 @@ Never edit these: change the source, then run the command.
 | Path | Written by |
 |---|---|
 | `fern/openapi.json`, `fern/asyncapi.json`, `fern/generators.yml` | `npm run spec`, from the contract; Fern's settings from the spec and `charter.config.ts` (`sdks`) |
+| `api/queries.go`, `api/tables.ts` | `npm run spec`, from `migrations/*.sql` (and in Go `api/queries.sql`), as `db` in `charter.config.ts` says |
 | `pages/*.x.go` (committed) | gsx, from the components; `npm run check` writes them and fails while they were stale |
 | `sdk/go/` (committed) | `npm run sdk -- --publish` |
 | `sdk/out/`, `build/`, `charter-ts/dist/`, `ts/lib/dist/` | `npm run sdk`; the Go Worker's build (`dev`, `check`, `deploy`); `npm ci` |

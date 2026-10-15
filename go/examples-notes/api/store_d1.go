@@ -4,39 +4,40 @@ package api
 
 import (
 	"context"
-	"errors"
 
 	"github.com/joeblew999/charter/go/lib/d1"
 )
 
-// D1Store is the notes table (the project's migrations/) on the D1 binding itself: one awaited
+// D1Store is the notes table (the project's migrations/) on the D1 binding itself, through the
+// queries of api/queries.sql, which npm run spec writes as typed Go (api/queries.go): one awaited
 // call per statement, and the rows reach Go as one string (package d1). It is what runs on
 // Cloudflare.
 type D1Store struct{ DB d1.DB }
 
 func (s D1Store) Create(_ context.Context, body string) (Note, error) {
-	notes, err := d1.Query[Note](s.DB, "INSERT INTO notes (body) VALUES (?) RETURNING id, body, created_at", body)
-	if err != nil {
-		return Note{}, err
-	}
-	if len(notes) != 1 {
-		return Note{}, errors.New("the insert returned no note")
-	}
-	return notes[0], nil
+	row, err := CreateNote(s.DB, body)
+	return Note(row), err
 }
 
 func (s D1Store) Before(_ context.Context, before int64, limit int) ([]Note, error) {
-	return d1.Query[Note](s.DB, "SELECT id, body, created_at FROM notes WHERE id < ? ORDER BY id DESC LIMIT ?", before, limit)
+	rows, err := NotesBefore(s.DB, before, int64(limit))
+	return notes(rows), err
 }
 
 func (s D1Store) Since(_ context.Context, after int64, limit int) ([]Note, error) {
-	return d1.Query[Note](s.DB, "SELECT id, body, created_at FROM notes WHERE id > ? ORDER BY id LIMIT ?", after, limit)
+	rows, err := NotesAfter(s.DB, after, int64(limit))
+	return notes(rows), err
 }
 
 func (s D1Store) Latest(context.Context) (int64, error) {
-	newest, err := d1.Query[Note](s.DB, "SELECT COALESCE(MAX(id), 0) AS id FROM notes")
-	if err != nil || len(newest) != 1 {
-		return 0, err
+	return NewestNote(s.DB)
+}
+
+// notes are the table's rows as the API's notes: the same fields.
+func notes(rows []NotesRow) []Note {
+	out := make([]Note, len(rows))
+	for i, row := range rows {
+		out[i] = Note(row)
 	}
-	return newest[0].ID, nil
+	return out
 }

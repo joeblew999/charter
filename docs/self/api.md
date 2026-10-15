@@ -8,7 +8,7 @@ nav_order: 3
 The contract is the source: the validation, the specs, the SDKs and the MCP tools follow from it. Add your operations beside the example's, then take the example's out.
 
 ```sh
-npm run spec     # after every change to the contract
+npm run spec     # after every change to the contract, migrations/ or the queries
 npm run check    # fails on a stale spec, a failing test, or (in Go) a TinyGo gap
 ```
 
@@ -18,7 +18,8 @@ npm run check    # fails on a stale spec, a failing test, or (in Go) a TinyGo ga
 |---|---|---|
 | The contract | `api/contract.ts` | `api/contract.go` |
 | The handlers | `api/handlers.ts` | `api/handlers.go` |
-| The storage | `api/store.ts` (D1) | `api/store.go` (`Store`, and `MemStore` for `go test` and `--native`), `api/store_d1.go` (D1) |
+| The storage | `api/store.ts` (D1, with Drizzle on `api/tables.ts`) | `api/store.go` (`Store`, and `MemStore` for `go test` and `--native`), `api/store_d1.go` (D1, through `api/queries.go`) |
+| The schema and its typed code | `migrations/*.sql`; `api/tables.ts`, written from them | `migrations/*.sql` and `api/queries.sql`; `api/queries.go`, written from them ([below](#the-database)) |
 | The specs' document | `api/spec.ts` | `api/spec.go`; `cmd/spec` writes the specs from it |
 | The Worker | `worker.ts` | `main.go`, with the bindings in `platform_js.go`; `worker.mjs`, the Worker's entry. Its module (`go.mod`) is the project's name, on the Go library `github.com/joeblew999/charter/go/lib` |
 | The tests | `test/`, and unit tests beside the code (`api/*.test.ts`) | `test/`, the TypeScript twin's tests, with the schemas they check answers against (`test/schemas.ts`); unit tests in `api/*_test.go` |
@@ -36,8 +37,19 @@ npm run check    # fails on a stale spec, a failing test, or (in Go) a TinyGo ga
    ```
 
 2. **The handler** gets its input already checked. To refuse, return Huma's error in Go (`huma.Error404NotFound("...")`), throw oRPC's in TypeScript; every refusal goes out as problem details ([The standard API](standard.md#refusals)).
-3. **The storage:** a table change is the next numbered file in `migrations/`; never edit one that was applied.
+3. **The storage:** a table change is the next numbered file in `migrations/`; never edit one that was applied. Then `npm run spec` writes the typed code again ([The database](#the-database)).
 4. **The SDK's names:** `x-fern-sdk-group-name` and `x-fern-sdk-method-name` on the operation name `client.<group>.<method>()` (the example's `sdk(...)` helper). Every constrained field needs a valid example.
+
+## The database
+
+The schema is `migrations/*.sql`, the one place the tables are said: a deploy applies them to D1, `npm run dev` to its local database. From them `npm run spec` writes the code that reads and writes the tables, typed, as `db` in `charter.config.ts` says, and `npm run check` fails when it is stale.
+
+| `db` | You write | `npm run spec` writes |
+|---|---|---|
+| `"drizzle"` (TypeScript) | The queries with [Drizzle](https://orm.drizzle.team), on `drizzle(env.DB)` | `api/tables.ts`: each table, as SQLite has it once the migrations ran |
+| `"sqlc"` (Go) | The queries in `api/queries.sql`, each named (`-- name: CreateNote :one`, `:many` or `:exec`), with a comment that starts with its name as its doc | `api/queries.go`: a function for each, over `go/lib/d1`, its arguments and rows typed by [sqlc](https://sqlc.dev) against the schema. A row of a whole table is that table's type (`NotesRow`); a column that may be NULL is a pointer |
+
+The Go is written over `go/lib/d1`, not `database/sql`, which D1 does not need: a statement is one call, and its rows come back as one string. The notes examples keep their notes this way.
 
 ## Write for Workers
 

@@ -20,6 +20,8 @@ export default defineConfig({
 	sdks: { name: "Notes", more: ["python", "cli"] },
 	/** Both specs, with the same generators the Worker serves /api/openapi.json and /api/asyncapi.json with. */
 	specs,
+	/** The tables of migrations/ as Drizzle has them (api/tables.ts). */
+	db: "drizzle",
 	/** npm run check, under workerd: the live test. Auth, rate limits and MCP are charter-lib/serve's, which the
 	 * conformance projects test every way. */
 	test: { run: ({ origin, node }) => node("test/live.ts", origin) },

@@ -24,6 +24,8 @@ export default defineConfig({
 	sdks: { name: "Conformance", more: ["python", "cli"], audiences: ["public"] },
 	/** Both specs, from the contract (api/contract.ts), naming the API's Worker. */
 	specs,
+	/** The tables of migrations/ as Drizzle has them (api/tables.ts). */
+	db: "drizzle",
 	specServer: apiUrl,
 	/** The Worker runs the generated SDK itself: it is copied into client/ first. */
 	sdkInWorker: "client",

@@ -40,7 +40,7 @@ The packages of `go/lib/`. The rest is in their doc comments: `go doc github.com
 | `problem` | A refusal as RFC 9457 problem details, as Huma writes an operation's, for what answers outside one (404, 405, `/.well-known/`) | `problem.Write(w, status, detail)` |
 | `humaworkers` | A Huma API on Workers: routes itself, registers an operation when a request first matches it | `humaworkers.New(humaworkers.Config(title, version), routes)` |
 | `transport` | The request bridge to the Worker, and the WebSocket adapter natively | `transport.Run(handler)` in `main` |
-| `d1` | Statements on a D1 database; rows decode by their `json` tags (Wasm only) | `d1.Query[T](db, query, args...)` |
+| `d1` | Statements on a D1 database; rows decode by their `json` tags (Wasm only). What `npm run spec` writes a project's queries over ([The database](api.md#the-database)) | `d1.Query[T](db, query, args...)`, `d1.One[T]` (no row: `d1.ErrNoRows`), `d1.Exec` |
 | `hub` | The live wake-up of a feed: the Durable Object, or memory | `hub.DurableObject[T]("HUB", "<feed>")`, `hub.Memory[T]` |
 | `follow` | The gap-free feed over a log and a hub ([Streaming](streaming.md)) | `follow.Follow(ctx, source, follow.Options{After: follow.Newest(after, lastEventID)}, emit)` |
 | `fragments` | A feed to the browser as SSE, each item an event you render: htmx 4's or Datastar's ([Server-rendered pages](pages.md)). Ids are positions, so a browser resumes with `Last-Event-ID`; a stream ends after `For` (5 minutes) | `fragments.Stream[T]{Feed: feed, Options: options, Event: event}.ServeHTTP(w, r)`, `fragments.Data(prefix, html)` |

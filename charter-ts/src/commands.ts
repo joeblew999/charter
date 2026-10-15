@@ -90,7 +90,7 @@ export const commands: Record<string, Command> = {
 			});
 		},
 	},
-	spec: { usage: "spec", where: "project", about: "write both specs (fern/openapi.json, fern/asyncapi.json) from the contract, and Fern's settings (fern/generators.yml) from them and charter.config.ts", when: "After every change to the contract, or to charter.config.ts's sdks", run: () => specs(false) },
+	spec: { usage: "spec", where: "project", about: "write both specs (fern/openapi.json, fern/asyncapi.json) from the contract, Fern's settings (fern/generators.yml) from them and charter.config.ts, and the database's typed code from migrations/ (db: sqlc in Go, drizzle in TypeScript)", when: "After every change to the contract, to charter.config.ts's sdks, or to migrations/ or api/queries.sql", run: () => specs(false) },
 	check: {
 		usage: "check [<folder>] [--fresh]",
 		where: "both",
@@ -289,4 +289,5 @@ async function specs(check: boolean): Promise<void> {
 	else await (await import("./specs.ts")).writeSpecs(config.specs, { server, check });
 	writeFernSettings(config, check);
 	console.log(check ? "fern/generators.yml is what the spec and charter.config.ts give" : "fern/generators.yml: from the spec and charter.config.ts (sdks)");
+	if (config.db) (await import("./db.ts")).writeDatabaseCode(config.db, check);
 }

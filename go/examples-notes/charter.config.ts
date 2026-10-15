@@ -25,6 +25,8 @@ export default defineConfig({
 	sdks: { name: "Notes", more: ["python", "cli"] },
 	/** Both specs, from the contract (api/contract.go). */
 	specs: { go: "./cmd/spec" },
+	/** The queries of api/queries.sql as Go (api/queries.go), typed by sqlc against migrations/. */
+	db: "sqlc",
 	go: { lint: ["api", "cmd", "test"], sdk: true },
 	/** npm run check, natively and under workerd: the real-time live test. */
 	native: { run: live },
