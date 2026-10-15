@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { implement } from "@orpc/server";
 import { asyncInfo, contract, info } from "./contract.ts";
+import { mcpHandler, mcpPath } from "charter-lib/mcp";
 import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
 
 // The contract (src/contract.ts) implemented, served by oRPC's OpenAPIHandler as plain REST. The
@@ -14,12 +15,16 @@ export const router = api.router({
 
 const handler = new OpenAPIHandler(router);
 
+// The same procedures as MCP tools at /api/mcp (charter-lib/mcp): an agent calls them as tools.
+const mcp = mcpHandler(router, { info });
+
 export default {
 	async fetch(request) {
 		const url = new URL(request.url);
 		// The specs, generated from the same router as fern/{openapi,asyncapi}.json.
 		if (url.pathname === "/api/openapi.json") return Response.json(await openapiSpec(router, { info, server: url.origin }));
 		if (url.pathname === "/api/asyncapi.json") return Response.json(await asyncapiSpec(router, { info: asyncInfo, server: url.origin }));
+		if (url.pathname === mcpPath) return mcp(request, {});
 		const { matched, response } = await handler.handle(request, { context: {} });
 		return matched ? response : new Response("not found", { status: 404 });
 	},

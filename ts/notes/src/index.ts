@@ -8,6 +8,7 @@ import { asyncInfo, contract, END, info, type note } from "./contract.ts";
 import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
 import { follow, type FollowSource } from "charter-lib/follow";
 import { accessScheme, authorize, discoveryURL, oidcScheme, scheme, securityOf, type Caller } from "charter-lib/auth";
+import { mcpHandler, mcpPath } from "charter-lib/mcp";
 import { keyOf, limitOf, rateLimit } from "charter-lib/ratelimit";
 export { NotesHub } from "./hub.ts";
 
@@ -112,6 +113,10 @@ export const router = os.router({
 // ResponseHeadersPlugin: a 429's Retry-After.
 const handler = new OpenAPIHandler(router, { plugins: [new ResponseHeadersPlugin()] });
 
+// The same procedures as MCP tools at /api/mcp (charter-lib/mcp): a tool call runs the procedure with
+// the request's headers, through the same auth and rate limit as the REST route.
+const mcp = mcpHandler(router, { info });
+
 // WebSocket transport for the contract's notes.live (AsyncAPI channel liveNotes): the procedure is
 // called with the query as its input (validated by the contract, 400 before upgrading), and each
 // note it yields is sent as plain JSON. The Worker holds the socket; the hub behind follow()
@@ -153,6 +158,7 @@ export default {
 			const to = discoveryURL(settings.OIDC_ISSUER);
 			return to ? Response.redirect(to, 302) : new Response("this API trusts no OpenID Connect issuer", { status: 404 });
 		}
+		if (url.pathname === mcpPath) return mcp(request, { headers: request.headers });
 		if (url.pathname === "/api/notes/live") return live(request);
 		const { matched, response } = await handler.handle(request, { context: { headers: request.headers } });
 		return matched ? response : new Response("not found", { status: 404 });

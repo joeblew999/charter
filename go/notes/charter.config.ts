@@ -9,12 +9,12 @@ const issuer = ({ extra }: { extra: number }) => ({
 	OIDC_ISSUER: `http://localhost:${extra}`,
 	OIDC_AUDIENCE: "https://notes.test",
 });
-// The notes API is the same in Go and in TypeScript (test/surface.test.ts holds them to it), so the
-// typed notes tests are ts/notes's; the MCP endpoint is Go's own.
+// The notes API is the same in Go and in TypeScript (test/surface.test.ts holds them to it), so its
+// tests are ts/notes's, typed: the MCP test included, against this API's go/lib/humamcp.
 const notes = "../../ts/notes/test";
 const all = ({ origin, extra, node }: TestContext) => {
 	node(`${notes}/live-test.ts`, origin);
-	node("test/mcp-test.mjs", origin);
+	node(`${notes}/mcp-test.ts`, origin);
 	node(`${notes}/auth-test.ts`, origin, String(extra));
 };
 
@@ -44,6 +44,6 @@ export default defineConfig({
 		sdk("typescript-dist", { ifStale: true });
 		node(`${notes}/live-test.ts`, url);
 		node(`${notes}/sdk-live-test.ts`, url);
-		node("test/mcp-test.mjs", url);
+		node(`${notes}/mcp-test.ts`, url);
 	},
 });

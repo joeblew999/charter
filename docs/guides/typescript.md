@@ -67,6 +67,7 @@ What the Worker imports is `charter-lib` (`ts/lib/`), in `dependencies`; `charte
 | `"charter-lib/auth"` | Bearer tokens, Cloudflare Access and an OpenID Connect issuer, with scopes ([Auth](auth.md)) |
 | `"charter-lib/ratelimit"` | Limits per caller on Workers Rate Limiting bindings |
 | `"charter-lib/follow"` | `follow()`: the gap-free feed behind the streams ([Streaming](streaming.md)) |
+| `"charter-lib/mcp"` | `mcpHandler(router, { info })`: every procedure that answers once as an MCP tool at `/api/mcp`, on the official MCP SDK ([Agents: MCP](replace-the-example.md#agents-mcp)) |
 
 From the tool, for `charter.config.ts` and scripts of your own:
 

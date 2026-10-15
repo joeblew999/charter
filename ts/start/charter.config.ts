@@ -3,6 +3,11 @@ import { defineConfig } from "charter-ts/config";
 import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
 import { asyncInfo, contract, info } from "./src/contract.ts";
 
+const tests = (origin: string, node: (file: string, ...args: string[]) => void) => {
+	node("test/live-test.ts", origin);
+	node("test/mcp-test.ts", origin);
+};
+
 export default defineConfig({
 	/** The Worker, as in cloudflare.config.ts. */
 	worker: "charter-start-ts",
@@ -15,8 +20,8 @@ export default defineConfig({
 		openapi: server => openapiSpec(contract, { info, server }),
 		asyncapi: server => asyncapiSpec(contract, { info: asyncInfo, server }),
 	},
-	/** npm run test:workerd: the live test against the Worker under workerd. */
-	test: { run: ({ origin, node }) => node("test/live-test.ts", origin) },
+	/** npm run check: the live test and the MCP test against the Worker under workerd. */
+	test: { run: ({ origin, node }) => tests(origin, node) },
 	/** npm run live-test: the same against the deployed Worker. */
-	live: ({ url, node }) => node("test/live-test.ts", url),
+	live: ({ url, node }) => tests(url, node),
 });

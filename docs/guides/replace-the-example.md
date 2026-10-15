@@ -38,7 +38,14 @@ For the generated clients: every constrained request field has a valid `example`
 
 ## Agents: MCP
 
-Every operation that answers once is also a tool at `/api/mcp`, with the same validation and handler; `humamcp.Expose(op, false)` hides one. It has no authorization of its own.
+Every operation that answers once is also a tool at `/api/mcp`, named by its `operationId`, with the same validation and handler: a stream or a WebSocket channel is not one. It has no authorization of its own: a call runs with the request's headers, so it is let in, refused and limited as the REST route is. Both protocol eras are served, the stateless 2026-07-28 one and the 2025-11-25 handshake.
+
+| | Served by | Hide one |
+|---|---|---|
+| Go | `go/lib/humamcp` | `humamcp.Expose(op, false)` |
+| TypeScript | `charter-lib/mcp`, on the official MCP SDK | `.meta(notATool())` on the procedure |
+
+The same test holds both to it: `ts/notes/test/mcp-test.ts`, which `go/notes` runs too.
 
 ```sh
 claude mcp add --transport http billing-api https://billing-api.<your-subdomain>.workers.dev/api/mcp
@@ -57,4 +64,4 @@ Without a stream, also remove the hub: `Hub` in `Env`, `feed`, the `HUB` binding
 
 ## In TypeScript
 
-The same API on oRPC (`src/contract.ts`, Zod) is `ts/notes/`, without a native run or MCP; invalid input gets a 400. `charter-ts new my-api --from notes` makes a project from it: [TypeScript](typescript.md).
+The same API on oRPC (`src/contract.ts`, Zod) is `ts/notes/`, without a native run; invalid input gets a 400. `charter-ts new my-api --from notes` makes a project from it: [TypeScript](typescript.md).

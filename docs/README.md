@@ -30,7 +30,7 @@ A repo with no API takes the parts that are not about one (the docs site, the re
 | Name | Where | What it is |
 |---|---|---|
 | charter-ts | `charter-ts/` | The tool, installed from its GitHub Release. For any repo: `adopt` (the kit, `charter-ts/kit/`), `docs:check`, `issue`, `upstream:status`, `repo`. For a project, from its `charter.config.ts`: `new`, `dev`, `check`, `spec`, `sdk`, `deploy`, `live-test`, and in Go `run`, `build`, `sdk:publish` ([TypeScript](guides/typescript.md)) |
-| The TypeScript library | `ts/lib/` | `charter-lib`, what a TypeScript Worker imports, the counterpart of `go/lib/`: `specs`, `asyncapi`, `auth`, `ratelimit`, `follow`. Built with no Node types: it runs on Workers |
+| The TypeScript library | `ts/lib/` | `charter-lib`, what a TypeScript Worker imports, the counterpart of `go/lib/`: `specs`, `asyncapi`, `auth`, `ratelimit`, `follow`, `mcp`. Built with no Node types: it runs on Workers |
 | The TypeScript projects | `ts/start/` (one route), `ts/notes/` (the notes API: auth, streams, rate limits), `ts/showcase/` (every Fern feature, the SDK tested inside a Worker) | Each: the contract (`src/contract.ts`), `charter.config.ts`, `test/` (typed, checked against the contract's schemas), `fern/`. `charter-ts new` copies start or notes |
 | The Go library | `go/lib/` | What a Go project imports ([Go packages](reference/packages.md)), with its Worker glue in `go/lib/worker/` |
 | The Go projects | `go/notes/`, `go/start/`, `go/start-htmx/`, `go/start-datastar/`, `go/showcase/` | The notes API, the start projects (with server-rendered pages: [Server-rendered pages](guides/pages.md)) and the conformance project, in Go |

@@ -37,6 +37,7 @@ export default defineConfig({
 		}),
 		run: ({ origin, extra, node }) => {
 			node("test/live-test.ts", origin);
+			node("test/mcp-test.ts", origin);
 			node("test/auth-test.ts", origin, String(extra));
 		},
 	},
@@ -46,5 +47,6 @@ export default defineConfig({
 		sdk("typescript-dist", { ifStale: true });
 		node("test/live-test.ts", url);
 		node("test/sdk-live-test.ts", url);
+		node("test/mcp-test.ts", url);
 	},
 });

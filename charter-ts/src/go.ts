@@ -160,8 +160,9 @@ export function goBuild(config: GoConfig, fresh = false): void {
 
 /** buildKey names what goes into the Wasm: the Go version, TinyGo's pins and patches, the build's
  * options, go.mod and go.sum, and every package the Worker is built from that is not the standard
- * library's, with its files and the files it embeds. A module from the module cache counts by its path,
- * which has its version: it never changes. */
+ * library's, with its Go files (whatever their build tags) and the files it embeds: nothing else in the
+ * folder goes into the Wasm. A module from the module cache counts by its path, which has its
+ * version: it never changes. */
 function buildKey(config: GoConfig): string {
 	const hash = createHash("sha256");
 	hash.update(JSON.stringify({ go: output("go", ["version"]), tinygoVersion, binaryenVersion, patches, build: config.build ?? {} }));
@@ -175,7 +176,7 @@ function buildKey(config: GoConfig): string {
 			continue;
 		}
 		hash.update(`${relative(".", dir)}\n`);
-		const files = [...readdirSync(dir).filter(name => statSync(join(dir, name)).isFile()), ...embeds.split(" ").filter(Boolean)].sort();
+		const files = [...readdirSync(dir).filter(name => name.endsWith(".go") && statSync(join(dir, name)).isFile()), ...embeds.split(" ").filter(Boolean)].sort();
 		for (const name of files) {
 			hash.update(`${name}\n`);
 			hash.update(readFileSync(join(dir, name)));

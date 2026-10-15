@@ -1,9 +1,10 @@
 // What charter-ts needs to know about this project (npm run <step> runs charter-ts <step>), typed, in one place.
 import { defineConfig, type TestContext } from "charter-ts/config";
 
+// The start API is the same in Go and in TypeScript, so its tests are ts/start's, typed.
 const both = ({ origin, node }: Pick<TestContext, "origin" | "node">) => {
-	node("test/live-test.mjs", origin);
-	node("test/mcp-test.mjs", origin);
+	node("../../ts/start/test/live-test.ts", origin);
+	node("../../ts/start/test/mcp-test.ts", origin);
 };
 
 export default defineConfig({
