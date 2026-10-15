@@ -6,14 +6,19 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, 
 import { createHash } from "node:crypto";
 import { createServer } from "node:net";
 import { homedir, tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import type { Config } from "./config.ts";
 
 /** A program npm installed (cf, fern, tsc) runs from node_modules/.bin; any other from the path. */
-function bin(program: string): string {
-	const local = join("node_modules", ".bin", program);
-	return existsSync(local) ? local : program;
+/** bin is a program as the folder's packages install it (node_modules/.bin, in the folder or a workspace
+ * above it), or else by its name, from PATH. */
+function bin(program: string, cwd = "."): string {
+	for (let dir = resolve(cwd); ; dir = dirname(dir)) {
+		const local = join(dir, "node_modules", ".bin", program);
+		if (existsSync(local)) return local;
+		if (dirname(dir) === dir) return program;
+	}
 }
 
 /** seconds is a duration as charter-ts prints every one: 12.3 s. */
@@ -99,7 +104,7 @@ const shortly = (program: string, args: string[]) => {
 export function run(program: string, args: string[], env: Record<string, string> = {}, cwd?: string): void {
 	console.log(`$ ${program} ${args.join(" ")}${cwd ? `   (in ${cwd})` : ""}`);
 	const start = performance.now();
-	const result = spawnSync(bin(program), args, { stdio: "inherit", cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" });
+	const result = spawnSync(bin(program, cwd), args, { stdio: "inherit", cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" });
 	const took = performance.now() - start;
 	if (result.status !== 0) throw new Error(`${program} ${args.join(" ")} failed (${result.status ?? result.signal ?? result.error}) after ${seconds(took)}`);
 	if (took >= worthSaying) console.log(`took ${seconds(took)}: ${shortly(program, args)}`);
@@ -148,14 +153,16 @@ export interface Server {
 	env: Record<string, string>;
 	/** A URL that answers once the server is up. */
 	ready: string;
+	/** The folder it runs in; by default this one. */
+	cwd?: string;
 }
 
 /** withServer starts a server, waits until it answers (two minutes at most), runs body, and stops the
  * server and everything it started, whether body passed or failed. */
 export async function withServer<T>(server: Server, body: () => Promise<T>): Promise<T> {
-	console.log(`$ ${server.program} ${server.args.join(" ")}   (started)`);
+	console.log(`$ ${server.program} ${server.args.join(" ")}   (started${server.cwd ? ` in ${server.cwd}` : ""})`);
 	const start = performance.now();
-	const child = spawn(bin(server.program), server.args, { stdio: "inherit", env: { ...process.env, ...server.env }, detached: process.platform !== "win32", shell: process.platform === "win32" });
+	const child = spawn(bin(server.program, server.cwd), server.args, { stdio: "inherit", cwd: server.cwd, env: { ...process.env, ...server.env }, detached: process.platform !== "win32", shell: process.platform === "win32" });
 	try {
 		await answers(server.ready, child);
 		console.log(`took ${seconds(performance.now() - start)}: ${server.program} answering at ${server.ready}`);
@@ -202,7 +209,7 @@ function stop(child: ChildProcess): void {
 
 /** migrateLocal applies migrations/*.sql, each once, to the local D1 database of the dev server on
  * port, through cf dev's local explorer. */
-export async function migrateLocal(project: Pick<Config, "worker">, port: number): Promise<void> {
+export async function migrateLocal(project: Pick<Config, "worker">, port: number, dir = "."): Promise<void> {
 	const endpoint = `http://localhost:${port}/cdn-cgi/local/explorer/api/d1/database/DB-${project.worker}/raw`;
 	const sql = async (statement: string): Promise<unknown> => {
 		const reply = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sql: statement }) });
@@ -211,9 +218,9 @@ export async function migrateLocal(project: Pick<Config, "worker">, port: number
 		return body.result?.at(-1)?.results?.rows?.[0]?.[0];
 	};
 	await sql("CREATE TABLE IF NOT EXISTS _local_migrations (name TEXT PRIMARY KEY, applied_at TEXT DEFAULT CURRENT_TIMESTAMP)");
-	for (const name of readdirSync("migrations").filter(file => file.endsWith(".sql")).sort()) {
+	for (const name of readdirSync(join(dir, "migrations")).filter(file => file.endsWith(".sql")).sort()) {
 		if (Number(await sql(`SELECT count(*) FROM _local_migrations WHERE name = '${name}'`)) > 0) continue;
-		await sql(readFileSync(join("migrations", name), "utf8"));
+		await sql(readFileSync(join(dir, "migrations", name), "utf8"));
 		await sql(`INSERT INTO _local_migrations (name) VALUES ('${name}')`);
 		console.log("applied", name);
 	}

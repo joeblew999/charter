@@ -258,14 +258,12 @@ func TestUploadTakesAMultipartForm(t *testing.T) {
 func TestChatStreamsChunksAsSSE(t *testing.T) {
 	srv := server(t, nil)
 	status, body, header := do(t, "POST", srv.URL+"/api/chat", js, `{"prompt":"from go"}`, "Authorization", "Bearer "+token(t, srv.URL))
-	want := "data: {\"text\":\"echo\",\"done\":false}\n\ndata: {\"text\":\"from\",\"done\":false}\n\ndata: {\"text\":\"go\",\"done\":true}\n\n"
+	want := ": \n\nevent: message\ndata: {\"text\":\"echo\",\"done\":false}\n\nevent: message\ndata: {\"text\":\"from\",\"done\":false}\n\nevent: message\ndata: {\"text\":\"go\",\"done\":true}\n\nevent: close\n\n"
 	if status != 200 || header.Get("Content-Type") != "text/event-stream" || body != want {
 		t.Errorf("HTTP %d %s\n%q\nwant\n%q", status, header.Get("Content-Type"), body, want)
 	}
 }
 
-// The channel as the adapters see it: the upgrade is answered 204 with the header that says it takes
-// messages, and a message is a POST answered with one event per line.
 // The SSE feed: the log after a position, then each new note, ended at `seconds` by the terminator.
 func TestWatchResumesAndEndsWithTheTerminator(t *testing.T) {
 	srv := server(t, nil)
@@ -315,18 +313,28 @@ func TestWatchResumesAndEndsWithTheTerminator(t *testing.T) {
 	}
 }
 
+// The channel as the adapters see it: the upgrade is answered 204 with the header that says it takes
+// messages, and a message is a POST, marked as the transport's, answered with one event per line. Any
+// other request to the channel's address is the channel's: 426, once let in.
 func TestTheChannelTakesTheOneTopic(t *testing.T) {
 	srv := server(t, nil)
 	good := token(t, srv.URL)
 	if status, _, _ := do(t, "GET", srv.URL+livePath, "", "", "Authorization", "Bearer "+good); status != 426 {
 		t.Errorf("a plain GET: HTTP %d, want 426", status)
 	}
+	if status, _, _ := do(t, "POST", srv.URL+livePath, js, `{"topic":"notes"}`, "Authorization", "Bearer "+good); status != 426 {
+		t.Errorf("a POST that is no frame: HTTP %d, want 426", status)
+	}
+	if status, _, _ := do(t, "POST", srv.URL+livePath, js, `{"topic":"notes"}`); status != 401 {
+		t.Errorf("a POST that is no frame, without credentials: HTTP %d, want 401", status)
+	}
 	// A message, as the adapter gives it to Go: the one topic is taken, any other refused.
-	if status, body, _ := do(t, "POST", srv.URL+livePath+"?access_token="+good, js, `{"topic":"notes"}`); status != 204 || body != "" {
+	frame := []string{transport.MessageHeader, "1"}
+	if status, body, _ := do(t, "POST", srv.URL+livePath+"?access_token="+good, js, `{"topic":"notes"}`, frame...); status != 204 || body != "" {
 		t.Errorf("subscribe notes: HTTP %d %q, want 204", status, body)
 	}
 	for _, refused := range []string{`{"topic":"other"}`, `{"subject":"x"}`} {
-		if status, body, _ := do(t, "POST", srv.URL+livePath, js, refused, "Authorization", "Bearer "+good); status != 422 {
+		if status, body, _ := do(t, "POST", srv.URL+livePath, js, refused, append([]string{"Authorization", "Bearer " + good}, frame...)...); status != 422 {
 			t.Errorf("%s: HTTP %d %s, want 422", refused, status, body)
 		}
 	}

@@ -53,8 +53,9 @@ Everything charter-ts makes says how big it is, gzipped, against its limit, and 
 
 | Job | When | What |
 |---|---|---|
-| `check` | Push, pull request, tag; Linux and macOS | charter-ts and charter-lib with their tests, the Go library, the docs, the workflows |
+| `check` | Push, pull request, tag; Linux and macOS | charter-ts and charter-lib with their tests, the Go library, the projects kept alike (`projects.test.ts`), the docs, the workflows |
 | `projects` | The same; one runner per project | Every project's check |
+| `twins` | The same | Each API that is here in TypeScript and in Go, both under workerd, the same requests to both: no answer may differ (`npx charter-ts twins ts/conformance go/conformance`; [The standard API](reference/standard.md#held-the-same)) |
 | `clients` | The same; one runner per conformance project | Every client its `fern/generators.yml` declares, generated and proven in its language. The conformance projects carry every Fern feature, so this proves the generators; an example's specs get Fern's check in its own `check` |
 | `deploy` | By hand: `npx charter-ts ci:remote deploy go/examples-notes` | A project's deploy, then its live tests |
 

@@ -45,7 +45,7 @@ Never edit these: change the source and run the step.
 | `pages/*.x.go` (committed) | `go tool gsx generate`, from the gsx components (`go/examples-start-htmx/`, `go/examples-start-datastar/`); `npm run check` fails while they are stale |
 | `sdk/go/` (committed), `sdk/out/` | `npm run sdk:publish`, `npm run sdk --`; in TypeScript, `npm run sdk -- <group>` |
 | `build/`, `charter-ts/dist/`, `ts/lib/dist/` | `npx charter-ts build` in a Go project (`dev`, `check` and `deploy` run it); `npm ci` (it builds both packages) |
-| `.github/workflows/self-*.yml` (`self-check.yml`, `self-projects.yml`, `self-clients.yml`, `self-deploy.yml`) | `npx charter-ts ci:write`, from `ci.config.ts` |
+| `.github/workflows/self-*.yml` (`self-check.yml`, `self-repo.yml`, `self-projects.yml`, `self-twins.yml`, `self-clients.yml`, `self-deploy.yml`) | `npx charter-ts ci:write`, from `ci.config.ts` |
 | The rest of `.github/`, `renovate.json`, `AGENTS.md`, `CLAUDE.md` | `npm run adopt`, from `charter-ts/kit/` |
 | `docs/charter/`, `docs/_config.yml`, `docs/llms.txt`, `docs/_sass/` | `npm run adopt`, from `charter-ts/kit/` |
 | `docs/charter/tasks.md`, `docs/charter/using.md` | `npm run adopt`, from `package.json`'s scripts and from charter-ts's commands |

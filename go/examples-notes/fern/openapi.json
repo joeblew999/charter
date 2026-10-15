@@ -1,22 +1,6 @@
 {
   "components": {
     "schemas": {
-      "CreateInputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "body": {
-            "examples": [
-              "Buy milk"
-            ],
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "body"
-        ],
-        "type": "object"
-      },
       "ErrorDetail": {
         "additionalProperties": false,
         "properties": {
@@ -86,43 +70,6 @@
         },
         "type": "object"
       },
-      "HelloOutputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "message": {
-            "examples": [
-              "Hello from charter-notes-go"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ],
-        "type": "object"
-      },
-      "ListOutputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/Note"
-            },
-            "type": "array"
-          },
-          "next_cursor": {
-            "description": "Pass as cursor for the next page; absent on the last page",
-            "examples": [
-              "41"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
       "Note": {
         "additionalProperties": false,
         "properties": {
@@ -187,7 +134,7 @@
     }
   },
   "info": {
-    "description": "Notes API: Huma contract (Go) -\u003e OpenAPI -\u003e Fern.",
+    "description": "Notes API: contract -\u003e OpenAPI -\u003e Fern.",
     "title": "charter-notes-go",
     "version": "1.0.0"
   },
@@ -201,7 +148,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HelloOutputBody"
+                  "additionalProperties": false,
+                  "properties": {
+                    "message": {
+                      "examples": [
+                        "Hello from charter-notes-go"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ],
+                  "type": "object"
                 }
               }
             },
@@ -233,7 +192,6 @@
         "parameters": [
           {
             "description": "Opaque cursor from the previous page's next_cursor",
-            "explode": false,
             "in": "query",
             "name": "cursor",
             "schema": {
@@ -245,7 +203,6 @@
             }
           },
           {
-            "explode": false,
             "in": "query",
             "name": "limit",
             "schema": {
@@ -265,7 +222,26 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListOutputBody"
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/Note"
+                      },
+                      "type": "array"
+                    },
+                    "next_cursor": {
+                      "description": "Pass as cursor for the next page; absent on the last page",
+                      "examples": [
+                        "41"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
                 }
               }
             },
@@ -311,7 +287,20 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateInputBody"
+                "additionalProperties": false,
+                "properties": {
+                  "body": {
+                    "examples": [
+                      "Buy milk"
+                    ],
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "body"
+                ],
+                "type": "object"
               }
             }
           },
@@ -415,7 +404,6 @@
         "parameters": [
           {
             "description": "Resume after this note id (the id of the last note you received). Absent: only notes created from now on",
-            "explode": false,
             "in": "query",
             "name": "after",
             "schema": {
@@ -429,7 +417,6 @@
           },
           {
             "description": "How long to keep the stream open",
-            "explode": false,
             "in": "query",
             "name": "seconds",
             "schema": {

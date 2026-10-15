@@ -11,7 +11,7 @@ import { z } from "zod";
 
 /** What both specs say beside the routes (charter-lib/serve): the API's name, and its channels'. */
 export const document: Document = {
-	info: { title: "charter-start-ts", version: "1.0.0", description: "charter-start-ts: oRPC contract -> OpenAPI -> Fern." },
+	info: { title: "charter-start-ts", version: "1.0.0", description: "charter-start-ts: contract -> OpenAPI -> Fern." },
 	asyncInfo: { title: "charter-start-ts live", version: "1.0.0" },
 };
 
@@ -20,7 +20,7 @@ const sdk = (group: string, method: string, extra: Record<string, unknown> = {})
 	(op: OpenAPIV3_2.OperationObject): OpenAPIV3_2.OperationObject => ({ ...op, "x-fern-sdk-group-name": group, "x-fern-sdk-method-name": method, ...extra });
 
 /** What GET /api/hello answers. */
-export const hello = z.object({ message: z.string() });
+export const hello = z.object({ message: z.string().meta({ examples: ["Hello from charter-start-ts"] }) });
 
 export const contract = {
 	hello: oc

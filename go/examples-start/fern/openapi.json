@@ -69,26 +69,11 @@
           }
         },
         "type": "object"
-      },
-      "HelloOutputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "message": {
-            "examples": [
-              "Hello from charter-start-go"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ],
-        "type": "object"
       }
     }
   },
   "info": {
-    "description": "charter-start-go: Huma contract (Go) -\u003e OpenAPI -\u003e Fern.",
+    "description": "charter-start-go: contract -\u003e OpenAPI -\u003e Fern.",
     "title": "charter-start-go",
     "version": "1.0.0"
   },
@@ -102,7 +87,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HelloOutputBody"
+                  "additionalProperties": false,
+                  "properties": {
+                    "message": {
+                      "examples": [
+                        "Hello from charter-start-go"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ],
+                  "type": "object"
                 }
               }
             },

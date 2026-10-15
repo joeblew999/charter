@@ -11,6 +11,7 @@ The packages of `github.com/joeblew999/charter/go`. The rest is in the doc comme
 | Package | What it is for | What you call |
 |---|---|---|
 | `serve` | The API the standard way: its routes under `/api`, allowed (`auth`) and limited (`ratelimit`), the specs, the MCP tools, `/.well-known/`, a channel's `?access_token=` ([The standard API](standard.md)) | `serve.API{Config, Routes, LiveTitle, Setting, Trusted}.Handler()`; `.OpenAPI`, `.AsyncAPI`, `.Tools` for `./cmd/spec` |
+| `problem` | A refusal as RFC 9457 problem details, as Huma writes an operation's, for what answers outside one (404, 405, `/.well-known/`) | `problem.Write(w, status, detail)` |
 | `humaworkers` | A Huma API on Workers: routes itself, registers an operation when a request first matches it | `humaworkers.New(humaworkers.Config(title, version), routes)` |
 | `transport` | The request bridge to the Worker, and the WebSocket adapter natively | `transport.Run(handler)` in `main` |
 | `d1` | Statements on a D1 database; rows decode by their `json` tags (Wasm only) | `d1.Query[T](db, query, args...)` |

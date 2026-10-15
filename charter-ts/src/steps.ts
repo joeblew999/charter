@@ -235,6 +235,12 @@ export const steps: Record<string, Step> = {
 		about: "generate a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>; by default the TypeScript SDK",
 		run: async args => (await scripts()).sdk(args[0] ?? "typescript-dist"),
 	},
+	twins: {
+		usage: "twins <reference> <other>",
+		about: "two projects of one API (a TypeScript one and its Go twin) under workerd, the same requests to both (from the reference's specs: the right ones and every kind of wrong one), and every answer that differs; fails if one does",
+		anyRepo: true,
+		run: async args => (await import("./twins.ts")).twins(args),
+	},
 	"go:check": {
 		usage: "go:check <folder>",
 		about: "a Go module's check, for one that is not a project (go/lib): gofmt, go vet for the host and for Wasm, go test",

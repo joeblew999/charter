@@ -16,12 +16,15 @@ package humaworkers
 import (
 	"net/http"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
+
+	"github.com/joeblew999/charter/go/problem"
 )
 
 func init() {
@@ -141,7 +144,8 @@ func (a *API) register(i int) {
 }
 
 // ServeHTTP registers the one route the request matches and runs it. An unknown path is 404; a
-// known path with another method is 405. Of several routes that match, the most specific one runs,
+// known path with another method is 405, with the methods it has (Allow, sorted); both as problem
+// details. Of several routes that match, the most specific one runs,
 // whatever their order: /things/watch before /things/{id} for a request for /things/watch.
 func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var allow []string
@@ -160,11 +164,12 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if best < 0 {
 		if len(allow) > 0 {
-			w.Header().Set("Allow", strings.Join(allow, ", "))
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			slices.Sort(allow)
+			w.Header().Set("Allow", strings.Join(slices.Compact(allow), ", "))
+			problem.Write(w, http.StatusMethodNotAllowed, "method not allowed")
 			return
 		}
-		http.Error(w, "not found", http.StatusNotFound)
+		problem.Write(w, http.StatusNotFound, "not found")
 		return
 	}
 	route := a.routes[best]

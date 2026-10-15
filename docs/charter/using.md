@@ -46,6 +46,7 @@ Those marked * work in any repo; the others in a project, a folder with a `chart
 | `bundle` | the Worker as a deploy would upload it (cf build, a Go Worker built first), and how big it is, gzipped, against its limit (charter.config.ts: bundleLimit; Workers Free's 3 MB by default); fails over it |
 | `test:workerd` | the Worker under workerd (cf dev) on a free port (a Go Worker built first), its local database migrated, and the config's tests against it |
 | `sdk [group]` | generate a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>; by default the TypeScript SDK |
+| `twins <reference> <other>` * | two projects of one API (a TypeScript one and its Go twin) under workerd, the same requests to both (from the reference's specs: the right ones and every kind of wrong one), and every answer that differs; fails if one does |
 | `go:check <folder>` * | a Go module's check, for one that is not a project (go/lib): gofmt, go vet for the host and for Wasm, go test |
 | `clients [group...]` | every client fern/generators.yml declares (or the groups named), generated with Fern (Docker) and proven in its language: Go built, vetted and tested against WireMock, TypeScript typechecked, the Rust CLI built; then a committed Go SDK checked against the specs |
 | `ci [<job> [<project>]]` * | a job of ci.config.ts, as GitHub runs it: in one project, or in each; with no job, every job GitHub runs on a push or a pull request, one after another |

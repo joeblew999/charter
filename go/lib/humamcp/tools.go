@@ -96,7 +96,7 @@ func Tools(ops []*huma.Operation, registry huma.Registry) []Tool {
 			log.Printf("%v: it is not in tools/list", err)
 			continue
 		}
-		tool := Tool{Name: op.OperationID, Description: op.Summary, InputSchema: in.schema(registry), OutputSchema: outputSchema(op, registry)}
+		tool := Tool{Name: op.OperationID, Description: op.Summary, InputSchema: drafted(in.schema(registry)), OutputSchema: drafted(outputSchema(op, registry))}
 		if op.Summary != "" && op.Description != "" {
 			tool.Description += "\n\n"
 		}
@@ -176,7 +176,9 @@ func (in input) schema(registry huma.Registry) map[string]any {
 	defs := definitions{registry: registry, schemas: map[string]any{}}
 	properties := map[string]any{}
 	required := []string{}
-	var additional any = false
+	// No more properties only when the body says so: a parameter the REST route does not know is
+	// ignored there, so the tool takes it as well (as charter-lib's tools do).
+	var additional any
 	for _, param := range in.params {
 		property, _ := defs.plain(param.Schema).(map[string]any)
 		if property == nil {
@@ -212,7 +214,10 @@ func (in input) schema(registry huma.Registry) map[string]any {
 			}
 		}
 	}
-	schema := map[string]any{"type": "object", "properties": properties, "additionalProperties": additional}
+	schema := map[string]any{"type": "object", "properties": properties}
+	if additional != nil {
+		schema["additionalProperties"] = additional
+	}
 	if len(required) > 0 {
 		schema["required"] = required
 	}
@@ -459,4 +464,12 @@ func (r *recorder) WriteHeader(status int) {
 func (r *recorder) Write(p []byte) (int, error) {
 	r.WriteHeader(http.StatusOK)
 	return r.body.Write(p)
+}
+
+// drafted is a tool's schema saying its dialect, JSON Schema 2020-12, as the MCP SDK's tools do.
+func drafted(schema map[string]any) map[string]any {
+	if schema != nil {
+		schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+	}
+	return schema
 }

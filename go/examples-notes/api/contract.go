@@ -23,7 +23,7 @@ import (
 const (
 	Title       = "charter-notes-go"
 	Version     = "1.0.0"
-	Description = "Notes API: Huma contract (Go) -> OpenAPI -> Fern."
+	Description = "Notes API: contract -> OpenAPI -> Fern."
 	LiveTitle   = "charter-notes-go live"
 )
 

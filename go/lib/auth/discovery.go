@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/joeblew999/charter/go/problem"
 )
 
 // How a client finds out how to get in: what an MCP client reads on a 401 (MCP's authorization, on
@@ -25,7 +27,7 @@ const (
 
 // WellKnown serves what a client reads to find out how to get in, for api with the ways in trusted:
 // ResourcePath (and a path after it), ServerPath when the API issues tokens itself, and OpenIDPath.
-// Anything else is 404. Mount it at /.well-known/.
+// Anything else is 404 (problem details). Mount it at /.well-known/.
 func WellKnown(api huma.API, setting func(name string) string, trusted ...Trusted) http.Handler {
 	if setting == nil {
 		setting = func(string) string { return "" }
@@ -57,7 +59,7 @@ func WellKnown(api huma.API, setting func(name string) string, trusted ...Truste
 				"scopes_supported":                      apiScopes(api.OpenAPI()),
 			})
 		default:
-			http.NotFound(w, r)
+			problem.Write(w, http.StatusNotFound, "not found")
 		}
 	})
 }

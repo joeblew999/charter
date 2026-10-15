@@ -9,10 +9,11 @@
 // - its input is one of two things. An object becomes the channel's query parameters
 //   (`bindings.ws.query`). `asyncIteratorObject(y)` is what the client sends: it becomes a `send`
 //   operation whose message payload is `y`, named by `send` in the metadata.
-// One message type each way, and not query parameters and a send side together, so far.
+// One message type each way. A channel with a send side says its query parameters with `query`. A
+// payload with an id (`.meta({ id })`) is a schema in components.schemas, as Huma names Go's.
 import type { AnySchema, Meta, MetaPlugin, RouterContract } from "@orpc/contract";
 import { getAsyncIteratorObjectSchemaDetails } from "@orpc/contract";
-import { DelegatingJsonSchemaConverter, type JsonSchemaConverter } from "@orpc/json-schema";
+import { DelegatingJsonSchemaConverter, type JsonSchema, type JsonSchemaConverter, mapJsonSchemaRefs } from "@orpc/json-schema";
 import { walkProcedureContractsAsync, type AnyRouter } from "@orpc/server";
 
 export interface AsyncAPIMeta {
@@ -30,6 +31,8 @@ export interface AsyncAPIMeta {
 	 * send operation's id. @default operationId `send<Message>`
 	 */
 	send?: { message: string; operationId?: string };
+	/** The query parameters of a channel whose input is what the client sends (an object schema). */
+	query?: AnySchema;
 	summary?: string;
 	description?: string;
 	/** Last word on the generated channel object (for x-fern-* extensions and the like). */
@@ -57,7 +60,7 @@ export interface AsyncAPIDocument {
 	asyncapi: "3.0.0";
 	channels: Record<string, Record<string, unknown>>;
 	operations: Record<string, { action: "send" | "receive"; channel: { $ref: string }; messages: { $ref: string }[] }>;
-	components: { messages: Record<string, { name: string; payload: unknown }> };
+	components: { messages: Record<string, { name: string; payload: unknown }>; schemas?: Record<string, unknown> };
 	[field: string]: unknown;
 }
 
@@ -81,8 +84,17 @@ export class AsyncAPIGenerator {
 			const details = getAsyncIteratorObjectSchemaDetails(outputSchema);
 			if (!details) { errors.push(`${path.join(".")}: an AsyncAPI channel's output must be asyncIteratorObject(...)`); return; }
 			const message = meta.message ?? meta.channel;
+			// A schema with an id goes into components.schemas, and the payload refers to it.
+			const named = (schema: unknown): unknown => {
+				const { $defs, ...rest } = (typeof schema === "object" && schema ? schema : {}) as { $defs?: Record<string, unknown> };
+				if (!$defs) return schema;
+				const component = (value: unknown) => mapJsonSchemaRefs(value as JsonSchema, ref => ref.replace(/^#\/\$defs\//, "#/components/schemas/"));
+				const schemas = (doc.components.schemas ??= {});
+				for (const [name, def] of Object.entries($defs)) schemas[name] = component(def);
+				return component(rest);
+			};
 			const [payload] = this.converter.convert(details.yieldSchema, "output");
-			doc.components.messages[message] = { name: message, payload };
+			doc.components.messages[message] = { name: message, payload: named(payload) };
 
 			let channel: Record<string, unknown> = {
 				address: meta.address,
@@ -96,8 +108,12 @@ export class AsyncAPIGenerator {
 			if (sent && !send) { errors.push(`${path.join(".")}: a channel whose input is asyncIteratorObject(...) needs \`send: { message }\` in its asyncapi() metadata`); return; }
 			if (sent && send) {
 				const [sentPayload] = this.converter.convert(sent.yieldSchema, "input");
-				doc.components.messages[send.message] = { name: send.message, payload: sentPayload };
+				doc.components.messages[send.message] = { name: send.message, payload: named(sentPayload) };
 				(channel.messages as Record<string, unknown>)[send.message] = { $ref: `#/components/messages/${send.message}` };
+				if (meta.query) {
+					const [query] = this.converter.convert(meta.query, "input");
+					channel = { ...channel, bindings: { ws: { query } } };
+				}
 			} else if (inputSchema) {
 				const [query] = this.converter.convert(inputSchema, "input");
 				if (typeof query !== "object" || query.type !== "object") errors.push(`${path.join(".")}: an AsyncAPI channel's input must be an object (its query parameters)`);

@@ -2,7 +2,7 @@
   "info": {
     "title": "charter-notes-ts",
     "version": "1.0.0",
-    "description": "Notes API: oRPC contract -> OpenAPI -> Fern."
+    "description": "Notes API: contract -> OpenAPI -> Fern."
   },
   "servers": [
     {
@@ -40,9 +40,110 @@
         "openIdConnectUrl": "/.well-known/openid-configuration",
         "description": "An access token from the OpenID Connect issuer the deployment trusts (OIDC_ISSUER), with the operation's scopes"
       }
+    },
+    "schemas": {
+      "ErrorModel": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "description": "A human-readable explanation specific to this occurrence of the problem.",
+            "examples": [
+              "Property foo is required but is missing."
+            ],
+            "type": "string"
+          },
+          "errors": {
+            "description": "Optional list of individual error details",
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array"
+          },
+          "instance": {
+            "description": "A URI reference that identifies the specific occurrence of the problem.",
+            "examples": [
+              "https://example.com/error-log/abc123"
+            ],
+            "format": "uri",
+            "type": "string"
+          },
+          "status": {
+            "description": "HTTP status code",
+            "examples": [
+              400
+            ],
+            "format": "int64",
+            "type": "integer"
+          },
+          "title": {
+            "description": "A short, human-readable summary of the problem type. This value should not change between occurrences of the error.",
+            "examples": [
+              "Bad Request"
+            ],
+            "type": "string"
+          },
+          "type": {
+            "default": "about:blank",
+            "description": "A URI reference to human-readable documentation for the error.",
+            "examples": [
+              "https://example.com/errors/example"
+            ],
+            "format": "uri",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "location": {
+            "description": "Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id'",
+            "type": "string"
+          },
+          "message": {
+            "description": "Error message text",
+            "type": "string"
+          },
+          "value": {
+            "description": "The value at the given location"
+          }
+        },
+        "type": "object"
+      },
+      "Note": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "examples": [
+              42
+            ]
+          },
+          "body": {
+            "type": "string",
+            "examples": [
+              "Buy milk"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "examples": [
+              "2026-10-01 12:00:00"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "body",
+          "created_at"
+        ],
+        "additionalProperties": false
+      }
     }
   },
-  "openapi": "3.1.1",
+  "openapi": "3.1.0",
   "paths": {
     "/api/hello": {
       "get": {
@@ -60,13 +161,26 @@
                   "type": "object",
                   "properties": {
                     "message": {
-                      "type": "string"
+                      "type": "string",
+                      "examples": [
+                        "Hello from charter-notes-ts"
+                      ]
                     }
                   },
                   "required": [
                     "message"
                   ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
                 }
               }
             }
@@ -90,22 +204,26 @@
             "name": "cursor",
             "schema": {
               "description": "Opaque cursor from the previous page's next_cursor",
+              "examples": [
+                "42"
+              ],
               "type": "string"
             },
-            "allowEmptyValue": true,
-            "allowReserved": true
+            "description": "Opaque cursor from the previous page's next_cursor"
           },
           {
             "in": "query",
             "name": "limit",
             "schema": {
               "default": 20,
+              "format": "int32",
+              "examples": [
+                20
+              ],
               "type": "integer",
               "minimum": 1,
               "maximum": 100
-            },
-            "allowEmptyValue": true,
-            "allowReserved": true
+            }
           }
         ],
         "responses": {
@@ -119,30 +237,14 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "integer",
-                            "minimum": -9007199254740991,
-                            "maximum": 9007199254740991
-                          },
-                          "body": {
-                            "type": "string"
-                          },
-                          "created_at": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "body",
-                          "created_at"
-                        ],
-                        "additionalProperties": false
+                        "$ref": "#/components/schemas/Note"
                       }
                     },
                     "next_cursor": {
                       "description": "Pass as cursor for the next page; absent on the last page",
+                      "examples": [
+                        "41"
+                      ],
                       "type": "string"
                     }
                   },
@@ -150,6 +252,26 @@
                     "data"
                   ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
                 }
               }
             }
@@ -179,12 +301,16 @@
                 "properties": {
                   "body": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "examples": [
+                      "Buy milk"
+                    ]
                   }
                 },
                 "required": [
                   "body"
-                ]
+                ],
+                "additionalProperties": false
               }
             }
           }
@@ -195,26 +321,27 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
-                    },
-                    "body": {
-                      "type": "string"
-                    },
-                    "created_at": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "body",
-                    "created_at"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
                 }
               }
             }
@@ -230,20 +357,19 @@
               }
             },
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "integer"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  }
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
                 }
               }
             }
@@ -290,11 +416,13 @@
             "name": "after",
             "schema": {
               "description": "Resume after this note id (the id of the last note you received). Absent: only notes created from now on",
+              "examples": [
+                "42"
+              ],
               "type": "string",
               "pattern": "^\\d+$"
             },
-            "allowEmptyValue": true,
-            "allowReserved": true
+            "description": "Resume after this note id (the id of the last note you received). Absent: only notes created from now on"
           },
           {
             "in": "query",
@@ -302,12 +430,15 @@
             "schema": {
               "default": 30,
               "description": "How long to keep the stream open",
+              "format": "int32",
+              "examples": [
+                30
+              ],
               "type": "integer",
               "minimum": 1,
               "maximum": 300
             },
-            "allowEmptyValue": true,
-            "allowReserved": true
+            "description": "How long to keep the stream open"
           }
         ],
         "responses": {
@@ -316,27 +447,27 @@
             "content": {
               "text/event-stream": {
                 "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
-                    },
-                    "body": {
-                      "type": "string"
-                    },
-                    "created_at": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "body",
-                    "created_at"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
                 }
               }
             }

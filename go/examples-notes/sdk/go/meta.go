@@ -10,10 +10,10 @@ import (
 )
 
 var (
-	helloOutputBodyFieldMessage = big.NewInt(1 << 0)
+	helloMetaResponseFieldMessage = big.NewInt(1 << 0)
 )
 
-type HelloOutputBody struct {
+type HelloMetaResponse struct {
 	Message string `json:"message" url:"message"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
@@ -23,21 +23,21 @@ type HelloOutputBody struct {
 	rawJSON         json.RawMessage
 }
 
-func (h *HelloOutputBody) GetMessage() string {
+func (h *HelloMetaResponse) GetMessage() string {
 	if h == nil {
 		return ""
 	}
 	return h.Message
 }
 
-func (h *HelloOutputBody) GetExtraProperties() map[string]interface{} {
+func (h *HelloMetaResponse) GetExtraProperties() map[string]interface{} {
 	if h == nil {
 		return nil
 	}
 	return h.extraProperties
 }
 
-func (h *HelloOutputBody) require(field *big.Int) {
+func (h *HelloMetaResponse) require(field *big.Int) {
 	next := new(big.Int)
 	if h.explicitFields != nil {
 		next.Set(h.explicitFields)
@@ -48,18 +48,18 @@ func (h *HelloOutputBody) require(field *big.Int) {
 
 // SetMessage sets the Message field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (h *HelloOutputBody) SetMessage(message string) {
+func (h *HelloMetaResponse) SetMessage(message string) {
 	h.Message = message
-	h.require(helloOutputBodyFieldMessage)
+	h.require(helloMetaResponseFieldMessage)
 }
 
-func (h *HelloOutputBody) UnmarshalJSON(data []byte) error {
-	type unmarshaler HelloOutputBody
+func (h *HelloMetaResponse) UnmarshalJSON(data []byte) error {
+	type unmarshaler HelloMetaResponse
 	var value unmarshaler
 	if err := json.Unmarshal(data, &value); err != nil {
 		return err
 	}
-	*h = HelloOutputBody(value)
+	*h = HelloMetaResponse(value)
 	extraProperties, err := internal.ExtractExtraProperties(data, *h)
 	if err != nil {
 		return err
@@ -69,8 +69,8 @@ func (h *HelloOutputBody) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (h *HelloOutputBody) MarshalJSON() ([]byte, error) {
-	type embed HelloOutputBody
+func (h *HelloMetaResponse) MarshalJSON() ([]byte, error) {
+	type embed HelloMetaResponse
 	var marshaler = struct {
 		embed
 	}{
@@ -80,7 +80,7 @@ func (h *HelloOutputBody) MarshalJSON() ([]byte, error) {
 	return json.Marshal(explicitMarshaler)
 }
 
-func (h *HelloOutputBody) String() string {
+func (h *HelloMetaResponse) String() string {
 	if h == nil {
 		return "<nil>"
 	}

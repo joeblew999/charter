@@ -37,6 +37,8 @@ export async function webSocket(goWorker, request, env, ctx) {
 		const headers = new Headers(request.headers);
 		for (const name of [...headers.keys()]) if (name === "upgrade" || name === "connection" || name.startsWith("sec-websocket-")) headers.delete(name);
 		headers.set("content-type", "application/json");
+		// What tells Go this POST is a frame from the socket, not a request to the channel's address.
+		headers.set("x-websocket-message", "1");
 		let queue = Promise.resolve();
 		server.addEventListener("message", event => {
 			queue = queue

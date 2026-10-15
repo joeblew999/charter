@@ -1,23 +1,6 @@
 {
   "components": {
     "schemas": {
-      "CreateInputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "body": {
-            "examples": [
-              "Hello, everyone"
-            ],
-            "maxLength": 280,
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "body"
-        ],
-        "type": "object"
-      },
       "ErrorDetail": {
         "additionalProperties": false,
         "properties": {
@@ -87,36 +70,6 @@
         },
         "type": "object"
       },
-      "HelloOutputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "message": {
-            "examples": [
-              "Hello from charter-start-htmx"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ],
-        "type": "object"
-      },
-      "ListOutputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/Message"
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
       "Message": {
         "additionalProperties": false,
         "properties": {
@@ -150,7 +103,7 @@
     }
   },
   "info": {
-    "description": "charter-start-htmx: Huma contract (Go) -\u003e OpenAPI -\u003e Fern, and server-rendered pages (gsx, htmx 4).",
+    "description": "charter-start-htmx: contract -\u003e OpenAPI -\u003e Fern, and server-rendered pages (gsx, htmx 4).",
     "title": "charter-start-htmx",
     "version": "1.0.0"
   },
@@ -164,7 +117,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HelloOutputBody"
+                  "additionalProperties": false,
+                  "properties": {
+                    "message": {
+                      "examples": [
+                        "Hello from charter-start-htmx"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ],
+                  "type": "object"
                 }
               }
             },
@@ -194,7 +159,6 @@
         "operationId": "listMessages",
         "parameters": [
           {
-            "explode": false,
             "in": "query",
             "name": "limit",
             "schema": {
@@ -214,7 +178,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListOutputBody"
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
                 }
               }
             },
@@ -255,7 +231,21 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateInputBody"
+                "additionalProperties": false,
+                "properties": {
+                  "body": {
+                    "examples": [
+                      "Hello, everyone"
+                    ],
+                    "maxLength": 280,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "body"
+                ],
+                "type": "object"
               }
             }
           },

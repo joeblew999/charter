@@ -41,6 +41,18 @@ export default defineCI({
 			each: "project",
 			run: [["charter-ts", "check"]],
 		},
+		// Each API that is here in TypeScript and in Go answers the same in both: the TypeScript project is
+		// the reference, and every request its specs give rise to goes to both (charter-ts twins).
+		twins: {
+			about: "Each API's TypeScript and Go projects under workerd, the same requests to both, and no answer may differ",
+			on: ["push", "pull_request", "tag"],
+			timeoutMinutes: 30,
+			run: [
+				["charter-ts", "twins", "ts/conformance", "go/conformance"],
+				["charter-ts", "twins", "ts/examples-notes", "go/examples-notes"],
+				["charter-ts", "twins", "ts/examples-start", "go/examples-start"],
+			],
+		},
 		// The conformance projects carry every Fern feature, so their clients prove the generators; an
 		// example's specs are checked by Fern in its own check, and its committed Go SDK by a hash.
 		clients: {

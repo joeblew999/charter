@@ -5,14 +5,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { call } from "@orpc/server";
-import { conformance, type Deployment, router, seen, trusted } from "../src/conformance.ts";
+import { conformance, type Deployment, newToken, oauthOf, router, seen, trusted } from "../src/conformance.ts";
 import { memoryNotes } from "../src/notes.ts";
 
-const deployment: Deployment = { notes: memoryNotes(), trusted: trusted({ READ_TOKEN: "r", WRITE_TOKEN: "w" }), limits: {} };
+const settings = { READ_TOKEN: "r", WRITE_TOKEN: "w" };
+const deployment: Deployment = { notes: memoryNotes(), trusted: trusted(settings), oauth: oauthOf(settings), limits: {} };
+/** A token the API issued, as the SDKs get one. */
+const issued = await newToken(oauthOf(settings).tokenSecret);
 /** A call, with the OAuth token /api/oauth/token issues unless it sends credentials of its own. */
 const api = (path: string, init: RequestInit = {}) => {
 	const headers = new Headers(init.headers);
-	if (!headers.has("authorization")) headers.set("authorization", "Bearer tok-1");
+	if (!headers.has("authorization")) headers.set("authorization", `Bearer ${issued}`);
 	return conformance(new Request(`https://conformance.invalid${path}`, { ...init, headers }), deployment);
 };
 const as = (token: string) => ({ authorization: `Bearer ${token}` });
@@ -20,13 +23,15 @@ const json = (body: unknown): RequestInit => ({ method: "POST", headers: { "cont
 
 test("the token endpoint takes a form, and refuses a wrong client with 401", async () => {
 	const token = await api("/api/oauth/token", { method: "POST", body: new URLSearchParams({ client_id: "id-1", client_secret: "secret-1" }) });
-	assert.deepEqual(await token.json(), { access_token: "tok-1", token_type: "Bearer", expires_in: 3600 });
+	const answer = (await token.json()) as { access_token: string };
+	assert.match(answer.access_token, /^\d+\.[0-9a-f]{64}$/);
+	assert.deepEqual(answer, { access_token: answer.access_token, token_type: "Bearer", expires_in: 3600 });
 	assert.match(seen.tokenContentType, /application\/x-www-form-urlencoded/);
 	const refused = await api("/api/oauth/token", { method: "POST", body: new URLSearchParams({ client_id: "id-1", client_secret: "wrong" }) });
 	assert.equal(refused.status, 401);
 	// client_secret_basic, as an OAuth client (an MCP client among them) sends it.
 	const basic = await api("/api/oauth/token", { method: "POST", headers: { authorization: `Basic ${btoa("id-1:secret-1")}` }, body: new URLSearchParams({ grant_type: "client_credentials", scope: "read write" }) });
-	assert.deepEqual(await basic.json(), { access_token: "tok-1", token_type: "Bearer", expires_in: 3600 });
+	assert.equal(((await basic.json()) as { token_type: string }).token_type, "Bearer");
 });
 
 test("notes come in pages of two, and limit changes that", async () => {
@@ -36,12 +41,12 @@ test("notes come in pages of two, and limit changes that", async () => {
 });
 
 test("create takes its id from the Idempotency-Key, keeps the first answer under it, and records the token", async () => {
-	const create = (body: string) => api("/api/notes", { ...json({ body }), headers: { "content-type": "application/json", "idempotency-key": "key-1", authorization: "Bearer tok-1" } });
+	const create = (body: string) => api("/api/notes", { ...json({ body }), headers: { "content-type": "application/json", "idempotency-key": "key-1", authorization: `Bearer ${issued}` } });
 	assert.deepEqual(await (await create("hello")).json(), { id: "key-1", body: "hello" });
 	assert.deepEqual(await (await create("something else")).json(), { id: "key-1", body: "hello" });
-	assert.equal(seen.authOnCreate, "Bearer tok-1");
+	assert.equal(seen.authOnCreate, `Bearer ${issued}`);
 	assert.deepEqual(await (await api("/api/notes?cursor=5")).json(), { data: [{ id: "key-1", body: "hello" }] });
-	assert.equal((await api("/api/notes", json({}))).status, 400);
+	assert.equal((await api("/api/notes", json({}))).status, 422);
 });
 
 test("an upload is multipart: the file and a field", async () => {
@@ -51,7 +56,7 @@ test("an upload is multipart: the file and a field", async () => {
 	assert.deepEqual(await (await api("/api/files", { method: "POST", body: form })).json(), { id: "hello.txt:greeting", size: 5 });
 	const none = new FormData();
 	none.set("note", "greeting");
-	assert.equal((await api("/api/files", { method: "POST", body: none })).status, 400);
+	assert.equal((await api("/api/files", { method: "POST", body: none })).status, 422);
 });
 
 test("chat streams one SSE event per word", async () => {
@@ -62,7 +67,7 @@ test("chat streams one SSE event per word", async () => {
 });
 
 test("watch streams the log after a position, then ends at `seconds` with the terminator; the newer of after and Last-Event-ID wins", async () => {
-	const request = new Request("https://conformance.invalid/api/notes/watch", { headers: as("tok-1") });
+	const request = new Request("https://conformance.invalid/api/notes/watch", { headers: as(issued) });
 	const read = async (input: { after?: string; seconds: number }, lastEventId?: string) => {
 		const ids: string[] = [];
 		const stream = await call(router.notes.watch, input, { context: { request, ...deployment }, lastEventId });
@@ -76,11 +81,11 @@ test("watch streams the log after a position, then ends at `seconds` with the te
 	assert.deepEqual(resumed.ids.slice(0, 2), ["n4", "n5"]);
 	assert.equal(resumed.end, "[end-of-stream]");
 	assert.equal((await read({ after: "1", seconds: 1 }, "4")).ids[0], "n5");
-	assert.equal((await api("/api/notes", json({ body: "a [end-of-stream] inside" }))).status, 400);
+	assert.equal((await api("/api/notes", json({ body: "a [end-of-stream] inside" }))).status, 422);
 });
 
 test("the channel's feed is the log from its start, then each new note through the hub; a topic it lacks ends it", async () => {
-	const request = new Request("https://conformance.invalid/api/notes/live", { headers: as("tok-1") });
+	const request = new Request("https://conformance.invalid/api/notes/live", { headers: as(issued) });
 	const stop = new AbortController();
 	// The client's messages: those given, then nothing until the test ends.
 	async function* messages(...sent: unknown[]) {
@@ -97,7 +102,7 @@ test("the channel's feed is the log from its start, then each new note through t
 		idle = setTimeout(() => void api("/api/notes", { ...json({ body: "live" }), headers: { "content-type": "application/json", "idempotency-key": "live-1" } }), 100);
 	}
 	stop.abort();
-	assert.deepEqual(events.slice(0, 3).map(event => [event.event, event.id, event.auth]), [1, 2, 3].map(n => ["notes.created", `n${n}`, "Bearer tok-1"]));
+	assert.deepEqual(events.slice(0, 3).map(event => [event.event, event.id, event.auth]), [1, 2, 3].map(n => ["notes.created", `n${n}`, `Bearer ${issued}`]));
 	assert.equal(events.at(-1)?.id, "live-1");
 	for (const refused of [{ subject: "notes" }, { topic: "other" }]) {
 		await assert.rejects(async () => { for await (const _ of await call(router.notes.live, messages(refused), { context: { request, ...deployment } })); });
@@ -120,5 +125,6 @@ test("every call needs credentials by one of the ways in: reading needs read, wr
 	assert.equal((await api("/api/notes", { headers: as("r") })).status, 200);
 	assert.equal((await api("/api/notes", { ...json({ body: "x" }), headers: { "content-type": "application/json", ...as("r") } })).status, 403);
 	assert.equal((await api("/api/notes", { ...json({ body: "x" }), headers: { "content-type": "application/json", ...as("w") } })).status, 200);
-	assert.equal((await api("/api/notes/live", { headers: as("never-issued") })).status, 426);
+	// The channel lets in, or refuses, before it asks for the upgrade.
+	assert.equal((await api("/api/notes/live", { headers: as("never-issued") })).status, 401);
 });

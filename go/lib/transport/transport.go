@@ -12,7 +12,8 @@
 //   - 204: there is no feed. The socket stays open until the client closes it.
 //   - The header MessagesHeader set to MessagesPost: the channel takes messages. Each text frame
 //     the client sends is given to Go as a POST to the same URL, with the upgrade request's headers
-//     (so Go authorizes every message as it did the upgrade) and the frame as the JSON body. The
+//     (so Go authorizes every message as it did the upgrade), MessageHeader, and the frame as the
+//     JSON body. The
 //     answer is lines again, each sent as one frame. Messages are handled one at a time, in order.
 //     Anything but 2xx closes the socket with 1008. Without the header, what the client sends is
 //     ignored.
@@ -27,3 +28,7 @@ const MessagesHeader = "X-Websocket-Messages"
 
 // MessagesPost: every text frame from the client becomes a POST to the upgrade's URL.
 const MessagesPost = "post"
+
+// MessageHeader is set on that POST: it is a frame from the socket. Any other request to a channel's
+// address is the channel's (go/lib/serve), as in charter-lib.
+const MessageHeader = "X-Websocket-Message"

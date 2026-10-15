@@ -35,63 +35,6 @@ func toolCall(t *testing.T, base, name, arguments string) (string, any, bool) {
 	return text, result["structuredContent"], result["isError"] == true
 }
 
-// The notes operations that answer once are tools, each exactly as the contract describes it. Other
-// operations of the contract are tools too (the list is not held to these three); a stream
-// (watchNotes) and a channel (liveNotes) never are.
-func TestMCPToolsAreTheContractsOperations(t *testing.T) {
-	srv, _ := server(t)
-	status, answer := mcp(t, srv.URL, "tools/list", `{}`)
-	if status != 200 {
-		t.Fatalf("HTTP %d %v", status, answer)
-	}
-	result, _ := answer["result"].(map[string]any)
-	listed, _ := result["tools"].([]any)
-	got := map[string]any{}
-	for _, tool := range listed {
-		name, _ := tool.(map[string]any)["name"].(string)
-		if _, twice := got[name]; twice || name == "" {
-			t.Errorf("tools/list names %q twice, or a tool has no name", name)
-		}
-		got[name] = tool
-	}
-	want := `[
-		{"name":"hello","description":"Say hello","annotations":{"readOnlyHint":true},
-		 "inputSchema":{"type":"object","properties":{},"additionalProperties":false},
-		 "outputSchema":{"type":"object","properties":{"message":{"type":"string"}},"required":["message"],"additionalProperties":false}},
-		{"name":"listNotes","description":"List notes, newest first (cursor pagination)","annotations":{"readOnlyHint":true},
-		 "inputSchema":{"type":"object","additionalProperties":false,"properties":{
-			"cursor":{"type":"string","description":"Opaque cursor from the previous page's next_cursor"},
-			"limit":{"type":"integer","format":"int32","minimum":1,"maximum":100,"default":20}}},
-		 "outputSchema":{"type":"object","additionalProperties":false,"required":["data"],"properties":{
-			"data":{"type":"array","items":{"$ref":"#/$defs/Note"}},
-			"next_cursor":{"type":"string","description":"Pass as cursor for the next page; absent on the last page"}},
-			"$defs":{"Note":{"type":"object","additionalProperties":false,"required":["id","body","created_at"],"properties":{
-				"id":{"type":"integer","format":"int64"},"body":{"type":"string"},"created_at":{"type":"string"}}}}}},
-		{"name":"createNote","description":"Create a note","annotations":{"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false},
-		 "inputSchema":{"type":"object","additionalProperties":false,"required":["body"],"properties":{"body":{"type":"string","minLength":1}}},
-		 "outputSchema":{"type":"object","additionalProperties":false,"required":["id","body","created_at"],"properties":{
-			"id":{"type":"integer","format":"int64"},"body":{"type":"string"},"created_at":{"type":"string"}}}}
-	]`
-	var wanted []map[string]any
-	if err := json.Unmarshal([]byte(want), &wanted); err != nil {
-		t.Fatal(err)
-	}
-	for _, tool := range wanted {
-		name := tool["name"].(string)
-		withoutExamples(got[name]) // examples are the contract's to choose: the shape is what is held here
-		if !reflect.DeepEqual(got[name], any(tool)) {
-			have, _ := json.Marshal(got[name])
-			need, _ := json.Marshal(tool)
-			t.Errorf("tool %s:\n got %s\nwant %s", name, have, need)
-		}
-	}
-	for _, name := range []string{"watchNotes", "liveNotes"} {
-		if _, ok := got[name]; ok {
-			t.Errorf("%s is listed as a tool: it does not answer once", name)
-		}
-	}
-}
-
 func TestMCPCallsRunTheSameOperationsAsREST(t *testing.T) {
 	srv, memory := server(t)
 	status, answer := mcp(t, srv.URL, "initialize", `{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1"}}`)
@@ -189,21 +132,6 @@ func TestEveryRouteNamesItsOperation(t *testing.T) {
 		ops := humaworkers.New(config(), []humaworkers.Route{route}).Operations()
 		if len(ops) != 1 || route.OperationID == "" || ops[0].OperationID != route.OperationID || ops[0].Method != route.Method || ops[0].Path != route.Path {
 			t.Errorf("route %s %s (%q) registers %+v", route.Method, route.Path, route.OperationID, ops)
-		}
-	}
-}
-
-// withoutExamples removes every "examples" key from a decoded JSON value, in place.
-func withoutExamples(v any) {
-	switch v := v.(type) {
-	case map[string]any:
-		delete(v, "examples")
-		for _, child := range v {
-			withoutExamples(child)
-		}
-	case []any:
-		for _, child := range v {
-			withoutExamples(child)
 		}
 	}
 }

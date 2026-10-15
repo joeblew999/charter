@@ -7,7 +7,7 @@ import { ConformanceClient } from "./client/index.mjs";
 import { WebhooksHelper } from "./client/webhooks/index.mjs";
 import type { Report } from "./report.ts";
 import { env } from "cloudflare:workers";
-import { conformance, type Deployment, seen, type Settings, trusted, webhookOf } from "./conformance.ts";
+import { conformance, type Deployment, oauthOf, seen, type Settings, trusted, webhookOf } from "./conformance.ts";
 import { d1Notes } from "./hub.ts";
 import { seeds } from "./notes.ts";
 export { Hub } from "./hub.ts";
@@ -16,7 +16,7 @@ export { Hub } from "./hub.ts";
 // bindings; where its webhook goes. The four settings
 // for Access and OIDC are optional secrets (cloudflare.config.ts), so the generated Env may not name them.
 const settings = env as typeof env & Settings;
-const deployment: Deployment = { notes: d1Notes(), trusted: trusted(settings), limits: env, webhook: webhookOf(settings) };
+const deployment: Deployment = { notes: d1Notes(), trusted: trusted(settings), oauth: oauthOf(settings), limits: env, webhook: webhookOf(settings) };
 
 async function hmacHex(secret: string, body: string) {
 	const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -59,7 +59,7 @@ async function sdkTest(): Promise<Response> {
 		const key = `key-${crypto.randomUUID().slice(0, 8)}`;
 		const note = await client.notes.create({ body: "hello" }, { idempotencyKey: key });
 		const again = await client.notes.create({ body: "something else" }, { idempotencyKey: key });
-		return [note.id === key && again.id === key && again.body === "hello" && seen.authOnCreate === "Bearer tok-1", { note, again, authorization: seen.authOnCreate }];
+		return [note.id === key && again.id === key && again.body === "hello" && seen.authOnCreate === `Bearer ${seen.issued}`, { note, again, authorization: seen.authOnCreate }];
 	});
 	await check("SSE stream (typed chunks)", async () => {
 		const chunks: string[] = [];
@@ -112,7 +112,7 @@ async function wsTest(origin: string): Promise<Response> {
 		socket.close();
 		// The feed goes on past the seeded notes: the first three are the log's start.
 		const gotEvents = events.slice(0, 3).map(e => e.id).join() === "n1,n2,n3";
-		const gotAuth = events.every(e => e.auth === "Bearer tok-1");
+		const gotAuth = events.every(e => e.auth === `Bearer ${access_token}`);
 		const results: Report["results"] = {
 			"websocket client inside a Worker (typed events)": { ok: gotEvents, detail: events.map(e => e.id) },
 			"websocket client inside a Worker (bearer token sent)": { ok: gotAuth, detail: events.map(e => e.auth ?? "") },

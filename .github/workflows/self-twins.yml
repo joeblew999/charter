@@ -1,0 +1,16 @@
+# Written by `charter-ts ci:write` from ci.config.ts: don't edit, change ci.config.ts, then npx charter-ts ci:write.
+# Each API's TypeScript and Go projects under workerd, the same requests to both, and no answer may differ. The same job here: npx charter-ts ci twins; on GitHub, from here: npx charter-ts ci:remote twins.
+name: self-twins
+on:
+  push:
+    branches: [main]
+    tags: ["ts-v*"]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  twins:
+    uses: ./.github/workflows/charter-ci.yml
+    with:
+      job: twins
+      runs-on: ubuntu-24.04
+      timeout-minutes: 30

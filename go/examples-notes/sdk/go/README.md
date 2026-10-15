@@ -46,7 +46,7 @@ func do() {
             "<token>",
         ),
     )
-    request := &notes.CreateInputBody{
+    request := &notes.CreateNotesRequest{
         Body: "Buy milk",
     }
     client.Notes.Create(

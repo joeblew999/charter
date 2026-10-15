@@ -1,21 +1,6 @@
 {
   "components": {
     "schemas": {
-      "ChatInputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "prompt": {
-            "examples": [
-              "Say hello"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "prompt"
-        ],
-        "type": "object"
-      },
       "Chunk": {
         "additionalProperties": false,
         "properties": {
@@ -31,21 +16,6 @@
         },
         "required": [
           "text"
-        ],
-        "type": "object"
-      },
-      "CreateInputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "body": {
-            "examples": [
-              "Buy milk"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "body"
         ],
         "type": "object"
       },
@@ -118,28 +88,6 @@
         },
         "type": "object"
       },
-      "ListOutputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/Note"
-            },
-            "type": "array"
-          },
-          "next_cursor": {
-            "description": "Pass as cursor for the next page; absent on the last page",
-            "examples": [
-              "4"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
       "Note": {
         "additionalProperties": false,
         "properties": {
@@ -178,56 +126,6 @@
         "required": [
           "event",
           "note"
-        ],
-        "type": "object"
-      },
-      "TokenOutputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "access_token": {
-            "type": "string"
-          },
-          "expires_in": {
-            "examples": [
-              3600
-            ],
-            "format": "int32",
-            "type": "integer"
-          },
-          "token_type": {
-            "examples": [
-              "Bearer"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "access_token",
-          "token_type",
-          "expires_in"
-        ],
-        "type": "object"
-      },
-      "UploadOutputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "examples": [
-              "file-1"
-            ],
-            "type": "string"
-          },
-          "size": {
-            "examples": [
-              1024
-            ],
-            "format": "int32",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "size"
         ],
         "type": "object"
       }
@@ -277,7 +175,7 @@
     }
   },
   "info": {
-    "description": "Every Fern feature we care about, from a Huma contract (Go): standard OpenAPI + x-fern-* extensions.",
+    "description": "Every Fern feature we care about, via standard OpenAPI + x-fern-* extensions.",
     "title": "Conformance",
     "version": "1.0.0"
   },
@@ -290,7 +188,19 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ChatInputBody"
+                "additionalProperties": false,
+                "properties": {
+                  "prompt": {
+                    "examples": [
+                      "Say hello"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "prompt"
+                ],
+                "type": "object"
               }
             }
           },
@@ -305,7 +215,7 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "chunks"
           },
           "401": {
             "content": {
@@ -382,11 +292,31 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UploadOutputBody"
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "examples": [
+                        "file-1"
+                      ],
+                      "type": "string"
+                    },
+                    "size": {
+                      "examples": [
+                        1024
+                      ],
+                      "format": "int32",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "size"
+                  ],
+                  "type": "object"
                 }
               }
             },
-            "description": "OK"
+            "description": "stored"
           },
           "401": {
             "content": {
@@ -457,7 +387,6 @@
         "parameters": [
           {
             "description": "Opaque cursor from the previous page's next_cursor",
-            "explode": false,
             "in": "query",
             "name": "cursor",
             "schema": {
@@ -469,7 +398,6 @@
             }
           },
           {
-            "explode": false,
             "in": "query",
             "name": "limit",
             "schema": {
@@ -489,11 +417,30 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListOutputBody"
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/Note"
+                      },
+                      "type": "array"
+                    },
+                    "next_cursor": {
+                      "description": "Pass as cursor for the next page; absent on the last page",
+                      "examples": [
+                        "4"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
                 }
               }
             },
-            "description": "OK"
+            "description": "a page"
           },
           "401": {
             "content": {
@@ -546,7 +493,19 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateInputBody"
+                "additionalProperties": false,
+                "properties": {
+                  "body": {
+                    "examples": [
+                      "Buy milk"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "body"
+                ],
+                "type": "object"
               }
             }
           },
@@ -561,7 +520,7 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "created"
           },
           "401": {
             "content": {
@@ -657,7 +616,6 @@
         "parameters": [
           {
             "description": "Resume after this event id (the last one you received). Absent: only notes created from now on",
-            "explode": false,
             "in": "query",
             "name": "after",
             "schema": {
@@ -671,7 +629,6 @@
           },
           {
             "description": "How long to keep the stream open",
-            "explode": false,
             "in": "query",
             "name": "seconds",
             "schema": {
@@ -794,11 +751,35 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TokenOutputBody"
+                  "additionalProperties": false,
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "expires_in": {
+                      "examples": [
+                        3600
+                      ],
+                      "format": "int32",
+                      "type": "integer"
+                    },
+                    "token_type": {
+                      "examples": [
+                        "Bearer"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "access_token",
+                    "token_type",
+                    "expires_in"
+                  ],
+                  "type": "object"
                 }
               }
             },
-            "description": "OK"
+            "description": "token"
           },
           "401": {
             "content": {
@@ -820,7 +801,7 @@
             },
             "description": "Unprocessable Entity"
           },
-          "500": {
+          "default": {
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -828,7 +809,7 @@
                 }
               }
             },
-            "description": "Internal Server Error"
+            "description": "Error"
           }
         },
         "security": [],

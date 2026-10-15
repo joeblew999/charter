@@ -9,6 +9,7 @@ parent: How to help
 
 | Issue | Problem | Workaround | When fixed |
 |---|---|---|---|
+| Cloudflare's workers-sdk, not filed | Under `cf dev`, a request answered before its body was read makes the next request on the connection fail (`fetch failed`, a 500 from the dev server) | `charter-lib/serve` reads a body the answer did not (`ts/lib/src/serve.ts`) | Drop that |
 | [tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800) | The collector runs at every pause of a workers-go program | A runtime patch and an 8 MB heap (`charter-ts/src/go.ts`) | Drop the patch |
 | [tinygo#5798](https://github.com/tinygo-org/tinygo/issues/5798) | Go timers stall on Cloudflare | `go/lib/worker/tinygo-clock.mjs` | Delete it |
 | [tinygo-org/net#56](https://github.com/tinygo-org/net/pull/56) | `http.ServeMux` has no method patterns | `humaworkers` routes itself | Use Huma's adapter |

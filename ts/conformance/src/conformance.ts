@@ -7,7 +7,7 @@
 import { implement, ORPCError, withEventMeta } from "@orpc/server";
 import type { Trusted } from "charter-lib/auth";
 import { follow } from "charter-lib/follow";
-import { guard, serve, type Served } from "charter-lib/serve";
+import { guard, refused, serve, type Served } from "charter-lib/serve";
 import { contract, document, END } from "./contract.ts";
 import type { Notes } from "./notes.ts";
 
@@ -17,12 +17,27 @@ import type { Notes } from "./notes.ts";
 export interface Deployment {
 	notes: Notes;
 	trusted: Trusted;
+	oauth: OAuth;
 	limits: object;
 	webhook?: Webhook;
 }
 
 /** The settings (a deployment's secrets and variables): whom it trusts, and where its webhook goes. */
-export type Settings = Partial<Record<"READ_TOKEN" | "WRITE_TOKEN" | "ACCESS_TEAM_DOMAIN" | "ACCESS_AUD" | "OIDC_ISSUER" | "OIDC_AUDIENCE" | "WEBHOOK_URL" | "WEBHOOK_SECRET", string>>;
+export type Settings = Partial<Record<"READ_TOKEN" | "WRITE_TOKEN" | "ACCESS_TEAM_DOMAIN" | "ACCESS_AUD" | "OIDC_ISSUER" | "OIDC_AUDIENCE" | "WEBHOOK_URL" | "WEBHOOK_SECRET" | "CLIENT_ID" | "CLIENT_SECRET" | "TOKEN_SECRET", string>>;
+
+/** The OAuth client the API knows, and the secret its tokens are signed with: its settings, or the
+ * defaults go/conformance has, so the same tests run against either. A real deployment sets them. */
+export interface OAuth {
+	clientId: string;
+	clientSecret: string;
+	tokenSecret: string;
+}
+
+export const oauthOf = (settings: Settings): OAuth => ({
+	clientId: settings.CLIENT_ID || "id-1",
+	clientSecret: settings.CLIENT_SECRET || "secret-1",
+	tokenSecret: settings.TOKEN_SECRET || "conformance-token-secret",
+});
 
 /** Where the noteCreated webhook goes, and the secret it is signed with. */
 export interface Webhook {
@@ -42,16 +57,36 @@ const signatureHeader = "x-webhook-signature";
  * in hex, under the secret. The receiver checks it with the SDK's WebhooksHelper.verifySignature. */
 async function notify(webhook: Webhook, payload: unknown): Promise<void> {
 	const body = JSON.stringify(payload);
-	const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(webhook.secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-	const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body)));
-	const signature = [...mac].map(b => b.toString(16).padStart(2, "0")).join("");
+	const signature = await sign(webhook.secret, body);
 	const res = await fetch(webhook.url, { method: "POST", headers: { "content-type": "application/json", [signatureHeader]: signature }, body, signal: AbortSignal.timeout(5000) });
 	await res.body?.cancel();
 	if (!res.ok) throw new Error(`${webhook.url} answered HTTP ${res.status}`);
 }
 
-/** The OAuth token /api/oauth/token issues: the one there is, as there is one client. */
-const issuedToken = "tok-1";
+/** sign is HMAC-SHA256 in hex: what signs both the access tokens and the webhooks (as go/conformance). */
+async function sign(secret: string, message: string): Promise<string> {
+	const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+	return [...new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message)))].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** How long an access token is good for, in seconds. */
+const tokenLife = 3600;
+
+/** An access token that needs no storage: its expiry, signed, so any request can check it (a Worker
+ * keeps nothing between requests). The same as go/conformance's. */
+export async function newToken(secret: string, now = Date.now()): Promise<string> {
+	const expiry = String(Math.floor(now / 1000) + tokenLife);
+	return `${expiry}.${await sign(secret, `access-token.${expiry}`)}`;
+}
+
+/** Whether a token is one newToken made with this secret, and still good. */
+export async function validToken(secret: string, token: string, now = Date.now()): Promise<boolean> {
+	const [expiry = "", signature = "", ...more] = token.split(".");
+	const want = await sign(secret, `access-token.${expiry}`);
+	let same = signature.length === want.length && more.length === 0;
+	for (let i = 0; i < want.length; i++) same &&= signature.charCodeAt(i) === want.charCodeAt(i);
+	return same && /^\d+$/.test(expiry) && Math.floor(now / 1000) < Number(expiry);
+}
 
 /**
  * Who may do what, by every way in: the API's tokens (READ_TOKEN may only read), Cloudflare Access (a
@@ -65,7 +100,7 @@ export const trusted = (settings: Settings): Trusted => ({
 	],
 	access: { team: settings.ACCESS_TEAM_DOMAIN, aud: settings.ACCESS_AUD, people: ["read", "write"], machines: ["read"] },
 	oidc: { issuer: settings.OIDC_ISSUER, audience: settings.OIDC_AUDIENCE },
-	issued: { scheme: "OAuth", tokenPath: "/api/oauth/token", check: token => (token === issuedToken ? ["read", "write"] : undefined) },
+	issued: { scheme: "OAuth", tokenPath: "/api/oauth/token", check: async token => ((await validToken(oauthOf(settings).tokenSecret, token)) ? ["read", "write"] : undefined) },
 });
 
 /** A client's id and secret from an Authorization: Basic header, each form-encoded before the base64
@@ -83,7 +118,7 @@ function basicCredentials(request: Request): { id: string; secret: string } | un
 	}
 }
 
-export const seen = { tokenCalls: 0, tokenContentType: "", authOnCreate: "", idempotencyKey: "" };
+export const seen = { tokenCalls: 0, tokenContentType: "", authOnCreate: "", idempotencyKey: "", issued: "" };
 
 /** The one topic the WebSocket channel has. */
 const topic = "notes";
@@ -105,20 +140,21 @@ const authorization = (request: Request) => request.headers.get("authorization")
 export const router = os.router({
 	auth: {
 		// The client-credentials grant: the client's credentials from the form or from a Basic header.
-		getToken: api.auth.getToken.handler(({ input, context }) => {
+		getToken: api.auth.getToken.handler(async ({ input, context }) => {
 			seen.tokenCalls++;
 			seen.tokenContentType = context.request.headers.get("content-type") ?? "";
 			if (input.grant_type !== undefined && input.grant_type !== "client_credentials") throw new ORPCError("BAD_REQUEST", { message: "unsupported_grant_type: the one grant is client_credentials" });
 			const client = basicCredentials(context.request) ?? { id: input.client_id, secret: input.client_secret };
-			if (client.id !== "id-1" || client.secret !== "secret-1") throw new ORPCError("UNAUTHORIZED", { message: "bad client" });
-			return { access_token: "tok-1", token_type: "Bearer", expires_in: 3600 };
+			if (client.id !== context.oauth.clientId || client.secret !== context.oauth.clientSecret) throw new ORPCError("UNAUTHORIZED", { message: "bad client" });
+			seen.issued = await newToken(context.oauth.tokenSecret);
+			return { access_token: seen.issued, token_type: "Bearer", expires_in: tokenLife };
 		}),
 	},
 	notes: {
 		// Cursors are opaque strings to callers (here, how many notes came before).
 		list: api.notes.list.handler(async ({ input, context }) => {
-			const start = Number(input.cursor ?? 0), limit = input.limit ?? 2;
-			if (!Number.isInteger(start) || start < 0) throw new ORPCError("BAD_REQUEST", { message: "not a cursor from next_cursor" });
+			const start = Number(input.cursor ?? 0), limit = input.limit;
+			if (!/^\d+$/.test(input.cursor ?? "0")) throw refused("query.cursor", "not a cursor from next_cursor", input.cursor);
 			// One more than the page: whether there is a next one.
 			const page = await context.notes.page(start, limit + 1);
 			return { data: page.slice(0, limit), next_cursor: page.length > limit ? String(start + limit) : undefined };

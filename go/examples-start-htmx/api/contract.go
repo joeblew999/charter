@@ -22,7 +22,7 @@ import (
 const (
 	Title       = "charter-start-htmx"
 	Version     = "1.0.0"
-	Description = "charter-start-htmx: Huma contract (Go) -> OpenAPI -> Fern, and server-rendered pages (gsx, htmx 4)."
+	Description = "charter-start-htmx: contract -> OpenAPI -> Fern, and server-rendered pages (gsx, htmx 4)."
 	LiveTitle   = "charter-start-htmx live"
 )
 

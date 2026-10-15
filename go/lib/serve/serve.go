@@ -7,7 +7,8 @@
 //   - its operations as MCP tools at /api/mcp (humamcp);
 //   - how to get in, at /.well-known/ (auth.WellKnown);
 //   - a WebSocket channel's token as ?access_token=, on the channel only, for a client that cannot send
-//     headers (a browser, a Worker).
+//     headers (a browser, a Worker);
+//   - every refusal as RFC 9457 problem details (Huma's, and go/lib/problem's), as charter-lib answers.
 //
 // The same API gives the specs cmd/spec writes (OpenAPI, AsyncAPI) and the MCP check it runs (Tools).
 // The platform carries the WebSocket (transport) and runs the handler (transport.Run).
@@ -15,6 +16,7 @@ package serve
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"slices"
 	"strings"
@@ -26,7 +28,27 @@ import (
 	"github.com/joeblew999/charter/go/humamcp"
 	"github.com/joeblew999/charter/go/humaworkers"
 	"github.com/joeblew999/charter/go/ratelimit"
+	"github.com/joeblew999/charter/go/transport"
 )
+
+// notJSON is what a body that does not parse is refused with (400), in Go and in charter-lib alike:
+// encoding/json's own words differ from JavaScript's.
+const notJSON = "the body is not valid JSON"
+
+func init() {
+	// Huma refuses a body that does not parse with its parser's error; the standard has one message.
+	standard := huma.NewError
+	huma.NewError = func(status int, msg string, errs ...error) huma.StatusError {
+		if status == http.StatusBadRequest && msg == "validation failed" {
+			for _, err := range errs {
+				if detail, ok := err.(*huma.ErrorDetail); ok && detail.Location == "body" {
+					detail.Message = notJSON
+				}
+			}
+		}
+		return standard(status, msg, errs...)
+	}
+}
 
 // The standard paths (docs/reference/standard.md).
 const (
@@ -60,6 +82,8 @@ func (a API) Handler() http.Handler {
 	}
 	// After auth: a limit counts per caller.
 	routes.UseMiddleware(ratelimit.Middleware(routes, nil))
+	// Then the body's media type: one the operation does not take is 415, as in charter-lib.
+	routes.UseMiddleware(mediaTypes(routes))
 	mcp := humamcp.Handler(routes)
 	wellKnown := auth.WellKnown(routes, a.Setting, a.Trusted...)
 	// The channels' paths: where a token may come as ?access_token=.
@@ -75,6 +99,13 @@ func (a API) Handler() http.Handler {
 			r.Header.Set("Authorization", "Bearer "+token)
 		}
 		path := r.URL.Path
+		// A request to a channel's address is the channel's, whatever its method, as in charter-lib: let
+		// in or refused, then 426 if it is no upgrade. Only the transport's frames (MessageHeader) are the
+		// channel's messages.
+		if slices.Contains(channels, path) && r.Method != http.MethodGet && r.Header.Get(transport.MessageHeader) == "" {
+			r = r.Clone(r.Context())
+			r.Method = http.MethodGet
+		}
 		switch {
 		case path == OpenAPIPath:
 			a.write(w, a.OpenAPI, Origin(r))
@@ -111,7 +142,89 @@ func (a API) document(server string) *humaworkers.API {
 	if a.Document != nil {
 		a.Document(api)
 	}
+	standardDocument(api.OpenAPI())
 	return api
+}
+
+// The reason phrase a refusal is declared with.
+var reasons = map[string]string{"400": "Bad Request", "401": "Unauthorized", "403": "Forbidden", "404": "Not Found", "409": "Conflict", "415": "Unsupported Media Type", "422": "Unprocessable Entity", "429": "Too Many Requests"}
+
+// standardDocument writes the document as the standard has it (docs/reference/standard.md), as
+// charter-lib writes it from oRPC: a body inline, not a schema Huma names after its Go type
+// (CreateInputBody); every refusal declared as problem details (401 when the operation needs
+// credentials, 422 when it takes input, its 429 when it is limited, any other it declares, and a
+// default); `explode` only on a parameter that is an array.
+func standardDocument(doc *huma.OpenAPI) {
+	schemas := doc.Components.Schemas.Map()
+	inlined := map[string]bool{}
+	inline := func(schema *huma.Schema) *huma.Schema {
+		if schema == nil || !strings.HasPrefix(schema.Ref, "#/components/schemas/") {
+			return schema
+		}
+		name := strings.TrimPrefix(schema.Ref, "#/components/schemas/")
+		if def := schemas[name]; def != nil && strings.HasSuffix(name, "Body") {
+			inlined[name] = true
+			return def
+		}
+		return schema
+	}
+	problem := map[string]*huma.MediaType{"application/problem+json": {Schema: &huma.Schema{Ref: "#/components/schemas/ErrorModel"}}}
+	for _, item := range doc.Paths {
+		for _, op := range []*huma.Operation{item.Get, item.Put, item.Post, item.Delete, item.Patch, item.Head, item.Options, item.Trace} {
+			if op == nil {
+				continue
+			}
+			for _, param := range op.Parameters {
+				if param.Schema == nil || param.Schema.Type != huma.TypeArray {
+					param.Explode = nil
+				}
+			}
+			if op.RequestBody != nil {
+				for _, media := range op.RequestBody.Content {
+					media.Schema = inline(media.Schema)
+				}
+			}
+			security := op.Security
+			if security == nil {
+				security = doc.Security
+			}
+			refusals := map[string]*huma.Response{}
+			if slices.ContainsFunc(security, func(requirement map[string][]string) bool { return len(requirement) > 0 }) {
+				refusals["401"] = &huma.Response{Description: reasons["401"]}
+			}
+			if len(op.Parameters) > 0 || op.RequestBody != nil {
+				refusals["422"] = &huma.Response{Description: reasons["422"]}
+			}
+			for status, response := range op.Responses {
+				if strings.HasPrefix(status, "2") || strings.HasPrefix(status, "3") {
+					for _, media := range response.Content {
+						media.Schema = inline(media.Schema)
+					}
+					continue
+				}
+				delete(op.Responses, status)
+				if len(status) == 3 && strings.HasPrefix(status, "4") {
+					if reason := reasons[status]; reason != "" && status != "429" {
+						response.Description = reason
+					}
+					refusals[status] = response
+				}
+			}
+			refusals["default"] = &huma.Response{Description: "Error"}
+			for status, response := range refusals {
+				response.Content = problem
+				op.Responses[status] = response
+			}
+		}
+	}
+	for name := range inlined {
+		delete(schemas, name)
+	}
+	// A problem's status is Huma's `int`: 32 bits under TinyGo, so the Worker's own spec would say
+	// int32 where the one cmd/spec writes natively says int64. The standard's is int64.
+	if model := schemas["ErrorModel"]; model != nil && model.Properties["status"] != nil {
+		model.Properties["status"].Format = "int64"
+	}
 }
 
 // OpenAPI is the API's OpenAPI spec, with server as its server: what cmd/spec writes for Fern and
@@ -150,4 +263,23 @@ func Origin(r *http.Request) string {
 		scheme = forwarded
 	}
 	return scheme + "://" + r.Host
+}
+
+// mediaTypes refuses a body of a media type the operation does not take (415), as charter-lib does:
+// Huma takes JSON for any operation, whatever its spec says.
+func mediaTypes(api huma.API) func(huma.Context, func(huma.Context)) {
+	return func(ctx huma.Context, next func(huma.Context)) {
+		op, given := ctx.Operation(), ctx.Header("Content-Type")
+		if given == "" || op.RequestBody == nil || len(op.RequestBody.Content) == 0 {
+			next(ctx)
+			return
+		}
+		media, _, _ := strings.Cut(given, ";")
+		if _, ok := op.RequestBody.Content[strings.ToLower(strings.TrimSpace(media))]; ok {
+			next(ctx)
+			return
+		}
+		body, _ := io.ReadAll(ctx.BodyReader())
+		huma.WriteErr(api, ctx, http.StatusUnsupportedMediaType, "validation failed", &huma.ErrorDetail{Location: "body", Message: "unknown content type: " + given, Value: string(body)})
+	}
 }

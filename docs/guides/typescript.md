@@ -59,7 +59,7 @@ What the Worker imports is `charter-lib` (`ts/lib/`), in `dependencies`; `charte
 
 | Import | What it is |
 |---|---|
-| `"charter-lib/serve"` | `serve(router, { document, trusted, limits })`: the API the standard way, every part below wired ([The standard API](../reference/standard.md)); `guard`, the middleware that allows and limits each call; `specsOf(contract, document)` for `charter.config.ts`'s `specs` |
+| `"charter-lib/serve"` | `serve(router, { document, trusted, limits })`: the API the standard way, every part below wired, every refusal as problem details ([The standard API](../reference/standard.md)); `guard`, the middleware that allows and limits each call; `refused(location, message, value)`, a handler's own 422; `specsOf(contract, document)` for `charter.config.ts`'s `specs` |
 | `"charter-lib/specs"` | Both specs from the contract, for `npm run spec` and for the Worker's `/api/openapi.json` and `/api/asyncapi.json` |
 | `"charter-lib/asyncapi"` | `asyncapi({...})` on a procedure: a WebSocket channel in the AsyncAPI spec |
 | `"charter-lib/auth"` | Bearer tokens, Cloudflare Access, an OpenID Connect issuer and tokens the API issued itself (`issued`, for an OAuth endpoint of its own), with scopes; each refusal's challenge, and `wellKnown`: what a client reads to find out how to get in ([Auth](auth.md)) |

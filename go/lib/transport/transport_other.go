@@ -105,6 +105,7 @@ func message(ctx context.Context, h http.Handler, upgrade *http.Request, socket 
 		}
 	}
 	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set(MessageHeader, "1")
 	frames := &frameResponse{ctx: ctx, socket: socket, header: http.Header{}, status: http.StatusOK}
 	h.ServeHTTP(frames, r)
 	return frames.status

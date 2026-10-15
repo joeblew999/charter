@@ -12,7 +12,7 @@ import { z } from "zod";
 // need is said here too: operationId/tags name the SDK methods, and `spec` adds Fern's extensions
 // (x-fern-*) to the generated operation, so nothing is patched afterwards.
 
-const info = { title: "charter-notes-ts", version: "1.0.0", description: "Notes API: oRPC contract -> OpenAPI -> Fern." };
+const info = { title: "charter-notes-ts", version: "1.0.0", description: "Notes API: contract -> OpenAPI -> Fern." };
 
 /** What both specs say beside the routes (charter-lib/serve): the API's name, its channels', and who may
  * call: bearer tokens, Cloudflare Access and an OpenID Connect issuer (src/index.ts). */
@@ -23,14 +23,14 @@ export const document: Document = {
 };
 
 export const note = z.object({
-	id: z.number().int(),
-	body: z.string(),
-	created_at: z.string(),
-});
+	id: z.number().int().meta({ format: "int64", examples: [42] }),
+	body: z.string().meta({ examples: ["Buy milk"] }),
+	created_at: z.string().meta({ examples: ["2026-10-01 12:00:00"] }),
+}).meta({ id: "Note" });
 
 /** The resume position in every stream: a note id, as an opaque string like list's cursor (docs/guides/streaming.md, rule 1). */
 export const after = z.string().regex(/^\d+$/).optional()
-	.describe("Resume after this note id (the id of the last note you received). Absent: only notes created from now on");
+	.describe("Resume after this note id (the id of the last note you received). Absent: only notes created from now on").meta({ examples: ["42"] });
 
 /**
  * What a planned stream end returns: SSE `event: close` with `data: "[end-of-stream]"`, Fern's terminator
@@ -55,7 +55,7 @@ const sdk = (group: string, method: string, extra: Record<string, unknown> = {})
 export const contract = {
 	hello: oc
 		.meta(openapi({ method: "GET", path: "/api/hello", summary: "Say hello", tags: ["meta"], operationId: "hello", spec: sdk("meta", "hello") }))
-		.output(z.object({ message: z.string() })),
+		.output(z.object({ message: z.string().meta({ examples: [`Hello from ${info.title}`] }) })),
 	notes: {
 		list: oc
 			.meta(openapi({
@@ -64,10 +64,10 @@ export const contract = {
 			}))
 			.input(z.object({
 				// Opaque string cursors: the generated CLI's --page-all stops on numeric ones.
-				cursor: z.string().optional().describe("Opaque cursor from the previous page's next_cursor"),
-				limit: z.coerce.number().int().min(1).max(100).default(20),
+				cursor: z.string().optional().describe("Opaque cursor from the previous page's next_cursor").meta({ examples: ["42"] }),
+				limit: z.coerce.number().int().min(1).max(100).default(20).meta({ format: "int32", examples: [20] }),
 			}))
-			.output(z.object({ data: z.array(note), next_cursor: z.string().optional().describe("Pass as cursor for the next page; absent on the last page") })),
+			.output(z.object({ data: z.array(note), next_cursor: z.string().optional().describe("Pass as cursor for the next page; absent on the last page").meta({ examples: ["41"] }) })),
 		watch: oc
 			.meta(openapi({
 				method: "GET", path: "/api/notes/watch", summary: "Stream notes as they are created (Server-Sent Events). The stream ends after `seconds`; call again with `after` = the last note id to continue without gaps", description: "Each event's SSE id is the note id, so a browser EventSource resumes by itself (Last-Event-ID).", tags: ["notes"], operationId: "watchNotes",
@@ -77,7 +77,7 @@ export const contract = {
 				spec: op => {
 					const ok = op.responses?.["200"] as OpenAPIV3_2.ResponseObject | undefined;
 					const stream = ok?.content?.["text/event-stream"] as OpenAPIV3_2.MediaTypeObject | undefined;
-					if (stream) stream.schema = z.toJSONSchema(note) as OpenAPIV3_2.SchemaObject;
+					if (stream) stream.schema = { $ref: "#/components/schemas/Note" };
 					// resumable: the SDKs reconnect by themselves on a drop, sending Last-Event-ID (= the note id).
 					// The terminator marks a planned end, so they only reconnect on genuine drops.
 					return sdk("notes", "watch", { "x-fern-streaming": { format: "sse", terminator: END, resumable: true } })(op);
@@ -85,7 +85,7 @@ export const contract = {
 			}))
 			.input(z.object({
 				after,
-				seconds: z.coerce.number().int().min(1).max(300).default(30).describe("How long to keep the stream open"),
+				seconds: z.coerce.number().int().min(1).max(300).default(30).describe("How long to keep the stream open").meta({ format: "int32", examples: [30] }),
 			}))
 			.output(asyncIteratorObject(note, z.literal(END).optional())),
 		// The WebSocket channel: in the AsyncAPI spec (src/asyncapi.ts), not in OpenAPI. Plain JSON notes;
@@ -100,7 +100,7 @@ export const contract = {
 			.output(asyncIteratorObject(note)),
 		create: oc
 			.meta(openapi({ method: "POST", path: "/api/notes", summary: "Create a note", tags: ["notes"], operationId: "createNote", spec: needs(["write"], limited(writeLimit, sdk("notes", "create"))) }))
-			.input(z.object({ body: z.string().min(1).refine(body => !body.includes(END), `must not contain ${END}`) }))
+			.input(z.strictObject({ body: z.string().min(1).refine(body => !body.includes(END), `must not contain ${END}`).meta({ examples: ["Buy milk"] }) }))
 			.output(note),
 	},
 };

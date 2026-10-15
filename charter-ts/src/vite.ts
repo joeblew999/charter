@@ -7,5 +7,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	resolve: { dedupe: ["@orpc/contract", "@orpc/json-schema", "@orpc/openapi", "@orpc/server", "@orpc/zod", "zod"] },
 	server: { port: Number(process.env.PORT) || 5173, strictPort: true },
-	plugins: [cloudflare()],
+	// CHARTER_LOCAL_STATE: local bindings (D1, Durable Objects) kept there, not in the project's own
+	// state; a run that must start from nothing (node twins.ts) gives it a folder of its own.
+	plugins: [cloudflare(process.env.CHARTER_LOCAL_STATE ? { persistState: { path: process.env.CHARTER_LOCAL_STATE } } : {})],
 });

@@ -54,10 +54,6 @@ test("the Go and the oRPC contract give the SDKs the same operations and channel
 		["channels", "liveNotes", "bindings", "ws", "query", "properties", "after"],
 		["operations", "receiveNote"],
 	]) {
-		// Examples are left out: the Go contract gives them (`example` tags) and the oRPC one doesn't,
-		// and they change no SDK method.
-		const property = at(go, ...path);
-		if (property && typeof property === "object") delete (property as Json).examples;
 		assert.equal(JSON.stringify(sorted(at(go, ...path))), JSON.stringify(sorted(at(orpc, ...path))), `asyncapi ${path.join(".")}`);
 	}
 });

@@ -133,8 +133,8 @@ func TestUnknownPathIs404AndUnknownMethodIs405(t *testing.T) {
 		}
 	}
 	rec := get(api, "POST", "/things/1")
-	if rec.Code != 405 || rec.Header().Get("Allow") != "GET, DELETE" {
-		t.Errorf("POST /things/1: HTTP %d Allow %q, want 405 GET, DELETE", rec.Code, rec.Header().Get("Allow"))
+	if rec.Code != 405 || rec.Header().Get("Allow") != "DELETE, GET" {
+		t.Errorf("POST /things/1: HTTP %d Allow %q, want 405 DELETE, GET", rec.Code, rec.Header().Get("Allow"))
 	}
 }
 

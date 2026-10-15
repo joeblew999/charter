@@ -18,7 +18,7 @@ import (
 const (
 	Title       = "charter-start-go"
 	Version     = "1.0.0"
-	Description = "charter-start-go: Huma contract (Go) -> OpenAPI -> Fern."
+	Description = "charter-start-go: contract -> OpenAPI -> Fern."
 	LiveTitle   = "charter-start-go live"
 )
 

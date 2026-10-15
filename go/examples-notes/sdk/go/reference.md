@@ -1,6 +1,6 @@
 # Reference
 ## Meta
-<details><summary><code>client.Meta.Hello() -> *notes.HelloOutputBody</code></summary>
+<details><summary><code>client.Meta.Hello() -> *notes.HelloMetaResponse</code></summary>
 <dl>
 <dd>
 
@@ -28,7 +28,7 @@ client.Meta.Hello(
 </details>
 
 ## Notes
-<details><summary><code>client.Notes.List() -> *notes.ListOutputBody</code></summary>
+<details><summary><code>client.Notes.List() -> *notes.ListNotesResponse</code></summary>
 <dl>
 <dd>
 
@@ -100,7 +100,7 @@ client.Notes.List(
 <dd>
 
 ```go
-request := &notes.CreateInputBody{
+request := &notes.CreateNotesRequest{
     Body: "Buy milk",
 }
 client.Notes.Create(

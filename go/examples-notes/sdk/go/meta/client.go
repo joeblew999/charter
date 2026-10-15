@@ -49,7 +49,7 @@ func NewClient(options *core.RequestOptions) *Client {
 func (c *Client) Hello(
 	ctx context.Context,
 	opts ...option.RequestOption,
-) (*notes.HelloOutputBody, error) {
+) (*notes.HelloMetaResponse, error) {
 	response, err := c.WithRawResponse.Hello(
 		ctx,
 		opts...,

@@ -39,9 +39,9 @@ describe("toolsOf", () => {
 	it("is every procedure that answers once, by operationId: not a stream, a channel, or one left out", () => {
 		expect(tools.map(tool => tool.name)).toEqual(["listNotes", "createNote", "deleteNote"]);
 	});
-	it("says what humamcp says: GET is read-only, every method but POST may overwrite or delete", () => {
+	it("says what humamcp says: GET is read-only, every method but POST may overwrite or delete, PUT and DELETE are idempotent", () => {
 		const byName = Object.fromEntries(tools.map(tool => [tool.name, tool.annotations]));
-		expect(byName).toEqual({ listNotes: { readOnlyHint: true }, createNote: { readOnlyHint: false, destructiveHint: false }, deleteNote: { readOnlyHint: false, destructiveHint: true } });
+		expect(byName).toEqual({ listNotes: { readOnlyHint: true }, createNote: { readOnlyHint: false, destructiveHint: false, idempotentHint: false }, deleteNote: { readOnlyHint: false, destructiveHint: true, idempotentHint: true } });
 	});
 });
 

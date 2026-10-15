@@ -22,7 +22,7 @@ import (
 const (
 	Title       = "charter-start-datastar"
 	Version     = "1.0.0"
-	Description = "charter-start-datastar: Huma contract (Go) -> OpenAPI -> Fern, and server-rendered pages (gsx, Datastar)."
+	Description = "charter-start-datastar: contract -> OpenAPI -> Fern, and server-rendered pages (gsx, Datastar)."
 	LiveTitle   = "charter-start-datastar live"
 )
 

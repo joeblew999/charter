@@ -9,9 +9,9 @@ import (
 	testing "testing"
 )
 
-func TestSettersHelloOutputBody(t *testing.T) {
+func TestSettersHelloMetaResponse(t *testing.T) {
 	t.Run("SetMessage", func(t *testing.T) {
-		obj := &HelloOutputBody{}
+		obj := &HelloMetaResponse{}
 		var fernTestValueMessage string
 		obj.SetMessage(fernTestValueMessage)
 		assert.Equal(t, fernTestValueMessage, obj.Message)
@@ -20,11 +20,11 @@ func TestSettersHelloOutputBody(t *testing.T) {
 
 }
 
-func TestGettersHelloOutputBody(t *testing.T) {
+func TestGettersHelloMetaResponse(t *testing.T) {
 	t.Run("GetMessage", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		obj := &HelloOutputBody{}
+		obj := &HelloMetaResponse{}
 		var expected string
 		obj.Message = expected
 
@@ -34,7 +34,7 @@ func TestGettersHelloOutputBody(t *testing.T) {
 
 	t.Run("GetMessage_NilReceiver", func(t *testing.T) {
 		t.Parallel()
-		var obj *HelloOutputBody
+		var obj *HelloMetaResponse
 		// Should not panic - getters should handle nil receiver gracefully
 		defer func() {
 			if r := recover(); r != nil {
@@ -46,11 +46,11 @@ func TestGettersHelloOutputBody(t *testing.T) {
 
 }
 
-func TestSettersMarkExplicitHelloOutputBody(t *testing.T) {
+func TestSettersMarkExplicitHelloMetaResponse(t *testing.T) {
 	t.Run("SetMessage_MarksExplicit", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		obj := &HelloOutputBody{}
+		obj := &HelloMetaResponse{}
 		var fernTestValueMessage string
 
 		// Act
@@ -80,11 +80,11 @@ func TestSettersMarkExplicitHelloOutputBody(t *testing.T) {
 
 }
 
-func TestJSONMarshalingHelloOutputBody(t *testing.T) {
+func TestJSONMarshalingHelloMetaResponse(t *testing.T) {
 	t.Run("MarshalUnmarshal", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
-		obj := &HelloOutputBody{}
+		obj := &HelloMetaResponse{}
 
 		// Act - Marshal to JSON
 		data, err := json.Marshal(obj)
@@ -93,46 +93,46 @@ func TestJSONMarshalingHelloOutputBody(t *testing.T) {
 		assert.NotEmpty(t, data, "marshaled data should not be empty")
 
 		// Unmarshal back and verify round-trip
-		var unmarshaled HelloOutputBody
+		var unmarshaled HelloMetaResponse
 		err = json.Unmarshal(data, &unmarshaled)
 		assert.NoError(t, err, "round-trip unmarshal should succeed")
 	})
 
 	t.Run("UnmarshalInvalidJSON", func(t *testing.T) {
 		t.Parallel()
-		var obj HelloOutputBody
+		var obj HelloMetaResponse
 		err := json.Unmarshal([]byte(`{invalid json}`), &obj)
 		assert.Error(t, err, "unmarshaling invalid JSON should return an error")
 	})
 
 	t.Run("UnmarshalEmptyObject", func(t *testing.T) {
 		t.Parallel()
-		var obj HelloOutputBody
+		var obj HelloMetaResponse
 		err := json.Unmarshal([]byte(`{}`), &obj)
 		assert.NoError(t, err, "unmarshaling empty object should succeed")
 	})
 }
 
-func TestStringHelloOutputBody(t *testing.T) {
+func TestStringHelloMetaResponse(t *testing.T) {
 	t.Run("StringMethod", func(t *testing.T) {
 		t.Parallel()
-		obj := &HelloOutputBody{}
+		obj := &HelloMetaResponse{}
 		result := obj.String()
 		assert.NotEmpty(t, result, "String() should return a non-empty representation")
 	})
 
 	t.Run("StringMethod_NilReceiver", func(t *testing.T) {
 		t.Parallel()
-		var obj *HelloOutputBody
+		var obj *HelloMetaResponse
 		result := obj.String()
 		assert.Equal(t, "<nil>", result, "String() should return <nil> for nil receiver")
 	})
 }
 
-func TestExtraPropertiesHelloOutputBody(t *testing.T) {
+func TestExtraPropertiesHelloMetaResponse(t *testing.T) {
 	t.Run("GetExtraProperties", func(t *testing.T) {
 		t.Parallel()
-		obj := &HelloOutputBody{}
+		obj := &HelloMetaResponse{}
 		// Should not panic when calling GetExtraProperties()
 		defer func() {
 			if r := recover(); r != nil {
@@ -146,7 +146,7 @@ func TestExtraPropertiesHelloOutputBody(t *testing.T) {
 
 	t.Run("GetExtraProperties_NilReceiver", func(t *testing.T) {
 		t.Parallel()
-		var obj *HelloOutputBody
+		var obj *HelloMetaResponse
 		extraProps := obj.GetExtraProperties()
 		assert.Nil(t, extraProps, "nil receiver should return nil without panicking")
 	})

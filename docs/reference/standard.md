@@ -29,6 +29,43 @@ What else is the same in every project:
 
 `projects.test.ts` fails if a project's scripts differ, or two projects use one package at different versions.
 
+## Refusals
+
+Every refusal is [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem details, `application/problem+json`, the same from Go and from TypeScript:
+
+```json
+{"title":"Unprocessable Entity","status":422,"detail":"validation failed","errors":[{"message":"expected number >= 1","location":"query.limit","value":0}]}
+```
+
+They are checked in this order, the first that fails answers:
+
+| Status | When | `detail`, `errors` |
+|---|---|---|
+| 404 | No route has the path (a trailing slash included) | `not found` |
+| 405 | The path has other methods: `Allow` names them, sorted | `method not allowed` |
+| 401, 403 | No credentials the API knows, or not the scope: `WWW-Authenticate` says how to get in | Why, e.g. `credentials are required: ...` |
+| 429 | Over the operation's limit: `Retry-After` | `too many calls: ...` |
+| 415 | A body of a media type the operation does not take | `validation failed`, at `body` |
+| 400 | A required body that is empty, or JSON that does not parse | `request body is required`; `validation failed` with `the body is not valid JSON` |
+| 422 | The contract refuses the input: each error says where (`query.limit`, `body.note`, `path.id`) | `validation failed`, in Huma's words (`expected required property body to be present`) |
+| 426 | A channel's address without a WebSocket upgrade, once let in | `expected a WebSocket upgrade` |
+
+A handler that refuses what the contract lets through says where: `refused("query.cursor", "not a cursor from next_cursor", value)` in TypeScript, `huma.Error422UnprocessableEntity` with an `ErrorDetail` in Go. At `/api/mcp`, a refused tool call's text is the same problem details, and one refused for its credentials is that 401 or 403 itself.
+
+## The document
+
+Both libraries write the OpenAPI document the same way, so the SDKs Fern makes from either are the same: OpenAPI 3.1.0; a request or response body inline (as Fern names its type from the operation); every operation's refusals declared as problem details (401 when it needs credentials, 422 when it takes input, its 429 when it is limited, any other it declares, and a default); a parameter's description on it and on its schema; a file as `contentMediaType: application/octet-stream`; examples on every field.
+
+## Held the same
+
+Each API that is here in TypeScript and in Go (conformance, notes, start) answers the same in both, with the TypeScript project as the reference:
+
+```sh
+npx charter-ts twins ts/conformance go/conformance
+```
+
+It runs both under workerd, as deployed, and sends both the requests the reference's specs give rise to: for each operation the right one and each kind of wrong one, for each channel one that is no upgrade, and what every API serves. It prints every answer that differs and fails if one does; the `twins` job runs it for each pair. The requests come from the spec, so a new route is covered without editing anything.
+
 ## Go
 
 ```go

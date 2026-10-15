@@ -186,60 +186,12 @@ func channels(doc map[string]any) map[string]string {
 	return out
 }
 
-// set puts value at path in doc, making the maps on the way.
-func set(doc map[string]any, value any, path ...string) {
-	for _, key := range path[:len(path)-1] {
-		next, ok := doc[key].(map[string]any)
-		if !ok {
-			next = map[string]any{}
-			doc[key] = next
-		}
-		doc = next
-	}
-	doc[path[len(path)-1]] = value
-}
-
 // The Go contract and the oRPC conformance contract describe the same API: every operation, webhook,
-// document-level setting and channel an SDK sees must be the same in both generated specs.
-//
-// They differ in a few places, each on purpose. Every difference is written down here as a change
-// to the oRPC document, and must really change it: when a difference has gone, its entry fails the
-// test, so the list stays true. (What the comparison leaves out altogether is said on shape and
-// operation above.)
+// document-level setting and channel an SDK sees must be the same in both generated specs, with no
+// difference tolerated (the oRPC one is the reference). What the comparison leaves out is said on
+// shape and operation above; what the servers answer is compared by twins.ts.
 func TestSameSurfaceAsTheORPCConformance(t *testing.T) {
-	type difference struct {
-		why   string
-		apply func(openapi, asyncapi map[string]any)
-	}
-	differences := []difference{
-		{"`limit` has bounds and a default in the Go contract (1 to 100, 2). The oRPC contract leaves it open, and its handler gives two",
-			func(openapi, _ map[string]any) {
-				for _, p := range asList(at(openapi, "paths", "/api/notes", "get", "parameters")) {
-					if at(p, "name") == "limit" {
-						set(asMap(p), map[string]any{"type": "integer", "minimum": 1.0, "maximum": 100.0, "default": 2.0}, "schema")
-					}
-				}
-			}},
-		{"The channel's `access_token` query parameter is declared in the Go contract, so connect() takes it typed. The oRPC server reads it undeclared: its generator has no channel with query parameters and a send side together",
-			func(_, asyncapi map[string]any) {
-				set(asyncapi, map[string]any{"type": "object", "properties": map[string]any{"access_token": map[string]any{"type": "string"}}}, "channels", "liveNotes", "bindings", "ws", "query")
-			}},
-	}
-
 	openapi, asyncapi := parse(t, read(t, reference+"openapi.json")), parse(t, read(t, reference+"asyncapi.json"))
-	text := func() string {
-		a, _ := json.Marshal(surface(openapi))
-		b, _ := json.Marshal(channels(asyncapi))
-		return string(a) + string(b)
-	}
-	for _, d := range differences {
-		before := text()
-		d.apply(openapi, asyncapi)
-		if text() == before {
-			t.Errorf("this difference is gone, so take it off the list: %s", d.why)
-		}
-	}
-
 	compare := func(what string, want, got map[string]string) {
 		for key, w := range want {
 			if got[key] != w {

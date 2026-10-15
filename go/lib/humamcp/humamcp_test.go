@@ -228,10 +228,11 @@ func TestEveryOperationThatAnswersOnceIsATool(t *testing.T) {
 func TestInputSchemaIsParametersAndBodyInOneObject(t *testing.T) {
 	list := tools(t, Handler(testAPI(map[string]int{})))
 
-	// Path, query and header parameters; the hidden header is not there.
+	// Path, query and header parameters; the hidden header is not there. Another parameter is taken, as
+	// the REST route ignores one it does not know.
 	get := list["getThing"]
 	same(t, "getThing.inputSchema", get["inputSchema"], `{
-		"type": "object", "additionalProperties": false, "required": ["id"],
+		"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["id"],
 		"properties": {
 			"id": {"type": "integer", "format": "int64", "description": "The thing's id"},
 			"verbose": {"type": "boolean"},
@@ -247,7 +248,7 @@ func TestInputSchemaIsParametersAndBodyInOneObject(t *testing.T) {
 	// refers to is in $defs.
 	create := list["createThing"]
 	same(t, "createThing.inputSchema", create["inputSchema"], `{
-		"type": "object", "additionalProperties": false, "required": ["name"],
+		"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "required": ["name"],
 		"properties": {
 			"dry": {"type": "boolean"},
 			"name": {"type": "string", "minLength": 2},
@@ -261,13 +262,13 @@ func TestInputSchemaIsParametersAndBodyInOneObject(t *testing.T) {
 	same(t, "createThing.annotations", create["annotations"], `{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false}`)
 	// The output is an object: its schema is given, standing alone.
 	same(t, "createThing.outputSchema", create["outputSchema"], `{
-		"type": "object", "additionalProperties": false, "required": ["id", "name"],
+		"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "required": ["id", "name"],
 		"properties": {"id": {"type": "integer", "format": "int64"}, "name": {"type": "string"}, "tags": {"type": ["array", "null"], "items": {"type": "string"}}, "trace": {"type": "string"}, "auth": {"type": "string"}}}`)
 
 	// A body that is not an object is the argument "body"; an array output has no outputSchema.
 	replace := list["replaceThings"]
 	same(t, "replaceThings.inputSchema", replace["inputSchema"], `{
-		"type": "object", "additionalProperties": false, "required": ["body"],
+		"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["body"],
 		"properties": {"body": {"type": ["array", "null"], "items": {"type": "string"}}}}`)
 	if replace["outputSchema"] != nil {
 		t.Errorf("replaceThings.outputSchema: %v", replace["outputSchema"])
@@ -407,7 +408,7 @@ func TestProtocolErrors(t *testing.T) {
 			t.Errorf("%s: HTTP %d %s, want HTTP %d and error %d", name, a.Status, a.Raw, test.status, test.code)
 		}
 	}
-	if a := post(t, h, rpc("tools/call", `{"name":"nope"}`)); a.Error == nil || a.Error.Message != "Unknown tool: nope" || a.ID != float64(7) {
+	if a := post(t, h, rpc("tools/call", `{"name":"nope"}`)); a.Error == nil || a.Error.Message != "Tool nope not found" || a.ID != float64(7) {
 		t.Errorf("unknown tool: %s", a.Raw)
 	}
 }
@@ -582,7 +583,7 @@ func clashAPI() *humaworkers.API {
 func TestABodyPropertyNamedAsAParameterKeepsTheBodyWhole(t *testing.T) {
 	h := Handler(clashAPI())
 	same(t, "clash.inputSchema", tools(t, h)["clash"]["inputSchema"], `{
-		"type": "object", "additionalProperties": false, "required": ["id", "body"],
+		"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["id", "body"],
 		"properties": {
 			"id": {"type": "string"},
 			"body": {

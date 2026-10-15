@@ -10,17 +10,17 @@ import (
 )
 
 var (
-	createInputBodyFieldBody = big.NewInt(1 << 0)
+	createNotesRequestFieldBody = big.NewInt(1 << 0)
 )
 
-type CreateInputBody struct {
+type CreateNotesRequest struct {
 	Body string `json:"body" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
 }
 
-func (c *CreateInputBody) require(field *big.Int) {
+func (c *CreateNotesRequest) require(field *big.Int) {
 	next := new(big.Int)
 	if c.explicitFields != nil {
 		next.Set(c.explicitFields)
@@ -31,23 +31,23 @@ func (c *CreateInputBody) require(field *big.Int) {
 
 // SetBody sets the Body field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CreateInputBody) SetBody(body string) {
+func (c *CreateNotesRequest) SetBody(body string) {
 	c.Body = body
-	c.require(createInputBodyFieldBody)
+	c.require(createNotesRequestFieldBody)
 }
 
-func (c *CreateInputBody) UnmarshalJSON(data []byte) error {
-	type unmarshaler CreateInputBody
+func (c *CreateNotesRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateNotesRequest
 	var body unmarshaler
 	if err := json.Unmarshal(data, &body); err != nil {
 		return err
 	}
-	*c = CreateInputBody(body)
+	*c = CreateNotesRequest(body)
 	return nil
 }
 
-func (c *CreateInputBody) MarshalJSON() ([]byte, error) {
-	type embed CreateInputBody
+func (c *CreateNotesRequest) MarshalJSON() ([]byte, error) {
+	type embed CreateNotesRequest
 	var marshaler = struct {
 		embed
 	}{
@@ -92,109 +92,6 @@ func (l *ListNotesRequest) SetCursor(cursor *string) {
 func (l *ListNotesRequest) SetLimit(limit *int) {
 	l.Limit = limit
 	l.require(listNotesRequestFieldLimit)
-}
-
-var (
-	listOutputBodyFieldData       = big.NewInt(1 << 0)
-	listOutputBodyFieldNextCursor = big.NewInt(1 << 1)
-)
-
-type ListOutputBody struct {
-	Data []*Note `json:"data" url:"data"`
-	// Pass as cursor for the next page; absent on the last page
-	NextCursor *string `json:"next_cursor,omitempty" url:"next_cursor,omitempty"`
-
-	// Private bitmask of fields set to an explicit value and therefore not to be omitted
-	explicitFields *big.Int `json:"-" url:"-"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (l *ListOutputBody) GetData() []*Note {
-	if l == nil {
-		return nil
-	}
-	return l.Data
-}
-
-func (l *ListOutputBody) GetNextCursor() *string {
-	if l == nil {
-		return nil
-	}
-	return l.NextCursor
-}
-
-func (l *ListOutputBody) GetExtraProperties() map[string]interface{} {
-	if l == nil {
-		return nil
-	}
-	return l.extraProperties
-}
-
-func (l *ListOutputBody) require(field *big.Int) {
-	next := new(big.Int)
-	if l.explicitFields != nil {
-		next.Set(l.explicitFields)
-	}
-	next.Or(next, field)
-	l.explicitFields = next
-}
-
-// SetData sets the Data field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (l *ListOutputBody) SetData(data []*Note) {
-	l.Data = data
-	l.require(listOutputBodyFieldData)
-}
-
-// SetNextCursor sets the NextCursor field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (l *ListOutputBody) SetNextCursor(nextCursor *string) {
-	l.NextCursor = nextCursor
-	l.require(listOutputBodyFieldNextCursor)
-}
-
-func (l *ListOutputBody) UnmarshalJSON(data []byte) error {
-	type unmarshaler ListOutputBody
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*l = ListOutputBody(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *l)
-	if err != nil {
-		return err
-	}
-	l.extraProperties = extraProperties
-	l.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (l *ListOutputBody) MarshalJSON() ([]byte, error) {
-	type embed ListOutputBody
-	var marshaler = struct {
-		embed
-	}{
-		embed: embed(*l),
-	}
-	explicitMarshaler := internal.HandleExplicitFields(marshaler, l.explicitFields)
-	return json.Marshal(explicitMarshaler)
-}
-
-func (l *ListOutputBody) String() string {
-	if l == nil {
-		return "<nil>"
-	}
-	if len(l.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(l.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(l); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", l)
 }
 
 var (
@@ -313,6 +210,109 @@ func (n *Note) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", n)
+}
+
+var (
+	listNotesResponseFieldData       = big.NewInt(1 << 0)
+	listNotesResponseFieldNextCursor = big.NewInt(1 << 1)
+)
+
+type ListNotesResponse struct {
+	Data []*Note `json:"data" url:"data"`
+	// Pass as cursor for the next page; absent on the last page
+	NextCursor *string `json:"next_cursor,omitempty" url:"next_cursor,omitempty"`
+
+	// Private bitmask of fields set to an explicit value and therefore not to be omitted
+	explicitFields *big.Int `json:"-" url:"-"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (l *ListNotesResponse) GetData() []*Note {
+	if l == nil {
+		return nil
+	}
+	return l.Data
+}
+
+func (l *ListNotesResponse) GetNextCursor() *string {
+	if l == nil {
+		return nil
+	}
+	return l.NextCursor
+}
+
+func (l *ListNotesResponse) GetExtraProperties() map[string]interface{} {
+	if l == nil {
+		return nil
+	}
+	return l.extraProperties
+}
+
+func (l *ListNotesResponse) require(field *big.Int) {
+	next := new(big.Int)
+	if l.explicitFields != nil {
+		next.Set(l.explicitFields)
+	}
+	next.Or(next, field)
+	l.explicitFields = next
+}
+
+// SetData sets the Data field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (l *ListNotesResponse) SetData(data []*Note) {
+	l.Data = data
+	l.require(listNotesResponseFieldData)
+}
+
+// SetNextCursor sets the NextCursor field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (l *ListNotesResponse) SetNextCursor(nextCursor *string) {
+	l.NextCursor = nextCursor
+	l.require(listNotesResponseFieldNextCursor)
+}
+
+func (l *ListNotesResponse) UnmarshalJSON(data []byte) error {
+	type unmarshaler ListNotesResponse
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*l = ListNotesResponse(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *l)
+	if err != nil {
+		return err
+	}
+	l.extraProperties = extraProperties
+	l.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (l *ListNotesResponse) MarshalJSON() ([]byte, error) {
+	type embed ListNotesResponse
+	var marshaler = struct {
+		embed
+	}{
+		embed: embed(*l),
+	}
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, l.explicitFields)
+	return json.Marshal(explicitMarshaler)
+}
+
+func (l *ListNotesResponse) String() string {
+	if l == nil {
+		return "<nil>"
+	}
+	if len(l.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(l.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(l); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", l)
 }
 
 var (

@@ -26,6 +26,9 @@
             "properties": {
               "after": {
                 "description": "Resume after this note id (the id of the last note you received). Absent: only notes created from now on",
+                "examples": [
+                  "42"
+                ],
                 "type": "string",
                 "pattern": "^\\d+$"
               }
@@ -53,27 +56,40 @@
       "Note": {
         "name": "Note",
         "payload": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
-            },
-            "body": {
-              "type": "string"
-            },
-            "created_at": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "id",
-            "body",
-            "created_at"
-          ],
-          "additionalProperties": false
+          "$ref": "#/components/schemas/Note"
         }
+      }
+    },
+    "schemas": {
+      "Note": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "examples": [
+              42
+            ]
+          },
+          "body": {
+            "type": "string",
+            "examples": [
+              "Buy milk"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "examples": [
+              "2026-10-01 12:00:00"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "body",
+          "created_at"
+        ],
+        "additionalProperties": false
       }
     }
   }

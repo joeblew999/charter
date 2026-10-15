@@ -60,7 +60,7 @@ func (c *Client) List(
 	ctx context.Context,
 	request *notes.ListNotesRequest,
 	opts ...option.RequestOption,
-) (*core.Page[*string, *notes.Note, *notes.ListOutputBody], error) {
+) (*core.Page[*string, *notes.Note, *notes.ListNotesResponse], error) {
 	options := core.NewRequestOptions(opts...)
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
@@ -105,11 +105,11 @@ func (c *Client) List(
 			ErrorDecoder:    internal.NewErrorDecoder(notes.ErrorCodes),
 		}
 	}
-	readPageResponse := func(response *notes.ListOutputBody) *core.PageResponse[*string, *notes.Note, *notes.ListOutputBody] {
+	readPageResponse := func(response *notes.ListNotesResponse) *core.PageResponse[*string, *notes.Note, *notes.ListNotesResponse] {
 		var zeroValue *string
 		next := response.GetNextCursor()
 		results := response.GetData()
-		return &core.PageResponse[*string, *notes.Note, *notes.ListOutputBody]{
+		return &core.PageResponse[*string, *notes.Note, *notes.ListNotesResponse]{
 			Results:  results,
 			Response: response,
 			Next:     next,
@@ -126,7 +126,7 @@ func (c *Client) List(
 
 // Example:
 //
-//	request := &notes.CreateInputBody{
+//	request := &notes.CreateNotesRequest{
 //	    Body: "Buy milk",
 //	}
 //	client.Notes.Create(
@@ -135,7 +135,7 @@ func (c *Client) List(
 //	)
 func (c *Client) Create(
 	ctx context.Context,
-	request *notes.CreateInputBody,
+	request *notes.CreateNotesRequest,
 	opts ...option.RequestOption,
 ) (*notes.Note, error) {
 	response, err := c.WithRawResponse.Create(

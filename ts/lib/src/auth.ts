@@ -24,6 +24,7 @@
 // key is not among them makes a new fetch, at most every 30 s.
 import { getOpenAPIMeta, type OpenAPIV3_2 } from "@orpc/openapi";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import { problem } from "./problem.ts";
 
 /** The security schemes' names in the specs. */
 export const NAME = "bearer";
@@ -257,7 +258,7 @@ export function wellKnown(request: Request, api: API): Response | undefined {
 	}
 	if (path === OPENID_PATH || path === `${own}${OPENID_PATH}`) {
 		const to = discoveryURL(api.trusted.oidc?.issuer);
-		return to ? Response.redirect(to, 302) : new Response("this API trusts no OpenID Connect issuer", { status: 404 });
+		return to ? Response.redirect(to, 302) : problem(404, "this API trusts no OpenID Connect issuer");
 	}
 	return undefined;
 }

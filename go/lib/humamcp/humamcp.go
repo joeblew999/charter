@@ -56,6 +56,7 @@ const (
 	headerMismatch     = -32020
 	unsupportedVersion = -32022
 	unauthorized       = -32001 // a server error (JSON-RPC's -32000 to -32099): the HTTP status says which
+	serverError        = -32000 // what the MCP SDK answers a request that is no POST with
 )
 
 const (
@@ -98,10 +99,10 @@ func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusForbidden, nil, invalidRequest, "Origin "+origin+" is not this server's", nil)
 		return
 	}
-	// No stream to open (GET) and no session to end (DELETE).
+	// No stream to open (GET) and no session to end (DELETE): answered as the MCP SDK answers.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed: MCP messages are POSTed", http.StatusMethodNotAllowed)
+		fail(w, http.StatusMethodNotAllowed, json.RawMessage("null"), serverError, "Method not allowed.", nil)
 		return
 	}
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxBody+1))
@@ -116,7 +117,7 @@ func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var msg message
 	if err := json.Unmarshal(body, &msg); err != nil {
-		fail(w, http.StatusBadRequest, nil, parseError, "Parse error: "+err.Error(), nil)
+		fail(w, http.StatusBadRequest, json.RawMessage("null"), parseError, "Parse error: Invalid JSON", nil)
 		return
 	}
 	if msg.JSONRPC != "2.0" || msg.Method == "" || string(msg.ID) == "null" {
@@ -195,7 +196,7 @@ func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	default:
-		fail(w, http.StatusNotFound, msg.ID, methodNotFound, "Method not found: "+msg.Method, nil)
+		fail(w, http.StatusNotFound, msg.ID, methodNotFound, "Method not found", nil)
 		return
 	}
 	// Every result says it is final (there are no input_required ones) and who answered.
@@ -226,7 +227,7 @@ func (s server) legacy(w http.ResponseWriter, r *http.Request, msg message, p pa
 	case "tools/call":
 		result = s.call(w, r, msg, p)
 	default:
-		fail(w, http.StatusOK, msg.ID, methodNotFound, "Method not found: "+msg.Method, nil)
+		fail(w, http.StatusOK, msg.ID, methodNotFound, "Method not found", nil)
 		return
 	}
 	if result != nil {
@@ -260,7 +261,7 @@ func (s server) list() map[string]any {
 func (s server) call(w http.ResponseWriter, r *http.Request, msg message, p params) map[string]any {
 	op := s.api.Operation(p.Name)
 	if p.Name == "" || op == nil || !IsTool(op) {
-		fail(w, http.StatusOK, msg.ID, invalidParams, "Unknown tool: "+p.Name, nil)
+		fail(w, http.StatusOK, msg.ID, invalidParams, "Tool "+p.Name+" not found", nil)
 		return nil
 	}
 	arguments := map[string]any{}
@@ -278,11 +279,17 @@ func (s server) call(w http.ResponseWriter, r *http.Request, msg message, p para
 		// The operation asks for credentials: the answer is its 401 or 403 and its challenge, which
 		// says where the API tells a client how to get in, so an MCP client knows to sign in.
 		w.Header().Set("WWW-Authenticate", refused.challenge)
+		// Its message is the refusal's own reason (the problem's detail), as charter-lib's says.
 		var data any
+		message := http.StatusText(refused.status)
 		if refused.body != nil {
 			data = refused.body
+			var problem struct{ Detail string }
+			if json.Unmarshal(refused.body, &problem) == nil && problem.Detail != "" {
+				message = problem.Detail
+			}
 		}
-		fail(w, refused.status, msg.ID, unauthorized, http.StatusText(refused.status), data)
+		fail(w, refused.status, msg.ID, unauthorized, message, data)
 		return nil
 	}
 	return result

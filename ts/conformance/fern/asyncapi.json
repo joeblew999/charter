@@ -13,12 +13,26 @@
   "channels": {
     "liveNotes": {
       "address": "/api/notes/live",
+      "summary": "Note events over a WebSocket: send `subscribe` with a topic, receive that topic's events",
       "messages": {
         "NoteEvent": {
           "$ref": "#/components/messages/NoteEvent"
         },
         "Subscribe": {
           "$ref": "#/components/messages/Subscribe"
+        }
+      },
+      "bindings": {
+        "ws": {
+          "query": {
+            "type": "object",
+            "properties": {
+              "access_token": {
+                "description": "The OAuth token, for clients that can't send WebSocket headers (browsers, Workers). Others send Authorization",
+                "type": "string"
+              }
+            }
+          }
         }
       }
     }
@@ -52,42 +66,63 @@
       "NoteEvent": {
         "name": "NoteEvent",
         "payload": {
-          "type": "object",
-          "properties": {
-            "event": {
-              "type": "string"
-            },
-            "id": {
-              "type": "string"
-            },
-            "body": {
-              "type": "string"
-            },
-            "auth": {
-              "description": "The Authorization value the server received on connecting: the harness test reads it",
-              "type": "string"
-            }
-          },
-          "required": [
-            "event",
-            "id"
-          ],
-          "additionalProperties": false
+          "$ref": "#/components/schemas/NoteEvent"
         }
       },
       "Subscribe": {
         "name": "Subscribe",
         "payload": {
-          "type": "object",
-          "properties": {
-            "topic": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "topic"
-          ]
+          "$ref": "#/components/schemas/Subscribe"
         }
+      }
+    },
+    "schemas": {
+      "NoteEvent": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "examples": [
+              "notes.created"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "examples": [
+              "note-1"
+            ]
+          },
+          "body": {
+            "examples": [
+              "Buy milk"
+            ],
+            "type": "string"
+          },
+          "auth": {
+            "description": "The Authorization value the server received on connecting: the harness test reads it",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "Subscribe": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "examples": [
+              "notes"
+            ]
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "additionalProperties": false
       }
     }
   }

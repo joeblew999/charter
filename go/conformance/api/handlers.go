@@ -277,18 +277,22 @@ func (env Env) upload(_ context.Context, in *UploadInput) (*UploadOutput, error)
 
 // ---- chat: SSE ----
 
-// chat streams the reply as SSE: one `data:` event per word, each a Chunk, the last with done.
+// chat streams the reply as SSE, framed as the oRPC conformance frames it: a comment first, one
+// `message` event per word, each a Chunk, the last with done, then a `close` event.
 func (env Env) chat(_ context.Context, in *ChatInput) (*huma.StreamResponse, error) {
 	words := strings.Split("echo "+in.Body.Prompt, " ")
 	return &huma.StreamResponse{Body: func(hc huma.Context) {
 		hc.SetHeader("Content-Type", "text/event-stream")
 		w := flushing(hc.BodyWriter())
+		if _, err := io.WriteString(w, ": \n\n"); err != nil {
+			return
+		}
 		for i, word := range words {
 			data, err := json.Marshal(Chunk{Text: word, Done: i == len(words)-1})
 			if err != nil {
 				return
 			}
-			if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+			if _, err := fmt.Fprintf(w, "event: message\ndata: %s\n\n", data); err != nil {
 				return
 			}
 			select {
@@ -297,6 +301,7 @@ func (env Env) chat(_ context.Context, in *ChatInput) (*huma.StreamResponse, err
 			case <-time.After(10 * time.Millisecond):
 			}
 		}
+		io.WriteString(w, "event: close\n\n")
 	}}, nil
 }
 

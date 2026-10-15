@@ -34,7 +34,7 @@ func NewRawClient(options *core.RequestOptions) *RawClient {
 
 func (r *RawClient) Create(
 	ctx context.Context,
-	request *notes.CreateInputBody,
+	request *notes.CreateNotesRequest,
 	opts ...option.RequestOption,
 ) (*core.Response[*notes.Note], error) {
 	options := core.NewRequestOptions(opts...)

@@ -47,7 +47,7 @@
         "additionalProperties": false,
         "properties": {
           "auth": {
-            "description": "The Authorization the server saw on this socket",
+            "description": "The Authorization value the server received on connecting: the harness test reads it",
             "type": "string"
           },
           "body": {
