@@ -54,6 +54,17 @@ How long a fresh TinyGo build of the notes Worker takes (`go/examples-notes`, pa
 
 The smallest build is also the quickest: most of a build is wasm-opt's asyncify pass, and it takes longer the bigger the Wasm. So there is no faster build for local checks to switch to; a build is quick when charter's cache has it (the same sources make the same Wasm). TinyGo 0.43.0 builds in the same time as 0.42.0 and makes a Wasm 15 % bigger. Its first build after the upgrade took 38.7 s, while TinyGo filled its own caches.
 
+## The Worker as a deploy uploads it
+
+What `cf build` makes of each notes Worker (`npx charter-ts bundle`), 2026-10-15, TinyGo 0.43.0:
+
+| Worker | Bundle | Gzipped |
+|---|---|---|
+| `ts/examples-notes` | 1.02 MB | 0.24 MB |
+| `go/examples-notes` (the Wasm is 1.38 MB of it, gzipped) | 3.83 MB | 1.38 MB |
+
+Workers Free allows 3 MB gzipped, Workers Paid 10 MB.
+
 ## What closed the gap
 
 The Go Worker's median CPU, 2026-10-01 and 2026-10-02:

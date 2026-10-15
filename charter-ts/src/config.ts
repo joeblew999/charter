@@ -26,6 +26,9 @@ export interface Config {
 	sdkInWorker?: string;
 	/** More modes to deploy after the default one (cf deploy --mode): the same code as another Worker. */
 	deployModes?: readonly string[];
+	/** The most the Worker's bundle may be, as a deploy uploads it, gzipped: check fails over it.
+	 * Workers Free allows 3 MB (the default, 3000000), Workers Paid 10 MB. */
+	bundleLimit?: number;
 	/** charter-ts test:workerd: the Worker under workerd (cf dev) on a free port, and these tests against it. */
 	test: Tests;
 	/** charter-ts test:native, in Go: the API run natively (go run .) on a free port, and these tests against it. */

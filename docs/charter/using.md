@@ -43,6 +43,7 @@ Those marked * work in any repo; the others in a project, a folder with a `chart
 | `spec` | write both specs from the contract into fern/ |
 | `spec:check` | fail if a committed spec is stale against the contract |
 | `test:native` | Go: the API natively (go run .) on a free port, and the config's native tests against it |
+| `bundle` | the Worker as a deploy would upload it (cf build, a Go Worker built first), and how big it is, gzipped, against its limit (charter.config.ts: bundleLimit; Workers Free's 3 MB by default); fails over it |
 | `test:workerd` | the Worker under workerd (cf dev) on a free port (a Go Worker built first), its local database migrated, and the config's tests against it |
 | `sdk [group]` | generate a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>; by default the TypeScript SDK |
 | `go:check <folder>` * | a Go module's check, for one that is not a project (go/lib): gofmt, go vet for the host and for Wasm, go test |

@@ -138,7 +138,7 @@ export function goBuild(config: GoConfig, fresh = false): void {
 		run(program, args, { TINYGOROOT: tinygoRoot() });
 		copyFileSync(join("build", "app.wasm"), cached);
 	}
-	if (made(join("build", "app.wasm"), "the Worker, TinyGo", maxBytes) > maxBytes) throw new Error("build/app.wasm is over the limit");
+	if (made(join("build", "app.wasm"), "the Worker's Wasm", maxBytes) > maxBytes) throw new Error("build/app.wasm is over the limit");
 }
 
 /** buildKey names what goes into the Wasm: the Go version, TinyGo's pins and patches, the build's

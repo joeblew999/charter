@@ -54,7 +54,7 @@ export default defineConfig({
 });
 ```
 
-Every field is documented in [`Config`](https://github.com/joeblew999/charter/blob/main/charter-ts/src/config.ts): secrets, throwaway local secrets, more environment for the tests, more deploy modes, the SDK copied into a Worker. A test run gets the server's port and three more free ones (`extras`) for what the tests serve, and `serve` names programs that run beside the server for its whole run, such as a webhook's receiver: the conformance projects serve a token issuer on one port and a receiver on another (`ts/conformance/charter.config.ts`).
+Every field is documented in [`Config`](https://github.com/joeblew999/charter/blob/main/charter-ts/src/config.ts): secrets, throwaway local secrets, more environment for the tests, more deploy modes, the SDK copied into a Worker, and the most the Worker may be as a deploy uploads it (`bundleLimit`: 3 MB gzipped, what Workers Free allows, by default). A test run gets the server's port and three more free ones (`extras`) for what the tests serve, and `serve` names programs that run beside the server for its whole run, such as a webhook's receiver: the conformance projects serve a token issuer on one port and a receiver on another (`ts/conformance/charter.config.ts`).
 
 ## The library
 

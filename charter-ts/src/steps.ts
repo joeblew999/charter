@@ -193,8 +193,12 @@ export const steps: Record<string, Step> = {
 			if (unit.length > 0) await timed("unit tests", () => run("node", ["--test", ...unit.map(name => `test/${name}`)]));
 			if (config.native) await timed("native", () => steps["test:native"].run([]));
 			await timed(config.go ? "build + workerd" : "workerd", () => steps["test:workerd"].run(fresh ? ["--fresh"] : []));
-			const { seconds } = await scripts();
-			console.log(`check took ${seconds(times.reduce((sum, [, ms]) => sum + ms, 0))}: ${times.map(([name, ms]) => `${name} ${seconds(ms)}`).join(", ")}`);
+			// The Worker was built for workerd: measured as a deploy would upload it.
+			await timed("bundle", async () => (await scripts()).bundle(config));
+			// How long each part took, and what the check made, with each limit.
+			const { madeThisRun, megabytes, seconds } = await scripts();
+			const sizes = madeThisRun.map(({ what, gzipped, limit }) => `${what} ${megabytes(gzipped)} gzipped${limit ? ` of ${megabytes(limit)}` : ""}`);
+			console.log(`check took ${seconds(times.reduce((sum, [, ms]) => sum + ms, 0))}: ${times.map(([name, ms]) => `${name} ${seconds(ms)}`).join(", ")}${sizes.length ? `; made ${sizes.join(", ")}` : ""}`);
 		},
 	},
 	spec: { usage: "spec", about: "write both specs from the contract into fern/", run: () => specs(false) },
@@ -206,6 +210,15 @@ export const steps: Record<string, Step> = {
 			const config = await load();
 			if (!config.native) throw new Error("charter.config.ts has no native tests");
 			await serve(config, config.native, "go", ["run", "."]);
+		},
+	},
+	bundle: {
+		usage: "bundle",
+		about: "the Worker as a deploy would upload it (cf build, a Go Worker built first), and how big it is, gzipped, against its limit (charter.config.ts: bundleLimit; Workers Free's 3 MB by default); fails over it",
+		run: async () => {
+			const config = await load();
+			await built(config);
+			(await scripts()).bundle(config);
 		},
 	},
 	"test:workerd": {
