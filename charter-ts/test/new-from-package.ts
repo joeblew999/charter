@@ -29,10 +29,11 @@ try {
 	mkdirSync(unpacked);
 	run("tar", ["-xzf", tarball("charter-ts"), "-C", unpacked], scratch);
 	for (const template of projects) {
-		const into = join(scratch, `demo-${template}`);
+		// A name that sorts after github.com: the project's own imports move past the Go library's.
+		const into = join(scratch, `my-${template}`);
 		const go = template.startsWith("go-");
 		// new, run from the package: no charter repo around it, so the template is the packed one.
-		run("node", [join(unpacked, "package", "bin", "charter-ts.js"), "new", `demo-${template}`, "--from", template.replace(/^go-/, ""), ...(go ? ["--go"] : []), "--into", into], scratch, { CHARTER_SOURCE: source });
+		run("node", [join(unpacked, "package", "bin", "charter-ts.js"), "new", `my-${template}`, "--from", template.replace(/^go-/, ""), ...(go ? ["--go"] : []), "--into", into], scratch, { CHARTER_SOURCE: source });
 		// The release's Go library is not tagged yet: this repo's instead.
 		if (go) {
 			writeFileSync(join(into, "go.mod"), `${readFileSync(join(into, "go.mod"), "utf8")}\nreplace github.com/joeblew999/charter/go/lib => ${resolve("go/lib")}\n`);

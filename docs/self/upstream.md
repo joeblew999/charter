@@ -11,6 +11,7 @@ nav_order: 16
 | Cloudflare's workers-sdk, not filed | Under `cf dev`, a request answered before its body was read makes the next request on the connection fail (`fetch failed`, a 500 from the dev server) | `charter-lib/serve` reads a body the answer did not (`ts/lib/src/serve.ts`) | Drop that |
 | [tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800) | The collector runs at every pause of a workers-go program | A runtime patch and an 8 MB heap (`charter-ts/src/go.ts`) | Drop the patch |
 | [tinygo#5798](https://github.com/tinygo-org/tinygo/issues/5798) | Go timers stall on Cloudflare | `go/lib/worker/tinygo-clock.mjs` | Delete it |
+| [tinygo#5684](https://github.com/tinygo-org/tinygo/issues/5684) | `hash/maphash` does not compile with Go 1.27, the first of eight gaps between TinyGo and the official Go MCP SDK | `go/lib/mcp` serves MCP itself | Try the official SDK (`go/lib/mcp/mcp.go`) |
 | [tinygo-org/net#56](https://github.com/tinygo-org/net/pull/56) | `http.ServeMux` has no method patterns | `humaworkers` routes itself | Use Huma's adapter |
 | [tinygo#3599](https://github.com/tinygo-org/tinygo/issues/3599) | No `reflect.StructOf` | `humaworkers.Config` drops the Huma hook | Keep Huma's defaults |
 | [tinygo#3862](https://github.com/tinygo-org/tinygo/issues/3862) | No `reflect.Value.MethodByName` | Uploads take `multipart.Form` | Use `huma.MultipartFormFiles[T]` |

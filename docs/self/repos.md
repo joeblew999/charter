@@ -17,7 +17,7 @@ A repo pins what it takes from another, and the pins are the only record. Renova
 
 ## Renovate
 
-`npm run adopt` writes `renovate.json`, charter's own:
+`npm run adopt` writes `renovate.json`, charter's own. It does nothing until the [Renovate app](https://github.com/apps/renovate) is installed on the repo: the file is its settings, not the bot. Then:
 
 | It watches | What it does |
 |---|---|

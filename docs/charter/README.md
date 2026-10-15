@@ -32,4 +32,4 @@ In a project (`ts/examples-start`, `ts/examples-notes`, `ts/conformance`, `go/ex
 
 The repo's own: `npm run release` (`node release.ts`).
 
-Another release of charter-ts: `npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz`, then `npm run adopt` (Renovate opens that pull request). Every command, with what it takes: `npx charter-ts help`.
+Another release of charter-ts: `npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz`, then `npm run adopt` (Renovate opens that pull request, on a repo with its app installed). Every command, with what it takes: `npx charter-ts help`.

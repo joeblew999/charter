@@ -164,7 +164,7 @@ Each is \`npm run <name>\`; what it takes goes after \`--\` (\`npm run issues --
 |---|---|---|
 ${rows.join("\n")}
 ${inProjects.length ? `\nIn a project (${projects.map(dir => `\`${dir}\``).join(", ")}), from its folder, or from here with \`-w <folder>\`:\n\n| When | Run | What it does |\n|---|---|---|\n${inProjects.map(([name, c]) => row(name, c)).join("\n")}\n` : ""}${own.length ? `\nThe repo's own: ${own.map(([name, command]) => `\`npm run ${name}\` (\`${command}\`)`).join(", ")}.\n` : ""}
-Another release of charter-ts: \`npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz\`, then \`npm run adopt\` (Renovate opens that pull request). Every command, with what it takes: \`npx charter-ts help\`.
+Another release of charter-ts: \`npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz\`, then \`npm run adopt\` (Renovate opens that pull request, on a repo with its app installed). Every command, with what it takes: \`npx charter-ts help\`.
 `;
 }
 

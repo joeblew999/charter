@@ -5,7 +5,10 @@
 //
 // It is MCP's Streamable HTTP transport written out by hand: JSON-RPC 2.0, one POST per message,
 // one application/json answer. No MCP SDK: the Go ones don't build with TinyGo, and nothing here
-// needs one. It keeps no state, which is what workers-go needs (a fresh Go runtime per request) and
+// needs one. The official one (github.com/modelcontextprotocol/go-sdk v1.8.0) still did not on
+// 2026-10-15: hash/maphash first, then seven more gaps, which the issue lists.
+// Upstream: tinygo-org/tinygo#5684 (when fixed: build the official SDK again, and use it if it fits)
+// It keeps no state, which is what workers-go needs (a fresh Go runtime per request) and
 // what MCP became in revision 2026-07-28 (no handshake, no sessions). Both eras are served on the
 // one endpoint:
 //

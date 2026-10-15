@@ -135,9 +135,11 @@ export async function newProject(args: string[]): Promise<void> {
 		return next;
 	});
 	console.log(`made ${into}, from the ${from} example in ${language === "go" ? "Go" : "TypeScript"}, as the Worker ${name}`);
-	// Go: the Go library of the release, fetched (go.sum).
+	// Go: the imports sorted again (the module's new name sorts elsewhere), and the Go library of the
+	// release, fetched (go.sum).
 	let tidy = true;
 	if (language === "go") {
+		output("gofmt", ["-w", "."], into);
 		try {
 			output("go", ["mod", "tidy"], into);
 		} catch {

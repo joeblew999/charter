@@ -5,7 +5,7 @@
 // The CLI (Rust): built. A language this does not know is generated and named, not proven. The
 // toolchains a proof needs are mise's, at the versions pinned here, in mise's own folder.
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { made } from "./sizes.ts";
 import { cacheFolder, output, run, runQuietly, seconds } from "./run.ts";
@@ -89,6 +89,9 @@ async function python(dir: string, group: string): Promise<void> {
 		else await uv("python", "-c", `import ${name}`);
 	} finally {
 		rmSync(site, { recursive: true, force: true });
+		try {
+			rmdirSync(join("sdk", "out", ".work")); // only if no other proof is using it
+		} catch {}
 	}
 }
 
