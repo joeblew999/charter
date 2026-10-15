@@ -10,7 +10,7 @@ From nothing to an API on Cloudflare Workers, tested there, with a generated SDK
 ## 1. Make the project
 
 ```sh
-npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.8.0/charter-ts-0.8.0.tgz charter-ts new billing-api --from notes --subdomain <your workers.dev subdomain>
+npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.8.1/charter-ts-0.8.1.tgz charter-ts new billing-api --from notes --subdomain <your workers.dev subdomain>
 cd billing-api
 npm install
 ```

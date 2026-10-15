@@ -12,7 +12,7 @@ Most of charter is not about an API. A repo with no Worker, no contract and no F
 In the repo:
 
 ```sh
-npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.8.0/charter-ts-0.8.0.tgz charter-ts adopt --description "<what the repo is>"
+npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.8.1/charter-ts-0.8.1.tgz charter-ts adopt --description "<what the repo is>"
 npm install
 npm run repo        # the repo on GitHub: labels, description, homepage, topics, Pages
 npm run ci -- repo  # what the check on GitHub runs
