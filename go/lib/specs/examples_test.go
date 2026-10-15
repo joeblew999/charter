@@ -51,7 +51,7 @@ func route[I, O any](id, path string, hidden bool) humaworkers.Route {
 
 func TestAConstrainedRequestFieldNeedsAnExampleAndEveryExampleMustBeValid(t *testing.T) {
 	var got []string
-	for _, problem := range Examples(humaworkers.New(humaworkers.Config("t", "1"), []humaworkers.Route{
+	for _, problem := range exampleProblems(humaworkers.New(humaworkers.Config("t", "1"), []humaworkers.Route{
 		route[reportInput, reportOutput]("report", "/devices/{id}/reports", false),
 		route[goodInput, struct{}]("good", "/good/{id}", false),
 		// A hidden operation (a WebSocket channel) is checked too.

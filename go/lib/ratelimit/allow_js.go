@@ -15,9 +15,9 @@ import (
 // errNoBinding is a Worker without the limit's binding: the call goes through, and is logged once.
 var errNoBinding = errors.New("the Worker has no such Rate Limiting binding")
 
-// Allow asks the Worker's Rate Limiting binding whether key may call once more (no network round
+// allow asks the Worker's Rate Limiting binding whether key may call once more (no network round
 // trip: the counter is local to the Cloudflare location).
-func Allow(_ context.Context, limit Limit, key string) (bool, error) {
+func allow(_ context.Context, limit Limit, key string) (bool, error) {
 	b := cloudflare.GetBinding(limit.Binding)
 	if b.IsUndefined() || b.IsNull() {
 		return true, errNoBinding

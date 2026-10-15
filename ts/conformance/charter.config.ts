@@ -32,7 +32,7 @@ export default defineConfig({
 	 * and as an OpenID Connect issuer, and the webhook's receiver (extras[1]), each on a port of its own. */
 	test: {
 		env: ({ extras: [issuer, webhook] }) => ({
-			CONFORMANCE_WEBHOOK_URL: `http://localhost:${webhook}/webhook`,
+			WEBHOOK_URL: `http://localhost:${webhook}/webhook`,
 			ACCESS_TEAM_DOMAIN: `http://localhost:${issuer}`,
 			ACCESS_AUD: "test-aud",
 			OIDC_ISSUER: `http://localhost:${issuer}`,
@@ -56,5 +56,6 @@ export default defineConfig({
 		sdk("typescript-public", { ifStale: true });
 		node("test/sdk.ts", apiUrl);
 		node("test/mcp.ts", apiUrl);
+		node("test/ratelimit.ts", apiUrl);
 	},
 });

@@ -34,7 +34,7 @@ func testAPI(t *testing.T, now *time.Time) humatest.TestAPI {
 	memory := &Memory{now: func() time.Time { return *now }}
 	api.UseMiddleware(Middleware(api, memory.Allow))
 	handler := func(context.Context, *struct{}) (*out, error) { return &out{Body: "ok"}, nil }
-	huma.Register(api, huma.Operation{OperationID: "hello", Method: http.MethodGet, Path: "/hello", Extensions: On(hellos, nil)}, handler)
+	huma.Register(api, huma.Operation{OperationID: "hello", Method: http.MethodGet, Path: "/hello", Extensions: Limited(hellos, nil)}, handler)
 	huma.Register(api, huma.Operation{OperationID: "list", Method: http.MethodGet, Path: "/notes"}, handler)
 	huma.Register(api, huma.Operation{OperationID: "create", Method: http.MethodPost, Path: "/notes", Security: auth.Needs("write")}, handler)
 	return api

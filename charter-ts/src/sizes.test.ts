@@ -36,10 +36,11 @@ it("says a file's size, gzipped and against its limit, then how it changed since
 	assert.deepEqual(madeThisRun.at(-1), { what: "the Worker's Wasm", gzipped: madeThisRun.at(-1)!.gzipped, limit: undefined });
 });
 
-it("says a folder's size as the sum of its files", () => {
+it("says a folder's size as the sum of its files, less source maps, which a Worker does not run", () => {
 	const folder = join(scratch, "bundle");
 	mkdirSync(join(folder, "assets"), { recursive: true });
 	writeFileSync(join(folder, "index.js"), "a".repeat(500_000));
+	writeFileSync(join(folder, "index.js.map"), "m".repeat(4_000_000));
 	writeFileSync(join(folder, "assets", "app.wasm"), "b".repeat(1_500_000));
 	assert.match(said(folder, "the Worker's bundle").line, /\(the Worker's bundle\): 2\.00 MB, /);
 });

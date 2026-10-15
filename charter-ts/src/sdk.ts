@@ -46,11 +46,13 @@ export async function generateQuietly(group: string): Promise<number> {
 }
 
 const fernGenerate = (group: string) => ["generate", "--local", "--group", group, "--force", "--log-level", "warn"];
-const stampOf = (group: string) => join("sdk", "out", `.${group}.made-from`);
-const upToDate = (group: string) => existsSync(join("sdk", "out", group)) && existsSync(stampOf(group)) && readFileSync(stampOf(group), "utf8").trim() === specsHash();
+/** What each SDK in sdk/out was made from (specsHash, by group), in one file beside them. */
+const madeFrom = join("sdk", "out", ".made-from.json");
+const stamps = (): Record<string, string> => (existsSync(madeFrom) ? (JSON.parse(readFileSync(madeFrom, "utf8")) as Record<string, string>) : {});
+const upToDate = (group: string) => existsSync(join("sdk", "out", group)) && stamps()[group] === specsHash();
 function stampMade(group: string): void {
 	mkdirSync(join("sdk", "out"), { recursive: true });
-	writeFileSync(stampOf(group), `${specsHash()}\n`);
+	writeFileSync(madeFrom, JSON.stringify({ ...stamps(), [group]: specsHash() }, null, "\t") + "\n");
 }
 
 /** syncSdk copies the TypeScript SDK (typescript-dist) into folder, for a Worker that runs it, generating
@@ -76,7 +78,7 @@ async function python(dir: string, group: string): Promise<void> {
 	const tests = join(dir, "tests");
 	const testText = existsSync(tests) ? readdirSync(tests).filter(name => name.endsWith(".py")).map(name => readFileSync(join(tests, name), "utf8")).join("\n") : "";
 	const name = /^\s*from ([a-z_][a-z0-9_]*)\.client import/m.exec(testText)?.[1] ?? "client";
-	const site = join("sdk", "out", `.${group}-import`);
+	const site = join("sdk", "out", ".work", `${group}-import`);
 	rmSync(site, { recursive: true, force: true });
 	mkdirSync(site, { recursive: true });
 	symlinkSync(resolve(dir), join(site, name), "junction");
@@ -98,6 +100,8 @@ export function groups(): string[] {
 }
 
 // How a generated TypeScript SDK is typechecked: standard fetch, none of the project's own settings.
+// The projects stay on @types/node 22: with 26, a generated TypeScript SDK's Headers does not typecheck.
+// Upstream: fern-api/fern#18313 (when fixed: @types/node 26 in every package.json)
 const tsconfig = (entry: string) => JSON.stringify({
 	"//": "Written by charter-ts sdk --prove: how a generated TypeScript SDK is typechecked (bundler mode, default libs).",
 	compilerOptions: { target: "es2022", module: "preserve", moduleResolution: "bundler", allowImportingTsExtensions: true, strict: true, noEmit: true, skipLibCheck: true },

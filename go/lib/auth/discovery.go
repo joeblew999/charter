@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"encoding/json"
 	"net/http"
 	"slices"
 	"strings"
@@ -9,38 +8,40 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/joeblew999/charter/go/lib/problem"
+
+	"github.com/joeblew999/charter/go/lib/internal/reply"
 )
 
 // How a client finds out how to get in: what an MCP client reads on a 401 (MCP's authorization, on
 // OAuth 2.0 Protected Resource Metadata, RFC 9728), and what any OAuth client reads of an API that
 // issues its own tokens (Authorization Server Metadata, RFC 8414).
 const (
-	// ResourcePath is the API's protected-resource metadata: the authorization servers it trusts, and
+	// resourcePath is the API's protected-resource metadata: the authorization servers it trusts, and
 	// its scopes. A resource with a path has it after this one (RFC 9728, 3.1).
-	ResourcePath = "/.well-known/oauth-protected-resource"
-	// ServerPath is the authorization-server metadata of an API that issues tokens itself (Issued
+	resourcePath = "/.well-known/oauth-protected-resource"
+	// serverPath is the authorization-server metadata of an API that issues tokens itself (Issued
 	// with a TokenPath): its token endpoint, and how a client authenticates there.
-	ServerPath = "/.well-known/oauth-authorization-server"
-	// OpenIDPath is the specs' openIdConnectUrl: on to the trusted issuer's discovery document.
-	OpenIDPath = "/.well-known/openid-configuration"
+	serverPath = "/.well-known/oauth-authorization-server"
+	// openIDPath is the specs' openIdConnectUrl: on to the trusted issuer's discovery document.
+	openIDPath = "/.well-known/openid-configuration"
 )
 
 // WellKnown serves what a client reads to find out how to get in, for api with the ways in trusted:
-// ResourcePath (and a path after it), ServerPath when the API issues tokens itself, and OpenIDPath.
+// resourcePath (and a path after it), serverPath when the API issues tokens itself, and openIDPath.
 // Anything else is 404 (problem details). Mount it at /.well-known/.
 func WellKnown(api huma.API, setting func(name string) string, trusted ...Trusted) http.Handler {
 	if setting == nil {
 		setting = func(string) string { return "" }
 	}
-	discovery := Discovery(setting)
+	discovery := discoveryHandler(setting)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := originOf(r.URL.Scheme, r.URL.Host, r.Host, r.TLS != nil, r.Header.Get("X-Forwarded-Proto"))
 		switch path := r.URL.Path; {
-		case path == OpenIDPath:
+		case path == openIDPath:
 			discovery.ServeHTTP(w, r)
-		case path == ResourcePath || strings.HasPrefix(path, ResourcePath+"/"):
+		case path == resourcePath || strings.HasPrefix(path, resourcePath+"/"):
 			metadata := map[string]any{
-				"resource":                 origin + strings.TrimPrefix(path, ResourcePath),
+				"resource":                 origin + strings.TrimPrefix(path, resourcePath),
 				"authorization_servers":    authorizationServers(origin, setting, trusted),
 				"scopes_supported":         apiScopes(api.OpenAPI()),
 				"bearer_methods_supported": []string{"header"},
@@ -49,7 +50,7 @@ func WellKnown(api huma.API, setting func(name string) string, trusted ...Truste
 				metadata["resource_name"] = info.Title
 			}
 			writeJSON(w, metadata)
-		case path == ServerPath && tokenPath(trusted) != "":
+		case path == serverPath && tokenPath(trusted) != "":
 			writeJSON(w, map[string]any{
 				"issuer":                                origin,
 				"token_endpoint":                        origin + tokenPath(trusted),
@@ -130,7 +131,7 @@ func challenge(origin, error string, scopes []string) string {
 	if len(scopes) > 0 {
 		parts = append(parts, `scope="`+strings.Join(scopes, " ")+`"`)
 	}
-	parts = append(parts, `resource_metadata="`+origin+ResourcePath+`"`)
+	parts = append(parts, `resource_metadata="`+origin+resourcePath+`"`)
 	return "Bearer " + strings.Join(parts, ", ")
 }
 
@@ -152,19 +153,20 @@ func originOf(scheme, urlHost, host string, tls bool, forwarded string) string {
 	return scheme + "://" + host
 }
 
+// Origin is a request's scheme and host: absolute in its URL on Workers, from Host natively, https
+// when it came over TLS or a proxy says so.
+func Origin(r *http.Request) string {
+	return originOf(r.URL.Scheme, r.URL.Host, r.Host, r.TLS != nil, r.Header.Get("X-Forwarded-Proto"))
+}
+
 // contextOrigin is originOf for a Huma request.
 func contextOrigin(ctx huma.Context) string {
 	u := ctx.URL()
 	return originOf(u.Scheme, u.Host, ctx.Host(), ctx.TLS() != nil, ctx.Header("X-Forwarded-Proto"))
 }
 
+// writeJSON answers with a document any page may read (CORS: what a browser client asks for).
 func writeJSON(w http.ResponseWriter, body any) {
-	data, err := json.Marshal(body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Write(data)
+	reply.JSON(w, http.StatusOK, body)
 }

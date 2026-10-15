@@ -24,10 +24,10 @@ import (
 	"github.com/joeblew999/charter/go/lib/transport"
 )
 
-// For is how long a stream stays open unless Stream.For says otherwise. Then it ends, and the
+// streamLife is how long a stream stays open unless Stream.For says otherwise. Then it ends, and the
 // browser connects again from the last item it has: a stream never outlives a deploy by long, and
 // one whose browser has gone ends too.
-const For = 5 * time.Minute
+const streamLife = 5 * time.Minute
 
 // Stream is one SSE response over a feed.
 type Stream[T follow.Item] struct {
@@ -37,7 +37,7 @@ type Stream[T follow.Item] struct {
 	// Event writes an item as the fields of its event, after its id: the only part that knows the
 	// client. Data builds the data lines.
 	Event func(ctx context.Context, item T) (string, error)
-	// For is how long the stream stays open (default For).
+	// For is how long the stream stays open (default streamLife: 5 minutes).
 	For time.Duration
 }
 
@@ -46,7 +46,7 @@ type Stream[T follow.Item] struct {
 func (s Stream[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	lifetime := s.For
 	if lifetime <= 0 {
-		lifetime = For
+		lifetime = streamLife
 	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")

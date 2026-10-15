@@ -43,7 +43,7 @@ func testAPI(t *testing.T, settings map[string]string, trusted ...Trusted) humat
 		c, _ := CallerOf(ctx)
 		return &out{Body: c.Name()}, nil
 	}
-	huma.Register(api, huma.Operation{OperationID: "hello", Method: http.MethodGet, Path: "/hello", Security: Public()}, handler)
+	huma.Register(api, huma.Operation{OperationID: "hello", Method: http.MethodGet, Path: "/hello", Security: []map[string][]string{}}, handler)
 	huma.Register(api, huma.Operation{OperationID: "list", Method: http.MethodGet, Path: "/notes"}, handler)
 	huma.Register(api, huma.Operation{OperationID: "create", Method: http.MethodPost, Path: "/notes", Security: Needs("write")}, handler)
 	return api
@@ -74,7 +74,7 @@ func TestScopes(t *testing.T) {
 		}
 		// A refusal says where the API tells a client how to get in (RFC 9728), and a 403 what it lacks.
 		challenge := resp.Header().Get("WWW-Authenticate")
-		if (c.want == 401 || c.want == 403) && (!strings.HasPrefix(challenge, "Bearer ") || !strings.Contains(challenge, `resource_metadata="`) || !strings.HasSuffix(challenge, ResourcePath+`"`)) {
+		if (c.want == 401 || c.want == 403) && (!strings.HasPrefix(challenge, "Bearer ") || !strings.Contains(challenge, `resource_metadata="`) || !strings.HasSuffix(challenge, resourcePath+`"`)) {
 			t.Errorf("%s %s: a %d whose WWW-Authenticate is %q", c.method, c.path, c.want, challenge)
 		}
 		if c.want == 403 && !strings.Contains(challenge, `error="insufficient_scope", scope="write"`) {
@@ -99,14 +99,14 @@ func TestWellKnown(t *testing.T) {
 		json.Unmarshal(rec.Body.Bytes(), &body)
 		return rec.Code, body
 	}
-	_, resource := get(ResourcePath)
+	_, resource := get(resourcePath)
 	if resource["resource"] != "https://api.example" || fmt.Sprint(resource["authorization_servers"]) != "[https://api.example https://issuer.example https://team.cloudflareaccess.com]" || fmt.Sprint(resource["scopes_supported"]) != "[read write]" {
 		t.Errorf("the resource's metadata: %v", resource)
 	}
-	if _, mcp := get(ResourcePath + "/mcp"); mcp["resource"] != "https://api.example/mcp" {
+	if _, mcp := get(resourcePath + "/mcp"); mcp["resource"] != "https://api.example/mcp" {
 		t.Errorf("a resource with a path: %v", mcp)
 	}
-	_, server := get(ServerPath)
+	_, server := get(serverPath)
 	if server["issuer"] != "https://api.example" || server["token_endpoint"] != "https://api.example/oauth/token" || fmt.Sprint(server["grant_types_supported"]) != "[client_credentials]" {
 		t.Errorf("the authorization server's metadata: %v", server)
 	}
@@ -116,7 +116,7 @@ func TestWellKnown(t *testing.T) {
 	// An API that issues no tokens is no authorization server.
 	bare := WellKnown(api, nil, Token{Secret: "WRITE_TOKEN"})
 	rec := httptest.NewRecorder()
-	bare.ServeHTTP(rec, httptest.NewRequest("GET", "https://api.example"+ServerPath, nil))
+	bare.ServeHTTP(rec, httptest.NewRequest("GET", "https://api.example"+serverPath, nil))
 	if rec.Code != 404 {
 		t.Errorf("the authorization server of an API that issues no tokens: %d, want 404", rec.Code)
 	}
@@ -319,7 +319,7 @@ func TestTheSpecSaysSo(t *testing.T) {
 func TestDiscovery(t *testing.T) {
 	for issuer, want := range map[string]int{"": 404, "https://id.example.com": 302} {
 		w := httptest.NewRecorder()
-		Discovery(func(string) string { return issuer }).ServeHTTP(w, httptest.NewRequest("GET", "/.well-known/openid-configuration", nil))
+		discoveryHandler(func(string) string { return issuer }).ServeHTTP(w, httptest.NewRequest("GET", "/.well-known/openid-configuration", nil))
 		if w.Code != want || (want == 302 && w.Header().Get("Location") != issuer+"/.well-known/openid-configuration") {
 			t.Errorf("issuer %q: %d %s", issuer, w.Code, w.Header().Get("Location"))
 		}

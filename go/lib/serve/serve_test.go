@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -38,7 +39,7 @@ func things(trusted ...auth.Trusted) API {
 		Trusted:   trusted,
 		Routes: []humaworkers.Route{
 			{Method: "GET", Path: "/api/things", OperationID: "listThings", Register: func(api huma.API) {
-				huma.Register(api, huma.Operation{OperationID: "listThings", Method: "GET", Path: "/api/things", Security: auth.Public()}, read)
+				huma.Register(api, huma.Operation{OperationID: "listThings", Method: "GET", Path: "/api/things", Security: []map[string][]string{}}, read)
 			}},
 			{Method: "POST", Path: "/api/things", OperationID: "createThing", Register: func(api huma.API) {
 				huma.Register(api, huma.Operation{OperationID: "createThing", Method: "POST", Path: "/api/things", Security: auth.Needs("write")}, read)
@@ -68,14 +69,14 @@ func TestTheStandardRoutes(t *testing.T) {
 		Servers []struct{ URL string } `json:"servers"`
 		Paths   map[string]any         `json:"paths"`
 	}
-	rec := get(t, h, "GET", "https://things.example"+OpenAPIPath)
+	rec := get(t, h, "GET", "https://things.example"+openAPIPath)
 	if json.Unmarshal(rec.Body.Bytes(), &spec); rec.Code != 200 || len(spec.Servers) != 1 || spec.Servers[0].URL != "https://things.example" || spec.Paths["/api/things"] == nil {
 		t.Errorf("the OpenAPI spec: %d %s", rec.Code, rec.Body)
 	}
-	if rec := get(t, h, "GET", "https://things.example"+AsyncAPIPath); rec.Code != 200 || !strings.Contains(rec.Body.String(), `"liveThings"`) || !strings.Contains(rec.Body.String(), `"Things live"`) {
+	if rec := get(t, h, "GET", "https://things.example"+asyncAPIPath); rec.Code != 200 || !strings.Contains(rec.Body.String(), `"liveThings"`) || !strings.Contains(rec.Body.String(), `"Things live"`) {
 		t.Errorf("the AsyncAPI spec: %d %s", rec.Code, rec.Body)
 	}
-	req := httptest.NewRequest("POST", "https://things.example"+MCPPath, strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`))
+	req := httptest.NewRequest("POST", "https://things.example"+mCPPath, strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/event-stream")
 	mcp := httptest.NewRecorder()
@@ -117,5 +118,47 @@ func TestAnAPIThatTrustsNoOne(t *testing.T) {
 	}
 	if rec := get(t, h, "GET", "https://things.example/.well-known/oauth-protected-resource"); rec.Code != 404 {
 		t.Errorf("sign-in documents with no one trusted: %d, want 404", rec.Code)
+	}
+}
+
+// The refusals the document declares, by status, as problem details: 401 where an operation needs
+// credentials, 422 where it takes input to check (Fern types an SDK's errors by status).
+func TestTheDocumentDeclaresEveryRefusal(t *testing.T) {
+	body, err := things().OpenAPI("https://things.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Paths map[string]map[string]struct {
+			Responses map[string]struct {
+				Description string
+				Content     map[string]struct {
+					Schema struct {
+						Ref string `json:"$ref"`
+					}
+				}
+			}
+		}
+	}
+	if err := json.Unmarshal(body, &doc); err != nil {
+		t.Fatal(err)
+	}
+	statuses := func(path, method string) string {
+		var all []string
+		for status := range doc.Paths[path][method].Responses {
+			all = append(all, status)
+		}
+		slices.Sort(all)
+		return strings.Join(all, " ")
+	}
+	if got := statuses("/api/things", "get"); got != "200 default" {
+		t.Errorf("a public read without input: %s, want 200 default", got)
+	}
+	if got := statuses("/api/things", "post"); got != "200 401 default" {
+		t.Errorf("a write that needs credentials: %s, want 200 401 default", got)
+	}
+	refused := doc.Paths["/api/things"]["post"].Responses["401"]
+	if media, ok := refused.Content["application/problem+json"]; refused.Description != "Unauthorized" || !ok || media.Schema.Ref != "#/components/schemas/ErrorModel" {
+		t.Errorf("401: %+v", refused)
 	}
 }

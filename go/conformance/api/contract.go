@@ -223,7 +223,7 @@ func Routes(env Env) []humaworkers.Route {
 		// and they call it themselves. It is the one operation that needs no token.
 		{Method: http.MethodPost, Path: "/api/oauth/token", OperationID: "getToken", Register: func(api huma.API) {
 			// Not a tool: an MCP client sends its token as a header, as the SDKs do.
-			huma.Register(api, mcp.Expose(huma.Operation{
+			huma.Register(api, mcp.NotATool(huma.Operation{
 				OperationID: "getToken", Method: http.MethodPost, Path: "/api/oauth/token",
 				Responses: map[string]*huma.Response{"200": {Description: "token"}},
 				Summary:   "OAuth client-credentials token (used by the SDK itself)", Tags: []string{"auth"},
@@ -232,14 +232,14 @@ func Routes(env Env) []humaworkers.Route {
 				// (humaworkers): what Huma and the token check answer with before a handler runs.
 				Errors: []int{http.StatusUnauthorized},
 				// The body's schema is written into the operation, not referred to by name. With a
-				// named one, the test Fern's Go generator (1.64.0) writes for a form-encoded token
+				// named one, the test Fern's Go generator writes for a form-encoded token
 				// endpoint doesn't compile (it names a type `Request` that doesn't exist). Not filed
 				// yet: docs/self/upstream.md.
 				RequestBody: &huma.RequestBody{Content: map[string]*huma.MediaType{humaworkers.FormContentType: {
 					Schema: api.OpenAPI().Components.Schemas.Schema(reflect.TypeFor[TokenRequest](), false, ""),
 				}}},
 				Extensions: audiences("public", "internal"),
-			}, false), env.token)
+			}), env.token)
 		}},
 		{Method: http.MethodGet, Path: "/api/notes", OperationID: "listNotes", Register: func(api huma.API) {
 			huma.Register(api, huma.Operation{
@@ -257,7 +257,7 @@ func Routes(env Env) []humaworkers.Route {
 				Responses: map[string]*huma.Response{"200": {Description: "created"}},
 				Summary:   "Create a note (idempotent: safe to retry with an Idempotency-Key)", Tags: []string{"notes"},
 				Security:   needs("write"),
-				Extensions: ratelimit.On(WriteLimit, with(audiences("public", "internal"), map[string]any{"x-fern-idempotent": true})),
+				Extensions: ratelimit.Limited(WriteLimit, with(audiences("public", "internal"), map[string]any{"x-fern-idempotent": true})),
 			}, env.create)
 		}},
 		// A resumable SSE feed of the log: every event's id is its place there, so `after` and the
@@ -283,14 +283,14 @@ func Routes(env Env) []humaworkers.Route {
 		// Multipart upload, and the one operation that is not public (audiences).
 		{Method: http.MethodPost, Path: "/api/files", OperationID: "uploadFile", Register: func(api huma.API) {
 			// Not a tool: a tool's arguments are JSON, and a file is not.
-			huma.Register(api, mcp.Expose(huma.Operation{
+			huma.Register(api, mcp.NotATool(huma.Operation{
 				OperationID: "uploadFile", Method: http.MethodPost, Path: "/api/files",
 				Responses: map[string]*huma.Response{"200": {Description: "stored"}},
 				Summary:   "Upload a file (multipart)", Tags: []string{"files"},
 				RequestBody: uploadForm(),
 				Security:    needs("write"),
 				Extensions:  audiences("internal"),
-			}, false), env.upload)
+			}), env.upload)
 		}},
 		{Method: http.MethodPost, Path: "/api/chat", OperationID: "chat", Register: func(api huma.API) {
 			huma.Register(api, huma.Operation{

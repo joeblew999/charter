@@ -11,7 +11,7 @@ groups:
   go:
     generators:
       - name: fernapi/fern-go-sdk
-        version: 1.64.0
+        version: 1.70.5
         output:
           location: local-file-system
           path: ../sdk/out/go
@@ -27,7 +27,7 @@ groups:
   typescript:
     generators:
       - name: fernapi/fern-typescript-sdk
-        version: 3.98.0
+        version: 3.106.1
         output:
           location: local-file-system
           path: ../sdk/out/typescript
@@ -41,7 +41,7 @@ groups:
   typescript-dist:
     generators:
       - name: fernapi/fern-typescript-sdk
-        version: 3.98.0
+        version: 3.106.1
         output:
           location: local-file-system
           path: ../sdk/out/typescript-dist

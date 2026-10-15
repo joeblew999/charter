@@ -1,6 +1,6 @@
 ---
 title: How to help
-nav_order: 13
+nav_order: 14
 ---
 
 # How to help

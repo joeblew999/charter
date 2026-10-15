@@ -18,6 +18,7 @@ package follow
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -234,3 +235,20 @@ type brokenError struct{}
 func (brokenError) Error() string { return "subscription broken" }
 
 var errBroken error = brokenError{}
+
+// Newest is the newest of the positions a client resumes from: a stream's `after`, and the
+// Last-Event-ID a reconnecting client sends with it (an SDK resends its first `after` too). What is
+// no position (absent, or not a number the contract checked) is left out; none: nil, from what is new.
+func Newest(positions ...string) *int64 {
+	var newest *int64
+	for _, position := range positions {
+		at, err := strconv.ParseInt(position, 10, 64)
+		if err != nil || at < 0 {
+			continue
+		}
+		if newest == nil || at > *newest {
+			newest = &at
+		}
+	}
+	return newest
+}

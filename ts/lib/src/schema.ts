@@ -1,6 +1,7 @@
 // JSON Schemas as charter publishes them (the specs, the MCP tools), the same from a zod contract as
 // Huma writes them from a Go one: zod says "an integer" with JavaScript's safe-integer bounds, which
 // are no limit, and leaves a definition in $defs that nothing refers to once the root is inlined.
+import { type JsonSchema, mapJsonSchemaRefs } from "@orpc/json-schema";
 
 const safe = Number.MAX_SAFE_INTEGER;
 
@@ -37,3 +38,7 @@ export function withoutUnusedDefs(schema: Record<string, unknown>): Record<strin
 	const kept = Object.fromEntries(Object.entries(defs).filter(([name]) => used.has(name)));
 	return Object.keys(kept).length ? { ...rest, $defs: kept } : rest;
 }
+
+/** asComponent is a schema with its references to `$defs` (zod's) pointed at the document's
+ * `components/schemas`, where a named schema goes in both specs. */
+export const asComponent = (schema: JsonSchema): JsonSchema => mapJsonSchemaRefs(schema, ref => ref.replace(/^#\/\$defs\//, "#/components/schemas/"));

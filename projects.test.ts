@@ -52,3 +52,10 @@ test("every project typechecks with the same TypeScript, and has the one Fern's 
 		assert.ok(dev.typescript && dev["typescript-sdk"], `${folder}: typescript and typescript-sdk`);
 	}
 });
+
+test("every package is pinned by version, not by a tag that moves (beta, latest): a project made by new installs what was tested", () => {
+	const tagged = [root, read("charter-ts/package.json"), ...projects.map(folder => read(`${folder}/package.json`))]
+		.flatMap(pkg => Object.entries({ ...pkg.dependencies, ...pkg.devDependencies }).map(([name, version]) => `${pkg.name}: ${name}@${version}`))
+		.filter(entry => /@(latest|beta|next|canary|alpha|\*)$/.test(entry));
+	assert.deepEqual(tagged, []);
+});

@@ -110,16 +110,7 @@ func (f Feed) Latest(ctx context.Context) (int64, error) { return f.store.Latest
 // Feed opens the feed and reads the resume position: the newest of the positions given (the page's
 // `after`, and the Last-Event-ID a reconnecting browser sends). None: from now on.
 func (env Env) Feed(positions ...string) (Feed, follow.Options, error) {
-	options := follow.Options{OnBroken: func(err error) { log.Printf("follow: hub subscription broken, resubscribing: %v", err) }}
-	for _, position := range positions {
-		id, err := strconv.ParseInt(position, 10, 64)
-		if err != nil || id < 0 {
-			continue // absent, or not a message id
-		}
-		if options.After == nil || id > *options.After {
-			options.After = &id
-		}
-	}
+	options := follow.Options{After: follow.Newest(positions...), OnBroken: func(err error) { log.Printf("follow: hub subscription broken, resubscribing: %v", err) }}
 	store, err := env.Store()
 	if err != nil {
 		return Feed{}, options, err

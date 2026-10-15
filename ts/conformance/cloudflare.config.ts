@@ -37,7 +37,7 @@ export default defineConfig(ctx => {
 				APP_NAME: bindings.text("charter-conformance-ts"),
 				// Where the noteCreated webhook is sent; empty: nowhere. WEBHOOK_SECRET (a secret, set where
 				// the environment has it) signs it, "whsec" by default for trying it out.
-				WEBHOOK_URL: bindings.text(process.env.CONFORMANCE_WEBHOOK_URL ?? ""),
+				WEBHOOK_URL: bindings.text(process.env.WEBHOOK_URL ?? ""),
 				DB: bindings.d1(),
 				HUB: bindings.durableObject({ worker: name, exportName: "Hub" }),
 				// The API's tokens (api/handlers.ts): set by every npm run deploy, from the environment under cf dev.

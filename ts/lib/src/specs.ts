@@ -3,14 +3,14 @@
 // and URL. No Workers APIs and no files here, so Node and a Worker can both run it.
 import { getOpenAPIMeta, OpenAPIGenerator, type OpenAPIV3_1, type OpenAPIV3_2 } from "@orpc/openapi";
 import type { RouterContract } from "@orpc/contract";
-import { DelegatingJsonSchemaConverter, mapJsonSchemaRefs, type JsonSchema } from "@orpc/json-schema";
+import { DelegatingJsonSchemaConverter, type JsonSchema } from "@orpc/json-schema";
 import { walkProcedureContractsAsync, type AnyRouter } from "@orpc/server";
 import { ZodToJsonSchemaConverter } from "@orpc/zod";
 import { AsyncAPIGenerator, getAsyncAPIMeta } from "./asyncapi.ts";
 import { expand, type Security } from "./auth.ts";
 import { reasonOf } from "./problem.ts";
 import { EXTENSION, needsScope, withLimit, type Limit } from "./ratelimit.ts";
-import { withoutSafeBounds } from "./schema.ts";
+import { withoutSafeBounds, asComponent } from "./schema.ts";
 
 const converters = [new ZodToJsonSchemaConverter()];
 
@@ -79,7 +79,7 @@ function withScopeLimits(doc: OpenAPIV3_1.OpenAPIObject, limits: Limit[]) {
 async function addWebhooks<T extends { components?: OpenAPIV3_2.ComponentsObject }>(doc: T, webhooks: RouterContract) {
 	const converter = new DelegatingJsonSchemaConverter(converters);
 	const schemas: Record<string, unknown> = (doc.components ??= {}).schemas ??= {};
-	const component = (schema: JsonSchema) => mapJsonSchemaRefs(schema, ref => ref.replace(/^#\/\$defs\//, "#/components/schemas/"));
+	const component = asComponent;
 	const hooks: Record<string, OpenAPIV3_2.PathItemObject> = {};
 	await walkProcedureContractsAsync(webhooks, (procedure, path) => {
 		const meta = getOpenAPIMeta(procedure as any);
@@ -132,7 +132,7 @@ const problemContent = { "application/problem+json": { schema: { $ref: "#/compon
  * default), a parameter's description on it as well as on its schema, a file as
  * `contentMediaType: application/octet-stream`, and none of oRPC's allowEmptyValue or allowReserved.
  */
-export function standardDocument<T extends OpenAPIV3_1.OpenAPIObject>(doc: T): T {
+function standardDocument<T extends OpenAPIV3_1.OpenAPIObject>(doc: T): T {
 	let refuses = false;
 	for (const item of Object.values(doc.paths ?? {})) {
 		for (const value of Object.values(item ?? {})) {

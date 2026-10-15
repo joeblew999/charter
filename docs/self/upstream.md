@@ -1,6 +1,6 @@
 ---
 title: Upstream issues
-nav_order: 15
+nav_order: 16
 ---
 # Upstream issues: every workaround, and the issue it waits for
 
@@ -32,3 +32,4 @@ nav_order: 15
 | [fern#17997](https://github.com/fern-api/fern/issues/17997) | With `endpoint-security`, the TypeScript SDK's WebSocket client uses `_metadata` it never declares, and the SDK is not written | `auth: any` in the notes examples' `fern/generators.yml` | Route credentials per operation |
 | [fern#17998](https://github.com/fern-api/fern/issues/17998) | An `auth` setting in `fern/generators.yml` marks every AsyncAPI channel as needing credentials | A TypeScript client with none passes `auth: false` (`ts/examples-notes/test/sdk.ts`, `go/examples-notes/test/soak.ts`) | Drop `auth: false` |
 | [fern#17996](https://github.com/fern-api/fern/issues/17996) | The CLI sends only the first credential it has (`AuthStrategy::Any`) | None: the CLI cannot pass Access | The CLI passes Access |
+| [fern#18313](https://github.com/fern-api/fern/issues/18313) | A generated TypeScript SDK's `Headers` does not typecheck with `@types/node` 26 | Every project stays on `@types/node` 22 (`charter-ts/src/sdk.ts`) | Move to `@types/node` 26 |

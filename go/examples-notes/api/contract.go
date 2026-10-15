@@ -155,7 +155,7 @@ func Routes(env Env) []humaworkers.Route {
 				OperationID: "createNote", Method: http.MethodPost, Path: "/api/notes",
 				Summary: "Create a note", Tags: []string{"notes"},
 				Security:   auth.Needs("write"),
-				Extensions: sdk("notes", "create", ratelimit.On(WriteLimit, nil)),
+				Extensions: sdk("notes", "create", ratelimit.Limited(WriteLimit, nil)),
 			}, env.create)
 		}},
 	}

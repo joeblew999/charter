@@ -8,20 +8,20 @@
 import type { Meta, MetaPlugin } from "@orpc/contract";
 import { getAsyncIteratorObjectSchemaDetails } from "@orpc/contract";
 import { getOpenAPIMeta } from "@orpc/openapi";
-import { call, type Context, ORPCError, Procedure, type Router } from "@orpc/server";
+import { call, type Context, ORPCError, type Router } from "@orpc/server";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { withoutSafeBounds, withoutUnusedDefs } from "./schema.ts";
+import { type AnyProcedure, proceduresOf } from "./router.ts";
 
 /** Where the endpoint is, beside the API's specs. */
 export const mcpPath = "/api/mcp";
 
-/** notATool leaves a procedure out of the tools, as go/lib/mcp's Expose(op, false) does. */
+/** notATool leaves a procedure out of the tools, as go/lib/mcp's NotATool(op) does. */
 export const notATool = (): MetaPlugin<any, any, any> => ({
 	name: "~charter-mcp",
 	init: (current: Meta) => ({ ...current, "~charter-mcp": false }),
 });
 
-export type AnyProcedure = Procedure<any, any, any, any, any>;
 
 /** A tool: what tools/list says of it, and the procedure a call runs. */
 export interface Tool {
@@ -37,7 +37,7 @@ export interface Tool {
  * route, or one left out. It says what go/lib/mcp says of an operation: the name is the operationId; the
  * description the summary, then the description; GET is read-only, and every method but POST may
  * overwrite or delete. Its schemas are the procedure's own (one input, one output). */
-export function toolOf(procedure: AnyProcedure): Tool | undefined {
+function toolOf(procedure: AnyProcedure): Tool | undefined {
 	const def = procedure["~orpc"] as { meta: Meta; inputSchemas?: unknown[]; outputSchemas?: unknown[] };
 	const meta = def.meta as Record<string, unknown>;
 	if (meta["~charter-mcp"] === false || meta["~asyncapi"]) return undefined;
@@ -58,15 +58,7 @@ export function toolOf(procedure: AnyProcedure): Tool | undefined {
 
 /** toolsOf is every tool of the router, in its order. */
 export function toolsOf(router: Router<any>): Tool[] {
-	const tools: Tool[] = [];
-	const walk = (node: unknown): void => {
-		if (node instanceof Procedure) {
-			const tool = toolOf(node);
-			if (tool) tools.push(tool);
-		} else if (node && typeof node === "object") Object.values(node).forEach(walk);
-	};
-	walk(router);
-	return tools;
+	return proceduresOf(router).flatMap(procedure => toolOf(procedure) ?? []);
 }
 
 type JsonSchema = Record<string, unknown>;

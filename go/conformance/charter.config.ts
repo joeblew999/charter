@@ -1,5 +1,5 @@
 // What charter-ts needs to know about this project (npm run <name> runs charter-ts <name>), typed, in one place.
-import { defineConfig, type Extras, type TestContext } from "charter-ts/config";
+import { defineConfig, type Extras, type TestContext, type Tests } from "charter-ts/config";
 import { sdk } from "charter-ts/sdk";
 import { optionalSecrets, secrets } from "./secrets.ts";
 
@@ -30,6 +30,9 @@ const trusting = (issuer: number) => ({
 	OIDC_AUDIENCE: "https://conformance.test",
 });
 
+/** The tests and what they serve, natively and under workerd alike. */
+const served: Tests = { env: ({ extras: [issuer, webhook] }) => ({ WEBHOOK_URL: `http://localhost:${webhook}/webhook`, ...trusting(issuer) }), serve: receiver, run: conformance };
+
 export default defineConfig({
 	/** The Worker, as in cloudflare.config.ts. */
 	worker: "charter-conformance-go",
@@ -47,13 +50,14 @@ export default defineConfig({
 	go: {},
 	/** npm run check, natively and under workerd: the generated SDKs against the API, with a webhook
 	 * receiver the test serves on the extra port. */
-	native: { env: ({ extras: [issuer, webhook] }) => ({ WEBHOOK_URL: `http://localhost:${webhook}/webhook`, ...trusting(issuer) }), serve: receiver, run: conformance },
-	test: { env: ({ extras: [issuer, webhook] }) => ({ CONFORMANCE_WEBHOOK_URL: `http://localhost:${webhook}/webhook`, ...trusting(issuer) }), serve: receiver, run: conformance },
+	native: served,
+	test: served,
 	/** npm run live-test (fnox exec -- npm run live-test): the SDK and MCP against the deployed Worker
 	 * (never the auth test: its issuer is local). It writes test notes. */
 	live: ({ url, node }) => {
 		sdks();
 		node(`${tests}/sdk.ts`, url);
 		node(`${tests}/mcp.ts`, url);
+		node(`${tests}/ratelimit.ts`, url);
 	},
 });

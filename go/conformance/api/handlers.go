@@ -325,7 +325,7 @@ func (f feed) Since(ctx context.Context, after int64, limit int) ([]Entry, error
 func (f feed) Latest(ctx context.Context) (int64, error) { return f.store.Latest(ctx) }
 
 // log opens the notes' log and its hub, for follow.Follow.
-func (env Env) log() (feed, error) {
+func (env Env) feed() (feed, error) {
 	store, err := env.Store()
 	if err != nil {
 		return feed{}, err
@@ -342,20 +342,11 @@ func (env Env) log() (feed, error) {
 // the newer wins). A planned end (`seconds`) sends END, the terminator; if Follow gives up (hub
 // down) the stream just ends without it, so the SDKs reconnect by themselves.
 func (env Env) watch(_ context.Context, in *WatchInput) (*huma.StreamResponse, error) {
-	notes, err := env.log()
+	notes, err := env.feed()
 	if err != nil {
 		return nil, err
 	}
-	options := follow.Options{OnBroken: func(err error) { log.Printf("watch: hub subscription broken, resubscribing: %v", err) }}
-	for _, position := range []string{in.After, in.LastEventID} {
-		seq, err := strconv.ParseInt(position, 10, 64)
-		if err != nil || seq < 0 {
-			continue // Last-Event-ID is not validated by the contract: ignore what is no position
-		}
-		if options.After == nil || seq > *options.After {
-			options.After = &seq
-		}
-	}
+	options := follow.Options{After: follow.Newest(in.After, in.LastEventID), OnBroken: func(err error) { log.Printf("watch: hub subscription broken, resubscribing: %v", err) }}
 	return &huma.StreamResponse{Body: func(hc huma.Context) {
 		hc.SetHeader("Content-Type", "text/event-stream")
 		w := transport.Flushing(hc.BodyWriter())
@@ -391,7 +382,7 @@ func (env Env) live(_ context.Context, in *LiveInput) (*huma.StreamResponse, err
 	if !strings.EqualFold(in.Upgrade, "websocket") {
 		return nil, huma.NewError(http.StatusUpgradeRequired, "expected a WebSocket upgrade")
 	}
-	notes, err := env.log()
+	notes, err := env.feed()
 	if err != nil {
 		return nil, err
 	}

@@ -33,8 +33,8 @@ import (
 	"github.com/joeblew999/charter/go/lib/auth"
 )
 
-// Extension is where an operation's limit is in the specs.
-const Extension = "x-rate-limit"
+// extension is where an operation's limit is in the specs.
+const extension = "x-rate-limit"
 
 // Limit is one Rate Limiting binding: at most Limit calls per caller in each Period.
 type Limit struct {
@@ -44,9 +44,10 @@ type Limit struct {
 	Scope   string `json:"scope,omitempty"` // Declare: every operation that needs this scope
 }
 
-// On is an operation's own limit, for its Extensions (with Fern's, if it has them).
-func On(limit Limit, extensions map[string]any) map[string]any {
-	out := map[string]any{Extension: limit}
+// Limited is an operation's own limit, for its Extensions (with Fern's, if it has them):
+// charter-lib/ratelimit's limited, in TypeScript.
+func Limited(limit Limit, extensions map[string]any) map[string]any {
+	out := map[string]any{extension: limit}
 	for key, value := range extensions {
 		out[key] = value
 	}
@@ -76,7 +77,7 @@ func Declare(spec *huma.OpenAPI, perScope ...Limit) {
 		if op.Extensions == nil {
 			op.Extensions = map[string]any{}
 		}
-		op.Extensions[Extension] = limit
+		op.Extensions[extension] = limit
 		if op.Responses == nil {
 			op.Responses = map[string]*huma.Response{}
 		}
@@ -124,20 +125,20 @@ func tooMany(spec *huma.OpenAPI, limit Limit) *huma.Response {
 
 // limitOf is the limit an operation's Extensions hold.
 func limitOf(op *huma.Operation) (Limit, bool) {
-	limit, ok := op.Extensions[Extension].(Limit)
+	limit, ok := op.Extensions[extension].(Limit)
 	return limit, ok && limit.Binding != ""
 }
 
-// Limiter says whether key may make one more call under limit. Allow (the Worker's binding, or
+// Limiter says whether key may make one more call under limit. allow (the Worker's binding, or
 // memory on the host) is the one Middleware uses unless given another.
 type Limiter func(ctx context.Context, limit Limit, key string) (bool, error)
 
 // Middleware enforces each operation's limit, after auth's middleware (it keys on the caller):
 // routes.UseMiddleware(auth.Middleware(...)); routes.UseMiddleware(ratelimit.Middleware(routes, nil)).
-// A nil limiter is Allow.
+// A nil limiter is allow.
 func Middleware(api huma.API, limiter Limiter) func(huma.Context, func(huma.Context)) {
 	if limiter == nil {
-		limiter = Allow
+		limiter = allow
 	}
 	var warned sync.Map
 	return func(ctx huma.Context, next func(huma.Context)) {
@@ -146,7 +147,7 @@ func Middleware(api huma.API, limiter Limiter) func(huma.Context, func(huma.Cont
 			next(ctx)
 			return
 		}
-		allowed, err := limiter(ctx.Context(), limit, Key(ctx))
+		allowed, err := limiter(ctx.Context(), limit, callerKey(ctx))
 		if err != nil {
 			// Fail open: a missing or failing binding never takes the API down.
 			if _, seen := warned.LoadOrStore(limit.Binding+err.Error(), true); !seen {
@@ -163,9 +164,9 @@ func Middleware(api huma.API, limiter Limiter) func(huma.Context, func(huma.Cont
 	}
 }
 
-// Key is whom a call counts against: the caller auth let in, by the most specific thing that names
+// callerKey is whom a call counts against: the caller auth let in, by the most specific thing that names
 // it, or else the client's IP (CF-Connecting-IP on Cloudflare, the connection's address on the host).
-func Key(ctx huma.Context) string {
+func callerKey(ctx huma.Context) string {
 	var caller *auth.Caller
 	if c, ok := auth.CallerOf(ctx.Context()); ok {
 		caller = &c

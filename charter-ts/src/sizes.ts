@@ -22,14 +22,15 @@ function lastSizes(): Record<string, number> {
 	}
 }
 
-/** A file's size and its gzipped size (what Cloudflare counts); a folder's, the sum of its files'. */
+/** A file's size and its gzipped size (what Cloudflare counts); a folder's, the sum of its files', less
+ * source maps (*.map), which a Worker does not run and its size limit does not count. */
 function sizesOf(path: string): { raw: number; gzipped: number } {
 	if (!statSync(path).isDirectory()) {
 		const content = readFileSync(path);
 		return { raw: content.length, gzipped: gzipSync(content).length };
 	}
 	return readdirSync(path, { recursive: true, withFileTypes: true })
-		.filter(entry => entry.isFile())
+		.filter(entry => entry.isFile() && !entry.name.endsWith(".map"))
 		.map(entry => sizesOf(join(entry.parentPath, entry.name)))
 		.reduce((sum, size) => ({ raw: sum.raw + size.raw, gzipped: sum.gzipped + size.gzipped }), { raw: 0, gzipped: 0 });
 }

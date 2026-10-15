@@ -74,18 +74,11 @@ Every 401 carries `WWW-Authenticate: Bearer resource_metadata="<the API>/.well-k
 
 ## Rate limits
 
-A limited operation takes at most `limit` calls per caller in each `period` (10 or 60 s); one more is 429 with `Retry-After`. The caller is who auth let in, or the client's IP on a public operation; a call auth refuses is not counted. In the notes examples, creating a note takes 100 a minute.
-
-```go
-ratelimit.Declare(config.OpenAPI, ratelimit.Limit{Binding: "READ_LIMIT", Limit: 600, Period: 60, Scope: "read"}) // per scope
-Extensions: ratelimit.On(ratelimit.Limit{Binding: "WRITE_LIMIT", Limit: 100, Period: 60}, nil)                   // per operation
-```
-
-In TypeScript: `spec: needs(["write"], limited(writeLimit))`, and `rateLimits` in the document. Each limit is a [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) binding, which `cloudflare.config.ts` declares from the spec: `...rateLimits(spec, name, bindings.rateLimit)` from `"charter-ts/cloudflare"`. It counts per Cloudflare location and is eventually consistent: it stops abuse, it does not account. A Worker without the binding lets every call through, and logs it once.
+How often each caller may call: [Rate limits](ratelimits.md).
 
 ## Proven
 
-- `npm run check` (2026-10-15): `ts/conformance/test/auth.ts` serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After`, against go/conformance natively and under workerd, and ts/conformance under workerd. It does not run on Cloudflare: rate limits and an OIDC issuer have not been tried there.
+- `npm run check` (2026-10-15): `ts/conformance/test/auth.ts` serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After`, against go/conformance natively and under workerd, and ts/conformance under workerd. It does not run on Cloudflare, where an OIDC issuer has not been tried; rate limits have ([Rate limits](ratelimits.md)).
 - On Cloudflare, 2026-10-03: a Go notes project behind Access. No token, or a wrong secret: a redirect to the login. The machine's token reads; writing is 403. The write token writes; the read token, 403; a JWT from an untrusted issuer, 401.
 
 ## Limits

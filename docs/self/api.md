@@ -20,8 +20,8 @@ npm run check    # fails on a stale spec, a failing test, or (in Go) a TinyGo ga
 | The handlers | `api/handlers.ts` | `api/handlers.go` |
 | The storage | `api/store.ts` (D1) | `api/store.go` (`Store`, and `MemStore` for `go test` and `--native`), `api/store_d1.go` (D1) |
 | The specs' document | `api/spec.ts` | `api/spec.go`; `cmd/spec` writes the specs from it |
-| The Worker | `worker.ts` | `main.go`, with the bindings in `platform_js.go`; `worker.mjs`, the Worker's entry |
-| The tests | `test/`, and unit tests beside the code (`api/*.test.ts`) | `test/`, the same as its TypeScript twin's; unit tests in `api/*_test.go` |
+| The Worker | `worker.ts` | `main.go`, with the bindings in `platform_js.go`; `worker.mjs`, the Worker's entry. Its module (`go.mod`) is the project's name, on the Go library `github.com/joeblew999/charter/go/lib` |
+| The tests | `test/`, and unit tests beside the code (`api/*.test.ts`) | `test/`, the TypeScript twin's tests, with the schemas they check answers against (`test/schemas.ts`); unit tests in `api/*_test.go` |
 | Cloudflare's | `cloudflare.config.ts` (the Worker, its database `DB`, and with a stream the hub `HUB`), `migrations/*.sql` | the same |
 | charter's | `charter.config.ts` ([below](#charterconfigts)) | the same |
 
@@ -47,7 +47,7 @@ npm run check    # fails on a stale spec, a failing test, or (in Go) a TinyGo ga
 
 ## MCP
 
-Every operation that answers once is also a tool at `/api/mcp`, with the same checks and the same sign-in: a call is let in, refused and limited as the route is. A stream or a WebSocket is not a tool. To hide one: `mcp.Expose(op, false)` in Go, `.meta(notATool())` in TypeScript.
+Every operation that answers once is also a tool at `/api/mcp`, with the same checks and the same sign-in: a call is let in, refused and limited as the route is. A stream or a WebSocket is not a tool. To hide one: `mcp.NotATool(op)` in Go, `.meta(notATool())` in TypeScript.
 
 ```sh
 claude mcp add --transport http billing-api https://billing-api.<your-subdomain>.workers.dev/api/mcp
@@ -55,23 +55,7 @@ claude mcp add --transport http billing-api https://billing-api.<your-subdomain>
 
 ## charter.config.ts
 
-What charter needs to know about the project, typed. The example's, shortened:
-
-```ts
-import { defineConfig } from "charter-ts/config";
-import { specs } from "./api/spec.ts";
-
-export default defineConfig({
-	worker: "billing-api",
-	url: process.env.API_URL ?? "https://billing-api.you.workers.dev",
-	port: 5178,
-	specs,
-	test: { run: ({ origin, node }) => node("test/live.ts", origin) },
-	live: ({ url, node }) => node("test/live.ts", url),
-});
-```
-
-`test` runs against the API on your machine (`npm run check`), `live` against the deployed one (`npm run live-test`). Every field is in [`Config`](https://github.com/joeblew999/charter/blob/main/charter-ts/src/config.ts): the secrets, throwaway local ones, programs to serve beside the API for a test (a webhook's receiver), and the most the Worker may be as a deploy uploads it (`bundleLimit`: [Deploy and CI](deploy.md#deploy)).
+What charter needs to know about the project, typed: its Worker's name and URL, its port, its specs, its secrets (and throwaway local ones), and its tests: `test` runs against the API on your machine (`npm run check`), `live` against the deployed one (`npm run live-test`). Every field is in [`Config`](https://github.com/joeblew999/charter/blob/main/charter-ts/src/config.ts).
 
 ## Take the example out
 
@@ -83,7 +67,3 @@ export default defineConfig({
 | `fern/generators.yml` | Your SDKs' names: `namespaceExport`, `packageName`, `binaryName` |
 
 Without a stream, remove the hub too: the `Hub` export, the `HUB` binding and the stream's code. `grep -rni note api test migrations fern/generators.yml charter.config.ts` shows what is left.
-
-## In Go
-
-`charter-ts new <name> --go` makes a Go project: its module is `<name>` (change it in `go.mod` and the imports), and it imports the Go library of the same release, `github.com/joeblew999/charter/go/lib`. Its tests against a server are TypeScript, the same as its TypeScript twin's, in `test/`, with the schemas they check answers against in `test/schemas.ts`.

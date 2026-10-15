@@ -12,8 +12,9 @@
 // payload with an id (`.meta({ id })`) is a schema in components.schemas, as Huma names Go's.
 import type { AnySchema, Meta, MetaPlugin, RouterContract } from "@orpc/contract";
 import { getAsyncIteratorObjectSchemaDetails } from "@orpc/contract";
-import { DelegatingJsonSchemaConverter, type JsonSchema, type JsonSchemaConverter, mapJsonSchemaRefs } from "@orpc/json-schema";
+import { DelegatingJsonSchemaConverter, type JsonSchema, type JsonSchemaConverter } from "@orpc/json-schema";
 import { walkProcedureContractsAsync, type AnyRouter } from "@orpc/server";
+import { asComponent } from "./schema.ts";
 
 export interface AsyncAPIMeta {
 	/** Channel id; Fern names the client after it (e.g. liveNotes -> client.liveNotes.connect()). */
@@ -87,7 +88,7 @@ export class AsyncAPIGenerator {
 			const named = (schema: unknown): unknown => {
 				const { $defs, ...rest } = (typeof schema === "object" && schema ? schema : {}) as { $defs?: Record<string, unknown> };
 				if (!$defs) return schema;
-				const component = (value: unknown) => mapJsonSchemaRefs(value as JsonSchema, ref => ref.replace(/^#\/\$defs\//, "#/components/schemas/"));
+				const component = (value: unknown) => asComponent(value as JsonSchema);
 				const schemas = (doc.components.schemas ??= {});
 				for (const [name, def] of Object.entries($defs)) schemas[name] = component(def);
 				return component(rest);

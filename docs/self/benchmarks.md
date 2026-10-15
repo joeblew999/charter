@@ -1,6 +1,6 @@
 ---
 title: Benchmarks
-nav_order: 16
+nav_order: 17
 ---
 # Benchmarks: what a request costs, and what made it cheaper
 

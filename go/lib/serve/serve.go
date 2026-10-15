@@ -52,9 +52,9 @@ func init() {
 
 // The standard paths (docs/self/standard.md).
 const (
-	OpenAPIPath  = "/api/openapi.json"
-	AsyncAPIPath = "/api/asyncapi.json"
-	MCPPath      = "/api/mcp"
+	openAPIPath  = "/api/openapi.json"
+	asyncAPIPath = "/api/asyncapi.json"
+	mCPPath      = "/api/mcp"
 )
 
 // API is what a project gives; the rest is the standard.
@@ -107,11 +107,11 @@ func (a API) Handler() http.Handler {
 			r.Method = http.MethodGet
 		}
 		switch {
-		case path == OpenAPIPath:
-			a.write(w, a.OpenAPI, Origin(r))
-		case path == AsyncAPIPath:
-			a.write(w, a.AsyncAPI, Origin(r))
-		case path == MCPPath:
+		case path == openAPIPath:
+			a.write(w, a.OpenAPI, auth.Origin(r))
+		case path == asyncAPIPath:
+			a.write(w, a.AsyncAPI, auth.Origin(r))
+		case path == mCPPath:
 			tools.ServeHTTP(w, r)
 		case len(a.Trusted) > 0 && strings.HasPrefix(path, "/.well-known/"):
 			// An API that takes credentials says how to get in; one that takes none has nothing to say.
@@ -247,22 +247,6 @@ func (a API) AsyncAPI(server string) ([]byte, error) {
 // fails on it before it writes a spec.
 func (a API) Tools() []error {
 	return mcp.Check(humaworkers.New(a.Config(), a.Routes))
-}
-
-// Origin is a request's scheme and host: absolute in its URL on Workers, from Host natively, https
-// when it came over TLS or a proxy says so.
-func Origin(r *http.Request) string {
-	if r.URL.Scheme != "" && r.URL.Host != "" {
-		return r.URL.Scheme + "://" + r.URL.Host
-	}
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
-	}
-	if forwarded := r.Header.Get("X-Forwarded-Proto"); forwarded != "" {
-		scheme = forwarded
-	}
-	return scheme + "://" + r.Host
 }
 
 // mediaTypes refuses a body of a media type the operation does not take (415), as charter-lib does:

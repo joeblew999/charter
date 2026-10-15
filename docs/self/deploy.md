@@ -1,6 +1,6 @@
 ---
 title: Deploy and CI
-nav_order: 8
+nav_order: 9
 ---
 
 # Deploy and CI

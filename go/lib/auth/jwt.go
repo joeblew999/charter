@@ -103,7 +103,7 @@ func (k *keyCache) oidc(ctx context.Context, issuer, audience, token string) (Ca
 	if len(scopes) == 0 {
 		scopes = claims.Scp
 	}
-	return Caller{Scheme: OIDCName, Email: claims.Email, Subject: std.Subject, Scopes: scopes}, nil
+	return Caller{Scheme: oIDCName, Email: claims.Email, Subject: std.Subject, Scopes: scopes}, nil
 }
 
 // verify checks token's signature against the issuer's keys at jwks, then its claims: iss, aud,
@@ -176,7 +176,7 @@ func find(set jose.JSONWebKeySet, kid string) (any, bool) {
 }
 
 // discover is the issuer's discovery document, kept for keysKept. Its issuer must be the one asked
-// for (OpenID Connect Discovery 1.0, 4.3).
+// for (OpenID Connect discoveryHandler 1.0, 4.3).
 func (k *keyCache) discover(ctx context.Context, issuer string) (*discovery, error) {
 	k.mu.Lock()
 	d := k.discovered[issuer]
@@ -185,7 +185,7 @@ func (k *keyCache) discover(ctx context.Context, issuer string) (*discovery, err
 		return d, nil
 	}
 	d = &discovery{}
-	if err := fetchJSON(ctx, strings.TrimSuffix(issuer, "/")+OpenIDPath, d); err != nil {
+	if err := fetchJSON(ctx, strings.TrimSuffix(issuer, "/")+openIDPath, d); err != nil {
 		return nil, err
 	}
 	if d.Issuer != issuer || d.JWKS == "" {

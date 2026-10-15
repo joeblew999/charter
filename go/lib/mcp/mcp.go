@@ -39,13 +39,14 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/joeblew999/charter/go/lib/humaworkers"
+	"github.com/joeblew999/charter/go/lib/internal/reply"
 )
 
-// The protocol revisions served: Modern ones say their version on every request, Legacy ones open
+// The protocol revisions served: modernVersions ones say their version on every request, legacyVersions ones open
 // with initialize.
 var (
-	Modern = []string{"2026-07-28"}
-	Legacy = []string{"2025-11-25", "2025-06-18"}
+	modernVersions = []string{"2026-07-28"}
+	legacyVersions = []string{"2025-11-25", "2025-06-18"}
 )
 
 // JSON-RPC and MCP error codes.
@@ -144,14 +145,14 @@ func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		modern = json.Unmarshal(raw, &version) == nil
 	}
 	header := r.Header.Get("MCP-Protocol-Version")
-	supported := map[string]any{"supported": append(append([]string{}, Modern...), Legacy...)}
+	supported := map[string]any{"supported": append(append([]string{}, modernVersions...), legacyVersions...)}
 	if !modern {
 		// The handshake era. Its requests may name the version negotiated by initialize.
-		if slices.Contains(Modern, header) {
+		if slices.Contains(modernVersions, header) {
 			fail(w, http.StatusBadRequest, msg.ID, invalidParams, "Invalid params: params._meta needs "+metaVersion+" and "+metaCapabilities, nil)
 			return
 		}
-		if header != "" && !slices.Contains(Legacy, header) {
+		if header != "" && !slices.Contains(legacyVersions, header) {
 			supported["requested"] = header
 			fail(w, http.StatusBadRequest, msg.ID, unsupportedVersion, "Unsupported protocol version", supported)
 			return
@@ -165,7 +166,7 @@ func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusBadRequest, msg.ID, headerMismatch, "Header mismatch: MCP-Protocol-Version header value '"+header+"' does not match body value '"+version+"'", nil)
 		return
 	}
-	if !slices.Contains(Modern, version) {
+	if !slices.Contains(modernVersions, version) {
 		supported["requested"] = version
 		fail(w, http.StatusBadRequest, msg.ID, unsupportedVersion, "Unsupported protocol version", supported)
 		return
@@ -203,7 +204,7 @@ func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Every result says it is final (there are no input_required ones) and who answered.
 	result["resultType"] = "complete"
 	result["_meta"] = map[string]any{metaServer: s.implementation()}
-	reply(w, msg.ID, result)
+	respond(w, msg.ID, result)
 }
 
 // legacy answers a request of the handshake era. Nothing is remembered between requests, so
@@ -214,8 +215,8 @@ func (s server) legacy(w http.ResponseWriter, r *http.Request, msg message, p pa
 	case "initialize":
 		// The client's version if it is served, otherwise the newest one of this era: the client decides.
 		version := p.ProtocolVersion
-		if !slices.Contains(Legacy, version) {
-			version = Legacy[0]
+		if !slices.Contains(legacyVersions, version) {
+			version = legacyVersions[0]
 		}
 		result = map[string]any{"protocolVersion": version, "capabilities": capabilities, "serverInfo": s.implementation()}
 		if instructions := s.info().Description; instructions != "" {
@@ -232,7 +233,7 @@ func (s server) legacy(w http.ResponseWriter, r *http.Request, msg message, p pa
 		return
 	}
 	if result != nil {
-		reply(w, msg.ID, result)
+		respond(w, msg.ID, result)
 	}
 }
 
@@ -254,14 +255,14 @@ func (s server) implementation() map[string]any {
 
 // list is the result of tools/list.
 func (s server) list() map[string]any {
-	return map[string]any{"tools": Tools(s.api.Operations(), s.api.API.OpenAPI().Components.Schemas)}
+	return map[string]any{"tools": toolList(s.api.Operations(), s.api.API.OpenAPI().Components.Schemas)}
 }
 
 // call is the result of tools/call, or nil when it has answered with an error. Only a call that
 // can't be made is a protocol error; whatever the operation answers, 4xx and 5xx too, is a result.
 func (s server) call(w http.ResponseWriter, r *http.Request, msg message, p params) map[string]any {
 	op := s.api.Operation(p.Name)
-	if p.Name == "" || op == nil || !IsTool(op) {
+	if p.Name == "" || op == nil || !isTool(op) {
 		fail(w, http.StatusOK, msg.ID, invalidParams, "Tool "+p.Name+" not found", nil)
 		return nil
 	}
@@ -296,8 +297,8 @@ func (s server) call(w http.ResponseWriter, r *http.Request, msg message, p para
 	return result
 }
 
-func reply(w http.ResponseWriter, id json.RawMessage, result any) {
-	write(w, http.StatusOK, map[string]any{"jsonrpc": "2.0", "id": id, "result": result})
+func respond(w http.ResponseWriter, id json.RawMessage, result any) {
+	reply.JSON(w, http.StatusOK, map[string]any{"jsonrpc": "2.0", "id": id, "result": result})
 }
 
 // fail answers with a JSON-RPC error. id is nil when the request's id could not be read.
@@ -310,18 +311,7 @@ func fail(w http.ResponseWriter, status int, id json.RawMessage, code int, text 
 	if id != nil {
 		body["id"] = id
 	}
-	write(w, status, body)
-}
-
-func write(w http.ResponseWriter, status int, body any) {
-	data, err := json.Marshal(body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	w.Write(data)
+	reply.JSON(w, status, body)
 }
 
 // decoded reads an Mcp-Name header: plain, or =?base64?...?= when the name is not header-safe.

@@ -33,7 +33,8 @@ The same APIs are kept here in TypeScript and in Go, and a program holds them to
 | [Your API](api.md) | The contract, handlers and storage; MCP; `charter.config.ts` |
 | [Streaming](streaming.md) | Streams that lose nothing across deploys |
 | [SDKs](sdks.md) | Generating, proving and publishing them; Fern's features |
-| [Auth](auth.md) | Who may call; rate limits |
+| [Auth](auth.md) | Who may call, and how they prove it |
+| [Rate limits](ratelimits.md) | How often each caller may call |
 | [Server-rendered pages](pages.md) | Pages from the same Worker, live over its streams |
 | [Deploy and CI](deploy.md) | Cloudflare, secrets, the checks on GitHub |
 | [Repos that use each other](repos.md) | Who pins what, breaking changes, Renovate |

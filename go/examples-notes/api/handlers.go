@@ -126,19 +126,7 @@ func (f feed) Latest(ctx context.Context) (int64, error) { return f.store.Latest
 // feed opens the feed and reads the resume position: the newest of the positions given (a
 // reconnecting SDK resends its original `after` plus a newer Last-Event-ID). None: from now on.
 func (env Env) feed(positions ...string) (feed, follow.Options, error) {
-	options := follow.Options{OnBroken: func(err error) { log.Printf("follow: hub subscription broken, resubscribing: %v", err) }}
-	for _, position := range positions {
-		if position == "" {
-			continue
-		}
-		id, err := strconv.ParseInt(position, 10, 64)
-		if err != nil || id < 0 {
-			continue // Last-Event-ID is not validated by the contract: ignore what is not a note id
-		}
-		if options.After == nil || id > *options.After {
-			options.After = &id
-		}
-	}
+	options := follow.Options{After: follow.Newest(positions...), OnBroken: func(err error) { log.Printf("follow: hub subscription broken, resubscribing: %v", err) }}
 	store, err := env.Store()
 	if err != nil {
 		return feed{}, options, err

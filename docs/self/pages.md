@@ -1,6 +1,6 @@
 ---
 title: Server-rendered pages
-nav_order: 7
+nav_order: 8
 ---
 # Server-rendered pages: gsx with htmx 4 or Datastar
 

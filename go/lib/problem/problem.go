@@ -11,12 +11,12 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-// Type is the media type of a problem.
-const Type = "application/problem+json"
+// mediaType is the media type of a problem.
+const mediaType = "application/problem+json"
 
 // Write answers w with status and what went wrong.
 func Write(w http.ResponseWriter, status int, detail string) {
-	w.Header().Set("Content-Type", Type)
+	w.Header().Set("Content-Type", mediaType)
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(&huma.ErrorModel{Title: http.StatusText(status), Status: status, Detail: detail})
 }

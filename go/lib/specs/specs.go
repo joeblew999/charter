@@ -29,7 +29,7 @@ func Problems(api serve.API) []error {
 		}
 	}
 	problems = append(problems, api.Tools()...)
-	return append(problems, Examples(humaworkers.New(api.Config(), api.Routes))...)
+	return append(problems, exampleProblems(humaworkers.New(api.Config(), api.Routes))...)
 }
 
 // Must prints the problems and ends the command if there are any: a contract with problems gets no

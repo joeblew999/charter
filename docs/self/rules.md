@@ -1,6 +1,6 @@
 ---
 title: Rules
-nav_order: 14
+nav_order: 15
 ---
 # Rules for working in this repo
 

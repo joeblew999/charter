@@ -111,9 +111,7 @@ func testAPI(registered map[string]int) *humaworkers.API {
 			func(api huma.API, op huma.Operation) { huma.Register(api, op, stream) }),
 		route(huma.Operation{OperationID: "hiddenThing", Method: "GET", Path: "/hidden/{id}", Hidden: true},
 			func(api huma.API, op huma.Operation) { huma.Register(api, op, get) }),
-		route(Expose(huma.Operation{OperationID: "secretThing", Method: "GET", Path: "/secret/{id}", Hidden: true}, true),
-			func(api huma.API, op huma.Operation) { huma.Register(api, op, get) }),
-		route(Expose(huma.Operation{OperationID: "internalThing", Method: "GET", Path: "/internal/{id}"}, false),
+		route(NotATool(huma.Operation{OperationID: "internalThing", Method: "GET", Path: "/internal/{id}"}),
 			func(api huma.API, op huma.Operation) { huma.Register(api, op, get) }),
 	})
 }
@@ -209,15 +207,15 @@ func same(t *testing.T, what string, got any, want string) {
 func TestEveryOperationThatAnswersOnceIsATool(t *testing.T) {
 	h := Handler(testAPI(map[string]int{}))
 	// Calls before the list (a server that lives on) don't change its order.
-	call(t, h, "secretThing", `{"id": 1}`)
+	call(t, h, "getThing", `{"id": 1}`)
 	call(t, h, "createThing", `{"name": "first"}`)
 	a := post(t, h, rpc("tools/list", ""))
 	var names []string
 	for _, tool := range a.Result["tools"].([]any) {
 		names = append(names, tool.(map[string]any)["name"].(string))
 	}
-	// In the routes' order. Not the stream, not the hidden one, not the one opted out; the hidden one opted in.
-	if want := []string{"getThing", "createThing", "replaceThings", "deleteThing", "secretThing"}; !reflect.DeepEqual(names, want) {
+	// In the routes' order. Not the stream, not the hidden one, not the one that is NotATool.
+	if want := []string{"getThing", "createThing", "replaceThings", "deleteThing"}; !reflect.DeepEqual(names, want) {
 		t.Fatalf("tools %v, want %v", names, want)
 	}
 	if a.Result["resultType"] != nil || a.Result["ttlMs"] != nil {
@@ -482,7 +480,7 @@ func TestStatelessEra(t *testing.T) {
 		"capabilities": {"tools": {}}, "ttlMs": 300000, "cacheScope": "public", "_meta": `+server+`}`)
 
 	a = modern(t, h, "tools/list", "")
-	if a.Status != 200 || a.Result["resultType"] != "complete" || a.Result["ttlMs"] != float64(300000) || a.Result["cacheScope"] != "public" || len(a.Result["tools"].([]any)) != 5 {
+	if a.Status != 200 || a.Result["resultType"] != "complete" || a.Result["ttlMs"] != float64(300000) || a.Result["cacheScope"] != "public" || len(a.Result["tools"].([]any)) != 4 {
 		t.Errorf("tools/list: HTTP %d %s", a.Status, a.Raw)
 	}
 	same(t, "tools/list _meta", a.Result["_meta"], server)

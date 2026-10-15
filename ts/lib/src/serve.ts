@@ -21,18 +21,19 @@
 import { getAsyncIteratorObjectSchemaDetails, type RouterContract, ValidationError } from "@orpc/contract";
 import { getOpenAPIMeta, type OpenAPIV3_1 } from "@orpc/openapi";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
-import { type AnyORPCError, call, COMMON_ERROR_STATUS_MAP, os, ORPCError, Procedure, type Router } from "@orpc/server";
+import { type AnyORPCError, call, COMMON_ERROR_STATUS_MAP, os, ORPCError, type Router } from "@orpc/server";
 import { ResponseHeadersPlugin } from "@orpc/server/plugins";
 import { type AsyncAPIDocument, getAsyncAPIMeta } from "./asyncapi.ts";
 import { authorize, type Base, type Caller, scopesOf, securityOf, type Security, type Trusted, wellKnown } from "./auth.ts";
-import { type AnyProcedure, mcpHandler, mcpPath } from "./mcp.ts";
+import { mcpHandler, mcpPath } from "./mcp.ts";
 import { type ErrorDetail, problem, problemOf, problemType } from "./problem.ts";
 import { keyOf, limitOf, type Limit, rateLimit } from "./ratelimit.ts";
 import { asyncapiSpec, openapiSpec } from "./specs.ts";
+import { type AnyProcedure, proceduresOf } from "./router.ts";
 
 /** The standard paths (docs/self/standard.md). */
-export const openapiPath = "/api/openapi.json";
-export const asyncapiPath = "/api/asyncapi.json";
+const openapiPath = "/api/openapi.json";
+const asyncapiPath = "/api/asyncapi.json";
 export { mcpPath };
 
 /** What an API's document says beside its procedures: both specs' info, the OpenAPI document's fields
@@ -122,13 +123,10 @@ declare const WebSocketPair: new () => Record<0 | 1, WorkerSocket>;
 /** The channels of a router: each asyncapi() procedure, by its address. */
 function channelsOf(router: Router<any>): Map<string, AnyProcedure> {
 	const channels = new Map<string, AnyProcedure>();
-	const walk = (node: unknown): void => {
-		if (node instanceof Procedure) {
-			const meta = getAsyncAPIMeta(node as never);
-			if (meta) channels.set(meta.address, node);
-		} else if (node && typeof node === "object") Object.values(node).forEach(walk);
-	};
-	walk(router);
+	for (const procedure of proceduresOf(router)) {
+		const meta = getAsyncAPIMeta(procedure as never);
+		if (meta) channels.set(meta.address, procedure);
+	}
 	return channels;
 }
 
@@ -171,16 +169,13 @@ interface Route {
 /** The routes of a router: each procedure with an OpenAPI route that is no channel. */
 function routesOf(router: Router<any>): Route[] {
 	const routes: Route[] = [];
-	const walk = (node: unknown): void => {
-		if (node instanceof Procedure) {
-			const meta = getOpenAPIMeta(node as never) as { method?: string; path?: string } | undefined;
-			if (!meta?.path || getAsyncAPIMeta(node as never)) return;
-			const params = [...meta.path.matchAll(/\{([^}]+)\}/g)].map(m => m[1]!);
-			const pattern = new RegExp(`^${meta.path.replace(/[.*+?^$()|[\]\\]/g, "\\$&").replace(/\\?\{[^}]+\\?\}/g, "([^/]+)")}$`);
-			routes.push({ method: (meta.method ?? "POST").toUpperCase(), path: meta.path, pattern, procedure: node, params });
-		} else if (node && typeof node === "object") Object.values(node).forEach(walk);
-	};
-	walk(router);
+	for (const procedure of proceduresOf(router)) {
+		const meta = getOpenAPIMeta(procedure as never) as { method?: string; path?: string } | undefined;
+		if (!meta?.path || getAsyncAPIMeta(procedure as never)) continue;
+		const params = [...meta.path.matchAll(/\{([^}]+)\}/g)].map(m => m[1]!);
+		const pattern = new RegExp(`^${meta.path.replace(/[.*+?^$()|[\]\\]/g, "\\$&").replace(/\\?\{[^}]+\\?\}/g, "([^/]+)")}$`);
+		routes.push({ method: (meta.method ?? "POST").toUpperCase(), path: meta.path, pattern, procedure, params });
+	}
 	return routes;
 }
 

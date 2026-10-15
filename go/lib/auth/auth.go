@@ -44,12 +44,12 @@ import (
 const (
 	// Name is the bearer tokens' scheme (Token).
 	Name = "bearer"
-	// AccessClientID and AccessClientSecret are a Cloudflare Access service token: the two headers
+	// accessClientID and accessClientSecret are a Cloudflare Access service token: the two headers
 	// a machine sends, which Access checks at the edge before it lets the request through.
-	AccessClientID     = "accessClientId"
-	AccessClientSecret = "accessClientSecret"
-	// OIDCName is an OpenID Connect issuer's access token.
-	OIDCName = "oidc"
+	accessClientID     = "accessClientId"
+	accessClientSecret = "accessClientSecret"
+	// oIDCName is an OpenID Connect issuer's access token.
+	oIDCName = "oidc"
 )
 
 // The settings (the Worker's secrets or variables) that say whom the API trusts. Unset, it trusts
@@ -89,7 +89,7 @@ type OIDC struct{}
 // says whether a token is one of them and still good, and what it may do. Scheme is that endpoint's
 // security scheme in the specs (an oauth2 one), which an operation's Security names beside this
 // package's schemes, with the same scopes. TokenPath is the endpoint (e.g. /oauth/token): with it, the
-// API names itself an authorization server and says how to use it (WellKnown: ServerPath).
+// API names itself an authorization server and says how to use it (WellKnown: serverPath).
 type Issued struct {
 	Scheme    string
 	Check     func(token string) (scopes []string, ok bool)
@@ -103,7 +103,7 @@ func (Issued) trusted() {}
 
 // Caller is who a request comes from, once its credentials are verified, and what it may do.
 type Caller struct {
-	Scheme  string   // what vouched for it: Name (a token), "access", OIDCName, or an Issued's Scheme
+	Scheme  string   // what vouched for it: Name (a token), "access", oIDCName, or an Issued's Scheme
 	Email   string   // a person: from Access, or from an OIDC token that has it
 	Machine string   // an Access service token's Client ID (the JWT's common_name)
 	Subject string   // the token's sub: a user's id at the issuer
@@ -146,28 +146,28 @@ func Scheme(spec *huma.OpenAPI, scopes ...string) {
 // the SDKs take as options or read from <API>_ACCESS_CLIENT_ID and <API>_ACCESS_CLIENT_SECRET, where
 // <API> is api (the API's name, e.g. its Worker's) in capitals with _ for -.
 func AccessScheme(spec *huma.OpenAPI, api string) {
-	prefix := EnvPrefix(api)
+	prefix := envPrefix(api)
 	header := func(header, option, variable, what string) *huma.SecurityScheme {
 		return &huma.SecurityScheme{
 			Type: "apiKey", In: "header", Name: header, Description: what,
 			Extensions: map[string]any{"x-fern-header": map[string]any{"name": option, "env": prefix + variable}},
 		}
 	}
-	declare(spec, AccessClientID, header("CF-Access-Client-Id", "accessClientId", "_ACCESS_CLIENT_ID", "A Cloudflare Access service token's Client ID: a machine's own (cf zero-trust access service-tokens create)"))
-	declare(spec, AccessClientSecret, header("CF-Access-Client-Secret", "accessClientSecret", "_ACCESS_CLIENT_SECRET", "The service token's Client Secret"))
+	declare(spec, accessClientID, header("CF-Access-Client-Id", "accessClientId", "_ACCESS_CLIENT_ID", "A Cloudflare Access service token's Client ID: a machine's own (cf zero-trust access service-tokens create)"))
+	declare(spec, accessClientSecret, header("CF-Access-Client-Secret", "accessClientSecret", "_ACCESS_CLIENT_SECRET", "The service token's Client Secret"))
 }
 
 // OIDCScheme declares an OpenID Connect issuer's access tokens in the specs. Its discovery URL is
-// the API's /.well-known/openid-configuration, which Discovery serves.
+// the API's /.well-known/openid-configuration, which discoveryHandler serves.
 func OIDCScheme(spec *huma.OpenAPI) {
-	declare(spec, OIDCName, &huma.SecurityScheme{
-		Type: "openIdConnect", OpenIDConnectURL: OpenIDPath,
+	declare(spec, oIDCName, &huma.SecurityScheme{
+		Type: "openIdConnect", OpenIDConnectURL: openIDPath,
 		Description: "An access token from the OpenID Connect issuer the deployment trusts (OIDC_ISSUER), with the operation's scopes",
 	})
 }
 
-// EnvPrefix is the start of the variables an API's SDKs read: its name in capitals, _ for -.
-func EnvPrefix(api string) string {
+// envPrefix is the start of the variables an API's SDKs read: its name in capitals, _ for -.
+func envPrefix(api string) string {
 	return strings.ToUpper(strings.NewReplacer("-", "_", " ", "_", ".", "_").Replace(api))
 }
 
@@ -186,7 +186,7 @@ func declare(spec *huma.OpenAPI, name string, scheme *huma.SecurityScheme) {
 		spec.OnAddOperation = append(spec.OnAddOperation, func(spec *huma.OpenAPI, op *huma.Operation) {
 			op.Security = expand(spec, op.Security)
 			if op.Security == nil && len(spec.Security) == 0 {
-				op.Security = Public() // public, said so: generated SDKs then send nothing it does not need
+				op.Security = []map[string][]string{} // public, said so: generated SDKs then send nothing it does not need
 			}
 		})
 	}
@@ -197,11 +197,8 @@ func Needs(scopes ...string) []map[string][]string {
 	return []map[string][]string{{Name: append([]string{}, scopes...)}}
 }
 
-// Public is an operation's Security when it needs no credentials.
-func Public() []map[string][]string { return []map[string][]string{} }
-
 // ours are the schemes this package declares, in the order an operation's Security lists them.
-var ours = []string{Name, AccessClientID, AccessClientSecret, OIDCName}
+var ours = []string{Name, accessClientID, accessClientSecret, oIDCName}
 
 // expand rewrites each requirement of security that names only this package's schemes as one
 // requirement per scheme the spec declares, with the same scopes. The specs then say every way in,
@@ -233,11 +230,11 @@ func expand(spec *huma.OpenAPI, security []map[string][]string) []map[string][]s
 		if declared[Name] != nil {
 			add(map[string][]string{Name: scopes}, Name+" "+key)
 		}
-		if declared[AccessClientID] != nil {
-			add(map[string][]string{AccessClientID: scopes, AccessClientSecret: {}}, AccessClientID+" "+key)
+		if declared[accessClientID] != nil {
+			add(map[string][]string{accessClientID: scopes, accessClientSecret: {}}, accessClientID+" "+key)
 		}
-		if declared[OIDCName] != nil {
-			add(map[string][]string{OIDCName: scopes}, OIDCName+" "+key)
+		if declared[oIDCName] != nil {
+			add(map[string][]string{oIDCName: scopes}, oIDCName+" "+key)
 		}
 	}
 	if out == nil {
@@ -429,15 +426,15 @@ func describe(security []map[string][]string) string {
 	return strings.Join(alternatives, ", or ")
 }
 
-// Discovery serves /.well-known/openid-configuration, the specs' openIdConnectUrl: a redirect to
+// discoveryHandler serves /.well-known/openid-configuration, the specs' openIdConnectUrl: a redirect to
 // the discovery document of the issuer in OIDC_ISSUER, or 404 when there is none.
-func Discovery(setting func(name string) string) http.Handler {
+func discoveryHandler(setting func(name string) string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		issuer := setting(OIDCIssuer)
 		if issuer == "" {
 			problem.Write(w, http.StatusNotFound, "this API trusts no OpenID Connect issuer")
 			return
 		}
-		http.Redirect(w, r, strings.TrimSuffix(issuer, "/")+OpenIDPath, http.StatusFound)
+		http.Redirect(w, r, strings.TrimSuffix(issuer, "/")+openIDPath, http.StatusFound)
 	})
 }

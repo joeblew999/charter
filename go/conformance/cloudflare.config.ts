@@ -38,7 +38,7 @@ export default defineConfig({
 			// Where the noteCreated webhook is sent; empty: nowhere. The other settings (CLIENT_ID,
 			// CLIENT_SECRET, TOKEN_SECRET, WEBHOOK_SECRET) have the tests' defaults (api/handlers.go):
 			// an API of its own would keep them as secrets.
-			WEBHOOK_URL: bindings.text(process.env.CONFORMANCE_WEBHOOK_URL ?? ""),
+			WEBHOOK_URL: bindings.text(process.env.WEBHOOK_URL ?? ""),
 		},
 	},
 });

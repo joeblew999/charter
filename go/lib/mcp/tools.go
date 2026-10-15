@@ -35,8 +35,8 @@ import (
 // it is a JSON object, and isError for 4xx and 5xx (the text is then Huma's problem+json, with the
 // locations of what was wrong).
 
-// Tool is one entry of tools/list.
-type Tool struct {
+// mcpTool is one entry of tools/list.
+type mcpTool struct {
 	Name         string         `json:"name"`
 	Description  string         `json:"description,omitempty"`
 	InputSchema  map[string]any `json:"inputSchema"`
@@ -51,20 +51,20 @@ const (
 	schemaRef   = "#/components/schemas/"
 )
 
-// Expose says whether op is a tool, whatever IsTool would decide by itself. A streaming operation
-// made a tool must end by itself: the whole response is the result.
-func Expose(op huma.Operation, tool bool) huma.Operation {
+// NotATool leaves op out of the tools, whatever isTool would decide by itself (charter-lib/mcp's
+// notATool, in TypeScript).
+func NotATool(op huma.Operation) huma.Operation {
 	if op.Metadata == nil {
 		op.Metadata = map[string]any{}
 	}
-	op.Metadata[metadataKey] = tool
+	op.Metadata[metadataKey] = false
 	return op
 }
 
-// IsTool reports whether op is a tool: by default, every operation with an OperationID that is in
+// isTool reports whether op is a tool: by default, every operation with an OperationID that is in
 // OpenAPI (not Hidden) and does not stream. A tool call is one request and one answer, so a
 // text/event-stream operation or a WebSocket channel has nothing to give it.
-func IsTool(op *huma.Operation) bool {
+func isTool(op *huma.Operation) bool {
 	if op.OperationID == "" {
 		return false
 	}
@@ -82,13 +82,13 @@ func IsTool(op *huma.Operation) bool {
 	return true
 }
 
-// Tools are the tools among ops (humaworkers' API.Operations()), in their order, with schemas from
+// toolList are the tools among ops (humaworkers' API.Operations()), in their order, with schemas from
 // registry (api.OpenAPI().Components.Schemas). An operation that cannot be a tool is left out and
 // logged, and the others are listed: Check says which, before a client asks.
-func Tools(ops []*huma.Operation, registry huma.Registry) []Tool {
-	tools := []Tool{}
+func toolList(ops []*huma.Operation, registry huma.Registry) []mcpTool {
+	tools := []mcpTool{}
 	for _, op := range ops {
-		if !IsTool(op) {
+		if !isTool(op) {
 			continue
 		}
 		in, err := inputOf(op, registry)
@@ -96,7 +96,7 @@ func Tools(ops []*huma.Operation, registry huma.Registry) []Tool {
 			log.Printf("%v: it is not in tools/list", err)
 			continue
 		}
-		tool := Tool{Name: op.OperationID, Description: op.Summary, InputSchema: drafted(in.schema(registry)), OutputSchema: drafted(outputSchema(op, registry))}
+		tool := mcpTool{Name: op.OperationID, Description: op.Summary, InputSchema: drafted(in.schema(registry)), OutputSchema: drafted(outputSchema(op, registry))}
 		if op.Summary != "" && op.Description != "" {
 			tool.Description += "\n\n"
 		}
@@ -118,12 +118,11 @@ func Tools(ops []*huma.Operation, registry huma.Registry) []Tool {
 
 // Check is why each operation that would be a tool cannot be one: nil for an API whose tools/list
 // is complete. cmd/spec calls it (specs.Problems), before the specs are written, so that a missing
-// tool is found there and not by a client. The fix is to rename what clashes, or
-// Expose(op, false).
+// tool is found there and not by a client. The fix is to rename what clashes, or NotATool(op).
 func Check(api *humaworkers.API) []error {
 	var problems []error
 	for _, op := range api.Operations() {
-		if !IsTool(op) {
+		if !isTool(op) {
 			continue
 		}
 		if _, err := inputOf(op, api.API.OpenAPI().Components.Schemas); err != nil {
@@ -159,7 +158,7 @@ func inputOf(op *huma.Operation, registry huma.Registry) (input, error) {
 	if op.RequestBody == nil || op.RequestBody.Content[jsonType] == nil || op.RequestBody.Content[jsonType].Schema == nil {
 		return in, nil
 	}
-	in.body = resolve(op.RequestBody.Content[jsonType].Schema, registry)
+	in.body = humaworkers.Resolve(op.RequestBody.Content[jsonType].Schema, registry)
 	in.flat = in.body.Type == huma.TypeObject && len(in.body.Properties) > 0
 	// A body property named as a parameter is: the body stays whole, so both have a place.
 	for name := range in.body.Properties {
@@ -238,7 +237,7 @@ func outputSchema(op *huma.Operation, registry huma.Registry) map[string]any {
 		if !strings.HasPrefix(status, "2") || response == nil || response.Content[jsonType] == nil || response.Content[jsonType].Schema == nil {
 			continue
 		}
-		body := resolve(response.Content[jsonType].Schema, registry)
+		body := humaworkers.Resolve(response.Content[jsonType].Schema, registry)
 		if body.Type != huma.TypeObject {
 			return nil
 		}
@@ -248,18 +247,6 @@ func outputSchema(op *huma.Operation, registry huma.Registry) map[string]any {
 		return schema
 	}
 	return nil
-}
-
-// resolve follows a schema that only refers to a registry schema.
-func resolve(schema *huma.Schema, registry huma.Registry) *huma.Schema {
-	for schema.Ref != "" {
-		target := registry.SchemaFromRef(schema.Ref)
-		if target == nil {
-			break
-		}
-		schema = target
-	}
-	return schema
 }
 
 // definitions collects the registry schemas that a tool's schemas refer to.

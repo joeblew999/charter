@@ -25,6 +25,7 @@
 import { getOpenAPIMeta, type OpenAPIV3_2 } from "@orpc/openapi";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import { problem } from "./problem.ts";
+import { proceduresOf } from "./router.ts";
 
 /** The security schemes' names in the specs. */
 export const NAME = "bearer";
@@ -33,7 +34,7 @@ export const ACCESS_CLIENT_SECRET = "accessClientSecret";
 export const OIDC_NAME = "oidc";
 
 /** The header Cloudflare Access puts its JWT in, on every request it lets through. */
-export const ACCESS_HEADER = "cf-access-jwt-assertion";
+const ACCESS_HEADER = "cf-access-jwt-assertion";
 
 export type Security = Record<string, string[]>[];
 type Operation = OpenAPIV3_2.OperationObject;
@@ -52,7 +53,7 @@ export const scheme = (...scopes: string[]): Base => ({
 });
 
 /** The start of the variables an API's SDKs read: its name in capitals, _ for -. */
-export const envPrefix = (api: string) => api.replace(/[-. ]/g, "_").toUpperCase();
+const envPrefix = (api: string) => api.replace(/[-. ]/g, "_").toUpperCase();
 
 /**
  * Adds a Cloudflare Access service token to a `base`: the two headers, which the SDKs take as options
@@ -158,7 +159,7 @@ export interface Caller {
 }
 
 /** The caller as a log line or an error message would name it. */
-export const callerName = (c: Caller) => c.email ?? (c.machine ? `service token ${c.machine}` : c.token ? `the token ${c.token}` : c.subject ?? "the token");
+const callerName = (c: Caller) => c.email ?? (c.machine ? `service token ${c.machine}` : c.token ? `the token ${c.token}` : c.subject ?? "the token");
 
 /** The security a procedure's contract declares, or the API's default. */
 export function securityOf(procedure: unknown, defaults?: Security): Security | undefined {
@@ -266,12 +267,7 @@ export function wellKnown(request: Request, api: API): Response | undefined {
 /** Every scope a router's procedures need (their security, or the API's default), sorted: an API's scopes_supported. */
 export function scopesOf(router: unknown, defaults?: Security): string[] {
 	const scopes = new Set<string>();
-	const walk = (node: unknown): void => {
-		if (node && typeof node === "object" && "~orpc" in node) {
-			for (const requirement of securityOf(node, defaults) ?? []) for (const scope of scopesIn(requirement)) scopes.add(scope);
-		} else if (node && typeof node === "object") Object.values(node).forEach(walk);
-	};
-	walk(router);
+	for (const procedure of proceduresOf(router)) for (const requirement of securityOf(procedure, defaults) ?? []) for (const scope of scopesIn(requirement)) scopes.add(scope);
 	return [...scopes].sort();
 }
 
@@ -345,7 +341,7 @@ async function discover(issuer: string) {
  * Where /.well-known/openid-configuration (the specs' openIdConnectUrl) sends a client: the issuer's
  * discovery document. Undefined without an issuer: answer 404.
  */
-export const discoveryURL = (issuer: string | undefined) => issuer && `${issuer.replace(/\/$/, "")}/.well-known/openid-configuration`;
+const discoveryURL = (issuer: string | undefined) => issuer && `${issuer.replace(/\/$/, "")}/.well-known/openid-configuration`;
 
 // Compares in time that depends only on the lengths.
 function same(a: string, b: string) {

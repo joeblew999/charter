@@ -10,7 +10,7 @@ import (
 	"github.com/joeblew999/charter/go/lib/humaworkers"
 )
 
-// Examples is what is wrong with the examples in api's contract (Huma's `example:"..."` tag on a
+// exampleProblems is what is wrong with the examples in api's contract (Huma's `example:"..."` tag on a
 // field). Fern puts an example of every request into each SDK's README, reference and tests, and
 // invents the values the contract doesn't give: "id" for an id, whatever its pattern says. Someone
 // who copies that gets a 422. So:
@@ -22,7 +22,7 @@ import (
 //
 // Hidden operations are checked too: a WebSocket channel's parameters are in the AsyncAPI spec.
 // cmd/spec calls it, through specs.Problems.
-func Examples(api *humaworkers.API) []error {
+func exampleProblems(api *humaworkers.API) []error {
 	ops := api.Operations()
 	e := examples{registry: api.API.OpenAPI().Components.Schemas, seen: map[seen]bool{}, said: map[string]bool{}}
 	for _, op := range ops {
@@ -113,10 +113,7 @@ func (e *examples) walk(schema *huma.Schema, where string, request, covered bool
 }
 
 func (e *examples) resolve(schema *huma.Schema) *huma.Schema {
-	for schema != nil && schema.Ref != "" {
-		schema = e.registry.SchemaFromRef(schema.Ref)
-	}
-	return schema
+	return humaworkers.Resolve(schema, e.registry)
 }
 
 func (e *examples) missing(where string) {
