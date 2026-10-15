@@ -1,4 +1,4 @@
-// charter-ts upstream:status: the upstream issues the code works around, and their state. A tag is a
+// charter-ts upstream: the upstream issues the code works around, and their state. A tag is a
 // comment line such as  Upstream: owner/repo#123 (when fixed: what to do then). CLOSED means that
 // workaround can go: the tag says what to do then.
 import { spawnSync } from "node:child_process";
@@ -7,7 +7,7 @@ import { repoRoot } from "./settings.ts";
 
 const tag = /^([^:]+:[0-9]+):.*Upstream: ([\w.-]+\/[\w.-]+)#([0-9]+) *(.*)$/;
 
-export function upstreamStatus(): void {
+export function upstream(): void {
 	// Not where a tag is written about: the docs, the task files, and the code that reads tags.
 	const grep = spawnSync("git", ["grep", "-n", "-E", "Upstream: [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+", "--", ":!*.md", ":!*mise.toml", ":!*tasks.toml", ":!*upstream.ts", ":!*upstream-status.go"], { cwd: repoRoot(), encoding: "utf8" });
 	if (grep.status === 1) {

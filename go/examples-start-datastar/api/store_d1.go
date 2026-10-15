@@ -6,7 +6,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/joeblew999/charter/go/d1"
+	"github.com/joeblew999/charter/go/lib/d1"
 )
 
 // D1Store is the messages table (migrations/) on the D1 binding: one awaited call per statement,

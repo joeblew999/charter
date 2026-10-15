@@ -1,13 +1,13 @@
-// The harness: does the Fern-generated TypeScript SDK (client/, copied from sdk/out by npm run lint and
-// test:workerd) work on Cloudflare Workers? /harness/sdk-test (worker.ts) runs the SDK against the API
+// The harness: does the Fern-generated TypeScript SDK (client/, copied from sdk/out by npm run check)
+// work on Cloudflare Workers? /harness/sdk-test (worker.ts) runs the SDK against the API
 // inside workerd, through the SDK's own `fetch` option (no network round trip); /harness/ws-test opens
-// its WebSocket client from inside a Worker. test/harness.ts reads what they answer.
+// its WebSocket client from inside a Worker. test/sdk-in-worker.ts reads what they answer.
 import { ConformanceClient } from "./client/index.mjs";
 import { WebhooksHelper } from "./client/webhooks/index.mjs";
 import { type Deployment, handler, seen } from "./api/handlers.ts";
 import { seeds } from "./api/store.ts";
 
-/** What the harness's routes (/harness/sdk-test, /harness/ws-test) answer, and test/harness.ts reads: each
+/** What the harness's routes (/harness/sdk-test, /harness/ws-test) answer, and test/sdk-in-worker.ts reads: each
  * check by name, and whether all passed. */
 export interface Report {
 	passed: boolean;

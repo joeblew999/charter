@@ -1,0 +1,20 @@
+# Written by `charter-ts adopt` (github.com/joeblew999/charter): don't edit, it is charter's job, the same in every repo.
+# What charter checks in any repo: charter's files and the workflows (adopt --check), the docs, the repo on GitHub as package.json says (repo --check), the upstream issues the code works around. Here: npm run ci -- repo; on GitHub, from here: npm run ci -- repo --remote.
+name: charter-repo
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  repo:
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      pages: read
+    uses: ./.github/workflows/charter-ci.yml
+    with:
+      job: repo
+      runs-on: ubuntu-24.04
+      timeout-minutes: 10

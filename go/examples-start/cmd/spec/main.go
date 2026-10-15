@@ -13,11 +13,11 @@ package main
 
 import (
 	"github.com/joeblew999/charter/go/examples-start/api"
-	"github.com/joeblew999/charter/go/specs"
+	"github.com/joeblew999/charter/go/lib/specs"
 )
 
 func main() {
 	spec := api.API(api.Env{})
-	specs.Must(spec.Tools())
+	specs.Must(specs.Problems(spec))
 	specs.Main(spec.OpenAPI, spec.AsyncAPI)
 }

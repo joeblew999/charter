@@ -7,8 +7,6 @@ import { optionalSecrets } from "./secrets.ts";
 // The Go Worker: the notes API, written in Go on workers-go and built with TinyGo.
 // D1 is the log; Hub is the hibernating live fan-out: the library's Hub class (build/hub.mjs),
 // which worker.mjs exports.
-// A mode that starts with "perf-" deploys a scratch Worker of that name, with a
-// database and a hub of its own.
 
 // Who else may call (go/auth, charter-lib/auth): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD)
 // and an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): the Worker's optional secrets
@@ -21,8 +19,8 @@ const optional = Object.fromEntries(optionalSecrets.filter(name => process.env[n
 // declares (x-rate-limit in fern/openapi.json) is a Workers Rate Limiting binding with the same limit
 // and period, counting in a namespace named from the Worker's name (charter-ts/cloudflare).
 
-export default defineConfig(ctx => {
-	const name = ctx.mode?.startsWith("perf-") ? `charter-notes-go-${ctx.mode}` : "charter-notes-go";
+export default defineConfig(() => {
+	const name = "charter-notes-go";
 	return {
 		worker: {
 			name,

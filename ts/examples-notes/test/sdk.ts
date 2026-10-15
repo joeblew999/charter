@@ -4,7 +4,7 @@
 // Usage, from the project's folder (the SDK is the one in its sdk/out): node test/sdk.ts <origin>
 import { pathToFileURL } from "node:url";
 import type { z } from "zod";
-import { note } from "../api/contract.ts";
+import { note } from "../api/schemas.ts";
 import { accessHeaders } from "./access.ts";
 
 type Note = z.infer<typeof note>;

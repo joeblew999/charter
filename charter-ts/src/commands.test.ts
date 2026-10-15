@@ -29,7 +29,7 @@ function repo(name: string): string {
 	const dir = join(scratch, name);
 	write(dir, "README.md", "# mine\n");
 	write(dir, "CLAUDE.md", "# Our notes\n\nAlways run the tests.\n");
-	write(dir, "docs/README.md", "---\ntitle: Home\nnav_order: 1\npermalink: /\n---\n\n# Our docs\n\n[Rules](rules.md).\n");
+	write(dir, "docs/self/README.md", "---\ntitle: Home\nnav_order: 1\npermalink: /\n---\n\n# Our docs\n\n[Rules](rules.md).\n");
 	write(dir, ".github/ISSUE_TEMPLATE/bug.yml", "name: Our bug form\ndescription: ours\nbody: []\n");
 	spawnSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
 	return dir;
@@ -39,30 +39,30 @@ describe("adopt", () => {
 	const dir = repo("adopt");
 	const first = charter(dir, "adopt", "--description", "A repo of ours");
 
-	it("writes the kit, package.json with charter-ts and the scripts, and node_modules/ in .gitignore", () => {
+	it("writes charter's files, package.json with charter-ts and the scripts, and node_modules/ in .gitignore", () => {
 		assert.equal(first.code, 0, first.out);
-		for (const file of ["docs/charter/README.md", "docs/charter/rules.md", "docs/charter/tasks.md", "docs/charter/using.md", "docs/_config.yml", "ci.config.ts", ".github/workflows/self-repo.yml", ".github/workflows/charter-ci.yml", ".github/ISSUE_TEMPLATE/charter-plan.yml", "AGENTS.md", "renovate.json"]) {
+		for (const file of ["docs/charter/README.md", "docs/charter/rules.md", "docs/charter/writing.md", "docs/self/rules.md", "docs/_config.yml", ".github/workflows/charter-repo.yml", ".github/workflows/charter-ci.yml", ".github/ISSUE_TEMPLATE/charter-plan.yml", "AGENTS.md", "renovate.json"]) {
 			assert.ok(existsSync(join(dir, file)), `${file} is written`);
 		}
 		const pkg = JSON.parse(read(dir, "package.json")) as { description: string; scripts: Record<string, string>; devDependencies: Record<string, string> };
 		assert.equal(pkg.description, "A repo of ours");
-		assert.equal(pkg.scripts["repo:ci"], "charter-ts repo:ci");
+		assert.deepEqual(pkg.scripts, Object.fromEntries(["adopt", "issues", "check", "docs", "repo", "upstream", "ci"].map(name => [name, `charter-ts ${name}`])));
 		assert.equal(pkg.devDependencies["charter-ts"], `https://github.com/joeblew999/charter/releases/download/ts-v${version}/charter-ts-${version}.tgz`);
 		assert.match(read(dir, ".gitignore"), /^node_modules\/$/m);
 	});
 
-	it("leaves the repo's own files alone, and moves what its CLAUDE.md said into docs/rules.md", () => {
+	it("leaves the repo's own files alone, and moves what its CLAUDE.md said into docs/self/rules.md", () => {
 		assert.equal(read(dir, "README.md"), "# mine\n");
-		assert.match(read(dir, "docs/README.md"), /# Our docs/);
+		assert.match(read(dir, "docs/self/README.md"), /# Our docs/);
 		assert.equal(read(dir, ".github/ISSUE_TEMPLATE/bug.yml"), "name: Our bug form\ndescription: ours\nbody: []\n");
-		assert.match(read(dir, "docs/rules.md"), /Always run the tests\./);
+		assert.match(read(dir, "docs/self/rules.md"), /Always run the tests\./);
 		assert.match(read(dir, "CLAUDE.md"), /Written by `charter-ts adopt`/);
 	});
 
 	it("changes nothing when run again, and --check passes", () => {
 		const again = charter(dir, "adopt");
 		assert.equal(again.code, 0, again.out);
-		assert.match(again.out, /ok {7}the kit: every file is what this version writes/);
+		assert.match(again.out, /ok {7}charter's files: every one is what this version writes/);
 		assert.equal(charter(dir, "adopt", "--check").code, 0);
 	});
 
@@ -76,58 +76,99 @@ describe("adopt", () => {
 		assert.equal(read(dir, page), kept);
 	});
 
-	it("starts a CI config of the repo's own, with the repo job, and writes its workflow from it", () => {
-		assert.match(read(dir, "ci.config.ts"), /^\/\/ Started by `charter-ts adopt`.*yours to edit/);
-		const workflow = read(dir, ".github/workflows/self-repo.yml");
-		assert.match(workflow, /^# Written by `charter-ts ci:write`/);
+	it("writes charter's repo job (charter-repo.yml), and a workflow per job of the repo's own ci.config.ts", () => {
+		assert.ok(!existsSync(join(dir, "ci.config.ts")), "a repo with no API starts with no CI config of its own");
+		const workflow = read(dir, ".github/workflows/charter-repo.yml");
+		assert.match(workflow, /^# Written by `charter-ts adopt` \(github\.com\/joeblew999\/charter\): don't edit, it is charter's job/);
 		assert.match(workflow, /uses: \.\/\.github\/workflows\/charter-ci\.yml/);
 		assert.match(workflow, /permissions:\n {6}contents: read/);
-		// A job the repo adds is its own: adopt keeps the config, and writes that job's workflow too.
-		write(dir, "ci.config.ts", read(dir, "ci.config.ts").replace("jobs: {", 'jobs: {\n\t\tlint: { about: "its own", on: ["push"], run: [["echo", "lint"]] },'));
+		// A job the repo adds is its own: its workflow is self-<job>.yml.
+		write(dir, "ci.config.ts", 'export default { jobs: { lint: { about: "its own", on: ["push"], run: [["echo", "lint"]] } } };\n');
 		assert.equal(charter(dir, "adopt").code, 0);
-		assert.match(read(dir, "ci.config.ts"), /lint: \{ about: "its own"/);
-		assert.ok(existsSync(join(dir, ".github/workflows/self-lint.yml")), "the repo's own job has its workflow");
+		assert.match(read(dir, ".github/workflows/self-lint.yml"), /^# Written by `charter-ts adopt` from ci\.config\.ts/);
 		assert.equal(charter(dir, "adopt", "--check").code, 0);
+		// charter's job is charter's: the repo's own cannot take its name.
+		write(dir, "ci.config.ts", 'export default { jobs: { repo: { about: "mine", on: ["push"], run: [["echo"]] } } };\n');
+		assert.equal(charter(dir, "adopt").code, 1);
+		rmSync(join(dir, "ci.config.ts"));
+		assert.equal(charter(dir, "adopt").code, 0);
+		assert.ok(!existsSync(join(dir, ".github/workflows/self-lint.yml")), "a job that is gone takes its workflow with it");
 	});
 
-	it("starts no CI config with \"workflow\": false, and then writes no runner", () => {
+	it("writes no workflows with \"workflow\": false", () => {
 		const bare = repo("no-ci");
 		write(bare, "package.json", JSON.stringify({ name: "no-ci", private: true, charter: { workflow: false } }));
 		assert.equal(charter(bare, "adopt").code, 0);
-		for (const file of ["ci.config.ts", ".github/workflows/charter-ci.yml", ".github/workflows/self-repo.yml"]) assert.ok(!existsSync(join(bare, file)), `${file} is not written`);
+		for (const file of [".github/workflows/charter-ci.yml", ".github/workflows/charter-repo.yml"]) assert.ok(!existsSync(join(bare, file)), `${file} is not written`);
 	});
 
-	it("docs:lint passes on what adopt wrote, and names a broken link", () => {
-		assert.equal(charter(dir, "docs:lint").code, 0);
-		write(dir, "docs/guide.md", "---\ntitle: Guide\nnav_order: 3\n---\n\n# Guide\n\n[Nowhere](nowhere.md).\n");
-		write(dir, "docs/README.md", `${read(dir, "docs/README.md")}\n[Guide](guide.md).\n`);
-		const lint = charter(dir, "docs:lint");
+	it("replaces a script an older charter-ts wrote under an old name, and keeps the repo's own", () => {
+		const old = repo("old-scripts");
+		write(old, "package.json", JSON.stringify({ name: "old-scripts", private: true, scripts: { "docs:check": "charter-ts docs:check", "repo:ci": "charter-ts repo:ci", test: "echo ours" } }));
+		const adopted = charter(old, "adopt");
+		assert.equal(adopted.code, 0, adopted.out);
+		const scripts = (JSON.parse(read(old, "package.json")) as { scripts: Record<string, string> }).scripts;
+		assert.equal(scripts["docs:check"], undefined);
+		assert.equal(scripts["repo:ci"], undefined);
+		assert.equal(scripts.test, "echo ours");
+		assert.equal(scripts.docs, "charter-ts docs");
+	});
+
+	it("an old command's name says what it is called now", () => {
+		const old = charter(dir, "docs:check");
+		assert.equal(old.code, 1);
+		assert.match(old.out, /charter-ts docs:check is charter-ts adopt --check, then docs now/);
+	});
+
+	it("docs passes on what adopt wrote, and names a broken link", () => {
+		assert.equal(charter(dir, "docs").code, 0);
+		write(dir, "docs/self/guide.md", "---\ntitle: Guide\nnav_order: 3\n---\n\n# Guide\n\n[Nowhere](nowhere.md).\n");
+		write(dir, "docs/self/README.md", `${read(dir, "docs/self/README.md")}\n[Guide](guide.md).\n`);
+		const lint = charter(dir, "docs");
 		assert.equal(lint.code, 1);
-		assert.match(lint.out, /docs\/guide\.md: link to nowhere\.md: no such file/);
+		assert.match(lint.out, /docs\/self\/guide\.md: link to nowhere\.md: no such file/);
 	});
 });
 
 describe("new", () => {
-	it("copies the notes template under the new name, with both packages pinned to this version", () => {
+	it("copies the notes template under the new name, with both packages pinned to this version, in a repo adopt keeps", () => {
 		const into = join(scratch, "made");
 		const made = charter(scratch, "new", "demo-api", "--from", "notes", "--subdomain", "example", "--into", into);
 		assert.equal(made.code, 0, made.out);
-		for (const file of ["charter.config.ts", "cloudflare.config.ts", "worker.ts", "api/contract.ts", "api/handlers.ts", "api/spec.ts", "api/store.ts", "test/live.ts", "test/sdk.ts", "test/access.ts", ".gitignore", ".github/workflows/self-check.yml"]) {
+		for (const file of ["charter.config.ts", "cloudflare.config.ts", "worker.ts", "api/contract.ts", "api/handlers.ts", "api/spec.ts", "api/store.ts", "test/live.ts", "test/sdk.ts", "test/access.ts", ".gitignore", ".git", "ci.config.ts", ".github/workflows/self-check.yml", ".github/workflows/charter-repo.yml", ".github/workflows/charter-ci.yml", "docs/charter/README.md", "docs/self/README.md", "AGENTS.md"]) {
 			assert.ok(existsSync(join(into, file)), `${file} is there`);
 		}
 		// It stands alone: its tests import its own contract, and nothing points outside it.
-		assert.match(read(into, "test/live.ts"), /from "\.\.\/api\/contract\.ts"/);
+		assert.match(read(into, "test/live.ts"), /from "\.\.\/api\/schemas\.ts"/);
 		assert.match(read(into, "tsconfig.node.json"), /"test"/);
 		const outside = spawnSync("grep", ["-rl", "-e", "shared/", "-e", "ts/examples-", join(into, "test"), join(into, "charter.config.ts"), join(into, "tsconfig.node.json")], { encoding: "utf8" }).stdout.trim();
 		assert.equal(outside, "", `it points outside itself:\n${outside}`);
-		const pkg = JSON.parse(read(into, "package.json")) as { name: string; dependencies: Record<string, string>; devDependencies: Record<string, string> };
+		const pkg = JSON.parse(read(into, "package.json")) as { name: string; scripts: Record<string, string>; dependencies: Record<string, string>; devDependencies: Record<string, string> };
 		assert.equal(pkg.name, "demo-api");
+		// A project's scripts, then those every repo has: each the command of its name.
+		assert.deepEqual(Object.keys(pkg.scripts), ["dev", "check", "spec", "sdk", "deploy", "live-test", "adopt", "issues", "docs", "repo", "upstream", "ci"]);
+		assert.match(read(into, "ci.config.ts"), /check: \{[^}]*run: \[\["charter-ts", "check"\]\]/);
 		assert.match(pkg.dependencies["charter-lib"], new RegExp(`/ts-v${version}/charter-lib-${version}\\.tgz$`));
 		assert.match(pkg.devDependencies["charter-ts"], new RegExp(`/ts-v${version}/charter-ts-${version}\\.tgz$`));
 		assert.match(read(into, "charter.config.ts"), /worker: "demo-api"/);
 		assert.match(read(into, "charter.config.ts"), /https:\/\/demo-api\.example\.workers\.dev/);
 		const everything = spawnSync("grep", ["-rl", "-e", "charter-notes-ts", "-e", "gedw99", into], { encoding: "utf8" }).stdout.trim();
 		assert.equal(everything, "", `the template's own names are left in:\n${everything}`);
+	});
+
+	it("--go copies the Go example with its tests, as its own module, on the release's Go library", () => {
+		const into = join(scratch, "made-go");
+		const made = charter(scratch, "new", "demo-go", "--from", "start", "--go", "--into", into);
+		assert.equal(made.code, 0, made.out);
+		for (const file of ["main.go", "api/contract.go", "cmd/spec/main.go", "charter.config.ts", "test/live.ts", "test/schemas.ts", "ci.config.ts", ".github/workflows/self-check.yml"]) assert.ok(existsSync(join(into, file)), `${file} is there`);
+		const mod = read(into, "go.mod");
+		assert.match(mod, /^module demo-go$/m);
+		assert.match(mod, new RegExp(`github\\.com/joeblew999/charter/go/lib v${version.replaceAll(".", "\\.")}`));
+		assert.doesNotMatch(mod, /^replace /m);
+		assert.match(read(into, "test/live.ts"), /from "\.\/schemas\.ts"/);
+		assert.match(read(into, "charter.config.ts"), /node\("test\/live\.ts"/);
+		const outside = spawnSync("grep", ["-rl", "-e", "ts/examples-", "-e", "charter/go/examples-", "-e", "charter-start-go", into], { encoding: "utf8" }).stdout.trim();
+		assert.equal(outside, "", `it points outside itself, or keeps the example's names:\n${outside}`);
 	});
 
 	it("refuses a name that is no Worker's name, and a folder that is not empty", () => {

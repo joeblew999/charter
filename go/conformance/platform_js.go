@@ -7,8 +7,8 @@ import (
 	"github.com/syumai/workers-go/cloudflare/fetch"
 
 	"github.com/joeblew999/charter/go/conformance/api"
-	"github.com/joeblew999/charter/go/d1"
-	"github.com/joeblew999/charter/go/hub"
+	"github.com/joeblew999/charter/go/lib/d1"
+	"github.com/joeblew999/charter/go/lib/hub"
 )
 
 // env binds the API to the Worker's bindings (cloudflare.config.ts): its settings, DB (D1), HUB (the

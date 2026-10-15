@@ -17,7 +17,7 @@ groups:
           location: local-file-system
           path: ../sdk/out/go
         config:
-          # The project's module with /sdk/go added: the folder `npm run sdk:publish` commits this SDK to,
+          # The project's module with /sdk/go added: the folder `npm run sdk -- --publish` commits this SDK to,
           # so another repo can go get it.
           module:
             path: github.com/joeblew999/charter/go/examples-start/sdk/go

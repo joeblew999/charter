@@ -1,4 +1,4 @@
-// A project's clients: every group of fern/generators.yml, generated with Fern (Docker) and proven in
+// sdk --prove: a project's clients, every group of fern/generators.yml, generated with Fern (Docker) and proven in
 // its own language. Go: build, vet, and Fern's tests against WireMock. TypeScript: typechecked with
 // the TypeScript its SDKs are written for. Python: mypy and its own tests. The CLI (Rust): built. A
 // language this does not know is generated and named, not proven. Fern generates in Docker; the
@@ -44,7 +44,7 @@ export function groups(): string[] {
 
 // How a generated TypeScript SDK is typechecked: standard fetch, none of the project's own settings.
 const tsconfig = (entry: string) => JSON.stringify({
-	"//": "Written by charter-ts clients: how a generated TypeScript SDK is typechecked (bundler mode, default libs).",
+	"//": "Written by charter-ts sdk --prove: how a generated TypeScript SDK is typechecked (bundler mode, default libs).",
 	compilerOptions: { target: "es2022", module: "preserve", moduleResolution: "bundler", allowImportingTsExtensions: true, strict: true, noEmit: true, skipLibCheck: true },
 	include: [entry],
 }, null, 2);
@@ -131,7 +131,7 @@ export async function clients(only: string[], committedGoSdk: boolean): Promise<
 	if (committedGoSdk && existsSync(join("sdk", "go")) && only.length === 0) {
 		const t0 = performance.now();
 		const { sdkPublish } = await import("./go.ts");
-		sdkPublish(true);
+		await sdkPublish(true);
 		times.push(`committed Go SDK ${seconds(performance.now() - t0)}`);
 	}
 	console.log(`clients took ${seconds(performance.now() - start)}, all at once: ${times.join(", ")} (generated + proven)`);

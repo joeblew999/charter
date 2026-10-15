@@ -6,12 +6,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/joeblew999/charter/go/d1"
+	"github.com/joeblew999/charter/go/lib/d1"
 )
 
 // D1Store is the notes table (migrations/ at the repo root) on the D1 binding itself: one awaited
 // call per statement, and the rows reach Go as one string (package d1). It is what runs on
-// Cloudflare. SQLStore is the same statements through database/sql.
+// Cloudflare.
 type D1Store struct{ DB d1.DB }
 
 func (s D1Store) Create(_ context.Context, body string) (Note, error) {

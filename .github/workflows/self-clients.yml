@@ -1,5 +1,5 @@
-# Written by `charter-ts ci:write` from ci.config.ts: don't edit, change ci.config.ts, then npx charter-ts ci:write.
-# Every client the conformance projects' fern/generators.yml declares, generated with Fern and proven in its language. The same job here: npx charter-ts ci clients [<project>]; on GitHub, from here: npx charter-ts ci:remote clients [<project>].
+# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
+# Every client the conformance projects' fern/generators.yml declares, generated with Fern and proven in its language. Here: npm run ci -- clients [<project>]; on GitHub, from here: npm run ci -- clients [<project>] --remote.
 name: self-clients
 on:
   push:

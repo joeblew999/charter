@@ -1,4 +1,4 @@
-module github.com/joeblew999/charter/go
+module github.com/joeblew999/charter/go/lib
 
 go 1.27.1
 

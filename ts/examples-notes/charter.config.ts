@@ -1,4 +1,4 @@
-// What charter-ts needs to know about this project (npm run <step> runs charter-ts <step>), typed, in one place.
+// What charter-ts needs to know about this project (npm run <name> runs charter-ts <name>), typed, in one place.
 import { defineConfig } from "charter-ts/config";
 import { sdk } from "charter-ts/scripts";
 import { optionalSecrets, secrets } from "./secrets.ts";
@@ -18,7 +18,7 @@ export default defineConfig({
 	localSecrets: { READ_TOKEN: "local-read-token", WRITE_TOKEN: "local-write-token" },
 	/** Both specs, with the same generators the Worker serves /api/openapi.json and /api/asyncapi.json with. */
 	specs,
-	/** npm run test:workerd: the live test. Auth, rate limits and MCP are charter-lib/serve's, which the
+	/** npm run check, under workerd: the live test. Auth, rate limits and MCP are charter-lib/serve's, which the
 	 * conformance projects test every way. */
 	test: { run: ({ origin, node }) => node("test/live.ts", origin) },
 	/** npm run live-test (fnox exec -- npm run live-test): the live test and the generated TypeScript SDK

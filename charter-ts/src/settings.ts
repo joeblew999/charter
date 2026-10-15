@@ -27,7 +27,7 @@ export interface Settings {
 	docs: "docs" | ".";
 	/** Write renovate.json. */
 	renovate: boolean;
-	/** In a repo that is not a project: start its CI config (ci.config.ts), and so its workflows. */
+	/** Start its CI config (ci.config.ts), and so its workflows. */
 	workflow: boolean;
 }
 
@@ -64,6 +64,3 @@ export function settings(root: string): Settings {
 
 /** isProject: an API project, which charter.config.ts configures. */
 export const isProject = (root: string) => existsSync(join(root, "charter.config.ts"));
-
-/** isCharterRepo: charter's own repo, whose scripts run charter-ts from its workspace. */
-export const isCharterRepo = (root: string) => readPackage(root)?.workspaces?.includes("charter-ts") === true;

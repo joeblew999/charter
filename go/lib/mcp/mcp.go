@@ -17,7 +17,7 @@
 // Only tools, and no stream: GET is 405, there are no resources, prompts, progress notifications or
 // list-changed subscriptions, and no authorization of its own: the Authorization header is passed on
 // to the operation, and when the operation asks for credentials (a 401 or 403 with WWW-Authenticate,
-// as go/auth answers) that is the answer's HTTP status and header, so an MCP client knows to sign in
+// as go/lib/auth answers) that is the answer's HTTP status and header, so an MCP client knows to sign in
 // (MCP's authorization; the challenge points to the API's metadata, RFC 9728). tools.go says how an
 // operation becomes a tool.
 //
@@ -33,11 +33,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/humaworkers"
+	"github.com/joeblew999/charter/go/lib/humaworkers"
 )
 
 // The protocol revisions served: Modern ones say their version on every request, Legacy ones open
@@ -146,11 +147,11 @@ func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	supported := map[string]any{"supported": append(append([]string{}, Modern...), Legacy...)}
 	if !modern {
 		// The handshake era. Its requests may name the version negotiated by initialize.
-		if contains(Modern, header) {
+		if slices.Contains(Modern, header) {
 			fail(w, http.StatusBadRequest, msg.ID, invalidParams, "Invalid params: params._meta needs "+metaVersion+" and "+metaCapabilities, nil)
 			return
 		}
-		if header != "" && !contains(Legacy, header) {
+		if header != "" && !slices.Contains(Legacy, header) {
 			supported["requested"] = header
 			fail(w, http.StatusBadRequest, msg.ID, unsupportedVersion, "Unsupported protocol version", supported)
 			return
@@ -164,7 +165,7 @@ func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusBadRequest, msg.ID, headerMismatch, "Header mismatch: MCP-Protocol-Version header value '"+header+"' does not match body value '"+version+"'", nil)
 		return
 	}
-	if !contains(Modern, version) {
+	if !slices.Contains(Modern, version) {
 		supported["requested"] = version
 		fail(w, http.StatusBadRequest, msg.ID, unsupportedVersion, "Unsupported protocol version", supported)
 		return
@@ -213,7 +214,7 @@ func (s server) legacy(w http.ResponseWriter, r *http.Request, msg message, p pa
 	case "initialize":
 		// The client's version if it is served, otherwise the newest one of this era: the client decides.
 		version := p.ProtocolVersion
-		if !contains(Legacy, version) {
+		if !slices.Contains(Legacy, version) {
 			version = Legacy[0]
 		}
 		result = map[string]any{"protocolVersion": version, "capabilities": capabilities, "serverInfo": s.implementation()}
@@ -321,15 +322,6 @@ func write(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	w.Write(data)
-}
-
-func contains(list []string, value string) bool {
-	for _, item := range list {
-		if item == value {
-			return true
-		}
-	}
-	return false
 }
 
 // decoded reads an Mcp-Name header: plain, or =?base64?...?= when the name is not header-safe.

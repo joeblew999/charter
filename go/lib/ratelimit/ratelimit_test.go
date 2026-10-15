@@ -11,7 +11,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
 
-	"github.com/joeblew999/charter/go/auth"
+	"github.com/joeblew999/charter/go/lib/auth"
 )
 
 type out struct{ Body string }

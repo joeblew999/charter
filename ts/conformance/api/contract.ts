@@ -6,7 +6,7 @@ import { accessScheme, oidcScheme, scheme, type Security } from "charter-lib/aut
 import { type Limit, limited } from "charter-lib/ratelimit";
 import { notATool } from "charter-lib/mcp";
 
-// The conformance API, contract first: one API with every Fern feature we use (docs/guides/sdks.md). The
+// The conformance API, contract first: one API with every Fern feature we use (docs/self/sdks.md). The
 // Worker implements it (api/handlers.ts, served the standard way under /api) and both specs are
 // generated from it (npm run spec -> fern/{openapi,asyncapi}.json). Each feature is switched on here:
 // - on an operation, by `openapi({ operationId, tags, spec })`: the SDK names and Fern's x-fern-*;

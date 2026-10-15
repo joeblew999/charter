@@ -1,4 +1,4 @@
-# Written by `charter-ts adopt` from the kit (github.com/joeblew999/charter, charter-ts/kit/.github/ISSUE_TEMPLATE): don't edit, change the kit.
+# Written by `charter-ts adopt` (github.com/joeblew999/charter, .github/ISSUE_TEMPLATE/): don't edit it in another repo, change it in charter.
 # For a form of the repo's own, write this file without the line above: charter then leaves it alone.
 # Each field's label is a heading in the issue body; `charter-ts issue upstream` prints the same headings.
 name: Upstream bug
@@ -10,7 +10,7 @@ body:
     attributes:
       value: |
         The upstream issues this repository tracks are its `Upstream:` tags
-        (`npx charter-ts upstream:status`), and `docs/upstream.md` where it keeps that page: if your bug
+        (`npm run upstream`), and `docs/self/upstream.md` where it keeps that page: if your bug
         is already there, add what you found to that issue instead of filing. It is upstream only
         if a correct caller, reading only that project's public documentation, would hit it.
   - type: input

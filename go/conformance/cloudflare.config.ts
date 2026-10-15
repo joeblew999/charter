@@ -15,7 +15,7 @@ const optional = Object.fromEntries(optionalSecrets.filter(name => process.env[n
 
 // The conformance Worker: every Fern feature we use, served by Go (api/) on workers-go, built
 // with TinyGo. The notes are in D1 (migrations/), and Hub, a hibernating Durable Object, wakes the
-// WebSocket's feed on every new one, as in the notes example (docs/guides/streaming.md).
+// WebSocket's feed on every new one, as in the notes example (docs/self/streaming.md).
 export default defineConfig({
 	worker: {
 		name: "charter-conformance-go",

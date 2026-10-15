@@ -4,6 +4,7 @@ import { asyncapi } from "charter-lib/asyncapi";
 import { needs } from "charter-lib/auth";
 import { limited, type Limit } from "charter-lib/ratelimit";
 import { z } from "zod";
+import { END, note } from "./schemas.ts";
 
 // The API, contract first: every route with its method, path, input and output as Zod 4 schemas.
 // The Worker implements it (api/handlers.ts) and the OpenAPI spec is generated from it (npm run spec ->
@@ -14,25 +15,9 @@ import { z } from "zod";
 /** The API's name, version and what it is: the specs' info (api/spec.ts). */
 export const info = { title: "charter-notes-ts", version: "1.0.0", description: "Notes API: contract -> OpenAPI -> Fern." };
 
-export const note = z.object({
-	id: z.number().int().meta({ format: "int64", examples: [42] }),
-	body: z.string().meta({ examples: ["Buy milk"] }),
-	created_at: z.string().meta({ examples: ["2026-10-01 12:00:00"] }),
-}).meta({ id: "Note" });
-
-/** The resume position in every stream: a note id, as an opaque string like list's cursor (docs/guides/streaming.md, rule 1). */
+/** The resume position in every stream: a note id, as an opaque string like list's cursor (docs/self/streaming.md, rule 1). */
 export const after = z.string().regex(/^\d+$/).optional()
 	.describe("Resume after this note id (the id of the last note you received). Absent: only notes created from now on").meta({ examples: ["42"] });
-
-/**
- * What a planned stream end returns: SSE `event: close` with `data: "[end-of-stream]"`, Fern's terminator
- * for watch. Fern matches the terminator as a substring of each event's data, so no note may contain
- * it (note bodies reject it), and it is plain text because Fern's Rust generator pastes it into
- * source unescaped.
- */
-// Upstream: fern-api/fern#17936 (when fixed: terminators match whole data values, so the body rule can go)
-// Upstream: fern-api/fern#17939 (when fixed: the Rust generator escapes it, so any text would do)
-export const END = "[end-of-stream]";
 
 /**
  * How often one caller may create notes: the Worker's WRITE_LIMIT binding, which

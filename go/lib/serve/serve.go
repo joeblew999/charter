@@ -1,4 +1,4 @@
-// Package serve serves a charter API the standard way (docs/reference/standard.md), so a project
+// Package serve serves a charter API the standard way (docs/self/standard.md), so a project
 // gives its contract, its handlers and whom it trusts, and wires nothing itself:
 //
 //   - its operations under /api, each call checked by the contract's security (auth) and limited by
@@ -23,12 +23,12 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/asyncapi"
-	"github.com/joeblew999/charter/go/auth"
-	"github.com/joeblew999/charter/go/humaworkers"
-	"github.com/joeblew999/charter/go/mcp"
-	"github.com/joeblew999/charter/go/ratelimit"
-	"github.com/joeblew999/charter/go/transport"
+	"github.com/joeblew999/charter/go/lib/asyncapi"
+	"github.com/joeblew999/charter/go/lib/auth"
+	"github.com/joeblew999/charter/go/lib/humaworkers"
+	"github.com/joeblew999/charter/go/lib/mcp"
+	"github.com/joeblew999/charter/go/lib/ratelimit"
+	"github.com/joeblew999/charter/go/lib/transport"
 )
 
 // notJSON is what a body that does not parse is refused with (400), in Go and in charter-lib alike:
@@ -50,7 +50,7 @@ func init() {
 	}
 }
 
-// The standard paths (docs/reference/standard.md).
+// The standard paths (docs/self/standard.md).
 const (
 	OpenAPIPath  = "/api/openapi.json"
 	AsyncAPIPath = "/api/asyncapi.json"
@@ -149,7 +149,7 @@ func (a API) document(server string) *humaworkers.API {
 // The reason phrase a refusal is declared with.
 var reasons = map[string]string{"400": "Bad Request", "401": "Unauthorized", "403": "Forbidden", "404": "Not Found", "409": "Conflict", "415": "Unsupported Media Type", "422": "Unprocessable Entity", "429": "Too Many Requests"}
 
-// standardDocument writes the document as the standard has it (docs/reference/standard.md), as
+// standardDocument writes the document as the standard has it (docs/self/standard.md), as
 // charter-lib writes it from oRPC: a body inline, not a schema Huma names after its Go type
 // (CreateInputBody); every refusal declared as problem details (401 when the operation needs
 // credentials, 422 when it takes input, its 429 when it is limited, any other it declares, and a

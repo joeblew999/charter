@@ -112,7 +112,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 
 	// warm starts runtimes before any request, while the Worker's module loads: await it at the top
 	// of the entry. A request that starts its own runtime in a new isolate costs about 100 ms of
-	// CPU; one that finds a warm runtime costs 4 to 19 (docs/benchmarks.md).
+	// CPU; one that finds a warm runtime costs 4 to 19 (docs/self/benchmarks.md).
 	//
 	//   - runtimes: how many. Each is start-up time for the isolate (Cloudflare allows about a
 	//     second) and 8 MB held. Requests that arrive together beyond that number start their own.

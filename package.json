@@ -38,15 +38,13 @@
 	"scripts": {
 		"prepare": "npm run build -w ts/lib -w charter-ts",
 		"adopt": "charter-ts adopt",
-		"repo": "charter-ts repo",
 		"issues": "charter-ts issues",
-		"issue": "charter-ts issue",
-		"check": "charter-ts ci check && charter-ts ci projects",
-		"docs:check": "charter-ts docs:check",
-		"repo:ci": "charter-ts repo:ci",
-		"docs:review": "charter-ts docs:review",
-		"release": "node release.ts",
-		"ci": "charter-ts ci"
+		"check": "charter-ts check",
+		"docs": "charter-ts docs",
+		"repo": "charter-ts repo",
+		"upstream": "charter-ts upstream",
+		"ci": "charter-ts ci",
+		"release": "node release.ts"
 	},
 	"allowScripts": {
 		"workerd": true,

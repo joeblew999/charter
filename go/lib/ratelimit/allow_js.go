@@ -9,7 +9,7 @@ import (
 
 	"github.com/syumai/workers-go/cloudflare"
 
-	"github.com/joeblew999/charter/go/internal/promise"
+	"github.com/joeblew999/charter/go/lib/internal/promise"
 )
 
 // errNoBinding is a Worker without the limit's binding: the call goes through, and is logged once.

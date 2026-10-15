@@ -1,15 +1,16 @@
-# Written by `charter-ts adopt` from the kit (github.com/joeblew999/charter, charter-ts/kit/.github/workflows/charter-ci.yml):
-# don't edit: change the kit, not this file. charter's job runner, the same in every repo with a
-# ci.config.ts. The repo's workflows (written by `charter-ts ci:write` from ci.config.ts) call it to run
-# one of its jobs on GitHub exactly as `npx charter-ts ci <job> [<project>]` runs it on a machine: mise
-# installs the tools the repo's mise.toml pins, npm the packages, then the job. The repo's secrets reach
-# the job as CHARTER_SECRETS (GitHub masks them); charter-ts gives each job only those ci.config.ts names.
+# Written by `charter-ts adopt` (github.com/joeblew999/charter, .github/workflows/charter-ci.yml):
+# don't edit it in another repo, change it in charter. charter's job runner, the same in every repo:
+# every workflow calls it, charter's (charter-repo.yml) and the repo's own (self-<job>.yml, from
+# ci.config.ts), to run one job on GitHub exactly as `npm run ci -- <job> [<project>]` runs it on a
+# machine: mise installs the tools the repo's mise.toml pins, npm the packages, then the job. It calls
+# charter-ts itself, not the repo's ci script, which a repo may have made its own. The repo's secrets
+# reach the job as CHARTER_SECRETS (GitHub masks them); charter-ts gives each job only those it names.
 name: charter-ci
 on:
   workflow_call:
     inputs:
       job:
-        description: The job of the repo's ci.config.ts
+        description: The job, charter's or one of the repo's ci.config.ts
         type: string
         required: true
       project:
@@ -38,6 +39,6 @@ jobs:
           JOB: ${{ inputs.job }}
           PROJECT: ${{ inputs.project }}
           CHARTER_SECRETS: ${{ toJSON(secrets) }}
-          # gh, for a job that reads the repo on GitHub (repo:ci): what the caller's permissions allow.
+          # gh, for a job that reads the repo on GitHub (the repo job): what the caller's permissions allow.
           GH_TOKEN: ${{ github.token }}
         run: npx charter-ts ci "$JOB" ${PROJECT:+"$PROJECT"}

@@ -7,7 +7,7 @@
 // refuse is checked too.
 import WebSocket from "ws";
 import type { z } from "zod";
-import { END, note } from "../api/contract.ts";
+import { END, note } from "../api/schemas.ts";
 import { accessHeaders } from "./access.ts";
 
 type Note = z.infer<typeof note>;

@@ -6,7 +6,7 @@ package main
 
 import (
 	"github.com/joeblew999/charter/go/conformance/api"
-	"github.com/joeblew999/charter/go/transport"
+	"github.com/joeblew999/charter/go/lib/transport"
 )
 
 func main() {

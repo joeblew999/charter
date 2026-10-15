@@ -1,4 +1,4 @@
-// The conformance API's MCP endpoint (<origin>/mcp) with a real MCP client, the official TypeScript one,
+// The conformance API's MCP endpoint (<origin>/api/mcp) with a real MCP client, the official TypeScript one,
 // over Streamable HTTP, in both protocol eras: the stateless 2026-07-28 and the 2025-11-25 handshake.
 // The tools are the contract's operations that answer once, less the token endpoint and the upload;
 // a tool call does what the REST route does, with the token the MCP request carries. The same test
@@ -76,7 +76,7 @@ for (const [era, mode, version] of [["stateless", { pin: "2026-07-28" }, "2026-0
 // own), whose metadata names its token endpoint. The chain is followed here as an OAuth client does,
 // by hand: MCP's own client (ClientCredentialsProvider) refuses an authorization server without an
 // authorization endpoint, which RFC 8414 does not ask of one with only client credentials
-// (docs/upstream.md).
+// (docs/self/upstream.md).
 const meta = { "io.modelcontextprotocol/protocolVersion": "2026-07-28", "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: "mcp-test", version: "1" } };
 const refused = await fetch(endpoint, {
 	method: "POST",

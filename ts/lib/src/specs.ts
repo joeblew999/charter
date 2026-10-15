@@ -8,6 +8,7 @@ import { walkProcedureContractsAsync, type AnyRouter } from "@orpc/server";
 import { ZodToJsonSchemaConverter } from "@orpc/zod";
 import { AsyncAPIGenerator, getAsyncAPIMeta } from "./asyncapi.ts";
 import { expand, type Security } from "./auth.ts";
+import { reasonOf } from "./problem.ts";
 import { EXTENSION, needsScope, withLimit, type Limit } from "./ratelimit.ts";
 import { withoutSafeBounds } from "./schema.ts";
 
@@ -123,11 +124,10 @@ const problemSchemas = {
 	ErrorDetail: { additionalProperties: false, properties: { location: { description: "Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id'", type: "string" }, message: { description: "Error message text", type: "string" }, value: { description: "The value at the given location" } }, type: "object" },
 };
 const problemContent = { "application/problem+json": { schema: { $ref: "#/components/schemas/ErrorModel" } } };
-const reasons: Record<string, string> = { "400": "Bad Request", "401": "Unauthorized", "403": "Forbidden", "404": "Not Found", "409": "Conflict", "415": "Unsupported Media Type", "422": "Unprocessable Entity", "429": "Too Many Requests" };
 
 /**
  * The document as the standard has it, from oRPC as go/lib/serve writes it from Huma
- * (docs/reference/standard.md): every refusal declared as problem details (401 when the operation needs
+ * (docs/self/standard.md): every refusal declared as problem details (401 when the operation needs
  * credentials, 422 when it takes input, its 429 when it is limited, any other it declares, and a
  * default), a parameter's description on it as well as on its schema, a file as
  * `contentMediaType: application/octet-stream`, and none of oRPC's allowEmptyValue or allowReserved.
@@ -148,12 +148,12 @@ export function standardDocument<T extends OpenAPIV3_1.OpenAPIObject>(doc: T): T
 			const responses = op.responses as Record<string, OpenAPIV3_1.ResponseObject>;
 			const security = (op.security ?? doc.security) as Security | undefined;
 			const refusals: Record<string, OpenAPIV3_1.ResponseObject> = {};
-			if (security?.some(requirement => Object.keys(requirement).length > 0)) refusals["401"] = { description: reasons["401"]! };
-			if (op.parameters?.length || op.requestBody) refusals["422"] = { description: reasons["422"]! };
+			if (security?.some(requirement => Object.keys(requirement).length > 0)) refusals["401"] = { description: reasonOf(401)! };
+			if (op.parameters?.length || op.requestBody) refusals["422"] = { description: reasonOf(422)! };
 			for (const [status, response] of Object.entries(responses)) {
 				if (/^[23]/.test(status)) continue;
 				delete responses[status];
-				if (/^[4]\d\d$/.test(status)) refusals[status] = { ...response, description: status === "429" ? response.description : (reasons[status] ?? response.description) };
+				if (/^[4]\d\d$/.test(status)) refusals[status] = { ...response, description: status === "429" ? response.description : (reasonOf(status) ?? response.description) };
 			}
 			refusals.default = { description: "Error" };
 			for (const [status, response] of Object.entries(refusals)) responses[status] = { ...response, content: problemContent };

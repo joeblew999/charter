@@ -24,7 +24,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 
-	"github.com/joeblew999/charter/go/problem"
+	"github.com/joeblew999/charter/go/lib/problem"
 )
 
 func init() {
@@ -230,7 +230,7 @@ func match(pattern, path string) (map[string]string, bool) {
 // the input has a RawBody []byte next to its typed Body (the request as posted, kept beside the
 // validated one). Huma 2.39.1 then documents both content types, though only the Body's is read,
 // and Fern's Go generator takes the binary one: the method's request becomes an io.Reader
-// (docs/upstream.md). op is the one in the OpenAPI document. An input with a
+// (docs/self/upstream.md). op is the one in the OpenAPI document. An input with a
 // RawBody alone keeps it: it is its only content.
 func jsonOnly(op *huma.Operation) {
 	const raw = "application/octet-stream"

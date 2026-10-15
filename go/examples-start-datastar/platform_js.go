@@ -5,9 +5,9 @@ package main
 import (
 	"github.com/syumai/workers-go/cloudflare"
 
-	"github.com/joeblew999/charter/go/d1"
 	"github.com/joeblew999/charter/go/examples-start-datastar/api"
-	"github.com/joeblew999/charter/go/hub"
+	"github.com/joeblew999/charter/go/lib/d1"
+	"github.com/joeblew999/charter/go/lib/hub"
 )
 
 // env binds the API and the pages to the Worker's bindings (cloudflare.config.ts): APP_NAME, DB

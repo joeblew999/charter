@@ -30,7 +30,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/auth"
+	"github.com/joeblew999/charter/go/lib/auth"
 )
 
 // Extension is where an operation's limit is in the specs.

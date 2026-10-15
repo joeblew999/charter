@@ -1,5 +1,5 @@
-# Written by `charter-ts ci:write` from ci.config.ts: don't edit, change ci.config.ts, then npx charter-ts ci:write.
-# Each API's TypeScript and Go projects under workerd, the same requests to both, and no answer may differ. The same job here: npx charter-ts ci twins; on GitHub, from here: npx charter-ts ci:remote twins.
+# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
+# Each API's TypeScript and Go projects under workerd, the same requests to both, and no answer may differ. Here: npm run ci -- twins; on GitHub, from here: npm run ci -- twins --remote.
 name: self-twins
 on:
   push:

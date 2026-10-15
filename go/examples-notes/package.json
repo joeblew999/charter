@@ -4,12 +4,10 @@
 	"type": "module",
 	"description": "The notes API in Go on Cloudflare Workers (workers-go, TinyGo), from a Huma contract (api/contract.go): auth, SSE and WebSocket streams, MCP, rate limits. npm run check is every local check (no Cloudflare account); npm run dev runs it locally; npx charter-ts lists every step.",
 	"scripts": {
-		"start": "charter-ts run",
 		"dev": "charter-ts dev",
 		"check": "charter-ts check",
 		"spec": "charter-ts spec",
 		"sdk": "charter-ts sdk",
-		"sdk:publish": "charter-ts sdk:publish",
 		"deploy": "charter-ts deploy",
 		"live-test": "charter-ts live-test"
 	},
@@ -23,6 +21,7 @@
 		"typescript": "^7.0.2",
 		"typescript-sdk": "npm:typescript@~5.9.3",
 		"vite": "^8.3.0",
-		"ws": "^8.18.0"
+		"ws": "^8.18.0",
+		"zod": "^4.6.5"
 	}
 }

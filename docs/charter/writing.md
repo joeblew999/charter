@@ -1,12 +1,12 @@
 ---
 title: Writing docs
-nav_order: 3
-parent: How this repo is kept
+nav_order: 2
+parent: What to do
 ---
 
 # Writing docs
 
-Written by `charter-ts adopt` (the same page in every repo that uses it): don't edit it here, change `charter-ts/kit/docs/charter/writing.md` in [charter](https://github.com/joeblew999/charter). `npm run docs:check` checks what a program can; `npm run docs:review` has Claude check the rest.
+Written by `charter-ts adopt` (the same page in every repo that uses it): don't edit it in another repo, change `docs/charter/writing.md` in [charter](https://github.com/joeblew999/charter). `npm run docs` checks what a program can; `npm run docs -- --review` has Claude check the rest.
 
 ## The reader
 
@@ -23,24 +23,19 @@ Someone who wants to use this, or to help with it, and has a job to do. Write fo
 
 ## The layout
 
-| Section | What goes there | Size |
-|---|---|---|
-| Home (`README.md`) | What this is, what you get, the map, what is generated, the index | One screen |
-| Getting started | From nothing to a working result, every step run as written | One page |
-| Guides | One job per page: steps and commands | Up to about 500 words each |
-| Reference | Commands, tasks, packages: tables, one line per row | As long as the tables are |
-| How to help | Setting up, reporting a bug, the rules, upstream issues, benchmarks | A few short pages |
-
-A page belongs to one section. Nothing a user needs lives only under How to help.
+| Folder | What goes there |
+|---|---|
+| `docs/charter/` | What to do, and when; the rules every repo shares; this page. charter's, the same in every repo: changed in charter, never in a repo that uses it |
+| `docs/self/` | Everything else: the repo's own pages. `README.md` is the home page: what this is, why, and an index of every page (one screen). Then a page per job a reader has (steps and commands first, up to about 500 words), reference tables, and how to help |
 
 ## The mechanics
 
-- **Front matter first:** `title`, `nav_order`, and `parent` under another page. The home page also has `permalink: /`.
+- **Front matter first:** `title` and `nav_order`. The home page also has `permalink: /`.
 - **Links are relative,** and an anchor must match a heading. A new page gets a row in the home page's index.
 - **No two opening curly braces together, and no curly brace followed by a percent sign:** the site's renderer reads them as template code.
-- **No release version in a page:** link `releases/latest`, write `@latest`, or use `vX.Y.Z`.
-- **Don't edit what is generated:** `_config.yml`, `_sass/`, `llms.txt`, this page, and the pages `_generated.toml` lists (change the code their command reads). The home page's "What is generated" table lists them.
+- **A version only in a URL that installs it;** anywhere else it goes stale.
+- **Don't edit what is generated:** `docs/charter/README.md` (written from the scripts), and what the first lines of a file say is generated.
 
 ## When the code changes
 
-The page changes in the same commit, and a removed thing is removed from every page (`npm run docs:check` finds the mentions).
+The page changes in the same commit, and a removed thing is removed from every page (`npm run docs` finds the mentions).

@@ -1,11 +1,11 @@
-// charter-ts repo [--check]: the repo on GitHub in shape from its package.json: the labels (the kit's
+// charter-ts repo [--check]: the repo on GitHub in shape from its package.json: the labels (charter's
 // .github/charter-labels.tsv), its description, homepage and topics (package.json's description,
-// homepage and keywords), and GitHub Pages serving docs/. It writes no file: adopt writes the kit.
+// homepage and keywords), and GitHub Pages serving docs/. It writes no file: adopt writes charter's files.
 // --check changes nothing and fails on drift.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { kitDir } from "./kit.ts";
+import { charterFile } from "./charter-files.ts";
 import { output } from "./scripts.ts";
 import { repoRoot, type Settings, settings } from "./settings.ts";
 
@@ -18,7 +18,7 @@ interface GitHubRepo {
 	defaultBranchRef: { name: string };
 }
 
-/** The labels GitHub gives a new repo: those no issue uses and the kit does not list go. */
+/** The labels GitHub gives a new repo: those no issue uses and charter does not list go. */
 const githubDefaultLabels = ["bug", "documentation", "duplicate", "enhancement", "good first issue", "help wanted", "invalid", "question", "wontfix"];
 
 export function repo(args: string[]): void {
@@ -52,15 +52,15 @@ export function repo(args: string[]): void {
 			console.log(`differs  ${name}: ${changes.join("; ")}`);
 		} else console.log(`changed  ${name}: ${changes.join("; ")}`);
 	}
-	if (drift > 0) throw new Error(`${drift} items differ from package.json and the kit: npm run repo`);
+	if (drift > 0) throw new Error(`${drift} items differ from package.json and charter's labels: npm run repo`);
 }
 
 type Gh = (...args: string[]) => string;
 
-/** labels makes the repo's labels the kit's, and removes GitHub's default ones that the kit does not
+/** labels makes the repo's labels charter's, and removes GitHub's default ones that charter does not
  * list and nothing uses. Other labels are the repo's own: kept. */
 function labels(gh: Gh, repo: string, check: boolean): string[] {
-	const want = readFileSync(join(kitDir, ".github", "charter-labels.tsv"), "utf8")
+	const want = readFileSync(charterFile(".github/charter-labels.tsv"), "utf8")
 		.split("\n")
 		.filter(line => line && !line.startsWith("#"))
 		.slice(1) // the column names

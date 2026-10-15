@@ -26,12 +26,12 @@ export interface Config {
 	sdkInWorker?: string;
 	/** More modes to deploy after the default one (cf deploy --mode): the same code as another Worker. */
 	deployModes?: readonly string[];
-	/** The most the Worker's bundle may be, as a deploy uploads it, gzipped: check fails over it.
-	 * Workers Free allows 3 MB (the default, 3000000), Workers Paid 10 MB. */
+	/** The most the Worker may be, gzipped, as a deploy uploads it (and in Go, its Wasm): check fails
+	 * over it. Workers Free allows 3 MB (the default, 3000000), Workers Paid 10 MB. */
 	bundleLimit?: number;
-	/** charter-ts test:workerd: the Worker under workerd (cf dev) on a free port, and these tests against it. */
+	/** check (and twins): the Worker under workerd (cf dev) on a free port, and these tests against it. */
 	test: Tests;
-	/** charter-ts test:native, in Go: the API run natively (go run .) on a free port, and these tests against it. */
+	/** check, in Go: the API run natively (go run .) on a free port, and these tests against it. */
 	native?: Tests;
 	/** A Go project: its lint, its build with TinyGo, what it commits that is generated. */
 	go?: GoConfig;
@@ -40,13 +40,11 @@ export interface Config {
 }
 
 export interface Tests {
-	/** A path that answers once the server is up. Default /api/openapi.json, which every API serves (docs/reference/standard.md). */
-	ready?: string;
 	/** More environment for the server, given its port and the free ones the tests may serve on. */
-	env?: (ports: { port: number; extra: number; extras: Extras }) => Record<string, string>;
+	env?: (ports: { port: number; extras: Extras }) => Record<string, string>;
 	/** What the tests serve beside the server for its whole run (a webhook's receiver): each started
 	 * before it, with the server's environment, waited for at its `ready` URL, and stopped after. */
-	serve?: (ports: { port: number; extra: number; extras: Extras }) => Helper[];
+	serve?: (ports: { port: number; extras: Extras }) => Helper[];
 	run: (context: TestContext) => void | Promise<void>;
 }
 
@@ -66,8 +64,6 @@ export interface GoConfig {
 		opt?: "z" | "s" | "1" | "2";
 		/** The stack per goroutine (Huma overflows TinyGo's 64 KB). Default 128kb. */
 		stack?: string;
-		/** Fail over this many bytes gzipped (Workers Free allows 3 MB). Default 3000000. */
-		maxBytes?: number;
 	};
 	/** gsx components whose generated *.x.go are committed: lint fails if they are stale. */
 	gsx?: boolean;
@@ -89,10 +85,8 @@ export interface TestContext {
 	/** The local Worker, http://localhost:<port>. */
 	origin: string;
 	port: number;
-	/** Another free port, for something a test serves (a test issuer of tokens): extras[0]. */
-	extra: number;
 	/** Three free ports, all different, for what the tests serve: one each (an issuer of tokens, a
-	 * webhook's receiver). The first is `extra`. */
+	 * webhook's receiver). */
 	extras: Extras;
 	/** node <file> <args>, with the Worker's environment; throws if it fails. */
 	node: (file: string, ...args: string[]) => void;

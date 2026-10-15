@@ -7,7 +7,7 @@ package main
 import (
 	"github.com/joeblew999/charter/go/examples-start-datastar/api"
 	"github.com/joeblew999/charter/go/examples-start-datastar/pages"
-	"github.com/joeblew999/charter/go/transport"
+	"github.com/joeblew999/charter/go/lib/transport"
 )
 
 func main() {

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joeblew999/charter/go/hub"
+	"github.com/joeblew999/charter/go/lib/hub"
 )
 
 // Store is the log: D1 on Cloudflare (D1Store, store_d1.go), memory for `go run .` and the tests

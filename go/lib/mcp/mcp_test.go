@@ -13,7 +13,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/humaworkers"
+	"github.com/joeblew999/charter/go/lib/humaworkers"
 )
 
 type thing struct {
@@ -332,7 +332,7 @@ func TestWhatTheOperationRefusesIsAToolError(t *testing.T) {
 	}
 }
 
-// An operation that asks for credentials (a 401 or 403 with a challenge, as go/auth answers) is the
+// An operation that asks for credentials (a 401 or 403 with a challenge, as go/lib/auth answers) is the
 // MCP answer's own status and challenge, so an MCP client knows to sign in; what else it refuses
 // stays a tool error.
 func TestARefusalThatAsksForCredentialsIsTheAnswersStatus(t *testing.T) {

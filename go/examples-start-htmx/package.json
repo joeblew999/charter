@@ -4,12 +4,10 @@
 	"type": "module",
 	"description": "The Go start project with server-rendered pages (gsx and htmx 4), live over SSE. npm run check is every local check (no Cloudflare account); npm run dev runs it locally; npx charter-ts lists every step.",
 	"scripts": {
-		"start": "charter-ts run",
 		"dev": "charter-ts dev",
 		"check": "charter-ts check",
 		"spec": "charter-ts spec",
 		"sdk": "charter-ts sdk",
-		"sdk:publish": "charter-ts sdk:publish",
 		"deploy": "charter-ts deploy",
 		"live-test": "charter-ts live-test"
 	},

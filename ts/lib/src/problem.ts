@@ -1,4 +1,4 @@
-// How every API charter serves answers a refusal (docs/reference/standard.md): RFC 9457 problem
+// How every API charter serves answers a refusal (docs/self/standard.md): RFC 9457 problem
 // details, as Huma writes them in Go, so an API answers the same in either language.
 //   {"title":"Unprocessable Entity","status":422,"detail":"validation failed","errors":[{"message":"expected number >= 1","location":"query.limit","value":0}]}
 
@@ -29,6 +29,9 @@ const titles: Record<number, string> = {
 	429: "Too Many Requests", 500: "Internal Server Error", 501: "Not Implemented", 502: "Bad Gateway",
 	503: "Service Unavailable", 504: "Gateway Timeout",
 };
+
+/** A status's reason phrase (a problem's title, a refusal's description in the specs). */
+export const reasonOf = (status: number | string): string | undefined => titles[Number(status)];
 
 /** A problem's body for a status and what went wrong. */
 export function problemOf(status: number, detail: string, errors?: ErrorDetail[]): Problem {

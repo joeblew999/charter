@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/joeblew999/charter/go/follow"
-	"github.com/joeblew999/charter/go/hub"
+	"github.com/joeblew999/charter/go/lib/follow"
+	"github.com/joeblew999/charter/go/lib/hub"
 )
 
 type item int64

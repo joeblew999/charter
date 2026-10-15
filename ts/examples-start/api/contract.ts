@@ -1,6 +1,6 @@
 import { oc } from "@orpc/contract";
 import { openapi, type OpenAPIV3_2 } from "@orpc/openapi";
-import { z } from "zod";
+import { hello } from "./schemas.ts";
 
 // The API, contract first: every route with its method, path, input and output as Zod 4 schemas.
 // The Worker implements it (api/handlers.ts) and the specs are generated from it (npm run spec ->
@@ -11,9 +11,6 @@ import { z } from "zod";
 /** Fern's names for the SDK method: client.<group>.<method>() and `cli <group> <method>`. */
 const sdk = (group: string, method: string, extra: Record<string, unknown> = {}) =>
 	(op: OpenAPIV3_2.OperationObject): OpenAPIV3_2.OperationObject => ({ ...op, "x-fern-sdk-group-name": group, "x-fern-sdk-method-name": method, ...extra });
-
-/** What GET /api/hello answers. */
-export const hello = z.object({ message: z.string().meta({ examples: ["Hello from charter-start-ts"] }) });
 
 export const contract = {
 	hello: oc

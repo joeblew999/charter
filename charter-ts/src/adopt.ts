@@ -1,26 +1,20 @@
 // charter-ts adopt: the repo you are in, kept the charter way. It writes what the repo lacks of
-// package.json (charter-ts, the scripts every repo runs), then the kit (kit.ts), moves what a repo's
-// own CLAUDE.md or AGENTS.md said into docs/rules.md, so the kit's take their place, and writes the
-// workflows from ci.config.ts (ci.ts), which the kit starts in a repo with no API.
+// package.json (charter-ts, the scripts every repo runs), then charter's files (charter-files.ts), moves what a repo's
+// own CLAUDE.md or AGENTS.md said into docs/self/rules.md, so charter's take their place, and writes the
+// workflows from ci.config.ts (ci.ts), which adopt starts.
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { ciWrite } from "./ci.ts";
-import { marked, writeKit } from "./kit.ts";
-import { releaseURL, version } from "./package.ts";
+import { writeWorkflows } from "./ci.ts";
+import { marked, writeFiles } from "./charter-files.ts";
+import { charterRepo, releaseURL, version } from "./package.ts";
 import { output } from "./scripts.ts";
-import { isCharterRepo, isProject, type PackageJson, readPackage, repoRoot, settings } from "./settings.ts";
+import { renamed } from "./commands.ts";
+import { isProject, type PackageJson, readPackage, repoRoot, settings } from "./settings.ts";
 
-/** The scripts every repo kept the charter way runs, in the order it runs them. */
-export const repoScripts: Record<string, string> = {
-	adopt: "charter-ts adopt",
-	repo: "charter-ts repo",
-	issues: "charter-ts issues",
-	issue: "charter-ts issue",
-	"docs:check": "charter-ts docs:check",
-	"repo:ci": "charter-ts repo:ci",
-	"docs:review": "charter-ts docs:review",
-};
+/** The scripts every repo kept the charter way runs, in the order it runs them: each is the charter-ts
+ * command of its name. */
+export const repoScripts: Record<string, string> = Object.fromEntries(["adopt", "issues", "check", "docs", "repo", "upstream", "ci"].map(name => [name, `charter-ts ${name}`]));
 
 const say = (did: string, path: string, why = "") => console.log(`${did.padEnd(7)}  ${path}${why}`);
 
@@ -38,9 +32,18 @@ export async function adopt(args: string[]): Promise<void> {
 	pkg.keywords ??= old.topics ?? [];
 	if (old.homepage) pkg.homepage ??= old.homepage;
 	const scripts = (pkg.scripts ??= {});
+	// A script an older charter-ts wrote, under a command's old name, goes: its command is called otherwise now.
+	for (const [name, command] of Object.entries(scripts)) {
+		const old = /^charter-ts ([a-z:-]+)$/.exec(command)?.[1];
+		if (old && renamed[old]) {
+			delete scripts[name];
+			say("removed", "package.json", `: the script ${name} (charter-ts ${old} is charter-ts ${renamed[old]} now)`);
+		}
+	}
 	const theirs = Object.keys(repoScripts).filter(name => scripts[name] !== undefined && scripts[name] !== repoScripts[name]);
 	for (const [name, command] of Object.entries(repoScripts)) scripts[name] ??= command;
-	if (!isCharterRepo(root)) (pkg.devDependencies ??= {})["charter-ts"] ??= releaseURL(version());
+	// charter's own repo runs charter-ts from its workspace.
+	if (!charterRepo || resolve(charterRepo) !== resolve(root)) (pkg.devDependencies ??= {})["charter-ts"] ??= releaseURL(version());
 	const file = join(root, "package.json");
 	const text = JSON.stringify(pkg, null, have && !readFileSync(file, "utf8").startsWith("{\n\t") ? 2 : "\t") + "\n";
 	if (!have || readFileSync(file, "utf8") !== text) {
@@ -60,42 +63,42 @@ export async function adopt(args: string[]): Promise<void> {
 		say(ignored ? "changed" : "wrote", ".gitignore", ": node_modules/");
 	}
 
-	// 2. The kit. A repo's own agent files are taken in step 3, so they are not reported kept here.
+	// 2. charter's files. A repo's own agent files are taken in step 3, so they are not reported kept here.
 	const taking = !isProject(root) && settings(root).docs === "docs";
-	writeKitSaying(root, taking ? ["CLAUDE.md", "AGENTS.md"] : []);
+	writeFilesSaying(root, taking ? ["CLAUDE.md", "AGENTS.md"] : []);
 
-	// 3. A repo's own CLAUDE.md or AGENTS.md: what it said moves into docs/rules.md, and the kit's take
+	// 3. A repo's own CLAUDE.md or AGENTS.md: what it said moves into docs/self/rules.md, and charter's take
 	// their place. A project's are its own.
 	if (taking) {
 		let took = false;
 		for (const name of ["CLAUDE.md", "AGENTS.md"]) {
 			const taken = takeAgentFile(root, name);
-			if (taken === "moved") say("moved", name, ": what it said is now in docs/rules.md");
+			if (taken === "moved") say("moved", name, ": what it said is now in docs/self/rules.md");
 			if (taken === "removed") say("removed", name, ": it only pointed to AGENTS.md");
 			took ||= taken !== undefined;
 		}
-		if (took) writeKitSaying(root);
+		if (took) writeFilesSaying(root);
 	}
 
-	// 4. The workflows, from ci.config.ts: a job each, calling the job runner the kit wrote.
-	if (existsSync(join(root, "ci.config.ts"))) await ciWrite([]);
-	console.log("\nNext: npm install, then the scripts in the order docs/charter/tasks.md lists them.");
+	// 4. The workflows, from ci.config.ts: a job each, calling the job runner adopt wrote.
+	await writeWorkflows(root, false);
+	console.log("\nNext: npm install, then what docs/charter/README.md says, and when.");
 }
 
 async function adoptCheck(root: string): Promise<void> {
-	const { changed, kept } = writeKit(root, true);
+	const { changed, kept } = writeFiles(root, true);
 	for (const name of kept) say("kept", name, ": the repo's own (it does not carry charter's mark)");
-	for (const name of changed) console.error(`differs  ${name.replace(/^removed /, "")}${name.startsWith("removed ") ? " (not the kit's: it goes)" : ""}: charter-ts adopt writes it`);
-	if (changed.length > 0) throw new Error(`${changed.length} files of the kit differ from what this version writes: npm run adopt`);
-	say("ok", "the kit", ": every file is what this version writes");
-	if (existsSync(join(root, "ci.config.ts"))) await ciWrite(["--check"]);
+	for (const name of changed) console.error(`differs  ${name.replace(/^removed /, "")}${name.startsWith("removed ") ? " (not charter's: it goes)" : ""}: charter-ts adopt writes it`);
+	if (changed.length > 0) throw new Error(`${changed.length} of charter's files differ from what this version writes: npm run adopt`);
+	say("ok", "charter's files", ": every one is what this version writes");
+	await writeWorkflows(root, true);
 }
 
-function writeKitSaying(root: string, quiet: string[] = []): void {
-	const { changed, kept } = writeKit(root, false);
+function writeFilesSaying(root: string, quiet: string[] = []): void {
+	const { changed, kept } = writeFiles(root, false);
 	for (const name of changed) name.startsWith("removed ") ? console.log(name) : say("wrote", name);
 	for (const name of kept) if (!quiet.includes(name)) say("kept", name, ": yours (it does not carry charter's mark), so charter leaves it");
-	if (changed.length === 0) say("ok", "the kit", ": every file is what this version writes");
+	if (changed.length === 0) say("ok", "charter's files", ": every one is what this version writes");
 }
 
 /** The repo on GitHub, if it is there yet. */
@@ -123,16 +126,16 @@ function charterToml(root: string): { found: boolean; description?: string; topi
 }
 
 /** takeAgentFile moves what a repo's own agent file says (one without charter's mark, and more than a
- * pointer) to the end of docs/rules.md, headings one level down and links made relative to docs/, and
- * removes the file, so the kit's takes its place. */
+ * pointer) to the end of docs/self/rules.md, headings one level down and links made relative to it, and
+ * removes the file, so charter's takes its place. */
 function takeAgentFile(root: string, name: string): "moved" | "removed" | undefined {
 	const path = join(root, name);
 	if (!existsSync(path) || marked(path)) return undefined;
 	const notes = readFileSync(path, "utf8").trim();
 	const said = notes !== "" && notes !== "@AGENTS.md";
 	if (said) {
-		const moved = notes.replace(/^(#{1,5} )/gm, "#$1").replace(/\]\(((?:[^)#:/][^):]*|\.\/[^):]*))\)/g, "](../$1)");
-		const rules = join(root, "docs", "rules.md");
+		const moved = notes.replace(/^(#{1,5} )/gm, "#$1").replace(/\]\(((?:[^)#:/][^):]*|\.\/[^):]*))\)/g, "](../../$1)");
+		const rules = join(root, "docs", "self", "rules.md");
 		const before = existsSync(rules) ? readFileSync(rules, "utf8").trimEnd() : "";
 		writeFileSync(rules, `${before}\n\n## What ${name} said before charter-ts adopt\n\nMoved here by \`charter-ts adopt\`, as it was. Yours to edit: keep what is still true, where it belongs.\n\n${moved}\n`);
 	}

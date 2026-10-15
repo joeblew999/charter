@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/joeblew999/charter/go/examples-start-datastar/api"
-	"github.com/joeblew999/charter/go/fragments"
+	"github.com/joeblew999/charter/go/lib/fragments"
 )
 
 // serveStream sends every message after the request's position as one SSE event (go/fragments):

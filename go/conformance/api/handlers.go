@@ -20,9 +20,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/auth"
-	"github.com/joeblew999/charter/go/follow"
-	"github.com/joeblew999/charter/go/transport"
+	"github.com/joeblew999/charter/go/lib/auth"
+	"github.com/joeblew999/charter/go/lib/follow"
+	"github.com/joeblew999/charter/go/lib/transport"
 )
 
 // Env is what the platform supplies: variables and secrets (bindings on Cloudflare, the environment
@@ -383,7 +383,7 @@ func (env Env) watch(_ context.Context, in *WatchInput) (*huma.StreamResponse, e
 	}}, nil
 }
 
-// live answers the upgrade with the feed, the way the notes example does (docs/guides/streaming.md):
+// live answers the upgrade with the feed, the way the notes example does (docs/self/streaming.md):
 // every note from the log's start, then each new one as the hub announces it, one JSON event per
 // line, which the adapter sends as a frame. The stream ends only when Follow gives up (the hub is
 // down); the adapter then closes the socket with 1011. The channel takes messages too (subscribe).

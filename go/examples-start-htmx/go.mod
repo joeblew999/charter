@@ -4,7 +4,7 @@ go 1.27.1
 
 require (
 	github.com/danielgtaylor/huma/v2 v2.39.1
-	github.com/joeblew999/charter/go v0.0.0
+	github.com/joeblew999/charter/go/lib v0.0.0
 	github.com/syumai/workers-go v0.36.0
 )
 
@@ -25,6 +25,6 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
 
-replace github.com/joeblew999/charter/go => ../lib
+replace github.com/joeblew999/charter/go/lib => ../lib
 
 tool github.com/gsxhq/gsx/cmd/gsx

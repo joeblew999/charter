@@ -11,11 +11,11 @@ package main
 
 import (
 	"github.com/joeblew999/charter/go/conformance/api"
-	"github.com/joeblew999/charter/go/specs"
+	"github.com/joeblew999/charter/go/lib/specs"
 )
 
 func main() {
 	spec := api.API(api.Env{})
-	specs.Must(spec.Tools())
+	specs.Must(specs.Problems(spec))
 	specs.Main(spec.OpenAPI, spec.AsyncAPI)
 }

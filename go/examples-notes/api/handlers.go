@@ -14,8 +14,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/auth"
-	"github.com/joeblew999/charter/go/follow"
+	"github.com/joeblew999/charter/go/lib/auth"
+	"github.com/joeblew999/charter/go/lib/follow"
 )
 
 // Env is what the platform supplies: bindings on Cloudflare (platform_js.go), memory elsewhere.
@@ -107,7 +107,7 @@ func (env Env) create(ctx context.Context, in *CreateInput) (*NoteOutput, error)
 	return &NoteOutput{Body: note}, nil
 }
 
-// feed is the one feed both transports serve (docs/guides/streaming.md): the store is the log, the hub
+// feed is the one feed both transports serve (docs/self/streaming.md): the store is the log, the hub
 // only wakes followers.
 type feed struct {
 	store Store

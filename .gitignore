@@ -10,7 +10,8 @@ mise.local.toml
 # Release builds (npm run release)
 dist/
 
-# npm, and what packing charter-ts writes (npm pack: its templates, the tarball)
+# npm, and what packing charter-ts writes (npm pack: its templates and charter's files, the tarball)
 node_modules/
 charter-ts/templates/
+charter-ts/charter-files/
 *.tgz

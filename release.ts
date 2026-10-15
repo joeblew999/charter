@@ -1,7 +1,7 @@
 // npm run release -- X.Y.Z [--dry-run]: a release of charter-ts, cut from this machine, onto GitHub.
 //   1. The version: charter-ts's package.json and the examples' dependency on it, committed.
 //   2. npm run check: every local check (Docker), the same one GitHub runs.
-//   3. The packages (npm pack) into dist/: charter-ts (the command, the kit, the templates) and
+//   3. The packages (npm pack) into dist/: charter-ts (the command, charter's files, the templates) and
 //      charter-lib (what a TypeScript Worker imports), at the same version.
 //   4. The tag ts-vX.Y.Z, pushed with main, and the GitHub Release, marked latest, with the package
 //      on it: charter-ts-X.Y.Z.tgz, which a repo installs.
@@ -82,9 +82,11 @@ if (dryRun) {
 	process.exit(0);
 }
 
-// 4. The tag and the GitHub Release.
-if (git("tag", "-l", tag) === "") run("git", ["tag", tag]);
-run("git", ["push", "-q", "origin", "main", tag]);
+// 4. The tags and the GitHub Release. The Go library is a module in go/lib, so go get finds its
+// version by the tag go/lib/vX.Y.Z (charter-ts new --go pins that).
+const goTag = `go/lib/v${version}`;
+for (const t of [tag, goTag]) if (git("tag", "-l", t) === "") run("git", ["tag", t]);
+run("git", ["push", "-q", "origin", "main", tag, goTag]);
 const exists = (() => {
 	try {
 		output("gh", ["release", "view", tag]);
@@ -93,9 +95,9 @@ const exists = (() => {
 		return false;
 	}
 })();
-const notes = `charter-ts ${version}: contract-first APIs on Cloudflare Workers in TypeScript.
+const notes = `charter-ts ${version}: contract-first APIs on Cloudflare Workers, in TypeScript or Go.
 
-Start a project:
+Start a project (in Go: add --go; the Go library is go get github.com/joeblew999/charter/go/lib@v${version}):
 
     npx --package ${releaseURL(version)} charter-ts new my-api
 
@@ -111,7 +113,7 @@ A TypeScript Worker's library, charter-lib, is on the same release:
 
     npm i ${releaseURL(version, "charter-lib")}
 
-Docs: https://joeblew999.github.io/charter/guides/typescript.html`;
+Docs: https://joeblew999.github.io/charter/`;
 if (!exists) run("gh", ["release", "create", tag, ...tarballs, "--title", `charter-ts ${version}`, "--notes", notes, "--latest"]);
 else run("gh", ["release", "upload", tag, ...tarballs, "--clobber"]);
 console.log(`released: ${releaseURL(version)}`);

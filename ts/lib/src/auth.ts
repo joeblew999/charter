@@ -1,4 +1,4 @@
-// Who may call an oRPC API, and with what scopes, the counterpart of go/auth: the contract declares
+// Who may call an oRPC API, and with what scopes, the counterpart of go/lib/auth: the contract declares
 // what each operation needs (its `spec`), and one check enforces that, so the specs, the SDKs and the
 // server agree.
 //

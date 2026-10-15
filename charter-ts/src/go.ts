@@ -1,31 +1,33 @@
-// A Go project's steps: gofmt and go vet, gsx's committed output kept fresh, the Worker built with
+// A Go project's parts of the commands: gofmt and go vet, gsx's committed output kept fresh, the Worker built with
 // TinyGo tuned for Workers, and the Go SDK committed in sdk/go, made from the specs it says.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { GoConfig } from "./config.ts";
-import { cacheFolder, made, output, run, sdk, specsHash } from "./scripts.ts";
+import { cacheFolder, freeBundleLimit, made, output, run, sdk, specsHash } from "./scripts.ts";
 
-/** lint: gofmt over the root's Go files and the config's folders, then go vet for the host and, for
- * the root package, for Wasm (GOOS=js GOARCH=wasm), where the Worker is built from. */
+/** gofmt over paths in dir, then go vet for the host and, for the packages wasm names, for Wasm
+ * (GOOS=js GOARCH=wasm), as a Worker is built. */
+function vetted(dir: string, paths: string[], wasm: string): void {
+	const unformatted = output("gofmt", ["-l", ...paths], dir).trim();
+	if (unformatted) throw new Error(`not formatted in ${dir} (gofmt -w writes them as they should be):\n${unformatted}`);
+	run("go", ["vet", "./..."], {}, dir);
+	run("go", ["vet", wasm], { GOOS: "js", GOARCH: "wasm" }, dir);
+}
+
+/** A project's lint: its root's Go files and the config's folders vetted (the root package, the
+ * Worker, for Wasm too), gsx's output and the committed Go SDK fresh. */
 export function goLint(config: GoConfig): void {
-	const paths = [...readdirSync(".").filter(name => name.endsWith(".go")), ...(config.lint ?? ["api", "cmd"]).filter(dir => existsSync(dir))];
-	const unformatted = output("gofmt", ["-l", ...paths]).trim();
-	if (unformatted) throw new Error(`not formatted (gofmt -w writes them as they should be):\n${unformatted}`);
-	run("go", ["vet", "./..."]);
-	run("go", ["vet", "."], { GOOS: "js", GOARCH: "wasm" });
+	vetted(".", [...readdirSync(".").filter(name => name.endsWith(".go")), ...(config.lint ?? ["api", "cmd"]).filter(dir => existsSync(dir))], ".");
 	if (config.gsx) gsxCheck();
 	if (config.sdk) sdkFresh();
 }
 
-/** goCheck is a Go module's check, for one that is not a project (go/lib): gofmt over every file,
- * go vet for the host and for Wasm (GOOS=js GOARCH=wasm, as a Worker builds it), then go test. */
+/** goCheck is a Go module's check, for one that is not a project (go/lib): every file vetted, for
+ * Wasm too, then go test. */
 export function goCheck(dir: string): void {
-	const unformatted = output("gofmt", ["-l", "."], dir).trim();
-	if (unformatted) throw new Error(`not formatted in ${dir} (gofmt -w writes them as they should be):\n${unformatted}`);
-	run("go", ["vet", "./..."], {}, dir);
-	run("go", ["vet", "./..."], { GOOS: "js", GOARCH: "wasm" }, dir);
+	vetted(dir, ["."], "./...");
 	run("go", ["test", "./..."], {}, dir);
 }
 
@@ -67,7 +69,7 @@ const tinygo = (...args: string[]): [string, string[]] => ["mise", ["exec", `tin
 // No collection at every pause. TinyGo runs a full collection whenever the scheduler goes idle once 32
 // finalizers were registered since the last one. Every JavaScript reference registers one, and a
 // Worker goes idle at every await: measured on Cloudflare, 38 to 71 ms of CPU per request against 9 to
-// 13 ms without it (docs/benchmarks.md). The collector still runs when the heap is full.
+// 13 ms without it (docs/self/benchmarks.md). The collector still runs when the heap is full.
 //
 // (TinyGo 0.43.0 frees the stacks of finished goroutines itself, tinygo-org/tinygo#5801: the patches
 // that made it reuse them are gone.)
@@ -108,7 +110,7 @@ function tinygoRoot(): string {
 		const [old, replacement] = crlf ? [patch.old.replaceAll("\n", "\r\n"), patch.new.replaceAll("\n", "\r\n")] : [patch.old, patch.new];
 		if (source.split(old).length !== 2) {
 			rmSync(root, { recursive: true, force: true });
-			throw new Error(`this TinyGo (${version.trim()}) does not have the text a patch changes (${JSON.stringify(patch.old)} in ${patch.file}): see docs/upstream.md`);
+			throw new Error(`this TinyGo (${version.trim()}) does not have the text a patch changes (${JSON.stringify(patch.old)} in ${patch.file}): see docs/self/upstream.md`);
 		}
 		rmSync(file); // a new file, not new content in the installed one's (a hard link on Windows)
 		writeFileSync(file, source.replace(old, replacement));
@@ -122,8 +124,8 @@ function tinygoRoot(): string {
  * fills build/ with what runs it: workers-go's JavaScript and the Go library's Worker glue. The Wasm
  * has the runtime patches, a starting heap so an ordinary request never collects, a stack per
  * goroutine Huma fits in, and fails over the size Workers Free allows. */
-export function goBuild(config: GoConfig, fresh = false): void {
-	const { heapMB = 8, opt = "z", stack = "128kb", maxBytes = 3_000_000 } = config.build ?? {};
+export function goBuild(config: GoConfig, limit = freeBundleLimit, fresh = false): void {
+	const { heapMB = 8, opt = "z", stack = "128kb" } = config.build ?? {};
 	run("go", ["run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=tinygo"]);
 	glue();
 	// The same sources, pins and options make the same Wasm: one made before is copied, not built.
@@ -138,7 +140,7 @@ export function goBuild(config: GoConfig, fresh = false): void {
 		run(program, args, { TINYGOROOT: tinygoRoot() });
 		copyFileSync(join("build", "app.wasm"), cached);
 	}
-	if (made(join("build", "app.wasm"), "the Worker's Wasm", maxBytes) > maxBytes) throw new Error("build/app.wasm is over the limit");
+	if (made(join("build", "app.wasm"), "the Worker's Wasm", limit) > limit) throw new Error("build/app.wasm is over the limit (charter.config.ts: bundleLimit)");
 }
 
 /** buildKey names what goes into the Wasm: the Go version, TinyGo's pins and patches, the build's
@@ -171,10 +173,10 @@ function buildKey(config: GoConfig): string {
 /** glue writes the Go library's Worker glue (worker/*.mjs) into build/, taken from the library as the
  * project's go.mod resolves it, so the JavaScript is always the one written for the Go it builds against. */
 function glue(): void {
-	const library = output("go", ["list", "-m", "-f", "{{.Dir}}", "github.com/joeblew999/charter/go"]).trim();
+	const library = output("go", ["list", "-m", "-f", "{{.Dir}}", "github.com/joeblew999/charter/go/lib"]).trim();
 	const worker = join(library, "worker");
 	const files = existsSync(worker) ? readdirSync(worker).filter(name => name.endsWith(".mjs")) : [];
-	if (files.length === 0) throw new Error(`no Worker glue (worker/*.mjs) in ${library}: the project's go.mod requires github.com/joeblew999/charter/go`);
+	if (files.length === 0) throw new Error(`no Worker glue (worker/*.mjs) in ${library}: the project's go.mod requires github.com/joeblew999/charter/go/lib`);
 	mkdirSync("build", { recursive: true });
 	for (const name of files) writeFileSync(join("build", name), readFileSync(join(worker, name)));
 }
@@ -186,7 +188,7 @@ const sdkDir = join("sdk", "go");
 export function sdkFresh(): void {
 	if (!existsSync(sdkDir)) return;
 	const made = existsSync(join(sdkDir, madeFrom)) ? readFileSync(join(sdkDir, madeFrom), "utf8").trim() : "";
-	if (made !== specsHash()) throw new Error(`${sdkDir} was not made from the specs in fern/ as they are now: npm run sdk:publish writes it again (Docker), then commit it`);
+	if (made !== specsHash()) throw new Error(`${sdkDir} was not made from the specs in fern/ as they are now: npm run sdk -- --publish writes it again (Docker), then commit it`);
 	console.log(`${sdkDir} was made from the specs in fern/ as they are now`);
 }
 
@@ -206,7 +208,7 @@ function sdkSources(dir: string, into = new Map<string, Buffer>(), base = dir): 
 /** sdkPublish generates the Go SDK (Docker), proves it (build, vet, Fern's tests against WireMock) and
  * copies its sources into sdk/go, the committed module another repo can go get. With check it writes
  * nothing and fails if sdk/go is not what the specs generate now. */
-export function sdkPublish(check: boolean): void {
+export async function sdkPublish(check: boolean): Promise<void> {
 	const out = join("sdk", "out", "go");
 	rmSync(out, { recursive: true, force: true });
 	sdk("go");
@@ -214,30 +216,19 @@ export function sdkPublish(check: boolean): void {
 	if (!module?.endsWith("/sdk/go")) throw new Error(`${out}/go.mod declares ${module}: set config.module.path of the go group in fern/generators.yml to <the project's module>/sdk/go`);
 	const generated = sdkSources(out);
 	const readme = generated.get("README.md") ?? Buffer.from("");
-	generated.set("README.md", Buffer.concat([Buffer.from("> **Generated code.** Fern generated this Go client from the API's contract (the specs in `fern/`). Don't edit it: change the contract, then `npm run sdk:publish` writes this folder again.\n\n"), readme]));
+	generated.set("README.md", Buffer.concat([Buffer.from("> **Generated code.** Fern generated this Go client from the API's contract (the specs in `fern/`). Don't edit it: change the contract, then `npm run sdk -- --publish` writes this folder again.\n\n"), readme]));
 	if (check) {
 		const committed = existsSync(sdkDir) ? sdkSources(sdkDir) : new Map<string, Buffer>();
 		const stale = [
 			...[...generated].filter(([file, content]) => !committed.get(file)?.equals(content)).map(([file]) => `  ${committed.has(file) ? "differs" : "missing"}: ${file}`),
 			...[...committed.keys()].filter(file => !generated.has(file)).map(file => `  not generated: ${file}`),
 		].sort();
-		if (stale.length > 0) throw new Error(`${sdkDir} is stale against the specs in fern/ (npm run sdk:publish writes it again):\n${stale.join("\n")}`);
+		if (stale.length > 0) throw new Error(`${sdkDir} is stale against the specs in fern/ (npm run sdk -- --publish writes it again):\n${stale.join("\n")}`);
 		console.log(`${sdkDir} is what the specs in fern/ generate (${generated.size} files)`);
 		return;
 	}
-	// Proven before it is committed. A generated module is its own: no workspace above it applies.
-	run("go", ["build", "./..."], { GOWORK: "off" }, out);
-	run("go", ["vet", "./..."], { GOWORK: "off" }, out);
-	const compose = join(out, "wiremock", "docker-compose.test.yml");
-	if (existsSync(compose)) {
-		run("docker", ["compose", "-f", compose, "up", "-d", "--wait"]);
-		try {
-			const port = output("docker", ["compose", "-f", compose, "port", "wiremock", "8080"]).trim();
-			run("go", ["test", "./..."], { GOWORK: "off", WIREMOCK_URL: `http://${port}` }, out);
-		} finally {
-			run("docker", ["compose", "-f", compose, "down"]);
-		}
-	}
+	// Proven before it is committed, as sdk --prove proves it.
+	await (await import("./clients.ts")).check("go");
 	rmSync(sdkDir, { recursive: true, force: true });
 	for (const [file, content] of generated) {
 		mkdirSync(join(sdkDir, file, ".."), { recursive: true });

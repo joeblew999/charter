@@ -18,7 +18,7 @@ const optional = Object.fromEntries(optionalSecrets.filter(name => process.env[n
 // on Cloudflare the WebSocket test connects from charter-conformance-ts to charter-conformance-ts-api, which needs the
 // global_fetch_strictly_public flag (without it: error 1042, Worker-to-Worker on the same zone).
 // Each keeps its notes in its own D1 (migrations/), and Hub, a hibernating Durable
-// Object, wakes the WebSocket's feed on every new one, as in the notes example (docs/guides/streaming.md).
+// Object, wakes the WebSocket's feed on every new one, as in the notes example (docs/self/streaming.md).
 export default defineConfig(ctx => {
 	const name = ctx.mode === "api" ? "charter-conformance-ts-api" : "charter-conformance-ts";
 	return {

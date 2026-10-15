@@ -1,5 +1,5 @@
-# Written by `charter-ts ci:write` from ci.config.ts: don't edit, change ci.config.ts, then npx charter-ts ci:write.
-# A project's Worker deployed to Cloudflare, then its live tests against it. The same job here: npx charter-ts ci deploy [<project>]; on GitHub, from here: npx charter-ts ci:remote deploy [<project>].
+# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
+# A project's Worker deployed to Cloudflare, then its live tests against it. Here: npm run ci -- deploy [<project>]; on GitHub, from here: npm run ci -- deploy [<project>] --remote.
 name: self-deploy
 on:
   workflow_dispatch:

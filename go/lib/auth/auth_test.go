@@ -20,7 +20,7 @@ import (
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 
-	"github.com/joeblew999/charter/go/auth/authtest"
+	"github.com/joeblew999/charter/go/lib/auth/authtest"
 )
 
 type out struct{ Body string }

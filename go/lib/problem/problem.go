@@ -1,7 +1,7 @@
 // Package problem writes a refusal as RFC 9457 problem details, as Huma writes an operation's
 // (huma.ErrorModel), for what answers outside an operation: an unknown path (404), a method the path
 // lacks (405), /.well-known/. Every refusal of an API is then the same kind of answer
-// (docs/reference/standard.md), and the same as charter-lib's (problem.ts).
+// (docs/self/standard.md), and the same as charter-lib's (problem.ts).
 package problem
 
 import (

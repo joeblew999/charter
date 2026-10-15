@@ -4,11 +4,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/joeblew999/charter/go/hub"
+	"github.com/joeblew999/charter/go/lib/hub"
 )
 
 // Entry is a note in the log. Seq is its place there: the only position a follower keeps
-// (docs/guides/streaming.md, rule 1). The note's id is the API's, and the Idempotency-Key when the
+// (docs/self/streaming.md, rule 1). The note's id is the API's, and the Idempotency-Key when the
 // creator sent one.
 type Entry struct {
 	Seq  int64  `json:"seq"`
@@ -33,7 +33,7 @@ type Store interface {
 	Latest(ctx context.Context) (int64, error)
 }
 
-// Hub is the live fan-out of new notes: only a wake-up signal for followers (docs/guides/streaming.md, rule 2).
+// Hub is the live fan-out of new notes: only a wake-up signal for followers (docs/self/streaming.md, rule 2).
 type Hub = hub.Hub[Entry]
 
 // seeds are the notes every log starts with: migrations/0001_init.sql writes the same into D1.

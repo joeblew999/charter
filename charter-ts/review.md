@@ -2,12 +2,12 @@ Bring the documentation in `docs/` of this repository up to date and into line w
 
 ## Read first
 
-1. `AGENTS.md`, then `docs/README.md` (the start page) and `docs/rules.md`.
+1. `AGENTS.md`, then `docs/self/README.md` (the start page) and `docs/self/rules.md`.
 2. `docs/charter/writing.md`: the rules every page is held to. They are the standard for this job.
 
 ## What a program already found
 
-`npm run docs:lint` reports:
+`npm run docs` reports:
 
 ```
 __LINT__
@@ -33,5 +33,5 @@ For every page under `docs/` (leave `_config.yml`, `llms.txt`, `_sass/` and `cha
 
 ## Finish
 
-1. Run `npm run docs:lint` until it reports nothing.
+1. Run `npm run docs` until it reports nothing.
 2. Report, page by page: what you corrected, what you added, what you cut, and anything you could not verify.

@@ -1,3 +1,3 @@
-# go/examples-start-htmx/
+# charter-start-htmx
 
-Documented in [docs/guides/pages.md](../../docs/guides/pages.md). All docs are in [docs/](../../docs/README.md).
+A Go API on Cloudflare Workers with server-rendered pages (htmx 4, gsx), live over its streams, made with [charter-ts](https://joeblew999.github.io/charter/): [Server-rendered pages](https://joeblew999.github.io/charter/self/pages.html). `npm run check` is every local check, with no Cloudflare account; the steps are the scripts in `package.json`, and `charter.config.ts` says what they need.

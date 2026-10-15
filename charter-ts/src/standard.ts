@@ -1,4 +1,4 @@
-// The standard test: what every API charter serves must do (docs/reference/standard.md), checked on a
+// The standard test: what every API charter serves must do (docs/self/standard.md), checked on a
 // running API from outside, as a client sees it. It knows no API: it reads the one it tests (its
 // /api/openapi.json) and checks it against that. check runs it on the project's server (natively and
 // under workerd), live-test on the deployed Worker, so no project writes or copies it.
@@ -11,11 +11,25 @@
 // Behind Cloudflare Access, every request carries the service token in <WORKER>_ACCESS_CLIENT_ID and
 // _SECRET (WORKER: the first label of the host, in capitals), as the live tests send it.
 
-type Operation = { operationId?: string; security?: Record<string, string[]>[]; requestBody?: { content?: Record<string, unknown> }; parameters?: { name: string; in: string }[] };
-type Spec = { servers?: { url: string }[]; paths?: Record<string, Record<string, Operation>>; security?: Record<string, string[]>[] };
+// What an API's OpenAPI spec says, as far as the standard test and twins read it.
+export type Schema = { type?: string | string[]; properties?: Record<string, Schema>; required?: string[]; items?: Schema; $ref?: string; examples?: unknown[]; default?: unknown; minimum?: number; maximum?: number; minLength?: number; pattern?: string; enum?: unknown[]; contentMediaType?: string; format?: string };
+export type Parameter = { name: string; in: string; required?: boolean; schema?: Schema };
+export type Operation = { operationId?: string; parameters?: Parameter[]; requestBody?: { required?: boolean; content?: Record<string, { schema?: Schema }> }; responses?: Record<string, { content?: Record<string, unknown> }>; security?: Record<string, string[]>[]; "x-fern-idempotent"?: boolean };
+export type OpenAPI = { servers?: { url: string }[]; paths?: Record<string, Record<string, Operation>>; components?: { schemas?: Record<string, Schema> }; security?: Record<string, string[]>[]; "x-fern-idempotency-headers"?: { header: string }[] };
 
-const methods = ["get", "put", "post", "delete", "patch"];
-const mcpMeta = { "io.modelcontextprotocol/protocolVersion": "2026-07-28", "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: "charter-standard", version: "1" } };
+/** The methods an OpenAPI path item may have. */
+export const methods = ["get", "put", "post", "delete", "patch"];
+
+/** An MCP request to /api/mcp as a client sends it (the stateless protocol), from client; raw is a body
+ * sent as it is, in place of the request. */
+export function mcpRequest(method: string, params: Record<string, unknown>, client: string, raw?: string): { headers: Record<string, string>; body: string } {
+	const version = "2026-07-28";
+	const meta = { "io.modelcontextprotocol/protocolVersion": version, "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: client, version: "1" } };
+	return {
+		headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": version, "mcp-method": method, ...(params.name ? { "mcp-name": String(params.name) } : {}) },
+		body: raw ?? JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: { ...params, _meta: meta } }),
+	};
+}
 
 /** The Cloudflare Access service token for a host, from the environment; none when it is not set. */
 function accessHeaders(origin: string): Record<string, string> {
@@ -39,15 +53,11 @@ export async function standard(origin: string, say: (line: string) => void = con
 		const body = await json(response);
 		return response.status === status && !!response.headers.get("content-type")?.startsWith("application/problem+json") && body?.status === status;
 	};
-	const mcp = (method: string, params: Record<string, unknown>, raw?: string) => get("/api/mcp", {
-		method: "POST",
-		headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2026-07-28", "mcp-method": method, ...(params.name ? { "mcp-name": String(params.name) } : {}) },
-		body: raw ?? JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: { ...params, _meta: mcpMeta } }),
-	});
+	const mcp = (method: string, params: Record<string, unknown>, raw?: string) => get("/api/mcp", { method: "POST", ...mcpRequest(method, params, "charter-standard", raw) });
 
 	// Both specs, naming this address.
 	const specAnswer = await get("/api/openapi.json");
-	const spec = ((await json(specAnswer)) ?? {}) as Spec;
+	const spec = ((await json(specAnswer)) ?? {}) as OpenAPI;
 	check("GET /api/openapi.json names this address", specAnswer.status === 200 && spec.servers?.[0]?.url === origin, { status: specAnswer.status, servers: spec.servers });
 	const asyncAnswer = await get("/api/asyncapi.json");
 	const asyncSpec = (await json(asyncAnswer)) as { channels?: object; servers?: { production?: { host?: string } } } | undefined;

@@ -1,28 +1,37 @@
 // charter-ts new: a new project, a copy of a tested example (start: one route; notes: the notes API,
-// with auth, streams and rate limits) under its own name. The package carries the examples in
-// templates/ (written when it is packed); in the charter repo they are read from ts/examples-<template>.
+// with auth, streams and rate limits), in TypeScript or, with --go, in Go, under its own name, in a repo
+// of its own that adopt keeps. The package carries the examples in templates/ (written when it is
+// packed, by copyTemplate); in the charter repo they are read from ts/ and go/ themselves.
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { packageDir, releaseURL, version } from "./package.ts";
+import { charterRepo, packageDir, releaseURL, version } from "./package.ts";
+import { output } from "./scripts.ts";
 
 export const templates = ["start", "notes"] as const;
 export type Template = (typeof templates)[number];
+/** A project's language: TypeScript (oRPC) or Go (Huma). */
+export const languages = ["ts", "go"] as const;
+export type Language = (typeof languages)[number];
+
+/** Where the package carries a template: templates/<template>, in Go templates/go-<template>. */
+export const packedName = (template: Template, language: Language) => `${language === "go" ? "go-" : ""}${template}`;
 
 /** What a copy leaves out: what npm, cf, Fern and the build write, and local secrets. */
-const left = new Set(["node_modules", ".wrangler", ".cloudflare", "dist", "package-lock.json", ".DS_Store"]);
+const left = new Set(["node_modules", ".wrangler", ".cloudflare", "dist", "build", "package-lock.json", ".DS_Store"]);
 const leftPaths = new Set(["sdk/out", "sdk/.work", "client"]);
 const leftFile = (name: string) => name.startsWith(".dev.vars") || name.endsWith(".log") || name.endsWith(".tsbuildinfo");
 
-/** copyProject copies a project's own files from one folder to another. npm drops a package's
- * .gitignore files, so a template holds it as gitignore; `gitignore` says which name to write. */
-export function copyProject(from: string, to: string, gitignore: ".gitignore" | "gitignore"): void {
+/** copyProject copies a project's own files from one folder to another, less `also` (paths in it).
+ * npm drops a package's .gitignore files, so a template holds it as gitignore; `gitignore` says which
+ * name to write. */
+export function copyProject(from: string, to: string, gitignore: ".gitignore" | "gitignore", also: string[] = []): void {
 	cpSync(from, to, {
 		recursive: true,
 		filter: source => {
 			const path = relative(from, source).replaceAll("\\", "/");
 			const name = basename(source);
-			return path === "" || !(left.has(name) || leftPaths.has(path) || (statSync(source).isFile() && leftFile(name)));
+			return path === "" || !(left.has(name) || leftPaths.has(path) || also.includes(path) || (statSync(source).isFile() && leftFile(name)));
 		},
 	});
 	for (const name of [".gitignore", "gitignore"]) {
@@ -30,17 +39,32 @@ export function copyProject(from: string, to: string, gitignore: ".gitignore" | 
 	}
 }
 
-/** Where a template is: the example itself in the charter repo (a templates/ left there by a pack is
- * never read: it would be what an older commit packed), or else the copy the package carries. */
-function templateDir(template: Template): string {
-	const repo = join(packageDir, "..", "ts", `examples-${template}`);
-	if (existsSync(repo)) return repo;
-	const packed = join(packageDir, "templates", template);
-	if (existsSync(packed)) return packed;
-	throw new Error(`no template ${template} in ${packed}`);
+/** copyTemplate copies an example of charter's repo (repo) into `to`: a TypeScript one as it is; a Go
+ * one with its TypeScript twin's tests, which in the repo it runs where they are, and the schemas they
+ * check its answers against, so that it stands alone. Its committed Go SDK is the example's (a project
+ * publishes its own), and so is the soak test of a redeploy (test/soak*), which this repo runs by hand. */
+export function copyTemplate(repo: string, template: Template, language: Language, to: string, gitignore: ".gitignore" | "gitignore"): void {
+	const twin = join(repo, "ts", `examples-${template}`);
+	if (language === "ts") return copyProject(twin, to, gitignore);
+	copyProject(join(repo, "go", `examples-${template}`), to, gitignore, ["sdk/go", "test/soak.ts", "test/soak-go"]);
+	cpSync(join(twin, "test"), join(to, "test"), { recursive: true });
+	cpSync(join(twin, "api", "schemas.ts"), join(to, "test", "schemas.ts"));
+	rewrite(join(to, "test"), content => content.replaceAll('from "../api/schemas.ts"', 'from "./schemas.ts"'));
+	rewrite(to, (content, file) => (basename(file) === "charter.config.ts" ? content.replaceAll(`../../ts/examples-${template}/test`, "test") : content));
+	const tsconfig = join(to, "tsconfig.node.json");
+	writeFileSync(tsconfig, JSON.stringify({ ...JSON.parse(readFileSync(tsconfig, "utf8")), include: ["charter.config.ts", "test"] }, null, "\t") + "\n");
 }
 
-const text = /\.(ts|mts|js|mjs|json|ya?ml|toml|md|sql|html|css|txt)$|^gitignore$|^\.gitignore$/;
+/** A template into `to`: in the charter repo, its examples as they are now (a templates/ left there by
+ * a pack is never read: it would be what an older commit packed); else the copy the package carries. */
+function fromTemplate(template: Template, language: Language, to: string): void {
+	if (charterRepo) return copyTemplate(charterRepo, template, language, to, ".gitignore");
+	const packed = join(packageDir, "templates", packedName(template, language));
+	if (!existsSync(packed)) throw new Error(`no template ${packedName(template, language)} in ${packed}`);
+	copyProject(packed, to, ".gitignore");
+}
+
+const text = /\.(ts|mts|js|mjs|json|ya?ml|toml|md|sql|html|css|txt|go)$|^go\.mod$|^gitignore$|^\.gitignore$/;
 
 function rewrite(dir: string, change: (content: string, file: string) => string): void {
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -56,29 +80,11 @@ function rewrite(dir: string, change: (content: string, file: string) => string)
 
 const screaming = (name: string) => name.toUpperCase().replaceAll("-", "_");
 
-// The project's checks on GitHub (self-check.yml: self- names the repo's own workflows), the same npm run check as on your machine.
-const workflow = `# The project's checks on every push and pull request: npm run check, the same as on your machine.
-name: check
-on:
-  push:
-  pull_request:
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 26
-      - run: npm ci
-      - run: npm run check
-`;
-
-export function newProject(args: string[]): void {
+export async function newProject(args: string[]): Promise<void> {
 	const { values, positionals } = parseArgs({
 		args,
 		allowPositionals: true,
-		options: { from: { type: "string", default: "start" }, subdomain: { type: "string" }, into: { type: "string" } },
+		options: { from: { type: "string", default: "start" }, go: { type: "boolean" }, subdomain: { type: "string" }, into: { type: "string" } },
 	});
 	const [name] = positionals;
 	if (!name || !/^[a-z][a-z0-9-]*$/.test(name)) throw new Error("new needs a name of lowercase letters, digits and -, which is the Worker's name too: charter-ts new my-api");
@@ -87,16 +93,20 @@ export function newProject(args: string[]): void {
 	const into = resolve(values.into ?? name);
 	if (existsSync(into) && readdirSync(into).length > 0) throw new Error(`${into} is not empty`);
 	mkdirSync(into, { recursive: true });
-	copyProject(templateDir(from), into, ".gitignore");
+	const language: Language = values.go ? "go" : "ts";
+	fromTemplate(from, language, into);
 
-	const old = `charter-${from}-ts`;
+	const old = `charter-${from}-${language}`;
 	const subdomain = values.subdomain ?? "your-subdomain";
 	rewrite(into, (content, file) => {
 		let next = content
 			.replaceAll(old, name)
 			.replaceAll(screaming(old), screaming(name))
 			.replaceAll(".gedw99.workers.dev", `.${subdomain}.workers.dev`)
+			// In Go: the project's module is its name, and the Go library is the release's, not the repo's.
+			.replaceAll(`github.com/joeblew999/charter/go/examples-${from}`, name)
 			.replace(/github\.com\/joeblew999\/charter\/[^\s"]+\/sdk\/go/g, `${name}/sdk/go`);
+		if (basename(file) === "go.mod") next = next.replace(/\nreplace github\.com\/joeblew999\/charter\/go\/lib => \S+\n/, "\n").replace(/(github\.com\/joeblew999\/charter\/go\/lib) v0\.0\.0/, `$1 v${version()}`);
 		if (basename(file) === "package.json" && file === join(into, "package.json")) {
 			const pkg = JSON.parse(next) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
 			for (const deps of [pkg.dependencies, pkg.devDependencies]) {
@@ -107,14 +117,32 @@ export function newProject(args: string[]): void {
 		}
 		return next;
 	});
-	mkdirSync(join(into, ".github", "workflows"), { recursive: true });
-	writeFileSync(join(into, ".github", "workflows", "self-check.yml"), workflow);
+	console.log(`made ${into}, from the ${from} example in ${language === "go" ? "Go" : "TypeScript"}, as the Worker ${name}`);
+	// Go: the Go library of the release, fetched (go.sum).
+	let tidy = true;
+	if (language === "go") {
+		try {
+			output("go", ["mod", "tidy"], into);
+		} catch {
+			tidy = false;
+			console.log(`go mod tidy failed: the Go library v${version()} could not be fetched. Run it again in ${into} when you can reach GitHub.`);
+		}
+	}
 
-	console.log(`made ${into}, from the ${from} example, as the Worker ${name}`);
+	// A project is a repo of its own, kept as every repo is: adopt writes its CI (ci.config.ts, and its
+	// workflows from it), its docs and charter's files.
+	if (!existsSync(join(into, ".git"))) output("git", ["init", "-q"], into);
+	const here = process.cwd();
+	process.chdir(into);
+	try {
+		await (await import("./adopt.ts")).adopt([]);
+	} finally {
+		process.chdir(here);
+	}
 	console.log(`next:
   cd ${relative(process.cwd(), into) || "."}
-  npm install          # the packages, charter-ts ${version()} among them
-  npm run check        # typecheck, the specs, the tests under workerd: no Cloudflare account
+${tidy ? "" : "  go mod tidy          # the Go library\n"}  npm install          # the packages, charter-ts ${version()} among them
+  npm run check        # every check that needs no Cloudflare account
   npm run dev          # the API on charter.config.ts's port
 ${values.subdomain ? "" : `Your workers.dev subdomain goes in charter.config.ts's url (cf deploy prints it; your-subdomain for now), then npm run spec.\n`}`);
 }

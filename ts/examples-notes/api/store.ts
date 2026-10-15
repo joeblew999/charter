@@ -2,10 +2,10 @@ import { env } from "cloudflare:workers";
 import { DurablePublisher } from "@orpc/cloudflare";
 import { follow, type FollowSource } from "charter-lib/follow";
 import type { z } from "zod";
-import type { note } from "./contract.ts";
+import type { note } from "./schemas.ts";
 
 // Where the notes are kept: D1 (DB) is the log, and the Hub Durable Object (HUB, worker.ts) only wakes
-// the followers when one is added (docs/guides/streaming.md).
+// the followers when one is added (docs/self/streaming.md).
 
 export type Note = z.infer<typeof note>;
 

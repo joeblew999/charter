@@ -22,10 +22,6 @@
 			"types": "./dist/asyncapi.d.ts",
 			"default": "./dist/asyncapi.js"
 		},
-		"./specs": {
-			"types": "./dist/specs.d.ts",
-			"default": "./dist/specs.js"
-		},
 		"./follow": {
 			"types": "./dist/follow.d.ts",
 			"default": "./dist/follow.js"

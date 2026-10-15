@@ -1,12 +1,12 @@
-// charter-ts issue <kind>: an issue body with the headings of that issue form (the kit's
+// charter-ts issues <kind>: an issue body with the headings of that issue form (charter's
 // .github/ISSUE_TEMPLATE/charter-<kind>.yml), for gh issue create --body-file: gh and the API ignore forms.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { kitDir } from "./kit.ts";
+import { charterFile } from "./charter-files.ts";
 
 export function issue(args: string[]): void {
 	const [kind] = args;
-	const form = join(kitDir, ".github", "ISSUE_TEMPLATE", `charter-${kind}.yml`);
+	const form = charterFile(`.github/ISSUE_TEMPLATE/charter-${kind}.yml`);
 	if (!kind || /[/.]/.test(kind) || !existsSync(form)) throw new Error("issue needs the kind: bug, feature, upstream or plan");
 	const lines = readFileSync(form, "utf8").split("\n");
 	let title = "", labels = "";

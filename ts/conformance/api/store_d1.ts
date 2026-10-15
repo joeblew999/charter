@@ -1,6 +1,6 @@
 // The notes' log on Cloudflare (as go/conformance's api/store_d1.go): the notes table in D1 (migrations/), and Hub (worker.ts), oRPC's
 // Durable Object publisher, which fans every new note out to the WebSocket's follow() loops. The hub
-// keeps no log: D1 is the log, so the hub may restart at any time (docs/guides/streaming.md).
+// keeps no log: D1 is the log, so the hub may restart at any time (docs/self/streaming.md).
 import { env } from "cloudflare:workers";
 import { DurablePublisher } from "@orpc/cloudflare";
 import type { Entry, Notes } from "./store.ts";

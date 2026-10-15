@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/joeblew999/charter/go/auth"
-	"github.com/joeblew999/charter/go/auth/authtest"
+	"github.com/joeblew999/charter/go/lib/auth"
+	"github.com/joeblew999/charter/go/lib/auth/authtest"
 )
 
 // A real HTTP server over the in-memory store and hub: the handlers as `go run .` serves them.

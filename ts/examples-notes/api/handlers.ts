@@ -2,7 +2,8 @@ import { env } from "cloudflare:workers";
 import { implement, withEventMeta } from "@orpc/server";
 import type { Trusted } from "charter-lib/auth";
 import { guard, serve, type Served } from "charter-lib/serve";
-import { contract, END } from "./contract.ts";
+import { contract } from "./contract.ts";
+import { END } from "./schemas.ts";
 import { document } from "./spec.ts";
 import { before, followNotes, insert } from "./store.ts";
 

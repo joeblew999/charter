@@ -11,7 +11,7 @@ node_modules/
 *.cpuprofile
 .DS_Store
 
-# Generated SDKs (npm run sdk), and the SDK copy the Worker imports (npm run lint, test:workerd)
+# Generated SDKs (npm run sdk), and the SDK copy the Worker imports (npm run check)
 sdk/out/
 sdk/.work/
 client/

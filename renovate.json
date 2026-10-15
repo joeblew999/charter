@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Written by `charter-ts adopt` from the kit (github.com/joeblew999/charter, charter-ts/kit/renovate.json): don't edit, change the kit. \"charter\": { \"renovate\": false } in package.json leaves this file to the repo. A new release of what the repo pins opens a pull request; minor and patch ones merge themselves once its checks pass.",
+  "description": "Written by `charter-ts adopt` (github.com/joeblew999/charter, renovate.json): don't edit it in another repo, change it in charter. \"charter\": { \"renovate\": false } in package.json leaves this file to the repo. A new release of what the repo pins opens a pull request; minor and patch ones merge themselves once its checks pass.",
   "enabledManagers": [
     "mise",
     "gomod",

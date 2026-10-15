@@ -1,2 +1,2 @@
--- The first migration: put your tables here (npm run deploy applies them on Cloudflare, npm run migrate:local locally).
+-- The first migration: put your tables here (npm run deploy applies them on Cloudflare, npm run dev locally).
 SELECT 1;

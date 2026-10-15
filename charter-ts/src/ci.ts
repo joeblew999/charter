@@ -1,21 +1,20 @@
 // The repo's CI, said once, in TypeScript (ci.config.ts at the repo's root), and typechecked: the jobs
-// and when GitHub runs them. charter-ts ci:write writes a workflow per job from it
-// (.github/workflows/self-<job>.yml: self- names the repo's own workflows, charter- charter's), which
-// calls charter's job runner (charter-ci.yml, which charter-ts adopt writes from the kit): mise installs
-// the tools, npm the packages, then `npx charter-ts ci <job>`. That is the command on a machine too, so
-// a job runs the same here as on GitHub; `charter-ts ci` is every job, and `charter-ts ci:remote <job>`
-// starts one on GitHub from here.
+// and when GitHub runs them. charter-ts adopt writes a workflow per job from it
+// (.github/workflows/self-<job>.yml: self- names the repo's own, charter- charter's), which calls
+// charter's job runner (charter-ci.yml): mise installs the tools, npm the packages, then
+// `npm run ci -- <job>`. That is the command on a machine too, so a job runs the same here as on
+// GitHub; `npm run ci` is every job, and `npm run ci -- <job> --remote` starts one on GitHub from here.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, posix } from "node:path";
 import { pathToFileURL } from "node:url";
-import { markOf } from "./kit.ts";
-import { packageDir } from "./package.ts";
-import { output, run, seconds } from "./scripts.ts";
+import { markOf } from "./charter-files.ts";
+import { cliPath } from "./package.ts";
+import { bin, output, run, seconds } from "./scripts.ts";
 import { readPackage, repoRoot } from "./settings.ts";
 
 /** A command: a program and its arguments. charter-ts is this charter-ts. */
-export type Command = readonly [program: string, ...args: string[]];
+export type Argv = readonly [program: string, ...args: string[]];
 
 export interface Job {
 	about: string;
@@ -25,7 +24,7 @@ export interface Job {
 	each?: "project";
 	/** The projects, by default every workspace with a charter.config.ts. */
 	projects?: readonly string[];
-	run: Command[];
+	run: Argv[];
 	/** The repo's GitHub secrets the job needs, as environment variables of the same names. */
 	secrets?: readonly string[];
 	/** The systems it runs on, by default Linux. */
@@ -36,8 +35,11 @@ export interface Job {
 }
 
 export interface CI {
-	/** Jobs: `charter-ts ci <name>` here, the workflow self-<name>.yml on GitHub. */
+	/** Jobs: `npm run ci -- <name>` here, the workflow self-<name>.yml on GitHub. */
 	jobs: Record<string, Job>;
+	/** The jobs `npm run check` runs at the repo's top, one after another (in a project, check is the
+	 * project's own): by default every job GitHub runs on a push or a pull request. */
+	check?: readonly string[];
 }
 
 /** defineCI types ci.config.ts. */
@@ -46,13 +48,39 @@ export function defineCI<T extends CI>(ci: T): T {
 }
 
 const runners = { linux: "ubuntu-24.04", macos: "macos-15", windows: "windows-2025" } as const;
-const written = (from: string) => `Written by \`charter-ts ci:write\` from ${from}: don't edit, change ci.config.ts, then npx charter-ts ci:write.`;
+const written = "Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.";
+/** A workflow adopt wrote from ci.config.ts. */
+const fromCI = (content: string) => content.includes("from ci.config.ts") && markOf(content)?.command === "adopt";
 
-async function load(root: string): Promise<CI> {
+/** charter's own jobs, the same in every repo: their workflows (charter-<job>.yml) are charter's files. */
+export const charterJobs: Record<string, Job> = {
+	repo: {
+		about: "What charter checks in any repo: charter's files and the workflows (adopt --check), the docs, the repo on GitHub as package.json says (repo --check), the upstream issues the code works around",
+		on: ["push", "pull_request"],
+		run: [["charter-ts", "adopt", "--check"], ["charter-ts", "docs"], ["charter-ts", "repo", "--check"], ["charter-ts", "upstream"]],
+		timeoutMinutes: 10,
+		// What the checks read with gh, and nothing they could change.
+		permissions: { contents: "read", issues: "read", "pull-requests": "read", pages: "read" },
+	},
+};
+
+/** The repo's own jobs, from ci.config.ts (none without one). */
+async function ownJobs(root: string): Promise<CI> {
 	const file = join(root, "ci.config.ts");
-	if (!existsSync(file)) throw new Error("no ci.config.ts at the repo's root: it says the tasks and the jobs (defineCI from charter-ts/ci)");
-	return ((await import(pathToFileURL(file).href)) as { default: CI }).default;
+	if (!existsSync(file)) return { jobs: {} };
+	const own = ((await import(pathToFileURL(file).href)) as { default: CI }).default;
+	for (const name of Object.keys(own.jobs)) if (charterJobs[name]) throw new Error(`ci.config.ts has a job ${name}: that one is charter's (charter-${name}.yml), so name yours otherwise`);
+	return own;
 }
+
+/** Every job: charter's, and the repo's own. */
+async function load(root: string): Promise<CI> {
+	const own = await ownJobs(root);
+	return { ...own, jobs: { ...charterJobs, ...own.jobs } };
+}
+
+/** A job's workflow file: charter-<job>.yml for charter's, self-<job>.yml for the repo's own. */
+const workflowOf = (name: string) => `${charterJobs[name] ? "charter" : "self"}-${name}.yml`;
 
 /** The projects a job runs in: those it names, or every workspace with a charter.config.ts. */
 function projectsOf(root: string, job: Job): string[] {
@@ -60,7 +88,6 @@ function projectsOf(root: string, job: Job): string[] {
 	return (readPackage(root)?.workspaces ?? []).filter(dir => existsSync(join(root, dir, "charter.config.ts")));
 }
 
-const cli = join(packageDir, "bin", "charter-ts.js");
 
 /** The secrets a job names, from the environment, or on GitHub from CHARTER_SECRETS (the repo's
  * secrets, which the shared runner passes): a job gets those its config names and no others. */
@@ -73,26 +100,37 @@ function secretsFor(job: Job): Record<string, string> {
 }
 
 /** exec runs a command in dir, charter-ts as this charter-ts, with the terminal's output. */
-function exec(command: Command, dir: string, env: Record<string, string>): void {
+function exec(command: Argv, dir: string, env: Record<string, string>): void {
 	const [program, ...args] = command;
 	console.log(`$ ${command.join(" ")}${dir === "." ? "" : `   (in ${dir})`}`);
-	const local = join(dir, "node_modules", ".bin", program);
-	const [bin, argv] = program === "charter-ts" ? [process.execPath, [cli, ...args]] : [existsSync(local) ? local : program, args];
+	const [file, argv] = program === "charter-ts" ? [process.execPath, [cliPath, ...args]] : [bin(program, dir), args];
 	const { CHARTER_SECRETS: _, ...rest } = process.env;
 	const start = performance.now();
-	const result = spawnSync(bin, argv, { cwd: dir, stdio: "inherit", env: { ...rest, ...env }, shell: process.platform === "win32" && program !== "charter-ts" });
+	const result = spawnSync(file, argv, { cwd: dir, stdio: "inherit", env: { ...rest, ...env }, shell: process.platform === "win32" && program !== "charter-ts" });
 	const took = seconds(performance.now() - start);
 	if (result.status !== 0) throw new Error(`${command.join(" ")} failed (${result.status ?? result.signal}) after ${took}${dir === "." ? "" : ` in ${dir}`}`);
 	console.log(`took ${took}: ${command.join(" ")}${dir === "." ? "" : `   (in ${dir})`}`);
 }
 
+/** The jobs GitHub runs on a push or a pull request (not one run by hand). */
+const onEveryChange = (config: CI) => Object.entries(config.jobs).filter(([, job]) => job.on.some(on => on === "push" || on === "pull_request")).map(([job]) => job);
+
 /** ci [<job> [<project>]]: a job, in one project or in each; with no job, every job GitHub runs on a
- * push or a pull request (not one run by hand), one after another. Each says how long it took. */
+ * push or a pull request, one after another. Each says how long it took. */
 export async function ci(args: string[]): Promise<void> {
-	const root = repoRoot();
-	const config = await load(root);
 	const [name, project] = args;
-	const names = name ? [name] : Object.entries(config.jobs).filter(([, job]) => job.on.some(on => on === "push" || on === "pull_request")).map(([job]) => job);
+	const config = await load(repoRoot());
+	await runJobs(config, name ? [name] : onEveryChange(config), project);
+}
+
+/** check at a repo's top: the jobs ci.config.ts lists in check. */
+export async function ciCheck(): Promise<void> {
+	const config = await load(repoRoot());
+	await runJobs(config, [...(config.check ?? onEveryChange(config))]);
+}
+
+async function runJobs(config: CI, names: string[], project?: string): Promise<void> {
+	const root = repoRoot();
 	const times: string[] = [];
 	for (const jobName of names) {
 		const job = config.jobs[jobName];
@@ -108,17 +146,19 @@ export async function ci(args: string[]): Promise<void> {
 	console.log(`\nci passed: ${times.join(", ")}`);
 }
 
-/** The job runner a repo's workflows call: its own copy, which adopt writes from the kit of the
- * charter-ts it has (docs:check fails while it differs), so it moves with that version. */
+/** The job runner a repo's workflows call: its own copy, which adopt writes from the charter-ts it has
+ * (adopt --check fails while it differs), so it moves with that version. */
 const runner = "./.github/workflows/charter-ci.yml";
 
 /** A job's workflow: when it runs, and a call of the shared runner per project and system. Every
- * workflow can be started by hand, so from here: charter-ts ci:remote <job> [<project>]. */
-function workflow(root: string, name: string, job: Job): string {
+ * workflow can be started by hand, so from here: npm run ci -- <job> [<project>] --remote. */
+export function workflow(root: string, name: string, job: Job): string {
 	const os = (job.os ?? ["linux"]).map(system => runners[system]);
 	const projects = job.each === "project" ? projectsOf(root, job) : [];
 	const byHand = job.on.length === 1 && job.on[0] === "dispatch";
-	const lines = [`# ${written("ci.config.ts")}`, `# ${job.about}. The same job here: npx charter-ts ci ${name}${projects.length ? " [<project>]" : ""}; on GitHub, from here: npx charter-ts ci:remote ${name}${projects.length ? " [<project>]" : ""}.`, `name: self-${name}`, "on:"];
+	const one = `${name}${projects.length ? " [<project>]" : ""}`;
+	const mark = charterJobs[name] ? `Written by \`charter-ts adopt\` (github.com/joeblew999/charter): don't edit, it is charter's job, the same in every repo.` : written;
+	const lines = [`# ${mark}`, `# ${job.about}. Here: npm run ci -- ${one}; on GitHub, from here: npm run ci -- ${one} --remote.`, `name: ${workflowOf(name).replace(/\.yml$/, "")}`, "on:"];
 	const push = [...(job.on.includes("push") ? ["    branches: [main]"] : []), ...(job.on.includes("tag") ? ['    tags: ["ts-v*"]'] : [])];
 	if (push.length) lines.push("  push:", ...push);
 	if (job.on.includes("pull_request")) lines.push("  pull_request:");
@@ -141,40 +181,38 @@ function workflow(root: string, name: string, job: Job): string {
 	return lines.join("\n");
 }
 
-/** ci:remote <job> [<project>]: start the job's workflow on GitHub, on this branch (pushed), and say
+/** ci <job> [<project>] --remote: start the job's workflow on GitHub, on this branch (pushed), and say
  * where the run is. It does not wait for it: gh run watch follows it. */
 export async function ciRemote(args: string[]): Promise<void> {
 	const root = repoRoot();
 	const config = await load(root);
 	const [name, project] = args;
-	if (!name || !config.jobs[name]) throw new Error(`ci:remote needs a job of ci.config.ts: ${Object.keys(config.jobs).join(", ")}`);
+	if (!name || !config.jobs[name]) throw new Error(`ci --remote needs a job of ci.config.ts: ${Object.keys(config.jobs).join(", ")}`);
 	const branch = output("git", ["branch", "--show-current"], root).trim();
 	const started = new Date(Date.now() - 5000).toISOString();
-	run("gh", ["workflow", "run", `self-${name}.yml`, "--ref", branch, ...(project ? ["-f", `project=${project}`] : [])]);
+	run("gh", ["workflow", "run", workflowOf(name), "--ref", branch, ...(project ? ["-f", `project=${project}`] : [])]);
 	for (let tries = 0; tries < 15; tries++) {
-		const runs = JSON.parse(output("gh", ["run", "list", "--workflow", `self-${name}.yml`, "--branch", branch, "--event", "workflow_dispatch", "--limit", "1", "--json", "url,createdAt,databaseId"], root)) as { url: string; createdAt: string; databaseId: number }[];
+		const runs = JSON.parse(output("gh", ["run", "list", "--workflow", workflowOf(name), "--branch", branch, "--event", "workflow_dispatch", "--limit", "1", "--json", "url,createdAt,databaseId"], root)) as { url: string; createdAt: string; databaseId: number }[];
 		if (runs[0] && runs[0].createdAt >= started) {
 			console.log(`started: ${runs[0].url}\nnot waiting for it (gh run watch ${runs[0].databaseId} follows it)`);
 			return;
 		}
 		await new Promise(resolve => setTimeout(resolve, 1000));
 	}
-	console.log(`started self-${name}.yml on ${branch}; gh run list --workflow self-${name}.yml shows it`);
+	console.log(`started ${workflowOf(name)} on ${branch}; gh run list --workflow ${workflowOf(name)} shows it`);
 }
 
-/** ci:write [--check]: the workflows from ci.config.ts, and a workflow it wrote before for a job that
- * is gone, removed. --check writes nothing and fails if one differs. */
-export async function ciWrite(args: string[]): Promise<void> {
-	const root = repoRoot();
-	const config = await load(root);
-	const check = args.includes("--check");
+/** The workflows from ci.config.ts (adopt writes them), and one written before for a job that is gone,
+ * removed. With check it writes nothing and fails if one differs. */
+export async function writeWorkflows(root: string, check: boolean): Promise<void> {
+	const config = await ownJobs(root);
 	const files = new Map<string, string>();
 	for (const [name, job] of Object.entries(config.jobs)) files.set(posix.join(".github/workflows", `self-${name}.yml`), workflow(root, name, job));
 	const differs: string[] = [];
 	for (const [file, content] of files) {
 		const path = join(root, file);
 		if (existsSync(path) && readFileSync(path, "utf8") === content) continue;
-		if (existsSync(path) && markOf(readFileSync(path, "utf8"))?.command !== "ci:write") throw new Error(`${file} is the repo's own (it does not say ci:write wrote it): move it, or name the job otherwise`);
+		if (existsSync(path) && !fromCI(readFileSync(path, "utf8"))) throw new Error(`${file} is the repo's own (it does not say adopt wrote it from ci.config.ts): move it, or name the job otherwise`);
 		differs.push(file);
 		if (!check) {
 			mkdirSync(join(path, ".."), { recursive: true });
@@ -184,11 +222,11 @@ export async function ciWrite(args: string[]): Promise<void> {
 	const workflows = join(root, ".github", "workflows");
 	for (const name of existsSync(workflows) ? readdirSync(workflows) : []) {
 		const file = posix.join(".github/workflows", name);
-		if (files.has(file) || markOf(readFileSync(join(workflows, name), "utf8"))?.command !== "ci:write") continue;
+		if (files.has(file) || !name.startsWith("self-") || !fromCI(readFileSync(join(workflows, name), "utf8"))) continue;
 		differs.push(`removed ${file}`);
 		if (!check) rmSync(join(workflows, name));
 	}
 	for (const file of differs) console.log(file.startsWith("removed ") ? (check ? `differs  ${file.slice(8)} (it goes)` : file) : `${check ? "differs" : "wrote  "}  ${file}`);
-	if (check && differs.length > 0) throw new Error(`${differs.length} workflows differ from what ci.config.ts says: npx charter-ts ci:write`);
+	if (check && differs.length > 0) throw new Error(`${differs.length} workflows differ from what ci.config.ts says: npm run adopt`);
 	if (differs.length === 0) console.log("ok       the CI: the workflows are what ci.config.ts says");
 }

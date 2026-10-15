@@ -19,7 +19,7 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/joeblew999/charter/go/transport"
+	"github.com/joeblew999/charter/go/lib/transport"
 )
 
 // testEnv is the settings given, over a log of its own with the seeded notes.

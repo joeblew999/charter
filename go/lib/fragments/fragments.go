@@ -1,6 +1,6 @@
 // Package fragments serves a live feed to browsers as server-sent events, each item rendered by the
 // caller: an HTML fragment for htmx 4's SSE extension, a datastar-patch-elements event for Datastar
-// (docs/guides/pages.md). The feed is go/follow's, so no item is lost or sent twice, across
+// (docs/self/pages.md). The feed is go/follow's, so no item is lost or sent twice, across
 // reconnects and deploys alike:
 //
 //	feed, options, err := env.Feed(r.URL.Query().Get("after"), r.Header.Get("Last-Event-ID"))
@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joeblew999/charter/go/follow"
+	"github.com/joeblew999/charter/go/lib/follow"
 )
 
 // For is how long a stream stays open unless Stream.For says otherwise. Then it ends, and the

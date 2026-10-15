@@ -2,7 +2,7 @@
 // counterpart of the oRPC conformance contract (ts/conformance/src/contract.ts) and its implementation
 // there. Each operation is a Huma operation whose input and output are Go structs; from this one
 // definition come the handlers' validation, the OpenAPI spec and the AsyncAPI spec (spec.go), and
-// from those Fern makes the SDKs. docs/guides/sdks.md says, feature by feature, what switches it
+// from those Fern makes the SDKs. docs/self/sdks.md says, feature by feature, what switches it
 // on here.
 //
 // The SDK's method names for the two notes operations are not here: the overlay beside the specs
@@ -17,11 +17,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/asyncapi"
-	"github.com/joeblew999/charter/go/auth"
-	"github.com/joeblew999/charter/go/humaworkers"
-	"github.com/joeblew999/charter/go/mcp"
-	"github.com/joeblew999/charter/go/ratelimit"
+	"github.com/joeblew999/charter/go/lib/asyncapi"
+	"github.com/joeblew999/charter/go/lib/auth"
+	"github.com/joeblew999/charter/go/lib/humaworkers"
+	"github.com/joeblew999/charter/go/lib/mcp"
+	"github.com/joeblew999/charter/go/lib/ratelimit"
 )
 
 // What the specs say about the API as a whole.
@@ -234,7 +234,7 @@ func Routes(env Env) []humaworkers.Route {
 				// The body's schema is written into the operation, not referred to by name. With a
 				// named one, the test Fern's Go generator (1.64.0) writes for a form-encoded token
 				// endpoint doesn't compile (it names a type `Request` that doesn't exist). Not filed
-				// yet: docs/upstream.md.
+				// yet: docs/self/upstream.md.
 				RequestBody: &huma.RequestBody{Content: map[string]*huma.MediaType{humaworkers.FormContentType: {
 					Schema: api.OpenAPI().Components.Schemas.Schema(reflect.TypeFor[TokenRequest](), false, ""),
 				}}},

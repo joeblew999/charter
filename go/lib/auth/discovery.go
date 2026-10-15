@@ -8,7 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/problem"
+	"github.com/joeblew999/charter/go/lib/problem"
 )
 
 // How a client finds out how to get in: what an MCP client reads on a 401 (MCP's authorization, on

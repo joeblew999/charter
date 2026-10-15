@@ -3,16 +3,11 @@
 * text=auto eol=lf
 
 # Generated files: nobody edits these by hand. GitHub marks them "generated" and folds them in diffs.
-# What writes each one is in docs/README.md ("What is generated").
-examples/*/fern/*.json                 linguist-generated=true
-examples/*/sdk/go/**                   linguist-generated=true
-examples/*/package-lock.json           linguist-generated=true
-ts/package-lock.json                   linguist-generated=true
-.github/workflows/*.yml                linguist-generated=true
-docs/_config.yml                       linguist-generated=true
-docs/charter/**                        linguist-generated=true
-docs/llms.txt                          linguist-generated=true
-docs/_sass/**                          linguist-generated=true
-.github/ISSUE_TEMPLATE/*.yml            linguist-generated=true
-# charter's own reusable workflow is source, not generated: repos call it from their charter.yml.
-.github/workflows/repo-check.yml       -linguist-generated
+# What writes each one is in docs/self/contributing.md ("What is generated").
+*/*/fern/*.json                        linguist-generated=true
+go/*/sdk/go/**                         linguist-generated=true
+go/*/pages/*.x.go                      linguist-generated=true
+package-lock.json                      linguist-generated=true
+.github/workflows/self-*.yml           linguist-generated=true
+.github/workflows/charter-repo.yml     linguist-generated=true
+docs/charter/README.md                 linguist-generated=true

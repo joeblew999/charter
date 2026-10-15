@@ -14,17 +14,13 @@ export interface SpecFiles {
 	server: string;
 	/** Check the committed files instead of writing them. */
 	check?: boolean;
-	/** Default fern/openapi.json. */
-	openapi?: string;
-	/** Default fern/asyncapi.json. */
-	asyncapi?: string;
 }
 
 /** writeSpecs writes both specs, or with check fails (exit code 1) if a committed one is stale. */
-export async function writeSpecs(specs: Specs, { server, check = false, openapi: openapiFile = "fern/openapi.json", asyncapi: asyncapiFile = "fern/asyncapi.json" }: SpecFiles): Promise<void> {
+export async function writeSpecs(specs: Specs, { server, check = false }: SpecFiles): Promise<void> {
 	const openapi = await specs.openapi(server);
 	const asyncapi = await specs.asyncapi(server);
-	for (const [file, spec] of [[openapiFile, openapi], [asyncapiFile, asyncapi]] as const) {
+	for (const [file, spec] of [["fern/openapi.json", openapi], ["fern/asyncapi.json", asyncapi]] as const) {
 		const text = JSON.stringify(spec, null, 2) + "\n";
 		if (!check) writeFileSync(file, text);
 		else if (readFileSync(file, "utf8") !== text) {
@@ -32,5 +28,5 @@ export async function writeSpecs(specs: Specs, { server, check = false, openapi:
 			process.exit(1);
 		}
 	}
-	console.log(check ? "specs match the contract" : `${openapiFile}: ${Object.keys(openapi.paths ?? {}).length} paths; ${asyncapiFile}: ${Object.keys(asyncapi.channels).length} channels (${server})`);
+	console.log(check ? "specs match the contract" : `fern/openapi.json: ${Object.keys(openapi.paths ?? {}).length} paths; fern/asyncapi.json: ${Object.keys(asyncapi.channels).length} channels (${server})`);
 }

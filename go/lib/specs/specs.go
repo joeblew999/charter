@@ -1,8 +1,7 @@
 // Package specs is the body of a spec command: it writes the specs a contract generates to
 // files, for Fern, or checks that the committed files are what the contract gives. One command per
-// contract calls Main with the contract's spec functions (each project's cmd/spec), after Must
-// with what else is wrong with the contract that no spec shows. Examples (examples.go) is a check of
-// what the specs give Fern, for a contract's tests.
+// contract calls Main with the contract's spec functions (each project's cmd/spec), after
+// Must(Problems(api)): what else is wrong with the contract that no spec shows.
 package specs
 
 import (
@@ -12,10 +11,20 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/joeblew999/charter/go/lib/humaworkers"
+	"github.com/joeblew999/charter/go/lib/serve"
 )
 
+// Problems is what is wrong with a contract that no spec shows: an operation that cannot be its MCP
+// tool, and a constrained request field without a valid example (Fern shows an example of every
+// request, and makes one up where the contract has none: whoever copies it gets a 422).
+func Problems(api serve.API) []error {
+	return append(api.Tools(), Examples(humaworkers.New(api.Config(), api.Routes))...)
+}
+
 // Must prints the problems and ends the command if there are any: a contract with problems gets no
-// specs, written or checked. cmd/spec gives it mcp.Check, the operations that cannot be MCP tools.
+// specs, written or checked.
 func Must(problems []error) {
 	for _, problem := range problems {
 		fmt.Fprintln(os.Stderr, problem)

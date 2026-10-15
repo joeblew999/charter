@@ -1,4 +1,4 @@
-// What charter-ts needs to know about this project (npm run <step> runs charter-ts <step>), typed, in one place.
+// What charter-ts needs to know about this project (npm run <name> runs charter-ts <name>), typed, in one place.
 import { defineConfig } from "charter-ts/config";
 import { specs } from "./api/spec.ts";
 

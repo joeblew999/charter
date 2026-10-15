@@ -5,10 +5,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/auth"
-	"github.com/joeblew999/charter/go/humaworkers"
-	"github.com/joeblew999/charter/go/ratelimit"
-	"github.com/joeblew999/charter/go/serve"
+	"github.com/joeblew999/charter/go/lib/auth"
+	"github.com/joeblew999/charter/go/lib/humaworkers"
+	"github.com/joeblew999/charter/go/lib/ratelimit"
+	"github.com/joeblew999/charter/go/lib/serve"
 )
 
 func init() {

@@ -1,7 +1,7 @@
 {
 	"name": "charter-ts",
 	"version": "0.7.0",
-	"description": "A repo kept the charter way, and APIs on Cloudflare Workers in TypeScript or Go, step by step: the charter-ts command. For any repo: adopt (the kit), docs:check, issue, upstream:status, repo, repo:ci. For a project, from its charter.config.ts: new, dev, check, spec, sdk, deploy, live-test (and in Go: run, build, sdk:publish). The library a TypeScript Worker imports is charter-lib (ts/lib). Installed from its GitHub Release: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz",
+	"description": "A repo kept the charter way, and APIs on Cloudflare Workers in TypeScript or Go, step by step: the charter-ts command. For a project, from its charter.config.ts: dev, check, spec, sdk, deploy, live-test. For any repo: new, adopt, docs, issues, repo, upstream, ci. Each is the npm script of its name. The library a TypeScript Worker imports is charter-lib (ts/lib). Installed from its GitHub Release: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -19,7 +19,7 @@
 	"files": [
 		"bin",
 		"dist",
-		"kit",
+		"charter-files",
 		"review.md",
 		"templates",
 		"tsconfig.node.json",
@@ -28,7 +28,7 @@
 	"scripts": {
 		"build": "tsc -p tsconfig.build.json",
 		"check": "tsc && node --test src/*.test.ts && npm run build",
-		"prepack": "npm run build && node pack-templates.ts"
+		"prepack": "npm run build && node pack.ts"
 	},
 	"exports": {
 		"./config": {
@@ -39,17 +39,9 @@
 			"types": "./dist/cloudflare.d.ts",
 			"default": "./dist/cloudflare.js"
 		},
-		"./spec-files": {
-			"types": "./dist/spec-files.d.ts",
-			"default": "./dist/spec-files.js"
-		},
 		"./scripts": {
 			"types": "./dist/scripts.d.ts",
 			"default": "./dist/scripts.js"
-		},
-		"./new": {
-			"types": "./dist/new.d.ts",
-			"default": "./dist/new.js"
 		},
 		"./package": {
 			"types": "./dist/package.d.ts",

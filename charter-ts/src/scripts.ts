@@ -1,4 +1,4 @@
-// What charter-ts's steps are made of, for a script of a project's own too: running a program, a dev
+// What charter-ts's commands are made of, for a script of a project's own too: running a program, a dev
 // server started and stopped around a test, the local database migrated, the Worker deployed with its
 // secrets, and an SDK generated when the specs are newer, or copied into the Worker.
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
@@ -13,7 +13,7 @@ import type { Config } from "./config.ts";
 /** A program npm installed (cf, fern, tsc) runs from node_modules/.bin; any other from the path. */
 /** bin is a program as the folder's packages install it (node_modules/.bin, in the folder or a workspace
  * above it), or else by its name, from PATH. */
-function bin(program: string, cwd = "."): string {
+export function bin(program: string, cwd = "."): string {
 	for (let dir = resolve(cwd); ; dir = dirname(dir)) {
 		const local = join(dir, "node_modules", ".bin", program);
 		if (existsSync(local)) return local;
@@ -114,7 +114,7 @@ export function run(program: string, args: string[], env: Record<string, string>
  * A run of a second or more says how long it took, on stderr: what it printed is the caller's. */
 export function output(program: string, args: string[], cwd?: string, env: Record<string, string> = {}): string {
 	const start = performance.now();
-	const result = spawnSync(bin(program), args, { encoding: "utf8", cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" });
+	const result = spawnSync(bin(program, cwd), args, { encoding: "utf8", cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" });
 	const took = performance.now() - start;
 	if (result.status !== 0) throw new Error(`${program} ${args.join(" ")} failed (${result.status ?? result.signal ?? result.error}) after ${seconds(took)}: ${result.stderr}`);
 	if (took >= worthSaying) console.error(`took ${seconds(took)}: ${shortly(program, args)}`);
@@ -175,7 +175,7 @@ export async function withServer<T>(server: Server, body: () => Promise<T>): Pro
 /** untilStopped starts a server, does `ready` once it answers, and runs until the server stops (Ctrl-C). */
 export async function untilStopped(server: Server, ready: () => Promise<void>): Promise<void> {
 	console.log(`$ ${server.program} ${server.args.join(" ")}`);
-	const child = spawn(bin(server.program), server.args, { stdio: "inherit", env: { ...process.env, ...server.env }, shell: process.platform === "win32" });
+	const child = spawn(bin(server.program, server.cwd), server.args, { stdio: "inherit", cwd: server.cwd, env: { ...process.env, ...server.env }, shell: process.platform === "win32" });
 	const exited = new Promise<number | null>(resolve => child.on("exit", code => resolve(code)));
 	await answers(server.ready, child);
 	await ready();
@@ -283,7 +283,7 @@ export function sdk(group: string, options: { ifStale?: boolean } = {}): void {
 		return;
 	}
 	run("fern", fernGenerate(group));
-	madeFrom(group);
+	stampMade(group);
 }
 
 /** generateQuietly generates a group as sdk does, with Fern's output kept rather than shown, so that
@@ -291,14 +291,14 @@ export function sdk(group: string, options: { ifStale?: boolean } = {}): void {
  * resolves with how long it took, and rejects with Fern's output if it fails. */
 export async function generateQuietly(group: string): Promise<number> {
 	const { ms } = await runQuietly("fern", fernGenerate(group));
-	madeFrom(group);
+	stampMade(group);
 	return ms;
 }
 
 const fernGenerate = (group: string) => ["generate", "--local", "--group", group, "--force", "--log-level", "warn"];
 const stampOf = (group: string) => join("sdk", "out", `.${group}.made-from`);
 const upToDate = (group: string) => existsSync(join("sdk", "out", group)) && existsSync(stampOf(group)) && readFileSync(stampOf(group), "utf8").trim() === specsHash();
-function madeFrom(group: string): void {
+function stampMade(group: string): void {
 	mkdirSync(join("sdk", "out"), { recursive: true });
 	writeFileSync(stampOf(group), `${specsHash()}\n`);
 }
@@ -308,7 +308,7 @@ function madeFrom(group: string): void {
 export function runQuietly(program: string, args: string[], env: Record<string, string> = {}, cwd?: string): Promise<{ output: string; ms: number }> {
 	const start = performance.now();
 	return new Promise((resolve, reject) => {
-		const child = spawn(bin(program), args, { cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" });
+		const child = spawn(bin(program, cwd), args, { cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" });
 		let output = "";
 		child.stdout.on("data", chunk => { output += chunk; });
 		child.stderr.on("data", chunk => { output += chunk; });

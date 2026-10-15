@@ -1,5 +1,5 @@
-# Written by `charter-ts ci:write` from ci.config.ts: don't edit, change ci.config.ts, then npx charter-ts ci:write.
-# A project made by charter-ts new from the packed package, as a release ships it, installed, and its check passing. The same job here: npx charter-ts ci new; on GitHub, from here: npx charter-ts ci:remote new.
+# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
+# A project made by charter-ts new from the packed package, as a release ships it, installed, and its check passing. Here: npm run ci -- new; on GitHub, from here: npm run ci -- new --remote.
 name: self-new
 on:
   push:

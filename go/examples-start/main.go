@@ -5,7 +5,7 @@ package main
 
 import (
 	"github.com/joeblew999/charter/go/examples-start/api"
-	"github.com/joeblew999/charter/go/transport"
+	"github.com/joeblew999/charter/go/lib/transport"
 )
 
 func main() {

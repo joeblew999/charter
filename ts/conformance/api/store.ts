@@ -8,7 +8,7 @@ export interface Note {
 	body: string;
 }
 
-/** A note in the log: `id` is its place there, follow()'s position (docs/guides/streaming.md, rule 1). */
+/** A note in the log: `id` is its place there, follow()'s position (docs/self/streaming.md, rule 1). */
 export interface Entry {
 	id: number;
 	note: Note;

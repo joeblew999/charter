@@ -1,36 +1,35 @@
 ---
-title: How this repo is kept
-nav_order: 80
+title: What to do
+nav_order: 100
 has_children: true
-permalink: /charter/
 ---
 
-# How this repo is kept
+# What to do, and when
 
-Written by `charter-ts adopt` (the same folder in every repo that uses it): don't edit these pages here, change `charter-ts/kit/docs/charter/` in [charter](https://github.com/joeblew999/charter).
+Written by `charter-ts adopt` from the repo's scripts (package.json): don't edit, change the scripts, then `npm run adopt`.
 
-What to run, and in what order, is the order of the npm scripts: [Tasks](tasks.md) lists them as package.json has them, step by step. Every script runs charter-ts, which package.json installs.
+Each is `npm run <name>`; what it takes goes after `--` (`npm run issues -- plan`). [The rules](rules.md) are binding; [Writing docs](writing.md) says how a page is written; this repo's own pages are in [self/](../self/README.md).
 
-Every repo that uses charter is kept the same way, so a developer or an agent who knows one knows them all. This folder is charter's: what is the same in every repo is here, and what is this repo's own is on its other pages.
+| When | Run | What it does |
+|---|---|---|
+| First, whenever you start: one labelled needs-triage comes before anything else. With a kind, to file one: a plan or a bug is an issue, never a page | `npm run issues` | REMOTE, read-only: the open issues, newest first; with a kind (bug, feature, upstream, plan), the body of a new one and the gh command that files it |
+| Before every commit | `npm run check` | every check that needs no Cloudflare account: in a project, the types, the specs, the tests, the API run and tested, its size; in a Go module, gofmt, go vet and go test; at a repo's top, the jobs ci.config.ts lists in check |
+| After changing a page in docs/ | `npm run docs` | check docs/ for what a program can (front matter, links, scripts and paths that don't exist); --review has Claude bring docs/ into line with docs/charter/writing.md |
+| To run a job as GitHub does, here; --remote to start it there | `npm run ci` | a job of ci.config.ts here, as GitHub runs it; with no job, every job GitHub runs on a change; --remote starts the job on GitHub instead |
+| Now and then: a CLOSED one means its workaround can go | `npm run upstream` | REMOTE, read-only: the upstream issues the code works around (its `Upstream:` tags), and their state |
+| After changing package.json's description, keywords or homepage | `npm run repo` | REMOTE: the repo on GitHub as package.json says: labels, description, homepage, topics, GitHub Pages; --check changes nothing and fails on drift |
+| After installing another release of charter-ts, and after changing ci.config.ts | `npm run adopt` | write charter's files into the repo (never one of the repo's own), the scripts it lacks, and a workflow per job of ci.config.ts; --check writes nothing and fails if one differs |
 
-| Page | What it is |
-|---|---|
-| [Rules for every repo](rules.md) | The working rules, for developers and agents alike. This repo's own rules, if it has more, are in its [rules.md](../rules.md) |
-| [Using charter-ts](using.md) | The tool this repo is kept with: how to run it, how to move to another release, and every command |
-| [Writing docs](writing.md) | The rules a page in `docs/` is held to |
-| [Tasks](tasks.md) | Every npm script, in the order you run them: the flow, written from package.json |
+In a project (`ts/examples-start`, `ts/examples-notes`, `ts/conformance`, `go/examples-notes`, `go/examples-start`, `go/examples-start-htmx`, `go/examples-start-datastar`, `go/conformance`), from its folder, or from here with `-w <folder>`:
 
-## What is charter's
+| When | Run | What it does |
+|---|---|---|
+| To try the API on your machine | `npm run dev` | the API on your machine, as on Cloudflare (workerd), its local database migrated, until Ctrl-C; --native, in Go: go run . |
+| After every change to the contract | `npm run spec` | write both specs (fern/openapi.json, fern/asyncapi.json) from the contract |
+| When a caller needs an SDK; --prove after changing fern/generators.yml; --publish after a contract change, where the repo commits its Go SDK | `npm run sdk` | an SDK with Fern (Docker), by default the TypeScript one, into sdk/out; --prove: every client, proven in its language; --publish, in Go: the Go SDK into sdk/go |
+| To put the API on Cloudflare | `npm run deploy` | REMOTE: the Worker on Cloudflare with its secrets (fnox exec -- npm run deploy), then its migrations |
+| After every deploy | `npm run live-test` | REMOTE: the standard test and the project's tests against the deployed Worker |
 
-Charter writes only these. This folder, and the `charter-*.yml` forms and workflows, are charter's whole: each release writes them as it has them, and removes anything else in them. The other files it writes only where there is none or the one there says charter wrote it: a file without that mark is the repo's own, and charter leaves it alone.
+The repo's own: `npm run release` (`node release.ts`).
 
-| Where | What |
-|---|---|
-| `docs/charter/` | These pages |
-| `docs/_config.yml`, `docs/llms.txt`, `docs/_sass/` | The docs site's look and its index for agents: GitHub Pages reads them at the top of `docs/` |
-| `.github/ISSUE_TEMPLATE/charter-*.yml`, `config.yml`, `.github/charter-labels.tsv` | The issue forms and the labels |
-| `ci.config.ts` | Started in a repo with no API, then yours: its CI, a job each (`repo`: what charter checks). Each job's workflow, `.github/workflows/self-<job>.yml`, is written from it |
-| `.github/workflows/charter-ci.yml` | The job runner, in a repo with a `ci.config.ts`: the workflows `charter-ts ci:write` writes from it call this one |
-| `AGENTS.md`, `CLAUDE.md`, `renovate.json` | What agents read first, and the update bot's settings |
-
-`charter-ts adopt` (`npm run adopt`) writes them all, copied as they are from the kit, and adds to `package.json` what it lacks: charter-ts and the scripts, never changing one the repo has. `npm run docs:check` fails if a file of the kit, or a workflow written from `ci.config.ts`, is not what this version writes. What each part needs: [Any repo](https://joeblew999.github.io/charter/guides/any-repo.html).
+Another release of charter-ts: `npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz`, then `npm run adopt` (Renovate opens that pull request). Every command, with what it takes: `npx charter-ts help`.

@@ -1,0 +1,20 @@
+# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
+# charter-ts and charter-lib with their tests, the Go library, this repo's own TypeScript, the projects kept the same, and these workflows linted. Here: npm run ci -- packages; on GitHub, from here: npm run ci -- packages --remote.
+name: self-packages
+on:
+  push:
+    branches: [main]
+    tags: ["ts-v*"]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  packages:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    uses: ./.github/workflows/charter-ci.yml
+    with:
+      job: packages
+      runs-on: ${{ matrix.os }}
+      timeout-minutes: 20

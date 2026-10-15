@@ -6,11 +6,11 @@ import { optionalSecrets } from "./secrets.ts";
 
 // The oRPC API (api/contract.ts) on D1, plus Hub: a hibernating Durable Object that fans every
 // new note out to the Worker's follow() loops. The Worker, not the hub, holds the clients' SSE
-// streams and WebSockets (docs/guides/streaming.md).
+// streams and WebSockets (docs/self/streaming.md).
 
 // Who else may call (charter-lib/auth): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD) and an
 // OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): the Worker's optional secrets (secrets.ts),
-// declared where the environment that deploys or runs the Worker has them; scripts/deploy.ts sets
+// declared where the environment that deploys or runs the Worker has them; npm run deploy sets
 // them, cf dev takes them from the environment. Unset, the Worker trusts no one that way.
 declare const process: { env: Record<string, string | undefined> };
 const optional = Object.fromEntries(optionalSecrets.filter(name => process.env[name]).map(name => [name, bindings.secret()]));

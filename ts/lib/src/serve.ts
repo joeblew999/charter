@@ -1,4 +1,4 @@
-// A Worker's API served the standard way (docs/reference/standard.md), as go/lib/serve serves a Huma
+// A Worker's API served the standard way (docs/self/standard.md), as go/lib/serve serves a Huma
 // API, so a project gives its router, its document and whom it trusts, and wires nothing itself:
 //   - its procedures under /api, as plain REST (oRPC's OpenAPIHandler), each call allowed by the
 //     credentials it carries and limited as its contract says (guard);
@@ -30,7 +30,7 @@ import { type ErrorDetail, problem, problemOf, problemType } from "./problem.ts"
 import { keyOf, limitOf, type Limit, rateLimit } from "./ratelimit.ts";
 import { asyncapiSpec, openapiSpec } from "./specs.ts";
 
-/** The standard paths (docs/reference/standard.md). */
+/** The standard paths (docs/self/standard.md). */
 export const openapiPath = "/api/openapi.json";
 export const asyncapiPath = "/api/asyncapi.json";
 export { mcpPath };

@@ -37,7 +37,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/go/problem"
+	"github.com/joeblew999/charter/go/lib/problem"
 )
 
 // The security schemes' names in the specs.

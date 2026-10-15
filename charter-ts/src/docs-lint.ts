@@ -1,11 +1,11 @@
-// charter-ts docs:lint: what is wrong with docs/ that a program can see: front matter, links and their
+// charter-ts docs: what is wrong with docs/ that a program can see: front matter, links and their
 // anchors, pages nothing links to, scripts and tasks that don't exist, paths that don't exist, release
 // versions that go stale. What needs judgement (is the page true, clear, complete) is for a reader:
-// npm run docs:review hands that to Claude.
+// npm run docs -- --review hands that to Claude.
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { charterFolder } from "./kit.ts";
+import { charterFolder } from "./charter-files.ts";
 import { output } from "./scripts.ts";
 import { repoRoot } from "./settings.ts";
 
@@ -85,10 +85,10 @@ export function docsLint(): void {
 		const front = text.split("\n---")[0];
 		const rel = relative(docs, page).replaceAll("\\", "/");
 		if (!text.startsWith("---\n") || !front.includes("title:") || !front.includes("nav_order:")) say(page, "no front matter with title and nav_order (the sidebar needs them)");
-		if (rel === "README.md" && !front.includes("permalink: /")) say(page, "the start page needs `permalink: /` in its front matter, or the site has no home page");
+		if (rel === "self/README.md" && !front.includes("permalink: /")) say(page, "the start page needs `permalink: /` in its front matter, or the site has no home page");
 		if (text.includes("{{") || text.includes("{%")) say(page, "two curly braces together, or a curly brace and a percent sign: Jekyll reads those as template code");
-		// charter's folder starts a section of its own: the sidebar and AGENTS.md reach it.
-		if (rel !== "README.md" && rel !== `${charterFolder}/README.md` && !linked.has(page)) say(page, "no other page links to it: add it to its section's table (or the home page's)");
+		// The two folders' first pages, the repo's own and charter's: the sidebar and AGENTS.md reach them.
+		if (rel !== "self/README.md" && rel !== `${charterFolder}/README.md` && !linked.has(page)) say(page, "no other page links to it: add it to its section's table (or the home page's)");
 		// Links and paths are read from the prose: an example inside code is not a link.
 		const prose = text.replace(fenced, "").replace(codeSpan, "");
 		for (const m of prose.matchAll(mdLink)) {

@@ -4,7 +4,6 @@
 	"type": "module",
 	"description": "The conformance API in Go: every Fern feature charter uses, in one small API, with the generated SDKs tested against it. npm run check is every local check (no Cloudflare account); npm run dev runs it locally; npx charter-ts lists every step.",
 	"scripts": {
-		"start": "charter-ts run",
 		"dev": "charter-ts dev",
 		"check": "charter-ts check",
 		"spec": "charter-ts spec",

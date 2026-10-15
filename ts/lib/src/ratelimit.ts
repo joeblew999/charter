@@ -1,4 +1,4 @@
-// How often a caller may call an oRPC API's operations, the counterpart of go/ratelimit, beside
+// How often a caller may call an oRPC API's operations, the counterpart of go/lib/ratelimit, beside
 // auth: the contract declares each limit, and one check enforces it, so the specs, the SDKs and the
 // server agree.
 //

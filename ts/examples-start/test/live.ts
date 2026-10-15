@@ -2,7 +2,7 @@
 // must serve is charter-ts's standard test, which check and live-test run first).
 // What it gets back is checked against the contract's schemas. Add a check for each route you add.
 // Usage, from the project's folder: node test/live.ts <origin>
-import { hello } from "../api/contract.ts";
+import { hello } from "../api/schemas.ts";
 
 const origin = process.argv[2];
 if (!origin) {

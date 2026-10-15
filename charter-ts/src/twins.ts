@@ -6,9 +6,11 @@
 // the right request and each kind of wrong one (no credentials, too little scope, each parameter
 // missing, of the wrong type or out of bounds, a body that is not JSON, of a media type the operation
 // does not take, with a property it does not have, a method the path does not have); for each channel,
-// a request that is no upgrade; and what every API serves (docs/reference/standard.md): /.well-known/,
+// a request that is no upgrade; and what every API serves (docs/self/standard.md): /.well-known/,
 // MCP, both specs, an unknown path. Then what is saved in each project, which no request shows: the
 // specs in fern/ (the files the SDKs are made from) and the database's migrations/.
+import { methods, mcpRequest, type OpenAPI, type Operation, type Parameter, type Schema } from "./standard.ts";
+import { goBuild } from "./go.ts";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -26,15 +28,10 @@ interface Probe {
 	headers?: Record<string, string>;
 	body?: () => string | URLSearchParams | FormData;
 }
-type Schema = { type?: string | string[]; properties?: Record<string, Schema>; required?: string[]; items?: Schema; $ref?: string; examples?: unknown[]; default?: unknown; minimum?: number; maximum?: number; minLength?: number; pattern?: string; enum?: unknown[]; contentMediaType?: string; format?: string };
-type Parameter = { name: string; in: string; required?: boolean; schema?: Schema };
-type Operation = { operationId?: string; parameters?: Parameter[]; requestBody?: { required?: boolean; content?: Record<string, { schema?: Schema }> }; responses?: Record<string, { content?: Record<string, unknown> }>; security?: Record<string, string[]>[]; "x-fern-idempotent"?: boolean };
-type OpenAPI = { paths?: Record<string, Record<string, Operation>>; components?: { schemas?: Record<string, Schema> }; security?: Record<string, string[]>[]; "x-fern-idempotency-headers"?: { header: string }[] };
 
 /** The headers a client reads. */
 const read = ["content-type", "allow", "www-authenticate", "retry-after", "location", "cache-control"];
 const json = (value: unknown) => () => JSON.stringify(value);
-const methods = ["get", "put", "post", "delete", "patch"];
 
 /** A valid value for a schema: its example, its default, or the least the schema allows. */
 function valueOf(schema: Schema | undefined, spec: OpenAPI): unknown {
@@ -125,12 +122,10 @@ function probesOf(path: string, method: string, op: Operation, spec: OpenAPI, it
 	return probes;
 }
 
-const mcpMeta = { "io.modelcontextprotocol/protocolVersion": "2026-07-28", "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: "twins", version: "1" } };
-const mcp = (name: string, method: string, params: Record<string, unknown>, auth: Auth, raw?: string): Probe => ({
-	name: `MCP: ${name}`, method: "POST", path: "/api/mcp", auth,
-	headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2026-07-28", "mcp-method": method, ...(params.name ? { "mcp-name": String(params.name) } : {}) },
-	body: () => raw ?? JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: { ...params, _meta: mcpMeta } }),
-});
+const mcp = (name: string, method: string, params: Record<string, unknown>, auth: Auth, raw?: string): Probe => {
+	const { headers, body } = mcpRequest(method, params, "twins", raw);
+	return { name: `MCP: ${name}`, method: "POST", path: "/api/mcp", auth, headers, body: () => body };
+};
 
 /** Every probe of an API, from its specs: what every API serves, each operation's, each channel's. */
 function probesFor(spec: OpenAPI, channels: string[], tools: { name: string }[], auth: Auth): Probe[] {
@@ -223,7 +218,17 @@ export async function twins(args: string[]): Promise<void> {
 	const state = mkdtempSync(join(tmpdir(), "charter-twins-"));
 	const [refPort, otherPort] = [await freePort(), await freePort()];
 	const origins = [`http://localhost:${refPort}`, `http://localhost:${otherPort}`] as const;
-	for (const [dir, config] of [[reference, refConfig], [other, otherConfig]] as const) if (config.go) run("charter-ts", ["build"], {}, dir);
+	// A Go Worker, built with TinyGo, as check builds it.
+	for (const [dir, config] of [[reference, refConfig], [other, otherConfig]] as const) {
+		if (!config.go) continue;
+		const here = process.cwd();
+		process.chdir(dir);
+		try {
+			goBuild(config.go, config.bundleLimit);
+		} finally {
+			process.chdir(here);
+		}
+	}
 	const server = (dir: string, port: number, name: string) => ({ program: "cf", args: ["dev"], env: { ...secrets, PORT: String(port), CHARTER_LOCAL_STATE: join(state, name) }, ready: `http://localhost:${port}/api/openapi.json`, cwd: dir });
 	try {
 		await withServer(server(reference, refPort, "reference"), () => withServer(server(other, otherPort, "other"), async () => {

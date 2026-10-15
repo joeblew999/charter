@@ -7,7 +7,7 @@ import { d1Notes } from "./api/store_d1.ts";
 import { sdkTest, wsTest } from "./harness.ts";
 
 /** The live fan-out for new notes: oRPC's Durable Object publisher (HUB). It keeps no log: D1 is the
- * log, so the hub may restart at any time (docs/guides/streaming.md). */
+ * log, so the hub may restart at any time (docs/self/streaming.md). */
 export class Hub extends DurablePublisherObject {}
 
 // The notes in D1 behind the hub; whom the API trusts, from the Worker's secrets; its Rate Limiting
