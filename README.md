@@ -5,6 +5,6 @@
 Contract-first APIs on Cloudflare Workers, in TypeScript ([oRPC](https://orpc.dev)) or Go ([Huma](https://huma.rocks)): you write the contract, and the specs, SDKs, MCP tools, sign-in, tests and CI follow from it. Why, and how: [docs/](docs/self/README.md), rendered at <https://joeblew999.github.io/charter/>.
 
 ```sh
-npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.7.0/charter-ts-0.7.0.tgz charter-ts new my-api   # a new API (--go: in Go)
-npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.7.0/charter-ts-0.7.0.tgz charter-ts adopt        # the repo you have
+npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.8.0/charter-ts-0.8.0.tgz charter-ts new my-api   # a new API (--go: in Go)
+npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.8.0/charter-ts-0.8.0.tgz charter-ts adopt        # the repo you have
 ```

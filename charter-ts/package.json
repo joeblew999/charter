@@ -1,6 +1,6 @@
 {
 	"name": "charter-ts",
-	"version": "0.7.0",
+	"version": "0.8.0",
 	"description": "charter-ts, the command of charter: contract-first APIs on Cloudflare Workers, in TypeScript or Go, and the repos that hold them. In a project (its charter.config.ts): dev, check, spec, sdk, deploy, live-test. In any repo: issues, docs, ci, upstream, repo, adopt, new. A repo's npm scripts run them, each the command of its name. A TypeScript Worker imports charter-lib (ts/lib), from the same release: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz",
 	"license": "MIT",
 	"repository": {
