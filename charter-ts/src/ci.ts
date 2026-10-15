@@ -30,6 +30,8 @@ export interface Job {
 	secrets?: readonly string[];
 	/** The systems it runs on, by default Linux. */
 	os?: readonly ("linux" | "macos" | "windows")[];
+	/** What its GitHub token may do (GitHub's permissions, e.g. { issues: "read" }); by default the repo's. */
+	permissions?: Readonly<Record<string, "read" | "write" | "none">>;
 	timeoutMinutes?: number;
 }
 
@@ -130,6 +132,7 @@ function workflow(root: string, name: string, job: Job): string {
 		...(os.length > 1 ? [`        os: [${os.join(", ")}]`] : []),
 	];
 	if (matrix.length) lines.push("    strategy:", "      fail-fast: false", "      matrix:", ...matrix);
+	if (job.permissions) lines.push("    permissions:", ...Object.entries(job.permissions).map(([scope, access]) => `      ${scope}: ${access}`));
 	lines.push(`    uses: ${runner}`, "    with:", `      job: ${name}`);
 	if (projects.length) lines.push("      project: ${{ matrix.project }}");
 	lines.push(`      runs-on: ${os.length > 1 ? "${{ matrix.os }}" : os[0]}`, `      timeout-minutes: ${job.timeoutMinutes ?? 60}`);

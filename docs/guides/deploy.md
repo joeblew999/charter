@@ -39,7 +39,7 @@ A test is a Node program that takes the server's URL and exits 1 on a failure, r
 
 ## CI on GitHub
 
-In this repo the workflows are written from `ci.config.ts`, and each runs the command that runs the same job on your machine ([The CI](../contributing.md#the-ci)): `self-deploy.yml`, by hand (`npx charter-ts ci:remote deploy go/examples-notes`), runs a project's deploy, then its live tests. In a repo with no API, `charter.yml` runs `npm ci`, then `npm run repo:ci` ([Any repo](any-repo.md#checks-on-github)).
+In this repo the workflows are written from `ci.config.ts`, and each runs the command that runs the same job on your machine ([The CI](../contributing.md#the-ci)): `self-deploy.yml`, by hand (`npx charter-ts ci:remote deploy go/examples-notes`), runs a project's deploy, then its live tests. Every repo charter keeps does the same: a repo with no API starts with a `ci.config.ts` whose `repo` job runs `npm run repo:ci` ([Any repo](any-repo.md#checks-on-github)).
 
 A project `charter-ts new` makes has its own `self-check.yml`. The deploy workflow's secrets:
 

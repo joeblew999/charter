@@ -19,6 +19,7 @@
 	"include": [
 		"src",
 		"test",
-		"pack-templates.ts"
+		"pack-templates.ts",
+		"kit/ci.config.ts"
 	]
 }

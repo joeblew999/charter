@@ -27,7 +27,7 @@ export interface Settings {
 	docs: "docs" | ".";
 	/** Write renovate.json. */
 	renovate: boolean;
-	/** In a repo that is not a project: write the charter workflow. */
+	/** In a repo that is not a project: start its CI config (ci.config.ts), and so its workflows. */
 	workflow: boolean;
 }
 

@@ -101,15 +101,19 @@ ${rows.join("\n")}
 }
 
 /** The kit for the repo at root, by path in the repo: every file of the kit as it is, but those the
- * repo does not take (renovate.json, the workflow, the job runner without a ci.config.ts), and the two pages written from charter-ts and from
- * the repo's scripts. */
+ * repo does not take (renovate.json; in a project, or with "workflow": false, the CI config to start
+ * from; the job runner without a CI config), and the two pages written from charter-ts and from the
+ * repo's scripts. */
 export function kitFor(root: string): Map<string, string> {
 	const s = settings(root);
 	const files = new Map<string, string>();
 	for (const rel of walk(kitDir)) {
 		if (rel === "renovate.json" && !s.renovate) continue;
-		if (rel === ".github/workflows/charter.yml" && (!s.workflow || isProject(root))) continue;
-		if (rel === ".github/workflows/charter-ci.yml" && !existsSync(join(root, "ci.config.ts"))) continue;
+		// A repo with no API starts with a CI config of its own (unless "workflow": false), and every
+		// repo with one gets the job runner its workflows call.
+		const startsCI = s.workflow && !isProject(root);
+		if (rel === "ci.config.ts" && !startsCI) continue;
+		if (rel === ".github/workflows/charter-ci.yml" && !startsCI && !existsSync(join(root, "ci.config.ts"))) continue;
 		const to = rel.startsWith("docs/") ? posix.join(s.docs, rel.slice("docs/".length)) : rel;
 		files.set(to, readFileSync(join(kitDir, rel), "utf8"));
 	}
@@ -153,7 +157,7 @@ export function writeKit(root: string, check: boolean): { changed: string[]; kep
 	for (const [dir, match] of [
 		[posix.join(docs, charterFolder), () => true],
 		[".github/ISSUE_TEMPLATE", (name: string) => name.startsWith("charter-")],
-		[".github/workflows", (name: string) => name.startsWith("charter-")],
+		[".github/workflows", (name: string) => name.startsWith("charter-") || name === "charter.yml"],
 	] as const) {
 		for (const rel of walk(join(root, dir))) {
 			const name = posix.join(dir, rel);

@@ -38,4 +38,6 @@ jobs:
           JOB: ${{ inputs.job }}
           PROJECT: ${{ inputs.project }}
           CHARTER_SECRETS: ${{ toJSON(secrets) }}
+          # gh, for a job that reads the repo on GitHub (repo:ci): what the caller's permissions allow.
+          GH_TOKEN: ${{ github.token }}
         run: npx charter-ts ci "$JOB" ${PROJECT:+"$PROJECT"}

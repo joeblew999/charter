@@ -16,11 +16,22 @@ export default defineCI({
 				["npm", "run", "check", "-w", "ts/lib"],
 				["npm", "run", "check", "-w", "charter-ts"],
 				["charter-ts", "go:check", "go/lib"],
+				// The kit, the workflows (written from this file) and the docs.
 				["charter-ts", "docs:check"],
-				["charter-ts", "ci:write", "--check"],
 				// The workflows, linted (rhysd/actionlint, which mise loads at this version).
 				["mise", "exec", "actionlint@1.7.12", "--", "actionlint"],
 			],
+		},
+		// What any repo charter keeps runs (the kit starts it in one with no API): the repo on GitHub as
+		// package.json says, and the upstream issues the code works around. It reads GitHub, so it waits
+		// for no Docker and no Cloudflare.
+		repo: {
+			about: "What charter checks in any repo: the kit and the docs (docs:check), the repo on GitHub as package.json says (repo --check), the upstream issues the code works around",
+			on: ["push", "pull_request"],
+			run: [["charter-ts", "repo:ci"]],
+			timeoutMinutes: 10,
+			// What the checks read with gh, and nothing they could change.
+			permissions: { contents: "read", issues: "read", "pull-requests": "read", pages: "read" },
 		},
 		projects: {
 			about: "Every project's check: lint, its specs, its tests natively (Go) and under workerd",

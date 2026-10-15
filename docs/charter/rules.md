@@ -14,7 +14,7 @@ Binding, for developers and agents alike.
 |---|---|
 | **One source for each fact.** `docs/` is where things are written; `README.md`, `AGENTS.md` and `CLAUDE.md` only point to it. What can be written from the code is generated from it | Two copies drift, and the wrong one gets read |
 | **Never edit what is generated, or what charter writes.** The first lines of such a file say so, and say what to change instead | A hand edit is lost, and the check fails |
-| **Everything is an npm script, and the CI runs here.** A workflow runs one script and nothing else: `npm run repo:ci` in a repo with no API, `npm run check` in a project. Run that script here, and act on what it says. Never use GitHub as the edit loop, and never wait for a run there | A runner may not come for an hour; your machine is here now |
+| **Everything is an npm script, and the CI runs here.** A workflow runs one job of `ci.config.ts` and nothing else: `npx charter-ts ci <job>`, the command that runs the same job here (`repo` in a repo with no API runs `npm run repo:ci`). Run it here, and act on what it says. Never use GitHub as the edit loop, and never wait for a run there | A runner may not come for an hour; your machine is here now |
 | **Every script is safe to run again,** and says what it acts on before it acts | Nobody remembers what was run once |
 | **Start with the issues:** `npm run issues`. One labelled `needs-triage` comes before anything else | That is where a person said something is wrong |
 | **A plan is an issue,** never a page: `npm run issue -- plan` prints the form. So is a bug, and a fault in something this repo is built on | The docs say what is true now; an issue has a state, and people can see it |

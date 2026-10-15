@@ -52,7 +52,7 @@ async function serve(config: Config, tests: Tests, program: string, args: string
 export const steps: Record<string, Step> = {
 	adopt: {
 		usage: "adopt [--description <text>] [--check]",
-		about: "write charter's kit into the repo you are in, charter's own included: docs/charter/, the docs site's files, the issue forms, the workflow, AGENTS.md, CLAUDE.md, renovate.json, never a file of the repo's own; and what it lacks of package.json (charter-ts, the scripts), docs/README.md and docs/rules.md. Run again, it brings the kit to this version; --check writes nothing and fails if the kit differs",
+		about: "write charter's kit into the repo you are in, charter's own included: docs/charter/, the docs site's files, the issue forms, the job runner, AGENTS.md, CLAUDE.md, renovate.json, never a file of the repo's own; what it lacks of package.json (charter-ts, the scripts), docs/README.md, docs/rules.md and ci.config.ts (with one job, repo); then the workflows from ci.config.ts. Run again, it brings the kit to this version; --check writes nothing and fails if the kit or a workflow differs",
 		anyRepo: true,
 		run: async args => (await import("./adopt.ts")).adopt(args),
 	},
@@ -88,7 +88,7 @@ export const steps: Record<string, Step> = {
 	},
 	"docs:check": {
 		usage: "docs:check",
-		about: "fail if a file of charter's kit is not what this version writes, or docs/ fails the lint",
+		about: "fail if a file of charter's kit or a workflow is not what this version writes, or docs/ fails the lint",
 		anyRepo: true,
 		run: async () => {
 			await steps.adopt.run(["--check"]);
@@ -97,7 +97,7 @@ export const steps: Record<string, Step> = {
 	},
 	"repo:ci": {
 		usage: "repo:ci",
-		about: "REMOTE, read-only: what the charter workflow runs, here: docs:check, repo --check, upstream:status. A pass here is a pass on GitHub",
+		about: "REMOTE, read-only: what the repo job runs (ci.config.ts), here: docs:check, repo --check, upstream:status. A pass here is a pass on GitHub",
 		anyRepo: true,
 		run: async () => {
 			await steps["docs:check"].run([]);

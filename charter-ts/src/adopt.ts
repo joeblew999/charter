@@ -1,9 +1,11 @@
 // charter-ts adopt: the repo you are in, kept the charter way. It writes what the repo lacks of
-// package.json (charter-ts, the scripts every repo runs), then the kit (kit.ts), and moves what a
-// repo's own CLAUDE.md or AGENTS.md said into docs/rules.md, so the kit's take their place.
+// package.json (charter-ts, the scripts every repo runs), then the kit (kit.ts), moves what a repo's
+// own CLAUDE.md or AGENTS.md said into docs/rules.md, so the kit's take their place, and writes the
+// workflows from ci.config.ts (ci.ts), which the kit starts in a repo with no API.
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
+import { ciWrite } from "./ci.ts";
 import { marked, writeKit } from "./kit.ts";
 import { releaseURL, version } from "./package.ts";
 import { output } from "./scripts.ts";
@@ -22,7 +24,7 @@ export const repoScripts: Record<string, string> = {
 
 const say = (did: string, path: string, why = "") => console.log(`${did.padEnd(7)}  ${path}${why}`);
 
-export function adopt(args: string[]): void {
+export async function adopt(args: string[]): Promise<void> {
 	const { values } = parseArgs({ args, options: { check: { type: "boolean" }, description: { type: "string" } } });
 	const root = repoRoot();
 	if (values.check) return adoptCheck(root);
@@ -74,15 +76,19 @@ export function adopt(args: string[]): void {
 		}
 		if (took) writeKitSaying(root);
 	}
+
+	// 4. The workflows, from ci.config.ts: a job each, calling the job runner the kit wrote.
+	if (existsSync(join(root, "ci.config.ts"))) await ciWrite([]);
 	console.log("\nNext: npm install, then the scripts in the order docs/charter/tasks.md lists them.");
 }
 
-function adoptCheck(root: string): void {
+async function adoptCheck(root: string): Promise<void> {
 	const { changed, kept } = writeKit(root, true);
 	for (const name of kept) say("kept", name, ": the repo's own (it does not carry charter's mark)");
 	for (const name of changed) console.error(`differs  ${name.replace(/^removed /, "")}${name.startsWith("removed ") ? " (not the kit's: it goes)" : ""}: charter-ts adopt writes it`);
 	if (changed.length > 0) throw new Error(`${changed.length} files of the kit differ from what this version writes: npm run adopt`);
 	say("ok", "the kit", ": every file is what this version writes");
+	if (existsSync(join(root, "ci.config.ts"))) await ciWrite(["--check"]);
 }
 
 function writeKitSaying(root: string, quiet: string[] = []): void {

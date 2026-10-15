@@ -22,15 +22,15 @@ Every repo that uses charter is kept the same way, so a developer or an agent wh
 
 ## What is charter's
 
-Charter writes only these. This folder, the `charter-*.yml` forms and `charter.yml` are charter's whole: each release writes them as it has them, and removes anything else in them. The other files it writes only where there is none or the one there says charter wrote it: a file without that mark is the repo's own, and charter leaves it alone.
+Charter writes only these. This folder, and the `charter-*.yml` forms and workflows, are charter's whole: each release writes them as it has them, and removes anything else in them. The other files it writes only where there is none or the one there says charter wrote it: a file without that mark is the repo's own, and charter leaves it alone.
 
 | Where | What |
 |---|---|
 | `docs/charter/` | These pages |
 | `docs/_config.yml`, `docs/llms.txt`, `docs/_sass/` | The docs site's look and its index for agents: GitHub Pages reads them at the top of `docs/` |
 | `.github/ISSUE_TEMPLATE/charter-*.yml`, `config.yml`, `.github/charter-labels.tsv` | The issue forms and the labels |
-| `.github/workflows/charter.yml` | The checks on GitHub, in a repo with no API |
+| `ci.config.ts` | Started in a repo with no API, then yours: its CI, a job each (`repo`: what charter checks). Each job's workflow, `.github/workflows/self-<job>.yml`, is written from it |
 | `.github/workflows/charter-ci.yml` | The job runner, in a repo with a `ci.config.ts`: the workflows `charter-ts ci:write` writes from it call this one |
 | `AGENTS.md`, `CLAUDE.md`, `renovate.json` | What agents read first, and the update bot's settings |
 
-`charter-ts adopt` (`npm run adopt`) writes them all, copied as they are from the kit, and adds to `package.json` what it lacks: charter-ts and the scripts, never changing one the repo has. `npm run docs:check` fails if a file of the kit is not what this version writes. What each part needs: [Any repo](https://joeblew999.github.io/charter/guides/any-repo.html).
+`charter-ts adopt` (`npm run adopt`) writes them all, copied as they are from the kit, and adds to `package.json` what it lacks: charter-ts and the scripts, never changing one the repo has. `npm run docs:check` fails if a file of the kit, or a workflow written from `ci.config.ts`, is not what this version writes. What each part needs: [Any repo](https://joeblew999.github.io/charter/guides/any-repo.html).

@@ -24,14 +24,14 @@ Those marked * work in any repo; the others in a project, a folder with a `chart
 
 | Command | What it does |
 |---|---|
-| `adopt [--description <text>] [--check]` * | write charter's kit into the repo you are in, charter's own included: docs/charter/, the docs site's files, the issue forms, the workflow, AGENTS.md, CLAUDE.md, renovate.json, never a file of the repo's own; and what it lacks of package.json (charter-ts, the scripts), docs/README.md and docs/rules.md. Run again, it brings the kit to this version; --check writes nothing and fails if the kit differs |
+| `adopt [--description <text>] [--check]` * | write charter's kit into the repo you are in, charter's own included: docs/charter/, the docs site's files, the issue forms, the job runner, AGENTS.md, CLAUDE.md, renovate.json, never a file of the repo's own; what it lacks of package.json (charter-ts, the scripts), docs/README.md, docs/rules.md and ci.config.ts (with one job, repo); then the workflows from ci.config.ts. Run again, it brings the kit to this version; --check writes nothing and fails if the kit or a workflow differs |
 | `repo [--check]` * | keep the repo on GitHub in shape from package.json: labels, description, homepage, topics (its keywords), GitHub Pages; --check changes nothing and fails on drift |
 | `issues` * | REMOTE, read-only: the open issues, newest first: what is reported and what is planned (a plan is an issue) |
 | `issue <bug\|feature\|upstream\|plan>` * | print an issue body with the headings of that issue form, and the gh command that files it |
 | `docs:lint` * | check docs/ for what a program can check: front matter, links, the index, scripts, tasks and paths that don't exist |
 | `upstream:status` * | REMOTE, read-only: the upstream issues the code works around (every `Upstream:` tag) and their state: CLOSED means that workaround can go |
-| `docs:check` * | fail if a file of charter's kit is not what this version writes, or docs/ fails the lint |
-| `repo:ci` * | REMOTE, read-only: what the charter workflow runs, here: docs:check, repo --check, upstream:status. A pass here is a pass on GitHub |
+| `docs:check` * | fail if a file of charter's kit or a workflow is not what this version writes, or docs/ fails the lint |
+| `repo:ci` * | REMOTE, read-only: what the repo job runs (ci.config.ts), here: docs:check, repo --check, upstream:status. A pass here is a pass on GitHub |
 | `docs:review [--print]` * | have Claude (the claude command) bring docs/ up to date and into line with docs/charter/writing.md; --print only shows the prompt |
 | `new <name> [--from start\|notes] [--subdomain <workers.dev subdomain>] [--into <dir>]` * | a new project: a copy of a tested example under your name, with its GitHub workflow |
 | `build` | Go: build the Worker into build/ with TinyGo, tuned for Workers, with the Go library's Worker glue beside it; fails over the size Workers Free allows |

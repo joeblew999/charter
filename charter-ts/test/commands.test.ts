@@ -41,7 +41,7 @@ describe("adopt", () => {
 
 	it("writes the kit, package.json with charter-ts and the scripts, and node_modules/ in .gitignore", () => {
 		assert.equal(first.code, 0, first.out);
-		for (const file of ["docs/charter/README.md", "docs/charter/rules.md", "docs/charter/tasks.md", "docs/charter/using.md", "docs/_config.yml", ".github/workflows/charter.yml", ".github/ISSUE_TEMPLATE/charter-plan.yml", "AGENTS.md", "renovate.json"]) {
+		for (const file of ["docs/charter/README.md", "docs/charter/rules.md", "docs/charter/tasks.md", "docs/charter/using.md", "docs/_config.yml", "ci.config.ts", ".github/workflows/self-repo.yml", ".github/workflows/charter-ci.yml", ".github/ISSUE_TEMPLATE/charter-plan.yml", "AGENTS.md", "renovate.json"]) {
 			assert.ok(existsSync(join(dir, file)), `${file} is written`);
 		}
 		const pkg = JSON.parse(read(dir, "package.json")) as { description: string; scripts: Record<string, string>; devDependencies: Record<string, string> };
@@ -76,15 +76,25 @@ describe("adopt", () => {
 		assert.equal(read(dir, page), kept);
 	});
 
-	it("writes the job runner only in a repo with a ci.config.ts", () => {
-		const runner = ".github/workflows/charter-ci.yml";
-		assert.ok(!existsSync(join(dir, runner)), `${runner} is not written without a ci.config.ts`);
-		write(dir, "ci.config.ts", "export default { jobs: {} };\n");
+	it("starts a CI config of the repo's own, with the repo job, and writes its workflow from it", () => {
+		assert.match(read(dir, "ci.config.ts"), /^\/\/ Started by `charter-ts adopt`.*yours to edit/);
+		const workflow = read(dir, ".github/workflows/self-repo.yml");
+		assert.match(workflow, /^# Written by `charter-ts ci:write`/);
+		assert.match(workflow, /uses: \.\/\.github\/workflows\/charter-ci\.yml/);
+		assert.match(workflow, /permissions:\n {6}contents: read/);
+		// A job the repo adds is its own: adopt keeps the config, and writes that job's workflow too.
+		write(dir, "ci.config.ts", read(dir, "ci.config.ts").replace("jobs: {", 'jobs: {\n\t\tlint: { about: "its own", on: ["push"], run: [["echo", "lint"]] },'));
 		assert.equal(charter(dir, "adopt").code, 0);
-		assert.match(read(dir, runner), /^# Written by `charter-ts adopt`/);
-		rmSync(join(dir, "ci.config.ts"));
-		assert.equal(charter(dir, "adopt").code, 0);
-		assert.ok(!existsSync(join(dir, runner)), `${runner} goes with the ci.config.ts`);
+		assert.match(read(dir, "ci.config.ts"), /lint: \{ about: "its own"/);
+		assert.ok(existsSync(join(dir, ".github/workflows/self-lint.yml")), "the repo's own job has its workflow");
+		assert.equal(charter(dir, "adopt", "--check").code, 0);
+	});
+
+	it("starts no CI config with \"workflow\": false, and then writes no runner", () => {
+		const bare = repo("no-ci");
+		write(bare, "package.json", JSON.stringify({ name: "no-ci", private: true, charter: { workflow: false } }));
+		assert.equal(charter(bare, "adopt").code, 0);
+		for (const file of ["ci.config.ts", ".github/workflows/charter-ci.yml", ".github/workflows/self-repo.yml"]) assert.ok(!existsSync(join(bare, file)), `${file} is not written`);
 	});
 
 	it("docs:lint passes on what adopt wrote, and names a broken link", () => {
