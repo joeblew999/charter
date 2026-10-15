@@ -23,6 +23,7 @@ api:
       header: CF-Access-Client-Secret
       name: accessClientSecret
       env: CHARTER_NOTES_GO_ACCESS_CLIENT_SECRET
+  # Upstream: fern-api/fern#17997 (when fixed: route credentials per operation, endpoint-security)
   auth:
     any:
       - bearer

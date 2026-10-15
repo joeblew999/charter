@@ -117,6 +117,7 @@ const clients: { name: string; run: Run }[] = [
       sock.on("close", code => resolve(`closed ${code}`));
     }) },
   { name: "TypeScript SDK liveNotes.connect({ after })", run: async (after, signal, onNote) => {
+      // Upstream: fern-api/fern#17998 (when fixed: drop auth: false)
       const sock = await new NotesClient({ baseUrl: ws, auth: false }).liveNotes.connect({ after: String(after), reconnectAttempts: 0 });
       signal.addEventListener("abort", () => sock.close());
       sock.on("message", onNote);

@@ -1,5 +1,5 @@
 // Hub: a live fan-out as a Durable Object, what the Go package hub publishes to and subscribes
-// from (the counterpart of api/ts/src/hub.ts). Subscribers (a Go Worker's Follow loops) are
+// from (the counterpart of the TypeScript projects' Hub, in their worker.ts). Subscribers (a Go Worker's Follow loops) are
 // hibernatable WebSockets, so the hub sleeps between messages. It stores nothing and relays any
 // message as it is: the log is the Worker's own (D1 in the notes example) and Follow catches up
 // from it, so the hub may restart at any time (docs/self/streaming.md, rule 2). One class serves every

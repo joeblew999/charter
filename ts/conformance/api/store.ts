@@ -2,11 +2,10 @@
 // (api/store_d1.ts), memory in the unit test (memoryNotes). It starts with the five notes
 // migrations/0001_init.sql seeds.
 import type { FollowSource } from "charter-lib/follow";
+import type { z } from "zod";
+import type { note } from "./schemas.ts";
 
-export interface Note {
-	id: string;
-	body: string;
-}
+export type Note = z.infer<typeof note>;
 
 /** A note in the log: `id` is its place there, follow()'s position (docs/self/streaming.md, rule 1). */
 export interface Entry {

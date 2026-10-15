@@ -313,7 +313,7 @@ func TestWatchResumesAndEndsWithTheTerminator(t *testing.T) {
 	}
 }
 
-// The channel as the adapters see it: the upgrade is answered 204 with the header that says it takes
+// The channel as the adapters see it: the upgrade is answered with the header that says it takes
 // messages, and a message is a POST, marked as the transport's, answered with one event per line. Any
 // other request to the channel's address is the channel's: 426, once let in.
 func TestTheChannelTakesTheOneTopic(t *testing.T) {

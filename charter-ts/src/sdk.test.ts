@@ -1,4 +1,4 @@
-// What a project's fern/generators.yml must restate of its spec (fern.ts): each security scheme, an
+// What a project's fern/generators.yml must restate of its spec (sdk.ts): each security scheme, an
 // API key with its header, option name and variable, and auth: any of them.
 //   node --test src/*.test.ts   (npm run check -w charter-ts runs them)
 import assert from "node:assert/strict";
@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, it } from "node:test";
-import { unstatedSchemes } from "./fern.ts";
+import { unstatedSchemes } from "./sdk.ts";
 
 const scratch = mkdtempSync(join(tmpdir(), "charter-ts-fern-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));

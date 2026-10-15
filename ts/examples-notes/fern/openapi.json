@@ -19,7 +19,7 @@
         "type": "apiKey",
         "in": "header",
         "name": "CF-Access-Client-Id",
-        "description": "A Cloudflare Access service token's Client ID: a machine's own (charter access token create)",
+        "description": "A Cloudflare Access service token's Client ID: a machine's own (cf zero-trust access service-tokens create)",
         "x-fern-header": {
           "name": "accessClientId",
           "env": "CHARTER_NOTES_TS_ACCESS_CLIENT_ID"

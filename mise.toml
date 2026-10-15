@@ -1,4 +1,4 @@
-# The tools, and nothing else: every step is an npm script (package.json here and in each project),
+# The tools, and nothing else: every command is an npm script (package.json here and in each project),
 # and charter-ts asks mise for the TinyGo it builds Go Workers with. node runs everything; go builds
 # and tests the Go side; gh is what the repo commands talk to GitHub with; fnox holds the secrets a
 # deploy and a live test take (fnox exec -- npm run deploy).

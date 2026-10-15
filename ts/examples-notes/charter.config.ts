@@ -1,6 +1,6 @@
 // What charter-ts needs to know about this project (npm run <name> runs charter-ts <name>), typed, in one place.
 import { defineConfig } from "charter-ts/config";
-import { sdk } from "charter-ts/scripts";
+import { sdk } from "charter-ts/sdk";
 import { optionalSecrets, secrets } from "./secrets.ts";
 import { specs } from "./api/spec.ts";
 

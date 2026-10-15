@@ -1,19 +1,19 @@
-# npm packages, and what cf and the build write
+# What npm, cf and the Go build write
 node_modules/
-build/
 .cloudflare/
 .wrangler/
+dist/
+build/
+
+# Local secrets and logs
 .dev.vars*
 .env*
 *.log
 .DS_Store
 
-# Generated SDKs and the CLI (npm run sdk)
+# What npm run sdk writes
 sdk/out/
-sdk/.work/
-target/
-dist/
-test/soak-go/soak-go
 
-# Your own settings: another Worker URL, another port
-mise.local.toml
+# The soak test's client (test/soak.ts builds it)
+test/soak-go/soak-go
+test/soak-go/soak-go.exe

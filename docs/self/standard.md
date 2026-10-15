@@ -21,12 +21,11 @@ What else is the same in every project:
 | What | Name |
 |---|---|
 | The D1 database | binding `DB` |
-| The hub (a Durable Object) | class `Hub`, binding `HUB` |
+| The hub (a Durable Object), in a project with a stream | class `Hub`, binding `HUB` |
 | A rate limit | a Workers Rate Limiting binding named as in the contract (`WRITE_LIMIT`); its counter is named from the Worker's name (`rateLimits` from `"charter-ts/cloudflare"`) |
-| The npm scripts | `dev`, `check`, `spec`, `sdk`, `deploy`, `live-test`, each the charter-ts command of its name |
 | What the tests wait for | `/api/openapi.json` answering |
 
-`projects.test.ts` fails if a project's scripts differ, or two projects use one package at different versions.
+Every project has the same npm scripts ([What to do](../charter/README.md)); in this repo, `projects.test.ts` fails if they differ, or two projects use one package at different versions.
 
 ## Refusals
 
@@ -57,7 +56,7 @@ Both libraries write the OpenAPI document the same way, so the SDKs Fern makes f
 
 ## Checked
 
-`charter-ts`'s standard test checks a running API from outside, against its own spec: both specs name its address; an unknown path is a 404 and a method a path lacks a 405, as problem details; `/api/mcp` lists tools that are the spec's operations and answers MCP's protocol errors; an operation that needs credentials, called without them, is a 401 whose challenge leads to the API's metadata, through MCP too. Every project's `check` runs it on its own server, and `live-test` on the deployed Worker, before the project's own tests.
+`charter-ts`'s standard test checks a running API from outside, against its own spec: the OpenAPI spec names its address, and the AsyncAPI spec its host when it has channels; an unknown path is a 404 and a method a path lacks a 405, as problem details; `/api/mcp` lists tools that are the spec's operations, answers a GET with 405 and MCP's protocol errors; an operation that needs credentials, called without them, is a 401 whose challenge leads to the API's metadata, through MCP too; and an API that takes no credentials answers 404 at `/.well-known/`. Every project's `check` runs it on its own server, and `live-test` on the deployed Worker, before the project's own tests.
 
 ## Held the same
 

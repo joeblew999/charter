@@ -1,4 +1,4 @@
-// What charter-ts says of what it makes (scripts.ts: made): a file's size and a folder's (the sum of
+// What charter-ts says of what it makes (sizes.ts: made): a file's size and a folder's (the sum of
 // its files), gzipped, its limit, and how it changed since it was last made there.
 //   node --test src/*.test.ts   (npm run check -w charter-ts runs them)
 import assert from "node:assert/strict";
@@ -7,7 +7,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, it } from "node:test";
-import { made, madeThisRun } from "./scripts.ts";
+import { made, madeThisRun } from "./sizes.ts";
 
 const scratch = mkdtempSync(join(tmpdir(), "charter-ts-sizes-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));

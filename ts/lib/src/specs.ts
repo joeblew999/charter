@@ -118,7 +118,7 @@ export const asyncapiSpec = async (router: RouterContract | AnyRouter, { info, s
 	}));
 };
 
-/** Huma's problem details schemas (RFC 9457), as go/lib writes them: the body of every refusal. */
+/** Huma's problem details schemas (RFC 9457), as go/lib/problem writes them: the body of every refusal. */
 const problemSchemas = {
 	ErrorModel: { additionalProperties: false, properties: { detail: { description: "A human-readable explanation specific to this occurrence of the problem.", examples: ["Property foo is required but is missing."], type: "string" }, errors: { description: "Optional list of individual error details", items: { $ref: "#/components/schemas/ErrorDetail" }, type: "array" }, instance: { description: "A URI reference that identifies the specific occurrence of the problem.", examples: ["https://example.com/error-log/abc123"], format: "uri", type: "string" }, status: { description: "HTTP status code", examples: [400], format: "int64", type: "integer" }, title: { description: "A short, human-readable summary of the problem type. This value should not change between occurrences of the error.", examples: ["Bad Request"], type: "string" }, type: { default: "about:blank", description: "A URI reference to human-readable documentation for the error.", examples: ["https://example.com/errors/example"], format: "uri", type: "string" } }, type: "object" },
 	ErrorDetail: { additionalProperties: false, properties: { location: { description: "Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id'", type: "string" }, message: { description: "Error message text", type: "string" }, value: { description: "The value at the given location" } }, type: "object" },

@@ -1,39 +1,40 @@
 #!/usr/bin/env node
-// charter-ts: a repo kept the charter way, and a TypeScript API on Cloudflare Workers step by step,
-// from its charter.config.ts. A repo's npm scripts call it, each the command of its name (npm run docs
-// runs charter-ts docs),
-// so every step is the same in every repo, on every machine and on GitHub.
-import { spawn } from "node:child_process";
+// charter-ts, the command: runs one of its commands (commands.ts) and says how long it took. A repo's
+// npm scripts call it, each script the command of its name: npm run check runs charter-ts check.
+import { commands, renamed } from "./commands.ts";
 import { version } from "./package.ts";
-import { seconds } from "./scripts.ts";
-import { renamed, commands } from "./commands.ts";
-
-// A Mac idle for a minute sleeps, and a Worker that cannot answer while it sleeps fails its check:
-// the Mac stays awake while charter-ts runs, and no longer (caffeinate ends with this process).
-if (process.platform === "darwin") spawn("caffeinate", ["-i", "-w", String(process.pid)], { stdio: "ignore", detached: true }).unref();
+import { seconds } from "./run.ts";
 
 const [name, ...args] = process.argv.slice(2);
-const step = name ? commands[name] : undefined;
-if (name && renamed[name]) {
-	console.error(`charter-ts ${name} is charter-ts ${renamed[name]} now (npm run adopt brings a repo's scripts to the new names)`);
-	process.exit(1);
+
+if (name === undefined || name === "help" || name === "--help") {
+	help(name !== undefined);
+	process.exit(0);
 }
-if (!step) {
-	// What a project runs, then, with help, every command.
-	const all = name === "help" || name === "--help";
-	console.log(`charter-ts ${version()}: APIs on Cloudflare Workers, in TypeScript or Go, and the repos that keep them. Run each as npm run <command>.\n`);
-	const shown = Object.entries(commands).filter(([, s]) => all || !s.anyRepo || s.usage.startsWith("check"));
-	for (const [, s] of shown) console.log(all ? `  ${s.usage}${s.anyRepo ? "   (any repo)" : ""}\n      ${s.about}\n` : `  ${s.usage}`);
-	if (!all) console.log("\ncharter-ts help: every command, and what each does");
-	process.exit(name && !all ? 1 : 0);
-}
-// Every command says how long it took (on stderr, so a command's own output stays its own), when that
-// is a second or more: the programs it ran say theirs as they end (scripts.ts: run).
+if (renamed[name]) fail(`charter-ts ${name} is charter-ts ${renamed[name]} now (npm run adopt brings a repo's scripts to the new names)`);
+const command = commands[name];
+if (!command) fail(`charter-ts has no command ${name}: charter-ts help lists them`);
+
 const start = performance.now();
 try {
-	await step.run(args);
+	await command.run(args);
+	// On stderr, so a command's own output stays its own. The programs it ran said their times as they ended.
 	if (performance.now() - start >= 1000) console.error(`charter-ts ${name} took ${seconds(performance.now() - start)}`);
 } catch (error) {
-	console.error(`charter-ts ${name} failed after ${seconds(performance.now() - start)}: ${error instanceof Error ? error.message : String(error)}`);
+	fail(`charter-ts ${name} failed after ${seconds(performance.now() - start)}: ${error instanceof Error ? error.message : String(error)}`);
+}
+
+/** The commands a project runs; with all, every command, where it works and what it does. */
+function help(all: boolean): void {
+	console.log(`charter-ts ${version()}: contract-first APIs on Cloudflare Workers, in TypeScript or Go. Run a command as npm run <command>.\n`);
+	for (const c of Object.values(commands)) {
+		if (all) console.log(`  ${c.usage}   (${c.where === "both" ? "in a project or any repo" : c.where === "project" ? "in a project" : "in any repo"})\n      ${c.about}\n`);
+		else if (c.where !== "repo") console.log(`  ${c.usage}`);
+	}
+	if (!all) console.log("\ncharter-ts help: every command, and what each does");
+}
+
+function fail(message: string): never {
+	console.error(message);
 	process.exit(1);
 }

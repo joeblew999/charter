@@ -8,7 +8,7 @@ import { optionalSecrets } from "./secrets.ts";
 // D1 is the log; Hub is the hibernating live fan-out: the library's Hub class (build/hub.mjs),
 // which worker.mjs exports.
 
-// Who else may call (go/auth, charter-lib/auth): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD)
+// Who else may call (go/lib/auth, charter-lib/auth): Cloudflare Access (ACCESS_TEAM_DOMAIN, ACCESS_AUD)
 // and an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): the Worker's optional secrets
 // (secrets.ts), declared where the environment that deploys or runs the Worker has them; npm run
 // deploy sets them, cf dev takes them from the environment. Unset, the Worker trusts no one that way.

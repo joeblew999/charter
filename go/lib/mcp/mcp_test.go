@@ -167,7 +167,7 @@ func call(t *testing.T, h http.Handler, name, arguments string, headers ...strin
 	return a.Result
 }
 
-// text is a tool result's one text block.
+// textOf is a tool result's one text block.
 func textOf(t *testing.T, result map[string]any) string {
 	t.Helper()
 	content, _ := result["content"].([]any)
@@ -612,7 +612,7 @@ func TestAnOperationThatCannotBeAToolIsLeftOutAndTheOthersAreListed(t *testing.T
 	if want := []string{"before", "clash", "after"}; !reflect.DeepEqual(names, want) {
 		t.Fatalf("tools %v (%s), want %v", names, a.Raw, want)
 	}
-	// Why, in the log and from Check, which a contract's tests and its spec command call.
+	// Why, in the log and from Check, which a project's spec command calls.
 	problems := Check(api)
 	if want := `bodyTwice has a parameter named "body"`; len(problems) != 1 || !strings.Contains(problems[0].Error(), want) || !strings.Contains(logged.String(), want) {
 		t.Errorf("want %q in Check (%v) and in the log (%s)", want, problems, logged.String())

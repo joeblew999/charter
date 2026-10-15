@@ -10,7 +10,7 @@
 //   - Huma's default config installs a hook that calls reflect.StructOf, which TinyGo does not have.
 //     Config leaves it out.
 //
-// Build with `tinygo build -target wasm -stack-size=256kb`: Huma overflows TinyGo's default stack.
+// Build with `tinygo build -target wasm -stack-size=128kb` (charter-ts does): Huma overflows TinyGo's default stack.
 package humaworkers
 
 import (

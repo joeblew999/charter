@@ -1,11 +1,12 @@
 go 1.27.1
 
 use (
-	./lib
+	./conformance
 	./examples-notes
 	./examples-notes/sdk/go
-	./conformance
+	./examples-notes/test/soak-go
 	./examples-start
 	./examples-start-datastar
 	./examples-start-htmx
+	./lib
 )

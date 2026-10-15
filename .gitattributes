@@ -4,9 +4,11 @@
 
 # Generated files: nobody edits these by hand. GitHub marks them "generated" and folds them in diffs.
 # What writes each one is in docs/self/contributing.md ("What is generated").
-*/*/fern/*.json                        linguist-generated=true
+*/*/fern/openapi.json                  linguist-generated=true
+*/*/fern/asyncapi.json                 linguist-generated=true
 go/*/sdk/go/**                         linguist-generated=true
 go/*/pages/*.x.go                      linguist-generated=true
+go/*/pages/static/*.js                 linguist-vendored=true
 package-lock.json                      linguist-generated=true
 .github/workflows/self-*.yml           linguist-generated=true
 .github/workflows/charter-repo.yml     linguist-generated=true

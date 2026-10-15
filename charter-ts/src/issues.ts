@@ -1,13 +1,15 @@
-// charter-ts issues <kind>: an issue body with the headings of that issue form (charter's
-// .github/ISSUE_TEMPLATE/charter-<kind>.yml), for gh issue create --body-file: gh and the API ignore forms.
+// charter-ts issues: the repo's open issues, newest first (what is reported, and what is planned: a
+// plan is an issue); with a kind, the body of a new one with the headings of that issue form (charter's
+// .github/ISSUE_TEMPLATE/charter-<kind>.yml) and the gh command that files it: gh and the API ignore forms.
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { charterFile } from "./charter-files.ts";
+import { run } from "./run.ts";
 
-export function issue(args: string[]): void {
+export function issues(args: string[]): void {
 	const [kind] = args;
+	if (!kind) return run("gh", ["issue", "list", "--state", "open", "--limit", "100"]);
 	const form = charterFile(`.github/ISSUE_TEMPLATE/charter-${kind}.yml`);
-	if (!kind || /[/.]/.test(kind) || !existsSync(form)) throw new Error("issue needs the kind: bug, feature, upstream or plan");
+	if (/[/.]/.test(kind) || !existsSync(form)) throw new Error(`issues takes a kind of issue: bug, feature, upstream or plan, not ${kind}`);
 	const lines = readFileSync(form, "utf8").split("\n");
 	let title = "", labels = "";
 	const body: string[] = [];

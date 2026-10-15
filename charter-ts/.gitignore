@@ -2,3 +2,5 @@
 node_modules/
 # What npm run build writes (tsconfig.build.json)
 dist/
+# What npm pack copies in from charter's repo (pack.ts)
+charter-files/

@@ -1,6 +1,6 @@
-# Written by `charter-ts adopt` (github.com/joeblew999/charter, .github/ISSUE_TEMPLATE/): don't edit it in another repo, change it in charter.
+# Written by `charter-ts adopt` (github.com/joeblew999/charter, .github/ISSUE_TEMPLATE/charter-plan.yml): don't edit it in another repo, change it in charter.
 # For a form of the repo's own, write this file without the line above: charter then leaves it alone.
-# Each field's label is a heading in the issue body; `charter-ts issue plan` prints the same headings.
+# Each field's label is a heading in the issue body; `npm run issues -- plan` prints the same headings.
 name: Plan
 description: A step of the plan, for the people who work on this repository. Plans are issues, never pages in docs/.
 title: "[plan] "
@@ -10,8 +10,8 @@ body:
     attributes:
       value: |
         One outcome per issue, small enough to finish in a pull request or a few. Link the issues it
-        builds on and those it closes. **Agents:** `charter-ts issue plan > body.md`, then
-        `gh issue create --body-file body.md`.
+        builds on and those it closes. **Agents:** `npm run issues -- plan` prints the body, and on its first line
+        the gh command that files it.
   - type: textarea
     id: outcome
     attributes:

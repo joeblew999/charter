@@ -13,7 +13,7 @@ export default defineConfig({
 	port: Number(process.env.API_PORT ?? 5177),
 	/** Both specs, from the contract (api/contract.go). */
 	specs: { go: "./cmd/spec" },
-	go: { sdk: true },
+	go: {},
 	/** npm run check, natively and under workerd: the live test. */
 	native: { run: both },
 	test: { run: both },

@@ -8,7 +8,7 @@ The only page with the numbers: CPU per request on Cloudflare, from Workers Logs
 
 ## The two notes Workers, side by side
 
-Measured 2026-10-02 with the compare task charter's Go tool had, 30 requests each:
+Measured 2026-10-02, 30 requests each, CPU time from Workers Logs:
 
 | Operation | TypeScript | Go |
 |---|---|---|
@@ -20,11 +20,11 @@ Measured 2026-10-02 with the compare task charter's Go tool had, 30 requests eac
 | A request of a burst that starts its own Go runtime, several at once | | about 100 ms |
 | An SSE stream of 15 to 60 seconds, over its life | | 40 to 150 ms |
 
-The conformance Workers (every Fern feature, a bearer token checked on every request), 2026-10-03: Go list about 1 ms, create about 1 ms, 404 0 ms. The TypeScript one kept its notes in memory then (no database), so it was not a like-for-like comparison: list and create 0 ms. Both have kept their notes in D1, with the hub, since 2026-10-15: not measured since. Its API is at `/api`, as every API's is.
+The Go conformance Worker (every Fern feature, a bearer token checked on every request), 2026-10-03: list about 1 ms, create about 1 ms, a 404 0 ms. Its TypeScript twin had no database then, so it was not compared; both keep their notes in D1 now, and have not been measured since.
 
 ## The Wasm's size
 
-The notes Worker's `build/app.wasm`, gzipped, TinyGo 0.42, 2026-10-03 (the limit is 3,000,000 bytes):
+The notes Worker's `build/app.wasm`, gzipped, TinyGo 0.42, 2026-10-03, when its JWT library was chosen (the limit is 3,000,000 bytes):
 
 | Build | Gzipped |
 |---|---|
@@ -36,7 +36,7 @@ Both libraries passed the same tests under workerd. go-jose was kept: smaller, n
 
 ## Building the Worker
 
-How long a fresh TinyGo build of the notes Worker takes (`go/examples-notes`, past charter's cache, TinyGo's own caches warm, on the owner's Mac), and what it makes, 2026-10-15:
+How long a fresh TinyGo build of the notes Worker takes (`go/examples-notes`, past charter's cache, TinyGo's own caches warm, on an Apple M2 Pro with 16 GB), and what it makes, 2026-10-15:
 
 | TinyGo | Optimization | Build | `build/app.wasm` | Gzipped |
 |---|---|---|---|---|
@@ -66,7 +66,7 @@ Workers Free allows 3 MB gzipped, Workers Paid 10 MB.
 
 ## What closed the gap
 
-The Go Worker's median CPU, 2026-10-01 and 2026-10-02:
+The Go Worker's median CPU, 2026-10-01 and 2026-10-02, on TinyGo 0.42 (step 3's patch is gone: TinyGo 0.43.0 frees finished goroutines' stacks itself; not measured again since):
 
 | Step | hello | list | create |
 |---|---|---|---|

@@ -1,23 +1,25 @@
-// charter-ts docs: what is wrong with docs/ that a program can see: front matter, links and their
-// anchors, pages nothing links to, scripts and tasks that don't exist, paths that don't exist, release
-// versions that go stale. What needs judgement (is the page true, clear, complete) is for a reader:
-// npm run docs -- --review hands that to Claude.
+// charter-ts docs: what is wrong with a repo's docs that a program can see (front matter, links and
+// their anchors, pages nothing links to, scripts and paths that don't exist, release versions that go
+// stale); with --review, Claude reads them for what needs judgement: is the page true, clear, complete.
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
+import { parseArgs } from "node:util";
 import { charterFolder } from "./charter-files.ts";
-import { output } from "./scripts.ts";
-import { repoRoot } from "./settings.ts";
+import { cliPath, packageDir } from "./package.ts";
+import { output } from "./run.ts";
+import { repoRoot, settings } from "./settings.ts";
 
 const mdLink = /\]\(([^)\s]+)\)/g;
 const mdHeading = /^#{1,6} +(.+?) *$/gm;
 const codeSpan = /`([^`\n]+)`/g;
 const fenced = /```[\s\S]*?```/g;
-const gitTag = /\/v([0-9]|X\.)/; // go/v0.1.0 is a tag, not a path
-const pinnedVersion = /(joeblew999\/charter[A-Za-z0-9/_-]*@v[0-9]+\.[0-9]+\.[0-9]+|releases\/(tag|download)\/v[0-9][0-9A-Za-z.-]*)/g;
+const gitTag = /\/v([0-9]|X\.)/; // go/lib/v0.1.0 is a tag, not a path
+// A release's version, pinned where it goes stale. An install URL (releases/download/ts-vX.Y.Z/...) is
+// not: npm run release writes each one to the version it releases.
+const pinnedVersion = /(joeblew999\/charter[A-Za-z0-9/_-]*@v[0-9]+\.[0-9]+\.[0-9]+|releases\/tag\/(?:ts-)?v[0-9][0-9A-Za-z.-]*)/g;
 const repoPath = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_./*<>{}-]*$/;
 const npmRun = /npm run ([a-z][a-z0-9:-]*)/g;
-const miseRun = /mise run ([a-z][a-z0-9:-]*)/g;
 
 function pagesIn(dir: string): string[] {
 	return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
@@ -27,21 +29,13 @@ function pagesIn(dir: string): string[] {
 	});
 }
 
-/** The names a page may run: every package.json's scripts and every mise file's tasks git tracks. */
-function runnable(root: string): { scripts: Set<string>; tasks: Set<string> } {
-	const scripts = new Set<string>(), tasks = new Set<string>();
-	const tracked = output("git", ["ls-files", "--", "*package.json", "package.json", "*mise.toml", "mise.toml", "*tasks.toml"], root).split("\n").filter(Boolean);
-	for (const file of tracked) {
-		const text = readFileSync(join(root, file), "utf8");
-		if (file.endsWith("package.json")) {
-			for (const name of Object.keys((JSON.parse(text) as { scripts?: object }).scripts ?? {})) scripts.add(name);
-		} else {
-			// mise.toml: [tasks.<name>]; a tasks.toml it includes: each top-level table is a task.
-			const table = file.endsWith("tasks.toml") ? /^\[("?)([A-Za-z0-9:_-]+)\1\]/gm : /^\[tasks\.("?)([A-Za-z0-9:_-]+)\1\]/gm;
-			for (const m of text.matchAll(table)) tasks.add(m[2]);
-		}
+/** The scripts a page may run: those of every package.json git tracks. */
+function scriptsOf(root: string): Set<string> {
+	const scripts = new Set<string>();
+	for (const file of output("git", ["ls-files", "--", "*package.json", "package.json"], root).split("\n").filter(Boolean)) {
+		for (const name of Object.keys((JSON.parse(readFileSync(join(root, file), "utf8")) as { scripts?: object }).scripts ?? {})) scripts.add(name);
 	}
-	return { scripts, tasks };
+	return scripts;
 }
 
 /** A heading makes the anchor the way GitHub and Jekyll do: lower case, spaces to hyphens, punctuation dropped. */
@@ -60,15 +54,16 @@ function ignored(root: string, path: string): boolean {
 	});
 }
 
+/** docsLint checks the repo's docs folder (package.json's charter.docs: docs, or the repo's top). */
 export function docsLint(): void {
 	const root = repoRoot();
-	const docs = join(root, "docs");
-	if (!existsSync(docs)) {
-		console.log("no docs/ here: nothing to check");
+	const docs = join(root, settings(root).docs);
+	if (!existsSync(join(docs, "self")) && !existsSync(join(docs, charterFolder))) {
+		console.log(`no docs in ${relative(root, docs) || "."}: nothing to check`);
 		return;
 	}
 	const pages = pagesIn(docs).sort();
-	const { scripts, tasks } = runnable(root);
+	const scripts = scriptsOf(root);
 	const top = new Set(readdirSync(root));
 	// Every page must be reachable: linked from at least one other page.
 	const linked = new Set<string>();
@@ -101,12 +96,10 @@ export function docsLint(): void {
 			}
 			if (anchor && file.endsWith(".md") && !hasAnchor(file, anchor)) say(page, `link to ${m[1]}: no heading makes the anchor #${anchor}`);
 		}
-		// Plans and findings describe what isn't built or what once was; charter's pages are the same in
-		// every repo, with example names of their own: only their links are checked.
-		if (rel.includes("plans/") || rel === "findings.md" || rel.startsWith(`${charterFolder}/`)) continue;
-		for (const m of text.matchAll(pinnedVersion)) say(page, `\`${m[0]}\`: a hard-coded release version goes stale. Use releases/latest, or the placeholder vX.Y.Z`);
+		// charter's pages are the same in every repo, with example names of their own: only their links are checked.
+		if (rel.startsWith(`${charterFolder}/`)) continue;
+		for (const m of text.matchAll(pinnedVersion)) say(page, `\`${m[0]}\`: a release version goes stale here. Use releases/latest, or the placeholder vX.Y.Z`);
 		for (const m of text.matchAll(npmRun)) if (!scripts.has(m[1])) say(page, `\`npm run ${m[1]}\`: no such script in a package.json`);
-		if (tasks.size > 0) for (const m of text.matchAll(miseRun)) if (!tasks.has(m[1])) say(page, `\`mise run ${m[1]}\`: no such task in a mise file`);
 		for (const m of text.replace(fenced, "").matchAll(codeSpan)) {
 			const span = m[1].replace(/[:,.]+$/, "");
 			if (!repoPath.test(span) || !top.has(span.split("/")[0]) || /[*<>{}]/.test(span) || span.includes("...") || gitTag.test(span)) continue;
@@ -119,4 +112,22 @@ export function docsLint(): void {
 	}
 	console.log(problems.join("\n"));
 	throw new Error(`docs: ${problems.length} problems in ${pages.length} pages`);
+}
+
+/** docsReview has Claude (the claude command, Claude Code) bring the docs up to date and into line with
+ * docs/charter/writing.md, with what docsLint found in the prompt (review.md, the same for every repo).
+ * It may edit files and run the checks, nothing else. --print only shows the prompt. */
+export function docsReview(args: string[]): void {
+	const { values } = parseArgs({ args, options: { print: { type: "boolean" } } });
+	const root = repoRoot();
+	const lint = spawnSync(process.execPath, [cliPath, "docs"], { cwd: root, encoding: "utf8" });
+	const prompt = readFileSync(join(packageDir, "review.md"), "utf8").replace("__LINT__", `${lint.stdout}${lint.stderr}`.trim());
+	if (values.print) {
+		console.log(prompt);
+		return;
+	}
+	console.log("Claude is reviewing docs/ (it prints its report when it is done; watch `git status` for its edits)");
+	const claude = spawnSync("claude", ["-p", prompt, "--permission-mode", "acceptEdits", "--allowedTools", "Read,Edit,Write,Glob,Grep,Bash(npm run docs),Bash(npm run),Bash(git status:*),Bash(git diff:*),Bash(ls:*)"], { cwd: root, stdio: ["ignore", "inherit", "inherit"] });
+	if (claude.error) throw new Error("docs --review needs the claude command (Claude Code) on PATH");
+	if (claude.status !== 0) throw new Error(`claude stopped (${claude.status})`);
 }

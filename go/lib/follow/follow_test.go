@@ -14,7 +14,7 @@ type item int64
 func (i item) Position() int64 { return int64(i) }
 
 // fake is a log plus a hub: add appends to the log and delivers live (or not, to simulate loss),
-// publish delivers live only, breakHub fails every current subscription, failSubscribes makes the
+// publish delivers live only, breakHub fails every current subscription, failNext makes the
 // next n subscribes fail.
 type fake struct {
 	mu         sync.Mutex

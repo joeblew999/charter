@@ -1,5 +1,5 @@
 // Package api is the conformance: every Fern feature we use, in one small API, contract first in Go: the
-// counterpart of the oRPC conformance contract (ts/conformance/src/contract.ts) and its implementation
+// counterpart of the oRPC conformance contract (ts/conformance/api/contract.ts) and its implementation
 // there. Each operation is a Huma operation whose input and output are Go structs; from this one
 // definition come the handlers' validation, the OpenAPI spec and the AsyncAPI spec (spec.go), and
 // from those Fern makes the SDKs. docs/self/sdks.md says, feature by feature, what switches it
@@ -7,7 +7,7 @@
 //
 // The SDK's method names for the two notes operations are not here: the overlay beside the specs
 // (fern/overlays.yml) gives them, to show that feature, as the oRPC conformance
-// does. A contract of your own says them itself, as api/contract.go does (x-fern-sdk-*).
+// does. A contract of your own says them itself, as go/examples-notes/api/contract.go does (x-fern-sdk-*).
 package api
 
 import (

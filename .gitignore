@@ -1,4 +1,4 @@
-# Each example ignores what its own tasks write (examples/*/.gitignore). Here: what is the repo's.
+# Each project ignores what its commands write (ts/*/.gitignore, go/*/.gitignore). Here: the repo's.
 .DS_Store
 *.log
 go.work.sum
@@ -7,11 +7,9 @@ mise.local.toml
 # Agent worktrees (Claude Code)
 .claude/worktrees/
 
-# Release builds (npm run release)
+# What builds write: the packages' (npm run build) and a release's (npm run release)
 dist/
 
-# npm, and what packing charter-ts writes (npm pack: its templates and charter's files, the tarball)
+# npm, and the tarballs npm pack writes
 node_modules/
-charter-ts/templates/
-charter-ts/charter-files/
 *.tgz

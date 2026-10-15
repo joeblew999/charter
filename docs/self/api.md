@@ -19,10 +19,10 @@ npm run check    # fails on a stale spec, a failing test, or (in Go) a TinyGo ga
 | The contract | `api/contract.ts` | `api/contract.go` |
 | The handlers | `api/handlers.ts` | `api/handlers.go` |
 | The storage | `api/store.ts` (D1) | `api/store.go` (`Store`, and `MemStore` for `go test` and `--native`), `api/store_d1.go` (D1) |
-| The specs' document | `api/spec.ts` | `api/spec.go`, written by `cmd/spec` |
-| The Worker | `worker.ts` | `main.go`, with the bindings in `platform_js.go` |
+| The specs' document | `api/spec.ts` | `api/spec.go`; `cmd/spec` writes the specs from it |
+| The Worker | `worker.ts` | `main.go`, with the bindings in `platform_js.go`; `worker.mjs`, the Worker's entry |
 | The tests | `test/`, and unit tests beside the code (`api/*.test.ts`) | `test/`, the same as its TypeScript twin's; unit tests in `api/*_test.go` |
-| Cloudflare's | `cloudflare.config.ts` (the Worker, its database `DB`, the hub `HUB`), `migrations/*.sql` | the same |
+| Cloudflare's | `cloudflare.config.ts` (the Worker, its database `DB`, and with a stream the hub `HUB`), `migrations/*.sql` | the same |
 | charter's | `charter.config.ts` ([below](#charterconfigts)) | the same |
 
 ## Add an operation
@@ -55,7 +55,7 @@ claude mcp add --transport http billing-api https://billing-api.<your-subdomain>
 
 ## charter.config.ts
 
-What charter needs to know about the project, typed. The example's:
+What charter needs to know about the project, typed. The example's, shortened:
 
 ```ts
 import { defineConfig } from "charter-ts/config";
@@ -71,7 +71,7 @@ export default defineConfig({
 });
 ```
 
-`test` runs against the API on your machine (`npm run check`), `live` against the deployed one (`npm run live-test`). Every field is in [`Config`](https://github.com/joeblew999/charter/blob/main/charter-ts/src/config.ts): the secrets, throwaway local ones, programs to serve beside the API for a test (a webhook's receiver), and the most the Worker may be as a deploy uploads it (3 MB gzipped by default, what Workers Free allows).
+`test` runs against the API on your machine (`npm run check`), `live` against the deployed one (`npm run live-test`). Every field is in [`Config`](https://github.com/joeblew999/charter/blob/main/charter-ts/src/config.ts): the secrets, throwaway local ones, programs to serve beside the API for a test (a webhook's receiver), and the most the Worker may be as a deploy uploads it (`bundleLimit`: [Deploy and CI](deploy.md#deploy)).
 
 ## Take the example out
 

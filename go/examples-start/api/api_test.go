@@ -17,7 +17,7 @@ func server(t *testing.T) *httptest.Server {
 	return srv
 }
 
-func do(t *testing.T, method, url, body string) (int, string, http.Header) {
+func do(t *testing.T, method, url, body string) (int, string) {
 	t.Helper()
 	req, err := http.NewRequest(method, url, strings.NewReader(body))
 	if err != nil {
@@ -35,12 +35,12 @@ func do(t *testing.T, method, url, body string) (int, string, http.Header) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return res.StatusCode, string(out), res.Header
+	return res.StatusCode, string(out)
 }
 
 func TestHello(t *testing.T) {
 	srv := server(t)
-	status, body, _ := do(t, "GET", srv.URL+"/api/hello", "")
+	status, body := do(t, "GET", srv.URL+"/api/hello", "")
 	if status != 200 || strings.TrimSpace(body) != `{"message":"Hello from test"}` {
 		t.Fatalf("HTTP %d %s", status, body)
 	}
@@ -48,18 +48,18 @@ func TestHello(t *testing.T) {
 
 func TestUnknownPathAndMethod(t *testing.T) {
 	srv := server(t)
-	if status, _, _ := do(t, "GET", srv.URL+"/api/nope", ""); status != 404 {
+	if status, _ := do(t, "GET", srv.URL+"/api/nope", ""); status != 404 {
 		t.Errorf("unknown path: HTTP %d, want 404", status)
 	}
-	if status, _, _ := do(t, "DELETE", srv.URL+"/api/hello", ""); status != 405 {
+	if status, _ := do(t, "DELETE", srv.URL+"/api/hello", ""); status != 405 {
 		t.Errorf("DELETE /api/hello: HTTP %d, want 405", status)
 	}
 }
 
 func TestTheWorkerServesBothSpecsWithItsOriginAsServer(t *testing.T) {
 	srv := server(t)
-	_, openapi, _ := do(t, "GET", srv.URL+"/api/openapi.json", "")
-	_, asyncapi, _ := do(t, "GET", srv.URL+"/api/asyncapi.json", "")
+	_, openapi := do(t, "GET", srv.URL+"/api/openapi.json", "")
+	_, asyncapi := do(t, "GET", srv.URL+"/api/asyncapi.json", "")
 	if !strings.Contains(openapi, `"servers":[{"url":"`+srv.URL+`"}]`) {
 		t.Errorf("openapi servers: %s", openapi)
 	}
@@ -71,7 +71,7 @@ func TestTheWorkerServesBothSpecsWithItsOriginAsServer(t *testing.T) {
 // The contract's operations are MCP tools: a tool call runs the same handler as the REST route.
 func TestMCPCallsRunTheSameOperationsAsREST(t *testing.T) {
 	srv := server(t)
-	status, body, _ := do(t, "POST", srv.URL+"/api/mcp", `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hello","arguments":{}}}`)
+	status, body := do(t, "POST", srv.URL+"/api/mcp", `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hello","arguments":{}}}`)
 	var answer struct {
 		Result struct {
 			Content []struct{ Text string }
@@ -81,7 +81,7 @@ func TestMCPCallsRunTheSameOperationsAsREST(t *testing.T) {
 	if err := json.Unmarshal([]byte(body), &answer); err != nil || status != 200 {
 		t.Fatalf("HTTP %d %s", status, body)
 	}
-	_, rest, _ := do(t, "GET", srv.URL+"/api/hello", "")
+	_, rest := do(t, "GET", srv.URL+"/api/hello", "")
 	if answer.Result.IsError || len(answer.Result.Content) != 1 || answer.Result.Content[0].Text != strings.TrimSpace(rest) {
 		t.Fatalf("hello over MCP: %s\nover REST: %s", body, rest)
 	}

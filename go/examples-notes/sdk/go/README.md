@@ -1,10 +1,10 @@
 > **Generated code.** Fern generated this Go client from the API's contract (the specs in `fern/`). Don't edit it: change the contract, then `npm run sdk -- --publish` writes this folder again.
 
-# Notes Go Library
+# CharterNotesGo Go Library
 
-[![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=Notes%2FGo)
+[![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=CharterNotesGo%2FGo)
 
-The Notes Go library provides convenient access to the Notes APIs from Go.
+The CharterNotesGo Go library provides convenient access to the CharterNotesGo APIs from Go.
 
 ## Table of Contents
 

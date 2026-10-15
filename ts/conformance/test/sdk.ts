@@ -211,7 +211,7 @@ await check("websocket with the token as ?access_token= (what a browser or a Wor
 
 await check("audiences: the public SDK has notes and auth, not the internal upload", async () => {
 	const resource = (name: string) => existsSync(new URL(`typescript-public/api/resources/${name}`, out));
-	if (!existsSync(new URL("typescript-public", out))) return [false, "no sdk/out/typescript-public: npx charter-ts sdk typescript-public"];
+	if (!existsSync(new URL("typescript-public", out))) return [false, "no sdk/out/typescript-public: npm run sdk -- typescript-public"];
 	return [resource("notes") && resource("auth") && !resource("files") && existsSync(new URL("typescript-dist/esm/api/resources/files", out)), { notes: resource("notes"), files: resource("files") }];
 });
 

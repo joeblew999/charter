@@ -5,7 +5,9 @@ import { createHash } from "node:crypto";
 import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { GoConfig } from "./config.ts";
-import { cacheFolder, freeBundleLimit, made, output, run, sdk, specsHash } from "./scripts.ts";
+import { cacheFolder, output, run } from "./run.ts";
+import { sdk, specsHash } from "./sdk.ts";
+import { freeBundleLimit, made } from "./sizes.ts";
 
 /** gofmt over paths in dir, then go vet for the host and, for the packages wasm names, for Wasm
  * (GOOS=js GOARCH=wasm), as a Worker is built. */
@@ -46,7 +48,7 @@ function snapshot(dir: string, match: (name: string) => boolean, into = new Map<
 
 /** gsxCheck runs gsx's generator and fails, naming them, if it changed a committed *.x.go: they were
  * stale. What it wrote stays, so what to commit is there. */
-export function gsxCheck(): void {
+function gsxCheck(): void {
 	const isGenerated = (name: string) => name.endsWith(".x.go");
 	const before = snapshot(".", isGenerated);
 	run("go", ["tool", "gsx", "generate", "--no-cache", "-q"]);
@@ -68,13 +70,10 @@ const tinygo = (...args: string[]): [string, string[]] => ["mise", ["exec", `tin
 //
 // No collection at every pause. TinyGo runs a full collection whenever the scheduler goes idle once 32
 // finalizers were registered since the last one. Every JavaScript reference registers one, and a
-// Worker goes idle at every await: measured on Cloudflare, 38 to 71 ms of CPU per request against 9 to
-// 13 ms without it (docs/self/benchmarks.md). The collector still runs when the heap is full.
-//
-// (TinyGo 0.43.0 frees the stacks of finished goroutines itself, tinygo-org/tinygo#5801: the patches
-// that made it reuse them are gone.)
+// Worker goes idle at every await, so it collected on every request: the first step in "What closed
+// the gap" (docs/self/benchmarks.md). The collector still runs when the heap is full.
 // Upstream: tinygo-org/tinygo#5800 (when fixed: drop the patch)
-const patches: { file: string; old: string; new: string; unless?: string }[] = [
+const patches: { file: string; old: string; new: string }[] = [
 	{ file: "src/runtime/gc_finalizer.go", old: "const finalizerGCThreshold = 32", new: "const finalizerGCThreshold = 0" },
 ];
 
@@ -105,12 +104,11 @@ function tinygoRoot(): string {
 	for (const patch of patches) {
 		const file = join(root, patch.file);
 		const source = existsSync(file) ? readFileSync(file, "utf8") : "";
-		if (patch.unless && source.includes(patch.unless)) continue; // this TinyGo has the fix itself
 		const crlf = source.includes("\r\n");
 		const [old, replacement] = crlf ? [patch.old.replaceAll("\n", "\r\n"), patch.new.replaceAll("\n", "\r\n")] : [patch.old, patch.new];
 		if (source.split(old).length !== 2) {
 			rmSync(root, { recursive: true, force: true });
-			throw new Error(`this TinyGo (${version.trim()}) does not have the text a patch changes (${JSON.stringify(patch.old)} in ${patch.file}): see docs/self/upstream.md`);
+			throw new Error(`this TinyGo (${version.trim()}) does not have the text a patch changes (${JSON.stringify(patch.old)} in ${patch.file}): see https://github.com/joeblew999/charter/blob/main/docs/self/upstream.md`);
 		}
 		rmSync(file); // a new file, not new content in the installed one's (a hard link on Windows)
 		writeFileSync(file, source.replace(old, replacement));
@@ -185,7 +183,7 @@ const madeFrom = ".made-from";
 const sdkDir = join("sdk", "go");
 
 /** sdkFresh fails if the specs changed since sdk/go was made from them (no Docker: it compares a hash). */
-export function sdkFresh(): void {
+function sdkFresh(): void {
 	if (!existsSync(sdkDir)) return;
 	const made = existsSync(join(sdkDir, madeFrom)) ? readFileSync(join(sdkDir, madeFrom), "utf8").trim() : "";
 	if (made !== specsHash()) throw new Error(`${sdkDir} was not made from the specs in fern/ as they are now: npm run sdk -- --publish writes it again (Docker), then commit it`);
@@ -228,7 +226,7 @@ export async function sdkPublish(check: boolean): Promise<void> {
 		return;
 	}
 	// Proven before it is committed, as sdk --prove proves it.
-	await (await import("./clients.ts")).check("go");
+	await (await import("./sdk.ts")).proveGroup("go");
 	rmSync(sdkDir, { recursive: true, force: true });
 	for (const [file, content] of generated) {
 		mkdirSync(join(sdkDir, file, ".."), { recursive: true });

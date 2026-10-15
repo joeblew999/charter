@@ -41,6 +41,7 @@ api:
       name: accessClientSecret
       env: CONFORMANCE_ACCESS_CLIENT_SECRET
   # Any of the four: the SDKs send whichever credentials they were given.
+  # Upstream: fern-api/fern#17997 (when fixed: route credentials per operation, endpoint-security)
   auth:
     any:
       - OAuth
@@ -48,7 +49,7 @@ api:
       - accessClientId
       - accessClientSecret
 
-# The same groups, in the same order, in every API. Generate one: npm run sdk -- <group>   (output: sdk/out/<group>)
+# The SDKs. Generate one: npm run sdk -- <group>   (output: sdk/out/<group>)
 groups:
   # The Go SDK.
   go:

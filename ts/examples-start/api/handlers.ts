@@ -12,7 +12,7 @@ import { document } from "./spec.ts";
 const os = implement(contract).$context<Served>();
 const api = os.use(guard);
 
-export const router = os.router({
+const router = os.router({
 	hello: api.hello.handler(() => ({ message: `Hello from ${env.APP_NAME}` })),
 });
 

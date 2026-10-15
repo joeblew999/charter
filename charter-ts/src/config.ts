@@ -1,7 +1,7 @@
 // A project's charter.config.ts: what charter-ts needs to know about the project, typed, in one place.
 //   import { defineConfig } from "charter-ts/config";
 //   export default defineConfig({ worker: "my-api", url: "https://my-api.me.workers.dev", ... });
-import type { Specs } from "./spec-files.ts";
+import type { Specs } from "./specs.ts";
 
 export interface Config {
 	/** The Worker's name, as in cloudflare.config.ts. Its D1 database is `${worker}-db`, locally `DB-${worker}`. */
@@ -14,22 +14,22 @@ export interface Config {
 	secrets?: readonly string[];
 	/** Secrets a deploy sets where the environment has them. */
 	optionalSecrets?: readonly string[];
-	/** Throwaway values of the secrets for the local Worker: charter-ts dev and the workerd test. */
+	/** Throwaway values of the secrets for the API on this machine: dev, check's tests, and twins. */
 	localSecrets?: Readonly<Record<string, string>>;
 	/** Both specs from the contract (charter-ts spec writes them into fern/): in TypeScript, the two
 	 * generators; in Go, the package that writes them. */
 	specs: Specs | GoSpecs;
 	/** The server the specs name, if not `url`. */
 	specServer?: string;
-	/** A folder the generated TypeScript SDK is copied into before lint, the workerd test and a deploy,
-	 * for a Worker that runs the SDK itself (client/). */
+	/** A folder the generated TypeScript SDK is copied into before the Worker runs (dev, check, twins)
+	 * or is deployed, for a Worker that runs the SDK itself (client/). */
 	sdkInWorker?: string;
 	/** More modes to deploy after the default one (cf deploy --mode): the same code as another Worker. */
 	deployModes?: readonly string[];
 	/** The most the Worker may be, gzipped, as a deploy uploads it (and in Go, its Wasm): check fails
 	 * over it. Workers Free allows 3 MB (the default, 3000000), Workers Paid 10 MB. */
 	bundleLimit?: number;
-	/** check (and twins): the Worker under workerd (cf dev) on a free port, and these tests against it. */
+	/** check: the Worker under workerd (cf dev) on a free port, and these tests against it. */
 	test: Tests;
 	/** check, in Go: the API run natively (go run .) on a free port, and these tests against it. */
 	native?: Tests;

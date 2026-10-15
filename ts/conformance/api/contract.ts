@@ -5,6 +5,7 @@ import { asyncapi } from "charter-lib/asyncapi";
 import { accessScheme, oidcScheme, scheme, type Security } from "charter-lib/auth";
 import { type Limit, limited } from "charter-lib/ratelimit";
 import { notATool } from "charter-lib/mcp";
+import { chunk, END, note } from "./schemas.ts";
 
 // The conformance API, contract first: one API with every Fern feature we use (docs/self/sdks.md). The
 // Worker implements it (api/handlers.ts, served the standard way under /api) and both specs are
@@ -22,19 +23,6 @@ export const info = { title: "Conformance", version: "1.0.0", description: "Ever
  * declares from the spec. Over it: 429, with Retry-After.
  */
 export const writeLimit: Limit = { binding: "WRITE_LIMIT", limit: 100, period: 60 };
-
-/**
- * What a planned end of watchNotes returns: SSE `event: close` with `data: "[end-of-stream]"`, Fern's
- * terminator. Fern matches it as a substring of each event's data, so no note may contain it (create
- * refuses one), and it is plain text because Fern's Rust generator pastes it into source unescaped.
- */
-// Upstream: fern-api/fern#17936 (when fixed: terminators match whole data values, so the body rule can go)
-// Upstream: fern-api/fern#17939 (when fixed: the Rust generator escapes it, so any text would do)
-export const END = "[end-of-stream]";
-
-// `id` names the schema in components.schemas, and so the type in the SDKs (Note, Chunk).
-export const note = z.object({ id: z.string().meta({ examples: ["note-1"] }), body: z.string().meta({ examples: ["Buy milk"] }) }).meta({ id: "Note" });
-export const chunk = z.object({ text: z.string().meta({ examples: ["echo"] }), done: z.boolean().optional() }).meta({ id: "Chunk" });
 
 /** An integer as the Go contract has it (int32): the specs say so, and the SDKs type it alike. */
 const int32 = (examples: number[]) => ({ format: "int32", examples });
@@ -55,7 +43,7 @@ const ways = oidcScheme(accessScheme(info.title, scheme("read")));
 const oauth = { type: "oauth2" as const, flows: { clientCredentials: { tokenUrl: "/api/oauth/token", scopes: { read: "Read notes", write: "Create notes and upload files" } } } };
 
 /** An operation's security: these scopes, by any of the four ways in (charter-lib/specs says each of charter's). */
-export const needs = (scopes: string[]): Security => [{ bearer: scopes }, { OAuth: scopes }];
+const needs = (scopes: string[]): Security => [{ bearer: scopes }, { OAuth: scopes }];
 
 /**
  * What the document says and no operation does: who may call, the idempotency header (an SDK request

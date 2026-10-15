@@ -9,7 +9,7 @@ import (
 	"github.com/joeblew999/charter/go/lib/d1"
 )
 
-// D1Store is the notes table (migrations/ at the repo root) on the D1 binding itself: one awaited
+// D1Store is the notes table (the project's migrations/) on the D1 binding itself: one awaited
 // call per statement, and the rows reach Go as one string (package d1). It is what runs on
 // Cloudflare.
 type D1Store struct{ DB d1.DB }

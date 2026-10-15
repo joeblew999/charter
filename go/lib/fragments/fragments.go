@@ -1,6 +1,6 @@
 // Package fragments serves a live feed to browsers as server-sent events, each item rendered by the
 // caller: an HTML fragment for htmx 4's SSE extension, a datastar-patch-elements event for Datastar
-// (docs/self/pages.md). The feed is go/follow's, so no item is lost or sent twice, across
+// (docs/self/pages.md). The feed is go/lib/follow's, so no item is lost or sent twice, across
 // reconnects and deploys alike:
 //
 //	feed, options, err := env.Feed(r.URL.Query().Get("after"), r.Header.Get("Last-Event-ID"))
@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/go/lib/follow"
+	"github.com/joeblew999/charter/go/lib/transport"
 )
 
 // For is how long a stream stays open unless Stream.For says otherwise. Then it ends, and the
@@ -49,7 +50,7 @@ func (s Stream[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
-	out := flushing(w)
+	out := transport.Flushing(w)
 	// A comment first: the response starts now, not at the first item.
 	if _, err := io.WriteString(out, ": \n\n"); err != nil {
 		return
@@ -74,24 +75,4 @@ func (s Stream[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func Data(prefix, text string) string {
 	start := "data: " + prefix
 	return start + strings.NewReplacer("\r\n", "\n"+start, "\r", "\n"+start, "\n", "\n"+start).Replace(text)
-}
-
-// flushing sends every write on at once (net/http buffers, and on Workers the answer becomes a
-// stream at the first Flush).
-func flushing(w http.ResponseWriter) io.Writer {
-	if f, ok := w.(http.Flusher); ok {
-		return flushWriter{w, f}
-	}
-	return w
-}
-
-type flushWriter struct {
-	io.Writer
-	http.Flusher
-}
-
-func (w flushWriter) Write(p []byte) (int, error) {
-	n, err := w.Writer.Write(p)
-	w.Flush()
-	return n, err
 }

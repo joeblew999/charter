@@ -1,4 +1,4 @@
-// The Worker's secrets, by name: one list, which cloudflare.config.ts and the scripts import.
+// The Worker's secrets, by name: one list, which cloudflare.config.ts and charter.config.ts import.
 
 /** A deploy needs every one. */
 export const secrets = ["READ_TOKEN", "WRITE_TOKEN"] as const;

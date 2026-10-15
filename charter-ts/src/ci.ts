@@ -10,7 +10,7 @@ import { join, posix } from "node:path";
 import { pathToFileURL } from "node:url";
 import { markOf } from "./charter-files.ts";
 import { cliPath } from "./package.ts";
-import { bin, output, run, seconds } from "./scripts.ts";
+import { bin, output, run, seconds } from "./run.ts";
 import { readPackage, repoRoot } from "./settings.ts";
 
 /** A command: a program and its arguments. charter-ts is this charter-ts. */
@@ -40,11 +40,6 @@ export interface CI {
 	/** The jobs `npm run check` runs at the repo's top, one after another (in a project, check is the
 	 * project's own): by default every job GitHub runs on a push or a pull request. */
 	check?: readonly string[];
-}
-
-/** defineCI types ci.config.ts. */
-export function defineCI<T extends CI>(ci: T): T {
-	return ci;
 }
 
 const runners = { linux: "ubuntu-24.04", macos: "macos-15", windows: "windows-2025" } as const;
@@ -87,7 +82,6 @@ function projectsOf(root: string, job: Job): string[] {
 	if (job.projects) return [...job.projects];
 	return (readPackage(root)?.workspaces ?? []).filter(dir => existsSync(join(root, dir, "charter.config.ts")));
 }
-
 
 /** The secrets a job names, from the environment, or on GitHub from CHARTER_SECRETS (the repo's
  * secrets, which the shared runner passes): a job gets those its config names and no others. */
@@ -138,7 +132,7 @@ async function runJobs(config: CI, names: string[], project?: string): Promise<v
 		const start = performance.now();
 		const dirs = job.each === "project" ? (project ? [project] : projectsOf(root, job)) : ["."];
 		for (const dir of dirs) {
-			console.log(`\n==== ci:${jobName}${dir === "." ? "" : ` ${dir}`}`);
+			console.log(`\n==== ci ${jobName}${dir === "." ? "" : ` ${dir}`}`);
 			for (const command of job.run) exec(command, dir === "." ? root : join(root, dir), secretsFor(job));
 		}
 		times.push(`${jobName} ${seconds(performance.now() - start)}`);

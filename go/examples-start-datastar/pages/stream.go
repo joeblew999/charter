@@ -10,8 +10,8 @@ import (
 	"github.com/joeblew999/charter/go/lib/fragments"
 )
 
-// serveStream sends every message after the request's position as one SSE event (go/fragments):
-// its id is the message's id, the rest is what event writes. The messages come from go/follow: D1
+// serveStream sends every message after the request's position as one SSE event (go/lib/fragments):
+// its id is the message's id, the rest is what event writes. The messages come from go/lib/follow: D1
 // is the log, the hub Durable Object only wakes the stream, so none is lost or sent twice, across
 // reconnects and deploys alike. The position is the page's `after`, or the Last-Event-ID a
 // reconnecting browser sends, whichever is newer.

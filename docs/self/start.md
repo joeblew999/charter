@@ -5,7 +5,7 @@ nav_order: 2
 
 # Getting started
 
-From nothing to an API on Cloudflare Workers, tested there, with a generated SDK. You need Node 26 and git; from step 4, Docker and a Cloudflare account.
+From nothing to an API on Cloudflare Workers, tested there, with a generated SDK. You need Node 26 and git; for an SDK, Docker; to deploy, a Cloudflare account and [fnox](https://github.com/jdx/fnox); for GitHub, `gh` signed in. In Go, also Go and [mise](https://mise.jdx.dev), which fetches TinyGo.
 
 ## 1. Make the project
 
@@ -15,9 +15,7 @@ cd billing-api
 npm install
 ```
 
-`billing-api` is the folder, the Worker and its database. `--from notes` starts from the notes API (sign-in, streams, rate limits); without it, from one route. The project is a git repo of its own, with charter's docs, rules and checks ([Any repo](any-repo.md)).
-
-`--go` makes it in Go ([Huma](https://huma.rocks), built with TinyGo) instead of TypeScript; it needs Go and [mise](https://mise.jdx.dev), which fetches TinyGo. Every step below is the same in both.
+`billing-api` is the folder, the Worker and its database. `--from notes` starts from the notes API (sign-in, streams, rate limits); without it, from one route. `--go` makes it in Go ([Huma](https://huma.rocks)) instead of TypeScript. The project is a git repo of its own, kept by charter ([Any repo](any-repo.md)).
 
 ## 2. Check it, and run it
 
@@ -28,7 +26,7 @@ npm run dev      # the API on charter.config.ts's port; until Ctrl-C
 
 ## 3. Make it yours
 
-The contract is `api/contract.ts`. After a change to it, `npm run spec`, then `npm run check` ([Your API](api.md)).
+The contract is `api/contract.ts` (in Go, `api/contract.go`). After a change to it, `npm run spec`, then `npm run check` ([Your API](api.md)).
 
 ## 4. An SDK
 
@@ -52,20 +50,10 @@ Without `--subdomain`, put the URL the deploy printed into `charter.config.ts`'s
 ## 6. On GitHub
 
 ```sh
+git add -A && git commit -m "billing-api"
 gh repo create billing-api --private --source . --push   # its check runs npm run check
 ```
 
-## The scripts
+What to run after that, and when: `docs/charter/README.md`, in the project.
 
-The same in every project, Go or TypeScript:
-
-| Script | What it does |
-|---|---|
-| `npm run dev` | The API under workerd, as on Cloudflare, its local database migrated; in Go, `-- --native` runs it with `go run .` |
-| `npm run check` | Every check that needs no Cloudflare account, and how long each took: the types, the specs against the contract, Fern's check, the unit tests, then the API on your machine with the standard test and the project's tests against it. `-- --fresh` does again what charter's cache skipped |
-| `npm run spec` | Both specs from the contract into `fern/` |
-| `npm run sdk` | An SDK with Fern (Docker); `-- --prove`: every client, proven in its language; `-- --publish`, in Go: the Go SDK into `sdk/go` |
-| `fnox exec -- npm run deploy` | REMOTE: the Worker with its secrets, then its migrations |
-| `fnox exec -- npm run live-test` | REMOTE: the standard test and the project's tests against the deployed Worker |
-
-Checked on 2026-10-15 on macOS: steps 1 and 2 with each template, in both languages, from the packed package (the `new` job; a Go project took this repo's Go library, as the release that tags it is not out yet). Steps 4 to 6 were run on this repo's projects, not on a project made this way.
+Checked on 2026-10-15 on macOS: steps 1 and 2 with each example in both languages, from the packed package (the `new` job). Steps 4 to 6 were run on this repo's projects, not on a project made this way.

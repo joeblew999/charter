@@ -20,7 +20,7 @@ type Store interface {
 	Latest(ctx context.Context) (int64, error)
 }
 
-// Hub is the live fan-out of messages: only a wake-up for followers (go/hub). On Cloudflare it is
+// Hub is the live fan-out of messages: only a wake-up for followers (go/lib/hub). On Cloudflare it is
 // the library's Durable Object (platform_js.go).
 type Hub = hub.Hub[Message]
 

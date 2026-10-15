@@ -1,5 +1,5 @@
 // The API as a Cloudflare Worker in Go: the contract and handlers are in api/, the bindings in
-// platform_js.go. Built with TinyGo for Wasm (npm run build) it runs on Workers; built for the
+// platform_js.go. Built with TinyGo for Wasm (npm run dev, check and deploy build it) it runs on Workers; built for the
 // host, transport.Run starts a plain HTTP server on :9900 (or $PORT) (platform_other.go).
 package main
 

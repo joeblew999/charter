@@ -6,7 +6,7 @@
 // same limit and period, from the spec), counted per caller: the key is who `authorize` let in (the
 // service token, the subject, the email or the token's secret), or the client's IP
 // (CF-Connecting-IP) for an operation that is public. An operation has a limit of its own
-// (`limited`, in its `spec`), or the limit of a scope it needs (openapiSpec's `rateLimits`, and the
+// (`limited`, in its `spec`), or the limit of a scope it needs (the Document's `rateLimits`, and the
 // same list to `limitOf`). Over it: 429, with Retry-After the binding's period, and the specs say so.
 //
 // The binding is a fixed window per key, local to each Cloudflare location and eventually
@@ -24,7 +24,7 @@ export interface Limit {
 	binding: string; // the Worker's binding that counts, e.g. WRITE_LIMIT
 	limit: number; // calls per caller in a period
 	period: 10 | 60; // seconds, all the binding takes
-	scope?: string; // openapiSpec's rateLimits: every operation that needs this scope
+	scope?: string; // the Document's rateLimits: every operation that needs this scope
 }
 
 type Operation = OpenAPIV3_2.OperationObject;
@@ -33,7 +33,7 @@ type Operation = OpenAPIV3_2.OperationObject;
 export const limited = (limit: Limit, spec: (op: Operation) => Operation = op => op) =>
 	(op: Operation): Operation => withLimit(spec(op), limit);
 
-/** An operation with its limit and its 429 (openapiSpec applies the scopes' limits with it). */
+/** An operation with its limit and its 429 (the OpenAPI spec applies the scopes' limits with it). */
 export const withLimit = (op: Operation, limit: Limit): Operation => ({
 	...op,
 	[EXTENSION]: limit,
@@ -42,7 +42,6 @@ export const withLimit = (op: Operation, limit: Limit): Operation => ({
 		"429": {
 			description: `Too Many Requests: more than ${limit.limit} calls in ${limit.period} s by this caller`,
 			headers: { "Retry-After": { description: "Seconds to wait before calling again", schema: { type: "integer" } } },
-			content: { "application/json": { schema: { type: "object", properties: { code: { type: "string" }, status: { type: "integer" }, message: { type: "string" } } } } },
 		},
 	},
 } as Operation);

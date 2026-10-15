@@ -7,7 +7,7 @@
 //   - how to get in, at /.well-known/ (charter-lib/auth's wellKnown), when it trusts anyone;
 //   - its WebSocket channels (asyncapi() procedures) at their addresses, a token on them taken as
 //     ?access_token= too, for a client that cannot send headers (a browser, a Worker);
-//   - every refusal as RFC 9457 problem details, as Huma answers in Go (charter-lib/problem), checked
+//   - every refusal as RFC 9457 problem details (problem.ts), as Huma answers in Go, checked
 //     in Huma's order: the route (404, 405), the credentials and the limits (401, 403, 429), the body's
 //     media type and its JSON (415, 400), then the contract (422).
 //
@@ -25,7 +25,7 @@ import { type AnyORPCError, call, COMMON_ERROR_STATUS_MAP, os, ORPCError, Proced
 import { ResponseHeadersPlugin } from "@orpc/server/plugins";
 import { type AsyncAPIDocument, getAsyncAPIMeta } from "./asyncapi.ts";
 import { authorize, type Base, type Caller, scopesOf, securityOf, type Security, type Trusted, wellKnown } from "./auth.ts";
-import { mcpHandler, mcpPath } from "./mcp.ts";
+import { type AnyProcedure, mcpHandler, mcpPath } from "./mcp.ts";
 import { type ErrorDetail, problem, problemOf, problemType } from "./problem.ts";
 import { keyOf, limitOf, type Limit, rateLimit } from "./ratelimit.ts";
 import { asyncapiSpec, openapiSpec } from "./specs.ts";
@@ -114,7 +114,6 @@ export interface ServeOptions<C> {
 	limits?: (context: C) => object;
 }
 
-type AnyProcedure = Procedure<any, any, any, any, any>;
 
 /** Workers' WebSockets (a Workers global, not the web's): accept() takes the socket in the Worker. */
 type WorkerSocket = WebSocket & { accept(): void };

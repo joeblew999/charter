@@ -8,7 +8,8 @@ import { implement, ORPCError, withEventMeta } from "@orpc/server";
 import type { Trusted } from "charter-lib/auth";
 import { follow } from "charter-lib/follow";
 import { guard, refused, serve, type Served } from "charter-lib/serve";
-import { contract, END } from "./contract.ts";
+import { contract } from "./contract.ts";
+import { END } from "./schemas.ts";
 import { document } from "./spec.ts";
 import type { Notes } from "./store.ts";
 
@@ -27,7 +28,8 @@ export interface Deployment {
 export type Settings = Partial<Record<"READ_TOKEN" | "WRITE_TOKEN" | "ACCESS_TEAM_DOMAIN" | "ACCESS_AUD" | "OIDC_ISSUER" | "OIDC_AUDIENCE" | "WEBHOOK_URL" | "WEBHOOK_SECRET" | "CLIENT_ID" | "CLIENT_SECRET" | "TOKEN_SECRET", string>>;
 
 /** The OAuth client the API knows, and the secret its tokens are signed with: its settings, or the
- * defaults go/conformance has, so the same tests run against either. A real deployment sets them. */
+ * defaults go/conformance has, so the same tests run against either. An API of its own would keep
+ * them as secrets; the conformance API's are the tests'. */
 export interface OAuth {
 	clientId: string;
 	clientSecret: string;
@@ -41,7 +43,7 @@ export const oauthOf = (settings: Settings): OAuth => ({
 });
 
 /** Where the noteCreated webhook goes, and the secret it is signed with. */
-export interface Webhook {
+interface Webhook {
 	url: string;
 	secret: string;
 }
@@ -65,7 +67,7 @@ async function notify(webhook: Webhook, payload: unknown): Promise<void> {
 }
 
 /** sign is HMAC-SHA256 in hex: what signs both the access tokens and the webhooks (as go/conformance). */
-async function sign(secret: string, message: string): Promise<string> {
+export async function sign(secret: string, message: string): Promise<string> {
 	const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
 	return [...new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message)))].map(b => b.toString(16).padStart(2, "0")).join("");
 }
@@ -81,7 +83,7 @@ export async function newToken(secret: string, now = Date.now()): Promise<string
 }
 
 /** Whether a token is one newToken made with this secret, and still good. */
-export async function validToken(secret: string, token: string, now = Date.now()): Promise<boolean> {
+async function validToken(secret: string, token: string, now = Date.now()): Promise<boolean> {
 	const [expiry = "", signature = "", ...more] = token.split(".");
 	const want = await sign(secret, `access-token.${expiry}`);
 	let same = signature.length === want.length && more.length === 0;

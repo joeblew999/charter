@@ -1,11 +1,66 @@
-// sdk --prove: a project's clients, every group of fern/generators.yml, generated with Fern (Docker) and proven in
-// its own language. Go: build, vet, and Fern's tests against WireMock. TypeScript: typechecked with
-// the TypeScript its SDKs are written for. Python: mypy and its own tests. The CLI (Rust): built. A
-// language this does not know is generated and named, not proven. Fern generates in Docker; the
+// The SDKs, made with Fern from a project's fern/ (its specs and generators.yml): a group generated
+// (Docker) into sdk/out/<group> when fern/ is newer than what made it, copied into a Worker that runs it,
+// or proven in its language (sdk --prove). Go: build, vet, and Fern's tests against WireMock.
+// TypeScript: typechecked with the TypeScript its SDKs are written for. Python: mypy and its own tests.
+// The CLI (Rust): built. A language this does not know is generated and named, not proven. The
 // toolchains a proof needs are mise's, at the versions pinned here, in mise's own folder.
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { cacheFolder, generateQuietly, made, output, runQuietly, seconds } from "./scripts.ts";
+import { made } from "./sizes.ts";
+import { cacheFolder, output, run, runQuietly, seconds } from "./run.ts";
+
+/** The hash of what an SDK is made from: every file in fern/. */
+export function specsHash(): string {
+	const hash = createHash("sha256");
+	for (const name of readdirSync("fern").sort()) {
+		const file = join("fern", name);
+		if (!statSync(file).isFile()) continue;
+		const content = readFileSync(file);
+		hash.update(`${name} ${content.length}\n`);
+		hash.update(content);
+	}
+	return `sha256:${hash.digest("hex")} fern`;
+}
+
+/** sdk generates a group of fern/generators.yml with Fern (Docker) into sdk/out/<group>, and records
+ * the hash of fern/ it was made from beside it. With ifStale, only when there is no SDK yet or fern/
+ * (the specs, Fern's settings) is not what it was made from: the specs come from the contract, so a
+ * contract change reaches the SDK. */
+export function sdk(group: string, options: { ifStale?: boolean } = {}): void {
+	if (options.ifStale && upToDate(group)) {
+		console.log(`sdk ${group}: up to date (made from fern/ as it is), not generated again`);
+		return;
+	}
+	run("fern", fernGenerate(group));
+	stampMade(group);
+}
+
+/** generateQuietly generates a group as sdk does, with Fern's output kept rather than shown, so that
+ * several can run at once (each in a Docker container of its own) without their lines mixing. It
+ * resolves with how long it took, and rejects with Fern's output if it fails. */
+export async function generateQuietly(group: string): Promise<number> {
+	const { ms } = await runQuietly("fern", fernGenerate(group));
+	stampMade(group);
+	return ms;
+}
+
+const fernGenerate = (group: string) => ["generate", "--local", "--group", group, "--force", "--log-level", "warn"];
+const stampOf = (group: string) => join("sdk", "out", `.${group}.made-from`);
+const upToDate = (group: string) => existsSync(join("sdk", "out", group)) && existsSync(stampOf(group)) && readFileSync(stampOf(group), "utf8").trim() === specsHash();
+function stampMade(group: string): void {
+	mkdirSync(join("sdk", "out"), { recursive: true });
+	writeFileSync(stampOf(group), `${specsHash()}\n`);
+}
+
+/** syncSdk copies the TypeScript SDK (typescript-dist) into folder, for a Worker that runs it, generating
+ * it first if the specs are newer. */
+export function syncSdk(folder: string): void {
+	sdk("typescript-dist", { ifStale: true });
+	rmSync(folder, { recursive: true, force: true });
+	cpSync(join("sdk", "out", "typescript-dist", "esm"), folder, { recursive: true });
+	console.log(`SDK copied into ${folder}`);
+}
 
 /** The Rust the CLI is built with: mise loads it when a CLI is built, as it loads TinyGo. */
 const rustVersion = "1.98.1";
@@ -49,9 +104,9 @@ const tsconfig = (entry: string) => JSON.stringify({
 	include: [entry],
 }, null, 2);
 
-/** check proves a generated group: in its language, by what is in sdk/out/<group>. What it runs keeps
+/** proveGroup proves a generated group: in its language, by what is in sdk/out/<group>. What it runs keeps
  * its output, shown only if it fails: the groups are proven side by side. */
-export async function check(group: string): Promise<void> {
+export async function proveGroup(group: string): Promise<void> {
 	const dir = join("sdk", "out", group);
 	if (!existsSync(dir) || readdirSync(dir).length === 0) throw new Error(`${dir}: nothing generated (charter-ts sdk ${group})`);
 	if (existsSync(join(dir, "go.mod"))) {
@@ -107,9 +162,9 @@ export async function check(group: string): Promise<void> {
 	console.log(`${dir}: generated; charter-ts proves Go, TypeScript, Python and the Rust CLI, not this language`);
 }
 
-/** clients generates every group the project declares and proves each, then, in a project that
+/** prove generates every group the project declares and proves each, then, in a project that
  * commits its Go SDK (charter.config.ts: go.sdk), that sdk/go is what the specs generate now. */
-export async function clients(only: string[], committedGoSdk: boolean): Promise<void> {
+export async function prove(only: string[], committedGoSdk: boolean): Promise<void> {
 	const wanted = only.length > 0 ? only : groups();
 	const start = performance.now();
 	// Every client at once: Fern generates each in a Docker container of its own, and each is proven in
@@ -120,13 +175,13 @@ export async function clients(only: string[], committedGoSdk: boolean): Promise<
 		const generated = await generateQuietly(group);
 		console.log(`client ${group}: generated in ${seconds(generated)}`);
 		const t0 = performance.now();
-		await check(group);
+		await proveGroup(group);
 		const proven = performance.now() - t0;
 		console.log(`client ${group}: proven in ${seconds(proven)}`);
 		return `${group} ${seconds(generated + proven)} (${seconds(generated)} + ${seconds(proven)})`;
 	}));
 	const failed = results.flatMap((result, i) => (result.status === "rejected" ? [`${wanted[i]}: ${(result.reason as Error).message}`] : []));
-	if (failed.length > 0) throw new Error(`${failed.length} of the clients failed:\n${failed.join("\n")}`);
+	if (failed.length > 0) throw new Error(`${failed.length} of the SDKs failed:\n${failed.join("\n")}`);
 	const times = results.map(result => (result as PromiseFulfilledResult<string>).value);
 	if (committedGoSdk && existsSync(join("sdk", "go")) && only.length === 0) {
 		const t0 = performance.now();
@@ -134,5 +189,28 @@ export async function clients(only: string[], committedGoSdk: boolean): Promise<
 		await sdkPublish(true);
 		times.push(`committed Go SDK ${seconds(performance.now() - t0)}`);
 	}
-	console.log(`clients took ${seconds(performance.now() - start)}, all at once: ${times.join(", ")} (generated + proven)`);
+	console.log(`sdk --prove took ${seconds(performance.now() - start)}, all at once: ${times.join(", ")} (generated + proven)`);
+}
+
+// What a project's fern/generators.yml must say that its spec already says: Fern sends only the
+// credentials generators.yml restates (api.auth-schemes, and auth: any of them), so each security
+// scheme of the spec is restated there, an API key with the spec's header, option name and variable.
+// An OpenID Connect scheme is not: its token goes as the bearer token.
+type Scheme = { type?: string; name?: string; "x-fern-header"?: { name?: string; env?: string } };
+
+/** What fern/generators.yml lacks of the spec's schemes, one line each; none: nothing. */
+export function unstatedSchemes(dir = "."): string[] {
+	if (!existsSync(`${dir}/fern/openapi.json`) || !existsSync(`${dir}/fern/generators.yml`)) return [];
+	const spec = JSON.parse(readFileSync(`${dir}/fern/openapi.json`, "utf8")) as { components?: { securitySchemes?: Record<string, Scheme> } };
+	const yml = readFileSync(`${dir}/fern/generators.yml`, "utf8");
+	const schemes = Object.entries(spec.components?.securitySchemes ?? {}).filter(([, scheme]) => scheme.type !== "openIdConnect");
+	if (!schemes.length) return [];
+	const missing: string[] = [];
+	if (!/^ {2}auth:\n {4}any:\n/m.test(yml)) missing.push("api.auth is not `any:` of the schemes");
+	for (const [name, scheme] of schemes) {
+		const want = [`    ${name}:\n`, `      - ${name}\n`];
+		if (scheme.type === "apiKey") want.push(`header: ${scheme.name}\n`, `name: ${scheme["x-fern-header"]?.name}\n`, `env: ${scheme["x-fern-header"]?.env}\n`);
+		for (const line of want) if (!yml.includes(line)) missing.push(`the scheme ${name} has no ${JSON.stringify(line.trim())}`);
+	}
+	return missing;
 }

@@ -51,5 +51,9 @@
 		"esbuild": false,
 		"fsevents": false,
 		"@scarf/scarf": false
+	},
+	"devDependencies": {
+		"@types/node": "^22.12.0",
+		"typescript": "^7.0.2"
 	}
 }

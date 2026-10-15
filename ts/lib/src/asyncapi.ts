@@ -1,7 +1,6 @@
-// oRPC has no AsyncAPI generator, and wants one as a community package first (middleapi/orpc#2115,
-// closed). This file is that generator.
-// AsyncAPI from an oRPC contract, the way @orpc/openapi does OpenAPI (https://github.com/joeblew999/charter/issues/23;
-// offered upstream in middleapi/orpc#2115). Built only on oRPC's public APIs: a meta plugin
+// AsyncAPI from an oRPC contract, the way @orpc/openapi does OpenAPI. oRPC has no AsyncAPI generator and
+// wants one as a community package (middleapi/orpc#2115): this is it, to be published on its own (#23).
+// Built only on oRPC's public APIs: a meta plugin
 // (`asyncapi()`, like `openapi()`), `walkProcedureContractsAsync`, and the JSON Schema converters.
 //
 // A procedure with `asyncapi({ channel, address })` metadata is a WebSocket channel:

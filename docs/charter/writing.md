@@ -38,4 +38,4 @@ Someone who wants to use this, or to help with it, and has a job to do. Write fo
 
 ## When the code changes
 
-The page changes in the same commit, and a removed thing is removed from every page (`npm run docs` finds the mentions).
+The page changes in the same commit, and a removed thing is removed from every page: `npm run docs` finds a removed script, path or link; search for any other name.

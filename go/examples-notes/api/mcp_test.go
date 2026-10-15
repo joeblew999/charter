@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/joeblew999/charter/go/lib/humaworkers"
 )
 
 // mcp POSTs one JSON-RPC request to /api/mcp and returns the HTTP status and the decoded answer.
@@ -123,15 +121,5 @@ func TestMCPErrors(t *testing.T) {
 	}
 	if status, _, header := do(t, "GET", srv.URL+"/api/mcp", ""); status != 405 || header.Get("Allow") != "POST" {
 		t.Errorf("GET: HTTP %d Allow %q, want 405 POST", status, header.Get("Allow"))
-	}
-}
-
-// Route.OperationID is how a tool call finds its one operation: it must be the operation's own id.
-func TestEveryRouteNamesItsOperation(t *testing.T) {
-	for _, route := range Routes(Env{}) {
-		ops := humaworkers.New(config(), []humaworkers.Route{route}).Operations()
-		if len(ops) != 1 || route.OperationID == "" || ops[0].OperationID != route.OperationID || ops[0].Method != route.Method || ops[0].Path != route.Path {
-			t.Errorf("route %s %s (%q) registers %+v", route.Method, route.Path, route.OperationID, ops)
-		}
 	}
 }

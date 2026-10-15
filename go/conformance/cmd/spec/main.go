@@ -6,7 +6,8 @@
 // With -check it writes nothing and fails if either file differs from what the contract gives:
 // someone changed the contract and didn't run `npm run spec`. The same functions the
 // server gives /api/openapi.json and /api/asyncapi.json with (api/spec.go, go/lib/serve). Either way
-// it first fails if an operation cannot be the MCP tool it would be (Tools).
+// it first fails on what the specs don't show (specs.Problems): a route that does not name its
+// operation, an operation that cannot be its MCP tool, an example missing or invalid.
 package main
 
 import (

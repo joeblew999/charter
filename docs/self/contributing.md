@@ -12,6 +12,7 @@ Report something, make it faster, or pick up an issue. [The rules](rules.md) are
 ```sh
 git clone https://github.com/joeblew999/charter && cd charter
 mise install    # the tools: node, go, gh, fnox
+gh auth login   # the repo job reads GitHub
 npm ci          # every package; builds charter-ts and charter-lib
 npm run check   # the packages, repo and projects jobs (Docker for the conformance projects)
 npm run ci      # every job GitHub runs, the clients in every language among them (Docker)
@@ -33,7 +34,7 @@ The root `package.json` is the npm workspace of `charter-ts/`, `ts/` and `go/`'s
 
 ## What is generated
 
-Never edit these: change the source, then run the step.
+Never edit these: change the source, then run the command.
 
 | Path | Written by |
 |---|---|
@@ -41,8 +42,11 @@ Never edit these: change the source, then run the step.
 | `pages/*.x.go` (committed) | gsx, from the components; `npm run check` writes them and fails while they were stale |
 | `sdk/go/` (committed) | `npm run sdk -- --publish` |
 | `sdk/out/`, `build/`, `charter-ts/dist/`, `ts/lib/dist/` | `npm run sdk`; the Go Worker's build (`dev`, `check`, `deploy`); `npm ci` |
-| `.github/workflows/self-*.yml` | `npm run adopt`, from `ci.config.ts` |
+| `ts/conformance/client/` | The SDK the conformance Worker runs, copied in by `check`, `dev` and `deploy` |
+| `charter-ts/charter-files/`, `dist/` | `npm pack`, and `npm run release` |
+| `.github/workflows/self-*.yml`, `charter-repo.yml` | `npm run adopt`, from `ci.config.ts` and charter's own job |
 | `docs/charter/README.md` | `npm run adopt`, from `package.json`'s scripts |
+| `package-lock.json` | `npm install` |
 
 ## Report a bug
 
@@ -54,7 +58,7 @@ npm run issues -- bug     # or feature, upstream, plan: the body, and the gh com
 
 ## Make it faster
 
-The target is the TypeScript Worker's cost per request; what was tried and measured is in [Benchmarks](benchmarks.md). Issues: [`perf`](https://github.com/joeblew999/charter/labels/perf).
+The target: a Go Worker costs no more CPU per request than its TypeScript twin. What was tried and measured is in [Benchmarks](benchmarks.md). Issues: [`perf`](https://github.com/joeblew999/charter/labels/perf).
 
 ## Pick up an issue
 
@@ -72,19 +76,19 @@ npx --package /tmp/try/charter-ts-X.Y.Z.tgz charter-ts adopt
 
 ## The CI
 
-`ci.config.ts` at the root says the jobs and when GitHub runs them, typed. `npm run adopt` writes a workflow per job from it (`.github/workflows/self-<job>.yml`: `self-` names this repo's own, `charter-` charter's, the same in every repo), and `npm run ci -- repo` fails while one differs. Each workflow installs the tools with mise, the packages with npm, and runs `npm run ci -- <job>`: the command that runs the same job here. One job in one project: `npm run ci -- clients go/conformance`.
+`ci.config.ts` at the root has this repo's own jobs, typed; `npm run adopt` writes a workflow for each (`.github/workflows/self-<job>.yml`), and `charter-repo.yml` is charter's `repo` job, the same in every repo. Every workflow calls the job runner (`charter-ci.yml`): mise installs the tools, npm the packages, then charter-ts runs the job as `npm run ci -- <job>` runs it here. One job in one project: `npm run ci -- clients go/conformance`.
 
-Everything charter-ts makes says how big it is, gzipped, against its limit, and how that changed since it was last made here (`made build/app.wasm (the Worker's Wasm): 3.81 MB, 1.38 MB gzipped (limit 3.00 MB; the same as last time)`): the Go Worker's Wasm, the Rust CLI, the release's packages, and every project's Worker as a deploy would upload it. That last is a step of `check` (`npx charter-ts bundle`): `cf build`, then the bundle against `bundleLimit` in `charter.config.ts` (3 MB, what Workers Free allows, unless it says 10 MB for Workers Paid), failing over it. `check` ends with what it made, as it ends with how long each part took. Everything says how long it took, so what is slow shows where it runs: each program charter-ts runs that takes a second or more (`took 19.8 s: fern generate --local --group typescript-dist ...`), a server's start (`took 2.6 s: cf answering at ...`), every command and every step of a job, and each job; `check` sums its parts, and `clients` each language's generation and proof. An SDK that is up to date says so instead of being made again.
+Every command says what it made and how long it took: each artifact its size, gzipped, against its limit, and how that changed since it was last made here; each program of a second or more, each server's start, each job. `check` ends with both.
 
 | Job | When | What |
 |---|---|---|
+| `repo` | Push, pull request | charter's job: charter's files and the workflows (`adopt --check`), the docs, the repo on GitHub, the upstream issues |
 | `packages` | Push, pull request, tag; Linux and macOS | charter-ts and charter-lib with their tests, the Go library, the projects kept alike (`projects.test.ts`), the workflows linted |
-| `repo` | Push, pull request | charter's job, in every repo (`charter-repo.yml`): charter's files and the workflows (`adopt --check`), the docs, the repo on GitHub, the upstream issues |
-| `projects` | The same; one runner per project | Every project's check |
-| `twins` | The same | Each API that is here in TypeScript and in Go, both under workerd, the same requests to both: no answer may differ, nor their saved specs and migrations (`npm run ci -- twins`; [The standard API](standard.md#held-the-same)) |
-| `new` | The same | A project made by `charter-ts new` from the packed package, as a release ships it, installed, and its check passing (`node charter-ts/test/new-from-package.ts`) |
-| `clients` | The same; one runner per conformance project | Every client its `fern/generators.yml` declares, generated and proven in its language. The conformance projects carry every Fern feature, so this proves the generators; an example's specs get Fern's check in its own `check` |
-| `deploy` | By hand: `npm run ci -- deploy go/examples-notes --remote` | A project's deploy, then its live tests |
+| `projects` | Push, pull request, tag; one runner per project | Every project's check |
+| `twins` | Push, pull request, tag | Each API that is here in TypeScript and in Go, both under workerd, the same requests to both: no answer may differ, nor their saved specs and migrations ([The standard API](standard.md#held-the-same)) |
+| `new` | Push, pull request, tag | A project made by `charter-ts new` from the packed package, in both languages, installed, and its check passing (`charter-ts/test/new-from-package.ts`) |
+| `clients` | Push, pull request, tag; one runner per conformance project | Every client its `fern/generators.yml` declares, generated and proven in its language |
+| `deploy` | By hand: `npm run ci -- deploy <project> --remote` | A project's deploy, then its live tests |
 
 ## Where the tests are
 
@@ -106,4 +110,4 @@ npm run release -- X.Y.Z --dry-run   # every check, and the packages into dist/
 npm run release -- X.Y.Z             # the version, the tag ts-vX.Y.Z, the GitHub Release with the packages
 ```
 
-It runs `npm run check` before it tags, and never waits for GitHub. The Release carries `charter-ts-X.Y.Z.tgz` and `charter-lib-X.Y.Z.tgz`, which a repo pins, and the release puts that version into every install command the docs show (npx keeps what it fetched for a URL, so a URL without a version would serve an old one).
+It runs `npm run check` before it tags, and never waits for GitHub. It tags `ts-vX.Y.Z` and `go/lib/vX.Y.Z` (the Go library's, which `go get` and `new --go` pin), and the Release carries `charter-ts-X.Y.Z.tgz` and `charter-lib-X.Y.Z.tgz`, which a repo pins. It puts that version into every install command the docs show (npx keeps what it fetched for a URL, so a URL without a version would serve an old one).

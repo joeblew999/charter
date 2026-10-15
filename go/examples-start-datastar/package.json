@@ -19,6 +19,7 @@
 		"fern-api": "5.140.0",
 		"typescript": "^7.0.2",
 		"typescript-sdk": "npm:typescript@~5.9.3",
-		"vite": "^8.3.0"
+		"vite": "^8.3.0",
+		"zod": "^4.6.5"
 	}
 }

@@ -16,11 +16,20 @@ import (
 	"github.com/joeblew999/charter/go/lib/serve"
 )
 
-// Problems is what is wrong with a contract that no spec shows: an operation that cannot be its MCP
-// tool, and a constrained request field without a valid example (Fern shows an example of every
-// request, and makes one up where the contract has none: whoever copies it gets a 422).
+// Problems is what is wrong with a contract that no spec shows: a route that does not name its own
+// operation (a tool call finds its operation by that name), an operation that cannot be its MCP tool,
+// and a constrained request field without a valid example (Fern shows an example of every request,
+// and makes one up where the contract has none: whoever copies it gets a 422).
 func Problems(api serve.API) []error {
-	return append(api.Tools(), Examples(humaworkers.New(api.Config(), api.Routes))...)
+	var problems []error
+	for _, route := range api.Routes {
+		ops := humaworkers.New(api.Config(), []humaworkers.Route{route}).Operations()
+		if len(ops) != 1 || route.OperationID == "" || ops[0].OperationID != route.OperationID || ops[0].Method != route.Method || ops[0].Path != route.Path {
+			problems = append(problems, fmt.Errorf("route %s %s (%q) does not register the one operation it names", route.Method, route.Path, route.OperationID))
+		}
+	}
+	problems = append(problems, api.Tools()...)
+	return append(problems, Examples(humaworkers.New(api.Config(), api.Routes))...)
 }
 
 // Must prints the problems and ends the command if there are any: a contract with problems gets no
@@ -80,7 +89,7 @@ func one(spec func(string) ([]byte, error), file, server string, check bool) err
 		return os.WriteFile(file, pretty.Bytes(), 0o644)
 	}
 	if committed, _ := os.ReadFile(file); !bytes.Equal(committed, pretty.Bytes()) {
-		return fmt.Errorf("%s is stale: write the specs again from the contract (the :spec task)", file)
+		return fmt.Errorf("%s is stale: write the specs again from the contract (npm run spec)", file)
 	}
 	return nil
 }

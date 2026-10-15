@@ -4,7 +4,7 @@
 // and docs. Everything the SDKs need is said here too: OperationID and Tags name the SDK methods,
 // and Extensions carry Fern's x-fern-*. The `example` tags are what the SDKs' READMEs and references
 // show: without one Fern makes a value up, which a pattern or a bound then refuses
-// (TestExamplesAreThereAndValid).
+// (cmd/spec checks them: specs.Problems).
 package api
 
 import (
@@ -50,7 +50,6 @@ type Note struct {
 func (n Note) Position() int64 { return n.ID }
 
 // The resume position in every stream: a note id, as an opaque string like list's cursor.
-const afterDoc = "Resume after this note id (the id of the last note you received). Absent: only notes created from now on"
 
 type HelloOutput struct {
 	Body struct {
@@ -82,7 +81,7 @@ type WatchInput struct {
 
 type LiveInput struct {
 	After string `query:"after" pattern:"^\\d+$" example:"42" doc:"Resume after this note id (the id of the last note you received). Absent: only notes created from now on"`
-	// The Worker's entry (worker.mjs) passes the upgrade request on; a plain GET is refused.
+	// The WebSocket adapter (go/lib/transport) passes the upgrade request on; a plain GET is refused.
 	Upgrade string `header:"Upgrade" hidden:"true"`
 }
 

@@ -8,7 +8,7 @@ import { base, contract, info, webhooks } from "./contract.ts";
  * document's fields, and the webhooks. */
 export const document: Document = { info, asyncInfo: { title: "Conformance live", version: "1.0.0" }, base, webhooks };
 
-
+/** The specs for a server, which they name with what it is. */
 const described = (server: string) =>
 	specsOf(contract, { ...document, base: { ...document.base, servers: [{ url: server, description: "The deployed API (mode api). Fern's CLI takes its OAuth token URL from here; --base-url doesn't move it." }] } });
 

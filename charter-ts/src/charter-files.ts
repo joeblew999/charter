@@ -37,9 +37,36 @@ export const charterFile = (rel: string) => join(charterRepo ?? join(packageDir,
 
 const startMark = "Started by `charter-ts adopt` (github.com/joeblew999/charter): yours to edit.";
 
-/** What adopt starts a repo with where it has none, then the repo's own: a project's CI (its check
- * job), and in docs/self/, the page that says what it is and its own rules. */
-const starters = (project: boolean): Record<string, string> => ({
+/** The tools a repo needs, as mise.toml pins them (mise installs them, here and on GitHub), at the
+ * versions charter's own mise.toml pins: node for charter-ts; in a project, fnox for its secrets; in
+ * a Go one, go. */
+function miseStarter(project: boolean, go: boolean): string {
+	const pins = readFileSync(charterFile("mise.toml"), "utf8").split("\n");
+	const pin = (tool: string) => pins.find(line => line.startsWith(`${tool} = `)) ?? "";
+	const tools = ["node", ...(project ? ["fnox"] : []), ...(go ? ["go"] : [])];
+	return `# ${startMark}\n# The tools, which mise installs here and on GitHub (charter-ci.yml): ${tools.join(", ")}.\n[tools]\n${tools.map(pin).join("\n")}\n`;
+}
+
+/** What adopt starts a repo with where it has none, then the repo's own: the tools it needs
+ * (mise.toml), its line ends and generated files (.gitattributes), a project's CI (its check job), and
+ * in docs/self/, the page that says what it is and its own rules. */
+const starters = (project: boolean, go: boolean): Record<string, string> => ({
+	"mise.toml": miseStarter(project, go),
+	".gitattributes": `# ${startMark}
+# Line ends are LF on every system: the checks compare generated files with the committed ones byte
+# for byte, and gofmt wants LF. (Git on Windows would otherwise check files out with CRLF.)
+* text=auto eol=lf
+
+# Generated files: nobody edits these by hand. GitHub marks them "generated" and folds them in diffs.
+fern/openapi.json                   linguist-generated=true
+fern/asyncapi.json                  linguist-generated=true
+sdk/go/**                           linguist-generated=true
+*.x.go                              linguist-generated=true
+package-lock.json                   linguist-generated=true
+.github/workflows/self-*.yml        linguist-generated=true
+.github/workflows/charter-repo.yml  linguist-generated=true
+docs/charter/README.md              linguist-generated=true
+`,
 	...(project && {
 		"ci.config.ts": `// ${startMark}
 // This project's CI: its own jobs, and when GitHub runs them, typed. \`npm run adopt\` writes a workflow
@@ -91,7 +118,7 @@ The rules every repo shares are in [Rules for every repo](../charter/rules.md). 
  * Started by `charter-ts <command>` ... yours to edit (the repo's, written once). */
 export function markOf(content: string): { charters: boolean; command: string } | undefined {
 	const head = content.split("\n").slice(0, 12).join("\n");
-	const m = /(Written|Started) by `charter(?:-ts)? ([a-z:-]+)`/.exec(head);
+	const m = /(Written|Started) by `charter-ts ([a-z-]+)`/.exec(head);
 	if (m?.[1] === "Written" && head.includes("don't edit")) return { charters: true, command: m[2] };
 	if (m?.[1] === "Started" && head.includes("yours to edit")) return { charters: false, command: m[2] };
 	return undefined;
@@ -111,7 +138,7 @@ const cell = (text: string) => text.replaceAll("|", "\\|").replaceAll("\n", " ")
 
 /** docs/charter/README.md: what to do, and when, written from the repo's scripts (each the charter-ts
  * command of its name) in the order a developer meets them, then the repo's own scripts. */
-export function whatToDoPage(root: string): string {
+function whatToDoPage(root: string): string {
 	const scripts = readPackage(root)?.scripts ?? {};
 	const charters = Object.entries(commands).filter(([name]) => scripts[name] === `charter-ts ${name}`);
 	const own = Object.entries(scripts).filter(([name, command]) => command !== `charter-ts ${name}` && !["prepare", "preinstall", "postinstall", "install"].includes(name));
@@ -141,11 +168,10 @@ Another release of charter-ts: \`npm i -D https://github.com/joeblew999/charter/
 `;
 }
 
-/** charter's files for the repo at root, by path in the repo: each as charter has it, but those the
- * repo does not take (renovate.json; the job runner without a CI config), the starters (with
- * "workflow": false, no CI config), and the two pages written from charter-ts and from the repo's
- * scripts. */
-export function filesFor(root: string): Map<string, string> {
+/** charter's files for the repo at root, by path in the repo: each as charter has it, less what the repo
+ * does not take (renovate.json; with "workflow": false, the workflows and the CI starter); the starters;
+ * docs/charter/README.md, written from the repo's scripts; and charter's job workflows (charter-<job>.yml). */
+function filesFor(root: string): Map<string, string> {
 	const s = settings(root);
 	// The workflows: charter's jobs, and the runner every workflow calls (unless "workflow": false).
 	const workflows = s.workflow;
@@ -156,7 +182,7 @@ export function filesFor(root: string): Map<string, string> {
 		if (rel === ".github/workflows/charter-ci.yml" && !workflows) continue;
 		files.set(inDocs(rel), readFileSync(charterFile(rel), "utf8"));
 	}
-	for (const [rel, content] of Object.entries(starters(isProject(root)))) {
+	for (const [rel, content] of Object.entries(starters(isProject(root), existsSync(join(root, "go.mod"))))) {
 		if (rel === "ci.config.ts" && !workflows) continue;
 		files.set(inDocs(rel), content);
 	}
@@ -166,10 +192,10 @@ export function filesFor(root: string): Map<string, string> {
 }
 
 /** ownPlace: a path in one of charter's own places, which are charter's whatever is in them: its folder
- * in the docs, its forms and workflows (charter-*.yml, charter.yml). Other names are the host's. */
-export function ownPlace(path: string): boolean {
+ * in the docs, its forms and workflows (charter-*). Other names are the repo's. */
+function ownPlace(path: string): boolean {
 	const base = basename(path);
-	return path.startsWith(`${charterFolder}/`) || path.includes(`/${charterFolder}/`) || base.startsWith("charter-") || base === "charter.yml";
+	return path.startsWith(`${charterFolder}/`) || path.includes(`/${charterFolder}/`) || base.startsWith("charter-");
 }
 
 /** writeFiles writes charter's files into the repo at root: charter's own places as this version has them, with
@@ -200,7 +226,7 @@ export function writeFiles(root: string, check: boolean): { changed: string[]; k
 	for (const [dir, match] of [
 		[posix.join(docs, charterFolder), () => true],
 		[".github/ISSUE_TEMPLATE", (name: string) => name.startsWith("charter-")],
-		[".github/workflows", (name: string) => name.startsWith("charter-") || name === "charter.yml"],
+		[".github/workflows", (name: string) => name.startsWith("charter-")],
 	] as const) {
 		for (const rel of walk(join(root, dir))) {
 			const name = posix.join(dir, rel);

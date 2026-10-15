@@ -19,10 +19,10 @@ The projects are `go/examples-start-htmx/` and `go/examples-start-datastar/` (po
 | Path | What it is |
 |---|---|
 | `pages/*.gsx` | The pages and fragments: `Layout`, `Home`, `Form`, `Item` |
-| `pages/*.x.go` | Generated from the `.gsx` by `go tool gsx generate`; never edit. `npm run check` fails if they are stale (`ui:check`) |
+| `pages/*.x.go` | Generated from the `.gsx` by `go tool gsx generate`; never edit. `npm run check` writes them and fails if they were stale |
 | `pages/pages.go` | The routes: `GET /`, `POST /messages`, `GET /static/...`. Every other path goes to the API |
-| `pages/stream.go` | `GET /messages/stream`: new messages as HTML, over SSE, by [go/fragments](libraries.md) |
-| `pages/static/` | htmx 4.0.0 and its SSE extension, as the npm package `htmx.org` has them, or Datastar 1.0.4's `bundles/datastar.js`, as its release tag has it; and `site.css`. The Worker serves them, the versioned ones as immutable |
+| `pages/stream.go` | `GET /messages/stream`: new messages as HTML, over SSE, by `go/lib/fragments` ([Libraries](libraries.md)) |
+| `pages/static/` | htmx 4 and its SSE extension, as the npm package `htmx.org` has them, or Datastar's `bundles/datastar.js`, as its release has it, each file named with its version; and `site.css`. The Worker serves them, the versioned ones as immutable |
 | `api/` | The contract: `GET /api/hello`, `GET` and `POST /api/messages`. The pages call its `Env.Post`, `Env.Recent` and `Env.Feed` in the process |
 | `gsx.toml` | htmx only: gsx's settings, which htmx attributes hold URLs |
 
@@ -60,4 +60,4 @@ To push another fragment, write a function like `htmxEvent` or `datastarEvent` t
 
 ## Limits
 
-The pages and `POST /messages` are public, as is the API: a bearer token ([go/auth](libraries.md)) does not fit a browser form, and the project has no sign-in.
+The pages and `POST /messages` are public, as is the API: a bearer token (`go/lib/auth`) does not fit a browser form, and the project has no sign-in.

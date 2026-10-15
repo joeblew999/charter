@@ -1,21 +1,19 @@
 // npm run release -- X.Y.Z [--dry-run]: a release of charter-ts, cut from this machine, onto GitHub.
-//   1. The version: charter-ts's package.json and the examples' dependency on it, committed.
-//   2. npm run check: every local check (Docker), the same one GitHub runs.
-//   3. The packages (npm pack) into dist/: charter-ts (the command, charter's files, the templates) and
-//      charter-lib (what a TypeScript Worker imports), at the same version.
-//   4. The tag ts-vX.Y.Z, pushed with main, and the GitHub Release, marked latest, with the package
-//      on it: charter-ts-X.Y.Z.tgz, which a repo installs.
-// The version goes into every command README.md and docs/ show too: npx keeps what it fetched for a
-// URL, so only a URL with the version in it gives the version it names.
+//   1. The version: charter-ts's and charter-lib's package.json, and every project's dependencies on
+//      them, committed.
+//   2. npm run check: the jobs ci.config.ts lists in check (the rest are the CI's: npm run ci).
+//   3. The packages (npm pack) into dist/: charter-ts (the command, charter's files) and charter-lib
+//      (what a TypeScript Worker imports), at the same version.
+//   4. The tags ts-vX.Y.Z and go/lib/vX.Y.Z (the Go library's), pushed with main, and the GitHub
+//      Release, marked latest, with both packages on it, which a repo installs.
+// The version goes into every install command that README.md and docs/ show too: npx keeps what it
+// fetched for a URL, so only a URL with the version in it gives the version it names.
 // Safe to run again: a step already done is skipped. --dry-run does steps 2 and 3 only, and changes no file.
-import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { releaseURL } from "charter-ts/package";
-import { made, output, run } from "charter-ts/scripts";
-
-// The Mac stays awake while the release runs (its check is minutes), and no longer.
-if (process.platform === "darwin") spawn("caffeinate", ["-i", "-w", String(process.pid)], { stdio: "ignore", detached: true }).unref();
+import { releaseURL } from "./charter-ts/src/package.ts";
+import { output, run } from "./charter-ts/src/run.ts";
+import { made } from "./charter-ts/src/sizes.ts";
 
 process.on("uncaughtException", error => {
 	console.error(`release: ${error.message}`);
@@ -59,13 +57,11 @@ if (pkg.version !== version && !dryRun) {
 		return next !== text;
 	});
 	run("npm", ["install", "--no-fund", "--no-audit"]);
-	if (!dryRun) {
-		run("git", ["add", "--", ...manifests, ...projects.map(project => `${project}/package.json`), "package-lock.json", ...changed]);
-		run("git", ["commit", "-q", "-m", `charter-ts ${version}`]);
-	}
+	run("git", ["add", "--", ...manifests, ...projects.map(project => `${project}/package.json`), "package-lock.json", ...changed]);
+	run("git", ["commit", "-q", "-m", `charter-ts ${version}`]);
 }
 
-// 2. Every local check.
+// 2. The check: the jobs ci.config.ts lists in check.
 run("npm", ["run", "check"]);
 
 // 3. The packages (a dry run packs the version there is).

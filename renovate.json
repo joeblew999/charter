@@ -37,7 +37,7 @@
       "automerge": true
     },
     {
-      "description": "charter-ts and charter's Go library move together: one pull request",
+      "description": "charter-ts, charter-lib and charter's Go library move together: one pull request",
       "matchPackageNames": [
         "/(^|[:\\/])joeblew999\\/charter($|\\/)/"
       ],

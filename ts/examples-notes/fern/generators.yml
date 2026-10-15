@@ -23,13 +23,14 @@ api:
       header: CF-Access-Client-Secret
       name: accessClientSecret
       env: CHARTER_NOTES_TS_ACCESS_CLIENT_SECRET
+  # Upstream: fern-api/fern#17997 (when fixed: route credentials per operation, endpoint-security)
   auth:
     any:
       - bearer
       - accessClientId
       - accessClientSecret
 
-# The same groups, in the same order, in every API. Generate one: npm run sdk -- <group>   (output: sdk/out/<group>)
+# The SDKs. Generate one: npm run sdk -- <group>   (output: sdk/out/<group>)
 groups:
   # The Go SDK.
   go:

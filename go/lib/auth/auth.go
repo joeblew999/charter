@@ -75,7 +75,7 @@ type Token struct {
 
 // Access trusts Cloudflare Access for the application in ACCESS_TEAM_DOMAIN and ACCESS_AUD: a
 // person who logged in gets People, a machine with a service token Machines. Which people and which
-// tokens Access lets through is Access's policy (charter access setup).
+// tokens Access lets through is Access's policy, set in Cloudflare (cf zero-trust access).
 type Access struct {
 	People   []string
 	Machines []string
@@ -153,7 +153,7 @@ func AccessScheme(spec *huma.OpenAPI, api string) {
 			Extensions: map[string]any{"x-fern-header": map[string]any{"name": option, "env": prefix + variable}},
 		}
 	}
-	declare(spec, AccessClientID, header("CF-Access-Client-Id", "accessClientId", "_ACCESS_CLIENT_ID", "A Cloudflare Access service token's Client ID: a machine's own (charter access token create)"))
+	declare(spec, AccessClientID, header("CF-Access-Client-Id", "accessClientId", "_ACCESS_CLIENT_ID", "A Cloudflare Access service token's Client ID: a machine's own (cf zero-trust access service-tokens create)"))
 	declare(spec, AccessClientSecret, header("CF-Access-Client-Secret", "accessClientSecret", "_ACCESS_CLIENT_SECRET", "The service token's Client Secret"))
 }
 
@@ -161,7 +161,7 @@ func AccessScheme(spec *huma.OpenAPI, api string) {
 // the API's /.well-known/openid-configuration, which Discovery serves.
 func OIDCScheme(spec *huma.OpenAPI) {
 	declare(spec, OIDCName, &huma.SecurityScheme{
-		Type: "openIdConnect", OpenIDConnectURL: "/.well-known/openid-configuration",
+		Type: "openIdConnect", OpenIDConnectURL: OpenIDPath,
 		Description: "An access token from the OpenID Connect issuer the deployment trusts (OIDC_ISSUER), with the operation's scopes",
 	})
 }
@@ -438,6 +438,6 @@ func Discovery(setting func(name string) string) http.Handler {
 			problem.Write(w, http.StatusNotFound, "this API trusts no OpenID Connect issuer")
 			return
 		}
-		http.Redirect(w, r, strings.TrimSuffix(issuer, "/")+"/.well-known/openid-configuration", http.StatusFound)
+		http.Redirect(w, r, strings.TrimSuffix(issuer, "/")+OpenIDPath, http.StatusFound)
 	})
 }

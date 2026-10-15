@@ -117,8 +117,8 @@ func Tools(ops []*huma.Operation, registry huma.Registry) []Tool {
 }
 
 // Check is why each operation that would be a tool cannot be one: nil for an API whose tools/list
-// is complete. Call it where a contract is tested and where its specs are written (cmd/spec), so
-// that a missing tool is found there and not by a client. The fix is to rename what clashes, or
+// is complete. cmd/spec calls it (specs.Problems), before the specs are written, so that a missing
+// tool is found there and not by a client. The fix is to rename what clashes, or
 // Expose(op, false).
 func Check(api *humaworkers.API) []error {
 	var problems []error
@@ -311,7 +311,6 @@ func (d definitions) into(schema map[string]any) {
 	}
 }
 
-// run calls op with a tool call's arguments, through api, and returns the tool result.
 // refusal is an operation's answer that asks for credentials: a 401 or a 403 with a challenge
 // (WWW-Authenticate). It is the MCP answer's own HTTP status and header, not a tool error, so an MCP
 // client knows to sign in (MCP's authorization, on RFC 9728).
@@ -321,6 +320,7 @@ type refusal struct {
 	body      json.RawMessage
 }
 
+// run calls op with a tool call's arguments, through api, and returns the tool result.
 func run(api *humaworkers.API, r *http.Request, op *huma.Operation, arguments map[string]any) (map[string]any, *refusal) {
 	in, err := inputOf(op, api.API.OpenAPI().Components.Schemas)
 	if err != nil {
@@ -328,7 +328,7 @@ func run(api *humaworkers.API, r *http.Request, op *huma.Operation, arguments ma
 	}
 	path, query, header := op.Path, url.Values{}, http.Header{}
 	// The operation sees the caller's credentials, as it would over REST: a bearer token, and the JWT
-	// Cloudflare Access adds for a caller it let in (go/auth reads it, auth.AccessHeader).
+	// Cloudflare Access adds for a caller it let in (go/lib/auth reads it, auth.AccessHeader).
 	for _, name := range []string{"Authorization", "Cf-Access-Jwt-Assertion"} {
 		if value := r.Header.Get(name); value != "" {
 			header.Set(name, value)

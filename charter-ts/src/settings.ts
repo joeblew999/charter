@@ -2,7 +2,7 @@
 // are npm's own fields; "charter" holds the rest: { docs, renovate, workflow }.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { output } from "./scripts.ts";
+import { output } from "./run.ts";
 
 export interface PackageJson {
 	name?: string;
@@ -27,12 +27,12 @@ export interface Settings {
 	docs: "docs" | ".";
 	/** Write renovate.json. */
 	renovate: boolean;
-	/** Start its CI config (ci.config.ts), and so its workflows. */
+	/** The workflows: charter's job runner and repo job, and one per job of ci.config.ts (which adopt starts in a project). */
 	workflow: boolean;
 }
 
 /** The topic every repo charter keeps has, so they can be found. */
-export const charterTopic = "charter";
+const charterTopic = "charter";
 
 /** repoRoot is the top of the git repo charter-ts runs in. */
 export function repoRoot(): string {

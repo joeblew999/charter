@@ -7,8 +7,8 @@ import { z } from "zod";
 import { END, note } from "./schemas.ts";
 
 // The API, contract first: every route with its method, path, input and output as Zod 4 schemas.
-// The Worker implements it (api/handlers.ts) and the OpenAPI spec is generated from it (npm run spec ->
-// fern/openapi.json), from which Fern makes SDKs, a CLI and docs. Everything the SDKs
+// The Worker implements it (api/handlers.ts) and the specs are generated from it (npm run spec ->
+// fern/openapi.json, fern/asyncapi.json), from which Fern makes the SDKs and a CLI. Everything the SDKs
 // need is said here too: operationId/tags name the SDK methods, and `spec` adds Fern's extensions
 // (x-fern-*) to the generated operation, so nothing is patched afterwards.
 
@@ -16,14 +16,14 @@ import { END, note } from "./schemas.ts";
 export const info = { title: "charter-notes-ts", version: "1.0.0", description: "Notes API: contract -> OpenAPI -> Fern." };
 
 /** The resume position in every stream: a note id, as an opaque string like list's cursor (docs/self/streaming.md, rule 1). */
-export const after = z.string().regex(/^\d+$/).optional()
+const after = z.string().regex(/^\d+$/).optional()
 	.describe("Resume after this note id (the id of the last note you received). Absent: only notes created from now on").meta({ examples: ["42"] });
 
 /**
  * How often one caller may create notes: the Worker's WRITE_LIMIT binding, which
  * cloudflare.config.ts declares from the spec. Over it: 429.
  */
-export const writeLimit: Limit = { binding: "WRITE_LIMIT", limit: 100, period: 60 };
+const writeLimit: Limit = { binding: "WRITE_LIMIT", limit: 100, period: 60 };
 
 /** Fern's names for the SDK method: client.<group>.<method>() and `cli <group> <method>`. */
 const sdk = (group: string, method: string, extra: Record<string, unknown> = {}) =>

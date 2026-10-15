@@ -1,7 +1,13 @@
-// What a project's cloudflare.config.ts takes from charter: its Workers Rate Limiting bindings, one for
-// each limit its spec declares (x-rate-limit: go/lib/ratelimit, charter-lib/ratelimit), with the same
-// limit and period, each counting in a namespace named from the Worker's name.
+// A project on Cloudflare: what its cloudflare.config.ts takes from charter (its Workers Rate Limiting
+// bindings, one for each limit its spec declares, x-rate-limit: go/lib/ratelimit, charter-lib/ratelimit,
+// each counting in a namespace named from the Worker's name), its deploy with its secrets, and its
+// migrations, on Cloudflare and on the local database of cf dev.
 //   env: { ...rateLimits(spec, name, bindings.rateLimit) }
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { Config } from "./config.ts";
+import { output, run } from "./run.ts";
 
 /** A limit as the spec declares it. */
 type Limit = { binding: string; limit: number; period: 10 | 60 };
@@ -30,3 +36,57 @@ export function rateLimits<B>(spec: { paths?: object }, worker: string, rateLimi
 		.flatMap(op => (op && typeof op === "object" && op["x-rate-limit"]) || []);
 	return Object.fromEntries(declared.map(({ binding, limit, period }) => [binding, rateLimit({ namespace: namespaceOf(worker, binding), simple: { limit, period } })]));
 }
+
+/** migrateLocal applies migrations/*.sql, each once, to the local D1 database of the dev server on
+ * port, through cf dev's local explorer. */
+export async function migrateLocal(project: Pick<Config, "worker">, port: number, dir = "."): Promise<void> {
+	const endpoint = `http://localhost:${port}/cdn-cgi/local/explorer/api/d1/database/DB-${project.worker}/raw`;
+	const sql = async (statement: string): Promise<unknown> => {
+		const reply = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sql: statement }) });
+		const body = (await reply.json()) as { success: boolean; errors: unknown[]; result?: { results?: { rows?: unknown[][] } }[] };
+		if (!body.success) throw new Error(`local D1 refused (HTTP ${reply.status} ${JSON.stringify(body.errors)}): ${statement}`);
+		return body.result?.at(-1)?.results?.rows?.[0]?.[0];
+	};
+	await sql("CREATE TABLE IF NOT EXISTS _local_migrations (name TEXT PRIMARY KEY, applied_at TEXT DEFAULT CURRENT_TIMESTAMP)");
+	for (const name of readdirSync(join(dir, "migrations")).filter(file => file.endsWith(".sql")).sort()) {
+		if (Number(await sql(`SELECT count(*) FROM _local_migrations WHERE name = '${name}'`)) > 0) continue;
+		await sql(readFileSync(join(dir, "migrations", name), "utf8"));
+		await sql(`INSERT INTO _local_migrations (name) VALUES ('${name}')`);
+		console.log("applied", name);
+	}
+}
+
+/** deploy deploys the Worker with its secrets from the environment (never printed: they reach cf in a
+ * file only this user can read, removed after), then applies migrations/ to its D1 database, if the
+ * project has migrations. `mode` deploys another of the config's modes (cf deploy --mode): the Worker
+ * <worker>-<mode>, as cloudflare.config.ts names it, with a database of its own. */
+export function deploy(project: Pick<Config, "worker" | "secrets" | "optionalSecrets">, mode?: string): void {
+	const secrets: Record<string, string> = {};
+	for (const name of project.secrets ?? []) {
+		const value = process.env[name];
+		if (!value) throw new Error(`${name} is not set: the Worker needs it (fnox exec -- npm run deploy)`);
+		secrets[name] = value;
+	}
+	for (const name of project.optionalSecrets ?? []) {
+		const value = process.env[name];
+		if (value) secrets[name] = value;
+	}
+	const args = ["deploy", ...(mode ? ["--mode", mode] : [])];
+	const folder = mkdtempSync(join(tmpdir(), "charter-secrets-"));
+	try {
+		if (Object.keys(secrets).length > 0) {
+			const file = join(folder, "secrets.json");
+			writeFileSync(file, JSON.stringify(secrets), { mode: 0o600 });
+			args.push("--secrets-file", file);
+		}
+		run("cf", args);
+	} finally {
+		rmSync(folder, { recursive: true, force: true });
+	}
+	if (!existsSync("migrations")) return;
+	const database = `${project.worker}${mode ? `-${mode}` : ""}-db`;
+	const found = (JSON.parse(output("cf", ["d1", "list", "--name", database, "--per-page", "100"])) as { name: string; uuid: string }[]).find(d => d.name === database);
+	if (!found) throw new Error(`no D1 database ${database} after the deploy`);
+	run("cf", ["d1", "migrations", "apply", found.uuid, "--dir", "migrations"]);
+}
+

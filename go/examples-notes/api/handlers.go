@@ -16,6 +16,7 @@ import (
 
 	"github.com/joeblew999/charter/go/lib/auth"
 	"github.com/joeblew999/charter/go/lib/follow"
+	"github.com/joeblew999/charter/go/lib/transport"
 )
 
 // Env is what the platform supplies: bindings on Cloudflare (platform_js.go), memory elsewhere.
@@ -27,7 +28,7 @@ type Env struct {
 }
 
 // Trusted is who may do what (reads are public, writing needs write):
-//   - the Worker's secrets (secrets in charter.config.ts), each with its scopes: READ_TOKEN may not write;
+//   - the Worker's secrets (secrets.ts), each with its scopes: READ_TOKEN may not write;
 //   - Cloudflare Access, once it is in front of the Worker: a person who
 //     logged in writes, a machine's service token reads (and writes with the write token beside it);
 //   - an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): what each token's scope claim says.
@@ -161,7 +162,7 @@ func (env Env) watch(_ context.Context, in *WatchInput) (*huma.StreamResponse, e
 	}
 	return &huma.StreamResponse{Body: func(hc huma.Context) {
 		hc.SetHeader("Content-Type", "text/event-stream")
-		w := flushing(hc.BodyWriter())
+		w := transport.Flushing(hc.BodyWriter())
 		// A comment first: the response starts now, not at the first note.
 		if _, err := io.WriteString(w, ": \n\n"); err != nil {
 			return
@@ -187,9 +188,9 @@ func (env Env) watch(_ context.Context, in *WatchInput) (*huma.StreamResponse, e
 }
 
 // live is the WebSocket channel's feed (AsyncAPI channel liveNotes). workers-go can't answer a
-// WebSocket upgrade itself, so it answers with lines, one JSON note each, and the Worker's entry
-// (worker.mjs) sends each line as a frame. The stream only ends when Follow gives up (hub
-// down); the entry then closes the socket with 1011, so the client reconnects with `after`.
+// WebSocket upgrade itself, so it answers with lines, one JSON note each, and the WebSocket adapter
+// (go/lib/transport) sends each line as a frame. The stream only ends when Follow gives up (hub
+// down); the adapter then closes the socket with 1011, so the client reconnects with `after`.
 func (env Env) live(_ context.Context, in *LiveInput) (*huma.StreamResponse, error) {
 	if !strings.EqualFold(in.Upgrade, "websocket") {
 		return nil, huma.NewError(http.StatusUpgradeRequired, "expected a WebSocket upgrade")
@@ -200,7 +201,7 @@ func (env Env) live(_ context.Context, in *LiveInput) (*huma.StreamResponse, err
 	}
 	return &huma.StreamResponse{Body: func(hc huma.Context) {
 		hc.SetHeader("Content-Type", "application/x-ndjson")
-		w := flushing(hc.BodyWriter())
+		w := transport.Flushing(hc.BodyWriter())
 		// An empty line first: the response (and so the 101) goes out now, not at the first note.
 		if _, err := io.WriteString(w, "\n"); err != nil {
 			return
@@ -217,23 +218,4 @@ func (env Env) live(_ context.Context, in *LiveInput) (*huma.StreamResponse, err
 			log.Printf("live: follow gave up: %v", err)
 		}
 	}}, nil
-}
-
-// flushing sends every write on at once (net/http buffers; workers-go's writer does not).
-func flushing(w io.Writer) io.Writer {
-	if f, ok := w.(http.Flusher); ok {
-		return flushWriter{w, f}
-	}
-	return w
-}
-
-type flushWriter struct {
-	io.Writer
-	http.Flusher
-}
-
-func (w flushWriter) Write(p []byte) (int, error) {
-	n, err := w.Writer.Write(p)
-	w.Flush()
-	return n, err
 }

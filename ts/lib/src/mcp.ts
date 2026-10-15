@@ -3,10 +3,8 @@
 // 2026-07-28 era and the 2025 handshake. What this adds is the tools themselves, from what the
 // contract already says, so nothing is declared twice: every procedure that answers once is a tool
 // named by its operationId, with its own input and output schemas, and a call runs the procedure
-// through oRPC's call(), with its middleware and validation, in the REST handler's context (the
-// request's headers): auth and rate limits are the REST route's.
-//   const mcp = mcpHandler(router, { info });
-//   if (url.pathname === mcpPath) return mcp(request, { headers: request.headers });
+// through oRPC's call(), with its middleware and validation, in the REST handler's context: auth and
+// rate limits are the REST route's. charter-lib/serve mounts it at /api/mcp.
 import type { Meta, MetaPlugin } from "@orpc/contract";
 import { getAsyncIteratorObjectSchemaDetails } from "@orpc/contract";
 import { getOpenAPIMeta } from "@orpc/openapi";
@@ -17,13 +15,13 @@ import { withoutSafeBounds, withoutUnusedDefs } from "./schema.ts";
 /** Where the endpoint is, beside the API's specs. */
 export const mcpPath = "/api/mcp";
 
-/** notATool leaves a procedure out of the tools, as mcp.Expose(op, false) does. */
+/** notATool leaves a procedure out of the tools, as go/lib/mcp's Expose(op, false) does. */
 export const notATool = (): MetaPlugin<any, any, any> => ({
 	name: "~charter-mcp",
 	init: (current: Meta) => ({ ...current, "~charter-mcp": false }),
 });
 
-type AnyProcedure = Procedure<any, any, any, any, any>;
+export type AnyProcedure = Procedure<any, any, any, any, any>;
 
 /** A tool: what tools/list says of it, and the procedure a call runs. */
 export interface Tool {

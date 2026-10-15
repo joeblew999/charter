@@ -2,7 +2,7 @@
 // output are Go structs; the struct tags are the schema. From this one definition come the handlers'
 // validation, the OpenAPI and AsyncAPI specs (spec.go), the MCP tools, and from the specs Fern's
 // SDKs, CLI and docs. OperationID and Tags name the SDK methods, and Extensions carry Fern's
-// x-fern-*. The `example` tags are what the SDKs' READMEs show (TestExamplesAreThereAndValid).
+// x-fern-*. The `example` tags are what the SDKs' READMEs show (cmd/spec checks them: specs.Problems).
 // Add a route to Routes, then: npm run spec.
 //
 // The pages (package pages) are not in the contract: they are HTML for browsers. They call the same
@@ -36,7 +36,7 @@ type Message struct {
 	CreatedAt string `json:"created_at" example:"2026-10-03 12:00:00"`
 }
 
-// Position is the message's place in the log: what a stream resumes after (go/follow).
+// Position is the message's place in the log: what a stream resumes after (go/lib/follow).
 func (m Message) Position() int64 { return m.ID }
 
 type HelloOutput struct {

@@ -4,7 +4,7 @@
 // its WebSocket client from inside a Worker. test/sdk-in-worker.ts reads what they answer.
 import { ConformanceClient } from "./client/index.mjs";
 import { WebhooksHelper } from "./client/webhooks/index.mjs";
-import { type Deployment, handler, seen } from "./api/handlers.ts";
+import { type Deployment, handler, seen, sign } from "./api/handlers.ts";
 import { seeds } from "./api/store.ts";
 
 /** What the harness's routes (/harness/sdk-test, /harness/ws-test) answer, and test/sdk-in-worker.ts reads: each
@@ -14,17 +14,12 @@ export interface Report {
 	results: Record<string, { ok: boolean; detail: unknown }>;
 }
 
-async function hmacHex(secret: string, body: string) {
-	const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-	const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
-	return [...new Uint8Array(mac)].map(b => b.toString(16).padStart(2, "0")).join("");
-}
 
 export async function sdkTest(deployment: Deployment): Promise<Response> {
 	let pages = 0;
 	const client = new ConformanceClient({
 		baseUrl: "https://conformance.invalid",
-		oauth: { clientId: "id-1", clientSecret: "secret-1" },
+		oauth: { clientId: deployment.oauth.clientId, clientSecret: deployment.oauth.clientSecret },
 		fetch: (input, init) => {
 			const request = new Request(input, init);
 			if (request.method === "GET" && new URL(request.url).pathname.endsWith("/notes")) pages++;
@@ -76,8 +71,8 @@ export async function sdkTest(deployment: Deployment): Promise<Response> {
 	});
 	await check("webhook HMAC signature (valid accepted, forged rejected)", async () => {
 		const body = JSON.stringify({ event: "note.created", note: seeds[0] });
-		const good = await WebhooksHelper.verifySignature(body, await hmacHex("whsec", body), "whsec");
-		const bad = await WebhooksHelper.verifySignature(body, await hmacHex("wrong", body), "whsec");
+		const good = await WebhooksHelper.verifySignature(body, await sign("whsec", body), "whsec");
+		const bad = await WebhooksHelper.verifySignature(body, await sign("wrong", body), "whsec");
 		return [good && !bad, { good, bad }];
 	});
 
@@ -88,13 +83,13 @@ export async function sdkTest(deployment: Deployment): Promise<Response> {
 export async function wsTest(origin: string, deployment: Deployment): Promise<Response> {
 	const client = new ConformanceClient({
 		baseUrl: origin.replace(/^http/, "ws"),
-		oauth: { clientId: "id-1", clientSecret: "secret-1" },
+		oauth: { clientId: deployment.oauth.clientId, clientSecret: deployment.oauth.clientSecret },
 		fetch: (input, init) => handler(new Request(input, init), deployment),
 	} as ConformanceClient.Options);
 	try {
 		// Workers can't send WebSocket headers, where the SDK puts the token: get it with the SDK's own
 		// auth client and pass it as a query parameter (connect's standard queryParams option).
-		const { access_token } = await client.auth.getToken({ client_id: "id-1", client_secret: "secret-1" });
+		const { access_token } = await client.auth.getToken({ client_id: deployment.oauth.clientId, client_secret: deployment.oauth.clientSecret });
 		const socket = await client.liveNotes.connect({ reconnectAttempts: 0, connectionTimeoutInSeconds: 5, queryParams: { access_token } });
 		const events: { event: string; id: string; auth?: string }[] = [];
 		const done = new Promise<void>((resolve, reject) => {

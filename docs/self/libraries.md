@@ -5,7 +5,7 @@ nav_order: 12
 
 # Libraries: what an API imports
 
-A Worker imports charter's library; the tool, `charter-ts`, only runs its steps. Both come from the same release.
+A Worker imports charter's library; the tool, `charter-ts`, only runs its commands. Both come from the same release.
 
 ## TypeScript: charter-lib
 
@@ -20,13 +20,15 @@ A Worker imports charter's library; the tool, `charter-ts`, only runs its steps.
 | `"charter-lib/follow"` | `follow()`: the gap-free feed behind the streams ([Streaming](streaming.md)) |
 | `"charter-lib/mcp"` | Every procedure that answers once as an MCP tool at `/api/mcp`, on the official MCP SDK |
 
-From the tool, for `charter.config.ts` and `cloudflare.config.ts`:
+From the tool, for a project's own files:
 
-| Import | What it is |
-|---|---|
-| `"charter-ts/config"` | `defineConfig` |
-| `"charter-ts/cloudflare"` | `rateLimits(spec, worker, bindings.rateLimit)`: a Rate Limiting binding per limit the spec declares |
-| `"charter-ts/scripts"` | What the steps are made of: `run`, `withServer`, `migrateLocal`, `deploy`, `sdk` |
+| Import | What it is | In |
+|---|---|---|
+| `"charter-ts/config"` | `defineConfig` | `charter.config.ts` |
+| `"charter-ts/cloudflare"` | `rateLimits(spec, worker, bindings.rateLimit)`: a Rate Limiting binding per limit the spec declares | `cloudflare.config.ts` |
+| `"charter-ts/sdk"` | `sdk(group, { ifStale })`: an SDK the live tests need, generated when `fern/` changed | `charter.config.ts` |
+| `"charter-ts/vite"` | The Vite config every project's is | `vite.config.ts` |
+| `"charter-ts/ci"` | `CI`, the type of a repo's own jobs | `ci.config.ts` |
 
 ## Go: github.com/joeblew999/charter/go/lib
 

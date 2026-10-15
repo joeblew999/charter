@@ -1,7 +1,7 @@
 // Runs a Go Worker (the TinyGo Wasm in build/), keeping Go runtimes alive between requests.
 //
 // This file and the others in this folder ship with the Go library and are not copied into a
-// project: `dev wasm-build` writes them into the project's build/ folder, beside the Wasm and
+// project: charter-ts writes them into the project's build/ folder (its Go build), beside the Wasm and
 // workers-go's wasm_exec.js and runtime.mjs, from the version of the library the project builds
 // against. So the JavaScript here and the Go it talks to (transport, hub) always match, and the
 // imports below are of files in build/.
@@ -146,7 +146,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		for (const [name, value] of request.headers) head += `\n${name}\n${value}`;
 		const body = request.body ? new Uint8Array(await request.arrayBuffer()) : null;
 		let runtime = waiting.pop();
-		// For measuring (dev bench -each): which kind of runtime a request got.
+		// Which kind of runtime a request got, in the answer's x-go-runtime: for looking into a slow one.
 		const kind = runtime ? (runtime.served ? "reused" : runtime.warm ? "warm" : "new") : "new";
 		if (runtime) {
 			// The bindings and waitUntil are this request's.

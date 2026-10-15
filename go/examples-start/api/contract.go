@@ -2,7 +2,7 @@
 // output are Go structs; the struct tags are the schema. From this one definition come the handlers'
 // validation, the OpenAPI and AsyncAPI specs (spec.go), the MCP tools, and from the specs Fern's
 // SDKs, CLI and docs. OperationID and Tags name the SDK methods, and Extensions carry Fern's
-// x-fern-*. The `example` tags are what the SDKs' READMEs show (TestExamplesAreThereAndValid).
+// x-fern-*. The `example` tags are what the SDKs' READMEs show (cmd/spec checks them: specs.Problems).
 // Add a route to Routes, then: npm run spec.
 package api
 

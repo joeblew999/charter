@@ -14,7 +14,7 @@
 //   - a bearer token the API issued itself, at an OAuth token endpoint of its own (`issued`): the API
 //     checks it, and says what it may do.
 //
-// `scheme()`, `accessScheme()` and `oidcScheme()` go into openapiSpec's `base`. An operation needs the
+// `scheme()`, `accessScheme()` and `oidcScheme()` go into the Document's `base` (charter-lib/serve). An operation needs the
 // scopes its security lists (`needs`; the API's default when it lists none; nothing when its security
 // is an empty list), by any scheme. No credentials, or credentials that do not verify: 401. Known,
 // without a scope the operation needs: 403. Unset, a secret or setting trusts no one.
@@ -37,7 +37,7 @@ export const ACCESS_HEADER = "cf-access-jwt-assertion";
 
 export type Security = Record<string, string[]>[];
 type Operation = OpenAPIV3_2.OperationObject;
-/** openapiSpec's `base`, or the part of it these functions write. */
+/** The Document's `base`, or the part of it these functions write. */
 export type Base = Partial<Omit<OpenAPIV3_2.OpenAPIObject, "openapi" | "info">>;
 
 const withScheme = (base: Base, name: string, scheme: object): Base => ({
@@ -45,7 +45,7 @@ const withScheme = (base: Base, name: string, scheme: object): Base => ({
 	components: { ...base.components, securitySchemes: { ...base.components?.securitySchemes, [name]: scheme as OpenAPIV3_2.SecuritySchemeObject } },
 });
 
-/** For openapiSpec's `base`: bearer tokens, and the scopes an operation needs when it says nothing (none: public). */
+/** For the Document's `base`: bearer tokens, and the scopes an operation needs when it says nothing (none: public). */
 export const scheme = (...scopes: string[]): Base => ({
 	components: { securitySchemes: { [NAME]: { type: "http", scheme: "bearer" } } },
 	...(scopes.length ? { security: [{ [NAME]: scopes }] } : {}),
@@ -62,11 +62,11 @@ export const accessScheme = (api: string, base: Base) => {
 	const header = (name: string, option: string, variable: string, description: string) =>
 		({ type: "apiKey", in: "header", name, description, "x-fern-header": { name: option, env: `${envPrefix(api)}${variable}` } });
 	return withScheme(withScheme(base,
-		ACCESS_CLIENT_ID, header("CF-Access-Client-Id", "accessClientId", "_ACCESS_CLIENT_ID", "A Cloudflare Access service token's Client ID: a machine's own (charter access token create)")),
+		ACCESS_CLIENT_ID, header("CF-Access-Client-Id", "accessClientId", "_ACCESS_CLIENT_ID", "A Cloudflare Access service token's Client ID: a machine's own (cf zero-trust access service-tokens create)")),
 		ACCESS_CLIENT_SECRET, header("CF-Access-Client-Secret", "accessClientSecret", "_ACCESS_CLIENT_SECRET", "The service token's Client Secret"));
 };
 
-/** Adds an OpenID Connect issuer's access tokens to a `base`; the discovery URL is the API's, which `discovery` serves. */
+/** Adds an OpenID Connect issuer's access tokens to a `base`; the discovery URL is the API's, which `wellKnown` serves. */
 export const oidcScheme = (base: Base) => withScheme(base, OIDC_NAME, {
 	type: "openIdConnect", openIdConnectUrl: "/.well-known/openid-configuration",
 	description: "An access token from the OpenID Connect issuer the deployment trusts (OIDC_ISSUER), with the operation's scopes",
@@ -88,7 +88,7 @@ const scopesIn = (requirement: Record<string, string[]>) =>
 
 /**
  * A security list with each requirement that names only these schemes rewritten as one per scheme
- * the spec declares, with the same scopes: the specs then say every way in. openapiSpec applies it.
+ * the spec declares, with the same scopes: the specs then say every way in. The OpenAPI spec applies it.
  */
 export function expand(declared: Record<string, unknown> | undefined, security: Security | undefined): Security | undefined {
 	if (!security?.length || !declared) return security;

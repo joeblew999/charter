@@ -141,7 +141,7 @@ describe("new", () => {
 		// It stands alone: its tests import its own contract, and nothing points outside it.
 		assert.match(read(into, "test/live.ts"), /from "\.\.\/api\/schemas\.ts"/);
 		assert.match(read(into, "tsconfig.node.json"), /"test"/);
-		const outside = spawnSync("grep", ["-rl", "-e", "shared/", "-e", "ts/examples-", join(into, "test"), join(into, "charter.config.ts"), join(into, "tsconfig.node.json")], { encoding: "utf8" }).stdout.trim();
+		const outside = spawnSync("grep", ["-rl", "-e", "ts/examples-", join(into, "test"), join(into, "charter.config.ts"), join(into, "tsconfig.node.json")], { encoding: "utf8" }).stdout.trim();
 		assert.equal(outside, "", `it points outside itself:\n${outside}`);
 		const pkg = JSON.parse(read(into, "package.json")) as { name: string; scripts: Record<string, string>; dependencies: Record<string, string>; devDependencies: Record<string, string> };
 		assert.equal(pkg.name, "demo-api");

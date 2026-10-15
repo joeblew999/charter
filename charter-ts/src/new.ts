@@ -1,31 +1,27 @@
-// charter-ts new: a new project, a copy of a tested example (start: one route; notes: the notes API,
-// with auth, streams and rate limits), in TypeScript or, with --go, in Go, under its own name, in a repo
-// of its own that adopt keeps. The package carries the examples in templates/ (written when it is
-// packed, by copyTemplate); in the charter repo they are read from ts/ and go/ themselves.
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+// charter-ts new: a new project, a copy of one of charter's tested examples (start: one route; notes:
+// the notes API, with sign-in, streams and rate limits), in TypeScript or, with --go, in Go, under its
+// own name, in a repo of its own that adopt keeps. The examples are charter's repo's, as the release
+// has them: charter-ts fetches the repo at its own tag (ts-v<version>) from GitHub; run from charter's
+// own checkout, it copies them from there.
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { charterRepo, packageDir, releaseURL, version } from "./package.ts";
-import { output } from "./scripts.ts";
+import { charterRepo, releaseURL, version } from "./package.ts";
+import { output } from "./run.ts";
 
-export const templates = ["start", "notes"] as const;
-export type Template = (typeof templates)[number];
+export const examples = ["start", "notes"] as const;
+type Example = (typeof examples)[number];
 /** A project's language: TypeScript (oRPC) or Go (Huma). */
-export const languages = ["ts", "go"] as const;
-export type Language = (typeof languages)[number];
-
-/** Where the package carries a template: templates/<template>, in Go templates/go-<template>. */
-export const packedName = (template: Template, language: Language) => `${language === "go" ? "go-" : ""}${template}`;
+type Language = "ts" | "go";
 
 /** What a copy leaves out: what npm, cf, Fern and the build write, and local secrets. */
 const left = new Set(["node_modules", ".wrangler", ".cloudflare", "dist", "build", "package-lock.json", ".DS_Store"]);
-const leftPaths = new Set(["sdk/out", "sdk/.work", "client"]);
+const leftPaths = new Set(["sdk/out"]);
 const leftFile = (name: string) => name.startsWith(".dev.vars") || name.endsWith(".log") || name.endsWith(".tsbuildinfo");
 
-/** copyProject copies a project's own files from one folder to another, less `also` (paths in it).
- * npm drops a package's .gitignore files, so a template holds it as gitignore; `gitignore` says which
- * name to write. */
-export function copyProject(from: string, to: string, gitignore: ".gitignore" | "gitignore", also: string[] = []): void {
+/** copyProject copies a project's own files from one folder to another, less the paths in `also`. */
+function copyProject(from: string, to: string, also: string[] = []): void {
 	cpSync(from, to, {
 		recursive: true,
 		filter: source => {
@@ -34,34 +30,50 @@ export function copyProject(from: string, to: string, gitignore: ".gitignore" | 
 			return path === "" || !(left.has(name) || leftPaths.has(path) || also.includes(path) || (statSync(source).isFile() && leftFile(name)));
 		},
 	});
-	for (const name of [".gitignore", "gitignore"]) {
-		if (name !== gitignore && existsSync(join(to, name))) renameSync(join(to, name), join(to, gitignore));
-	}
 }
 
-/** copyTemplate copies an example of charter's repo (repo) into `to`: a TypeScript one as it is; a Go
+/** copyExample copies an example of charter's repo (at repo) into `to`: a TypeScript one as it is; a Go
  * one with its TypeScript twin's tests, which in the repo it runs where they are, and the schemas they
  * check its answers against, so that it stands alone. Its committed Go SDK is the example's (a project
- * publishes its own), and so is the soak test of a redeploy (test/soak*), which this repo runs by hand. */
-export function copyTemplate(repo: string, template: Template, language: Language, to: string, gitignore: ".gitignore" | "gitignore"): void {
-	const twin = join(repo, "ts", `examples-${template}`);
-	if (language === "ts") return copyProject(twin, to, gitignore);
-	copyProject(join(repo, "go", `examples-${template}`), to, gitignore, ["sdk/go", "test/soak.ts", "test/soak-go"]);
+ * publishes its own), and so is the soak test of a redeploy (test/soak*), which charter runs by hand. */
+function copyExample(repo: string, example: Example, language: Language, to: string): void {
+	const twin = join(repo, "ts", `examples-${example}`);
+	if (language === "ts") return copyProject(twin, to);
+	copyProject(join(repo, "go", `examples-${example}`), to, ["sdk/go", "test/soak.ts", "test/soak-go"]);
 	cpSync(join(twin, "test"), join(to, "test"), { recursive: true });
 	cpSync(join(twin, "api", "schemas.ts"), join(to, "test", "schemas.ts"));
 	rewrite(join(to, "test"), content => content.replaceAll('from "../api/schemas.ts"', 'from "./schemas.ts"'));
-	rewrite(to, (content, file) => (basename(file) === "charter.config.ts" ? content.replaceAll(`../../ts/examples-${template}/test`, "test") : content));
+	rewrite(to, (content, file) => (basename(file) === "charter.config.ts" ? content.replaceAll(`../../ts/examples-${example}/test`, "test") : content));
 	const tsconfig = join(to, "tsconfig.node.json");
 	writeFileSync(tsconfig, JSON.stringify({ ...JSON.parse(readFileSync(tsconfig, "utf8")), include: ["charter.config.ts", "test"] }, null, "\t") + "\n");
 }
 
-/** A template into `to`: in the charter repo, its examples as they are now (a templates/ left there by
- * a pack is never read: it would be what an older commit packed); else the copy the package carries. */
-function fromTemplate(template: Template, language: Language, to: string): void {
-	if (charterRepo) return copyTemplate(charterRepo, template, language, to, ".gitignore");
-	const packed = join(packageDir, "templates", packedName(template, language));
-	if (!existsSync(packed)) throw new Error(`no template ${packedName(template, language)} in ${packed}`);
-	copyProject(packed, to, ".gitignore");
+/** The repo the examples are copied from: charter's own checkout, when charter-ts runs from it; else the
+ * repo at this release's tag, from GitHub, or from the archive CHARTER_SOURCE names (charter's test of
+ * new). It is fetched into a folder of its own, which done removes. */
+async function examplesRepo(): Promise<{ root: string; done: () => void }> {
+	if (charterRepo) return { root: charterRepo, done: () => {} };
+	const scratch = mkdtempSync(join(tmpdir(), "charter-examples-"));
+	const done = () => rmSync(scratch, { recursive: true, force: true });
+	try {
+		let archive = process.env.CHARTER_SOURCE;
+		if (!archive) {
+			const url = `https://github.com/joeblew999/charter/archive/refs/tags/ts-v${version()}.tar.gz`;
+			const response = await fetch(url);
+			if (!response.ok) throw new Error(`the examples of charter-ts ${version()} could not be fetched: ${url} answered ${response.status}`);
+			archive = join(scratch, "charter.tar.gz");
+			writeFileSync(archive, Buffer.from(await response.arrayBuffer()));
+		}
+		const into = join(scratch, "repo");
+		mkdirSync(into);
+		output("tar", ["-xzf", resolve(archive), "-C", into]);
+		// GitHub's archive has the repo in one folder (charter-ts-v<version>); one of the files alone has none.
+		const top = readdirSync(into);
+		return { root: top.length === 1 && !existsSync(join(into, "ts")) ? join(into, top[0]!) : into, done };
+	} catch (error) {
+		done();
+		throw error;
+	}
 }
 
 const text = /\.(ts|mts|js|mjs|json|ya?ml|toml|md|sql|html|css|txt|go)$|^go\.mod$|^gitignore$|^\.gitignore$/;
@@ -88,13 +100,18 @@ export async function newProject(args: string[]): Promise<void> {
 	});
 	const [name] = positionals;
 	if (!name || !/^[a-z][a-z0-9-]*$/.test(name)) throw new Error("new needs a name of lowercase letters, digits and -, which is the Worker's name too: charter-ts new my-api");
-	const from = values.from as Template;
-	if (!templates.includes(from)) throw new Error(`--from is one of ${templates.join(", ")}`);
+	const from = values.from as Example;
+	if (!examples.includes(from)) throw new Error(`--from is one of ${examples.join(", ")}`);
 	const into = resolve(values.into ?? name);
 	if (existsSync(into) && readdirSync(into).length > 0) throw new Error(`${into} is not empty`);
 	mkdirSync(into, { recursive: true });
 	const language: Language = values.go ? "go" : "ts";
-	fromTemplate(from, language, into);
+	const repo = await examplesRepo();
+	try {
+		copyExample(repo.root, from, language, into);
+	} finally {
+		repo.done();
+	}
 
 	const old = `charter-${from}-${language}`;
 	const subdomain = values.subdomain ?? "your-subdomain";

@@ -39,6 +39,7 @@ const watching = (async () => {
 })();
 // One baseUrl serves HTTP and WebSocket: the socket needs the ws(s):// form. The channel is public, but
 // the SDK asks for credentials for it: auth: false says there are none.
+// Upstream: fern-api/fern#17998 (when fixed: drop auth: false)
 const live = new NotesClient({ baseUrl: origin.replace(/^http/, "ws"), auth: false, headers });
 const socket = await live.liveNotes.connect({ reconnectAttempts: 0 });
 const received = new Promise<void>(resolve => socket.on("message", message => {

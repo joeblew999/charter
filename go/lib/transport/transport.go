@@ -23,6 +23,31 @@
 // be shared goes through a binding, a Durable Object or a database, as the notes hub does.
 package transport
 
+import (
+	"io"
+	"net/http"
+)
+
+// Flushing sends every write on at once: net/http buffers, and on Workers an answer becomes a
+// stream at its first Flush. A feed's writer (SSE, a channel's lines) writes through it.
+func Flushing(w io.Writer) io.Writer {
+	if f, ok := w.(http.Flusher); ok {
+		return flushWriter{w, f}
+	}
+	return w
+}
+
+type flushWriter struct {
+	io.Writer
+	http.Flusher
+}
+
+func (w flushWriter) Write(p []byte) (int, error) {
+	n, err := w.Writer.Write(p)
+	w.Flush()
+	return n, err
+}
+
 // MessagesHeader, on the answer to an upgrade, says how the channel takes what the client sends.
 const MessagesHeader = "X-Websocket-Messages"
 

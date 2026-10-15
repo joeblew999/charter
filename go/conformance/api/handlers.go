@@ -283,7 +283,7 @@ func (env Env) chat(_ context.Context, in *ChatInput) (*huma.StreamResponse, err
 	words := strings.Split("echo "+in.Body.Prompt, " ")
 	return &huma.StreamResponse{Body: func(hc huma.Context) {
 		hc.SetHeader("Content-Type", "text/event-stream")
-		w := flushing(hc.BodyWriter())
+		w := transport.Flushing(hc.BodyWriter())
 		if _, err := io.WriteString(w, ": \n\n"); err != nil {
 			return
 		}
@@ -358,7 +358,7 @@ func (env Env) watch(_ context.Context, in *WatchInput) (*huma.StreamResponse, e
 	}
 	return &huma.StreamResponse{Body: func(hc huma.Context) {
 		hc.SetHeader("Content-Type", "text/event-stream")
-		w := flushing(hc.BodyWriter())
+		w := transport.Flushing(hc.BodyWriter())
 		// A comment first: the response starts now, not at the first note.
 		if _, err := io.WriteString(w, ": \n\n"); err != nil {
 			return
@@ -402,7 +402,7 @@ func (env Env) live(_ context.Context, in *LiveInput) (*huma.StreamResponse, err
 	return &huma.StreamResponse{Body: func(hc huma.Context) {
 		hc.SetHeader("Content-Type", "application/x-ndjson")
 		hc.SetHeader(transport.MessagesHeader, transport.MessagesPost)
-		w := flushing(hc.BodyWriter())
+		w := transport.Flushing(hc.BodyWriter())
 		// An empty line first: the response (and so the 101) goes out now, not at the first note.
 		if _, err := io.WriteString(w, "\n"); err != nil {
 			return
@@ -431,23 +431,4 @@ func (env Env) subscribe(_ context.Context, in *SubscribeInput) (*struct{}, erro
 		return nil, huma.Error422UnprocessableEntity("validation failed", &huma.ErrorDetail{Location: "body.topic", Message: "the one topic is " + topic, Value: in.Body.Topic})
 	}
 	return nil, nil
-}
-
-// flushing sends every write on at once (net/http buffers; workers-go's writer does not).
-func flushing(w io.Writer) io.Writer {
-	if f, ok := w.(http.Flusher); ok {
-		return flushWriter{w, f}
-	}
-	return w
-}
-
-type flushWriter struct {
-	io.Writer
-	http.Flusher
-}
-
-func (w flushWriter) Write(p []byte) (int, error) {
-	n, err := w.Writer.Write(p)
-	w.Flush()
-	return n, err
 }

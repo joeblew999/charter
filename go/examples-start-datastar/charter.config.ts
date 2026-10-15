@@ -1,7 +1,8 @@
 // What charter-ts needs to know about this project (npm run <name> runs charter-ts <name>), typed, in one place.
 import { defineConfig, type TestContext } from "charter-ts/config";
 
-// The start API is the same in Go and in TypeScript, so its test is ts/examples-start's, typed.
+// Its test against a server is the TypeScript start project's (the hello route every start project has),
+// typed; its messages and pages are tested by go test (api/api_test.go).
 const both = ({ origin, node }: Pick<TestContext, "origin" | "node">) => node("../../ts/examples-start/test/live.ts", origin);
 
 export default defineConfig({
@@ -13,7 +14,7 @@ export default defineConfig({
 	port: Number(process.env.API_PORT ?? 5180),
 	/** Both specs, from the contract (api/contract.go). */
 	specs: { go: "./cmd/spec" },
-	go: { lint: ["api", "cmd", "pages"], gsx: true, sdk: true },
+	go: { lint: ["api", "cmd", "pages"], gsx: true },
 	/** npm run check, natively and under workerd: the live test. */
 	native: { run: both },
 	test: { run: both },

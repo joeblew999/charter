@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { charterFile } from "./charter-files.ts";
-import { output } from "./scripts.ts";
+import { output } from "./run.ts";
 import { repoRoot, type Settings, settings } from "./settings.ts";
 
 interface GitHubRepo {

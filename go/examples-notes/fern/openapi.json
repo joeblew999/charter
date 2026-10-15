@@ -103,7 +103,7 @@
     },
     "securitySchemes": {
       "accessClientId": {
-        "description": "A Cloudflare Access service token's Client ID: a machine's own (charter access token create)",
+        "description": "A Cloudflare Access service token's Client ID: a machine's own (cf zero-trust access service-tokens create)",
         "in": "header",
         "name": "CF-Access-Client-Id",
         "type": "apiKey",

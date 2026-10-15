@@ -12,9 +12,9 @@ Each is `npm run <name>`; what it takes goes after `--` (`npm run issues -- plan
 
 | When | Run | What it does |
 |---|---|---|
-| First, whenever you start: one labelled needs-triage comes before anything else. With a kind, to file one: a plan or a bug is an issue, never a page | `npm run issues` | REMOTE, read-only: the open issues, newest first; with a kind (bug, feature, upstream, plan), the body of a new one and the gh command that files it |
-| Before every commit | `npm run check` | every check that needs no Cloudflare account: in a project, the types, the specs, the tests, the API run and tested, its size; in a Go module, gofmt, go vet and go test; at a repo's top, the jobs ci.config.ts lists in check |
-| After changing a page in docs/ | `npm run docs` | check docs/ for what a program can (front matter, links, scripts and paths that don't exist); --review has Claude bring docs/ into line with docs/charter/writing.md |
+| First, whenever you start; with a kind, to file a bug or a plan | `npm run issues` | REMOTE, read-only: the open issues, newest first; with a kind (bug, feature, upstream, plan), the body of a new one and the gh command that files it |
+| Before every commit | `npm run check` | every check that needs no Cloudflare account: in a project, the types, the specs against the contract, the tests, the API run and tested, its size; in a Go module, gofmt, go vet and go test; at a repo's top, the jobs ci.config.ts lists in check (gh signed in, for the repo job) |
+| After changing a page in docs/ | `npm run docs` | what a program can see wrong in docs/ (front matter, links and anchors, pages nothing links to, scripts and paths that don't exist, pinned release versions); --review has Claude read it for the rest |
 | To run a job as GitHub does, here; --remote to start it there | `npm run ci` | a job of ci.config.ts here, as GitHub runs it; with no job, every job GitHub runs on a change; --remote starts the job on GitHub instead |
 | Now and then: a CLOSED one means its workaround can go | `npm run upstream` | REMOTE, read-only: the upstream issues the code works around (its `Upstream:` tags), and their state |
 | After changing package.json's description, keywords or homepage | `npm run repo` | REMOTE: the repo on GitHub as package.json says: labels, description, homepage, topics, GitHub Pages; --check changes nothing and fails on drift |

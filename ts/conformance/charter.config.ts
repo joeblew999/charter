@@ -1,11 +1,11 @@
 // What charter-ts needs to know about this project (npm run <name> runs charter-ts <name>), typed, in one place.
 import { defineConfig } from "charter-ts/config";
-import { sdk } from "charter-ts/scripts";
+import { sdk } from "charter-ts/sdk";
 import { optionalSecrets, secrets } from "./secrets.ts";
 import { specs } from "./api/spec.ts";
 
 /** The second Worker, the same code deployed with --mode api, which serves the API the specs describe:
- * on Cloudflare a Worker can't open a WebSocket to itself. On another account: set API_SERVER_URL. */
+ * on Cloudflare a Worker can't open a WebSocket to itself. On another account: set API_SERVER_URL, then npm run spec. */
 const apiUrl = process.env.API_SERVER_URL ?? "https://charter-conformance-ts-api.gedw99.workers.dev";
 
 export default defineConfig({
@@ -20,6 +20,7 @@ export default defineConfig({
 	optionalSecrets,
 	/** Throwaway tokens for the local Worker and its tests. */
 	localSecrets: { READ_TOKEN: "local-read-token", WRITE_TOKEN: "local-write-token" },
+	/** Both specs, from the contract (api/contract.ts), naming the API's Worker. */
 	specs,
 	specServer: apiUrl,
 	/** The Worker runs the generated SDK itself: it is copied into client/ first. */

@@ -1,7 +1,7 @@
 {
 	"name": "charter-ts",
 	"version": "0.7.0",
-	"description": "A repo kept the charter way, and APIs on Cloudflare Workers in TypeScript or Go, step by step: the charter-ts command. For a project, from its charter.config.ts: dev, check, spec, sdk, deploy, live-test. For any repo: new, adopt, docs, issues, repo, upstream, ci. Each is the npm script of its name. The library a TypeScript Worker imports is charter-lib (ts/lib). Installed from its GitHub Release: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz",
+	"description": "charter-ts, the command of charter: contract-first APIs on Cloudflare Workers, in TypeScript or Go, and the repos that hold them. In a project (its charter.config.ts): dev, check, spec, sdk, deploy, live-test. In any repo: issues, docs, ci, upstream, repo, adopt, new. A repo's npm scripts run them, each the command of its name. A TypeScript Worker imports charter-lib (ts/lib), from the same release: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -21,12 +21,11 @@
 		"dist",
 		"charter-files",
 		"review.md",
-		"templates",
 		"tsconfig.node.json",
 		"tsconfig.worker.json"
 	],
 	"scripts": {
-		"build": "tsc -p tsconfig.build.json",
+		"build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
 		"check": "tsc && node --test src/*.test.ts && npm run build",
 		"prepack": "npm run build && node pack.ts"
 	},
@@ -39,13 +38,9 @@
 			"types": "./dist/cloudflare.d.ts",
 			"default": "./dist/cloudflare.js"
 		},
-		"./scripts": {
-			"types": "./dist/scripts.d.ts",
-			"default": "./dist/scripts.js"
-		},
-		"./package": {
-			"types": "./dist/package.d.ts",
-			"default": "./dist/package.js"
+		"./sdk": {
+			"types": "./dist/sdk.d.ts",
+			"default": "./dist/sdk.js"
 		},
 		"./vite": {
 			"types": "./dist/vite.d.ts",

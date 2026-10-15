@@ -10,13 +10,14 @@
 // MCP, both specs, an unknown path. Then what is saved in each project, which no request shows: the
 // specs in fern/ (the files the SDKs are made from) and the database's migrations/.
 import { methods, mcpRequest, type OpenAPI, type Operation, type Parameter, type Schema } from "./standard.ts";
-import { goBuild } from "./go.ts";
+import { buildWorker } from "./commands.ts";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Config } from "./config.ts";
-import { freePort, migrateLocal, run, withServer } from "./scripts.ts";
+import { migrateLocal } from "./cloudflare.ts";
+import { freePort, run, withServer } from "./run.ts";
 
 type Answer = { status: number; headers: Record<string, string>; body: unknown };
 type Auth = "none" | "read" | "write";
@@ -218,13 +219,12 @@ export async function twins(args: string[]): Promise<void> {
 	const state = mkdtempSync(join(tmpdir(), "charter-twins-"));
 	const [refPort, otherPort] = [await freePort(), await freePort()];
 	const origins = [`http://localhost:${refPort}`, `http://localhost:${otherPort}`] as const;
-	// A Go Worker, built with TinyGo, as check builds it.
+	// Each Worker readied as check readies it: a Go one built, an SDK a Worker runs copied in.
 	for (const [dir, config] of [[reference, refConfig], [other, otherConfig]] as const) {
-		if (!config.go) continue;
 		const here = process.cwd();
 		process.chdir(dir);
 		try {
-			goBuild(config.go, config.bundleLimit);
+			await buildWorker(config);
 		} finally {
 			process.chdir(here);
 		}

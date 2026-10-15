@@ -9,24 +9,15 @@ export interface Specs {
 	asyncapi: (server: string) => Promise<{ channels: object }>;
 }
 
-export interface SpecFiles {
-	/** Where the API is served: the specs name it as their server. */
-	server: string;
-	/** Check the committed files instead of writing them. */
-	check?: boolean;
-}
-
-/** writeSpecs writes both specs, or with check fails (exit code 1) if a committed one is stale. */
-export async function writeSpecs(specs: Specs, { server, check = false }: SpecFiles): Promise<void> {
+/** writeSpecs writes both specs into fern/, naming server as the API's; with check it writes nothing,
+ * and fails if a committed one is not what the contract gives. */
+export async function writeSpecs(specs: Specs, { server, check = false }: { server: string; check?: boolean }): Promise<void> {
 	const openapi = await specs.openapi(server);
 	const asyncapi = await specs.asyncapi(server);
 	for (const [file, spec] of [["fern/openapi.json", openapi], ["fern/asyncapi.json", asyncapi]] as const) {
 		const text = JSON.stringify(spec, null, 2) + "\n";
 		if (!check) writeFileSync(file, text);
-		else if (readFileSync(file, "utf8") !== text) {
-			console.error(`${file} is stale: npm run spec`);
-			process.exit(1);
-		}
+		else if (readFileSync(file, "utf8") !== text) throw new Error(`${file} is not what the contract gives: npm run spec`);
 	}
 	console.log(check ? "specs match the contract" : `fern/openapi.json: ${Object.keys(openapi.paths ?? {}).length} paths; fern/asyncapi.json: ${Object.keys(asyncapi.channels).length} channels (${server})`);
 }

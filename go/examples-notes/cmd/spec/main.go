@@ -7,8 +7,8 @@
 // someone changed the contract and didn't run `npm run spec`. The same functions the Worker
 // serves /api/openapi.json and /api/asyncapi.json with (api/spec.go, go/lib/serve).
 //
-// Either way it first fails if an operation cannot be the MCP tool it would be (mcp.Check): the
-// specs don't show that, and otherwise the first client to list the tools finds out.
+// Either way it first fails on what the specs don't show (specs.Problems): a route that does not name
+// its operation, an operation that cannot be its MCP tool, an example missing or invalid.
 package main
 
 import (

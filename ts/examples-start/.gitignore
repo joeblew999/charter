@@ -1,19 +1,14 @@
-# npm packages, and what cf writes
+# What npm and cf write
 node_modules/
 .cloudflare/
 .wrangler/
-.dev.vars*
-!.dev.vars.example
-.env*
-!.env.example
-.secrets/
-*.log
-*.cpuprofile
-.DS_Store
-
-# Generated SDKs (npm run sdk), and release builds
-sdk/out/
-sdk/.work/
-target/
 dist/
 
+# Local secrets and logs
+.dev.vars*
+.env*
+*.log
+.DS_Store
+
+# What npm run sdk writes
+sdk/out/

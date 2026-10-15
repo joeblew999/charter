@@ -185,7 +185,7 @@ func (k *keyCache) discover(ctx context.Context, issuer string) (*discovery, err
 		return d, nil
 	}
 	d = &discovery{}
-	if err := fetchJSON(ctx, strings.TrimSuffix(issuer, "/")+"/.well-known/openid-configuration", d); err != nil {
+	if err := fetchJSON(ctx, strings.TrimSuffix(issuer, "/")+OpenIDPath, d); err != nil {
 		return nil, err
 	}
 	if d.Issuer != issuer || d.JWKS == "" {

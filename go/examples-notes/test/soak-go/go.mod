@@ -6,5 +6,5 @@ require github.com/joeblew999/charter/go/examples-notes/sdk/go v0.0.0
 
 require github.com/google/uuid v1.6.0 // indirect
 
-// The committed Go SDK. test/soak.mjs builds with a workspace file that points at a generated one instead.
+// The committed Go SDK. test/soak.ts builds with a workspace file that points at a generated one instead.
 replace github.com/joeblew999/charter/go/examples-notes/sdk/go => ../../sdk/go

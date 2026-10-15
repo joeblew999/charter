@@ -92,7 +92,7 @@ func (env Env) Recent(ctx context.Context, limit int) ([]Message, error) {
 	return store.Before(ctx, math.MaxInt64, limit)
 }
 
-// Feed is the log and its wake-up together: what go/follow follows. The store is the log, the
+// Feed is the log and its wake-up together: what go/lib/follow follows. The store is the log, the
 // hub only wakes followers, so a stream loses nothing when the hub does.
 type Feed struct {
 	store Store

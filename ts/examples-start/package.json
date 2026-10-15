@@ -2,7 +2,7 @@
 	"name": "charter-start-ts",
 	"private": true,
 	"type": "module",
-	"description": "The start of a TypeScript API on Cloudflare Workers, from an oRPC contract (api/contract.ts). npm run check is every local check (no Cloudflare account); npm run dev runs it locally; npx charter-ts lists every step.",
+	"description": "The start of a TypeScript API on Cloudflare Workers, from an oRPC contract (api/contract.ts). npm run check is every check that needs no Cloudflare account; npm run dev runs it here; npx charter-ts help lists every command.",
 	"scripts": {
 		"dev": "charter-ts dev",
 		"check": "charter-ts check",
