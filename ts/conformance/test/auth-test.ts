@@ -58,12 +58,18 @@ try {
 		["a token no one issued", bearer("never-issued"), 401, "refused"],
 		["nothing", {}, 401, "credentials are required"],
 	];
+	// A refusal says how to get in (the challenge, RFC 9728): where the API's metadata is, and a 403
+	// what scope it lacks.
+	const metadataURL = `${new URL(api).origin}/.well-known/oauth-protected-resource${new URL(api).pathname === "/" ? "" : new URL(api).pathname}`;
 	for (const [name, headers, want, says] of writes) {
 		const res = await fetch(`${api}/notes`, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify({ body: `auth test: ${name}` }) });
-		const text = await res.text();
-		const ok = res.status === want && (!says || text.includes(says));
-		report(`create: ${name}`, ok, `: ${res.status}${ok ? "" : ` ${text}`}`);
+		const text = await res.text(), challenge = res.headers.get("www-authenticate") ?? "";
+		const challenged = want === 200 || (challenge.startsWith("Bearer ") && challenge.includes(`resource_metadata="${metadataURL}"`) && (want !== 403 || challenge.includes('error="insufficient_scope", scope="write"')));
+		const ok = res.status === want && (!says || text.includes(says)) && challenged;
+		report(`create: ${name}`, ok, `: ${res.status}${ok ? "" : ` ${text} ${challenge}`}`);
 	}
+	const metadata = (await (await fetch(metadataURL)).json()) as { resource?: string; authorization_servers?: string[]; scopes_supported?: string[] };
+	report("the API's metadata names every issuer it trusts, its own first, and its scopes", metadata.resource === api && metadata.authorization_servers?.join() === [api, issuer].join() && metadata.scopes_supported?.join() === "read,write", `: ${JSON.stringify(metadata)}`);
 	const reads: [name: string, headers: Headers, want: number][] = [
 		["the read token reads", bearer(READ_TOKEN), 200],
 		["a machine's service token reads", await access(machine), 200],

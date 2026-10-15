@@ -97,11 +97,21 @@ function objectRoot(schema: unknown): unknown {
 const refusal = (error: unknown) =>
 	error instanceof ORPCError ? error.toJSON() : { message: error instanceof Error ? error.message : String(error) };
 
-/** mcpHandler serves the router's tools at /api/mcp: a server per request (the SDK's stateless way on
- * Workers), whose calls run in the context given, the one the REST handler is given. */
+/** A call refused for its credentials: a 401 or 403 whose ORPCError carries the challenge
+ * (`data.challenge`, charter-lib/auth's Decision), which the answer is, not a tool error. */
+const asksForCredentials = (error: unknown): error is ORPCError<string, { challenge: string }> =>
+	error instanceof ORPCError && error.code in credentialStatus && typeof (error.data as { challenge?: unknown } | undefined)?.challenge === "string";
+const credentialStatus: Record<string, number> = { UNAUTHORIZED: 401, FORBIDDEN: 403 };
+
+/**
+ * mcpHandler serves the router's tools at /api/mcp: a server per request (the SDK's stateless way on
+ * Workers), whose calls run in the context given, the one the REST handler is given. A call refused
+ * for its credentials (asksForCredentials) is the answer's own 401 or 403 with its WWW-Authenticate,
+ * as MCP's authorization asks, so an MCP client knows to sign in; any other refusal is a tool error.
+ */
 export function mcpHandler<T extends Context>(router: Router<T>, { info }: { info: { title: string; version: string } }): (request: Request, context: T) => Promise<Response> {
 	const tools = toolsOf(router);
-	const serverFor = (context: T) => {
+	const serverFor = (context: T, refused: { error?: ORPCError<string, { challenge: string }> }) => {
 		const server = new McpServer({ name: info.title, version: info.version });
 		for (const tool of tools) {
 			server.registerTool(
@@ -112,6 +122,7 @@ export function mcpHandler<T extends Context>(router: Router<T>, { info }: { inf
 						const output = await call(tool.procedure, (args ?? {}) as never, { context } as never);
 						return { content: [{ type: "text", text: JSON.stringify(output) }], structuredContent: output };
 					} catch (error) {
+						if (asksForCredentials(error)) refused.error = error;
 						return { isError: true, content: [{ type: "text", text: JSON.stringify(refusal(error)) }] };
 					}
 				}) as never,
@@ -119,5 +130,19 @@ export function mcpHandler<T extends Context>(router: Router<T>, { info }: { inf
 		}
 		return server;
 	};
-	return (request, context) => createMcpHandler(() => serverFor(context), { responseMode: "json" }).fetch(request);
+	return async (request, context) => {
+		const refused: { error?: ORPCError<string, { challenge: string }> } = {};
+		const message = request.method === "POST" ? ((await request.clone().json().catch(() => undefined)) as { id?: unknown; method?: string } | undefined) : undefined;
+		let response = await createMcpHandler(() => serverFor(context, refused), { responseMode: "json" }).fetch(request);
+		// The 2025 era answers as one Server-Sent Event (the SDK's fallback for it streams whatever the
+		// response mode), sent before the tool has run: a tool call answers once, so its answer is read
+		// to the end here, and a refusal for credentials can still be the answer.
+		if (message?.method === "tools/call" && response.body && response.headers.get("content-type")?.startsWith("text/event-stream")) {
+			response = new Response(await response.text(), { status: response.status, headers: response.headers });
+		}
+		if (!refused.error) return response;
+		await response.body?.cancel();
+		const { code, message: refusedMessage, data } = refused.error;
+		return Response.json({ jsonrpc: "2.0", id: message?.id ?? null, error: { code: -32001, message: refusedMessage, data: refusal(refused.error) } }, { status: credentialStatus[code], headers: { "www-authenticate": data.challenge } });
+	};
 }

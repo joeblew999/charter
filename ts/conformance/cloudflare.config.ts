@@ -39,7 +39,8 @@ export default defineConfig(ctx => {
 			entrypoint,
 			assets: {
 				notFoundHandling: "single-page-application",
-				runWorkerFirst: ["/api/*"],
+				// The API, and what a client reads to find out how to get in (/.well-known/).
+				runWorkerFirst: ["/api/*", "/.well-known/*"],
 			},
 			exports: {
 				ConformanceHub: exports.durableObject({ storage: "sqlite" }),

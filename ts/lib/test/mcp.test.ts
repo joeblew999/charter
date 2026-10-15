@@ -72,6 +72,29 @@ describe("mcpHandler", () => {
 		const allowed = (await rpc("tools/call", { name: "createNote", arguments: { body: "x" } }, { "x-may-write": "yes" })).result;
 		expect(allowed?.structuredContent).toEqual({ id: 2, body: "x" });
 	});
+	it("answers a call refused for its credentials with that 401 and its challenge, so an MCP client signs in", async () => {
+		const challenge = 'Bearer resource_metadata="https://api.test/.well-known/oauth-protected-resource"';
+		const locked = os.use(({ context, next }) => {
+			if (!context.headers?.get("authorization")) throw new ORPCError("UNAUTHORIZED", { message: "credentials are required", data: { challenge } });
+			return next();
+		});
+		const lockedRouter = os.router({ ...router, remove: locked.remove.handler(() => ({})) });
+		const handler = mcpHandler(lockedRouter, { info: { title: "notes-test", version: "1.0.0" } });
+		const ask = async (headers: Record<string, string> = {}) => {
+			const request = new Request("http://localhost/api/mcp", {
+				method: "POST",
+				headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2026-07-28", "mcp-method": "tools/call", "mcp-name": "deleteNote", ...headers },
+				body: JSON.stringify({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "deleteNote", arguments: { id: 1 }, _meta: meta } }),
+			});
+			return handler(request, { headers: request.headers });
+		};
+		const refused = await ask();
+		expect(refused.status).toBe(401);
+		expect(refused.headers.get("www-authenticate")).toBe(challenge);
+		expect(await refused.json()).toMatchObject({ jsonrpc: "2.0", id: 5, error: { code: -32001 } });
+		expect((await ask({ authorization: "Bearer t" })).status).toBe(200);
+	});
+
 	it("answers a named object as itself on a 2025 connection too, not wrapped as { result }", async () => {
 		const legacy = async (id: number, method: string, params: Record<string, unknown>) => {
 			const request = new Request("http://localhost/api/mcp", {

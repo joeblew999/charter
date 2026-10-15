@@ -52,12 +52,14 @@ func Handler(env Env) http.Handler {
 	// After auth: a limit counts per caller (WriteLimit).
 	routes.UseMiddleware(ratelimit.Middleware(routes, nil))
 	mcp := humamcp.Handler(routes)
-	discovery := auth.Discovery(env.Var)
+	// How a client finds out how to get in: the API's metadata (RFC 9728), which a 401's challenge
+	// names, and the specs' openIdConnectUrl, on to the issuer's discovery document.
+	wellKnown := auth.WellKnown(routes, env.Var, Trusted...)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var spec func(server string) ([]byte, error)
 		switch r.URL.Path {
-		case "/.well-known/openid-configuration":
-			discovery.ServeHTTP(w, r)
+		case auth.OpenIDPath, auth.ResourcePath:
+			wellKnown.ServeHTTP(w, r)
 			return
 		case "/api/openapi.json":
 			spec = OpenAPI

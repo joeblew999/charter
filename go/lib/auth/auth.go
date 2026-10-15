@@ -86,10 +86,12 @@ type OIDC struct{}
 // Issued trusts bearer tokens the API issues itself, at an OAuth token endpoint of its own: Check
 // says whether a token is one of them and still good, and what it may do. Scheme is that endpoint's
 // security scheme in the specs (an oauth2 one), which an operation's Security names beside this
-// package's schemes, with the same scopes.
+// package's schemes, with the same scopes. TokenPath is the endpoint (e.g. /oauth/token): with it, the
+// API names itself an authorization server and says how to use it (WellKnown: ServerPath).
 type Issued struct {
-	Scheme string
-	Check  func(token string) (scopes []string, ok bool)
+	Scheme    string
+	Check     func(token string) (scopes []string, ok bool)
+	TokenPath string
 }
 
 func (Token) trusted()  {}
@@ -296,11 +298,14 @@ func Middleware(api huma.API, setting func(name string) string, trusted ...Trust
 		}
 		callers, err := g.identify(ctx.Context(), ctx.Header)
 		if err != nil || len(callers) == 0 {
-			ctx.SetHeader("WWW-Authenticate", "Bearer")
+			// The challenge says where the API tells a client how to get in (RFC 9728): what an MCP
+			// client reads to start signing in.
+			reason := ""
 			message := "credentials are required: " + g.ways()
 			if err != nil {
-				message = "the credentials were refused: " + err.Error()
+				reason, message = "invalid_token", "the credentials were refused: "+err.Error()
 			}
+			ctx.SetHeader("WWW-Authenticate", challenge(contextOrigin(ctx), reason, nil))
 			huma.WriteErr(api, ctx, http.StatusUnauthorized, message)
 			return
 		}
@@ -314,6 +319,8 @@ func Middleware(api huma.API, setting func(name string) string, trusted ...Trust
 				}
 			}
 		}
+		// Known, without the scope: the challenge names the scopes an operation needs (insufficient_scope).
+		ctx.SetHeader("WWW-Authenticate", challenge(contextOrigin(ctx), "insufficient_scope", scopesIn(security[0])))
 		huma.WriteErr(api, ctx, http.StatusForbidden, callers[0].Name()+" may not do this: it needs "+describe(security))
 	}
 }

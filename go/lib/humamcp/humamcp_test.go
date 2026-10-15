@@ -331,6 +331,46 @@ func TestWhatTheOperationRefusesIsAToolError(t *testing.T) {
 	}
 }
 
+// An operation that asks for credentials (a 401 or 403 with a challenge, as go/auth answers) is the
+// MCP answer's own status and challenge, so an MCP client knows to sign in; what else it refuses
+// stays a tool error.
+func TestARefusalThatAsksForCredentialsIsTheAnswersStatus(t *testing.T) {
+	api := testAPI(map[string]int{})
+	const challenge = `Bearer resource_metadata="https://things.example/.well-known/oauth-protected-resource"`
+	api.UseMiddleware(func(ctx huma.Context, next func(huma.Context)) {
+		if ctx.Operation().OperationID != "deleteThing" {
+			next(ctx)
+			return
+		}
+		switch ctx.Header("Authorization") {
+		case "Bearer writer":
+			next(ctx)
+		case "Bearer reader":
+			ctx.SetHeader("WWW-Authenticate", `Bearer error="insufficient_scope", scope="write"`)
+			huma.WriteErr(api, ctx, http.StatusForbidden, "it needs scope write")
+		default:
+			ctx.SetHeader("WWW-Authenticate", challenge)
+			huma.WriteErr(api, ctx, http.StatusUnauthorized, "credentials are required")
+		}
+	})
+	h := Handler(api)
+	none := post(t, h, rpc("tools/call", `{"name":"deleteThing","arguments":{"id":"1"}}`))
+	if none.Status != 401 || none.Header.Get("WWW-Authenticate") != challenge || none.Error == nil || none.Error.Code != -32001 {
+		t.Errorf("without credentials: %d %q %s", none.Status, none.Header.Get("WWW-Authenticate"), none.Raw)
+	}
+	reader := post(t, h, rpc("tools/call", `{"name":"deleteThing","arguments":{"id":"1"}}`), "Authorization", "Bearer reader")
+	if reader.Status != 403 || !strings.Contains(reader.Header.Get("WWW-Authenticate"), "insufficient_scope") {
+		t.Errorf("without the scope: %d %q", reader.Status, reader.Header.Get("WWW-Authenticate"))
+	}
+	if writer := post(t, h, rpc("tools/call", `{"name":"deleteThing","arguments":{"id":"1"}}`), "Authorization", "Bearer writer"); writer.Status != 200 || writer.Result["isError"] == true {
+		t.Errorf("with the scope: %d %s", writer.Status, writer.Raw)
+	}
+	// A refusal without a challenge (the handler's own 404) is still a tool error.
+	if result := call(t, h, "getThing", `{"id": 404}`); result["isError"] != true {
+		t.Errorf("the handler's own error: %v", result)
+	}
+}
+
 func TestACallRegistersOnlyItsOwnOperation(t *testing.T) {
 	registered := map[string]int{}
 	h := Handler(testAPI(registered))

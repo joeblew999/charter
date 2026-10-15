@@ -7,6 +7,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -70,9 +72,53 @@ func TestScopes(t *testing.T) {
 		if resp.Code != c.want {
 			t.Errorf("%s %s with %q: %d, want %d: %s", c.method, c.path, c.token, resp.Code, c.want, resp.Body)
 		}
-		if c.want == 401 && resp.Header().Get("WWW-Authenticate") != "Bearer" {
-			t.Errorf("%s %s: a 401 without WWW-Authenticate: Bearer", c.method, c.path)
+		// A refusal says where the API tells a client how to get in (RFC 9728), and a 403 what it lacks.
+		challenge := resp.Header().Get("WWW-Authenticate")
+		if (c.want == 401 || c.want == 403) && (!strings.HasPrefix(challenge, "Bearer ") || !strings.Contains(challenge, `resource_metadata="`) || !strings.HasSuffix(challenge, ResourcePath+`"`)) {
+			t.Errorf("%s %s: a %d whose WWW-Authenticate is %q", c.method, c.path, c.want, challenge)
 		}
+		if c.want == 403 && !strings.Contains(challenge, `error="insufficient_scope", scope="write"`) {
+			t.Errorf("%s %s: a 403 that does not say it needs write: %q", c.method, c.path, challenge)
+		}
+	}
+}
+
+// What a client reads to find out how to get in: the protected-resource metadata (RFC 9728), naming
+// every issuer the API trusts and its scopes, and, for an API that issues its own tokens, the
+// authorization-server metadata (RFC 8414).
+func TestWellKnown(t *testing.T) {
+	settings := map[string]string{OIDCIssuer: "https://issuer.example/", AccessTeam: "team.cloudflareaccess.com"}
+	api := testAPI(t, settings)
+	trusted := []Trusted{Access{}, OIDC{}, Issued{Scheme: "OAuth", Check: func(string) ([]string, bool) { return nil, false }, TokenPath: "/oauth/token"}}
+	known := WellKnown(api, func(name string) string { return settings[name] }, trusted...)
+	get := func(path string) (int, map[string]any) {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		known.ServeHTTP(rec, httptest.NewRequest("GET", "https://api.example"+path, nil))
+		var body map[string]any
+		json.Unmarshal(rec.Body.Bytes(), &body)
+		return rec.Code, body
+	}
+	_, resource := get(ResourcePath)
+	if resource["resource"] != "https://api.example" || fmt.Sprint(resource["authorization_servers"]) != "[https://api.example https://issuer.example https://team.cloudflareaccess.com]" || fmt.Sprint(resource["scopes_supported"]) != "[read write]" {
+		t.Errorf("the resource's metadata: %v", resource)
+	}
+	if _, mcp := get(ResourcePath + "/mcp"); mcp["resource"] != "https://api.example/mcp" {
+		t.Errorf("a resource with a path: %v", mcp)
+	}
+	_, server := get(ServerPath)
+	if server["issuer"] != "https://api.example" || server["token_endpoint"] != "https://api.example/oauth/token" || fmt.Sprint(server["grant_types_supported"]) != "[client_credentials]" {
+		t.Errorf("the authorization server's metadata: %v", server)
+	}
+	if code, _ := get("/.well-known/nothing"); code != 404 {
+		t.Errorf("an unknown document: %d, want 404", code)
+	}
+	// An API that issues no tokens is no authorization server.
+	bare := WellKnown(api, nil, Token{Secret: "WRITE_TOKEN"})
+	rec := httptest.NewRecorder()
+	bare.ServeHTTP(rec, httptest.NewRequest("GET", "https://api.example"+ServerPath, nil))
+	if rec.Code != 404 {
+		t.Errorf("the authorization server of an API that issues no tokens: %d, want 404", rec.Code)
 	}
 }
 

@@ -81,8 +81,20 @@ export const contract = {
 			}))
 			// Not a tool: an MCP client sends its token as a header, as the SDKs do.
 			.meta(notATool())
-			.input(z.object({ client_id: z.string(), client_secret: z.string() }))
-			.output(z.object({ access_token: z.string(), expires_in: z.number().int() })),
+			// The client-credentials grant (RFC 6749, 4.4). The client's credentials are in it
+			// (client_secret_post, what the SDKs send) or in an Authorization: Basic header
+			// (client_secret_basic, what an OAuth client sends first, an MCP client among them).
+			.input(z.object({
+				// A string, not an enum: with an enum here, Fern's Go SDK does not compile (the handler checks it).
+				// Upstream: Fern, not filed (when fixed: z.enum(["client_credentials"]))
+				grant_type: z.string().optional().describe("client_credentials, the one grant"),
+				client_id: z.string().optional(),
+				client_secret: z.string().optional(),
+				scope: z.string().optional().describe("The scopes asked for: a token here may read and write whatever is asked"),
+				resource: z.string().optional().describe("The API the token is for (RFC 8707): this one"),
+			}))
+			// The token response (RFC 6749, 5.1): a bearer token, for expires_in seconds.
+			.output(z.object({ access_token: z.string(), token_type: z.string(), expires_in: z.number().int() })),
 	},
 	notes: {
 		list: oc

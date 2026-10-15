@@ -6,7 +6,7 @@ import { ConformanceClient } from "./client/index.mjs";
 import { WebhooksHelper } from "./client/webhooks/index.mjs";
 import type { Report } from "./report.ts";
 import { env } from "cloudflare:workers";
-import { type Deployment, mockApi, seen, type Settings, trusted, webhookOf } from "./conformance.ts";
+import { type Deployment, mockApi, seen, type Settings, trusted, webhookOf, wellKnownOf } from "./conformance.ts";
 import { d1Notes } from "./hub.ts";
 import { seeds } from "./notes.ts";
 export { ConformanceHub } from "./hub.ts";
@@ -130,6 +130,8 @@ export default {
 		// ?target= another Worker serving the mock API: on Cloudflare a Worker can't call its own URL (error 1042).
 		if (url.pathname === "/api/ws-test") return wsTest(url.searchParams.get("target") ?? url.origin);
 		if (url.pathname.startsWith("/api/mock/")) return mockApi(request, deployment);
+		// What a client reads to find out how to get in: the metadata of the API at /api/mock.
+		if (url.pathname.startsWith("/.well-known/")) return wellKnownOf(request, deployment) ?? new Response("not found", { status: 404 });
 		return new Response("not found", { status: 404 });
 	},
 } satisfies ExportedHandler;

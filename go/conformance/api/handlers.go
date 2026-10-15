@@ -6,12 +6,14 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -70,7 +72,7 @@ func (env Env) trusted() []auth.Trusted {
 		auth.Token{Secret: "READ_TOKEN", Scopes: []string{"read"}},
 		auth.Access{People: []string{"read", "write"}, Machines: []string{"read"}},
 		auth.OIDC{},
-		auth.Issued{Scheme: OAuth, Check: func(token string) ([]string, bool) {
+		auth.Issued{Scheme: OAuth, TokenPath: "/oauth/token", Check: func(token string) ([]string, bool) {
 			return []string{"read", "write"}, env.validToken(token, time.Now())
 		}},
 	}
@@ -86,7 +88,9 @@ func Handler(env Env) http.Handler {
 	// After auth: a limit counts per caller (WriteLimit).
 	routes.UseMiddleware(ratelimit.Middleware(routes, nil))
 	mcp := humamcp.Handler(routes)
-	discovery := auth.Discovery(env.setting)
+	// How a client finds out how to get in: the API's metadata, its token endpoint's, and the OpenID
+	// Connect issuer's (go/lib/auth), each named by the challenge of a 401 or 403.
+	wellKnown := auth.WellKnown(routes, env.setting, env.trusted()...)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// A WebSocket client that can't send headers (a browser, a Worker) sends its token as
 		// ?access_token=: on the channel, and only there, it is the Authorization header.
@@ -96,8 +100,8 @@ func Handler(env Env) http.Handler {
 		}
 		var spec func(server string) ([]byte, error)
 		switch r.URL.Path {
-		case "/.well-known/openid-configuration":
-			discovery.ServeHTTP(w, r)
+		case auth.OpenIDPath, auth.ResourcePath, auth.ServerPath:
+			wellKnown.ServeHTTP(w, r)
 			return
 		case "/openapi.json":
 			spec = OpenAPI
@@ -159,16 +163,49 @@ func (env Env) validToken(token string, now time.Time) bool {
 	return err == nil && now.Unix() < until
 }
 
+// token is the client-credentials grant (RFC 6749, 4.4): the client's credentials from the form or
+// from a Basic header, checked in constant time.
 func (env Env) token(_ context.Context, in *TokenInput) (*TokenOutput, error) {
-	id := hmac.Equal([]byte(in.Body.ClientID), []byte(env.setting("CLIENT_ID")))
-	secret := hmac.Equal([]byte(in.Body.ClientSecret), []byte(env.setting("CLIENT_SECRET")))
+	if in.Body.GrantType != "" && in.Body.GrantType != "client_credentials" {
+		return nil, huma.Error400BadRequest("unsupported_grant_type: the one grant is client_credentials")
+	}
+	clientID, clientSecret := in.Body.ClientID, in.Body.ClientSecret
+	if basicID, basicSecret, ok := basicCredentials(in.Authorization); ok {
+		clientID, clientSecret = basicID, basicSecret
+	}
+	id := hmac.Equal([]byte(clientID), []byte(env.setting("CLIENT_ID")))
+	secret := hmac.Equal([]byte(clientSecret), []byte(env.setting("CLIENT_SECRET")))
 	if !id || !secret {
 		return nil, huma.Error401Unauthorized("bad client")
 	}
 	out := &TokenOutput{}
-	out.Body.AccessToken = env.newToken(time.Now())
+	out.Body.AccessToken, out.Body.TokenType = env.newToken(time.Now()), "Bearer"
 	out.Body.ExpiresIn = int32(tokenLife / time.Second)
 	return out, nil
+}
+
+// basicCredentials are a client's id and secret from an Authorization: Basic header, each form-encoded
+// before the base64 (RFC 6749, 2.3.1).
+func basicCredentials(authorization string) (string, string, bool) {
+	scheme, encoded, ok := strings.Cut(authorization, " ")
+	if !ok || !strings.EqualFold(scheme, "Basic") {
+		return "", "", false
+	}
+	raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(encoded))
+	if err != nil {
+		return "", "", false
+	}
+	id, secret, ok := strings.Cut(string(raw), ":")
+	if !ok {
+		return "", "", false
+	}
+	if unescaped, err := url.QueryUnescape(id); err == nil {
+		id = unescaped
+	}
+	if unescaped, err := url.QueryUnescape(secret); err == nil {
+		secret = unescaped
+	}
+	return id, secret, true
 }
 
 // ---- notes: cursor pagination, idempotency, the webhook, the hub ----

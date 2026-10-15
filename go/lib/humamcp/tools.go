@@ -307,10 +307,19 @@ func (d definitions) into(schema map[string]any) {
 }
 
 // run calls op with a tool call's arguments, through api, and returns the tool result.
-func run(api *humaworkers.API, r *http.Request, op *huma.Operation, arguments map[string]any) map[string]any {
+// refusal is an operation's answer that asks for credentials: a 401 or a 403 with a challenge
+// (WWW-Authenticate). It is the MCP answer's own HTTP status and header, not a tool error, so an MCP
+// client knows to sign in (MCP's authorization, on RFC 9728).
+type refusal struct {
+	status    int
+	challenge string
+	body      json.RawMessage
+}
+
+func run(api *humaworkers.API, r *http.Request, op *huma.Operation, arguments map[string]any) (map[string]any, *refusal) {
 	in, err := inputOf(op, api.API.OpenAPI().Components.Schemas)
 	if err != nil {
-		return toolError(err.Error())
+		return toolError(err.Error()), nil
 	}
 	path, query, header := op.Path, url.Values{}, http.Header{}
 	// The operation sees the caller's credentials, as it would over REST: a bearer token, and the JWT
@@ -325,14 +334,14 @@ func run(api *humaworkers.API, r *http.Request, op *huma.Operation, arguments ma
 		delete(arguments, param.Name)
 		if !given || value == nil {
 			if param.In == "path" {
-				return toolError("path." + param.Name + ": expected required path parameter to be present")
+				return toolError("path." + param.Name + ": expected required path parameter to be present"), nil
 			}
 			continue
 		}
 		switch param.In {
 		case "path":
 			if text(value) == "" {
-				return toolError("path." + param.Name + ": expected a value")
+				return toolError("path." + param.Name + ": expected a value"), nil
 			}
 			path = strings.ReplaceAll(path, "{"+param.Name+"}", url.PathEscape(text(value)))
 		case "query":
@@ -360,7 +369,7 @@ func run(api *humaworkers.API, r *http.Request, op *huma.Operation, arguments ma
 		}
 		if value != nil {
 			if body, err = json.Marshal(value); err != nil {
-				return toolError(err.Error())
+				return toolError(err.Error()), nil
 			}
 			header.Set("Content-Type", jsonType)
 		}
@@ -371,7 +380,7 @@ func run(api *humaworkers.API, r *http.Request, op *huma.Operation, arguments ma
 			names = append(names, name)
 		}
 		sort.Strings(names)
-		return toolError("unexpected arguments: " + strings.Join(names, ", "))
+		return toolError("unexpected arguments: " + strings.Join(names, ", ")), nil
 	}
 
 	target := path
@@ -380,7 +389,7 @@ func run(api *humaworkers.API, r *http.Request, op *huma.Operation, arguments ma
 	}
 	request, err := http.NewRequestWithContext(r.Context(), op.Method, target, bytes.NewReader(body))
 	if err != nil {
-		return toolError(err.Error())
+		return toolError(err.Error()), nil
 	}
 	request.Header, request.Host, request.RemoteAddr = header, r.Host, r.RemoteAddr
 	request.URL.Scheme, request.URL.Host = r.URL.Scheme, r.URL.Host // absolute on Workers
@@ -388,6 +397,13 @@ func run(api *humaworkers.API, r *http.Request, op *huma.Operation, arguments ma
 	api.ServeHTTP(response, request)
 
 	answer := bytes.TrimSpace(response.body.Bytes())
+	if challenge := response.header.Get("WWW-Authenticate"); challenge != "" && (response.status == http.StatusUnauthorized || response.status == http.StatusForbidden) {
+		refused := &refusal{status: response.status, challenge: challenge}
+		if json.Valid(answer) {
+			refused.body = json.RawMessage(answer)
+		}
+		return nil, refused
+	}
 	result := map[string]any{"content": []any{}}
 	if len(answer) > 0 {
 		result["content"] = []any{map[string]any{"type": "text", "text": string(answer)}}
@@ -397,7 +413,7 @@ func run(api *humaworkers.API, r *http.Request, op *huma.Operation, arguments ma
 	} else if len(answer) > 0 && answer[0] == '{' && json.Valid(answer) {
 		result["structuredContent"] = json.RawMessage(answer)
 	}
-	return result
+	return result, nil
 }
 
 func toolError(text string) map[string]any {

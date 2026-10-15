@@ -15,8 +15,11 @@
 //     notifications/initialized, ping, tools/list, tools/call.
 //
 // Only tools, and no stream: GET is 405, there are no resources, prompts, progress notifications or
-// list-changed subscriptions, and no authorization of its own (the Authorization header is passed on
-// to the operation). tools.go says how an operation becomes a tool.
+// list-changed subscriptions, and no authorization of its own: the Authorization header is passed on
+// to the operation, and when the operation asks for credentials (a 401 or 403 with WWW-Authenticate,
+// as go/auth answers) that is the answer's HTTP status and header, so an MCP client knows to sign in
+// (MCP's authorization; the challenge points to the API's metadata, RFC 9728). tools.go says how an
+// operation becomes a tool.
 //
 // The rules followed are those of https://modelcontextprotocol.io/specification/2026-07-28
 // (basic, basic/versioning, basic/transports/streamable-http, server/discover, server/tools) and,
@@ -52,6 +55,7 @@ const (
 	invalidParams      = -32602
 	headerMismatch     = -32020
 	unsupportedVersion = -32022
+	unauthorized       = -32001 // a server error (JSON-RPC's -32000 to -32099): the HTTP status says which
 )
 
 const (
@@ -269,7 +273,19 @@ func (s server) call(w http.ResponseWriter, r *http.Request, msg message, p para
 			return nil
 		}
 	}
-	return run(s.api, r, op, arguments)
+	result, refused := run(s.api, r, op, arguments)
+	if refused != nil {
+		// The operation asks for credentials: the answer is its 401 or 403 and its challenge, which
+		// says where the API tells a client how to get in, so an MCP client knows to sign in.
+		w.Header().Set("WWW-Authenticate", refused.challenge)
+		var data any
+		if refused.body != nil {
+			data = refused.body
+		}
+		fail(w, refused.status, msg.ID, unauthorized, http.StatusText(refused.status), data)
+		return nil
+	}
+	return result
 }
 
 func reply(w http.ResponseWriter, id json.RawMessage, result any) {

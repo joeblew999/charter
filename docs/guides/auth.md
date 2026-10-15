@@ -66,6 +66,18 @@ fnox exec -- npm run deploy    # sets them: they are optionalSecrets in charter.
 
 Put `OIDC_ISSUER` (its discovery document is at `<issuer>/.well-known/openid-configuration`, and must name the same issuer) and `OIDC_AUDIENCE` in fnox, as the tokens are: every deploy sets them (`optionalSecrets` in `charter.config.ts`).
 
+## How a client finds out how to get in
+
+A refusal says how to get in, as MCP's authorization asks: every 401 carries `WWW-Authenticate: Bearer resource_metadata="<the API>/.well-known/oauth-protected-resource"`, and a 403 adds `error="insufficient_scope", scope="write"`. That document (RFC 9728) names the API, its scopes and the authorization servers it trusts, in the order a client should try them: the API itself when it issues tokens, the OpenID Connect issuer, the Cloudflare Access team. An API that issues its own tokens (`auth.Issued{..., TokenPath: "/oauth/token"}` in Go, `issued: { ..., tokenPath }` in TypeScript) also says how, at `/.well-known/oauth-authorization-server` (RFC 8414): its token endpoint, the client-credentials grant, and Basic or form credentials.
+
+| | Go | TypeScript |
+|---|---|---|
+| The documents | `auth.WellKnown(routes, env.Var, trusted...)`, mounted for `auth.ResourcePath`, `auth.ServerPath`, `auth.OpenIDPath` | `wellKnown(request, { resource, title, scopes: scopesOf(router), trusted })` for `/.well-known/` |
+| The challenge | `auth.Middleware` sets it | `authorize(headers, security, trusted, resource)` returns it as `challenge`: set it as `WWW-Authenticate`, and put it in the `ORPCError`'s `data` |
+| MCP | `humamcp`: a tool call refused that way is that 401 or 403, with its challenge, not a tool error | `mcpHandler`: the same, from the `ORPCError`'s `data.challenge` |
+
+The conformance projects check the whole chain against both servers, natively, under workerd and on Cloudflare (`ts/conformance/test/mcp-test.ts`, `auth-test.ts`): a tool call without credentials is a 401 whose challenge points to the metadata, which points to the API's own authorization server, whose token endpoint gives a token for the client's credentials, with which the call goes through. MCP's own TypeScript client cannot follow the last steps by itself yet ([Upstream issues](../upstream.md)).
+
 ## From the SDKs
 
 | SDK | Bearer or OIDC token | Access service token |

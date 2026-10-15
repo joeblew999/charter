@@ -94,9 +94,19 @@ func TestTokens(t *testing.T) {
 		if status != c.want {
 			t.Errorf("%s %s with %q: %d, want %d: %s", c.method, c.path, c.authorization, status, c.want, out)
 		}
-		if status == 401 && header.Get("WWW-Authenticate") != "Bearer" {
-			t.Errorf("%s %s: a 401 without WWW-Authenticate: Bearer", c.method, c.path)
+		// A refusal's challenge says where the API tells a client how to get in (RFC 9728), and a
+		// 403 what it lacks.
+		challenge := header.Get("WWW-Authenticate")
+		if (status == 401 || status == 403) && !strings.HasPrefix(challenge, "Bearer ") || (status == 401 || status == 403) && !strings.Contains(challenge, `resource_metadata="`+srv.URL+`/.well-known/oauth-protected-resource"`) {
+			t.Errorf("%s %s with %q: a %d whose challenge is %q", c.method, c.path, c.authorization, status, challenge)
 		}
+		if status == 403 && !strings.Contains(challenge, `error="insufficient_scope", scope="write"`) {
+			t.Errorf("%s %s: a 403 that does not say it needs write: %q", c.method, c.path, challenge)
+		}
+	}
+	// The API's metadata names its scopes; this one issues no tokens of its own.
+	if status, out, _ := do(t, "GET", srv.URL+"/.well-known/oauth-protected-resource", ""); status != 200 || !strings.Contains(out, `"resource":"`+srv.URL+`"`) || !strings.Contains(out, `"scopes_supported":["write"]`) {
+		t.Errorf("the metadata: %d %s", status, out)
 	}
 }
 

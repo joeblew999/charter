@@ -9,4 +9,6 @@ require (
 	github.com/syumai/workers-go v0.36.0
 )
 
+require github.com/go-jose/go-jose/v4 v4.1.5 // indirect
+
 replace github.com/joeblew999/charter/go => ../lib

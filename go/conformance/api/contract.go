@@ -71,19 +71,30 @@ type NoteEvent struct {
 }
 
 // TokenRequest is the OAuth token request: a form, not JSON (RFC 6749).
+// The client's credentials are in it (client_secret_post, what the SDKs send) or in an Authorization:
+// Basic header (client_secret_basic, what an OAuth client sends first, an MCP client among them).
 type TokenRequest struct {
-	ClientID     string `json:"client_id" example:"id-1"`
-	ClientSecret string `json:"client_secret" example:"secret-1"`
+	// A string, not an enum: with an enum here, Fern's Go SDK does not compile (the handler checks it).
+	// Upstream: Fern, not filed (when fixed: enum:"client_credentials")
+	GrantType    string `json:"grant_type,omitempty" required:"false" example:"client_credentials" doc:"client_credentials, the one grant"`
+	ClientID     string `json:"client_id,omitempty" required:"false" example:"id-1"`
+	ClientSecret string `json:"client_secret,omitempty" required:"false" example:"secret-1"`
+	Scope        string `json:"scope,omitempty" required:"false" doc:"The scopes asked for: a token here may read and write whatever is asked"`
+	Resource     string `json:"resource,omitempty" required:"false" doc:"The API the token is for (RFC 8707): this one"`
 }
 
 type TokenInput struct {
+	// client_secret_basic: Basic base64(client_id:client_secret).
+	Authorization string `header:"Authorization" hidden:"true"`
 	// humaworkers.WithForm decodes the form.
 	Body TokenRequest `contentType:"application/x-www-form-urlencoded"`
 }
 
+// TokenOutput is the token response (RFC 6749, 5.1): a bearer token, for expires_in seconds.
 type TokenOutput struct {
 	Body struct {
 		AccessToken string `json:"access_token"`
+		TokenType   string `json:"token_type" example:"Bearer"`
 		ExpiresIn   int32  `json:"expires_in" example:"3600"`
 	}
 }

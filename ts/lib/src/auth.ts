@@ -133,6 +133,9 @@ export interface OIDC {
 export interface Issued {
 	scheme: string;
 	check(token: string): string[] | undefined | Promise<string[] | undefined>;
+	/** The token endpoint, as a path of the API (e.g. /oauth/token): with it, the API names itself an
+	 * authorization server and says how to use it (wellKnown: the authorization-server metadata). */
+	tokenPath?: string;
 }
 
 /** The ways in the API accepts. */
@@ -163,25 +166,112 @@ export function securityOf(procedure: unknown, defaults?: Security): Security | 
 	return (op?.security as Security | undefined) ?? defaults;
 }
 
-export type Decision = { status: 401 | 403; message: string } | { status: 200; caller?: Caller };
+/**
+ * A refusal says why (`message`) and how to get in (`challenge`, the WWW-Authenticate to answer it
+ * with): Bearer, the error if there is one (invalid_token; insufficient_scope with the scopes needed),
+ * and where the API says how to get in (resource_metadata, RFC 9728), what an MCP client reads to
+ * start signing in.
+ */
+export type Decision = { status: 401 | 403; message: string; challenge: string } | { status: 200; caller?: Caller };
 
-/** Whether a request with these headers may run an operation with this security: 200 with its caller, or 401 or 403. */
-export async function authorize(headers: Headers, security: Security | undefined, trusted: Trusted): Promise<Decision> {
+/**
+ * Whether a request with these headers may run an operation with this security: 200 with its caller,
+ * or 401 or 403 with why and the challenge. `resource` is the API's own URL (its origin, or where it
+ * is mounted), for the challenge's resource_metadata.
+ */
+export async function authorize(headers: Headers, security: Security | undefined, trusted: Trusted, resource?: string): Promise<Decision> {
 	if (!security?.length) return { status: 200 };
 	let callers: Caller[];
 	try {
 		callers = await identify(headers, trusted);
 	} catch (error) {
-		return { status: 401, message: `the credentials were refused: ${(error as Error).message}` };
+		return { status: 401, message: `the credentials were refused: ${(error as Error).message}`, challenge: challenge(resource, "invalid_token") };
 	}
-	if (!callers.length) return { status: 401, message: `credentials are required: ${ways(trusted)}` };
+	if (!callers.length) return { status: 401, message: `credentials are required: ${ways(trusted)}`, challenge: challenge(resource) };
 	// Security is a list of alternatives; the scopes of one are all needed.
 	for (const alternative of security) {
 		const caller = callers.find(c => scopesIn(alternative).every(scope => c.scopes.includes(scope)));
 		if (caller) return { status: 200, caller };
 	}
 	const needed = [...new Set(security.map(a => `scope ${scopesIn(a).join(" and ")}`))].join(", or ");
-	return { status: 403, message: `${callerName(callers[0]!)} may not do this: it needs ${needed}` };
+	return { status: 403, message: `${callerName(callers[0]!)} may not do this: it needs ${needed}`, challenge: challenge(resource, "insufficient_scope", scopesIn(security[0]!)) };
+}
+
+/** Where an API at `resource` says how to get in (RFC 9728, 3.1): /.well-known/oauth-protected-resource, then its path. */
+export function resourceMetadataURL(resource: string): string {
+	const url = new URL(resource);
+	return `${url.origin}${RESOURCE_PATH}${url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "")}`;
+}
+
+/** The WWW-Authenticate of a refusal (see Decision). */
+function challenge(resource: string | undefined, error?: string, scopes: string[] = []): string {
+	const parts = [...(error ? [`error="${error}"`] : []), ...(scopes.length ? [`scope="${scopes.join(" ")}"`] : []), ...(resource ? [`resource_metadata="${resourceMetadataURL(resource)}"`] : [])];
+	return parts.length ? `Bearer ${parts.join(", ")}` : "Bearer";
+}
+
+/** Where a client reads how to get in: the protected-resource metadata (RFC 9728), and the
+ * authorization-server metadata of an API that issues its own tokens (RFC 8414). */
+export const RESOURCE_PATH = "/.well-known/oauth-protected-resource";
+export const SERVER_PATH = "/.well-known/oauth-authorization-server";
+const OPENID_PATH = "/.well-known/openid-configuration";
+
+/** What wellKnown answers from: the API's own URL, its name, its scopes, and whom it trusts. */
+export interface API {
+	/** The API's own URL: its origin, or where it is mounted (https://host/api/mock). */
+	resource: string;
+	title: string;
+	scopes: string[];
+	trusted: Trusted;
+}
+
+/**
+ * The answer to a /.well-known/ request of the API's, or undefined when it is none of these: the
+ * protected-resource metadata (the authorization servers it trusts, in the order a client should try
+ * them: the API itself when it issues tokens, an OpenID Connect issuer, the Cloudflare Access team; and
+ * its scopes), the authorization-server metadata when it issues tokens (`issued.tokenPath`), and the
+ * specs' openIdConnectUrl, on to the trusted issuer.
+ */
+export function wellKnown(request: Request, api: API): Response | undefined {
+	const path = new URL(request.url).pathname, resource = new URL(api.resource);
+	const own = resource.pathname === "/" ? "" : resource.pathname.replace(/\/$/, "");
+	const json = (body: unknown) => Response.json(body, { headers: { "access-control-allow-origin": "*" } });
+	const issuer = `${resource.origin}${own}`;
+	if (path === `${RESOURCE_PATH}${own}`) {
+		const team = api.trusted.access?.team && api.trusted.access.aud ? (/^https?:\/\//.test(api.trusted.access.team) ? api.trusted.access.team : `https://${api.trusted.access.team}`) : undefined;
+		const servers = [
+			...(api.trusted.issued?.tokenPath ? [issuer] : []),
+			...(api.trusted.oidc?.issuer && api.trusted.oidc.audience ? [api.trusted.oidc.issuer] : []),
+			...(team ? [team] : []),
+		].map(server => server.replace(/\/$/, ""));
+		return json({ resource: issuer, authorization_servers: [...new Set(servers)], scopes_supported: api.scopes, bearer_methods_supported: ["header"], resource_name: api.title });
+	}
+	if (path === `${SERVER_PATH}${own}` && api.trusted.issued?.tokenPath) {
+		return json({
+			issuer,
+			token_endpoint: `${issuer}${api.trusted.issued.tokenPath}`,
+			grant_types_supported: ["client_credentials"],
+			token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post"],
+			response_types_supported: [],
+			scopes_supported: api.scopes,
+		});
+	}
+	if (path === OPENID_PATH || path === `${own}${OPENID_PATH}`) {
+		const to = discoveryURL(api.trusted.oidc?.issuer);
+		return to ? Response.redirect(to, 302) : new Response("this API trusts no OpenID Connect issuer", { status: 404 });
+	}
+	return undefined;
+}
+
+/** Every scope a router's procedures need (their security, or the API's default), sorted: an API's scopes_supported. */
+export function scopesOf(router: unknown, defaults?: Security): string[] {
+	const scopes = new Set<string>();
+	const walk = (node: unknown): void => {
+		if (node && typeof node === "object" && "~orpc" in node) {
+			for (const requirement of securityOf(node, defaults) ?? []) for (const scope of scopesIn(requirement)) scopes.add(scope);
+		} else if (node && typeof node === "object") Object.values(node).forEach(walk);
+	};
+	walk(router);
+	return [...scopes].sort();
 }
 
 function ways(trusted: Trusted) {

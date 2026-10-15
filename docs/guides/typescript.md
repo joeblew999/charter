@@ -64,7 +64,7 @@ What the Worker imports is `charter-lib` (`ts/lib/`), in `dependencies`; `charte
 |---|---|
 | `"charter-lib/specs"` | Both specs from the contract, for `npm run spec` and for the Worker's `/api/openapi.json` and `/api/asyncapi.json` |
 | `"charter-lib/asyncapi"` | `asyncapi({...})` on a procedure: a WebSocket channel in the AsyncAPI spec |
-| `"charter-lib/auth"` | Bearer tokens, Cloudflare Access, an OpenID Connect issuer and tokens the API issued itself (`issued`, for an OAuth endpoint of its own), with scopes ([Auth](auth.md)) |
+| `"charter-lib/auth"` | Bearer tokens, Cloudflare Access, an OpenID Connect issuer and tokens the API issued itself (`issued`, for an OAuth endpoint of its own), with scopes; each refusal's challenge, and `wellKnown`: what a client reads to find out how to get in ([Auth](auth.md)) |
 | `"charter-lib/ratelimit"` | Limits per caller on Workers Rate Limiting bindings |
 | `"charter-lib/follow"` | `follow()`: the gap-free feed behind the streams ([Streaming](streaming.md)) |
 | `"charter-lib/mcp"` | `mcpHandler(router, { info })`: every procedure that answers once as an MCP tool at `/api/mcp`, on the official MCP SDK ([Agents: MCP](replace-the-example.md#agents-mcp)) |

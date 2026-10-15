@@ -193,10 +193,17 @@
             ],
             "format": "int32",
             "type": "integer"
+          },
+          "token_type": {
+            "examples": [
+              "Bearer"
+            ],
+            "type": "string"
           }
         },
         "required": [
           "access_token",
+          "token_type",
           "expires_in"
         ],
         "type": "object"
@@ -759,12 +766,23 @@
                       "secret-1"
                     ],
                     "type": "string"
+                  },
+                  "grant_type": {
+                    "description": "client_credentials, the one grant",
+                    "examples": [
+                      "client_credentials"
+                    ],
+                    "type": "string"
+                  },
+                  "resource": {
+                    "description": "The API the token is for (RFC 8707): this one",
+                    "type": "string"
+                  },
+                  "scope": {
+                    "description": "The scopes asked for: a token here may read and write whatever is asked",
+                    "type": "string"
                   }
                 },
-                "required": [
-                  "client_id",
-                  "client_secret"
-                ],
                 "type": "object"
               }
             }

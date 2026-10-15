@@ -71,6 +71,46 @@ for (const [era, mode, version] of [["stateless", { pin: "2026-07-28" }, "2026-0
 	await client.close();
 }
 
+// Signing in, as MCP's authorization has it (RFC 9728, RFC 8414): a tool call without credentials is a
+// 401 whose challenge points to the API's metadata, which names an authorization server (the API's
+// own), whose metadata names its token endpoint. The chain is followed here as an OAuth client does,
+// by hand: MCP's own client (ClientCredentialsProvider) refuses an authorization server without an
+// authorization endpoint, which RFC 8414 does not ask of one with only client credentials
+// (docs/upstream.md).
+const meta = { "io.modelcontextprotocol/protocolVersion": "2026-07-28", "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: "mcp-test", version: "1" } };
+const refused = await fetch(endpoint, {
+	method: "POST",
+	headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2026-07-28", "mcp-method": "tools/call", "mcp-name": "createNote" },
+	body: JSON.stringify({ jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "createNote", arguments: { body: "no credentials" }, _meta: meta } }),
+});
+const challenge = refused.headers.get("www-authenticate") ?? "";
+const metadataURL = /resource_metadata="([^"]+)"/.exec(challenge)?.[1];
+check("a tool call without credentials is a 401 whose challenge points to the API's metadata", refused.status === 401 && !!metadataURL, { status: refused.status, challenge });
+type Metadata = { resource?: string; authorization_servers?: string[]; scopes_supported?: string[]; issuer?: string; token_endpoint?: string };
+const metadata = metadataURL ? ((await (await fetch(metadataURL)).json()) as Metadata) : undefined;
+check("the API's metadata names it, its own authorization server first, and its scopes", metadata?.resource === api && metadata.authorization_servers?.[0] === api && ["read", "write"].every(scope => metadata.scopes_supported?.includes(scope)), metadata);
+const issuer = new URL(api);
+const server = (await (await fetch(`${issuer.origin}/.well-known/oauth-authorization-server${issuer.pathname === "/" ? "" : issuer.pathname}`)).json()) as Metadata;
+check("its authorization server's metadata names the token endpoint", server.issuer === api && server.token_endpoint === `${api}/oauth/token`, server);
+// The token endpoint, with the client's credentials as an OAuth client sends them first (Basic), the
+// grant, the scopes the metadata names and the resource (RFC 8707).
+const granted = server.token_endpoint
+	? await fetch(server.token_endpoint, { method: "POST", headers: { authorization: `Basic ${btoa("id-1:secret-1")}` }, body: new URLSearchParams({ grant_type: "client_credentials", scope: (metadata?.scopes_supported ?? []).join(" "), resource: metadata?.resource ?? "" }) })
+	: undefined;
+const token = granted?.ok ? ((await granted.json()) as { access_token?: string; token_type?: string }) : undefined;
+check("its token endpoint gives a bearer token for the client's credentials", token?.token_type === "Bearer" && !!token.access_token, token ?? granted?.status);
+const signedIn = new Client({ name: "mcp-test", version: "1.0.0" });
+await signedIn.connect(new StreamableHTTPClientTransport(endpoint, { requestInit: { headers: { authorization: `Bearer ${token?.access_token ?? ""}` } } }));
+const withToken = (await signedIn.callTool({ name: "createNote", arguments: { body: `signed in ${Date.now()}` } })) as Result;
+check("with that token, the tool call goes through", !withToken.isError && typeof withToken.structuredContent?.id === "string", withToken);
+await signedIn.close();
+// The same refusal in the 2025 era, where the answer comes as a Server-Sent Event.
+const legacy = new Client({ name: "mcp-test", version: "1.0.0" }, { versionNegotiation: { mode: "legacy" } });
+await legacy.connect(new StreamableHTTPClientTransport(endpoint));
+const legacyRefusal = await legacy.callTool({ name: "createNote", arguments: { body: "no credentials" } }).then(() => "answered", (error: unknown) => String(error));
+check("handshake (2025-11-25): a tool call without credentials is refused with the 401, not answered", legacyRefusal !== "answered" && /401|Unauthorized|credentials/i.test(legacyRefusal), legacyRefusal);
+await legacy.close().catch(() => {});
+
 // Left to itself, the client finds the stateless era (it probes with server/discover).
 const auto = new Client({ name: "mcp-test", version: "1.0.0" }, { versionNegotiation: { mode: "auto" } });
 await auto.connect(new StreamableHTTPClientTransport(endpoint, { requestInit: { headers: { authorization } } }));

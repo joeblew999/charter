@@ -7,7 +7,7 @@ import type { z } from "zod";
 import { asyncInfo, contract, END, info, type note } from "./contract.ts";
 import { asyncapiSpec, openapiSpec } from "charter-lib/specs";
 import { follow, type FollowSource } from "charter-lib/follow";
-import { accessScheme, authorize, discoveryURL, oidcScheme, scheme, securityOf, type Caller } from "charter-lib/auth";
+import { accessScheme, authorize, oidcScheme, scheme, scopesOf, securityOf, wellKnown, type Caller } from "charter-lib/auth";
 import { mcpHandler, mcpPath } from "charter-lib/mcp";
 import { keyOf, limitOf, rateLimit } from "charter-lib/ratelimit";
 export { NotesHub } from "./hub.ts";
@@ -50,16 +50,20 @@ const trusted = () => ({
 const base = oidcScheme(accessScheme(info.title, scheme()));
 
 // The contract (src/contract.ts) implemented on D1, served by oRPC's OpenAPIHandler as plain REST,
-// each call allowed by the credentials it carries (401 without any it knows, 403 without the scope),
-// then limited as its contract says, per caller (429 with Retry-After: writeLimit); the handler finds
-// its caller in the context. The router is built from `os`, without the middleware: oRPC would
-// otherwise run it twice per call, once for the router and once for the procedure.
-const os = implement(contract).$context<{ headers?: Headers; resHeaders?: Headers; caller?: Caller }>();
+// each call allowed by the credentials it carries (401 without any it knows, 403 without the scope,
+// each with the challenge that says where the API tells a client how to get in: an MCP client reads it
+// to sign in), then limited as its contract says, per caller (429 with Retry-After: writeLimit); the
+// handler finds its caller in the context. The router is built from `os`, without the middleware: oRPC
+// would otherwise run it twice per call, once for the router and once for the procedure.
+const os = implement(contract).$context<{ headers?: Headers; resHeaders?: Headers; origin?: string; caller?: Caller }>();
 const api = os
 	.use(async ({ context, procedure, next }) => {
 		const headers = context.headers ?? new Headers();
-		const decision = await authorize(headers, securityOf(procedure), trusted());
-		if (decision.status !== 200) throw new ORPCError(decision.status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", { message: decision.message });
+		const decision = await authorize(headers, securityOf(procedure), trusted(), context.origin);
+		if (decision.status !== 200) {
+			context.resHeaders?.set("WWW-Authenticate", decision.challenge);
+			throw new ORPCError(decision.status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", { message: decision.message, data: { challenge: decision.challenge } });
+		}
 		const verdict = await rateLimit(limitOf(procedure), keyOf(decision.caller, headers), env);
 		if (verdict.status === 429) {
 			context.resHeaders?.set("Retry-After", String(verdict.retryAfter));
@@ -153,14 +157,14 @@ export default {
 		// The specs, generated from the same router as fern/{openapi,asyncapi}.json.
 		if (url.pathname === "/api/openapi.json") return Response.json(await openapiSpec(router, { info, server: url.origin, base }));
 		if (url.pathname === "/api/asyncapi.json") return Response.json(await asyncapiSpec(router, { info: asyncInfo, server: url.origin }));
-		// The specs' openIdConnectUrl: on to the issuer's discovery document.
-		if (url.pathname === "/.well-known/openid-configuration") {
-			const to = discoveryURL(settings.OIDC_ISSUER);
-			return to ? Response.redirect(to, 302) : new Response("this API trusts no OpenID Connect issuer", { status: 404 });
+		// How a client finds out how to get in: the API's metadata (RFC 9728), which a 401's challenge
+		// names, and the specs' openIdConnectUrl, on to the issuer's discovery document.
+		if (url.pathname.startsWith("/.well-known/")) {
+			return wellKnown(request, { resource: url.origin, title: info.title, scopes: scopesOf(router), trusted: trusted() }) ?? new Response("not found", { status: 404 });
 		}
-		if (url.pathname === mcpPath) return mcp(request, { headers: request.headers });
+		if (url.pathname === mcpPath) return mcp(request, { headers: request.headers, origin: url.origin });
 		if (url.pathname === "/api/notes/live") return live(request);
-		const { matched, response } = await handler.handle(request, { context: { headers: request.headers } });
+		const { matched, response } = await handler.handle(request, { context: { headers: request.headers, origin: url.origin } });
 		return matched ? response : new Response("not found", { status: 404 });
 	},
 } satisfies ExportedHandler;

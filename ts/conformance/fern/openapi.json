@@ -139,17 +139,25 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "grant_type": {
+                    "description": "client_credentials, the one grant",
+                    "type": "string"
+                  },
                   "client_id": {
                     "type": "string"
                   },
                   "client_secret": {
                     "type": "string"
+                  },
+                  "scope": {
+                    "description": "The scopes asked for: a token here may read and write whatever is asked",
+                    "type": "string"
+                  },
+                  "resource": {
+                    "description": "The API the token is for (RFC 8707): this one",
+                    "type": "string"
                   }
-                },
-                "required": [
-                  "client_id",
-                  "client_secret"
-                ]
+                }
               }
             }
           }
@@ -165,6 +173,9 @@
                     "access_token": {
                       "type": "string"
                     },
+                    "token_type": {
+                      "type": "string"
+                    },
                     "expires_in": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -173,6 +184,7 @@
                   },
                   "required": [
                     "access_token",
+                    "token_type",
                     "expires_in"
                   ],
                   "additionalProperties": false

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"io"
@@ -89,13 +90,20 @@ func TestTheTokenEndpointTakesAFormAndRefusesAnotherClient(t *testing.T) {
 	srv := server(t, nil)
 	token(t, srv.URL)
 	for body, want := range map[string]int{
-		"client_id=id-1&client_secret=nope":     401,
-		"client_id=nope&client_secret=secret-1": 401,
-		"client_id=id-1":                        422,
+		"client_id=id-1&client_secret=nope":                         401,
+		"client_id=nope&client_secret=secret-1":                     401,
+		"client_id=id-1":                                            401,
+		"grant_type=password&client_id=id-1&client_secret=secret-1": 400,
 	} {
 		if status, out, _ := do(t, "POST", srv.URL+"/oauth/token", form, body); status != want {
 			t.Errorf("%s: HTTP %d %s, want %d", body, status, out, want)
 		}
+	}
+	// client_secret_basic, as an OAuth client (an MCP client among them) sends it: the credentials in
+	// a Basic header, form-encoded first; the form has the grant, and what the client asks for.
+	basic := "Basic " + base64.StdEncoding.EncodeToString([]byte("id-1:secret-1"))
+	if status, out, _ := do(t, "POST", srv.URL+"/oauth/token", form, "grant_type=client_credentials&scope=read+write&resource=https%3A%2F%2Fapi.example", "Authorization", basic); status != 200 || !strings.Contains(out, "access_token") {
+		t.Errorf("client_secret_basic: HTTP %d %s", status, out)
 	}
 	// The client is a setting: on Cloudflare a secret.
 	other := server(t, map[string]string{"CLIENT_ID": "other", "CLIENT_SECRET": "s3"})
@@ -123,8 +131,9 @@ func TestEveryOperationButTheTokenOneNeedsAValidToken(t *testing.T) {
 	} {
 		for name, authorization := range map[string]string{"no token": "", "a made-up token": "Bearer nope", "an expired token": "Bearer " + expired, "another server's token": "Bearer " + foreign, "not a bearer": "Basic " + good} {
 			status, body, header := do(t, c.method, srv.URL+c.path, c.contentType, c.body, "Authorization", authorization)
-			if status != 401 || header.Get("WWW-Authenticate") != "Bearer" {
-				t.Errorf("%s %s with %s: HTTP %d %s, want 401", c.method, c.path, name, status, body)
+			// The challenge says where the API tells a client how to get in (RFC 9728).
+			if status != 401 || !strings.HasPrefix(header.Get("WWW-Authenticate"), "Bearer ") || !strings.Contains(header.Get("WWW-Authenticate"), `resource_metadata="`+srv.URL+`/.well-known/oauth-protected-resource"`) {
+				t.Errorf("%s %s with %s: HTTP %d %s %q, want 401 with the challenge", c.method, c.path, name, status, body, header.Get("WWW-Authenticate"))
 			}
 		}
 		if status, body, _ := do(t, c.method, srv.URL+c.path, c.contentType, c.body, "Authorization", "Bearer "+good); status == 401 {

@@ -5,7 +5,7 @@
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { call, implement, ORPCError, withEventMeta } from "@orpc/server";
 import { ResponseHeadersPlugin } from "@orpc/server/plugins";
-import { authorize, discoveryURL, securityOf, type Trusted } from "charter-lib/auth";
+import { authorize, scopesOf, securityOf, type Trusted, wellKnown } from "charter-lib/auth";
 import { follow } from "charter-lib/follow";
 import { mcpHandler } from "charter-lib/mcp";
 import { keyOf, limitOf, rateLimit } from "charter-lib/ratelimit";
@@ -66,8 +66,27 @@ export const trusted = (settings: Settings): Trusted => ({
 	],
 	access: { team: settings.ACCESS_TEAM_DOMAIN, aud: settings.ACCESS_AUD, people: ["read", "write"], machines: ["read"] },
 	oidc: { issuer: settings.OIDC_ISSUER, audience: settings.OIDC_AUDIENCE },
-	issued: { scheme: "OAuth", check: token => (token === issuedToken ? ["read", "write"] : undefined) },
+	issued: { scheme: "OAuth", tokenPath: "/oauth/token", check: token => (token === issuedToken ? ["read", "write"] : undefined) },
 });
+
+/** Where the API is mounted in the Worker: its own URL, the resource its challenges and metadata name. */
+const mount = "/api/mock";
+const resourceOf = (request: Request) => `${new URL(request.url).origin}${mount}`;
+
+/** A client's id and secret from an Authorization: Basic header, each form-encoded before the base64
+ * (RFC 6749, 2.3.1). */
+function basicCredentials(request: Request): { id: string; secret: string } | undefined {
+	const [scheme, encoded = ""] = (request.headers.get("authorization") ?? "").split(" ", 2);
+	if (scheme?.toLowerCase() !== "basic") return undefined;
+	try {
+		const raw = atob(encoded.trim()), colon = raw.indexOf(":");
+		if (colon < 0) return undefined;
+		const unescape = (value: string) => decodeURIComponent(value.replace(/\+/g, " "));
+		return { id: unescape(raw.slice(0, colon)), secret: unescape(raw.slice(colon + 1)) };
+	} catch {
+		return undefined;
+	}
+}
 
 /** A request's credentials: its headers, where on the channel a token sent as ?access_token= (Workers
  * and browsers can't set WebSocket headers) is the Authorization header. */
@@ -87,14 +106,18 @@ const topic = "notes";
 // What the contract doesn't describe travels in the request: the credentials and the idempotency key
 // are headers the SDK adds by itself (the document's security schemes and x-fern-idempotency-headers).
 // Every call is allowed as its contract's security says (the document's, read, when it says none):
-// 401 without credentials it knows, 403 without the scope; then limited as its contract says, per
-// caller (429 with Retry-After: writeLimit). The router is built from `os`, without the checks: oRPC
-// would otherwise run them twice per call.
+// 401 without credentials it knows, 403 without the scope, each with the challenge that says where
+// the API tells a client how to get in (charter-lib/auth: an MCP client reads it to sign in); then
+// limited as its contract says, per caller (429 with Retry-After: writeLimit). The router is built
+// from `os`, without the checks: oRPC would otherwise run them twice per call.
 const os = implement(contract).$context<{ request: Request; resHeaders?: Headers } & Deployment>();
 const api = os.use(async ({ context, procedure, next }) => {
 	const headers = credentials(context.request);
-	const decision = await authorize(headers, securityOf(procedure, document.security), context.trusted);
-	if (decision.status !== 200) throw new ORPCError(decision.status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", { message: decision.message });
+	const decision = await authorize(headers, securityOf(procedure, document.security), context.trusted, resourceOf(context.request));
+	if (decision.status !== 200) {
+		context.resHeaders?.set("WWW-Authenticate", decision.challenge);
+		throw new ORPCError(decision.status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", { message: decision.message, data: { challenge: decision.challenge } });
+	}
 	const verdict = await rateLimit(limitOf(procedure), keyOf(decision.caller, headers), context.limits);
 	if (verdict.status === 429) {
 		context.resHeaders?.set("Retry-After", String(verdict.retryAfter));
@@ -111,11 +134,14 @@ function authorization(request: Request) {
 
 export const router = os.router({
 	auth: {
+		// The client-credentials grant: the client's credentials from the form or from a Basic header.
 		getToken: api.auth.getToken.handler(({ input, context }) => {
 			seen.tokenCalls++;
 			seen.tokenContentType = context.request.headers.get("content-type") ?? "";
-			if (input.client_id !== "id-1" || input.client_secret !== "secret-1") throw new ORPCError("UNAUTHORIZED", { message: "bad client" });
-			return { access_token: "tok-1", expires_in: 3600 };
+			if (input.grant_type !== undefined && input.grant_type !== "client_credentials") throw new ORPCError("BAD_REQUEST", { message: "unsupported_grant_type: the one grant is client_credentials" });
+			const client = basicCredentials(context.request) ?? { id: input.client_id, secret: input.client_secret };
+			if (client.id !== "id-1" || client.secret !== "secret-1") throw new ORPCError("UNAUTHORIZED", { message: "bad client" });
+			return { access_token: "tok-1", token_type: "Bearer", expires_in: 3600 };
 		}),
 	},
 	notes: {
@@ -206,8 +232,8 @@ const mcp = mcpHandler(router, { info });
 async function live(request: Request, deployment: Deployment): Promise<Response> {
 	if (request.headers.get("upgrade") !== "websocket") return new Response("expected a WebSocket upgrade", { status: 426 });
 	// Refused before the upgrade: no socket opens.
-	const decision = await authorize(credentials(request), securityOf(router.notes.live, document.security), deployment.trusted);
-	if (decision.status !== 200) return new Response(decision.message, { status: decision.status, headers: decision.status === 401 ? { "www-authenticate": "Bearer" } : {} });
+	const decision = await authorize(credentials(request), securityOf(router.notes.live, document.security), deployment.trusted, resourceOf(request));
+	if (decision.status !== 200) return new Response(decision.message, { status: decision.status, headers: { "www-authenticate": decision.challenge } });
 	const [client, server] = Object.values(new WebSocketPair());
 	server.accept();
 	const closed = new AbortController();
@@ -230,17 +256,22 @@ async function live(request: Request, deployment: Deployment): Promise<Response>
 	return new Response(null, { status: 101, webSocket: client });
 }
 
+/** How a client finds out how to get in (charter-lib/auth's wellKnown): the API's metadata at
+ * /.well-known/oauth-protected-resource/api/mock, its token endpoint's at
+ * /.well-known/oauth-authorization-server/api/mock, and the specs' openIdConnectUrl. The Worker routes
+ * /.well-known/ here too. */
+export function wellKnownOf(request: Request, deployment: Deployment): Response | undefined {
+	return wellKnown(request, { resource: resourceOf(request), title: info.title, scopes: scopesOf(router, document.security), trusted: deployment.trusted });
+}
+
 /** The conformance API on a deployment, as a fetch function, so the SDK test can also call it without
  * the network. */
 export async function mockApi(request: Request, deployment: Deployment): Promise<Response> {
 	const path = new URL(request.url).pathname;
 	if (path === "/api/mock/notes/live") return live(request, deployment);
 	if (path === "/api/mock/mcp") return mcp(request, { request, ...deployment });
-	// The specs' openIdConnectUrl: on to the issuer's discovery document.
-	if (path === "/api/mock/.well-known/openid-configuration") {
-		const to = discoveryURL(deployment.trusted.oidc?.issuer);
-		return to ? Response.redirect(to, 302) : new Response("this API trusts no OpenID Connect issuer", { status: 404 });
-	}
+	const known = wellKnownOf(request, deployment);
+	if (known) return known;
 	const { matched, response } = await handler.handle(request, { prefix: "/api/mock", context: { request, ...deployment } });
 	return matched ? response : new Response("not found", { status: 404 });
 }

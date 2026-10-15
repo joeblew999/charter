@@ -20,10 +20,13 @@ const json = (body: unknown): RequestInit => ({ method: "POST", headers: { "cont
 
 test("the token endpoint takes a form, and refuses a wrong client with 401", async () => {
 	const token = await api("/oauth/token", { method: "POST", body: new URLSearchParams({ client_id: "id-1", client_secret: "secret-1" }) });
-	assert.deepEqual(await token.json(), { access_token: "tok-1", expires_in: 3600 });
+	assert.deepEqual(await token.json(), { access_token: "tok-1", token_type: "Bearer", expires_in: 3600 });
 	assert.match(seen.tokenContentType, /application\/x-www-form-urlencoded/);
 	const refused = await api("/oauth/token", { method: "POST", body: new URLSearchParams({ client_id: "id-1", client_secret: "wrong" }) });
 	assert.equal(refused.status, 401);
+	// client_secret_basic, as an OAuth client (an MCP client among them) sends it.
+	const basic = await api("/oauth/token", { method: "POST", headers: { authorization: `Basic ${btoa("id-1:secret-1")}` }, body: new URLSearchParams({ grant_type: "client_credentials", scope: "read write" }) });
+	assert.deepEqual(await basic.json(), { access_token: "tok-1", token_type: "Bearer", expires_in: 3600 });
 });
 
 test("notes come in pages of two, and limit changes that", async () => {
@@ -107,7 +110,12 @@ test("anything else is 404, and the channel without an upgrade is 426", async ()
 });
 
 test("every call needs credentials by one of the ways in: reading needs read, writing write (last: it adds a note)", async () => {
-	assert.equal((await mockApi(new Request("https://mock.invalid/api/mock/notes"), deployment)).status, 401);
+	const none = await mockApi(new Request("https://mock.invalid/api/mock/notes"), deployment);
+	assert.equal(none.status, 401);
+	// The challenge says where the API tells a client how to get in (RFC 9728), and a 403 what it lacks.
+	assert.equal(none.headers.get("www-authenticate"), 'Bearer resource_metadata="https://mock.invalid/.well-known/oauth-protected-resource/api/mock"');
+	const reader = await api("/notes", { ...json({ body: "x" }), headers: { "content-type": "application/json", ...as("r") } });
+	assert.match(reader.headers.get("www-authenticate") ?? "", /^Bearer error="insufficient_scope", scope="write", resource_metadata=/);
 	assert.equal((await api("/notes", { headers: as("never-issued") })).status, 401);
 	assert.equal((await api("/notes", { headers: as("r") })).status, 200);
 	assert.equal((await api("/notes", { ...json({ body: "x" }), headers: { "content-type": "application/json", ...as("r") } })).status, 403);
