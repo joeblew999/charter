@@ -97,6 +97,7 @@ func answer(h http.Handler, head string, body js.Value) {
 		r.Header.Add(lines[i], lines[i+1])
 	}
 	r.RemoteAddr = r.Header.Get("Cf-Connecting-Ip")
+	r = withCF(r)
 	if !body.IsNull() {
 		r.Body, r.ContentLength = &requestBody{js: body}, int64(body.Length())
 	}

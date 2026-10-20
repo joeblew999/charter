@@ -1,11 +1,9 @@
 // A Go project's parts of the commands: gofmt and go vet, gsx's committed output kept fresh, the Worker built with
 // TinyGo tuned for Workers, and the Go SDK committed in sdk/go, made from the specs it says.
-import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { GoConfig } from "./config.ts";
-import { cacheFolder, output, run } from "./run.ts";
+import { output, run } from "./run.ts";
 import { sdk, specsHash } from "./sdk.ts";
 import { freeBundleLimit, made } from "./sizes.ts";
 
@@ -92,119 +90,19 @@ function gsxCheck(): void {
 // The TinyGo the build uses, and the wasm-opt it runs: the compiler and the patch below are one
 // thing, so they are pinned here together. mise installs them the first time.
 const tinygoVersion = "0.43.0", binaryenVersion = "133";
-const tinygo = (...args: string[]): [string, string[]] => ["mise", ["exec", `tinygo@${tinygoVersion}`, `aqua:WebAssembly/binaryen@${binaryenVersion}`, "--", "tinygo", ...args]];
+/** tinygoEnv runs a command with the TinyGo and wasm-opt charter pins on the PATH. */
+const tinygoEnv = (...command: string[]): [string, string[]] => ["mise", ["exec", `tinygo@${tinygoVersion}`, `aqua:WebAssembly/binaryen@${binaryenVersion}`, "--", ...command]];
 
-// The change made to TinyGo's runtime source (read at build time: the compiler is not rebuilt).
-//
-// No collection at every pause. TinyGo runs a full collection whenever the scheduler goes idle once 32
-// finalizers were registered since the last one. Every JavaScript reference registers one, and a
-// Worker goes idle at every await, so it collected on every request: the first step in "What closed
-// the gap" (docs/self/benchmarks.md). The collector still runs when the heap is full.
-// Upstream: tinygo-org/tinygo#5800 (when fixed: drop the patch)
-const patches: { file: string; old: string; new: string }[] = [
-	{ file: "src/runtime/gc_finalizer.go", old: "const finalizerGCThreshold = 32", new: "const finalizerGCThreshold = 0" },
-];
-
-/** tinygoRoot is a TinyGo root whose runtime has the patches: the installed one with its src/ copied
- * and the patched files changed, made once per TinyGo version and kept in the cache folder. What is not
- * src/ is a link to the installed one. */
-function tinygoRoot(): string {
-	const installed = output(...tinygo("env", "TINYGOROOT")).trim().split("\n").at(-1)!.trim();
-	const version = output(...tinygo("version"));
-	const key = createHash("sha256").update(version + patches.map(p => p.file + p.old + p.new).join("")).digest("hex").slice(0, 12);
-	const root = join(cacheFolder(), `tinygo-${key}`);
-	if (existsSync(join(root, ".patched"))) return root;
-	rmSync(root, { recursive: true, force: true });
-	mkdirSync(root, { recursive: true });
-	for (const name of readdirSync(installed)) {
-		const from = join(installed, name), to = join(root, name);
-		if (name === "src") {
-			// TinyGo wants src/ to be real folders, and the patches change files in it. On macOS a clone.
-			if (process.platform !== "darwin" || spawnSync("cp", ["-c", "-R", from, to]).status !== 0) cpSync(from, to, { recursive: true });
-		} else {
-			try {
-				symlinkSync(from, to);
-			} catch {
-				cpSync(from, to, { recursive: true }); // Windows lets only some users make links
-			}
-		}
-	}
-	for (const patch of patches) {
-		const file = join(root, patch.file);
-		const source = existsSync(file) ? readFileSync(file, "utf8") : "";
-		const crlf = source.includes("\r\n");
-		const [old, replacement] = crlf ? [patch.old.replaceAll("\n", "\r\n"), patch.new.replaceAll("\n", "\r\n")] : [patch.old, patch.new];
-		if (source.split(old).length !== 2) {
-			rmSync(root, { recursive: true, force: true });
-			throw new Error(`this TinyGo (${version.trim()}) does not have the text a patch changes (${JSON.stringify(patch.old)} in ${patch.file}): see https://github.com/joeblew999/charter/blob/main/docs/self/upstream.md`);
-		}
-		rmSync(file); // a new file, not new content in the installed one's (a hard link on Windows)
-		writeFileSync(file, source.replace(old, replacement));
-	}
-	writeFileSync(join(root, ".patched"), version);
-	console.log(`TinyGo runtime patched once into ${root}`);
-	return root;
-}
-
-/** goBuild builds the project's Go Worker into build/app.wasm with TinyGo, tuned for Workers, and
- * fills build/ with what runs it: workers-go's JavaScript and the Go library's Worker glue. The Wasm
- * has the runtime patches, a starting heap so an ordinary request never collects, a stack per
- * goroutine Huma fits in, and fails over the size Workers Free allows. */
+/** goBuild builds the project's Go Worker into build/ with go/lib's workerbuild command (TinyGo with the
+ * runtime patches, a starting heap, a stack per goroutine Huma fits in, the Worker glue, and a cache of
+ * Wasm made before: go/lib/cmd/workerbuild has why), with the TinyGo and wasm-opt charter pins on the
+ * PATH, and fails over the size Workers Free allows. A Go repo without charter-ts runs the same command
+ * (go tool workerbuild), so both build the same Wasm. */
 export function goBuild(config: GoConfig, limit = freeBundleLimit, fresh = false): void {
 	const { heapMB = 8, opt = "z", stack = "128kb" } = config.build ?? {};
-	run("go", ["run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=tinygo"]);
-	glue();
-	// The same sources, pins and options make the same Wasm: one made before is copied, not built.
-	const cached = join(cacheFolder("wasm"), `${buildKey(config)}.wasm`);
-	if (!fresh && existsSync(cached)) {
-		copyFileSync(cached, join("build", "app.wasm"));
-		console.log("build/app.wasm: built before from the same sources (charter's cache); --fresh builds it again");
-	} else {
-		const target = join("build", "tinygo-target.json");
-		writeFileSync(target, `{ "inherits": ["wasm"], "ldflags": ["--initial-memory=${heapMB * 1024 * 1024}"] }\n`);
-		const [program, args] = tinygo("build", "-o", "build/app.wasm", "-target", target, "-no-debug", `-opt=${opt}`, `-stack-size=${stack}`, ".");
-		run(program, args, { TINYGOROOT: tinygoRoot() });
-		copyFileSync(join("build", "app.wasm"), cached);
-	}
+	const [program, args] = tinygoEnv("go", "run", "github.com/joeblew999/charter/go/lib/cmd/workerbuild", `-heap=${heapMB}`, `-opt=${opt}`, `-stack=${stack}`, ...(fresh ? ["-fresh"] : []));
+	run(program, args);
 	if (made(join("build", "app.wasm"), "the Worker's Wasm", limit) > limit) throw new Error("build/app.wasm is over the limit (charter.config.ts: bundleLimit)");
-}
-
-/** buildKey names what goes into the Wasm: the Go version, TinyGo's pins and patches, the build's
- * options, go.mod and go.sum, and every package the Worker is built from that is not the standard
- * library's, with its Go files (whatever their build tags) and the files it embeds: nothing else in the
- * folder goes into the Wasm. A module from the module cache counts by its path, which has its
- * version: it never changes. */
-function buildKey(config: GoConfig): string {
-	const hash = createHash("sha256");
-	hash.update(JSON.stringify({ go: output("go", ["version"]), tinygoVersion, binaryenVersion, patches, build: config.build ?? {} }));
-	for (const name of ["go.mod", "go.sum"]) if (existsSync(name)) hash.update(readFileSync(name));
-	const modcache = output("go", ["env", "GOMODCACHE"]).trim();
-	const packages = output("go", ["list", "-deps", "-tags", "tinygo", "-f", '{{if not .Standard}}{{.Dir}}{{"\t"}}{{join .EmbedFiles " "}}{{end}}', "."], undefined, { GOOS: "js", GOARCH: "wasm" });
-	for (const line of packages.split("\n").filter(Boolean).sort()) {
-		const [dir, embeds = ""] = line.split("\t");
-		if (dir.startsWith(modcache)) {
-			hash.update(`${relative(modcache, dir)}\n`);
-			continue;
-		}
-		hash.update(`${relative(".", dir)}\n`);
-		const files = [...readdirSync(dir).filter(name => name.endsWith(".go") && statSync(join(dir, name)).isFile()), ...embeds.split(" ").filter(Boolean)].sort();
-		for (const name of files) {
-			hash.update(`${name}\n`);
-			hash.update(readFileSync(join(dir, name)));
-		}
-	}
-	return hash.digest("hex").slice(0, 24);
-}
-
-/** glue writes the Go library's Worker glue (worker/*.mjs) into build/, taken from the library as the
- * project's go.mod resolves it, so the JavaScript is always the one written for the Go it builds against. */
-function glue(): void {
-	const library = output("go", ["list", "-m", "-f", "{{.Dir}}", "github.com/joeblew999/charter/go/lib"]).trim();
-	const worker = join(library, "worker");
-	const files = existsSync(worker) ? readdirSync(worker).filter(name => name.endsWith(".mjs")) : [];
-	if (files.length === 0) throw new Error(`no Worker glue (worker/*.mjs) in ${library}: the project's go.mod requires github.com/joeblew999/charter/go/lib`);
-	mkdirSync("build", { recursive: true });
-	for (const name of files) writeFileSync(join("build", name), readFileSync(join(worker, name)));
 }
 
 const madeFrom = ".made-from";

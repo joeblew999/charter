@@ -39,7 +39,7 @@ The packages of `go/lib/`. The rest is in their doc comments: `go doc github.com
 | `serve` | The API the standard way: its routes under `/api`, allowed (`auth`) and limited (`ratelimit`), the specs, the MCP tools, `/.well-known/`, a channel's `?access_token=` ([The standard API](standard.md)) | `serve.API{Config, Routes, LiveTitle, Setting, Trusted}.Handler()`; `.OpenAPI`, `.AsyncAPI`, which `npm run spec` writes |
 | `problem` | A refusal as RFC 9457 problem details, as Huma writes an operation's, for what answers outside one (404, 405, `/.well-known/`) | `problem.Write(w, status, detail)` |
 | `humaworkers` | A Huma API on Workers: routes itself, registers an operation when a request first matches it | `humaworkers.New(humaworkers.Config(title, version), routes)` |
-| `transport` | The request bridge to the Worker, and the WebSocket adapter natively | `transport.Run(handler)` in `main` |
+| `transport` | The request bridge to the Worker, and the WebSocket adapter natively; what Cloudflare knows of where a request came from (`request.cf`: country, city, time zone, …) | `transport.Run(handler)` in `main`; `transport.CFOf(r)` |
 | `d1` | Statements on a D1 database; rows decode by their `json` tags (Wasm only). What `npm run spec` writes a project's queries over ([The database](api.md#the-database)) | `d1.Query[T](db, query, args...)`, `d1.One[T]` (no row: `d1.ErrNoRows`), `d1.Exec` |
 | `hub` | The live wake-up of a feed: the Durable Object, or memory | `hub.DurableObject[T]("HUB", "<feed>")`, `hub.Memory[T]` |
 | `follow` | The gap-free feed over a log and a hub ([Streaming](streaming.md)) | `follow.Follow(ctx, source, follow.Options{After: follow.Newest(after, lastEventID)}, emit)` |
@@ -49,6 +49,12 @@ The packages of `go/lib/`. The rest is in their doc comments: `go doc github.com
 | `auth` | Who may call, with scopes declared in the contract and enforced by one middleware (401, 403): bearer tokens, Cloudflare Access (people and service tokens), an OpenID Connect issuer, tokens the API issued itself (`auth.Issued`, for an OAuth endpoint of its own); every refusal's challenge and `auth.WellKnown`, what a client reads to find out how to get in (RFC 9728, RFC 8414) ([Auth](auth.md)); `auth/authtest` is a test issuer | `auth.Scheme`, `auth.AccessScheme`, `auth.OIDCScheme`, `Security: auth.Needs("write")`, `auth.CallerOf(ctx)`; `serve` adds the middleware |
 | `ratelimit` | How often a caller may call, beside `auth`: a limit per operation or per scope, declared in the contract (`x-rate-limit` and a 429 with Retry-After in the specs), counted per caller by a Workers Rate Limiting binding, in memory on the host ([Auth](ratelimits.md)) | `ratelimit.Declare(config.OpenAPI, perScope...)`, `Extensions: ratelimit.Limited(limit, nil)`; `serve` adds the middleware, after auth's |
 | `specs` | What `npm run spec` runs for a Go project's `api.API`, which stops on what the specs don't show (a route that does not name its operation, an operation that cannot be its tool, an example missing or invalid) | `specs.Must(specs.Problems(spec))`, `specs.Main(spec.OpenAPI, spec.AsyncAPI)` |
+
+The build, `go/lib/cmd/workerbuild`: the Worker's Wasm with TinyGo (the runtime patches in [Upstream issues](upstream.md), an 8 MB starting heap, 128 KB stacks, `-opt=z`), the glue below copied into `build/`, and a cache that gives back a Wasm built before from the same sources (a build of minutes, 0.6 s when nothing changed). charter-ts's build runs it; a Go repo without Node runs it itself, with tinygo and wasm-opt on its PATH:
+
+```sh
+go tool workerbuild      # go.mod: tool github.com/joeblew999/charter/go/lib/cmd/workerbuild
+```
 
 The Worker glue, in `go/lib/worker/`, written into `build/` by the build:
 
