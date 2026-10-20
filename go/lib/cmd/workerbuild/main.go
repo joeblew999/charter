@@ -50,7 +50,11 @@ func main() {
 	stack := flag.String("stack", "128kb", "TinyGo's -stack-size, per goroutine")
 	limit := flag.Int("limit", 0, "fail when build/app.wasm is more than this many bytes gzipped (0: no limit)")
 	fresh := flag.Bool("fresh", false, "build again even when the cache has this Wasm")
+	usePatches := flag.Bool("patches", true, "patch TinyGo's runtime (-patches=false: as TinyGo ships, to measure what the patches save)")
 	flag.Parse()
+	if !*usePatches {
+		patches = nil
+	}
 	if err := build(*heapMB, *opt, *stack, *limit, *fresh); err != nil {
 		fmt.Fprintln(os.Stderr, "workerbuild:", err)
 		os.Exit(1)
@@ -77,16 +81,21 @@ func build(heapMB int, opt, stack string, limit int, fresh bool) error {
 		}
 		fmt.Println("build/app.wasm: built before from the same sources (charter's cache); -fresh builds it again")
 	} else {
-		root, err := tinygoRoot()
-		if err != nil {
-			return err
+		root := "" // TinyGo's own, when there is nothing to patch
+		if len(patches) > 0 {
+			if root, err = tinygoRoot(); err != nil {
+				return err
+			}
 		}
 		target := filepath.Join("build", "tinygo-target.json")
 		spec := fmt.Sprintf(`{ "inherits": ["wasm"], "ldflags": ["--initial-memory=%d"] }`+"\n", heapMB*1024*1024)
 		if err := os.WriteFile(target, []byte(spec), 0o644); err != nil {
 			return err
 		}
-		env := []string{"TINYGOROOT=" + root}
+		var env []string
+		if root != "" {
+			env = []string{"TINYGOROOT=" + root}
+		}
 		if err := run(env, "tinygo", "build", "-o", wasm, "-target", target, "-no-debug", "-opt="+opt, "-stack-size="+stack, "."); err != nil {
 			return err
 		}
