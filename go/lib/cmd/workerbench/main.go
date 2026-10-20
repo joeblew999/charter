@@ -16,6 +16,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -43,6 +44,7 @@ func main() {
 	warm := flag.Int("warm", 5, "uncounted requests per kind first")
 	runs := flag.Int("runs", 3, "runs")
 	label := flag.String("label", "", "what is measured, for the table's title")
+	asJSON := flag.Bool("json", false, "print the results as JSON (label, and per request its median and runs) instead of a table")
 	every := flag.Duration("every", 0, "at most one request per this long (to stay under a rate limit; waiting costs no CPU)")
 	var hs headers
 	flag.Var(&hs, "H", "a header for every request, 'Name: value' (repeatable)")
@@ -80,6 +82,26 @@ func main() {
 	title := *label
 	if title == "" {
 		title = *base
+	}
+	if *asJSON {
+		type row struct {
+			Request string    `json:"request"`
+			Median  float64   `json:"median"`
+			Runs    []float64 `json:"runs"`
+		}
+		out := struct {
+			Label    string `json:"label"`
+			Runs     int    `json:"runs"`
+			N        int    `json:"n"`
+			Platform string `json:"platform"`
+			Requests []row  `json:"requests"`
+		}{title, *runs, *n, runtime.GOOS + "/" + runtime.GOARCH, nil}
+		for k, rq := range requests {
+			out.Requests = append(out.Requests, row{rq.label, median(results[k]), results[k]})
+		}
+		b, _ := json.MarshalIndent(out, "", "  ")
+		fmt.Println(string(b))
+		return
 	}
 	fmt.Printf("%s: workerd CPU per request, ms (%d runs × %d requests, after %d warm; %s/%s)\n", title, *runs, *n, *warm, runtime.GOOS, runtime.GOARCH)
 	for k, rq := range requests {
