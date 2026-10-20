@@ -56,6 +56,14 @@ The build, `go/lib/cmd/workerbuild`: the Worker's Wasm with TinyGo (the runtime 
 go tool workerbuild      # go.mod: tool github.com/joeblew999/charter/go/lib/cmd/workerbuild
 ```
 
+Switches, each turning one part off so what it saves can be measured: `-reuse=false` (a Go runtime per request), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). `-compiler=go` builds with the standard compiler in seconds, for a dev loop; it is never deployed.
+
+What a request costs, `go/lib/cmd/workerbench`: the CPU a local workerd spends per request, from the operating system's count, in repeated runs (`-json` for a program). No Cloudflare account is needed, so anyone gets the same comparison:
+
+```sh
+go tool workerbench -base http://localhost:8787 'GET /api/hello' 'POST /api/notes {"body":"x"}'
+```
+
 The Worker glue, in `go/lib/worker/`, written into `build/` by the build:
 
 | File | What it gives |
