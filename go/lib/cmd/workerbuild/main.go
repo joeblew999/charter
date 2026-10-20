@@ -2,6 +2,9 @@
 // fills build/ with what runs it: workers-go's JavaScript and this library's Worker glue (worker/*.mjs,
 // go.mjs first). Run it in the Worker's module, with tinygo and wasm-opt on the PATH:
 //
+// -patches=false, -reuse=false and -heap=0 each turn one of these off, so what each saves can be
+// measured (cmd/workerbench, docs/self/benchmarks.md); -compiler=go is a dev build in seconds.
+//
 //	go tool workerbuild              (go.mod: tool github.com/joeblew999/charter/go/lib/cmd/workerbuild)
 //	go run github.com/joeblew999/charter/go/lib/cmd/workerbuild
 //
@@ -45,28 +48,44 @@ var patches = []patch{
 }
 
 func main() {
-	heapMB := flag.Int("heap", 8, "the Wasm's starting heap, in MB")
+	heapMB := flag.Int("heap", 8, "the Wasm's starting heap, in MB (0: TinyGo's default)")
 	opt := flag.String("opt", "z", "TinyGo's -opt")
 	stack := flag.String("stack", "128kb", "TinyGo's -stack-size, per goroutine")
 	limit := flag.Int("limit", 0, "fail when build/app.wasm is more than this many bytes gzipped (0: no limit)")
 	fresh := flag.Bool("fresh", false, "build again even when the cache has this Wasm")
 	usePatches := flag.Bool("patches", true, "patch TinyGo's runtime (-patches=false: as TinyGo ships, to measure what the patches save)")
+	reuse := flag.Bool("reuse", true, "keep Go runtimes between requests (-reuse=false: one per request, as workers-go's own entry, to measure what reuse saves)")
+	compiler := flag.String("compiler", "tinygo", `"tinygo", or "go": the standard compiler, seconds per build, for a dev loop (a bigger Wasm, a runtime per request; never deploy it)`)
 	flag.Parse()
 	if !*usePatches {
 		patches = nil
 	}
-	if err := build(*heapMB, *opt, *stack, *limit, *fresh); err != nil {
+	var err error
+	switch *compiler {
+	case "tinygo":
+		err = build(*heapMB, *opt, *stack, *limit, *fresh, *reuse)
+	case "go":
+		err = buildGo()
+	default:
+		err = fmt.Errorf("-compiler %q: tinygo or go", *compiler)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "workerbuild:", err)
 		os.Exit(1)
 	}
 }
 
-func build(heapMB int, opt, stack string, limit int, fresh bool) error {
+func build(heapMB int, opt, stack string, limit int, fresh, reuse bool) error {
 	if err := run(nil, "go", "run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=tinygo"); err != nil {
 		return err
 	}
 	if err := glue(); err != nil {
 		return err
+	}
+	if !reuse {
+		if err := noReuse(); err != nil {
+			return err
+		}
 	}
 	flags := fmt.Sprintf("heap=%d opt=%s stack=%s", heapMB, opt, stack)
 	key, err := buildKey(flags)
@@ -88,7 +107,10 @@ func build(heapMB int, opt, stack string, limit int, fresh bool) error {
 			}
 		}
 		target := filepath.Join("build", "tinygo-target.json")
-		spec := fmt.Sprintf(`{ "inherits": ["wasm"], "ldflags": ["--initial-memory=%d"] }`+"\n", heapMB*1024*1024)
+		spec := `{ "inherits": ["wasm"] }` + "\n"
+		if heapMB > 0 {
+			spec = fmt.Sprintf(`{ "inherits": ["wasm"], "ldflags": ["--initial-memory=%d"] }`+"\n", heapMB*1024*1024)
+		}
 		if err := os.WriteFile(target, []byte(spec), 0o644); err != nil {
 			return err
 		}
@@ -111,6 +133,54 @@ func build(heapMB int, opt, stack string, limit int, fresh bool) error {
 	if limit > 0 && gz > limit {
 		return fmt.Errorf("%s is %d bytes gzipped, over the limit of %d", wasm, gz, limit)
 	}
+	return nil
+}
+
+// noReuse makes build/go.mjs start a Go runtime for every request and keep none, as workers-go's own
+// entry does: what reuse saves is then the difference.
+func noReuse() error {
+	path := filepath.Join("build", "go.mjs")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	const keep = "const MAX_WAITING = 4;"
+	if strings.Count(string(b), keep) != 1 {
+		return fmt.Errorf("-reuse=false: %s has no %q to change", path, keep)
+	}
+	return os.WriteFile(path, []byte(strings.Replace(string(b), keep, "const MAX_WAITING = 0; // workerbuild -reuse=false: a runtime per request", 1)), 0o644)
+}
+
+// buildGo builds with the standard compiler (GOOS=js GOARCH=wasm), in seconds: for a dev loop, never
+// for a deploy. The glue is copied as for TinyGo, but go.mjs is TinyGo's, so build/go.mjs becomes a
+// stand-in with its interface (goWorker, warm) over workers-go's own entry, which starts a Go runtime
+// per request. A Worker's entry imports build/go.mjs either way.
+func buildGo() error {
+	if err := run(nil, "go", "run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=go"); err != nil {
+		return err
+	}
+	wasm := filepath.Join("build", "app.wasm")
+	if err := run([]string{"GOOS=js", "GOARCH=wasm"}, "go", "build", "-trimpath", "-ldflags=-s", "-o", wasm, "."); err != nil {
+		return err
+	}
+	if err := glue(); err != nil {
+		return err
+	}
+	standIn := `// workerbuild -compiler=go: a stand-in for go.mjs over workers-go's own entry (a Go runtime per
+// request), for a dev build with the standard compiler. Never deploy it.
+import worker from "./worker.mjs";
+export function goWorker() {
+	return { fetch: (request, env, ctx) => worker.fetch(request, env, ctx), warm: async () => {} };
+}
+`
+	if err := os.WriteFile(filepath.Join("build", "go.mjs"), []byte(standIn), 0o644); err != nil {
+		return err
+	}
+	raw, gz, err := sizes(wasm)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("made %s (standard Go, for development): %.2f MB, %.2f MB gzipped\n", wasm, float64(raw)/1e6, float64(gz)/1e6)
 	return nil
 }
 
