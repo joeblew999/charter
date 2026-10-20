@@ -32,6 +32,16 @@ import "./tinygo-clock.mjs"; // before anything creates a Go runtime
 import * as build from "./runtime.mjs";
 import { webSocket } from "./websocket.mjs";
 
+// request.cf's fields transport.CF has (cf.go), under the header name it reads (lower case, as
+// Headers gives names). A client's own header of that name is dropped.
+const CF_HEADER = "x-charter-cf";
+const CF_FIELDS = ["country", "region", "regionCode", "city", "postalCode", "continent", "timezone", "latitude", "longitude", "colo", "asn", "isEUCountry"];
+function cfFields(cf) {
+	const picked = {};
+	for (const name of CF_FIELDS) if (cf[name] !== undefined) picked[name] = cf[name];
+	return picked;
+}
+
 const MAX_WAITING = 4; // runtimes kept for the next request; each holds its Go heap (8 MB)
 
 // workers-go's Go code calls this.
@@ -143,7 +153,9 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 	// between JavaScript and Go costs, and so does every call into Go.
 	async function serve(request, env, ctx) {
 		let head = `${request.method}\n${request.url}`;
-		for (const [name, value] of request.headers) head += `\n${name}\n${value}`;
+		for (const [name, value] of request.headers) if (name !== CF_HEADER) head += `\n${name}\n${value}`;
+		// request.cf, for transport.CFOf: the fields it reads, as one JSON line.
+		if (request.cf) head += `\n${CF_HEADER}\n${JSON.stringify(cfFields(request.cf))}`;
 		const body = request.body ? new Uint8Array(await request.arrayBuffer()) : null;
 		let runtime = waiting.pop();
 		// Which kind of runtime a request got, in the answer's x-go-runtime: for looking into a slow one.
