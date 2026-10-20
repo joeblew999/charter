@@ -81,22 +81,18 @@ Tried and dropped: `-gc=boehm` (hung on Cloudflare), `-gc=leaking` (a stream's m
 
 Left: the first use of each operation in a new isolate ([#22](https://github.com/joeblew999/charter/issues/22)), whose handler needs the database a starting runtime lacks.
 
-## Each difference alone, in another app
+## Each difference alone, measured by anyone
 
-[go-htmx4](https://github.com/joeblew999/go-htmx4) is a Go Worker that is not built from charter: htmx 4 and gsxui pages, 13 locales, the server's Intl, a live board on D1 and a Durable Object, built with TinyGo 0.43.0 and workers-go v0.36.0. Its pages are big (50 to 170 KB of HTML). Each variant below is a Worker Preview of one commit, all sent the same requests in turns over the same six minutes (2026-10-20, 30 rounds, every answer a 200). CPU time is from Workers Logs, the median of 23 to 53 requests per cell, in ms:
+`go tool workerbuild`'s switches turn each optimisation off: `-reuse=false` (a Go runtime per request, as workers-go's own entry), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). `go tool workerbench` measures the CPU a local workerd spends per request, from the operating system's count, in repeated runs. No Cloudflare account is needed, so a comparison can be checked by anyone on their own machine ([Libraries](libraries.md)).
 
-| Variant | `/healthz` | `/de/` | `/board` (D1 read) | board write (D1, Durable Object) | `/de/formats` (111 Intl calls) |
+[go-htmx4](https://github.com/joeblew999/go-htmx4) is a Go Worker that is not built from charter: htmx 4 and gsxui pages of 50 to 170 KB, 13 locales, the server's Intl, a live board on D1 and a Durable Object. `mise run bench:variants` builds its current code once per switch combination, measures each, and writes the table to its [docs/benchmarks.md](https://github.com/joeblew999/go-htmx4/blob/main/docs/benchmarks.md). Its CI runs the shipped build's half on every change.
+
+On Cloudflare (Workers Logs, 2026-10-20, Worker Previews of one app sent the same requests in turns), the same comparison, median CPU per request in ms:
+
+| | `/healthz` | `/de/` | `/board` | board write | `/de/formats` |
 |---|---|---|---|---|---|
-| A. As it shipped: workers-go's entry, TinyGo as it ships | 20 | 35 | 58 | 70 | 124 |
-| B. A, with TinyGo patched (tinygo#5800), an 8 MB heap and 128 KB stacks | 21 | 77 | 41 | 33 | 108 |
-| C. Go runtimes reused (`go.mjs`, `transport.Run`), TinyGo as it ships (`workerbuild -patches=false`) | 15 | 53 | 25 | 67 | 127 |
-| D. Both: charter's runtime | 4 | 19 | 22 | 49 | 80 |
-| E. D, and the app's pages allocating a third (a pooled page buffer, cached Tailwind merging) | 1 | 22 | 18 | 24 | 73 |
+| A runtime per request, TinyGo as it ships | 20 | 35 | 58 | 70 | 124 |
+| C runtimes reused, TinyGo as it ships | 15 | 53 | 25 | 67 | 127 |
+| D runtimes reused, TinyGo patched (what charter ships) | 4 | 19 | 22 | 49 | 80 |
 
-What it shows:
-
-- **Reused runtimes are most of it, and they need the patch.** C alone takes the cost of starting Go away (`/healthz` 15 ms), but without the patch a reused runtime collects at every await, over a heap that is no longer new: the heavy page costs the same as A (127 ms). With the patch (D) it is 80 ms, and the home page 19 ms.
-- **The patch alone is no win.** Without reuse every request starts a runtime, and B pays for the 8 MB heap each time: some pages are cheaper, the home page dearer.
-- **What is left is the app's own work.** E's `/de/formats` makes 111 calls from Go to the Worker's Intl, each a crossing between Wasm and JavaScript; the next step there is fewer crossings (step 4 of the table above).
-
-The branches are `bench-a-shipped`, `bench-b-gcpatch`, `bench-c-reuse-nopatch`, `bench-d-runtime` and `render-allocs` in go-htmx4. A cell moves by 10 to 20 ms from one run to the next (which isolate a request lands in, a new one or a warm one), so read the table by its rows, not by single cells.
+A runtime kept between requests saves the cost of starting Go, but without the patch it collects at every await over a heap that is no longer new, so a heavy page gains nothing (C); with the patch, it does (D). One run on Cloudflare moves 10 to 20 ms a cell; the local table is the one to check against.
