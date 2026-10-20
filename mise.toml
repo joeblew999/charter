@@ -6,4 +6,4 @@
 go = "1.27.1"
 gh = "2.101.0"
 node = "26.11.1"
-fnox = { version = "1.39.0", workflow = "release.yml" }
+fnox = { version = "1.40.0", workflow = "release.yml" }
