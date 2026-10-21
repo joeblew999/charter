@@ -3,7 +3,7 @@
 # and tests the Go side; gh is what the repo commands talk to GitHub with; fnox holds the secrets a
 # deploy and a live test take (fnox exec -- npm run deploy).
 [tools]
-go = "1.27.1"
+go = "1.27.3"
 gh = "2.101.0"
 node = "26.11.1"
 fnox = { version = "1.40.0", workflow = "release.yml" }

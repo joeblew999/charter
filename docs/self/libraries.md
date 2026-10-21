@@ -64,6 +64,13 @@ What a request costs, `go/lib/cmd/workerbench`: the CPU a local workerd spends p
 go tool workerbench -base http://localhost:8787 'GET /api/hello' 'POST /api/notes {"body":"x"}'
 ```
 
+Putting it on Cloudflare without Node, `go/lib/cmd/workerdeploy`: the build in `build/`, static assets (`-assets`), bindings (`-var`, `-d1`, `-do`, `-ratelimit`), `migrations/*.sql` on every D1 database (each once), a Durable Object migration and custom domains (`-domain`), over the REST API. `-preview <name>` deploys a Worker Preview instead, and `-delete-preview`, `-prune-previews` remove them. So a commit is compiled once, CI publishes its build (`-publish-build <commit>`, with `GITHUB_TOKEN`) and Workers Builds deploys that (`-fetch-build <commit>`); `-configure-builds` sets Workers Builds up. `go tool workerdeploy -h` lists every flag. Its live logs, `go/lib/cmd/workertail`: requests, console output and exceptions, until Ctrl-C deletes the tail.
+
+```sh
+fnox exec -- go tool workerdeploy -name my-api -compat <date> -allow-existing -d1 DB=my-api-db -d1-create -migrations migrations
+fnox exec -- go tool workertail -name my-api
+```
+
 The Worker glue, in `go/lib/worker/`, written into `build/` by the build:
 
 | File | What it gives |
