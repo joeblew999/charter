@@ -7,4 +7,5 @@ require (
 	github.com/danielgtaylor/huma/v2 v2.39.1
 	github.com/go-jose/go-jose/v4 v4.1.5
 	github.com/syumai/workers-go v0.36.0
+	golang.org/x/net v0.61.0
 )
