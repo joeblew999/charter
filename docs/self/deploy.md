@@ -20,6 +20,7 @@ fnox exec -- npm run live-test   # REMOTE: the standard test, then the project's
 - **`cloudflare.config.ts`** declares the Worker, its database `<name>-db` (binding `DB`) and, with a stream, the hub. A second deploy keeps the database. A project may deploy the same code as a second Worker (`deployModes`: `ts/conformance` does).
 - **Migrations** are `migrations/*.sql`, applied in name order, each once: `npm run deploy` applies them on Cloudflare, `npm run dev` locally. Never edit one that was applied.
 - **The URL is `url` in `charter.config.ts`** (`API_URL` overrides it): the specs name it and the live test calls it. After changing it, `npm run spec`.
+- **A Go repo without Node** deploys with `go tool workerdeploy` and reads the Worker's logs with `go tool workertail` ([Libraries](libraries.md#go-githubcomjoeblew999chartergolib)).
 - **The size:** `npm run check` fails when the Worker, gzipped as a deploy uploads it (and in Go, its Wasm), is over `bundleLimit` in `charter.config.ts`: 3 MB by default, what Workers Free allows; Workers Paid allows 10 MB.
 
 ## Secrets
