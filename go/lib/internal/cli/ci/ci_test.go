@@ -49,6 +49,17 @@ func TestRelease(t *testing.T) {
 	}
 }
 
+// TestReleaseArgs: what ci run passes, ci release reads (v1.8's release stopped at the usage line: the flags were
+// parsed before the step's name).
+func TestReleaseArgs(t *testing.T) {
+	for _, hook := range []string{"", `ci/module-tags.sh "$GITHUB_SHA"`} {
+		step, got, rest, err := parse(releaseArgs(hook, "v1.8"))
+		if err != nil || step != "release" || got != hook || !slices.Equal(rest, []string{"v1.8"}) {
+			t.Errorf("hook %q: step %q, hook %q, rest %v, %v", hook, step, got, rest, err)
+		}
+	}
+}
+
 func TestReleaseOf(t *testing.T) {
 	for _, tc := range []struct{ refType, ref, want string }{
 		{"tag", "v1.8", "v1.8"}, {"branch", "release/v1.8", "v1.8"}, {"branch", "main", ""}, {"tag", "intl/v0.7.0", ""}, {"branch", "v1.8", ""},
