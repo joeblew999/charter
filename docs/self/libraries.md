@@ -50,25 +50,30 @@ The packages of `go/lib/`. The rest is in their doc comments: `go doc github.com
 | `ratelimit` | How often a caller may call, beside `auth`: a limit per operation or per scope, declared in the contract (`x-rate-limit` and a 429 with Retry-After in the specs), counted per caller by a Workers Rate Limiting binding, in memory on the host ([Auth](ratelimits.md)) | `ratelimit.Declare(config.OpenAPI, perScope...)`, `Extensions: ratelimit.Limited(limit, nil)`; `serve` adds the middleware, after auth's |
 | `specs` | What `npm run spec` runs for a Go project's `api.API`, which stops on what the specs don't show (a route that does not name its operation, an operation that cannot be its tool, an example missing or invalid) | `specs.Must(specs.Problems(spec))`, `specs.Main(spec.OpenAPI, spec.AsyncAPI)` |
 
-The build, `go/lib/cmd/workerbuild`: the Worker's Wasm with TinyGo (the runtime patches in [Upstream issues](upstream.md), an 8 MB starting heap, 128 KB stacks, `-opt=z`), the glue below copied into `build/`, and a cache that gives back a Wasm built before from the same sources (a build of minutes, 0.6 s when nothing changed). charter-ts's build runs it; a Go repo without Node runs it itself, with tinygo and wasm-opt on its PATH:
+A Go Worker's steps on Cloudflare are one command, `go tool charter <step>` (go.mod: `tool
+github.com/joeblew999/charter/go/lib/cmd/charter`); `go tool charter <step> -h` lists a step's flags. `go tool
+workerbuild`, `workerdeploy`, `workertail` and `workerbench` are the same steps by their old names, kept while repos
+move over.
+
+The build, `go tool charter build`: the Worker's Wasm with TinyGo (the runtime patches in [Upstream issues](upstream.md), an 8 MB starting heap, 128 KB stacks, `-opt=z`), the glue below copied into `build/`, and a cache that gives back a Wasm built before from the same sources (a build of minutes, 0.6 s when nothing changed). charter-ts's build runs it; a Go repo without Node runs it itself, with tinygo and wasm-opt on its PATH:
 
 ```sh
-go tool workerbuild      # go.mod: tool github.com/joeblew999/charter/go/lib/cmd/workerbuild
+go tool charter build
 ```
 
 Switches, each turning one part off so what it saves can be measured: `-reuse=false` (a Go runtime per request), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). `-compiler=go` builds with the standard compiler in seconds, for a dev loop; it is never deployed.
 
-What a request costs, `go/lib/cmd/workerbench`: the CPU a local workerd spends per request, from the operating system's count, in repeated runs (`-json` for a program). No Cloudflare account is needed, so anyone gets the same comparison:
+What a request costs, `go tool charter bench`: the CPU a local workerd spends per request, from the operating system's count, in repeated runs (`-json` for a program). No Cloudflare account is needed, so anyone gets the same comparison:
 
 ```sh
-go tool workerbench -base http://localhost:8787 'GET /api/hello' 'POST /api/notes {"body":"x"}'
+go tool charter bench -base http://localhost:8787 'GET /api/hello' 'POST /api/notes {"body":"x"}'
 ```
 
-Putting it on Cloudflare without Node, `go/lib/cmd/workerdeploy`: the build in `build/`, static assets (`-assets`), bindings (`-var`, `-d1`, `-do`, `-ratelimit`), `migrations/*.sql` on every D1 database (each once), a Durable Object migration and custom domains (`-domain`), over the REST API. `-preview <name>` deploys a Worker Preview instead, and `-delete-preview`, `-prune-previews` remove them. So a commit is compiled once, CI publishes its build (`-publish-build <commit>`, with `GITHUB_TOKEN`) and Workers Builds deploys that (`-fetch-build <commit>`); `-configure-builds` sets Workers Builds up. `go tool workerdeploy -h` lists every flag. Its live logs, `go/lib/cmd/workertail`: requests, console output and exceptions, until Ctrl-C deletes the tail.
+Putting it on Cloudflare without Node, `go tool charter deploy`: the build in `build/`, static assets (`-assets`), bindings (`-var`, `-d1`, `-do`, `-ratelimit`), `migrations/*.sql` on every D1 database (each once), a Durable Object migration and custom domains (`-domain`), over the REST API. `-preview <name>` deploys a Worker Preview instead, and `-delete-preview`, `-prune-previews` remove them. So a commit is compiled once, CI publishes its build (`-publish-build <commit>`, with `GITHUB_TOKEN`) and Workers Builds deploys that (`-fetch-build <commit>`); `-configure-builds` sets Workers Builds up. `go tool charter deploy -h` lists every flag. Its live logs, `go tool charter tail`: requests, console output and exceptions, until Ctrl-C deletes the tail.
 
 ```sh
-fnox exec -- go tool workerdeploy -name my-api -compat <date> -allow-existing -d1 DB=my-api-db -d1-create -migrations migrations
-fnox exec -- go tool workertail -name my-api
+fnox exec -- go tool charter deploy -name my-api -compat <date> -allow-existing -d1 DB=my-api-db -d1-create -migrations migrations
+fnox exec -- go tool charter tail -name my-api
 ```
 
 How Google sees a site with pages (robots.txt, the sitemap, an audit as Googlebot, Search Console, Lighthouse) is
