@@ -14,7 +14,7 @@ import (
 // run is go tool charter ci run. It returns the exit code.
 func run(p *project.Project) int {
 	var t timings
-	defer t.report()
+	defer func() { t.report() }() // the phases as they are when run returns
 	onCI, pushed := os.Getenv("CI") != "", os.Getenv("GITHUB_ACTIONS") != "" && os.Getenv("GITHUB_EVENT_NAME") == "push"
 	var env []string
 	install := "mise install"
