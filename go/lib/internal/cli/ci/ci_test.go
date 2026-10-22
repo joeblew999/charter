@@ -48,3 +48,13 @@ func TestRelease(t *testing.T) {
 		t.Errorf("a pushed tag: %v, calls %v", err, calls)
 	}
 }
+
+func TestReleaseOf(t *testing.T) {
+	for _, tc := range []struct{ refType, ref, want string }{
+		{"tag", "v1.8", "v1.8"}, {"branch", "release/v1.8", "v1.8"}, {"branch", "main", ""}, {"tag", "intl/v0.7.0", ""}, {"branch", "v1.8", ""},
+	} {
+		if got := releaseOf(tc.refType, tc.ref); got != tc.want {
+			t.Errorf("releaseOf(%s, %s) = %q, want %q", tc.refType, tc.ref, got, tc.want)
+		}
+	}
+}

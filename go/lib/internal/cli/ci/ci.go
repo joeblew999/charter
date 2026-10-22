@@ -1,6 +1,10 @@
-// Package ci is go tool charter ci publish|release: the GitHub CI side of a Worker's previews and releases, so a
-// commit is compiled once, on CI, and Cloudflare deploys that build (go tool charter builds).
+// Package ci is go tool charter ci run|publish|release: an app's CI, and the GitHub side of its previews and releases,
+// so a commit is compiled once, on CI, and Cloudflare deploys that build (go tool charter builds).
 //
+//	go tool charter ci run                what .github/workflows/charter.yml runs, from charter.toml's [ci]: the tools,
+//	                                      the build, on a push its publishing (as ci publish), the checks, and for a
+//	                                      v* tag or a release/v* branch the release (as ci release), then a table of
+//	                                      where the time went; anywhere else (this machine), the build and the checks
 //	go tool charter ci publish            this commit's build (build/, the Static Assets) and this binary to the
 //	                                      repository's preview-builds pre-release; on a branch with a preview, its
 //	                                      URL on the branch's pull request
@@ -40,6 +44,12 @@ func Main(args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if err := os.Chdir(p.Root); err != nil {
+		log.Fatal(err)
+	}
+	if fs.Arg(0) == "run" {
+		os.Exit(run(p))
+	}
 	gh := github{repo: os.Getenv("GITHUB_REPOSITORY"), token: os.Getenv("GITHUB_TOKEN")}
 	sha, ref, refType := os.Getenv("GITHUB_SHA"), os.Getenv("GITHUB_REF_NAME"), os.Getenv("GITHUB_REF_TYPE")
 	if gh.repo == "" || gh.token == "" || sha == "" {
@@ -56,7 +66,7 @@ func Main(args []string) {
 			log.Fatal("✗ ", err)
 		}
 	default:
-		log.Fatal("usage: go tool charter ci publish | release [-hook command] <version>")
+		log.Fatal("usage: go tool charter ci run | publish | release [-hook command] <version>")
 	}
 }
 

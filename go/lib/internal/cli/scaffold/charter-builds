@@ -1,0 +1,62 @@
+#!/bin/sh
+#MISE description="Workers Builds' build and deploy step: fetch the charter CI published for this commit, then go tool charter builds build|deploy"
+# Written by `go tool charter tasks` (github.com/joeblew999/charter): don't edit it; go tool charter tasks writes it again.
+#
+# Workers Builds runs it for every pushed branch, `sh .mise/tasks/charter-builds build` then `… deploy` (go tool charter
+# builds configure sets that up). It only fetches charter: the static binary CI published for this commit (go tool
+# charter ci publish), which does the work in Go (go tool charter builds). When none comes (CI down, a fork, or
+# CHARTER_COMPILE=1), it builds here with mise instead; when the branch moved on, there is nothing to deploy.
+set -eu
+step=${1:?build or deploy}
+repo=$(sed -n 's/^repo *= *"\([^"]*\)".*/\1/p' charter.toml)
+sha=${WORKERS_CI_COMMIT_SHA:-}
+
+# mise with only this repo's config: the build image has its own (node, ruby, python, …) in its global and system
+# config, in the checkout's parent directory and in MISE_*_VERSION variables.
+mise_here() {
+  empty=$(mktemp)
+  mv "$empty" "$empty.toml"
+  export MISE_GLOBAL_CONFIG_FILE="$empty.toml" MISE_SYSTEM_CONFIG_FILE="$empty.toml" MISE_CEILING_PATHS="$(dirname "$PWD")"
+  for v in $(env | sed -n 's/^\(MISE_[A-Z0-9_]*_VERSION\)=.*/\1/p'); do unset "$v"; done
+  export MISE_YES=1 MISE_TRUSTED_CONFIG_PATHS="$PWD" MISE_TASK_RUN_AUTO_INSTALL=false PATH="$HOME/.local/bin:$PATH"
+  command -v mise >/dev/null ||
+    curl -fsSL https://mise.run | MISE_VERSION="v$(sed -n 's/^min_version = "\(.*\)"/\1/p' mise.toml)" MISE_QUIET=1 sh
+  mise install go
+}
+
+case $step in
+build)
+  if [ "${CHARTER_COMPILE:-}" != 1 ] && [ -n "$sha" ] && [ -n "$repo" ]; then
+    i=0
+    while [ "$i" -lt 48 ]; do # 8 minutes; CI publishes in about 3
+      if curl -fsSL -o charter.tmp "https://github.com/$repo/releases/download/preview-builds/deploy-$sha" 2>/dev/null; then
+        mkdir -p bin && chmod +x charter.tmp && mv charter.tmp bin/charter && break
+      fi
+      # A newer push cancels CI for this commit, so its build never comes: stop rather than build a stale commit.
+      head=$(git ls-remote "https://github.com/$repo" "refs/heads/${WORKERS_CI_BRANCH:-}" 2>/dev/null | cut -f1)
+      if [ -n "$head" ] && [ "$head" != "$sha" ]; then
+        echo "· ${WORKERS_CI_BRANCH:-} moved on to $head: $sha is superseded, nothing to deploy"
+        touch .superseded
+        exit 0
+      fi
+      i=$((i + 1))
+      sleep 10
+    done
+  fi
+  if [ -x bin/charter ] && bin/charter builds build; then exit 0; fi
+  echo "· no build from CI for ${sha:-this commit}: building here"
+  rm -f bin/charter
+  mise_here
+  exec mise exec -- go tool charter builds build -compile
+  ;;
+deploy)
+  [ ! -e .superseded ] || { echo "· superseded by a newer push: nothing to deploy"; exit 0; }
+  if [ -x bin/charter ]; then exec bin/charter builds deploy; fi
+  mise_here
+  exec mise exec -- go tool charter builds deploy
+  ;;
+*)
+  echo "usage: sh .mise/tasks/charter-builds build|deploy" >&2
+  exit 2
+  ;;
+esac

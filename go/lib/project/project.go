@@ -40,6 +40,16 @@
 //	note = "Shares staging's D1."      # a sentence for the pull request's preview comment
 //	[local]
 //	vars = { APP_ENV = "local" }
+//
+//	[build]                            # optional
+//	command = "mise run build"         # what builds the Worker and its assets (default: go tool charter build)
+//
+//	[ci]                               # optional: go tool charter ci run, on GitHub (.github/workflows/charter.yml)
+//	tools = ["go", "tinygo", "workerd"]  # what CI installs, of mise.toml's (default: all of them)
+//	build = "mise run build ::: test"  # the build, before it is published for a preview (default: [build] command);
+//	                                   # checks that may run beside it go here too
+//	test = "mise run e2e"              # the checks after it (default: none)
+//	release_hook = "ci/tag-modules.sh" # run when a release is tagged, before production moves (default: none)
 package project
 
 import (
@@ -74,8 +84,31 @@ type Project struct {
 	Staging           *Environment    `toml:"staging"`
 	Preview           *Environment    `toml:"preview"`
 	Local             Environment     `toml:"local"`
+	Build             Build           `toml:"build"`
+	CI                CI              `toml:"ci"`
 
 	Root string `toml:"-"` // the directory charter.toml is in
+}
+
+// Build is how the app builds its Worker into build/ and its Static Assets.
+type Build struct {
+	Command string `toml:"command"`
+}
+
+// BuildCommand is the command that builds the Worker: [build] command, else go tool charter build.
+func (p *Project) BuildCommand() string {
+	if p.Build.Command != "" {
+		return p.Build.Command
+	}
+	return "go tool charter build"
+}
+
+// CI is what go tool charter ci run does on GitHub.
+type CI struct {
+	Tools       []string `toml:"tools"`
+	Build       string   `toml:"build"`
+	Test        string   `toml:"test"`
+	ReleaseHook string   `toml:"release_hook"`
 }
 
 // D1 is a D1 database binding. Its database is the Worker's name, with -staging or -preview in those environments.

@@ -1,8 +1,14 @@
-// Package scaffold is go tool charter init and tasks: a Go app set up to run on Cloudflare Workers with charter.
+// Package scaffold is go tool charter init, tasks, skill, workflow and check: a Go app set up to run on Cloudflare
+// Workers with charter, the way intl and seo set an app up: a config file, its mise tasks, an agent skill, and a check
+// that says when any of them is stale.
 //
-//	go tool charter init [-name n] [-compat date]   charter.toml, build/ in .gitignore, and the mise tasks
-//	go tool charter tasks [-o file]                 the mise tasks (charter:build, serve, with, token, deploy, tail),
-//	                                                into .mise/tasks/charter.toml: again after upgrading charter
+//	go tool charter init [-name n] [-compat date]   charter.toml, build/ in .gitignore, and everything below
+//	go tool charter tasks                           the mise tasks (.mise/tasks/charter.toml) and Workers Builds'
+//	                                                launcher (.mise/tasks/charter-builds)
+//	go tool charter skill                           the agent skill (.claude/skills/charter)
+//	go tool charter workflow                        the CI workflow (.github/workflows/charter.yml)
+//	go tool charter check                           every problem: charter.toml, and each file above as charter
+//	                                                writes it now (after upgrading charter: write them again)
 //
 // What init leaves to the app: a main package that serves its handler with transport.Run (the Worker, and off
 // Workers a plain HTTP server on $PORT), and its bindings in charter.toml.
@@ -12,6 +18,7 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -21,29 +28,76 @@ import (
 	"strings"
 
 	"github.com/joeblew999/charter/go/lib/project"
+	"github.com/joeblew999/charter/go/lib/skills"
 )
 
-//go:embed tasks.toml
-var tasks []byte
+var (
+	//go:embed tasks.toml
+	tasks []byte
+	//go:embed charter-builds
+	launcher []byte
+	//go:embed charter.yml
+	workflow []byte
+)
 
 // TasksFile is where tasks writes, under the app's root: mise finds it there with no configuration (Task discovery).
 const TasksFile = ".mise/tasks/charter.toml"
 
-// Tasks runs go tool charter tasks.
-func Tasks(args []string) {
-	fs := flag.NewFlagSet("charter tasks", flag.ExitOnError)
-	out := fs.String("o", TasksFile, "where to write them")
-	fs.Parse(args)
-	log.SetFlags(0)
-	check(writeTasks(*out))
-	log.Printf("✓ %s", *out)
+// file is one file charter writes into an app, under its root.
+type file struct {
+	path    string
+	content []byte
+	mode    os.FileMode
+	how     string // the command that writes it
 }
 
-func writeTasks(path string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+// owned are the files charter writes into an app, but charter.toml.
+func owned() []file {
+	b, err := fs.ReadFile(skills.FS, "charter/SKILL.md")
+	check(err)
+	return []file{
+		{TasksFile, tasks, 0o644, "go tool charter tasks"},
+		{".mise/tasks/charter-builds", launcher, 0o755, "go tool charter tasks"},
+		{".claude/skills/charter/SKILL.md", b, 0o644, "go tool charter skill"},
+		{".github/workflows/charter.yml", workflow, 0o644, "go tool charter workflow"},
 	}
-	return os.WriteFile(path, tasks, 0o644)
+}
+
+// write writes the owned files that how writes.
+func write(how string) {
+	for _, f := range owned() {
+		if f.how != how {
+			continue
+		}
+		check(os.MkdirAll(filepath.Dir(f.path), 0o755))
+		check(os.WriteFile(f.path, f.content, f.mode))
+		check(os.Chmod(f.path, f.mode))
+		log.Printf("✓ %s", f.path)
+	}
+}
+
+// Tasks runs go tool charter tasks.
+func Tasks(args []string) { writer("tasks", "go tool charter tasks", args) }
+
+// Skill runs go tool charter skill.
+func Skill(args []string) { writer("skill", "go tool charter skill", args) }
+
+// Workflow runs go tool charter workflow.
+func Workflow(args []string) { writer("workflow", "go tool charter workflow", args) }
+
+func writer(name, how string, args []string) {
+	fs := flag.NewFlagSet("charter "+name, flag.ExitOnError)
+	fs.Parse(args)
+	log.SetFlags(0)
+	root()
+	write(how)
+}
+
+// root moves to the app's root: charter.toml's folder, else go.mod's.
+func root() {
+	if p, err := project.Load("."); err == nil {
+		check(os.Chdir(p.Root))
+	}
 }
 
 // Init runs go tool charter init, from the app's root (its go.mod's directory).
@@ -72,14 +126,16 @@ func Init(args []string) {
 		log.Printf("✓ %s: the Worker %s, compatibility date %s", project.File, *name, *compat)
 	}
 	check(ignore(".gitignore", "/build/"))
-	check(writeTasks(TasksFile))
-	log.Printf("✓ %s", TasksFile)
+	for _, how := range []string{"go tool charter tasks", "go tool charter skill", "go tool charter workflow"} {
+		write(how)
+	}
 	log.Print(`
 Next:
   main.go     func main() { transport.Run(handler) }   // github.com/joeblew999/charter/go/lib/transport
   bindings    D1, Durable Objects, rate limits, vars: charter.toml (go doc github.com/joeblew999/charter/go/lib/project)
   mise run charter:build && mise run charter:serve      // or go tool charter build, serve
-  mise run charter:deploy production                     // Cloudflare credentials in the environment, or fnox`)
+  mise run charter:deploy production                     // Cloudflare credentials in the environment, or fnox
+  charter.toml [ci], then mise run charter:builds-configure   // CI and Workers Builds: a commit compiled once`)
 }
 
 func starter(name, compat string) string {
