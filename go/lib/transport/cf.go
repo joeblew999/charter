@@ -48,6 +48,13 @@ func CFOf(r *http.Request) CF {
 	return v.cf
 }
 
+// WithCF is r carrying cf as its request.cf: for a test, or a server off Cloudflare that knows where its requests come
+// from. On Cloudflare, worker/go.mjs passes the real one.
+func WithCF(r *http.Request, cf CF) *http.Request {
+	raw, _ := json.Marshal(cf)
+	return r.WithContext(context.WithValue(r.Context(), cfKey{}, cfValue{cf, raw}))
+}
+
 // CFJSON is r's request.cf as worker/go.mjs passed it (CF's fields, exactly as Cloudflare sent them), nil without
 // one: for an app that reads a field its own way.
 func CFJSON(r *http.Request) json.RawMessage {
