@@ -109,3 +109,16 @@ func TestProblems(t *testing.T) {
 		}
 	}
 }
+
+// TestBranches: production deploys production, main staging, a release request nothing, any other branch its preview.
+func TestBranches(t *testing.T) {
+	for branch, want := range map[string]string{"production": "production", "main": "staging", "release/v1.7": "", "fix-x": "preview", "feat/y": "preview"} {
+		if got := project.BranchEnvironment(branch); got != want {
+			t.Errorf("BranchEnvironment(%q) = %q, want %q", branch, got, want)
+		}
+	}
+	p := &project.Project{Name: "my-app", Subdomain: "you"}
+	if got := p.PreviewURL("fix-x"); got != "https://fix-x-my-app.you.workers.dev" {
+		t.Errorf("PreviewURL = %s", got)
+	}
+}

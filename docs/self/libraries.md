@@ -89,6 +89,15 @@ time zone; `go tool charter with <command>` runs a command against it on a free 
 and stops it (`-strict`: a panic or uncaught exception in workerd's log fails it too). Deploys read it too: `go tool
 charter deploy production`, `staging` or `preview <name>`.
 
+CI and Workers Builds share the work so that a commit is compiled once, on CI. `go tool charter ci publish`, from a
+static linux/amd64 build of the command, puts the commit's build and that very binary on the repository's
+`preview-builds` pre-release, and the branch's preview URL on its pull request. Workers Builds then runs that binary:
+`go tool charter builds build` fetches the build, verified, and `go tool charter builds deploy` deploys what the branch
+deploys, which is production for `production`, staging for `main`, otherwise the branch's own preview. A release is
+`go tool charter ci release <version>` on CI: once the commit is checked to be on `main`, it is tagged and the
+`production` branch moves to it. `go tool charter token` checks the Cloudflare token before a deploy. `charter.toml`'s
+`repo` and `subdomain` say where these happen.
+
 The build, `go tool charter build`: the Worker's Wasm with TinyGo (the runtime patches in [Upstream issues](upstream.md), an 8 MB starting heap, 128 KB stacks, `-opt=z`), the glue below copied into `build/`, and a cache that gives back a Wasm built before from the same sources (a build of minutes, 0.6 s when nothing changed). charter-ts's build runs it; a Go repo without Node runs it itself, with tinygo and wasm-opt on its PATH:
 
 ```sh
