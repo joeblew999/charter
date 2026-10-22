@@ -55,6 +55,40 @@ github.com/joeblew999/charter/go/lib/cmd/charter`); `go tool charter <step> -h` 
 workerbuild`, `workerdeploy`, `workertail` and `workerbench` are the same steps by their old names, kept while repos
 move over.
 
+Everything about the Worker on Cloudflare is one file at the app's root, `charter.toml` (package `go/lib/project`
+documents every key): its name, compatibility date and modules, Static Assets, D1 databases, Durable Objects and
+rate limits, and what production, staging, previews and local workerd each get. The steps read it, and an app's tests
+can (`project.Load`), so a limit a test counts to is checked against the one that ships.
+
+```toml
+name = "my-app"
+compatibility_date = "2026-09-11"
+main = "worker/index.mjs"
+assets = "dist/site"
+health = "/healthz"
+
+[[d1]]
+binding = "DB"
+migrations = "migrations"
+
+[[rate_limits]]
+binding = "WRITES"
+namespace_id = 1001
+limit = 60
+period = 10
+
+[production]
+domain = "app.example.com"
+vars = { APP_ENV = "production" }
+```
+
+Locally, no wrangler and no Node: `go tool charter local` writes `.charter/` from it (workerd's config, an entry that
+gives the app a D1 database on a Durable Object's SQLite with its migrations, in-memory rate limits and the visitor's
+time zone, and Static Assets in front), ignored by git. `go tool charter serve` runs it on its port in the developer's
+time zone; `go tool charter with <command>` runs a command against it on a free port with fresh state, `BASE` its URL,
+and stops it (`-strict`: a panic or uncaught exception in workerd's log fails it too). Deploys read it too: `go tool
+charter deploy production`, `staging` or `preview <name>`.
+
 The build, `go tool charter build`: the Worker's Wasm with TinyGo (the runtime patches in [Upstream issues](upstream.md), an 8 MB starting heap, 128 KB stacks, `-opt=z`), the glue below copied into `build/`, and a cache that gives back a Wasm built before from the same sources (a build of minutes, 0.6 s when nothing changed). charter-ts's build runs it; a Go repo without Node runs it itself, with tinygo and wasm-opt on its PATH:
 
 ```sh

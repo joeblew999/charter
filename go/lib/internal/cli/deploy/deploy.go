@@ -15,14 +15,17 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"maps"
 	"net/http"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/joeblew999/charter/go/lib/internal/cfdeploy"
 	"github.com/joeblew999/charter/go/lib/internal/previewbuild"
+	"github.com/joeblew999/charter/go/lib/project"
 )
 
 // previewTag is the pre-release that carries CI's builds for previews.
@@ -64,8 +67,13 @@ func (v vars) Set(s string) error {
 	return nil
 }
 
-// Main runs the command with args, the arguments after its name.
+// Main runs the command with args, the arguments after its name. Its first argument may be an environment of
+// charter.toml, production, staging or preview <name>: then charter.toml says what to deploy, and flags after it add to
+// that (-dry-run, -annotation, …).
 func Main(args []string) {
+	if len(args) > 0 && (args[0] == "production" || args[0] == "staging" || args[0] == "preview") {
+		args = fromProject(args)
+	}
 	fs := flag.NewFlagSet("charter deploy", flag.ExitOnError)
 	log.SetFlags(0)
 	cfg := cfdeploy.Config{Vars: vars{}, D1: vars{}, DurableObjects: vars{}, RateLimits: rateLimits{}}
@@ -217,7 +225,84 @@ func Main(args []string) {
 	if err != nil {
 		log.Fatalf("deploy: %v", err)
 	}
+	if publicDomain != "" {
+		log.Printf("  workers.dev URL %s", url)
+		url = "https://" + publicDomain
+	}
 	fmt.Println(url)
+}
+
+// publicDomain is the production environment's custom domain: its URL is what a deploy to it prints.
+var publicDomain string
+
+// fromProject is the flags for a deploy to an environment of charter.toml (production, staging, or preview and its
+// name), followed by the flags after it.
+func fromProject(args []string) []string {
+	log.SetFlags(0)
+	env, rest, preview := args[0], args[1:], ""
+	if env == "preview" {
+		if len(rest) == 0 || strings.HasPrefix(rest[0], "-") {
+			log.Fatal("deploy: preview needs a name, e.g. go tool charter deploy preview pr-7")
+		}
+		preview, rest = rest[0], rest[1:]
+	}
+	p, err := project.Load(".")
+	check(err)
+	d, err := p.Deploy(env, preview)
+	check(err)
+	check(os.Chdir(p.Root))
+	out := []string{"-name", d.Worker, "-compat", p.CompatibilityDate}
+	if preview == "" {
+		out = append(out, "-allow-existing")
+	} else {
+		out = append(out, "-preview", preview)
+	}
+	if p.Main != "" {
+		out = append(out, "-main", p.Main)
+	}
+	for _, m := range p.Modules {
+		out = append(out, "-module", m)
+	}
+	if p.Assets != "" {
+		out = append(out, "-assets", p.Assets)
+	}
+	migrations := ""
+	for _, db := range p.D1 {
+		out = append(out, "-d1", db.Binding+"="+d.Database)
+		if db.Migrations != "" && migrations != "" && db.Migrations != migrations {
+			log.Fatal("deploy: every [[d1]] gets the same migrations (one folder applied to every database)")
+		}
+		if db.Migrations != "" {
+			migrations = db.Migrations
+		}
+	}
+	if len(p.D1) > 0 {
+		out = append(out, "-d1-create")
+	}
+	if migrations != "" {
+		out = append(out, "-migrations", migrations)
+	}
+	for _, o := range p.DurableObjects {
+		out = append(out, "-do", o.Binding+"="+o.Class)
+	}
+	if tag, classes := p.LastMigration(); tag != "" {
+		out = append(out, "-migration-tag", tag)
+		for _, c := range classes {
+			out = append(out, "-new-sqlite-class", c)
+		}
+	}
+	for _, r := range p.RateLimits {
+		out = append(out, "-ratelimit", fmt.Sprintf("%s=%d:%d/%d", r.Binding, r.NamespaceID, r.Limit, r.Period))
+	}
+	for _, k := range slices.Sorted(maps.Keys(d.Vars)) {
+		out = append(out, "-var", k+"="+d.Vars[k])
+	}
+	if d.Domain != "" {
+		out = append(out, "-domain", d.Domain)
+		publicDomain = d.Domain
+	}
+	log.Printf("charter.toml, %s: %s", env, strings.Join(out, " "))
+	return append(out, rest...)
 }
 
 // client is the API client, with credentials from CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
