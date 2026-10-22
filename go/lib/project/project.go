@@ -1,0 +1,230 @@
+// Package project reads charter.toml, everything about a Go Worker on Cloudflare in one file at the app's root: its
+// name, compatibility date and modules, its Static Assets, its bindings (D1, Durable Objects, rate limits) and what
+// each environment (production, staging, previews, local workerd) gets. go tool charter reads it to run the Worker
+// locally (charter local, serve, with) and to deploy it (charter deploy production|staging|preview), and an app's
+// tests read it so that a fact kept anywhere else (a limit a test counts to) can be checked against it.
+//
+//	# charter.toml
+//	name = "my-app"                    # the Worker; staging is my-app-staging, previews are Worker Previews of it
+//	compatibility_date = "2026-09-11"  # workerd's locally, Cloudflare's in production
+//	main = "worker/index.mjs"          # the entry module, importing ./build/worker.mjs ("": build/worker.mjs is it)
+//	modules = ["worker/room.mjs"]      # the app's other modules, beside main
+//	assets = "dist/site"               # Static Assets ("": none)
+//	health = "/healthz"                # a path that touches no binding: a local server is up when it answers
+//	port = 8787                        # local workerd's port (PORT overrides it)
+//
+//	[[d1]]                             # databases my-app, my-app-staging and my-app-preview
+//	binding = "DB"
+//	migrations = "migrations"          # *.sql, applied in name order, each once
+//
+//	[[durable_objects]]
+//	binding = "ROOM"
+//	class = "Room"                     # exported by main
+//	migration = "v1"                   # the Durable Object migration that created it (SQLite storage)
+//
+//	[[rate_limits]]
+//	binding = "WRITES"
+//	namespace_id = 1001                # unique in the account
+//	limit = 60                         # per period seconds (10 or 60), per key
+//	period = 10
+//
+//	[production]
+//	domain = "app.example.com"         # a Workers Custom Domain ("": workers.dev only)
+//	vars = { APP_ENV = "production" }
+//	[staging]                          # optional: charter deploy staging
+//	vars = { APP_ENV = "staging" }
+//	[preview]                          # optional: charter deploy preview <name>; {preview} is the name
+//	vars = { APP_ENV = "preview {preview}" }
+//	[local]
+//	vars = { APP_ENV = "local" }
+package project
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+
+	"github.com/BurntSushi/toml"
+)
+
+// File is the file's name.
+const File = "charter.toml"
+
+// Project is charter.toml.
+type Project struct {
+	Name              string          `toml:"name"`
+	CompatibilityDate string          `toml:"compatibility_date"`
+	Main              string          `toml:"main"`
+	Modules           []string        `toml:"modules"`
+	Assets            string          `toml:"assets"`
+	Health            string          `toml:"health"`
+	Port              int             `toml:"port"`
+	D1                []D1            `toml:"d1"`
+	DurableObjects    []DurableObject `toml:"durable_objects"`
+	RateLimits        []RateLimit     `toml:"rate_limits"`
+	Production        Environment     `toml:"production"`
+	Staging           *Environment    `toml:"staging"`
+	Preview           *Environment    `toml:"preview"`
+	Local             Environment     `toml:"local"`
+
+	Root string `toml:"-"` // the directory charter.toml is in
+}
+
+// D1 is a D1 database binding. Its database is the Worker's name, with -staging or -preview in those environments.
+type D1 struct {
+	Binding    string `toml:"binding"`
+	Migrations string `toml:"migrations"`
+}
+
+// DurableObject is a Durable Object namespace binding, with SQLite storage.
+type DurableObject struct {
+	Binding   string `toml:"binding"`
+	Class     string `toml:"class"`
+	Migration string `toml:"migration"`
+}
+
+// RateLimit is a Workers Rate Limiting binding: Limit calls per Period seconds per key.
+type RateLimit struct {
+	Binding     string `toml:"binding"`
+	NamespaceID int    `toml:"namespace_id"`
+	Limit       int    `toml:"limit"`
+	Period      int    `toml:"period"`
+}
+
+// Environment is what one environment gets beyond the bindings every one has.
+type Environment struct {
+	Domain string            `toml:"domain"`
+	Vars   map[string]string `toml:"vars"`
+}
+
+// Load reads charter.toml in dir, or the nearest directory above it.
+func Load(dir string) (*Project, error) {
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, err
+	}
+	for {
+		path := filepath.Join(dir, File)
+		if _, err := os.Stat(path); err == nil {
+			p := &Project{Root: dir}
+			md, err := toml.DecodeFile(path, p)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", path, err)
+			}
+			if undecoded := md.Undecoded(); len(undecoded) > 0 {
+				return nil, fmt.Errorf("%s: unknown keys %v", path, undecoded)
+			}
+			if err := p.check(); err != nil {
+				return nil, fmt.Errorf("%s: %w", path, err)
+			}
+			return p, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return nil, errors.New("no " + File + " at or above the working directory")
+		}
+		dir = parent
+	}
+}
+
+func (p *Project) check() error {
+	var problems []string
+	if p.Name == "" {
+		problems = append(problems, "name is required")
+	}
+	if p.CompatibilityDate == "" {
+		problems = append(problems, "compatibility_date is required")
+	}
+	for _, d := range p.D1 {
+		if d.Binding == "" {
+			problems = append(problems, "every [[d1]] needs a binding")
+		}
+	}
+	for _, d := range p.DurableObjects {
+		if d.Binding == "" || d.Class == "" || d.Migration == "" {
+			problems = append(problems, "every [[durable_objects]] needs a binding, a class and a migration")
+		}
+	}
+	for _, r := range p.RateLimits {
+		if r.Binding == "" || r.NamespaceID < 1 || r.Limit < 1 || (r.Period != 10 && r.Period != 60) {
+			problems = append(problems, fmt.Sprintf("rate limit %q: want a binding, namespace_id ≥ 1, limit ≥ 1 and period 10 or 60", r.Binding))
+		}
+	}
+	if len(problems) > 0 {
+		return errors.New(strings.Join(problems, "; "))
+	}
+	return nil
+}
+
+// LocalPort is the port local workerd listens on: PORT, else port, else 8787 (wrangler's).
+func (p *Project) LocalPort() string {
+	if port := os.Getenv("PORT"); port != "" {
+		return port
+	}
+	if p.Port != 0 {
+		return fmt.Sprint(p.Port)
+	}
+	return "8787"
+}
+
+// RateLimit is the rate limit bound as binding, false if there is none.
+func (p *Project) RateLimit(binding string) (RateLimit, bool) {
+	i := slices.IndexFunc(p.RateLimits, func(r RateLimit) bool { return r.Binding == binding })
+	if i < 0 {
+		return RateLimit{}, false
+	}
+	return p.RateLimits[i], true
+}
+
+// Deploy is one deploy of the Worker: the Worker and database names and the variables and domain of an environment.
+type Deploy struct {
+	Worker   string            // the script: name, or name-staging
+	Preview  string            // the Worker Preview's name, for a preview
+	Database string            // every D1 binding's database
+	Vars     map[string]string // the environment's, with {preview} filled in
+	Domain   string
+}
+
+// Deploy is the deploy to env: "production", "staging" or "preview" (preview names the Worker Preview).
+func (p *Project) Deploy(env, preview string) (Deploy, error) {
+	var e *Environment
+	d := Deploy{Worker: p.Name, Database: p.Name}
+	switch env {
+	case "production":
+		e = &p.Production
+		d.Domain = e.Domain
+	case "staging":
+		e = p.Staging
+		d.Worker, d.Database = p.Name+"-staging", p.Name+"-staging"
+	case "preview":
+		if preview == "" {
+			return Deploy{}, errors.New("a preview needs a name, e.g. pr-7")
+		}
+		e = p.Preview
+		d.Preview, d.Database = preview, p.Name+"-preview"
+	default:
+		return Deploy{}, fmt.Errorf("%q: deploy to production, staging or preview <name>", env)
+	}
+	if e == nil {
+		return Deploy{}, fmt.Errorf("%s has no [%s]", File, env)
+	}
+	d.Vars = map[string]string{}
+	for k, v := range e.Vars {
+		d.Vars[k] = strings.ReplaceAll(v, "{preview}", preview)
+	}
+	return d, nil
+}
+
+// LastMigration is the Durable Object migration the Worker is at, and the classes it created: the one named last.
+func (p *Project) LastMigration() (tag string, classes []string) {
+	for _, d := range p.DurableObjects {
+		if d.Migration != tag {
+			tag, classes = d.Migration, nil
+		}
+		classes = append(classes, d.Class)
+	}
+	return tag, classes
+}

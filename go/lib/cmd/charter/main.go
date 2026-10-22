@@ -4,6 +4,9 @@
 //	go tool charter deploy   to Cloudflare over its REST API: production, Worker Previews, the preview pipeline
 //	go tool charter tail     the deployed Worker's live logs
 //	go tool charter bench    the CPU a local Worker spends per request
+//	go tool charter local    write .charter/ from charter.toml: what runs the Worker on plain workerd
+//	go tool charter serve    run it locally, in the developer's time zone
+//	go tool charter with     run a command against it on a free port (BASE its URL), then stop it
 //
 // go.mod: tool github.com/joeblew999/charter/go/lib/cmd/charter. `go tool charter <step> -h` lists a step's flags.
 // go tool workerbuild, workerdeploy, workertail and workerbench are the same steps by their old names.
@@ -16,6 +19,7 @@ import (
 	"github.com/joeblew999/charter/go/lib/internal/cli/bench"
 	"github.com/joeblew999/charter/go/lib/internal/cli/build"
 	"github.com/joeblew999/charter/go/lib/internal/cli/deploy"
+	"github.com/joeblew999/charter/go/lib/internal/cli/local"
 	"github.com/joeblew999/charter/go/lib/internal/cli/tail"
 )
 
@@ -24,11 +28,14 @@ var steps = map[string]func(args []string){
 	"deploy": deploy.Main,
 	"tail":   tail.Main,
 	"bench":  bench.Main,
+	"local":  local.Local,
+	"serve":  local.Serve,
+	"with":   local.With,
 }
 
 func main() {
 	if len(os.Args) < 2 || steps[os.Args[1]] == nil {
-		fmt.Fprintln(os.Stderr, "usage: go tool charter build | deploy | tail | bench [flags]   (go tool charter <step> -h: its flags)")
+		fmt.Fprintln(os.Stderr, "usage: go tool charter build | deploy | tail | bench | local | serve | with [flags]   (go tool charter <step> -h: its flags)")
 		os.Exit(2)
 	}
 	steps[os.Args[1]](os.Args[2:])
