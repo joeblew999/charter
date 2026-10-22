@@ -1,0 +1,48 @@
+# Written by `go tool charter tasks` (github.com/joeblew999/charter): don't edit it; after upgrading charter, run it
+# again. Every task reads charter.toml through go tool charter. Cloudflare credentials (CLOUDFLARE_API_TOKEN,
+# CLOUDFLARE_ACCOUNT_ID) come from the environment, else from fnox when it is installed.
+
+["charter:build"]
+description = "Build the Worker into build/ with TinyGo (go tool charter build); WORKER_COMPILER=go builds with the standard compiler, in seconds, never to deploy"
+run = 'go tool charter build ${WORKER_COMPILER:+-compiler=$WORKER_COMPILER}'
+
+["charter:serve"]
+description = "Run the built Worker on local workerd, on charter.toml's port (PORT overrides it), in your time zone (go tool charter serve)"
+run = "go tool charter serve"
+
+["charter:with"]
+description = "Run a command against the built Worker on local workerd, a free port and fresh state, BASE its URL (go tool charter with)"
+usage = 'arg "<command>" var=#true help="the command and its arguments"'
+run = 'go tool charter with ${usage_command}'
+
+["charter:token"]
+description = "Check the Cloudflare token is active (go tool charter token)"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec go tool charter token; fi
+exec fnox exec -- go tool charter token
+'''
+
+["charter:deploy"]
+description = "Deploy the built Worker to production, staging or a preview <name>, as charter.toml says (go tool charter deploy); prints its URL"
+usage = '''
+arg "<environment>" help="production, staging or preview"
+arg "[name]" help="the preview's name, e.g. pr-7"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+args=("$usage_environment"); [ -z "${usage_name:-}" ] || args+=("$usage_name")
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec go tool charter deploy "${args[@]}"; fi
+exec fnox exec -- go tool charter deploy "${args[@]}"
+'''
+
+["charter:tail"]
+description = "Stream the deployed Worker's live logs until Ctrl-C (go tool charter tail)"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec go tool charter tail; fi
+exec fnox exec -- go tool charter tail
+'''

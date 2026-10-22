@@ -10,6 +10,8 @@
 //	go tool charter token    whether CLOUDFLARE_API_TOKEN is active
 //	go tool charter ci       CI's side of previews and releases: publish a commit's build, release a version
 //	go tool charter builds   Workers Builds' side: fetch a commit's build, deploy what its branch deploys
+//	go tool charter init     set an app up: charter.toml, .gitignore, the mise tasks
+//	go tool charter tasks    the mise tasks again (after upgrading charter)
 //
 // go.mod: tool github.com/joeblew999/charter/go/lib/cmd/charter. `go tool charter <step> -h` lists a step's flags.
 // go tool workerbuild, workerdeploy, workertail and workerbench are the same steps by their old names.
@@ -25,6 +27,7 @@ import (
 	"github.com/joeblew999/charter/go/lib/internal/cli/ci"
 	"github.com/joeblew999/charter/go/lib/internal/cli/deploy"
 	"github.com/joeblew999/charter/go/lib/internal/cli/local"
+	"github.com/joeblew999/charter/go/lib/internal/cli/scaffold"
 	"github.com/joeblew999/charter/go/lib/internal/cli/tail"
 	"github.com/joeblew999/charter/go/lib/internal/cli/token"
 )
@@ -40,11 +43,13 @@ var steps = map[string]func(args []string){
 	"token":  token.Main,
 	"ci":     ci.Main,
 	"builds": builds.Main,
+	"init":   scaffold.Init,
+	"tasks":  scaffold.Tasks,
 }
 
 func main() {
 	if len(os.Args) < 2 || steps[os.Args[1]] == nil {
-		fmt.Fprintln(os.Stderr, "usage: go tool charter build | deploy | tail | bench | local | serve | with | token | ci | builds [flags]   (go tool charter <step> -h: its flags)")
+		fmt.Fprintln(os.Stderr, "usage: go tool charter build | deploy | tail | bench | local | serve | with | token | ci | builds | init | tasks [flags]   (go tool charter <step> -h: its flags)")
 		os.Exit(2)
 	}
 	steps[os.Args[1]](os.Args[2:])
