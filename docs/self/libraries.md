@@ -49,7 +49,6 @@ The packages of `go/lib/`. The rest is in their doc comments: `go doc github.com
 | `auth` | Who may call, with scopes declared in the contract and enforced by one middleware (401, 403): bearer tokens, Cloudflare Access (people and service tokens), an OpenID Connect issuer, tokens the API issued itself (`auth.Issued`, for an OAuth endpoint of its own); every refusal's challenge and `auth.WellKnown`, what a client reads to find out how to get in (RFC 9728, RFC 8414) ([Auth](auth.md)); `auth/authtest` is a test issuer | `auth.Scheme`, `auth.AccessScheme`, `auth.OIDCScheme`, `Security: auth.Needs("write")`, `auth.CallerOf(ctx)`; `serve` adds the middleware |
 | `ratelimit` | How often a caller may call, beside `auth`: a limit per operation or per scope, declared in the contract (`x-rate-limit` and a 429 with Retry-After in the specs), counted per caller by a Workers Rate Limiting binding, in memory on the host ([Auth](ratelimits.md)) | `ratelimit.Declare(config.OpenAPI, perScope...)`, `Extensions: ratelimit.Limited(limit, nil)`; `serve` adds the middleware, after auth's |
 | `specs` | What `npm run spec` runs for a Go project's `api.API`, which stops on what the specs don't show (a route that does not name its operation, an operation that cannot be its tool, an example missing or invalid) | `specs.Must(specs.Problems(spec))`, `specs.Main(spec.OpenAPI, spec.AsyncAPI)` |
-| `searchconsole` | A site's pages in Google: the Search Console API with a service account (submit and read sitemaps, inspect a URL), and how wide a title or description is in Google's units, for a test that keeps them uncut | `searchconsole.SnippetWidth(title) <= searchconsole.MaxTitleWidth`; the rest through `go tool searchconsole` |
 
 The build, `go/lib/cmd/workerbuild`: the Worker's Wasm with TinyGo (the runtime patches in [Upstream issues](upstream.md), an 8 MB starting heap, 128 KB stacks, `-opt=z`), the glue below copied into `build/`, and a cache that gives back a Wasm built before from the same sources (a build of minutes, 0.6 s when nothing changed). charter-ts's build runs it; a Go repo without Node runs it itself, with tinygo and wasm-opt on its PATH:
 
@@ -72,12 +71,8 @@ fnox exec -- go tool workerdeploy -name my-api -compat <date> -allow-existing -d
 fnox exec -- go tool workertail -name my-api
 ```
 
-How Google sees a site with pages, `go/lib/cmd/searchconsole`: `audit` fetches robots.txt and every sitemap URL as Googlebot and fails on what would keep a page out (a status, noindex, a canonical elsewhere, a missing title, description or h1, hreflang that isn't reciprocal); `todo` gives Google's verdict for every sitemap URL and `inspect` for one; `submit` sends the sitemap. All but `audit` need a service account key in `GOOGLE_SEARCH_CONSOLE_KEY` with Full access to the property; `-json` prints one document for a program.
-
-```sh
-go tool searchconsole -base https://app.example.com audit
-fnox exec -- go tool searchconsole -base https://app.example.com todo
-```
+How Google sees a site with pages (robots.txt, the sitemap, an audit as Googlebot, Search Console, Lighthouse) is
+[seo](https://github.com/joeblew999/go-htmx4/tree/main/seo), its own Go module, not part of charter.
 
 The Worker glue, in `go/lib/worker/`, written into `build/` by the build:
 

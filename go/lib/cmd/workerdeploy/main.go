@@ -97,12 +97,13 @@ func main() {
 	prunePreviews := flag.Bool("prune-previews", false, "delete -name's previews whose branch no longer exists on GitHub")
 	commentPR := flag.String("comment-pr", "", "CI: post the preview URL (-url) on this branch's open pull request (GITHUB_TOKEN)")
 	commentURL := flag.String("url", "", "preview URL for -comment-pr")
+	commentNote := flag.String("comment-note", "", "-comment-pr: a sentence about the app's previews, after the URL (what they share, whether they're indexed)")
 	configureBuilds := flag.Bool("configure-builds", false, "make -name's Workers Builds setup match the flags below (needs Cloudflare credentials)")
 	bc := cfdeploy.BuildsConfig{Vars: vars{}}
 	flag.StringVar(&bc.BuildToken, "build-token", "", "-configure-builds: Workers Builds token name (make it once in the dashboard)")
 	flag.StringVar(&bc.FallbackBuildToken, "fallback-build-token", "", "-configure-builds: token name to use until -build-token exists")
-	flag.StringVar(&bc.BuildCommand, "build-command", "ci/workers-builds.sh build", "-configure-builds: preview build command")
-	flag.StringVar(&bc.DeployCommand, "deploy-command", "ci/workers-builds.sh deploy", "-configure-builds: preview deploy command")
+	flag.StringVar(&bc.BuildCommand, "build-command", "", "-configure-builds: the build command Workers Builds runs (required)")
+	flag.StringVar(&bc.DeployCommand, "deploy-command", "", "-configure-builds: the deploy command Workers Builds runs (required)")
 	flag.Var(vars(bc.Vars), "build-var", "-configure-builds: build variable KEY=VALUE (repeatable)")
 	flag.Var((*list)(&bc.PathExcludes), "path-exclude", "-configure-builds: don't build pushes that only change these paths (repeatable)")
 	flag.Parse()
@@ -143,8 +144,8 @@ func main() {
 	case *commentPR != "":
 		need(*repo != "" && gh.Token != "" && *commentURL != "", "-comment-pr needs -repo, GITHUB_TOKEN and -url")
 		_, err := gh.CommentPR(ctx, *commentPR, "<!-- worker-preview -->",
-			"**Preview:** "+*commentURL+"\n\nDeployed by Workers Builds a few seconds after this commit's build is published; "+
-				"its check goes green when it's live. Own Durable Object storage, shared preview D1, not indexed.")
+			strings.TrimSpace("**Preview:** "+*commentURL+"\n\nDeployed by Workers Builds a few seconds after this commit's build is published; "+
+				"its check goes green when it's live. "+*commentNote))
 		check(err)
 		return
 	case *prunePreviews:

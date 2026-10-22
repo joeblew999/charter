@@ -134,24 +134,24 @@ func TestSlug(t *testing.T) {
 		{"2026-fix", "b-2026-fix"},
 		{"///", "branch"},
 	} {
-		if got := previewbuild.Slug(tc.branch, "go-htmx4"); got != tc.want {
+		if got := previewbuild.Slug(tc.branch, "app"); got != tc.want {
 			t.Errorf("Slug(%q) = %q, want %q", tc.branch, got, tc.want)
 		}
 	}
 	long := strings.Repeat("very-long-branch-name-", 6)
-	a, b := previewbuild.Slug(long+"a", "go-htmx4"), previewbuild.Slug(long+"b", "go-htmx4")
+	a, b := previewbuild.Slug(long+"a", "app"), previewbuild.Slug(long+"b", "app")
 	if a == b {
 		t.Errorf("long branches collide: %q", a)
 	}
 	for _, s := range []string{a, b} {
-		if l := len(s) + len("-go-htmx4"); l > 63 {
+		if l := len(s) + len("-app"); l > 63 {
 			t.Errorf("%q: label %d > 63", s, l)
 		}
 		if strings.HasSuffix(s, "-") || strings.Contains(s, "--") {
 			t.Errorf("%q: bad hyphens", s)
 		}
 	}
-	if got := previewbuild.URL("pr-7", "go-htmx4", "acme"); got != "https://pr-7-go-htmx4.acme.workers.dev" {
+	if got := previewbuild.URL("pr-7", "app", "acme"); got != "https://pr-7-app.acme.workers.dev" {
 		t.Errorf("URL = %s", got)
 	}
 }
