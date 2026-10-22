@@ -55,6 +55,13 @@ github.com/joeblew999/charter/go/lib/cmd/charter`); `go tool charter <step> -h` 
 workerbuild`, `workerdeploy`, `workertail` and `workerbench` are the same steps by their old names, kept while repos
 move over.
 
+A Go app is set up for Workers with `go tool charter init`, from its root:
+- **`charter.toml`:** named after the module and dated from the workerd on its PATH;
+- **`.gitignore`:** `build/` added to it;
+- **mise tasks:** `charter:build`, `serve`, `with`, `token`, `deploy` and `tail` in `.mise/tasks/charter.toml` (`go tool charter tasks` writes them again after an upgrade).
+
+The app writes one `main` package, `transport.Run(handler)`, which is the Worker on Cloudflare and a plain HTTP server off it, and its bindings in `charter.toml`. go-htmx4's `e2e/fresh` makes such an app from nothing and runs it on workerd (and, asked to, on Cloudflare).
+
 Everything about the Worker on Cloudflare is one file at the app's root, `charter.toml` (package `go/lib/project`
 documents every key): its name, compatibility date and modules, Static Assets, D1 databases, Durable Objects and
 rate limits, and what production, staging, previews and local workerd each get. The steps read it, and an app's tests
