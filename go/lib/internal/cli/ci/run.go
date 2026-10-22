@@ -17,6 +17,11 @@ func run(p *project.Project) int {
 	defer func() { t.report() }() // the phases as they are when run returns
 	onCI, pushed := os.Getenv("CI") != "", os.Getenv("GITHUB_ACTIONS") != "" && os.Getenv("GITHUB_EVENT_NAME") == "push"
 	var env []string
+	if repo := os.Getenv("GITHUB_REPOSITORY"); os.Getenv("GITHUB_ACTIONS") != "" && repo != "" {
+		// go tool charter build shares its builds through the repository's releases (charter-cache): a release, or a
+		// change that leaves the Worker's inputs alone, takes the earlier build instead of compiling it again.
+		env = append(env, "CHARTER_CACHE_REPO="+repo)
+	}
 	install := "mise install"
 	if onCI && len(p.CI.Tools) > 0 {
 		// Only the tools CI runs, and no installing of the rest before each mise task (mise's default).

@@ -105,7 +105,9 @@ charter deploy production`, `staging` or `preview <name>`.
 
 CI and Workers Builds share the work so that a commit is compiled once, on CI. `go tool charter ci run` is the
 whole CI, from `charter.toml`'s `[ci]` (`tools`, `build`, `test`, `release_hook`): it publishes on a push, releases a
-`v*` tag or a `release/v*` branch, and prints where the time went. `go tool charter ci publish`, from a
+`v*` tag or a `release/v*` branch, and prints where the time went. On GitHub, `go tool charter build` shares its
+builds through the repository's `charter-cache` pre-release, keyed by every input: a release, or a change that leaves
+the Worker's inputs alone, takes the earlier build instead of minutes of TinyGo and wasm-opt. `go tool charter ci publish`, from a
 static linux/amd64 build of the command, puts the commit's build and that very binary on the repository's
 `preview-builds` pre-release, and the branch's preview URL on its pull request. Workers Builds then runs that binary:
 `.mise/tasks/charter-builds` fetches that binary, `go tool charter builds build` fetches the build, verified (or
