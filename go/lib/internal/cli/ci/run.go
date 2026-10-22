@@ -52,11 +52,8 @@ func run(p *project.Project) int {
 		return 1
 	}
 	if version := releaseOf(os.Getenv("GITHUB_REF_TYPE"), os.Getenv("GITHUB_REF_NAME")); pushed && version != "" {
-		args := []string{"bin/charter", "ci", "release"}
-		if p.CI.ReleaseHook != "" {
-			args = append(args, "-hook", p.CI.ReleaseHook)
-		}
-		if !t.phase("release "+version, command(append(args, version), env)) {
+		args := append([]string{"bin/charter", "ci"}, releaseArgs(p.CI.ReleaseHook, version)...)
+		if !t.phase("release "+version, command(args, env)) {
 			return 1
 		}
 	}

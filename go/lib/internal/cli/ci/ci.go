@@ -36,9 +36,10 @@ import (
 
 // Main runs the step with args, the arguments after its name.
 func Main(args []string) {
-	fs := flag.NewFlagSet("charter ci", flag.ExitOnError)
-	hook := fs.String("hook", "", "release: a shell command run after the commit is checked and tagged, before production moves (e.g. tagging the repo's own Go modules)")
-	fs.Parse(args)
+	step, hook, rest, err := parse(args)
+	if err != nil {
+		os.Exit(2) // flag printed it
+	}
 	log.SetFlags(0)
 	p, err := project.Load(".")
 	if err != nil {
@@ -47,7 +48,7 @@ func Main(args []string) {
 	if err := os.Chdir(p.Root); err != nil {
 		log.Fatal(err)
 	}
-	if fs.Arg(0) == "run" {
+	if step == "run" {
 		os.Exit(run(p))
 	}
 	gh := github{repo: os.Getenv("GITHUB_REPOSITORY"), token: os.Getenv("GITHUB_TOKEN")}
@@ -55,19 +56,41 @@ func Main(args []string) {
 	if gh.repo == "" || gh.token == "" || sha == "" {
 		log.Fatal("✗ charter ci needs GITHUB_REPOSITORY, GITHUB_TOKEN and GITHUB_SHA (GitHub Actions sets them)")
 	}
-	switch fs.Arg(0) {
+	switch step {
 	case "publish":
 		os.Exit(publish(p, gh.repo, sha, ref, refType))
 	case "release":
-		if fs.NArg() != 2 {
+		if len(rest) != 1 {
 			log.Fatal("usage: go tool charter ci release [-hook command] <version>")
 		}
-		if err := release(gh, fs.Arg(1), sha, ref, refType, *hook); err != nil {
+		if err := release(gh, rest[0], sha, ref, refType, hook); err != nil {
 			log.Fatal("✗ ", err)
 		}
 	default:
 		log.Fatal("usage: go tool charter ci run | publish | release [-hook command] <version>")
 	}
+}
+
+// parse reads the step's name, then its flags: ci release -hook command <version>.
+func parse(args []string) (step, hook string, rest []string, err error) {
+	if len(args) > 0 {
+		step, args = args[0], args[1:]
+	}
+	fs := flag.NewFlagSet("charter ci "+step, flag.ContinueOnError)
+	fs.StringVar(&hook, "hook", "", "release: a shell command run after the commit is checked and tagged, before production moves (e.g. tagging the repo's own Go modules)")
+	if err := fs.Parse(args); err != nil {
+		return "", "", nil, err
+	}
+	return step, hook, fs.Args(), nil
+}
+
+// releaseArgs are ci release's arguments for version, as parse reads them.
+func releaseArgs(hook, version string) []string {
+	args := []string{"release"}
+	if hook != "" {
+		args = append(args, "-hook", hook)
+	}
+	return append(args, version)
 }
 
 func publish(p *project.Project, repo, sha, ref, refType string) int {
