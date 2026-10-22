@@ -9,7 +9,7 @@ nav_order: 16
 | Issue | Problem | Workaround | When fixed |
 |---|---|---|---|
 | [workers-sdk#16199](https://github.com/cloudflare/workers-sdk/issues/16199) | Under `cf dev`, a request answered before its body was read makes the next request on the connection fail (`fetch failed`, a 500 from the dev server): workerd up to 1.20261013.1 closes the connection, and miniflare does not retry | `charter-lib/serve` reads a body the answer did not (`ts/lib/src/serve.ts`) | Drop that |
-| [tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800) | The collector runs at every pause of a workers-go program | A runtime patch and an 8 MB heap (`go/lib/cmd/workerbuild`) | Drop the patch |
+| [tinygo#5800](https://github.com/tinygo-org/tinygo/issues/5800) | The collector runs at every pause of a workers-go program | A runtime patch and an 8 MB heap (`go/lib/internal/cli/build`) | Drop the patch |
 | [tinygo#5798](https://github.com/tinygo-org/tinygo/issues/5798) | Go timers stall on Cloudflare | `go/lib/worker/tinygo-clock.mjs` | Delete it |
 | [tinygo#5684](https://github.com/tinygo-org/tinygo/issues/5684), [#5888](https://github.com/tinygo-org/tinygo/issues/5888), [#5889](https://github.com/tinygo-org/tinygo/issues/5889), [net#106](https://github.com/tinygo-org/net/issues/106), [net#95](https://github.com/tinygo-org/net/issues/95) | The official Go MCP SDK does not build with TinyGo 0.43.0: `hash/maphash` with Go 1.27, `reflect.VisibleFields`, `os.OpenRoot`, two `net/http` APIs and `net.Dialer.Control` | `go/lib/mcp` serves MCP itself | When all are closed, try the official SDK (`go/lib/mcp/mcp.go`) |
 | [tinygo-org/net#56](https://github.com/tinygo-org/net/pull/56) | `http.ServeMux` has no method patterns | `humaworkers` routes itself | Use Huma's adapter |
