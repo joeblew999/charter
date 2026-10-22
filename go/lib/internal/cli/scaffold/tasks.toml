@@ -46,3 +46,32 @@ set -euo pipefail
 if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec go tool charter tail; fi
 exec fnox exec -- go tool charter tail
 '''
+
+["charter:check"]
+description = "Everything charter.toml and charter's files in this app should be (go tool charter check): exits 1 on any problem"
+run = "go tool charter check"
+
+["charter:ci"]
+description = "What CI runs, here (go tool charter ci run, charter.toml's [ci]): the build and the checks; on GitHub also the preview's build and a release"
+run = "go tool charter ci run"
+
+["charter:tasks"]
+description = "After upgrading charter: these tasks and the Workers Builds launcher again (go tool charter tasks)"
+run = "go tool charter tasks"
+
+["charter:skill"]
+description = "After upgrading charter: its agent skill again, into .claude/skills/charter (go tool charter skill)"
+run = "go tool charter skill"
+
+["charter:workflow"]
+description = "After upgrading charter: the CI workflow again, .github/workflows/charter.yml (go tool charter workflow)"
+run = "go tool charter workflow"
+
+["charter:builds-configure"]
+description = "Set Workers Builds up for the Worker: the repository, .mise/tasks/charter-builds as its build and deploy commands (go tool charter builds configure; Cloudflare credentials)"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec go tool charter builds configure; fi
+exec fnox exec -- go tool charter builds configure
+'''

@@ -34,6 +34,24 @@ func TestInit(t *testing.T) {
 	if !strings.Contains(mustRead(t, project.File), `name = "kept"`) {
 		t.Error("init again replaced charter.toml")
 	}
+	for _, f := range []string{".mise/tasks/charter-builds", ".claude/skills/charter/SKILL.md", ".github/workflows/charter.yml"} {
+		if _, err := os.Stat(f); err != nil {
+			t.Errorf("init wrote no %s", f)
+		}
+	}
+	p, err = project.Load(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if problems := Problems(p); len(problems) != 0 {
+		t.Errorf("a fresh init has problems: %v", problems)
+	}
+	os.WriteFile(TasksFile, []byte("# changed\n"), 0o644)
+	os.Chmod(".mise/tasks/charter-builds", 0o644)
+	problems := Problems(p)
+	if len(problems) != 2 || !strings.Contains(problems[0], "isn't this charter's") || !strings.Contains(problems[1], "isn't executable") {
+		t.Errorf("problems: %q", problems)
+	}
 	if workerName("example.com/x/Go.HTMX_4") != "go-htmx-4" {
 		t.Errorf("workerName = %s", workerName("example.com/x/Go.HTMX_4"))
 	}

@@ -55,12 +55,19 @@ github.com/joeblew999/charter/go/lib/cmd/charter`); `go tool charter <step> -h` 
 workerbuild`, `workerdeploy`, `workertail` and `workerbench` are the same steps by their old names, kept while repos
 move over.
 
-A Go app is set up for Workers with `go tool charter init`, from its root:
-- **`charter.toml`:** named after the module and dated from the workerd on its PATH;
-- **`.gitignore`:** `build/` added to it;
-- **mise tasks:** `charter:build`, `serve`, `with`, `token`, `deploy` and `tail` in `.mise/tasks/charter.toml` (`go tool charter tasks` writes them again after an upgrade).
+A Go app is set up for Workers the way go-htmx4's intl and seo set one up: one command, a config file, its own mise
+tasks, an agent skill, and a check. `go tool charter init`, from the app's root, writes:
+- `charter.toml` (named after the module, dated from the workerd on its PATH);
+- `build/` into `.gitignore`;
+- the mise tasks, `.mise/tasks/charter.toml` (`charter:build`, `serve`, `with`, `deploy`, `tail`, `token`, `check`,
+  `ci`, `builds-configure`, …), and Workers Builds' launcher beside them, `.mise/tasks/charter-builds`;
+- the agent skill, `.claude/skills/charter`;
+- the CI workflow, `.github/workflows/charter.yml`, which runs `go tool charter ci run`.
 
-The app writes one `main` package, `transport.Run(handler)`, which is the Worker on Cloudflare and a plain HTTP server off it, and its bindings in `charter.toml`. go-htmx4's `e2e/fresh` makes such an app from nothing and runs it on workerd (and, asked to, on Cloudflare).
+`go tool charter check` names every problem with `charter.toml` and with those files: after upgrading charter, `go tool
+charter tasks`, `skill` and `workflow` write them again. The app writes one `main` package, `transport.Run(handler)`,
+which is the Worker on Cloudflare and a plain HTTP server off it, and its bindings in `charter.toml`. go-htmx4's
+`e2e/fresh` makes such an app from nothing and runs it on workerd (and, asked to, on Cloudflare).
 
 Everything about the Worker on Cloudflare is one file at the app's root, `charter.toml` (package `go/lib/project`
 documents every key): its name, compatibility date and modules, Static Assets, D1 databases, Durable Objects and
@@ -96,10 +103,14 @@ time zone; `go tool charter with <command>` runs a command against it on a free 
 and stops it (`-strict`: a panic or uncaught exception in workerd's log fails it too). Deploys read it too: `go tool
 charter deploy production`, `staging` or `preview <name>`.
 
-CI and Workers Builds share the work so that a commit is compiled once, on CI. `go tool charter ci publish`, from a
+CI and Workers Builds share the work so that a commit is compiled once, on CI. `go tool charter ci run` is the
+whole CI, from `charter.toml`'s `[ci]` (`tools`, `build`, `test`, `release_hook`): it publishes on a push, releases a
+`v*` tag or a `release/v*` branch, and prints where the time went. `go tool charter ci publish`, from a
 static linux/amd64 build of the command, puts the commit's build and that very binary on the repository's
 `preview-builds` pre-release, and the branch's preview URL on its pull request. Workers Builds then runs that binary:
-`go tool charter builds build` fetches the build, verified, and `go tool charter builds deploy` deploys what the branch
+`.mise/tasks/charter-builds` fetches that binary, `go tool charter builds build` fetches the build, verified (or
+`-compile` builds it there with `[build] command` when CI published none), and `go tool charter builds deploy` deploys
+what the branch
 deploys, which is production for `production`, staging for `main`, otherwise the branch's own preview. A release is
 `go tool charter ci release <version>` on CI: once the commit is checked to be on `main`, it is tagged and the
 `production` branch moves to it. `go tool charter token` checks the Cloudflare token before a deploy. `charter.toml`'s

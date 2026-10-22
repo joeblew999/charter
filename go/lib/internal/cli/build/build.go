@@ -62,7 +62,12 @@ func Main(args []string) {
 	if !*usePatches {
 		patches = nil
 	}
-	var err error
+	unlock, err := lock()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "workerbuild:", err)
+		os.Exit(1)
+	}
+	defer unlock()
 	switch *compiler {
 	case "tinygo":
 		err = build(*heapMB, *opt, *stack, *limit, *fresh, *reuse)
@@ -72,6 +77,7 @@ func Main(args []string) {
 		err = fmt.Errorf("-compiler %q: tinygo or go", *compiler)
 	}
 	if err != nil {
+		unlock()
 		fmt.Fprintln(os.Stderr, "workerbuild:", err)
 		os.Exit(1)
 	}
