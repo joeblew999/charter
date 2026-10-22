@@ -102,6 +102,9 @@ func build(heapMB int, opt, stack string, limit int, fresh, reuse bool) error {
 	}
 	wasm := filepath.Join("build", "app.wasm")
 	cached := filepath.Join(cacheDir("wasm"), key+".wasm")
+	if _, err := os.Stat(cached); err != nil && !fresh {
+		fetchShared(key, cached)
+	}
 	if _, err := os.Stat(cached); err == nil && !fresh {
 		if err := copyFile(cached, wasm); err != nil {
 			return err
@@ -132,6 +135,7 @@ func build(heapMB int, opt, stack string, limit int, fresh, reuse bool) error {
 		if err := copyFile(wasm, cached); err != nil {
 			return err
 		}
+		storeShared(key, wasm)
 	}
 	raw, gz, err := sizes(wasm)
 	if err != nil {

@@ -237,6 +237,8 @@ type GitHub struct {
 	Downloads string       // default https://github.com
 	HTTP      *http.Client // default http.DefaultClient
 	Logf      func(format string, args ...any)
+	// Title and About name and describe a pre-release Publish creates (default: the preview builds').
+	Title, About string
 }
 
 func (g *GitHub) logf(format string, args ...any) {
@@ -318,8 +320,8 @@ func (g *GitHub) Publish(ctx context.Context, tag, name string, data []byte, kee
 	var rel release
 	err := g.do(ctx, "GET", "/repos/"+g.Repo+"/releases/tags/"+url.PathEscape(tag), "", nil, &rel)
 	if errors.Is(err, errNotFound) {
-		body, _ := json.Marshal(map[string]any{"tag_name": tag, "name": "Preview builds", "prerelease": true,
-			"body": "Build output per commit for Cloudflare Worker Previews (charter's workerdeploy). Not a release."})
+		body, _ := json.Marshal(map[string]any{"tag_name": tag, "name": or(g.Title, "Preview builds"), "prerelease": true,
+			"body": or(g.About, "Build output per commit for Cloudflare Worker Previews (charter's workerdeploy). Not a release.")})
 		err = g.do(ctx, "POST", "/repos/"+g.Repo+"/releases", "application/json", body, &rel)
 		if err == nil {
 			g.logf("✓ release %s created", tag)
