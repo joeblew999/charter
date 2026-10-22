@@ -15,18 +15,24 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/go/lib/internal/cftail"
+	"github.com/joeblew999/charter/go/lib/project"
 )
 
 // Main runs the command with args, the arguments after its name.
 func Main(args []string) {
 	fs := flag.NewFlagSet("charter tail", flag.ExitOnError)
 	log.SetFlags(0)
-	name := fs.String("name", os.Getenv("APP_NAME"), "Worker script name (default $APP_NAME)")
+	name := fs.String("name", os.Getenv("APP_NAME"), "Worker script name (default $APP_NAME, else charter.toml's name)")
 	asJSON := fs.Bool("json", false, "print raw events as JSON lines")
 	duration := fs.Duration("for", 0, "stop after this long (0 = until Ctrl-C)")
 	fs.Parse(args)
 	if *name == "" {
-		log.Fatal("tail: -name is required")
+		if p, err := project.Load("."); err == nil {
+			*name = p.Name
+		}
+	}
+	if *name == "" {
+		log.Fatal("tail: -name is required (or a charter.toml)")
 	}
 	c := &cftail.Client{Token: os.Getenv("CLOUDFLARE_API_TOKEN"), AccountID: os.Getenv("CLOUDFLARE_ACCOUNT_ID"),
 		Ready: func() { log.Printf("tailing %s (Ctrl-C to stop)", *name) }}

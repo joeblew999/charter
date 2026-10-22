@@ -12,6 +12,8 @@
 //	assets = "dist/site"               # Static Assets ("": none)
 //	health = "/healthz"                # a path that touches no binding: a local server is up when it answers
 //	port = 8787                        # local workerd's port (PORT overrides it)
+//	repo = "you/my-app"                # its GitHub repository: CI publishes each commit's build there for Workers Builds
+//	subdomain = "you"                  # the account's workers.dev subdomain: a preview is <branch>-my-app.you.workers.dev
 //
 //	[[d1]]                             # databases my-app, my-app-staging and my-app-preview
 //	binding = "DB"
@@ -35,6 +37,7 @@
 //	vars = { APP_ENV = "staging" }
 //	[preview]                          # optional: charter deploy preview <name>; {preview} is the name
 //	vars = { APP_ENV = "preview {preview}" }
+//	note = "Shares staging's D1."      # a sentence for the pull request's preview comment
 //	[local]
 //	vars = { APP_ENV = "local" }
 package project
@@ -62,6 +65,8 @@ type Project struct {
 	Assets            string          `toml:"assets"`
 	Health            string          `toml:"health"`
 	Port              int             `toml:"port"`
+	Repo              string          `toml:"repo"`
+	Subdomain         string          `toml:"subdomain"`
 	D1                []D1            `toml:"d1"`
 	DurableObjects    []DurableObject `toml:"durable_objects"`
 	RateLimits        []RateLimit     `toml:"rate_limits"`
@@ -98,6 +103,36 @@ type RateLimit struct {
 type Environment struct {
 	Domain string            `toml:"domain"`
 	Vars   map[string]string `toml:"vars"`
+	Note   string            `toml:"note"` // preview: a sentence for the pull request's comment
+}
+
+// The branches that deploy something other than their own preview (go tool charter builds deploy): production
+// deploys production (CI moves it there on a release, go tool charter ci release), and main deploys staging.
+const (
+	ProductionBranch = "production"
+	StagingBranch    = "main"
+)
+
+// BranchEnvironment is what branch deploys: "production", "staging", "preview", or "" for a release request
+// (release/v*: CI releases it, nothing deploys).
+func BranchEnvironment(branch string) string {
+	switch {
+	case branch == ProductionBranch:
+		return "production"
+	case branch == StagingBranch:
+		return "staging"
+	case strings.HasPrefix(branch, "release/"):
+		return ""
+	}
+	return "preview"
+}
+
+// PreviewURL is where the Worker Preview called slug answers, "" without a subdomain.
+func (p *Project) PreviewURL(slug string) string {
+	if p.Subdomain == "" {
+		return ""
+	}
+	return "https://" + slug + "-" + p.Name + "." + p.Subdomain + ".workers.dev"
 }
 
 // Load reads charter.toml in dir, or the nearest directory above it.
