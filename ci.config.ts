@@ -17,9 +17,9 @@ export default {
 				["tsc"],
 				// The projects, kept the same: their scripts and the versions they share.
 				["node", "--test", "projects.test.ts"],
-				["npm", "run", "check", "-w", "ts/lib"],
+				["npm", "run", "check", "-w", "ts"],
 				["npm", "run", "check", "-w", "charter-ts"],
-				["charter-ts", "check", "go/lib"],
+				["charter-ts", "check", "."],
 				// The workflows, linted (rhysd/actionlint, which mise loads at this version).
 				["mise", "exec", "actionlint@1.7.12", "--", "actionlint"],
 			],
@@ -37,9 +37,9 @@ export default {
 			on: ["push", "pull_request", "tag"],
 			timeoutMinutes: 30,
 			run: [
-				["charter-ts", "twins", "ts/conformance", "go/conformance"],
-				["charter-ts", "twins", "ts/examples-notes", "go/examples-notes"],
-				["charter-ts", "twins", "ts/examples-start", "go/examples-start"],
+				["charter-ts", "twins", "examples/conformance-ts", "examples/conformance-go"],
+				["charter-ts", "twins", "examples/notes-ts", "examples/notes-go"],
+				["charter-ts", "twins", "examples/start-ts", "examples/start-go"],
 			],
 		},
 		// What a user gets: a project made by charter-ts new from the package as a release packs it,
@@ -56,7 +56,7 @@ export default {
 			about: "A Go app made by go tool charter init gets charter's TinyGo through mise, every way it builds, builds, and may not pin its own",
 			on: ["push", "pull_request", "tag"],
 			timeoutMinutes: 20,
-			run: [["bash", "go/new-app.sh"]],
+			run: [["bash", "examples/new-app.sh"]],
 		},
 		// The conformance projects carry every Fern feature, so their clients prove the generators; an
 		// example's specs are checked by Fern in its own check, and its committed Go SDK by a hash.
@@ -64,7 +64,7 @@ export default {
 			about: "Every client the conformance projects' fern/generators.yml declares, generated with Fern and proven in its language",
 			on: ["push", "pull_request", "tag"],
 			each: "project",
-			projects: ["go/conformance", "ts/conformance"],
+			projects: ["examples/conformance-go", "examples/conformance-ts"],
 			timeoutMinutes: 60,
 			run: [["charter-ts", "sdk", "--prove"]],
 		},

@@ -4,7 +4,7 @@
 //   2. npm run check: the jobs ci.config.ts lists in check (the rest are the CI's: npm run ci).
 //   3. The packages (npm pack) into dist/: charter-ts (the command, charter's files) and charter-lib
 //      (what a TypeScript Worker imports), at the same version.
-//   4. The tags ts-vX.Y.Z and go/lib/vX.Y.Z (the Go library's), pushed with main, and the GitHub
+//   4. The tags ts-vX.Y.Z and vX.Y.Z (the Go library's, the repo's root module), pushed with main, and the GitHub
 //      Release, marked latest, with both packages on it, which a repo installs.
 // The version goes into every install command that README.md and docs/ show too: npx keeps what it
 // fetched for a URL, so only a URL with the version in it gives the version it names.
@@ -27,6 +27,12 @@ if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
 	process.exit(1);
 }
 const tag = `ts-v${version}`;
+// The Go library is the repo's root module, tagged vX.Y.Z. Before charter-ts the root held charter's Go tool, tagged
+// up to v0.19.1, and go get takes the highest tag, so a release is above that.
+if (version.split(".").map(Number).reduce((a, n) => a * 1000 + n, 0) <= 19001) {
+	console.error(`release: ${version} is not above v0.19.1, the Go tool's last tag at the root: go get would take that instead`);
+	process.exit(1);
+}
 const git = (...args: string[]) => output("git", args).trim();
 
 if (git("branch", "--show-current") !== "main") throw new Error("a release is cut from main");
@@ -34,12 +40,12 @@ if (git("status", "--porcelain") !== "") throw new Error("the repo has changes t
 
 // 1. The version.
 // Both packages are released together, at one version: the tool and the library.
-const manifests = ["charter-ts/package.json", "ts/lib/package.json"];
+const manifests = ["charter-ts/package.json", "ts/package.json"];
 const pkg = JSON.parse(readFileSync(manifests[0], "utf8")) as { version: string };
 if (pkg.version !== version && !dryRun) {
 	console.log(`charter-ts and charter-lib ${pkg.version} -> ${version}`);
 	for (const manifest of manifests) writeFileSync(manifest, JSON.stringify({ ...JSON.parse(readFileSync(manifest, "utf8")), version }, null, "\t") + "\n");
-	const projects = (JSON.parse(readFileSync("package.json", "utf8")) as { workspaces: string[] }).workspaces.filter(w => w !== "charter-ts" && w !== "ts/lib");
+	const projects = (JSON.parse(readFileSync("package.json", "utf8")) as { workspaces: string[] }).workspaces.filter(w => w !== "charter-ts" && w !== "ts");
 	for (const project of projects) {
 		const file = `${project}/package.json`;
 		const manifestOf = JSON.parse(readFileSync(file, "utf8")) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
@@ -68,7 +74,7 @@ run("npm", ["run", "check"]);
 const packed = dryRun ? pkg.version : version;
 const tarballs = [`dist/charter-ts-${packed}.tgz`, `dist/charter-lib-${packed}.tgz`];
 mkdirSync("dist", { recursive: true });
-run("npm", ["pack", "-w", "charter-ts", "-w", "ts/lib", "--pack-destination", resolve("dist")]);
+run("npm", ["pack", "-w", "charter-ts", "-w", "ts", "--pack-destination", resolve("dist")]);
 for (const tarball of tarballs) {
 	if (!existsSync(tarball)) throw new Error(`npm pack wrote no ${tarball}`);
 	made(tarball, "a package the release carries");
@@ -78,9 +84,9 @@ if (dryRun) {
 	process.exit(0);
 }
 
-// 4. The tags and the GitHub Release. The Go library is a module in go/lib, so go get finds its
-// version by the tag go/lib/vX.Y.Z (charter-ts new --go pins that).
-const goTag = `go/lib/v${version}`;
+// 4. The tags and the GitHub Release. The Go library is the root module, so go get finds its version by the
+// tag vX.Y.Z (charter-ts new --go pins that).
+const goTag = `v${version}`;
 for (const t of [tag, goTag]) if (git("tag", "-l", t) === "") run("git", ["tag", t]);
 run("git", ["push", "-q", "origin", "main", tag, goTag]);
 const exists = (() => {
@@ -93,7 +99,7 @@ const exists = (() => {
 })();
 const notes = `charter-ts ${version}: contract-first APIs on Cloudflare Workers, in TypeScript or Go.
 
-Start a project (in Go: add --go; the Go library is go get github.com/joeblew999/charter/go/lib@v${version}):
+Start a project (in Go: add --go; the Go library is go get github.com/joeblew999/charter@v${version}):
 
     npx --package ${releaseURL(version)} charter-ts new my-api
 

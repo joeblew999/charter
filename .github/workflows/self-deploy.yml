@@ -8,13 +8,13 @@ on:
         description: The project
         type: choice
         required: true
-        options: [ts/examples-start, ts/examples-notes, ts/conformance, go/examples-notes, go/examples-start, go/examples-start-htmx, go/examples-start-datastar, go/conformance]
+        options: [examples/start-ts, examples/notes-ts, examples/conformance-ts, examples/notes-go, examples/start-go, examples/start-htmx, examples/start-datastar, examples/conformance-go]
 jobs:
   deploy:
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON(inputs.project && format('["{0}"]', inputs.project) || '["ts/examples-start","ts/examples-notes","ts/conformance","go/examples-notes","go/examples-start","go/examples-start-htmx","go/examples-start-datastar","go/conformance"]') }}
+        project: ${{ fromJSON(inputs.project && format('["{0}"]', inputs.project) || '["examples/start-ts","examples/notes-ts","examples/conformance-ts","examples/notes-go","examples/start-go","examples/start-htmx","examples/start-datastar","examples/conformance-go"]') }}
     uses: ./.github/workflows/charter-ci.yml
     with:
       job: deploy

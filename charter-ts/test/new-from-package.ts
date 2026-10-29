@@ -19,7 +19,7 @@ const run = (program: string, args: string[], cwd: string, env: Record<string, s
 
 try {
 	// The packages, as a release packs them; and the repo, as GitHub's archive of the release's tag has it.
-	run("npm", ["pack", "-w", "charter-ts", "-w", "ts/lib", "--pack-destination", scratch], resolve("."));
+	run("npm", ["pack", "-w", "charter-ts", "-w", "ts", "--pack-destination", scratch], resolve("."));
 	const files = spawnSync("git", ["ls-files", "-co", "--exclude-standard"], { encoding: "utf8" }).stdout.split("\n").filter(file => file && existsSync(file));
 	writeFileSync(join(scratch, "files.txt"), files.join("\n"));
 	const source = join(scratch, "charter.tar.gz");
@@ -36,7 +36,7 @@ try {
 		run("node", [join(unpacked, "package", "bin", "charter-ts.js"), "new", `my-${template}`, "--from", template.replace(/^go-/, ""), ...(go ? ["--go"] : []), "--into", into], scratch, { CHARTER_SOURCE: source });
 		// The release's Go library is not tagged yet: this repo's instead.
 		if (go) {
-			writeFileSync(join(into, "go.mod"), `${readFileSync(join(into, "go.mod"), "utf8")}\nreplace github.com/joeblew999/charter/go/lib => ${resolve("go/lib")}\n`);
+			writeFileSync(join(into, "go.mod"), `${readFileSync(join(into, "go.mod"), "utf8")}\nreplace github.com/joeblew999/charter => ${resolve(".")}\n`);
 			run("go", ["mod", "tidy"], into);
 		}
 		// The release's URLs do not exist yet: the packages packed here instead.

@@ -20,7 +20,7 @@ Each is `npm run <name>`; what it takes goes after `--` (`npm run issues -- plan
 | After changing package.json's description, keywords or homepage | `npm run repo` | REMOTE: the repo on GitHub as package.json says: labels, description, homepage, topics, GitHub Pages; --check changes nothing and fails on drift |
 | After installing another release of charter-ts, and after changing ci.config.ts | `npm run adopt` | write charter's files into the repo (never one of the repo's own), the scripts it lacks, and a workflow per job of ci.config.ts; --check writes nothing and fails if one differs |
 
-In a project (`ts/examples-start`, `ts/examples-notes`, `ts/conformance`, `go/examples-notes`, `go/examples-start`, `go/examples-start-htmx`, `go/examples-start-datastar`, `go/conformance`), from its folder, or from here with `-w <folder>`:
+In a project (`examples/start-ts`, `examples/notes-ts`, `examples/conformance-ts`, `examples/notes-go`, `examples/start-go`, `examples/start-htmx`, `examples/start-datastar`, `examples/conformance-go`), from its folder, or from here with `-w <folder>`:
 
 | When | Run | What it does |
 |---|---|---|

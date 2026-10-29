@@ -5,7 +5,7 @@ nav_order: 12
 
 # The standard API: what every API serves, and where
 
-Every API charter serves has the same shape, in Go and in TypeScript. The library does the wiring: `go/lib/serve` in Go, `charter-lib/serve` in TypeScript. A project gives its contract, its handlers and whom it trusts.
+Every API charter serves has the same shape, in Go and in TypeScript. The library does the wiring: `charter/serve` in Go, `charter-lib/serve` in TypeScript. A project gives its contract, its handlers and whom it trusts.
 
 | Path | What | Only when |
 |---|---|---|
@@ -63,7 +63,7 @@ Both libraries write the OpenAPI document the same way, so the SDKs Fern makes f
 Each API that is here in TypeScript and in Go (conformance, notes, start) answers the same in both, with the TypeScript project as the reference:
 
 ```sh
-npx charter-ts twins ts/conformance go/conformance
+npx charter-ts twins examples/conformance-ts examples/conformance-go
 ```
 
 It runs both under workerd, as deployed, and sends both the requests the reference's specs give rise to: for each operation the right one and each kind of wrong one, for each channel one that is no upgrade, and what every API serves. It prints every answer that differs and fails if one does, or if their saved specs (`fern/`) or migrations differ; the `twins` job runs it for each pair. The requests come from the spec, so a new route is covered without editing anything.

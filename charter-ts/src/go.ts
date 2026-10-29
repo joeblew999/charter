@@ -1,7 +1,7 @@
 // A Go project's parts of the commands: gofmt and go vet, gsx's committed output kept fresh, the Worker built with
 // TinyGo tuned for Workers, and the Go SDK committed in sdk/go, made from the specs it says.
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 import type { GoConfig } from "./config.ts";
 import { miseTool } from "./pins.ts";
 import { output, run } from "./run.ts";
@@ -10,15 +10,15 @@ import { freeBundleLimit, made } from "./sizes.ts";
 
 /** gofmt over paths in dir, then go vet for the host and, for the packages wasm names, for Wasm
  * (GOOS=js GOARCH=wasm), as a Worker is built. */
-function vetted(dir: string, paths: string[], wasm: string): void {
+function vetted(dir: string, paths: string[], wasm: string, env: Record<string, string> = {}): void {
 	const unformatted = output("gofmt", ["-l", ...paths], dir).trim();
 	if (unformatted) throw new Error(`not formatted in ${dir} (gofmt -w writes them as they should be):\n${unformatted}`);
-	run("go", ["vet", "./..."], {}, dir);
-	run("go", ["vet", wasm], { GOOS: "js", GOARCH: "wasm" }, dir);
+	run("go", ["vet", "./..."], env, dir);
+	run("go", ["vet", wasm], { ...env, GOOS: "js", GOARCH: "wasm" }, dir);
 }
 
 /** goSpecProgram writes the program that writes a Go project's specs, and returns its package: the
- * contract's API (api.API in the project's module) given to go/lib/specs, which first stops on what
+ * contract's API (api.API in the project's module) given to charter/specs, which first stops on what
  * the specs don't show (specs.Problems), then writes both specs or, with -check, compares them. It is
  * the same in every project, so charter-ts writes it, into build/ (charter's); go vet and go test
  * leave out a folder whose name starts with _. */
@@ -33,7 +33,7 @@ package main
 
 import (
 	"${module}/api"
-	"github.com/joeblew999/charter/go/lib/specs"
+	"github.com/joeblew999/charter/specs"
 )
 
 func main() {
@@ -53,11 +53,15 @@ export function goLint(config: GoConfig): void {
 	if (config.sdk) sdkFresh();
 }
 
-/** goCheck is a Go module's check, for one that is not a project (go/lib): every file vetted, for
- * Wasm too, then go test. */
+/** goCheck is a Go module's check, for one that is not a project (charter's own, at the repo's top): its
+ * packages' files vetted, for Wasm too, then go test. Only the module's own packages (GOWORK=off): the
+ * examples beside them are modules of their own in the workspace, each with a check of its own. */
 export function goCheck(dir: string): void {
-	vetted(dir, ["."], "./...");
-	run("go", ["test", "./..."], {}, dir);
+	const env = { GOWORK: "off" };
+	const packages = output("go", ["list", "-e", "-f", "{{.Dir}}", "./..."], dir, env).trim().split("\n").filter(Boolean);
+	const files = packages.flatMap(pkg => readdirSync(pkg).filter(name => name.endsWith(".go")).map(name => relative(resolve(dir), join(pkg, name))));
+	vetted(dir, files, "./...", env);
+	run("go", ["test", "./..."], env, dir);
 }
 
 /** Not looked in for generated files: what is installed or built. */
@@ -89,19 +93,20 @@ function gsxCheck(): void {
 }
 
 // The TinyGo the build uses, and the wasm-opt it runs, at the versions mise.toml pins (pins.ts): the
-// repo's own, else charter's. The build patches TinyGo's runtime (go/lib/internal/cli/build), and
+// repo's own, else charter's. The build patches TinyGo's runtime (internal/cli/build), and
 // fails, saying so, when a TinyGo no longer has what a patch changes. mise installs them the first time.
 /** tinygoEnv runs a command with the pinned TinyGo and wasm-opt on the PATH. */
 const tinygoEnv = (...command: string[]): [string, string[]] => ["mise", ["exec", miseTool("tinygo"), miseTool("aqua:WebAssembly/binaryen"), "--", ...command]];
 
-/** goBuild builds the project's Go Worker into build/ with go/lib's workerbuild command (TinyGo with the
+/** goBuild builds the project's Go Worker into build/ with charter's build step (TinyGo with the
  * runtime patches, a starting heap, a stack per goroutine Huma fits in, the Worker glue, and a cache of
- * Wasm made before: go/lib/cmd/workerbuild has why), with the TinyGo and wasm-opt charter pins on the
- * PATH, and fails over the size Workers Free allows. A Go repo without charter-ts runs the same command
- * (go tool workerbuild), so both build the same Wasm. */
+ * Wasm made before: internal/cli/build has why), with the TinyGo and wasm-opt charter pins on the
+ * PATH, and fails over the size Workers Free allows. It is go tool charter build, the tool of the project's
+ * go.mod (tool github.com/joeblew999/charter/cmd/charter), as a Go repo without charter-ts runs it, so both
+ * build the same Wasm. */
 export function goBuild(config: GoConfig, limit = freeBundleLimit, fresh = false): void {
 	const { heapMB = 8, opt = "z", stack = "128kb" } = config.build ?? {};
-	const [program, args] = tinygoEnv("go", "run", "github.com/joeblew999/charter/go/lib/cmd/workerbuild", `-heap=${heapMB}`, `-opt=${opt}`, `-stack=${stack}`, ...(fresh ? ["-fresh"] : []));
+	const [program, args] = tinygoEnv("go", "tool", "charter", "build", `-heap=${heapMB}`, `-opt=${opt}`, `-stack=${stack}`, ...(fresh ? ["-fresh"] : []));
 	run(program, args);
 	if (made(join("build", "app.wasm"), "the Worker's Wasm", limit) > limit) throw new Error("build/app.wasm is over the limit (charter.config.ts: bundleLimit)");
 }

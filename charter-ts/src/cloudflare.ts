@@ -1,6 +1,6 @@
 // A project on Cloudflare: what its cloudflare.config.ts takes from charter (the compatibility date, its
 // optional secrets, and its Workers Rate Limiting bindings, one for each limit its spec declares,
-// x-rate-limit: go/lib/ratelimit, charter-lib/ratelimit, each counting in a namespace named from the
+// x-rate-limit: charter/ratelimit, charter-lib/ratelimit, each counting in a namespace named from the
 // Worker's name), its deploy with its secrets, and its migrations, on Cloudflare and on the local
 // database of cf dev.
 //   env: { ...rateLimits(spec, name, bindings.rateLimit) }

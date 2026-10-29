@@ -1,4 +1,4 @@
-# Each project ignores what its commands write (ts/*/.gitignore, go/*/.gitignore). Here: the repo's.
+# Each project ignores what its commands write (examples/*/.gitignore). Here: the repo's.
 .DS_Store
 *.log
 go.work.sum

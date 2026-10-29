@@ -36,7 +36,7 @@ Both libraries passed the same tests under workerd. go-jose was kept: smaller, n
 
 ## Building the Worker
 
-How long a fresh TinyGo build of the notes Worker takes (`go/examples-notes`, past charter's cache, TinyGo's own caches warm, on an Apple M2 Pro with 16 GB), and what it makes, 2026-10-15:
+How long a fresh TinyGo build of the notes Worker takes (`examples/notes-go`, past charter's cache, TinyGo's own caches warm, on an Apple M2 Pro with 16 GB), and what it makes, 2026-10-15:
 
 | TinyGo | Optimization | Build | `build/app.wasm` | Gzipped |
 |---|---|---|---|---|
@@ -59,8 +59,8 @@ What `cf build` makes of each notes Worker (`npm run check` measures it), 2026-1
 
 | Worker | Bundle | Gzipped |
 |---|---|---|
-| `ts/examples-notes` | 1.02 MB | 0.24 MB |
-| `go/examples-notes` (the Wasm is 1.38 MB of it, gzipped) | 3.83 MB | 1.38 MB |
+| `examples/notes-ts` | 1.02 MB | 0.24 MB |
+| `examples/notes-go` (the Wasm is 1.38 MB of it, gzipped) | 3.83 MB | 1.38 MB |
 
 Workers Free allows 3 MB gzipped, Workers Paid 10 MB.
 
@@ -72,7 +72,7 @@ The Go Worker's median CPU, 2026-10-01 and 2026-10-02, on TinyGo 0.42 (step 3's 
 |---|---|---|---|
 | TinyGo and workers-go as they come | 55 ms | 71 ms | about 265 ms |
 | 1. The collector no longer runs at every pause: a runtime patch, an 8 MB heap | 6 to 19 | 8 to 29 | 61 to 66 |
-| 2. Go runtimes reused between requests (`go/lib/worker/go.mjs`) | 3 | 7 | 10 to 13 |
+| 2. Go runtimes reused between requests (`worker/go.mjs`) | 3 | 7 | 10 to 13 |
 | 3. Goroutine stacks reused: a second patch | 1 | 3 | 4 |
 | 4. One crossing into Go and one out; D1 rows as one JSON string; the hub published to by RPC | 0 | 1 to 2 | 2 |
 | 5. Two runtimes started and warmed while the module loads (a new isolate's first request) | 7 to 11, was 90 to 170 | | |
@@ -83,7 +83,7 @@ Left: the first use of each operation in a new isolate ([#22](https://github.com
 
 ## Each difference alone, measured by anyone
 
-`go tool charter build`'s switches turn each optimisation off: `-reuse=false` (a Go runtime per request, as workers-go's own entry), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). `go tool workerbench` measures the CPU a local workerd spends per request, from the operating system's count, in repeated runs. No Cloudflare account is needed, so a comparison can be checked by anyone on their own machine ([Libraries](libraries.md)).
+`go tool charter build`'s switches turn each optimisation off: `-reuse=false` (a Go runtime per request, as workers-go's own entry), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). `go tool charter bench` measures the CPU a local workerd spends per request, from the operating system's count, in repeated runs. No Cloudflare account is needed, so a comparison can be checked by anyone on their own machine ([Libraries](libraries.md)).
 
 [go-htmx4](https://github.com/joeblew999/go-htmx4) is a Go Worker that is not built from charter: htmx 4 and gsxui pages of 50 to 170 KB, 13 locales, the server's Intl, a live board on D1 and a Durable Object. `mise run bench:variants` builds its current code once per switch combination, measures each, and writes the table to its [docs/benchmarks.md](https://github.com/joeblew999/go-htmx4/blob/main/docs/benchmarks.md). Its CI runs the shipped build's half on every change.
 

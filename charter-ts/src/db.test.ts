@@ -21,7 +21,7 @@ it("writes each table as Drizzle has it: keys, NOT NULL, UNIQUE, defaults, the l
 
 const column = (name: string, type: string, not_null = true, table: string | null = "notes") => ({ name, not_null, type: { name: type }, table: table ? { name: table } : null });
 
-it("writes each query as a typed Go function over go/lib/d1", () => {
+it("writes each query as a typed Go function over charter/d1", () => {
 	const request: SqlcRequest = {
 		catalog: { schemas: [{ tables: [{ rel: { name: "notes" }, columns: [column("id", "INTEGER"), column("body", "TEXT"), column("created_at", "TEXT", false)] }] }] },
 		queries: [

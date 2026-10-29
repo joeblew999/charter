@@ -37,13 +37,13 @@ function copyProject(from: string, to: string, also: string[] = []): void {
  * check its answers against, so that it stands alone. Its committed Go SDK is the example's (a project
  * publishes its own), and so is the soak test of a redeploy (test/soak*), which charter runs by hand. */
 function copyExample(repo: string, example: Example, language: Language, to: string): void {
-	const twin = join(repo, "ts", `examples-${example}`);
+	const twin = join(repo, "examples", `${example}-ts`);
 	if (language === "ts") return copyProject(twin, to);
-	copyProject(join(repo, "go", `examples-${example}`), to, ["sdk/go", "test/soak.ts", "test/soak-go"]);
+	copyProject(join(repo, "examples", `${example}-go`), to, ["sdk/go", "test/soak.ts", "test/soak-go"]);
 	cpSync(join(twin, "test"), join(to, "test"), { recursive: true });
 	cpSync(join(twin, "api", "schemas.ts"), join(to, "test", "schemas.ts"));
 	rewrite(join(to, "test"), content => content.replaceAll('from "../api/schemas.ts"', 'from "./schemas.ts"'));
-	rewrite(to, (content, file) => (basename(file) === "charter.config.ts" ? content.replaceAll(`../../ts/examples-${example}/test`, "test") : content));
+	rewrite(to, (content, file) => (basename(file) === "charter.config.ts" ? content.replaceAll(`../../examples/${example}-ts/test`, "test") : content));
 	const tsconfig = join(to, "tsconfig.node.json");
 	writeFileSync(tsconfig, JSON.stringify({ ...JSON.parse(readFileSync(tsconfig, "utf8")), include: ["charter.config.ts", "test"] }, null, "\t") + "\n");
 }
@@ -121,8 +121,8 @@ export async function newProject(args: string[]): Promise<void> {
 			.replaceAll(screaming(old), screaming(name))
 			.replaceAll(".gedw99.workers.dev", `.${subdomain}.workers.dev`)
 			// In Go: the project's module is its name, and the Go library is the release's, not the repo's.
-			.replaceAll(`github.com/joeblew999/charter/go/examples-${from}`, name);
-		if (basename(file) === "go.mod") next = next.replace(/\nreplace github\.com\/joeblew999\/charter\/go\/lib => \S+\n/, "\n").replace(/(github\.com\/joeblew999\/charter\/go\/lib) v0\.0\.0/, `$1 v${version()}`);
+			.replaceAll(`github.com/joeblew999/charter/examples/${from}-go`, name);
+		if (basename(file) === "go.mod") next = next.replace(/\nreplace github\.com\/joeblew999\/charter => \S+\n/, "\n").replace(/(github\.com\/joeblew999\/charter) v0\.0\.0/, `$1 v${version()}`);
 		if (basename(file) === "package.json" && file === join(into, "package.json")) {
 			const pkg = JSON.parse(next) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
 			for (const deps of [pkg.dependencies, pkg.devDependencies]) {

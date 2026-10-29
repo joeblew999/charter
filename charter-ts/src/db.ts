@@ -1,8 +1,8 @@
 // A project's database code, typed, from its schema: migrations/*.sql, the one place the tables are
 // said. npm run spec writes it beside the specs, and check fails when it is stale.
-//   Go (charter.config.ts: db: "sqlc"): the queries in api/queries.sql as functions over go/lib/d1,
+//   Go (charter.config.ts: db: "sqlc"): the queries in api/queries.sql as functions over charter/d1,
 //   api/queries.go. sqlc works out each one's parameters and columns against the schema; charter-ts
-//   writes the Go, with no database/sql (go/lib/d1 says why).
+//   writes the Go, with no database/sql (charter/d1 says why).
 //   TypeScript (db: "drizzle"): the tables as Drizzle has them, api/tables.ts, read from the schema
 //   as SQLite itself has it once the migrations ran; queries are Drizzle's, on drizzle(env.DB).
 import { spawnSync } from "node:child_process";
@@ -90,7 +90,7 @@ function goType(column: SqlcColumn): string {
 
 const goField = (column: SqlcColumn) => `\t${exported(column.name)} ${goType(column)} \`json:"${column.name}"\``;
 
-/** goQueries is api/queries.go for what sqlc worked out: a function for each query, over go/lib/d1. */
+/** goQueries is api/queries.go for what sqlc worked out: a function for each query, over charter/d1. */
 export function goQueries(request: SqlcRequest, pkg: string): string {
 	const tables = new Map(request.catalog.schemas.flatMap(schema => schema.tables ?? []).map(table => [table.rel.name, table.columns]));
 	const types: string[] = [];
@@ -146,7 +146,7 @@ export function goQueries(request: SqlcRequest, pkg: string): string {
 		"",
 		`package ${pkg}`,
 		"",
-		'import "github.com/joeblew999/charter/go/lib/d1"',
+		'import "github.com/joeblew999/charter/d1"',
 		"",
 		...types,
 		functions.join("\n\n"),

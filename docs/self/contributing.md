@@ -25,14 +25,14 @@ Docker: charter-ts starts it where it is installed but not running and may be st
 | Folder | What it is |
 |---|---|
 | `charter-ts/` | The tool: its commands are in `charter-ts/src/commands.ts`. The files it writes into every repo are this repo's own, listed in `charter-ts/src/charter-files.ts` |
-| `ts/lib/` | `charter-lib`, what a TypeScript Worker imports |
-| `go/lib/` | The Go library, with its Worker glue in `go/lib/worker/` |
-| `ts/examples-start/`, `ts/examples-notes/` | The TypeScript examples, which `charter-ts new` copies: one route, and the notes API (sign-in, streams, rate limits) |
-| `go/examples-start/`, `go/examples-notes/` | The same two APIs in Go, held to the TypeScript ones by `twins` |
-| `go/examples-start-htmx/`, `go/examples-start-datastar/` | Go with server-rendered pages ([Server-rendered pages](pages.md)) |
-| `ts/conformance/`, `go/conformance/` | Every Fern feature, its SDKs tested against the API, inside a Worker too; the TypeScript one is the reference |
+| `ts/` | `charter-lib`, what a TypeScript Worker imports |
+| The top (`go.mod`) | The Go library, one package per folder (`auth/`, `serve/`…), with its Worker glue in `worker/`, and the Go tool, `go tool charter`, in `cmd/charter/` (its steps in `internal/cli/`) |
+| `examples/start-ts/`, `examples/notes-ts/` | The TypeScript examples, which `charter-ts new` copies: one route, and the notes API (sign-in, streams, rate limits) |
+| `examples/start-go/`, `examples/notes-go/` | The same two APIs in Go, held to the TypeScript ones by `twins` |
+| `examples/start-htmx/`, `examples/start-datastar/` | Go with server-rendered pages ([Server-rendered pages](pages.md)) |
+| `examples/conformance-ts/`, `examples/conformance-go/` | Every Fern feature, its SDKs tested against the API, inside a Worker too; the TypeScript one is the reference |
 
-The root `package.json` is the npm workspace of `charter-ts/`, `ts/` and `go/`'s projects; mise only installs the tools (`mise.toml`).
+The root `package.json` is the npm workspace of `charter-ts/`, `ts/` and the projects in `examples/`; the root `go.work` is the Go workspace of the library and the Go projects; mise only installs the tools (`mise.toml`).
 
 ## What is generated
 
@@ -44,8 +44,8 @@ Never edit these: change the source, then run the command.
 | `api/queries.go`, `api/tables.ts` | `npm run spec`, from `migrations/*.sql` (and in Go `api/queries.sql`), as `db` in `charter.config.ts` says |
 | `pages/*.x.go` (committed) | gsx, from the components; `npm run check` writes them and fails while they were stale |
 | `sdk/go/` (committed) | `npm run sdk -- --publish` |
-| `sdk/out/`, `build/`, `charter-ts/dist/`, `ts/lib/dist/` | `npm run sdk`; the Go Worker's build (`dev`, `check`, `deploy`) and the program that writes a Go project's specs (`build/_spec`, `spec`); `npm ci` |
-| `ts/conformance/client/` | The SDK the conformance Worker runs, copied in by `check`, `dev` and `deploy` |
+| `sdk/out/`, `build/`, `charter-ts/dist/`, `ts/dist/` | `npm run sdk`; the Go Worker's build (`dev`, `check`, `deploy`) and the program that writes a Go project's specs (`build/_spec`, `spec`); `npm ci` |
+| `examples/conformance-ts/client/` | The SDK the conformance Worker runs, copied in by `check`, `dev` and `deploy` |
 | `charter-ts/charter-files/`, `dist/` | `npm pack`, and `npm run release` |
 | `.github/workflows/self-*.yml`, `charter-repo.yml` | `npm run adopt`, from `ci.config.ts` and charter's own job |
 | `docs/charter/README.md` | `npm run adopt`, from `package.json`'s scripts |
@@ -79,7 +79,7 @@ npx --package /tmp/try/charter-ts-X.Y.Z.tgz charter-ts adopt
 
 ## The CI
 
-`ci.config.ts` at the root has this repo's own jobs, typed; `npm run adopt` writes a workflow for each (`.github/workflows/self-<job>.yml`), and `charter-repo.yml` is charter's `repo` job, the same in every repo. Every workflow calls the job runner (`charter-ci.yml`): mise installs the tools, npm the packages, then charter-ts runs the job as `npm run ci -- <job>` runs it here. One job in one project: `npm run ci -- clients go/conformance`.
+`ci.config.ts` at the root has this repo's own jobs, typed; `npm run adopt` writes a workflow for each (`.github/workflows/self-<job>.yml`), and `charter-repo.yml` is charter's `repo` job, the same in every repo. Every workflow calls the job runner (`charter-ci.yml`): mise installs the tools, npm the packages, then charter-ts runs the job as `npm run ci -- <job>` runs it here. One job in one project: `npm run ci -- clients examples/conformance-go`.
 
 Every command says what it made and how long it took: each artifact its size, gzipped, against its limit, and how that changed since it was last made here; each program of a second or more, each server's start, each job. `check` ends with both.
 
@@ -103,7 +103,7 @@ Each test checks one thing, at one level, and the same level is in the same plac
 | 2 | **The API's own:** it does what it is for | Every API | The project's `test/` (`test/live.ts`, `test/sdk.ts`…); a Go twin runs its TypeScript reference's, as its `charter.config.ts` says | The project's `check` and `live-test` |
 | 3 | **Unit tests:** a handler on its own | Where wanted | Beside the code: `api/*_test.go`, `api/*.test.ts` | The project's `check` |
 | 4 | **Twins:** the Go project answers as its TypeScript reference | An API in both languages | Built into charter-ts (`charter-ts twins`) | The `twins` job |
-| 5 | **The libraries** | charter's developers | Beside the code: `go/lib/*/*_test.go`, `ts/lib/src/*.test.ts`, `charter-ts/src/*.test.ts` | The `packages` job |
+| 5 | **The libraries** | charter's developers | Beside the code: `*/*_test.go` at the top, `ts/src/*.test.ts`, `charter-ts/src/*.test.ts` | The `packages` job |
 | 6 | **This repo only:** the projects are alike; a project made from the release works | charter's developers | `projects.test.ts`, `charter-ts/test/new-from-package.ts` | The `packages` and `new` jobs |
 
 ## Cut a release
@@ -113,4 +113,4 @@ npm run release -- X.Y.Z --dry-run   # every check, and the packages into dist/
 npm run release -- X.Y.Z             # the version, the tag ts-vX.Y.Z, the GitHub Release with the packages
 ```
 
-It runs `npm run check` before it tags, and never waits for GitHub. It tags `ts-vX.Y.Z` and `go/lib/vX.Y.Z` (the Go library's, which `go get` and `new --go` pin), and the Release carries `charter-ts-X.Y.Z.tgz` and `charter-lib-X.Y.Z.tgz`, which a repo pins. It puts that version into every install command the docs show (npx keeps what it fetched for a URL, so a URL without a version would serve an old one).
+It runs `npm run check` before it tags, and never waits for GitHub. It tags `ts-vX.Y.Z` and `vX.Y.Z` (the Go library's, the root module, which `go get` and `new --go` pin; above `v0.19.1`, the last tag of the Go tool the root held before charter-ts), and the Release carries `charter-ts-X.Y.Z.tgz` and `charter-lib-X.Y.Z.tgz`, which a repo pins. It puts that version into every install command the docs show (npx keeps what it fetched for a URL, so a URL without a version would serve an old one).

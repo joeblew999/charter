@@ -23,7 +23,7 @@ export interface Config {
 	 * spec's security schemes. */
 	sdks: Sdks;
 	/** The database's typed code, from its schema (migrations/*.sql), which charter-ts spec writes:
-	 * "sqlc" in Go (api/queries.go, the queries of api/queries.sql as functions over go/lib/d1) or
+	 * "sqlc" in Go (api/queries.go, the queries of api/queries.sql as functions over charter/d1) or
 	 * "drizzle" in TypeScript (api/tables.ts, the tables for Drizzle). */
 	db?: "sqlc" | "drizzle";
 	/** The server the specs name, if not `url`. */
