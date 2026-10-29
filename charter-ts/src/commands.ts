@@ -32,6 +32,15 @@ async function load(): Promise<Config> {
 
 const go = () => import("./go.ts");
 
+/** A project of charter.toml: a Go project, whose steps are charter's own (#121). charter-ts runs its step as the tool
+ * of the project's go.mod (go tool charter, this checkout's charter), until charter-ts goes. */
+export const charterProject = (dir = ".") => !existsSync(join(dir, "charter.config.ts")) && existsSync(join(dir, "charter.toml"));
+
+/** charterStep runs a step of a charter.toml project with charter, its flags as charter writes them (-prove). */
+function charterStep(step: string[], args: string[]): void {
+	run("go", ["tool", "charter", ...step, ...args.map(arg => arg.replace(/^--/, "-"))]);
+}
+
 /** buildWorker readies the project's Worker before workerd runs it or a deploy ships it: a Go one built
  * with TinyGo, and the SDK a Worker runs itself (sdkInWorker) copied in. A TypeScript one needs no build. */
 export async function buildWorker(config: Config, fresh = false): Promise<void> {
@@ -76,6 +85,7 @@ export const commands: Record<string, Command> = {
 		about: "the API on your machine, as on Cloudflare (workerd), its local database migrated, until Ctrl-C; --native, in Go: go run .",
 		when: "To try the API on your machine",
 		run: async args => {
+			if (charterProject()) return charterStep(["dev"], args);
 			const config = await load();
 			const env = { ...config.localSecrets, PORT: String(config.port) };
 			if (args.includes("--native")) {
@@ -90,7 +100,7 @@ export const commands: Record<string, Command> = {
 			});
 		},
 	},
-	spec: { usage: "spec", where: "project", about: "write both specs (fern/openapi.json, fern/asyncapi.json) from the contract, Fern's settings (fern/generators.yml) from them and charter.config.ts, and the database's typed code from migrations/ (db: sqlc in Go, drizzle in TypeScript)", when: "After every change to the contract, to charter.config.ts's sdks, or to migrations/ or api/queries.sql", run: () => specs(false) },
+	spec: { usage: "spec", where: "project", about: "write both specs (fern/openapi.json, fern/asyncapi.json) from the contract, Fern's settings (fern/generators.yml) from them and charter.config.ts, and the database's typed code from migrations/ (db: sqlc in Go, drizzle in TypeScript)", when: "After every change to the contract, to charter.config.ts's sdks, or to migrations/ or api/queries.sql", run: args => (charterProject() ? charterStep(["spec"], args) : specs(false)) },
 	check: {
 		usage: "check [<folder>] [--fresh]",
 		where: "both",
@@ -99,10 +109,11 @@ export const commands: Record<string, Command> = {
 		run: async args => {
 			const folder = args.find(arg => !arg.startsWith("--"));
 			if (folder) {
-				if (existsSync(join(folder, "charter.config.ts"))) process.chdir(folder);
+				if (existsSync(join(folder, "charter.config.ts")) || charterProject(folder)) process.chdir(folder);
 				else if (existsSync(join(folder, "go.mod"))) return (await go()).goCheck(folder);
-				else throw new Error(`${folder} is neither a project (charter.config.ts) nor a Go module (go.mod)`);
+				else throw new Error(`${folder} is neither a project (charter.config.ts, charter.toml) nor a Go module (go.mod)`);
 			}
+			if (charterProject()) return charterStep(["check"], args.filter(arg => arg.startsWith("--")));
 			if (!existsSync("charter.config.ts")) return (await import("./ci.ts")).ciCheck();
 			await projectCheck(args.includes("--fresh"));
 		},
@@ -123,6 +134,7 @@ export const commands: Record<string, Command> = {
 		about: "an SDK with Fern (Docker), by default the TypeScript one, into sdk/out; --prove: every client, proven in its language; --publish, in Go: the Go SDK into sdk/go",
 		when: "When a caller needs an SDK; --prove after changing charter.config.ts's sdks; --publish after a contract change, where the repo commits its Go SDK",
 		run: async args => {
+			if (charterProject()) return charterStep(["sdk"], args);
 			const config = await load();
 			const groups = args.filter(arg => !arg.startsWith("--"));
 			if (args.includes("--publish")) {
@@ -138,7 +150,8 @@ export const commands: Record<string, Command> = {
 		where: "project",
 		about: "REMOTE: the Worker on Cloudflare with its secrets (fnox exec -- npm run deploy), then its migrations",
 		when: "To put the API on Cloudflare",
-		run: async () => {
+		run: async args => {
+			if (charterProject()) return charterStep(["deploy", "production"], args);
 			const config = await load();
 			await buildWorker(config);
 			deploy(config);
@@ -150,7 +163,8 @@ export const commands: Record<string, Command> = {
 		where: "project",
 		about: "REMOTE: the standard test and the project's tests against the deployed Worker",
 		when: "After every deploy",
-		run: async () => {
+		run: async args => {
+			if (charterProject()) return charterStep(["live-test"], args);
 			const config = await load();
 			if (!config.live) throw new Error("charter.config.ts has no live tests");
 			await (await import("./standard.ts")).standard(config.url);

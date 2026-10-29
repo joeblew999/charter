@@ -75,6 +75,10 @@ type Config struct {
 	DurableObjects   map[string]string // binding → class name
 	MigrationTag     string            // Durable Object migration tag to reach (sent only if not yet applied)
 	NewSQLiteClasses []string          // classes created by MigrationTag
+
+	// ExportedClasses are Durable Object classes (SQLite storage) declared in the upload's exports, as cf deploy
+	// declares them: no migration tags, a class live as long as it is declared.
+	ExportedClasses []string
 }
 
 // RateLimit is a Workers Rate Limiting binding: a simple fixed window of Limit requests per Period seconds
@@ -546,6 +550,9 @@ func (c *Client) putScript(ctx context.Context, cfg Config, modules []Module, d1
 	if doMigration != nil {
 		meta["migrations"] = doMigration
 	}
+	if e := exports(cfg); e != nil {
+		meta["exports"] = e
+	}
 	if assetsJWT != "" {
 		meta["assets"] = map[string]string{"jwt": assetsJWT}
 	}
@@ -554,6 +561,19 @@ func (c *Client) putScript(ctx context.Context, cfg Config, modules []Module, d1
 		return err
 	}
 	return c.do(ctx, "PUT", c.accountPath("/workers/scripts/"+cfg.Name), "", body, nil)
+}
+
+// exports declares cfg's ExportedClasses in the upload, as cf deploy does: each a Durable Object class with SQLite
+// storage, live as long as it is declared, with no migration tags. nil when there are none.
+func exports(cfg Config) map[string]any {
+	if len(cfg.ExportedClasses) == 0 {
+		return nil
+	}
+	out := map[string]any{}
+	for _, class := range cfg.ExportedClasses {
+		out[class] = map[string]string{"type": "durable-object", "storage": "sqlite"}
+	}
+	return out
 }
 
 // bindings are cfg's bindings in the script upload format (production and previews alike).

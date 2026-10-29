@@ -95,3 +95,24 @@ func TestProxyCA(t *testing.T) {
 		t.Errorf("no proxy: %q", ca)
 	}
 }
+
+// TestSamePinsAsChartersTS: until the TypeScript projects move to charter too (#121), charter-ts pins Fern's generators
+// and the toolchains of a proof for them: the same versions as these, so both kinds of project get the same SDKs.
+func TestSamePinsAsChartersTS(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("..", "..", "charter-ts", "src", "sdk.ts"))
+	if err != nil {
+		t.Skipf("no charter-ts beside it: %v", err)
+	}
+	ts := string(b)
+	for _, g := range generators {
+		if want := `name: "` + g.name + `", version: "` + g.version + `"`; !strings.Contains(ts, want) {
+			t.Errorf("charter-ts/src/sdk.ts has no %s", want)
+		}
+	}
+	for _, want := range []string{`rustVersion = "` + rustVersion + `"`, `uvVersion = "` + uvVersion + `", pythonVersion = "` + pythonVersion + `"`,
+		`pythonPackages = ["` + strings.Join(pythonPackages, `", "`) + `"]`} {
+		if !strings.Contains(ts, want) {
+			t.Errorf("charter-ts/src/sdk.ts has no %s", want)
+		}
+	}
+}

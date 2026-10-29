@@ -1,0 +1,8 @@
+# The tools a Go Worker app builds with, at the versions this charter's TinyGo patches are for
+# (internal/cli/build). `charter tasks` writes this file into an app as
+# .config/mise/conf.d/charter.toml, which mise reads beside the app's own mise.toml, so `mise install` there
+# gets them; `charter check` fails when it is stale, or when the app pins them itself. Each line
+# equals charter's own mise.toml's (TestSameAsCharters), and Renovate moves both.
+[tools]
+tinygo = "0.44.0"
+"aqua:WebAssembly/binaryen" = "133"

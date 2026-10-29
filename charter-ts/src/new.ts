@@ -15,8 +15,8 @@ type Example = (typeof examples)[number];
 /** A project's language: TypeScript (oRPC) or Go (Huma). */
 type Language = "ts" | "go";
 
-/** What a copy leaves out: what npm, cf, Fern and the build write, and local secrets. */
-const left = new Set(["node_modules", ".wrangler", ".cloudflare", "dist", "build", "package-lock.json", ".DS_Store"]);
+/** What a copy leaves out: what npm, cf, charter's local runner (.charter), Fern and the build write, and local secrets. */
+const left = new Set(["node_modules", ".wrangler", ".cloudflare", ".charter", "dist", "build", "package-lock.json", ".DS_Store"]);
 const leftPaths = new Set(["sdk/out"]);
 const leftFile = (name: string) => name.startsWith(".dev.vars") || name.endsWith(".log") || name.endsWith(".tsbuildinfo");
 
@@ -43,9 +43,10 @@ function copyExample(repo: string, example: Example, language: Language, to: str
 	cpSync(join(twin, "test"), join(to, "test"), { recursive: true });
 	cpSync(join(twin, "api", "schemas.ts"), join(to, "test", "schemas.ts"));
 	rewrite(join(to, "test"), content => content.replaceAll('from "../api/schemas.ts"', 'from "./schemas.ts"'));
-	rewrite(to, (content, file) => (basename(file) === "charter.config.ts" ? content.replaceAll(`../../examples/${example}-ts/test`, "test") : content));
-	const tsconfig = join(to, "tsconfig.node.json");
-	writeFileSync(tsconfig, JSON.stringify({ ...JSON.parse(readFileSync(tsconfig, "utf8")), include: ["charter.config.ts", "test"] }, null, "\t") + "\n");
+	// A Go project is charter's (charter.toml, #121): its tests run from its own test/ now.
+	rewrite(to, (content, file) => (basename(file) === "charter.toml" ? content.replaceAll(`../${example}-ts/test`, "test") : content));
+	// Its tests are TypeScript, typechecked by charter check (tsc -p tsconfig.node.json).
+	writeFileSync(join(to, "tsconfig.node.json"), JSON.stringify({ extends: "charter-ts/tsconfig.node.json", include: ["test"] }, null, "\t") + "\n");
 }
 
 /** The repo the examples are copied from: charter's own checkout, when charter-ts runs from it; else the

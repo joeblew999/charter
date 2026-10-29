@@ -1,0 +1,58 @@
+# charter.toml: the notes API in Go on Cloudflare (auth, SSE and WebSocket streams, MCP, rate limits), everything
+# charter knows about it (every key: go doc github.com/joeblew999/charter/project). Its steps are charter's: charter
+# check, spec, sdk, dev, deploy (fnox exec -- charter deploy production), live-test.
+name = "charter-notes-go"
+compatibility_date = "2026-09-25"
+main = "worker.mjs"
+health = "/api/openapi.json"
+port = 5174
+# Where it is deployed (charter deploy prints it): the live test's target, and the server the specs name.
+url = "https://charter-notes-go.gedw99.workers.dev"
+# Its rate limits are the contract's (x-rate-limit in the spec), each a Workers Rate Limiting binding.
+spec = "fern/openapi.json"
+# The queries of api/queries.sql as Go (api/queries.go), typed by sqlc against migrations/.
+db = "sqlc"
+
+[[d1]]
+binding = "DB"
+migrations = "migrations"
+database = "charter-notes-go-db"
+
+# The hibernating live fan-out of new notes: the library's Hub class (build/hub.mjs), which worker.mjs exports.
+[[durable_objects]]
+binding = "HUB"
+class = "Hub"
+
+# The API's tokens (api/handlers.go), and whom else it trusts (Cloudflare Access, an OpenID Connect issuer): unset, it
+# trusts no one that way.
+[secrets]
+required = ["READ_TOKEN", "WRITE_TOKEN"]
+optional = ["ACCESS_TEAM_DOMAIN", "ACCESS_AUD", "OIDC_ISSUER", "OIDC_AUDIENCE"]
+
+[production]
+vars = { APP_NAME = "charter-notes-go" }
+
+# Throwaway tokens for the API on this machine and its tests.
+[local]
+vars = { APP_NAME = "charter-notes-go", READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
+
+# The SDKs Fern makes; the Go SDK is committed in sdk/go (charter sdk -publish).
+[sdks]
+name = "Notes"
+more = ["python", "cli"]
+go = true
+
+[go]
+lint = ["api", "test"]
+
+# The notes API is the same in Go and in TypeScript, so its tests are the TypeScript project's: the real-time live test,
+# natively and under workerd; against the deployed Worker, through the generated TypeScript SDK too (made first if the
+# specs are newer: Docker). The live test writes test notes.
+[test]
+run = ["node ../notes-ts/test/live.ts {base}"]
+native = true
+live = [
+  "charter sdk typescript-dist -if-stale",
+  "node ../notes-ts/test/live.ts {base}",
+  "node ../notes-ts/test/sdk.ts {base}",
+]

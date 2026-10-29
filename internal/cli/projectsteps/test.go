@@ -35,12 +35,13 @@ func Test(args []string) {
 			ports = append(ports, n)
 		}
 	}
-	check(try(p, p.Test.Run, places{base, ports}))
+	pl := places{base, ports}
+	check(try(p, p.Test.Run, pl, localEnv(p, pl)))
 }
 
-// try runs the standard test against the Worker at pl.base, then each command, in the project's root with [test]
-// env; it fails at the first that fails.
-func try(p *project.Project, commands []string, pl places) error {
+// try runs the standard test against the Worker at pl.base, then each command, in the project's root with env; it
+// fails at the first that fails.
+func try(p *project.Project, commands []string, pl places, env map[string]string) error {
 	if err := standard.Run(pl.base, func(line string) { say("%s", line) }); err != nil {
 		return err
 	}
@@ -49,7 +50,7 @@ func try(p *project.Project, commands []string, pl places) error {
 		if err != nil {
 			return err
 		}
-		if err := run.Run(p.Root, pl.env(p), words[0], words[1:]...); err != nil {
+		if err := run.Run(p.Root, env, words[0], words[1:]...); err != nil {
 			return err
 		}
 	}
@@ -68,5 +69,6 @@ func LiveTest(args []string) {
 	if len(p.Test.Live) == 0 {
 		check(errors.New("charter.toml has no [test] live: the tests against the deployed Worker"))
 	}
-	check(try(p, p.Test.Live, places{base: p.URL}))
+	// The deployed Worker's tokens are the environment's (fnox), never [local]'s throwaway ones.
+	check(try(p, p.Test.Live, places{base: p.URL}, nil))
 }

@@ -1,4 +1,4 @@
-> **Generated code.** Fern generated this Go client from the API's contract (the specs in `fern/`). Don't edit it: change the contract, then `npm run sdk -- --publish` writes this folder again.
+> **Generated code.** Fern generated this Go client from the API's contract (the specs in `fern/`). Don't edit it: change the contract, then `charter sdk -publish` writes this folder again.
 
 # CharterNotesGo Go Library
 

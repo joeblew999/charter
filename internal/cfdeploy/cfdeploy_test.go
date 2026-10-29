@@ -494,6 +494,26 @@ func TestDeploy(t *testing.T) {
 	}
 }
 
+// TestExportedClasses: a Durable Object class declared in exports, as cf deploy declares one, goes in every upload
+// (production and preview alike) with SQLite storage and no migration.
+func TestExportedClasses(t *testing.T) {
+	f, srv := newFakeCF(t)
+	dir := project(t)
+	c := &cfdeploy.Client{Token: "tok", AccountID: "acc", BaseURL: srv.URL}
+	cfg := config(dir)
+	cfg.MigrationTag, cfg.NewSQLiteClasses, cfg.ExportedClasses = "", nil, []string{"Room"}
+	if _, err := c.Deploy(context.Background(), cfg); err != nil {
+		t.Fatal(err)
+	}
+	meta, _ := json.Marshal(f.putMeta)
+	if !strings.Contains(string(meta), `"exports":{"Room":{"storage":"sqlite","type":"durable-object"}}`) {
+		t.Errorf("metadata has no exports for Room:\n%s", meta)
+	}
+	if _, ok := f.putMeta["migrations"]; ok {
+		t.Errorf("an exported class went with a migration: %v", f.putMeta["migrations"])
+	}
+}
+
 // TestMigrationsCarriedOver: a database cf migrated (d1_migrations, by file name) runs none again; one charter migrated
 // before into _migrations (names without .sql) has them copied across, so only a newer migration runs.
 func TestMigrationsCarriedOver(t *testing.T) {

@@ -40,7 +40,7 @@ const startMark = "Started by `charter-ts adopt` (github.com/joeblew999/charter)
 
 /** The tools a repo needs, as mise.toml pins them (mise installs them, here and on GitHub), at the
  * versions charter's own mise.toml pins: node for charter-ts; in a project, fnox for its secrets; in
- * a Go one, go, and the sqlc its queries are typed with. */
+ * a Go one, go, the sqlc its queries are typed with, and the workerd charter runs its Worker on here. */
 export function miseStarter(project: boolean, go: boolean): string {
 	const charters = readFileSync(charterFile("mise.toml"), "utf8");
 	const key = (tool: string) => (/^[A-Za-z0-9_-]+$/.test(tool) ? tool : JSON.stringify(tool));
@@ -51,7 +51,7 @@ export function miseStarter(project: boolean, go: boolean): string {
 	};
 	// Not TinyGo or wasm-opt: charter pins those beside its TinyGo patch, in the file `charter tasks` writes
 	// (.config/mise/conf.d/charter.toml), and `charter check` refuses a repo's own.
-	const tools = ["node", ...(project ? ["github:jdx/fnox"] : []), ...(go ? ["go", "aqua:sqlc-dev/sqlc"] : [])];
+	const tools = ["node", ...(project ? ["github:jdx/fnox"] : []), ...(go ? ["go", "aqua:sqlc-dev/sqlc", "workerd"] : [])];
 	return `# ${startMark}\n# The tools, which mise installs here and on GitHub (charter-ci.yml): ${tools.join(", ")}.\n[tools]\n${tools.map(pin).join("\n")}\n`;
 }
 
@@ -152,8 +152,10 @@ function whatToDoPage(root: string): string {
 	const own = Object.entries(scripts).filter(([name, command]) => command !== `charter-ts ${name}` && !["prepare", "preinstall", "postinstall", "install"].includes(name));
 	const row = (name: string, c: Command, where = "") => `| ${cell(c.when ?? "")} | \`npm run ${name}${where}\` | ${cell(c.about)} |`;
 	const rows = charters.map(([name, c]) => row(name, c));
-	// A repo whose workspaces are projects: their scripts too, run from here with -w.
-	const projects = (readPackage(root)?.workspaces ?? []).filter(dir => isProject(join(root, dir)));
+	// A repo whose workspaces are projects: their scripts too, run from here with -w; a Go project's steps are charter's.
+	const workspaces = (readPackage(root)?.workspaces ?? []).filter(dir => isProject(join(root, dir)));
+	const projects = workspaces.filter(dir => existsSync(join(root, dir, "charter.config.ts")));
+	const goProjects = workspaces.filter(dir => !projects.includes(dir));
 	const projectScripts = projects.length ? readPackage(join(root, projects[0]!))?.scripts ?? {} : {};
 	const inProjects = Object.entries(commands).filter(([name]) => projectScripts[name] === `charter-ts ${name}` && scripts[name] === undefined);
 	return `---
@@ -171,7 +173,7 @@ Each is \`npm run <name>\`; what it takes goes after \`--\` (\`npm run issues --
 | When | Run | What it does |
 |---|---|---|
 ${rows.join("\n")}
-${inProjects.length ? `\nIn a project (${projects.map(dir => `\`${dir}\``).join(", ")}), from its folder, or from here with \`-w <folder>\`:\n\n| When | Run | What it does |\n|---|---|---|\n${inProjects.map(([name, c]) => row(name, c)).join("\n")}\n` : ""}${own.length ? `\nThe repo's own: ${own.map(([name, command]) => `\`npm run ${name}\` (\`${command}\`)`).join(", ")}.\n` : ""}
+${inProjects.length ? `\nIn a project (${projects.map(dir => `\`${dir}\``).join(", ")}), from its folder, or from here with \`-w <folder>\`:\n\n| When | Run | What it does |\n|---|---|---|\n${inProjects.map(([name, c]) => row(name, c)).join("\n")}\n` : ""}${goProjects.length ? `\nA Go project (${goProjects.map(dir => `\`${dir}\``).join(", ")}) is charter's: \`charter.toml\` says what its steps need, and each is \`go tool charter <step>\` from its folder (in a repo of its own, \`mise run charter:<step>\`): \`check\`, \`spec\`, \`sdk\`, \`dev\`, \`deploy production\`, \`live-test\`. \`go tool charter\` lists every one.\n` : ""}${own.length ? `\nThe repo's own: ${own.map(([name, command]) => `\`npm run ${name}\` (\`${command}\`)`).join(", ")}.\n` : ""}
 Another release of charter-ts: \`npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz\`, then \`npm run adopt\` (Renovate opens that pull request, on a repo with its app installed). Every command, with what it takes: \`npx charter-ts help\`.
 `;
 }

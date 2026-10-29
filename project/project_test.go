@@ -113,7 +113,8 @@ func TestProblems(t *testing.T) {
 		{`compatibility_date = "2026-09-11"`, "name is required"},
 		{`name = "x"` + "\ncompatibility_date = \"2026-09-11\"\nnmae = \"y\"", "unknown keys"},
 		{`name = "x"` + "\ncompatibility_date = \"2026-09-11\"\n[[rate_limits]]\nbinding = \"W\"\nnamespace_id = 1\nlimit = 5\nperiod = 30", "period 10 or 60"},
-		{`name = "x"` + "\ncompatibility_date = \"2026-09-11\"\n[[durable_objects]]\nbinding = \"R\"\nclass = \"Room\"", "a migration"},
+		{`name = "x"` + "\ncompatibility_date = \"2026-09-11\"\n[[durable_objects]]\nbinding = \"R\"\nclass = \"Room\"\nmigration = \"v1\"\n[[durable_objects]]\nbinding = \"H\"\nclass = \"Hub\"", "or none does"},
+		{`name = "x"` + "\ncompatibility_date = \"2026-09-11\"\n[[durable_objects]]\nbinding = \"R\"", "a binding and a class"},
 	} {
 		if _, err := load(t, tc.toml); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%q: %v, want %q", tc.toml, err, tc.want)

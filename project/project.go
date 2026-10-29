@@ -145,7 +145,9 @@ func (p *Project) DatabaseOf(d D1, dep Deploy) string {
 	return d.Database + strings.TrimPrefix(dep.Database, p.Name)
 }
 
-// DurableObject is a Durable Object namespace binding, with SQLite storage.
+// DurableObject is a Durable Object namespace binding, with SQLite storage. Its class is declared in each upload's
+// exports, as cf deploy declares one (live while it is declared, no migration tags), unless it names the migration
+// that created it: then the deploy sends that migration where the Worker has not had it.
 type DurableObject struct {
 	Binding   string `toml:"binding"`
 	Class     string `toml:"class"`
@@ -334,10 +336,17 @@ func (p *Project) check() error {
 			problems = append(problems, "every [[d1]] needs a binding")
 		}
 	}
+	tagged := 0
 	for _, d := range p.DurableObjects {
-		if d.Binding == "" || d.Class == "" || d.Migration == "" {
-			problems = append(problems, "every [[durable_objects]] needs a binding, a class and a migration")
+		if d.Binding == "" || d.Class == "" {
+			problems = append(problems, "every [[durable_objects]] needs a binding and a class")
 		}
+		if d.Migration != "" {
+			tagged++
+		}
+	}
+	if tagged > 0 && tagged < len(p.DurableObjects) {
+		problems = append(problems, "[[durable_objects]]: each names its migration, or none does (declared in exports, as cf deploy does)")
 	}
 	for _, r := range p.RateLimits {
 		if r.Binding == "" || r.NamespaceID < 0 || r.Limit < 1 || (r.Period != 10 && r.Period != 60) {
@@ -416,6 +425,9 @@ func (p *Project) Deploy(env, preview string) (Deploy, error) {
 // LastMigration is the Durable Object migration the Worker is at, and the classes it created: the one named last.
 func (p *Project) LastMigration() (tag string, classes []string) {
 	for _, d := range p.DurableObjects {
+		if d.Migration == "" {
+			continue
+		}
 		if d.Migration != tag {
 			tag, classes = d.Migration, nil
 		}

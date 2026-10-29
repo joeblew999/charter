@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/joeblew999/charter/internal/fern"
 	"github.com/joeblew999/charter/internal/run"
@@ -115,6 +116,20 @@ func fernSettings(p *project.Project, goModule string, checkOnly bool) error {
 	return nil
 }
 
+// flagsFirst is args with its flags (-x) before the rest, which Go's flag package stops at: charter sdk group -if-stale
+// is charter sdk -if-stale group. sdk's flags take no values, so none is taken from its place.
+func flagsFirst(args []string) []string {
+	var flags, rest []string
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			flags = append(flags, a)
+		} else {
+			rest = append(rest, a)
+		}
+	}
+	return append(flags, rest...)
+}
+
 // SDK runs charter sdk: an SDK with Fern (Docker) into sdk/out, by default the TypeScript one; -prove: every client,
 // proven in its language; -publish: the Go SDK into sdk/go, which the project commits.
 func SDK(args []string) {
@@ -122,7 +137,7 @@ func SDK(args []string) {
 	prove := fs.Bool("prove", false, "generate every client (or those named) and prove each in its language")
 	publish := fs.Bool("publish", false, "the Go SDK into sdk/go, proven ([sdks] go = true)")
 	ifStale := fs.Bool("if-stale", false, "only when fern/ is not what the SDK was made from")
-	fs.Parse(args)
+	fs.Parse(flagsFirst(args))
 	p := load()
 	switch {
 	case *publish:

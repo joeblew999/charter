@@ -24,7 +24,7 @@ for await (const n of await client.notes.list({ limit: 50 })) console.log(n.id);
 
 `npm run sdk -- --prove` generates every group of `fern/generators.yml` at once, each in a Docker container of its own, and proves each in its language as soon as it is generated: Go built, vetted and tested against WireMock; TypeScript typechecked; Python checked by mypy and its own tests; the Rust CLI built. Each says how long it took. The toolchains come from mise, at versions charter-ts pins. This repo's CI proves the conformance projects' clients, which carry every Fern feature.
 
-Which SDKs a project has is `sdks` in `charter.config.ts`; `npm run spec` writes Fern's settings, `fern/generators.yml`, from it and the spec, with the generators charter-ts pins:
+Which SDKs a project has is `sdks` in `charter.config.ts` (in Go, `[sdks]` in `charter.toml`); `npm run spec` (`charter spec`) writes Fern's settings, `fern/generators.yml`, from it and the spec, with the generators charter pins:
 
 ```ts
 sdks: { name: "Notes", more: ["python", "cli"] },
@@ -41,10 +41,10 @@ The credentials each SDK sends are the spec's security schemes, restated there: 
 
 ## Give the Go SDK to another repo
 
-In a Go project with `go: { sdk: true }` in `charter.config.ts`:
+In a Go project with `go = true` in `charter.toml`'s `[sdks]`:
 
 ```sh
-npm run sdk -- --publish   # generates and proves the Go SDK, and copies it into sdk/go
+charter sdk -publish       # generates and proves the Go SDK, and copies it into sdk/go
 git add sdk/go             # commit it with its contract change; never edit it
 ```
 

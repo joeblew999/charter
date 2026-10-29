@@ -46,7 +46,13 @@ func Serve(args []string) {
 	check(os.Chdir(p.Root))
 	log.Printf("→ http://127.0.0.1:%s (workerd, in %s)", p.LocalPort(), Zone())
 	env := append(os.Environ(), "LOCAL_TIME_ZONE="+Zone())
-	check(becomeProcess(bin, []string{"workerd", "serve", local.Dir + "/config.capnp", "--socket-addr", "http=127.0.0.1:" + p.LocalPort()}, env))
+	argv := []string{"workerd", "serve", local.Dir + "/config.capnp", "--socket-addr", "http=127.0.0.1:" + p.LocalPort()}
+	// Local state of its own, for a run that must start from nothing (twins): CHARTER_LOCAL_STATE names its folder.
+	if state := os.Getenv("CHARTER_LOCAL_STATE"); state != "" {
+		check(os.MkdirAll(state, 0o755))
+		argv = append(argv, "--directory-path", "state="+state)
+	}
+	check(becomeProcess(bin, argv, env))
 }
 
 // With runs charter with.

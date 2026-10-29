@@ -96,6 +96,7 @@ func Main(args []string) {
 	fs.Var((*list)(&cfg.Domains), "domain", "Workers Custom Domain to attach, e.g. app.example.com (repeatable; zone must be in the account)")
 	fs.Var((*list)(&cfg.Modules), "module", "extra ES module next to -main, e.g. worker/room.mjs (repeatable)")
 	fs.Var((*list)(&cfg.NewSQLiteClasses), "new-sqlite-class", "Durable Object class created by -migration-tag (repeatable)")
+	fs.Var((*list)(&cfg.ExportedClasses), "export-class", "Durable Object class (SQLite) declared in the upload's exports, as cf deploy declares one: no migration tag (repeatable)")
 	dryRun := fs.Bool("dry-run", false, "print what would be uploaded; make no API calls")
 	previewName := fs.String("preview", "", "deploy as this Worker Preview of -name (e.g. pr-7) instead of production; prints its URL")
 	deletePreview := fs.String("delete-preview", "", "delete this Worker Preview of -name and exit")
@@ -304,6 +305,11 @@ func fromProject(args []string) []string {
 		out = append(out, "-migration-tag", tag)
 		for _, c := range classes {
 			out = append(out, "-new-sqlite-class", c)
+		}
+	}
+	for _, o := range p.DurableObjects {
+		if o.Migration == "" {
+			out = append(out, "-export-class", o.Class)
 		}
 	}
 	limits, err := p.Limits()

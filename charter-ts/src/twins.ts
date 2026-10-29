@@ -10,7 +10,7 @@
 // MCP, both specs, an unknown path. Then what is saved in each project, which no request shows: the
 // specs in fern/ (the files the SDKs are made from) and the database's migrations/.
 import { methods, mcpRequest, type OpenAPI, type Operation, type Parameter, type Schema } from "./standard.ts";
-import { buildWorker } from "./commands.ts";
+import { buildWorker, charterProject } from "./commands.ts";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -209,7 +209,16 @@ function savedDifferences(reference: string, refName: string, other: string, oth
 	return found;
 }
 
-const configOf = async (dir: string) => ((await import(pathToFileURL(resolve(dir, "charter.config.ts")).href)) as { default: Config }).default;
+/** What twins reads of a project: charter.config.ts's, or of a charter.toml project (a Go one, #121) its Worker's
+ * name and [local] vars, the throwaway secrets it runs with here, read from the file's two lines that say them. */
+const configOf = async (dir: string): Promise<Pick<Config, "worker" | "localSecrets">> => {
+	if (!charterProject(dir)) return ((await import(pathToFileURL(resolve(dir, "charter.config.ts")).href)) as { default: Config }).default;
+	const text = readFileSync(join(dir, "charter.toml"), "utf8");
+	const worker = /^name\s*=\s*"([^"]+)"/m.exec(text)?.[1];
+	if (!worker) throw new Error(`${dir}/charter.toml has no name`);
+	const vars = /^\[local\]\s*\nvars\s*=\s*\{([^}]*)\}/m.exec(text)?.[1] ?? "";
+	return { worker, localSecrets: Object.fromEntries([...vars.matchAll(/(\w+)\s*=\s*"([^"]*)"/g)].map(m => [m[1]!, m[2]!])) };
+};
 
 export async function twins(args: string[]): Promise<void> {
 	const [reference, other] = args;
@@ -221,19 +230,30 @@ export async function twins(args: string[]): Promise<void> {
 	const origins = [`http://localhost:${refPort}`, `http://localhost:${otherPort}`] as const;
 	// Each Worker readied as check readies it: a Go one built, an SDK a Worker runs copied in.
 	for (const [dir, config] of [[reference, refConfig], [other, otherConfig]] as const) {
+		if (charterProject(dir)) {
+			run("go", ["tool", "charter", "build"], {}, dir);
+			continue;
+		}
 		const here = process.cwd();
 		process.chdir(dir);
 		try {
-			await buildWorker(config);
+			await buildWorker(config as Config);
 		} finally {
 			process.chdir(here);
 		}
 	}
-	const server = (dir: string, port: number, name: string) => ({ program: "cf", args: ["dev"], env: { ...secrets, PORT: String(port), CHARTER_LOCAL_STATE: join(state, name) }, ready: `http://localhost:${port}/api/openapi.json`, cwd: dir });
+	// Each on local workerd with state of its own: cf dev, or charter serve for a charter.toml project.
+	const server = (dir: string, port: number, name: string) => ({
+		...(charterProject(dir) ? { program: "go", args: ["tool", "charter", "serve"] } : { program: "cf", args: ["dev"] }),
+		env: { ...secrets, PORT: String(port), CHARTER_LOCAL_STATE: join(state, name) },
+		ready: `http://localhost:${port}/api/openapi.json`,
+		cwd: dir,
+	});
 	try {
 		await withServer(server(reference, refPort, "reference"), () => withServer(server(other, otherPort, "other"), async () => {
-			await migrateLocal(refConfig, refPort, reference).catch(() => {});
-			await migrateLocal(otherConfig, otherPort, other).catch(() => {});
+			// cf dev's local D1 is migrated from here; charter's migrates itself on first use.
+			if (!charterProject(reference)) await migrateLocal(refConfig, refPort, reference).catch(() => {});
+			if (!charterProject(other)) await migrateLocal(otherConfig, otherPort, other).catch(() => {});
 			const spec = (await (await fetch(`${origins[0]}/api/openapi.json`)).json()) as OpenAPI;
 			const asyncapi = (await (await fetch(`${origins[0]}/api/asyncapi.json`)).json()) as { channels?: Record<string, { address: string }> };
 			const tokensOf = (): Record<Auth, string | undefined> => ({ none: undefined, read: secrets.READ_TOKEN, write: secrets.WRITE_TOKEN });

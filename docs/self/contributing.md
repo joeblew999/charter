@@ -41,7 +41,7 @@ Never edit these: change the source, then run the command.
 | Path | Written by |
 |---|---|
 | `fern/openapi.json`, `fern/asyncapi.json`, `fern/generators.yml` | `npm run spec`, from the contract; Fern's settings from the spec and `charter.config.ts` (`sdks`) |
-| `api/queries.go`, `api/tables.ts` | `npm run spec`, from `migrations/*.sql` (and in Go `api/queries.sql`), as `db` in `charter.config.ts` says |
+| `api/queries.go`, `api/tables.ts` | `charter spec` (Go) or `npm run spec` (TypeScript), from `migrations/*.sql` (and in Go `api/queries.sql`), as `db` in `charter.toml` or `charter.config.ts` says |
 | `pages/*.x.go` (committed) | gsx, from the components; `npm run check` writes them and fails while they were stale |
 | `sdk/go/` (committed) | `npm run sdk -- --publish` |
 | `sdk/out/`, `build/`, `charter-ts/dist/`, `ts/dist/` | `npm run sdk`; the Go Worker's build (`dev`, `check`, `deploy`) and the program that writes a Go project's specs (`build/_spec`, `spec`); `npm ci` |
@@ -100,7 +100,7 @@ Each test checks one thing, at one level, and the same level is in the same plac
 | # | Level | Who needs it | Where | When it runs |
 |---|---|---|---|---|
 | 1 | **The standard:** a running API serves its specs, lists its MCP tools, leads a client to sign in, refuses with problem details | Every API | Built into charter-ts (`charter-ts/src/standard.ts`): it reads the API's own spec, so nothing is written or copied | Every project's `check` and `live-test`, first |
-| 2 | **The API's own:** it does what it is for | Every API | The project's `test/` (`test/live.ts`, `test/sdk.ts`…); a Go twin runs its TypeScript reference's, as its `charter.config.ts` says | The project's `check` and `live-test` |
+| 2 | **The API's own:** it does what it is for | Every API | The project's `test/` (`test/live.ts`, `test/sdk.ts`…); a Go twin runs its TypeScript reference's, as its `charter.toml`'s `[test]` says | The project's `check` and `live-test` |
 | 3 | **Unit tests:** a handler on its own | Where wanted | Beside the code: `api/*_test.go`, `api/*.test.ts` | The project's `check` |
 | 4 | **Twins:** the Go project answers as its TypeScript reference | An API in both languages | Built into charter-ts (`charter-ts twins`) | The `twins` job |
 | 5 | **The libraries** | charter's developers | Beside the code: `*/*_test.go` at the top, `ts/src/*.test.ts`, `charter-ts/src/*.test.ts` | The `packages` job |

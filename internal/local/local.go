@@ -129,6 +129,9 @@ func config(p *project.Project, build []string, migrations []migration) string {
 	q := strconv.Quote
 	fmt.Fprintf(&b, "# %s\n#\n# workerd serve .charter/config.capnp, from the app's root. Embed paths are relative to this file, disk paths to\n# the working directory.\n\n", header)
 	b.WriteString("using Workerd = import \"/workerd/workerd.capnp\";\n\nconst config :Workerd.Config = (\n  services = [\n")
+	// What the Worker's fetch reaches: workerd's own allows only the internet, where a local Worker calls what runs
+	// beside it too (a webhook's receiver, a token issuer), as cf dev's allows.
+	b.WriteString("    (name = \"internet\", network = (allow = [\"public\", \"private\", \"local\"], tlsOptions = (trustBrowserCas = true))),\n")
 	front := "app"
 	if p.Assets != "" {
 		front = "assets"
@@ -178,10 +181,11 @@ func config(p *project.Project, build []string, migrations []migration) string {
 		fmt.Fprintf(&b, "    (name = %s, text = %s),\n", q(k), q(p.Local.Vars[k]))
 	}
 	// A secret without a local value in [local] vars, and what [test] env gives the Worker under test: from workerd's
-	// environment (charter check sets them for its run), and absent where it has none, as an unset secret is.
+	// environment (charter check sets them for its run). Only one the environment has is bound: workerd binds an unset
+	// one as null, where Cloudflare (and cf dev) leave an unset secret out, and the Worker must see the same.
 	var fromEnv []string
 	for _, k := range append(append(slices.Clone(p.Secrets.Required), p.Secrets.Optional...), slices.Sorted(maps.Keys(p.Test.Env))...) {
-		if _, ok := p.Local.Vars[k]; !ok && !slices.Contains(fromEnv, k) {
+		if _, ok := p.Local.Vars[k]; !ok && os.Getenv(k) != "" && !slices.Contains(fromEnv, k) {
 			fromEnv = append(fromEnv, k)
 		}
 	}

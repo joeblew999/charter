@@ -260,7 +260,7 @@ func native(p *project.Project) error {
 		env := localEnv(p, pl)
 		env["PORT"] = strconv.Itoa(ports[0])
 		return run.With(run.Server{Command: []string{"go", "run", "."}, Dir: p.Root, Env: env, Ready: pl.base + "/api/openapi.json"},
-			func() error { return try(p, p.Test.Run, pl) })
+			func() error { return try(p, p.Test.Run, pl, localEnv(p, pl)) })
 	})
 }
 
