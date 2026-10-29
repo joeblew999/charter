@@ -1,5 +1,5 @@
-# Written by `go tool charter workflow` (github.com/joeblew999/charter): don't edit it; go tool charter workflow writes
-# it again. What it runs is charter.toml's [ci], through go tool charter ci run: the tools, the build, a push's build
+# Written by `charter workflow` (github.com/joeblew999/charter): don't edit it; charter workflow writes
+# it again. What it runs is charter.toml's [ci], through charter ci run: the tools, the build, a push's build
 # published for its Workers Builds preview, the checks, and for a v* tag or a release/v* branch the release. Shell steps
 # only: no JavaScript actions.
 name: charter
@@ -36,10 +36,10 @@ jobs:
           git checkout -q --detach FETCH_HEAD
           git log --oneline -1
 
-      - name: go tool charter ci run
+      - name: charter ci run
         run: |
           export MISE_TRUSTED_CONFIG_PATHS="$PWD" PATH="$HOME/.local/bin:$PATH"
           command -v mise >/dev/null ||
             curl -fsSL https://mise.run | MISE_VERSION="v$(sed -n 's/^min_version = "\(.*\)"/\1/p' mise.toml)" MISE_QUIET=1 sh
-          mise install go
-          mise exec -- go tool charter ci run
+          mise install go github:joeblew999/charter
+          mise exec -- charter ci run

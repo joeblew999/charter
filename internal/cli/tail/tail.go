@@ -1,4 +1,4 @@
-// Package tail is go tool charter tail: it streams a deployed Worker's live logs (requests, console output, exceptions) without
+// Package tail is charter tail: it streams a deployed Worker's live logs (requests, console output, exceptions) without
 // wrangler: flags for internal/cftail. Ctrl-C stops it and deletes the tail.
 //
 // Credentials come from CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, e.g. with `fnox exec --`.

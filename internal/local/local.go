@@ -27,7 +27,7 @@ const Dir = ".charter"
 // StateDir is where local Durable Objects (D1's stand-in among them) keep their SQLite files, under the app's root.
 const StateDir = Dir + "/state"
 
-const header = "Written by `go tool charter local` from charter.toml: don't edit it, change charter.toml. Local only, never deployed."
+const header = "Written by `charter local` from charter.toml: don't edit it, change charter.toml. Local only, never deployed."
 
 // Write writes .charter/ for p, from the build in build/.
 func Write(p *project.Project) error {
@@ -70,7 +70,7 @@ func write(path, content string) error {
 func buildModules(root string) ([]string, error) {
 	entries, err := os.ReadDir(filepath.Join(root, "build"))
 	if err != nil {
-		return nil, fmt.Errorf("no build/: build first (go tool charter build): %w", err)
+		return nil, fmt.Errorf("no build/: build first (charter build): %w", err)
 	}
 	var out []string
 	for _, e := range entries {
@@ -80,7 +80,7 @@ func buildModules(root string) ([]string, error) {
 		}
 	}
 	if !slices.Contains(out, "worker.mjs") {
-		return nil, fmt.Errorf("build/ has no worker.mjs: build first (go tool charter build)")
+		return nil, fmt.Errorf("build/ has no worker.mjs: build first (charter build)")
 	}
 	return out, nil
 }

@@ -3,9 +3,12 @@
 //      them, committed.
 //   2. npm run check: the jobs ci.config.ts lists in check (the rest are the CI's: npm run ci).
 //   3. The packages (npm pack) into dist/: charter-ts (the command, charter's files) and charter-lib
-//      (what a TypeScript Worker imports), at the same version.
+//      (what a TypeScript Worker imports), at the same version; and the charter binary for every machine, built
+//      as a snapshot (dist/charter), which proves it builds.
 //   4. The tags ts-vX.Y.Z and vX.Y.Z (the Go library's, the repo's root module), pushed with main, and the GitHub
-//      Release, marked latest, with both packages on it, which a repo installs.
+//      Release ts-vX.Y.Z with both packages on it, which a repo installs.
+//   5. The Release vX.Y.Z, marked latest, with the charter binary for every machine (goreleaser, .goreleaser.yaml),
+//      which a repo takes from mise: mise use github:joeblew999/charter@X.Y.Z.
 // The version goes into every install command that README.md and docs/ show too: npx keeps what it
 // fetched for a URL, so only a URL with the version in it gives the version it names.
 // Safe to run again: a step already done is skipped. --dry-run does steps 2 and 3 only, and changes no file.
@@ -79,6 +82,8 @@ for (const tarball of tarballs) {
 	if (!existsSync(tarball)) throw new Error(`npm pack wrote no ${tarball}`);
 	made(tarball, "a package the release carries");
 }
+// The binaries, every machine's, as step 5 releases them: built here first, so a dry run proves they build.
+run("goreleaser", ["build", "--snapshot", "--clean"]);
 if (dryRun) {
 	console.log(`dry run: ${tarballs.join(" and ")} are what the release would carry; nothing tagged, pushed or published`);
 	process.exit(0);
@@ -115,10 +120,21 @@ A TypeScript Worker's library, charter-lib, is on the same release:
 
     npm i ${releaseURL(version, "charter-lib")}
 
+The charter command is on the release v${version}, a binary for every machine:
+
+    mise use github:joeblew999/charter@${version}
+
 Docs: https://joeblew999.github.io/charter/`;
-if (!exists) run("gh", ["release", "create", tag, ...tarballs, "--title", `charter-ts ${version}`, "--notes", notes, "--latest"]);
+// Not the latest: that is v${version}'s, whose binary mise use github:joeblew999/charter takes.
+if (!exists) run("gh", ["release", "create", tag, ...tarballs, "--title", `charter-ts ${version}`, "--notes", notes, "--latest=false"]);
 else run("gh", ["release", "upload", tag, ...tarballs, "--clobber"]);
 console.log(`released: ${releaseURL(version)}`);
+
+// 5. The charter binary for every machine on the release vX.Y.Z, marked latest (.goreleaser.yaml). The repo has tags of
+// several kinds (ts-v, go/lib/v, examples/…), so goreleaser is told which two are this release's and the one before.
+const previous = git("tag", "-l", "v*", "--sort=-v:refname").split("\n").find(t => /^v\d+\.\d+\.\d+$/.test(t) && t !== goTag);
+run("goreleaser", ["release", "--clean"], { GITHUB_TOKEN: output("gh", ["auth", "token"]).trim(), GORELEASER_CURRENT_TAG: goTag, ...(previous ? { GORELEASER_PREVIOUS_TAG: previous } : {}) });
+console.log(`released: the charter binary, mise use github:joeblew999/charter@${version}`);
 
 function walk(dir: string): string[] {
 	return readdirSync(dir, { withFileTypes: true }).flatMap(entry => (entry.isDirectory() ? walk(`${dir}/${entry.name}`) : [`${dir}/${entry.name}`]));

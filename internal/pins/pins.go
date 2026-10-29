@@ -1,5 +1,5 @@
-// Package pins is the TinyGo and wasm-opt a Go Worker app builds with: mise.toml, which go tool charter tasks
-// writes into an app (ConfFile) and go tool charter build checks the TinyGo on PATH against.
+// Package pins is the TinyGo and wasm-opt a Go Worker app builds with: mise.toml, which charter tasks
+// writes into an app (ConfFile) and charter build checks the TinyGo on PATH against.
 package pins
 
 import (
@@ -16,8 +16,7 @@ var File []byte
 const ConfFile = ".config/mise/conf.d/charter.toml"
 
 // Tools is what File pins, by mise's name for each: its [tools] lines, name = "version", a name bare or quoted. Read
-// with the standard library only: go tool charter build imports this, and a project runs it (go run) with no go.sum
-// lines for anything the build needs beyond what the project already has.
+// with the standard library only, as the rest of the build step is.
 func Tools() map[string]string {
 	tools := map[string]string{}
 	in := false

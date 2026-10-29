@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/joeblew999/charter/project"
@@ -14,9 +15,10 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/joeblew999/charter/internal/pins"
+	"github.com/joeblew999/charter/internal/version"
 )
 
-// Check runs go tool charter check: every problem with charter.toml and the files charter writes into the app.
+// Check runs charter check: every problem with charter.toml and the files charter writes into the app.
 func Check(args []string) {
 	fs := flag.NewFlagSet("charter check", flag.ExitOnError)
 	fs.Parse(args)
@@ -55,8 +57,13 @@ func Problems(p *project.Project) []string {
 		}
 	}
 	out = append(out, ownPins()...)
+	if b, err := os.ReadFile("go.mod"); err == nil {
+		if s := skew(string(b), version.String(), version.Released()); s != "" {
+			out = append(out, s)
+		}
+	}
 	if b, err := os.ReadFile(".gitignore"); err != nil || !strings.Contains("\n"+string(b), "\n/build/") {
-		out = append(out, ".gitignore doesn't ignore /build/: go tool charter init")
+		out = append(out, ".gitignore doesn't ignore /build/: charter init")
 	}
 	for _, m := range append([]string{p.Main}, p.Modules...) {
 		if m == "" {
@@ -86,9 +93,11 @@ func Problems(p *project.Project) []string {
 }
 
 // ownPins is each line of the app's own mise config that pins TinyGo or wasm-opt: mise would install a second copy
-// beside the one charter pins (pins.ConfFile), and which the build ran would be chance.
+// beside the one charter pins (pins.ConfFile), and which the build ran would be chance. And charter itself, which
+// the app takes from mise (mise use github:joeblew999/charter): a problem when no config pins it.
 func ownPins() []string {
 	var out []string
+	pinned := false
 	for _, file := range []string{"mise.toml", ".mise.toml", "mise.local.toml", ".config/mise.toml", ".config/mise/config.toml"} {
 		b, err := os.ReadFile(file)
 		if err != nil {
@@ -103,9 +112,29 @@ func ownPins() []string {
 		}
 		for name := range config.Tools {
 			if pins.Charters(name) {
-				out = append(out, fmt.Sprintf("%s pins %s: delete that line; charter pins it, at the version its TinyGo patch is for (%s: go tool charter tasks)", file, name, pins.ConfFile))
+				out = append(out, fmt.Sprintf("%s pins %s: delete that line; charter pins it, at the version its TinyGo patch is for (%s: charter tasks)", file, name, pins.ConfFile))
 			}
+			pinned = pinned || name == CharterTool
 		}
 	}
+	if !pinned {
+		out = append(out, fmt.Sprintf("mise.toml doesn't pin charter: mise use %s@<version>", CharterTool))
+	}
 	return out
+}
+
+// CharterTool is charter as mise has it: the binary of charter's GitHub release.
+const CharterTool = "github:joeblew999/charter"
+
+// skew is a problem when gomod requires charter's library at a version other than this charter's (binary), which
+// builds the Worker from it: none when it requires none, replaces it (a checkout's), or this charter is no release.
+func skew(gomod, binary string, released bool) string {
+	if !released || regexp.MustCompile(`(?m)^\s*(replace\s+)?github\.com/joeblew999/charter\s+=>`).MatchString(gomod) {
+		return ""
+	}
+	m := regexp.MustCompile(`(?m)^\s*(?:require\s+)?github\.com/joeblew999/charter\s+(v\S+)`).FindStringSubmatch(gomod)
+	if m == nil || m[1] == binary {
+		return ""
+	}
+	return fmt.Sprintf("go.mod requires github.com/joeblew999/charter %s, but this charter is %s: the same version for both (mise use %s@%s, or go get github.com/joeblew999/charter@%s)", m[1], binary, CharterTool, strings.TrimPrefix(m[1], "v"), binary)
 }

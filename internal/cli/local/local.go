@@ -1,9 +1,9 @@
-// Package local is go tool charter local, serve and with: the Worker on plain workerd from charter.toml, no wrangler
+// Package local is charter local, serve and with: the Worker on plain workerd from charter.toml, no wrangler
 // and no Node (internal/local writes what workerd runs into .charter/).
 //
-//	go tool charter local                  write .charter/ (after a build)
-//	go tool charter serve                  run it on charter.toml's port (PORT overrides), in the developer's time zone
-//	go tool charter with [-strict] cmd…    run cmd against it on a free port with its own state, BASE its URL, then
+//	charter local                  write .charter/ (after a build)
+//	charter serve                  run it on charter.toml's port (PORT overrides), in the developer's time zone
+//	charter with [-strict] cmd…    run cmd against it on a free port with its own state, BASE its URL, then
 //	                                       stop it; -strict also fails on a panic or uncaught exception in its log
 package local
 
@@ -26,7 +26,7 @@ import (
 	"github.com/joeblew999/charter/project"
 )
 
-// Local runs go tool charter local.
+// Local runs charter local.
 func Local(args []string) {
 	fs := flag.NewFlagSet("charter local", flag.ExitOnError)
 	fs.Parse(args)
@@ -35,7 +35,7 @@ func Local(args []string) {
 	log.Printf("✓ %s: workerd serve %s/config.capnp", filepath.Join(p.Root, local.Dir), local.Dir)
 }
 
-// Serve runs go tool charter serve: workerd in the foreground, until it is stopped.
+// Serve runs charter serve: workerd in the foreground, until it is stopped.
 func Serve(args []string) {
 	fs := flag.NewFlagSet("charter serve", flag.ExitOnError)
 	fs.Parse(args)
@@ -49,14 +49,14 @@ func Serve(args []string) {
 	check(becomeProcess(bin, []string{"workerd", "serve", local.Dir + "/config.capnp", "--socket-addr", "http=127.0.0.1:" + p.LocalPort()}, env))
 }
 
-// With runs go tool charter with.
+// With runs charter with.
 func With(args []string) {
 	fs := flag.NewFlagSet("charter with", flag.ExitOnError)
 	strict := fs.Bool("strict", false, "also fail when workerd's log has a panic or an uncaught exception")
 	logPath := fs.String("log", "", "workerd's log (default .charter/workerd-<port>.log)")
 	fs.Parse(args)
 	if fs.NArg() == 0 {
-		log.Fatal("usage: go tool charter with [-strict] [-log file] <command> [args…]")
+		log.Fatal("usage: charter with [-strict] [-log file] <command> [args…]")
 	}
 	p := load()
 	check(local.Write(p))

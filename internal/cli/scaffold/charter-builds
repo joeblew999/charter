@@ -1,10 +1,10 @@
 #!/bin/sh
-#MISE description="Workers Builds' build and deploy step: fetch the charter CI published for this commit, then go tool charter builds build|deploy"
-# Written by `go tool charter tasks` (github.com/joeblew999/charter): don't edit it; go tool charter tasks writes it again.
+#MISE description="Workers Builds' build and deploy step: fetch the charter CI published for this commit, then charter builds build|deploy"
+# Written by `charter tasks` (github.com/joeblew999/charter): don't edit it; charter tasks writes it again.
 #
-# Workers Builds runs it for every pushed branch, `sh .mise/tasks/charter-builds build` then `… deploy` (go tool charter
-# builds configure sets that up). It only fetches charter: the static binary CI published for this commit (go tool
-# charter ci publish), which does the work in Go (go tool charter builds). When none comes (CI down, a fork, or
+# Workers Builds runs it for every pushed branch, `sh .mise/tasks/charter-builds build` then `… deploy` (charter
+# builds configure sets that up). It only fetches charter: the static binary CI published for this commit (charter
+# ci publish), which does the work in Go (charter builds). When none comes (CI down, a fork, or
 # CHARTER_COMPILE=1), it builds here with mise instead; when the branch moved on, there is nothing to deploy.
 set -eu
 step=${1:?build or deploy}
@@ -21,7 +21,7 @@ mise_here() {
   export MISE_YES=1 MISE_TRUSTED_CONFIG_PATHS="$PWD" MISE_TASK_RUN_AUTO_INSTALL=false PATH="$HOME/.local/bin:$PATH"
   command -v mise >/dev/null ||
     curl -fsSL https://mise.run | MISE_VERSION="v$(sed -n 's/^min_version = "\(.*\)"/\1/p' mise.toml)" MISE_QUIET=1 sh
-  mise install go
+  mise install go github:joeblew999/charter
 }
 
 case $step in
@@ -47,13 +47,13 @@ build)
   echo "· no build from CI for ${sha:-this commit}: building here"
   rm -f bin/charter
   mise_here
-  exec mise exec -- go tool charter builds build -compile
+  exec mise exec -- charter builds build -compile
   ;;
 deploy)
   [ ! -e .superseded ] || { echo "· superseded by a newer push: nothing to deploy"; exit 0; }
   if [ -x bin/charter ]; then exec bin/charter builds deploy; fi
   mise_here
-  exec mise exec -- go tool charter builds deploy
+  exec mise exec -- charter builds deploy
   ;;
 *)
   echo "usage: sh .mise/tasks/charter-builds build|deploy" >&2

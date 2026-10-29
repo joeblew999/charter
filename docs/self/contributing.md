@@ -26,7 +26,7 @@ Docker: charter-ts starts it where it is installed but not running and may be st
 |---|---|
 | `charter-ts/` | The tool: its commands are in `charter-ts/src/commands.ts`. The files it writes into every repo are this repo's own, listed in `charter-ts/src/charter-files.ts` |
 | `ts/` | `charter-lib`, what a TypeScript Worker imports |
-| The top (`go.mod`) | The Go library, one package per folder (`auth/`, `serve/`…), with its Worker glue in `worker/`, and the Go tool, `go tool charter`, in `cmd/charter/` (its steps in `internal/cli/`) |
+| The top (`go.mod`) | The Go library, one package per folder (`auth/`, `serve/`…), with its Worker glue in `worker/`, and the command, `charter`, in `cmd/charter/` (its steps in `internal/cli/`) |
 | `examples/start-ts/`, `examples/notes-ts/` | The TypeScript examples, which `charter-ts new` copies: one route, and the notes API (sign-in, streams, rate limits) |
 | `examples/start-go/`, `examples/notes-go/` | The same two APIs in Go, held to the TypeScript ones by `twins` |
 | `examples/start-htmx/`, `examples/start-datastar/` | Go with server-rendered pages ([Server-rendered pages](pages.md)) |
@@ -46,7 +46,7 @@ Never edit these: change the source, then run the command.
 | `sdk/go/` (committed) | `npm run sdk -- --publish` |
 | `sdk/out/`, `build/`, `charter-ts/dist/`, `ts/dist/` | `npm run sdk`; the Go Worker's build (`dev`, `check`, `deploy`) and the program that writes a Go project's specs (`build/_spec`, `spec`); `npm ci` |
 | `examples/conformance-ts/client/` | The SDK the conformance Worker runs, copied in by `check`, `dev` and `deploy` |
-| `charter-ts/charter-files/`, `dist/` | `npm pack`, and `npm run release` |
+| `charter-ts/charter-files/`, `dist/` | `npm pack`, and `npm run release` (its binaries in `dist/charter/`, goreleaser) |
 | `.github/workflows/self-*.yml`, `charter-repo.yml` | `npm run adopt`, from `ci.config.ts` and charter's own job |
 | `docs/charter/README.md` | `npm run adopt`, from `package.json`'s scripts |
 | `package-lock.json` | `npm install` |
@@ -109,8 +109,8 @@ Each test checks one thing, at one level, and the same level is in the same plac
 ## Cut a release
 
 ```sh
-npm run release -- X.Y.Z --dry-run   # every check, and the packages into dist/
-npm run release -- X.Y.Z             # the version, the tag ts-vX.Y.Z, the GitHub Release with the packages
+npm run release -- X.Y.Z --dry-run   # every check, the packages into dist/, the binaries into dist/charter
+npm run release -- X.Y.Z             # the version, the tags, the GitHub Releases with the packages and the binaries
 ```
 
-It runs `npm run check` before it tags, and never waits for GitHub. It tags `ts-vX.Y.Z` and `vX.Y.Z` (the Go library's, the root module, which `go get` and `new --go` pin; above `v0.19.1`, the last tag of the Go tool the root held before charter-ts), and the Release carries `charter-ts-X.Y.Z.tgz` and `charter-lib-X.Y.Z.tgz`, which a repo pins. It puts that version into every install command the docs show (npx keeps what it fetched for a URL, so a URL without a version would serve an old one).
+It runs `npm run check` before it tags, and never waits for GitHub. It tags `ts-vX.Y.Z` and `vX.Y.Z` (the Go library's, the root module, which `go get` and `new --go` pin; above `v0.19.1`, the last tag of the Go tool the root held before charter-ts), and the Release `ts-vX.Y.Z` carries `charter-ts-X.Y.Z.tgz` and `charter-lib-X.Y.Z.tgz`, which a repo pins. The Release `vX.Y.Z`, marked latest, carries the `charter` binary for every machine (goreleaser, `.goreleaser.yaml`), which a repo takes with `mise use github:joeblew999/charter@X.Y.Z`. It puts that version into every install command the docs show (npx keeps what it fetched for a URL, so a URL without a version would serve an old one).

@@ -12,6 +12,7 @@ A repo pins what it takes from another, and the pins are the only record. Renova
 | charter-ts | `package.json`, `devDependencies` | The URL of its GitHub Release, version and all (`ts-vX.Y.Z`) |
 | charter-lib (a TypeScript Worker) | `package.json`, `dependencies` | The same, from the same release |
 | The Go library (a Go Worker) | `go.mod` | `github.com/joeblew999/charter`, at its tag `vX.Y.Z`, which every release has |
+| The `charter` command (any repo) | `mise.toml` | `"github:joeblew999/charter" = "X.Y.Z"` (`mise use github:joeblew999/charter`): the binary on the release `vX.Y.Z`. In a Go repo, the same version as the library, which `charter check` holds it to |
 | A Go SDK another project publishes | `go.mod` | The module path of its `sdk/go`, at a commit or a tag |
 | Tools | `mise.toml` | Exact versions |
 

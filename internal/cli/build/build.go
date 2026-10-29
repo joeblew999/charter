@@ -1,11 +1,11 @@
-// Package build is go tool charter build: it builds a Go Worker into build/ with TinyGo, tuned for Cloudflare Workers, and
+// Package build is charter build: it builds a Go Worker into build/ with TinyGo, tuned for Cloudflare Workers, and
 // fills build/ with what runs it: workers-go's JavaScript and this library's Worker glue (worker/*.mjs,
 // go.mjs first). Run it in the Worker's module, with tinygo and wasm-opt on the PATH:
 //
 // -patches=false, -reuse=false and -heap=0 each turn one of these off, so what each saves can be
-// measured (go tool charter bench, docs/self/benchmarks.md); -compiler=go is a dev build in seconds.
+// measured (charter bench, docs/self/benchmarks.md); -compiler=go is a dev build in seconds.
 //
-//	go tool charter build              (go.mod: tool github.com/joeblew999/charter/cmd/charter)
+//	charter build              (mise use github:joeblew999/charter)
 //
 // charter-ts runs it too (its check, dev and deploy build a Go Worker with it), so a repo without Node builds its
 // Worker the same way.
@@ -419,7 +419,7 @@ func pinnedTinyGo() error {
 		return fmt.Errorf("no tinygo on PATH: run this through mise (mise run charter:build), which installs TinyGo %s from %s", pins.TinyGo(), pins.ConfFile)
 	}
 	if want := pins.TinyGo(); !strings.Contains(have, "tinygo version "+want+" ") {
-		return fmt.Errorf("the tinygo on PATH is %s, and this charter's TinyGo patches are for %s: run it through mise (mise run charter:build), with %s up to date (go tool charter tasks) and no tinygo line in the app's own mise.toml (go tool charter check)", strings.TrimSpace(have), want, pins.ConfFile)
+		return fmt.Errorf("the tinygo on PATH is %s, and this charter's TinyGo patches are for %s: run it through mise (mise run charter:build), with %s up to date (charter tasks) and no tinygo line in the app's own mise.toml (charter check)", strings.TrimSpace(have), want, pins.ConfFile)
 	}
 	return nil
 }

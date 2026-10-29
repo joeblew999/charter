@@ -1,13 +1,13 @@
-// Package scaffold is go tool charter init, tasks, skill, workflow and check: a Go app set up to run on Cloudflare
+// Package scaffold is charter init, tasks, skill, workflow and check: a Go app set up to run on Cloudflare
 // Workers with charter, the way intl and seo set an app up: a config file, its mise tasks, an agent skill, and a check
 // that says when any of them is stale.
 //
-//	go tool charter init [-name n] [-compat date]   charter.toml, build/ in .gitignore, and everything below
-//	go tool charter tasks                           the mise tasks (.mise/tasks/charter.toml) and Workers Builds'
+//	charter init [-name n] [-compat date]   charter.toml, build/ in .gitignore, and everything below
+//	charter tasks                           the mise tasks (.mise/tasks/charter.toml) and Workers Builds'
 //	                                                launcher (.mise/tasks/charter-builds)
-//	go tool charter skill                           the agent skill (.claude/skills/charter)
-//	go tool charter workflow                        the CI workflow (.github/workflows/charter.yml)
-//	go tool charter check                           every problem: charter.toml, and each file above as charter
+//	charter skill                           the agent skill (.claude/skills/charter)
+//	charter workflow                        the CI workflow (.github/workflows/charter.yml)
+//	charter check                           every problem: charter.toml, and each file above as charter
 //	                                                writes it now (after upgrading charter: write them again)
 //
 // What init leaves to the app: a main package that serves its handler with transport.Run (the Worker, and off
@@ -58,11 +58,11 @@ func owned() []file {
 	b, err := fs.ReadFile(skills.FS, "charter/SKILL.md")
 	check(err)
 	return []file{
-		{TasksFile, tasks, 0o644, "go tool charter tasks"},
-		{".mise/tasks/charter-builds", launcher, 0o755, "go tool charter tasks"},
-		{pins.ConfFile, pins.File, 0o644, "go tool charter tasks"},
-		{".claude/skills/charter/SKILL.md", b, 0o644, "go tool charter skill"},
-		{".github/workflows/charter.yml", workflow, 0o644, "go tool charter workflow"},
+		{TasksFile, tasks, 0o644, "charter tasks"},
+		{".mise/tasks/charter-builds", launcher, 0o755, "charter tasks"},
+		{pins.ConfFile, pins.File, 0o644, "charter tasks"},
+		{".claude/skills/charter/SKILL.md", b, 0o644, "charter skill"},
+		{".github/workflows/charter.yml", workflow, 0o644, "charter workflow"},
 	}
 }
 
@@ -79,14 +79,14 @@ func write(how string) {
 	}
 }
 
-// Tasks runs go tool charter tasks.
-func Tasks(args []string) { writer("tasks", "go tool charter tasks", args) }
+// Tasks runs charter tasks.
+func Tasks(args []string) { writer("tasks", "charter tasks", args) }
 
-// Skill runs go tool charter skill.
-func Skill(args []string) { writer("skill", "go tool charter skill", args) }
+// Skill runs charter skill.
+func Skill(args []string) { writer("skill", "charter skill", args) }
 
-// Workflow runs go tool charter workflow.
-func Workflow(args []string) { writer("workflow", "go tool charter workflow", args) }
+// Workflow runs charter workflow.
+func Workflow(args []string) { writer("workflow", "charter workflow", args) }
 
 func writer(name, how string, args []string) {
 	fs := flag.NewFlagSet("charter "+name, flag.ExitOnError)
@@ -103,7 +103,7 @@ func root() {
 	}
 }
 
-// Init runs go tool charter init, from the app's root (its go.mod's directory).
+// Init runs charter init, from the app's root (its go.mod's directory).
 func Init(args []string) {
 	fs := flag.NewFlagSet("charter init", flag.ExitOnError)
 	name := fs.String("name", "", "the Worker's name (default: the module path's last element)")
@@ -111,7 +111,7 @@ func Init(args []string) {
 	fs.Parse(args)
 	log.SetFlags(0)
 	if _, err := os.Stat("go.mod"); err != nil {
-		log.Fatal("✗ run go tool charter init in the app's root, beside its go.mod")
+		log.Fatal("✗ run charter init in the app's root, beside its go.mod")
 	}
 	if _, err := os.Stat(project.File); err == nil {
 		log.Printf("· %s is there already: left as it is", project.File)
@@ -129,21 +129,21 @@ func Init(args []string) {
 		log.Printf("✓ %s: the Worker %s, compatibility date %s", project.File, *name, *compat)
 	}
 	check(ignore(".gitignore", "/build/"))
-	for _, how := range []string{"go tool charter tasks", "go tool charter skill", "go tool charter workflow"} {
+	for _, how := range []string{"charter tasks", "charter skill", "charter workflow"} {
 		write(how)
 	}
 	log.Print(`
 Next:
   main.go     func main() { transport.Run(handler) }   // github.com/joeblew999/charter/transport
   bindings    D1, Durable Objects, rate limits, vars: charter.toml (go doc github.com/joeblew999/charter/project)
-  mise run charter:build && mise run charter:serve      // or go tool charter build, serve
+  mise run charter:build && mise run charter:serve      // or charter build, serve
   mise run charter:deploy production                     // Cloudflare credentials in the environment, or fnox
   charter.toml [ci], then mise run charter:builds-configure   // CI and Workers Builds: a commit compiled once`)
 }
 
 func starter(name, compat string) string {
 	return `# charter.toml: ` + name + ` on Cloudflare (github.com/joeblew999/charter; every key: go doc
-# github.com/joeblew999/charter/project). go tool charter reads it to run the Worker locally and to deploy it.
+# github.com/joeblew999/charter/project). charter reads it to run the Worker locally and to deploy it.
 name = "` + name + `"
 # The date workerd runs the Worker with locally, and Cloudflare in production: not newer than workerd's.
 compatibility_date = "` + compat + `"
@@ -206,7 +206,7 @@ func ignore(path, line string) error {
 	if len(b) > 0 && b[len(b)-1] != '\n' {
 		b = append(b, '\n')
 	}
-	return os.WriteFile(path, append(b, []byte(fmt.Sprintf("# The Worker's build (go tool charter build)\n%s\n", line))...), 0o644)
+	return os.WriteFile(path, append(b, []byte(fmt.Sprintf("# The Worker's build (charter build)\n%s\n", line))...), 0o644)
 }
 
 func check(err error) {

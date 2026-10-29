@@ -1,5 +1,5 @@
-// Package deploy is go tool charter deploy: it deploys a Go Worker to Cloudflare with the REST API, no wrangler and no Node: the build
-// go tool charter build wrote, its static assets, bindings (plain text, D1, Durable Objects, rate limiting), D1 and Durable
+// Package deploy is charter deploy: it deploys a Go Worker to Cloudflare with the REST API, no wrangler and no Node: the build
+// charter build wrote, its static assets, bindings (plain text, D1, Durable Objects, rate limiting), D1 and Durable
 // Object migrations and custom domains (internal/cfdeploy documents the steps). It also deploys and deletes Worker
 // Previews, and runs the preview pipeline that hands CI's build to Workers Builds (internal/previewbuild).
 //
@@ -195,7 +195,7 @@ func Main(args []string) {
 
 	plan, err := cfdeploy.NewPlan(cfg)
 	if err != nil {
-		log.Fatalf("deploy: %v (build first: go tool charter build)", err)
+		log.Fatalf("deploy: %v (build first: charter build)", err)
 	}
 	log.Printf("worker %q: %d modules (main %s), %d assets from %q, vars %v, d1 %v, do %v, ratelimit %v, domains %v, migration %q %v",
 		cfg.Name, len(plan.Modules), plan.Modules[0].Name, len(plan.Assets), cfg.AssetsDir, cfg.Vars, cfg.D1, cfg.DurableObjects, cfg.RateLimits, cfg.Domains, cfg.MigrationTag, cfg.NewSQLiteClasses)
@@ -242,7 +242,7 @@ func fromProject(args []string) []string {
 	env, rest, preview := args[0], args[1:], ""
 	if env == "preview" {
 		if len(rest) == 0 || strings.HasPrefix(rest[0], "-") {
-			log.Fatal("deploy: preview needs a name, e.g. go tool charter deploy preview pr-7")
+			log.Fatal("deploy: preview needs a name, e.g. charter deploy preview pr-7")
 		}
 		preview, rest = rest[0], rest[1:]
 	}

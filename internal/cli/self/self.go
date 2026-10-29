@@ -1,4 +1,4 @@
-// Package self runs this binary's own steps as commands of their own (go tool charter deploy …), for steps made of
+// Package self runs this binary's own steps as commands of their own (charter deploy …), for steps made of
 // others: their flags, output and exit codes stay exactly theirs.
 package self
 

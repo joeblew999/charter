@@ -1,4 +1,4 @@
-// Package token is go tool charter token: whether CLOUDFLARE_API_TOKEN is an active token, before a deploy uses it.
+// Package token is charter token: whether CLOUDFLARE_API_TOKEN is an active token, before a deploy uses it.
 package token
 
 import (
