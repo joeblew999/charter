@@ -29,7 +29,7 @@ fnox exec -- charter live-test           # REMOTE: the standard test, then the p
 
 ## CI on GitHub
 
-A repo's own jobs are its `ci.config.ts`; a project starts with one, `check`, which runs `npm run check` on every push and pull request ([Any repo](any-repo.md#checks-on-github)). A job that deploys needs the Cloudflare credentials and the Worker's secrets as the repo's GitHub secrets, and names them in its `secrets`:
+A repo's own jobs are its `charter.toml`'s `[ci.jobs]`; a project starts with one, `check`, which runs `charter check` on every push and pull request ([Any repo](any-repo.md#checks-on-github)). A job that deploys needs the Cloudflare credentials and the Worker's secrets as the repo's GitHub secrets, and names them in its `secrets`:
 
 ```sh
 fnox exec -- sh -c 'gh secret set CLOUDFLARE_API_TOKEN --body "$CLOUDFLARE_API_TOKEN"'
@@ -37,6 +37,6 @@ fnox exec -- sh -c 'gh secret set CLOUDFLARE_ACCOUNT_ID --body "$CLOUDFLARE_ACCO
 fnox exec -- sh -c 'gh secret set WRITE_TOKEN --body "$WRITE_TOKEN" && gh secret set READ_TOKEN --body "$READ_TOKEN"'
 ```
 
-This repo has one, `deploy`, run by hand: `npm run ci -- deploy examples/notes-go --remote`. It has not run on GitHub; its three steps were run here by hand, on all eight projects on 2026-10-29.
+This repo has one, `deploy`, run by hand: `go tool charter ci deploy examples/notes-go -remote`. It has not run on GitHub; its three steps were run here by hand, on all eight projects on 2026-10-29.
 
 This repo's projects deploy to production only. `charter.toml` also takes `[staging]` and `[preview]`, each with its own Worker, and a custom domain (every key: `go doc github.com/joeblew999/charter/project`).

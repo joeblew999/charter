@@ -2,6 +2,7 @@ package scaffold
 
 import (
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -10,9 +11,13 @@ import (
 )
 
 // TestInit: a module whose mise.toml pins charter (mise use github:joeblew999/charter, as a user starts) gets a
-// charter.toml that loads, named after it, build/ ignored and the mise tasks; again, it changes nothing it made.
+// charter.toml that loads, named after it, build/ ignored and the mise tasks, and at the repo's top charter's files;
+// again, it changes nothing it made.
 func TestInit(t *testing.T) {
 	t.Chdir(t.TempDir())
+	if err := exec.Command("git", "init", "-q").Run(); err != nil {
+		t.Skip("no git")
+	}
 	os.WriteFile("go.mod", []byte("module github.com/you/My_App\n\ngo 1.26\n"), 0o644)
 	os.WriteFile("mise.toml", []byte("[tools]\n\"github:joeblew999/charter\" = \"0.20.0\"\n"), 0o644)
 	Init([]string{"-compat", "2026-09-25"})
@@ -35,7 +40,7 @@ func TestInit(t *testing.T) {
 	if !strings.Contains(mustRead(t, project.File), `name = "kept"`) {
 		t.Error("init again replaced charter.toml")
 	}
-	for _, f := range []string{".mise/tasks/charter-builds", ".claude/skills/charter/SKILL.md", ".github/workflows/charter.yml"} {
+	for _, f := range []string{".mise/tasks/charter-builds", ".claude/skills/charter/SKILL.md", ".github/workflows/charter.yml", "AGENTS.md", "docs/charter/README.md", ".github/workflows/charter-repo.yml"} {
 		if _, err := os.Stat(f); err != nil {
 			t.Errorf("init wrote no %s", f)
 		}

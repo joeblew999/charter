@@ -1,10 +1,10 @@
-# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
-# A project made by charter-ts new from the packed package, as a release ships it, installed, and its check passing. Here: npm run ci -- new; on GitHub, from here: npm run ci -- new --remote.
+# Written by `charter init` from charter.toml: don't edit, change charter.toml's [ci.jobs], then charter init.
+# A project made by charter new from each example, with charter from mise and charter-lib packed as a release packs it, installed, and its check passing. Here: charter ci new; on GitHub, from here: charter ci new -remote.
 name: self-new
 on:
   push:
     branches: [main]
-    tags: ["ts-v*"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 jobs:

@@ -8,15 +8,18 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"log"
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/joeblew999/charter/internal/bundle"
+	"github.com/joeblew999/charter/internal/cli/repo"
 	"github.com/joeblew999/charter/internal/cli/scaffold"
 	"github.com/joeblew999/charter/internal/fern"
 	"github.com/joeblew999/charter/internal/run"
@@ -27,20 +30,78 @@ import (
 // to it.
 const bundleLimit = 3_000_000
 
-// Check runs charter check: every problem with charter.toml and charter's files in the app; then, for a project
-// (project.IsProject), every check that needs no Cloudflare account, each timed: lint, go test, the specs against the
-// contract, Fern's check, the app tried natively ([test] native), the Worker built and tried under workerd.
+// Check runs charter check: every problem with charter's files here (an app's, and at the repo's top the repo's);
+// then, for a project (project.IsProject), every check that needs no Cloudflare account, each timed: lint, go test,
+// the specs against the contract, Fern's check, the app tried natively ([test] native), the Worker built and tried
+// under workerd; at the top of a repo that is no app, the jobs charter.toml's [ci] check lists. -go: the folder's Go
+// module instead (gofmt, go vet, for Wasm too, go test).
 func Check(args []string) {
 	fs := flag.NewFlagSet("charter check", flag.ExitOnError)
 	fresh := fs.Bool("fresh", false, "build the Worker and run Fern's check again, even when charter's cache has them")
+	goModule := fs.Bool("go", false, "the folder's Go module: gofmt, go vet (for Wasm too, but its command and internal/), go test")
 	fs.Parse(args)
-	p := load()
-	if !scaffold.Report(p) {
+	log.SetFlags(0)
+	if *goModule {
+		check(goCheck("."))
+		return
+	}
+	if !scaffold.Report() {
 		os.Exit(1)
 	}
-	if p.IsProject() {
-		check(projectCheck(p, *fresh))
+	if p, err := project.Load("."); err == nil {
+		if p.IsProject() {
+			check(projectCheck(p, *fresh))
+		}
+		return
 	}
+	if top, atTop := repo.AtTop(); atTop {
+		check(repo.CheckJobs(top))
+	}
+}
+
+// goCheck is a Go module's check, for one that is no project (charter's own, at the repo's top): its packages' files
+// formatted and vetted, then go test; and vetted for Wasm too (GOOS=js GOARCH=wasm), as a Worker is built, the packages
+// a Worker imports: all but the command (cmd/) and its own (internal/), which run on the host. Only the module's own
+// packages (GOWORK=off): the examples beside them are modules of their own in the workspace, each with a check of its
+// own.
+func goCheck(dir string) error {
+	env := map[string]string{"GOWORK": "off"}
+	out, err := run.Output(dir, env, "go", "list", "-e", "-f", "{{.Dir}}", "./...")
+	if err != nil {
+		return err
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+	var files, worker []string
+	for _, pkg := range strings.Fields(out) {
+		rel, _ := filepath.Rel(abs, pkg)
+		rel = filepath.ToSlash(rel)
+		entries, _ := os.ReadDir(pkg)
+		for _, e := range entries {
+			if strings.HasSuffix(e.Name(), ".go") {
+				files = append(files, filepath.Join(rel, e.Name()))
+			}
+		}
+		if !regexp.MustCompile(`^(cmd|internal)(/|$)`).MatchString(rel) {
+			worker = append(worker, "./"+rel)
+		}
+	}
+	unformatted, err := run.Output(dir, nil, "gofmt", append([]string{"-l"}, files...)...)
+	if err != nil {
+		return err
+	}
+	if s := strings.TrimSpace(unformatted); s != "" {
+		return fmt.Errorf("not formatted in %s (gofmt -w writes them as they should be):\n%s", dir, s)
+	}
+	if err := run.Run(dir, env, "go", "vet", "./..."); err != nil {
+		return err
+	}
+	if err := run.Run(dir, map[string]string{"GOWORK": "off", "GOOS": "js", "GOARCH": "wasm"}, "go", append([]string{"vet"}, worker...)...); err != nil {
+		return err
+	}
+	return run.Run(dir, env, "go", "test", "./...")
 }
 
 func projectCheck(p *project.Project, fresh bool) error {

@@ -25,7 +25,7 @@ What else is the same in every project:
 | A rate limit | a Workers Rate Limiting binding named as in the contract (`WRITE_LIMIT`); its counter is named from the Worker's name (charter binds it from the spec) |
 | What the tests wait for | `/api/openapi.json` answering |
 
-Every project has the same npm scripts ([What to do](../charter/README.md)); in this repo, `projects.test.ts` fails if they differ, or two projects use one package at different versions.
+Every project's steps are charter's, the same commands ([What to do](../charter/README.md)), and none has an npm script; in this repo, `examples/examples_test.go` fails if one does, or two projects use one package at different versions.
 
 ## Refusals
 

@@ -1,0 +1,77 @@
+# Written by `charter init` (github.com/joeblew999/charter, .github/ISSUE_TEMPLATE/charter-bug.yml): don't edit it in another repo, change it in charter.
+# For a form of the repo's own, write this file without the line above: charter then leaves it alone.
+# Each field's label is a heading in the issue body; `charter issues bug` prints the same headings.
+name: Bug report
+description: It did the wrong thing. Not for bugs in the projects it is built on.
+title: "[bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Is it ours?** A bug in a project this one is built on is fixed there. Check the
+        upstream issues this repository already tracks first (`charter upstream`, and
+        `docs/self/upstream.md` where it keeps that page), and use the *Upstream bug* form if it is theirs.
+
+        **Agents:** forms are web-only. Run `charter issues bug`, fill in what it prints, and file
+        it with the gh command on its first line.
+  - type: input
+    id: reporter
+    attributes:
+      label: Reporting repo and agent
+      description: The repository you were working in, and who hit this. "owner/repo, Claude Code (agent)" or "me, by hand".
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command
+      description: As run, with every flag. For a request, the method, URL and body.
+      render: sh
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Full output
+      description: Everything it printed and the exit code or HTTP status. Not a summary.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: What happened instead, if the output does not already say.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: From a known state, for example a fresh clone.
+    validations:
+      required: false
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: The release or commit you ran, your OS, and the versions of the tools it uses (`node --version`, `charter version`).
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: It is not already an open issue, or an upstream issue this repository tracks.
+          required: true
+        - label: What I pasted holds no secret, token or personal path.
+          required: true

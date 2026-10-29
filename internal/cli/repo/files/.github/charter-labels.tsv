@@ -1,0 +1,16 @@
+# Written by `charter init` (github.com/joeblew999/charter, .github/charter-labels.tsv): don't edit it in another repo, change it in charter.
+# The labels on GitHub: `charter repo` makes the repo's labels these.
+name	color	description
+bug	d73a4a	it does the wrong thing
+feature	a2eeef	something it should do and does not
+plan	0e8a16	a plan: an issue, never a page
+upstream	5319e7	waits on, or is about, another project: charter upstream lists them
+perf	fbca04	CPU or latency, measured
+needs-triage	fbca04	not looked at yet; every form adds it
+triaged	0e8a16	classified, with the next step named in a comment
+agent-filed	1d76db	filed by an AI agent
+good first issue	7057ff	small, self-contained, and the fix is described
+duplicate	cfd3d7	already filed; a comment links the original
+wontfix	ffffff	will not be changed; a comment says why
+help wanted	008672	open for anyone to pick up
+windows	0052cc	only on Windows, or about Windows support

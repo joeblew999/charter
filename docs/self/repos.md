@@ -9,8 +9,7 @@ A repo pins what it takes from another, and the pins are the only record. Renova
 
 | What | Pinned in | How |
 |---|---|---|
-| charter-ts | `package.json`, `devDependencies` | The URL of its GitHub Release, version and all (`ts-vX.Y.Z`) |
-| charter-lib (a TypeScript Worker) | `package.json`, `dependencies` | The same, from the same release |
+| charter-lib (a TypeScript Worker) | `package.json`, `dependencies` | The URL of `charter-lib-X.Y.Z.tgz` on the release `vX.Y.Z`, version and all |
 | The Go library (a Go Worker) | `go.mod` | `github.com/joeblew999/charter`, at its tag `vX.Y.Z`, which every release has |
 | The `charter` command (any repo) | `mise.toml` | `"github:joeblew999/charter" = "X.Y.Z"` (`mise use github:joeblew999/charter`): the binary on the release `vX.Y.Z`. In a Go repo, the same version as the library, which `charter check` holds it to |
 | A Go SDK another project publishes | `go.mod` | The module path of its `sdk/go`, at a commit or a tag |
@@ -18,16 +17,16 @@ A repo pins what it takes from another, and the pins are the only record. Renova
 
 ## Renovate
 
-`npm run adopt` writes `renovate.json`, charter's own. It does nothing until the [Renovate app](https://github.com/apps/renovate) is installed on the repo: the file is its settings, not the bot. Then:
+`charter init` writes `renovate.json`, charter's own. It does nothing until the [Renovate app](https://github.com/apps/renovate) is installed on the repo: the file is its settings, not the bot. Then:
 
 | It watches | What it does |
 |---|---|
 | `mise.toml` tools, `go.mod`, `package.json` | Opens a pull request when a pinned project releases (managers `mise`, `gomod`, `npm`) |
-| charter-ts's release URL in `package.json` | The same, from charter's releases tagged `ts-v*` |
+| charter-lib's release URL in `package.json` | The same, from charter's releases `v*` |
 | Minor and patch updates | Merges them once the checks pass; a major one waits for a person |
-| charter's own | One pull request for charter-ts, charter-lib and the Go library together |
+| charter's own | One pull request for charter, charter-lib and the Go library together |
 
-`"charter": { "renovate": false }` in `package.json` leaves the file to the repo. Moving to a release by hand: what `docs/charter/README.md` says, and in Go, `go get github.com/joeblew999/charter@vX.Y.Z && go mod tidy`.
+`renovate = false` in `charter.toml`'s `[github]` leaves the file to the repo. Moving to a release by hand: `mise use github:joeblew999/charter@X.Y.Z`, then `charter init`; in Go, `go get github.com/joeblew999/charter@vX.Y.Z && go mod tidy`.
 
 ## Breaking changes
 

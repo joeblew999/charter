@@ -1,5 +1,5 @@
-# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
-# A project's Worker deployed to Cloudflare, then its live tests against it. Here: npm run ci -- deploy [<project>]; on GitHub, from here: npm run ci -- deploy [<project>] --remote.
+# Written by `charter init` from charter.toml: don't edit, change charter.toml's [ci.jobs], then charter init.
+# A project's Worker deployed to Cloudflare, then its live tests against it. Here: charter ci deploy [<project>]; on GitHub, from here: charter ci deploy [<project>] -remote.
 name: self-deploy
 on:
   workflow_dispatch:
@@ -8,13 +8,13 @@ on:
         description: The project
         type: choice
         required: true
-        options: [examples/start-ts, examples/notes-ts, examples/conformance-ts, examples/notes-go, examples/start-go, examples/start-htmx, examples/start-datastar, examples/conformance-go]
+        options: [examples/conformance-go, examples/conformance-ts, examples/notes-go, examples/notes-ts, examples/start-datastar, examples/start-go, examples/start-htmx, examples/start-ts]
 jobs:
   deploy:
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON(inputs.project && format('["{0}"]', inputs.project) || '["examples/start-ts","examples/notes-ts","examples/conformance-ts","examples/notes-go","examples/start-go","examples/start-htmx","examples/start-datastar","examples/conformance-go"]') }}
+        project: ${{ fromJSON(inputs.project && format('["{0}"]', inputs.project) || '["examples/conformance-go","examples/conformance-ts","examples/notes-go","examples/notes-ts","examples/start-datastar","examples/start-go","examples/start-htmx","examples/start-ts"]') }}
     uses: ./.github/workflows/charter-ci.yml
     with:
       job: deploy

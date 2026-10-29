@@ -1,10 +1,10 @@
-# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
-# Every project's check (charter check): lint, its specs, its tests natively (Go) and under workerd. Here: npm run ci -- projects [<project>]; on GitHub, from here: npm run ci -- projects [<project>] --remote.
+# Written by `charter init` from charter.toml: don't edit, change charter.toml's [ci.jobs], then charter init.
+# Every project's check (charter check): lint, its specs, its tests natively (Go) and under workerd. Here: charter ci projects [<project>]; on GitHub, from here: charter ci projects [<project>] -remote.
 name: self-projects
 on:
   push:
     branches: [main]
-    tags: ["ts-v*"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON(inputs.project && format('["{0}"]', inputs.project) || '["examples/start-ts","examples/notes-ts","examples/conformance-ts","examples/notes-go","examples/start-go","examples/start-htmx","examples/start-datastar","examples/conformance-go"]') }}
+        project: ${{ fromJSON(inputs.project && format('["{0}"]', inputs.project) || '["examples/conformance-go","examples/conformance-ts","examples/notes-go","examples/notes-ts","examples/start-datastar","examples/start-go","examples/start-htmx","examples/start-ts"]') }}
     uses: ./.github/workflows/charter-ci.yml
     with:
       job: projects

@@ -20,7 +20,7 @@ A Worker imports charter's library; the command, `charter`, runs a project's ste
 | `"charter-lib/follow"` | `follow()`: the gap-free feed behind the streams ([Streaming](streaming.md)) |
 | `"charter-lib/mcp"` | Every procedure that answers once as an MCP tool at `/api/mcp`, on the official MCP SDK |
 
-A Worker's bindings are `env` from `cloudflare:workers`, typed by Cloudflare's runtime types (`@cloudflare/workers-types`, in a project's `devDependencies`) and charter's, from `charter.toml` (`.charter/env.d.ts`, which `charter build` and `check` write). A repo's own jobs (`ci.config.ts`) are typed by `CI` from `"charter-ts/ci"`.
+A Worker's bindings are `env` from `cloudflare:workers`, typed by Cloudflare's runtime types (`@cloudflare/workers-types`, in a project's `devDependencies`) and charter's, from `charter.toml` (`.charter/env.d.ts`, which `charter build` and `check` write).
 
 ## Go: github.com/joeblew999/charter
 

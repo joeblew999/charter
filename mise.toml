@@ -1,7 +1,8 @@
-# The tools, and nothing else: the repo's commands are npm scripts (package.json), a project's charter's (charter.toml).
-# This file is the one place their versions are said: mise installs them here and on GitHub, Renovate
-# moves them, charter runs them from here (mise exec: sqlc, TinyGo), and charter-ts starts a new repo's mise.toml
-# from them (charter-files.ts). node runs everything; go builds and tests the Go side; gh is what the
+# The tools, and nothing else: every command is charter's (in this repo, go tool charter <command>), the repo's from
+# charter.toml at the top, a project's from its own. This file is the one place the tools' versions are said: mise
+# installs them here and on GitHub, Renovate moves them, charter runs them from here (mise exec: sqlc, TinyGo), and a
+# new repo's mise.toml starts from them (internal/pins/repo.toml, held equal by a test). node runs the TypeScript
+# (charter-lib, the projects' tests, Fern); go builds and tests the Go side, charter among it; gh is what the
 # repo commands talk to GitHub with; fnox holds the secrets a deploy and a live test take (fnox exec --
 # charter deploy production). tinygo and binaryen build a Go Worker: internal/cli/build patches this
 # TinyGo's runtime, so a new TinyGo that the patch no longer fits fails the build and says so. sqlc

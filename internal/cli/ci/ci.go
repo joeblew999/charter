@@ -26,16 +26,23 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/joeblew999/charter/internal/cli/repo"
 	"github.com/joeblew999/charter/internal/cli/self"
 	"github.com/joeblew999/charter/internal/previewbuild"
 	"github.com/joeblew999/charter/project"
 )
 
-// Main runs the step with args, the arguments after its name.
+// Main runs the step with args, the arguments after its name: an app's own (run, publish, release), else a job of the
+// repo's (charter ci [<job> [<project>]] [-remote], go doc .../internal/cli/repo).
 func Main(args []string) {
+	if len(args) == 0 || !slices.Contains(project.ReservedJobs, args[0]) {
+		jobs(args)
+		return
+	}
 	step, hook, rest, err := parse(args)
 	if err != nil {
 		os.Exit(2) // flag printed it
@@ -68,6 +75,30 @@ func Main(args []string) {
 		}
 	default:
 		log.Fatal("usage: charter ci run | publish | release [-hook command] <version>")
+	}
+}
+
+// jobs runs charter ci [<job> [<project>]] [-remote]: a job of the repo's charter.toml here, as GitHub runs it, or on
+// GitHub; with no job, every job GitHub runs on a change. An app with no jobs of its own runs its [ci]: charter ci run.
+func jobs(args []string) {
+	log.SetFlags(0)
+	remote := false
+	var rest []string
+	for _, a := range args {
+		if a == "-remote" || a == "--remote" {
+			remote = true
+		} else {
+			rest = append(rest, a)
+		}
+	}
+	if root, err := repo.Root(); err == nil && len(rest) == 0 && !remote && !repo.HasJobs(root) {
+		if _, err := project.Load("."); err == nil {
+			Main([]string{"run"})
+			return
+		}
+	}
+	if err := repo.CI(rest, remote); err != nil {
+		log.Fatal("✗ ", err)
 	}
 }
 

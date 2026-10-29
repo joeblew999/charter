@@ -4,7 +4,7 @@ nav_order: 4
 ---
 # Streaming: SSE and a WebSocket that lose nothing
 
-A project made `--from notes` streams notes over Server-Sent Events (`watchNotes`) and a WebSocket (`liveNotes`). Both survive deploys and dropped connections. Code comments cite the rules below by number.
+A project made `-from notes` streams notes over Server-Sent Events (`watchNotes`) and a WebSocket (`liveNotes`). Both survive deploys and dropped connections. Code comments cite the rules below by number.
 
 ```sh
 charter dev

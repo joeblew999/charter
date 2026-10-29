@@ -1,6 +1,6 @@
 // Package run runs what a project's steps run: a program from the folder's packages or the PATH, its output shown
 // or kept, a server started, waited for and stopped around what uses it, and how long each took; and charter's
-// cache, where a step keeps what it may reuse. The steps print each command before it runs, as charter-ts did.
+// cache, where a step keeps what it may reuse. The steps print each command before it runs.
 package run
 
 import (

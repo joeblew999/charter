@@ -1,8 +1,8 @@
-# The charter binary for every machine, on each release: npm run release puts it on the release vX.Y.Z (release.ts),
+# The charter binary for every machine, and charter-lib, on each release: charter release puts them on the release vX.Y.Z,
 # which a repo pins with mise use github:joeblew999/charter@X.Y.Z. The packages job runs goreleaser check.
 version: 2
 project_name: charter
-# Not dist/ itself, where npm pack puts the release's packages: goreleaser --clean empties its own folder.
+# Not dist/ itself, where npm pack puts charter-lib: goreleaser --clean empties its own folder.
 dist: dist/charter
 builds:
   - id: charter
@@ -27,8 +27,11 @@ release:
     name: charter
   # The release a repo's mise use github:joeblew999/charter takes when it names no version.
   make_latest: true
-  # A release run again (release.ts is safe to run again) puts its binaries there again.
+  # A release run again (charter release is safe to run again) puts its files there again.
   replace_existing_artifacts: true
+  # charter-lib, what a TypeScript Worker imports, packed by charter release into dist/ before goreleaser runs.
+  extra_files:
+    - glob: ./dist/charter-lib-*.tgz
 # Each release lists every commit since the previous one, each with its link and author.
 changelog:
   use: github
