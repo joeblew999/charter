@@ -50,23 +50,28 @@ The packages at the repo's top, its root module. The rest is in their doc commen
 | `ratelimit` | How often a caller may call, beside `auth`: a limit per operation or per scope, declared in the contract (`x-rate-limit` and a 429 with Retry-After in the specs), counted per caller by a Workers Rate Limiting binding, in memory on the host ([Auth](ratelimits.md)) | `ratelimit.Declare(config.OpenAPI, perScope...)`, `Extensions: ratelimit.Limited(limit, nil)`; `serve` adds the middleware, after auth's |
 | `specs` | What `npm run spec` runs for a Go project's `api.API`, which stops on what the specs don't show (a route that does not name its operation, an operation that cannot be its tool, an example missing or invalid) | `specs.Must(specs.Problems(spec))`, `specs.Main(spec.OpenAPI, spec.AsyncAPI)` |
 
-A Go Worker's steps on Cloudflare are one command, `go tool charter <step>` (go.mod: `tool
-github.com/joeblew999/charter/cmd/charter`); `go tool charter <step> -h` lists a step's flags.
+A Worker's steps on Cloudflare are one command, `charter <step>`, a binary of charter's GitHub release that a repo
+takes from mise: `mise use github:joeblew999/charter` pins it in the repo's `mise.toml`. `charter <step> -h` lists a
+step's flags, and `charter version` says which charter it is.
 
-A Go app is set up for Workers the way go-htmx4's intl and seo set one up: one command, a config file, its own mise
-tasks, an agent skill, and a check. `go tool charter init`, from the app's root, writes:
+A Go app is set up for Workers the way go-htmx4's intl and seo set one up, and as
+[mise-cloudflare](https://github.com/joeblew999/mise-cloudflare) sets a repo up: a pin, one command, a config file, its
+own mise tasks, an agent skill, and a check. `mise use github:joeblew999/charter`, then `charter init` from the app's
+root, writes:
 - `charter.toml` (named after the module, dated from the workerd on its PATH);
 - `build/` into `.gitignore`;
 - the mise tasks, `.mise/tasks/charter.toml` (`charter:build`, `serve`, `with`, `deploy`, `tail`, `token`, `check`,
   `ci`, `builds-configure`, …), and Workers Builds' launcher beside them, `.mise/tasks/charter-builds`;
 - the TinyGo and wasm-opt its Worker builds with, `.config/mise/conf.d/charter.toml`, which mise reads beside the app's
-  own `mise.toml`: the versions this charter's TinyGo patch is for, so the app pins neither itself (`go tool charter
+  own `mise.toml`: the versions this charter's TinyGo patch is for, so the app pins neither itself (`charter
   check` refuses a `tinygo` or binaryen line in its `mise.toml`, and the build refuses another TinyGo);
 - the agent skill, `.claude/skills/charter`;
-- the CI workflow, `charter.yml` in the app's GitHub workflows folder, which runs `go tool charter ci run`.
+- the CI workflow, `charter.yml` in the app's GitHub workflows folder, which runs `charter ci run`.
 
-`go tool charter check` names every problem with `charter.toml` and with those files: after upgrading charter, `go tool
-charter tasks`, `skill` and `workflow` write them again. The app writes one `main` package, `transport.Run(handler)`,
+`charter check` names every problem with `charter.toml` and with those files, and when the app's two pins of charter
+differ: the command in `mise.toml` and the library in `go.mod`, which the build takes the Worker glue from. To upgrade,
+move both (`mise use github:joeblew999/charter@X.Y.Z`, `go get github.com/joeblew999/charter@vX.Y.Z`), then `charter
+tasks`, `skill` and `workflow` write their files again. The app writes one `main` package, `transport.Run(handler)`,
 which is the Worker on Cloudflare and a plain HTTP server off it, and its bindings in `charter.toml`. go-htmx4's
 `e2e/fresh` makes such an app from nothing and runs it on workerd (and, asked to, on Cloudflare).
 
@@ -97,47 +102,47 @@ domain = "app.example.com"
 vars = { APP_ENV = "production" }
 ```
 
-Locally, no wrangler and no Node: `go tool charter local` writes `.charter/` from it (workerd's config, an entry that
+Locally, no wrangler and no Node: `charter local` writes `.charter/` from it (workerd's config, an entry that
 gives the app a D1 database on a Durable Object's SQLite with its migrations, in-memory rate limits and the visitor's
-time zone, and Static Assets in front), ignored by git. `go tool charter serve` runs it on its port in the developer's
-time zone; `go tool charter with <command>` runs a command against it on a free port with fresh state, `BASE` its URL,
-and stops it (`-strict`: a panic or uncaught exception in workerd's log fails it too). Deploys read it too: `go tool
-charter deploy production`, `staging` or `preview <name>`.
+time zone, and Static Assets in front), ignored by git. `charter serve` runs it on its port in the developer's
+time zone; `charter with <command>` runs a command against it on a free port with fresh state, `BASE` its URL,
+and stops it (`-strict`: a panic or uncaught exception in workerd's log fails it too). Deploys read it too: `charter
+deploy production`, `staging` or `preview <name>`.
 
-CI and Workers Builds share the work so that a commit is compiled once, on CI. `go tool charter ci run` is the
+CI and Workers Builds share the work so that a commit is compiled once, on CI. `charter ci run` is the
 whole CI, from `charter.toml`'s `[ci]` (`tools`, `build`, `test`, `release_hook`): it publishes on a push, releases a
-`v*` tag or a `release/v*` branch, and prints where the time went. On GitHub, `go tool charter build` shares its
+`v*` tag or a `release/v*` branch, and prints where the time went. On GitHub, `charter build` shares its
 builds through the repository's `charter-cache` pre-release, keyed by every input: a release, or a change that leaves
-the Worker's inputs alone, takes the earlier build instead of minutes of TinyGo and wasm-opt. `go tool charter ci publish`, from a
+the Worker's inputs alone, takes the earlier build instead of minutes of TinyGo and wasm-opt. `charter ci publish`, from a
 static linux/amd64 build of the command, puts the commit's build and that very binary on the repository's
 `preview-builds` pre-release, and the branch's preview URL on its pull request. Workers Builds then runs that binary:
-`.mise/tasks/charter-builds` fetches that binary, `go tool charter builds build` fetches the build, verified (or
-`-compile` builds it there with `[build] command` when CI published none), and `go tool charter builds deploy` deploys
+`.mise/tasks/charter-builds` fetches that binary, `charter builds build` fetches the build, verified (or
+`-compile` builds it there with `[build] command` when CI published none), and `charter builds deploy` deploys
 what the branch
 deploys, which is production for `production`, staging for `main`, otherwise the branch's own preview. A release is
-`go tool charter ci release <version>` on CI: once the commit is checked to be on `main`, it is tagged and the
-`production` branch moves to it. `go tool charter token` checks the Cloudflare token before a deploy. `charter.toml`'s
+`charter ci release <version>` on CI: once the commit is checked to be on `main`, it is tagged and the
+`production` branch moves to it. `charter token` checks the Cloudflare token before a deploy. `charter.toml`'s
 `repo` and `subdomain` say where these happen.
 
-The build, `go tool charter build`: the Worker's Wasm with TinyGo (the runtime patches in [Upstream issues](upstream.md), an 8 MB starting heap, 128 KB stacks, `-opt=z`), the glue below copied into `build/`, and a cache that gives back a Wasm built before from the same sources (a build of minutes, 0.6 s when nothing changed). charter-ts's build runs it; a Go repo without Node runs it itself, with tinygo and wasm-opt on its PATH:
+The build, `charter build`: the Worker's Wasm with TinyGo (the runtime patches in [Upstream issues](upstream.md), an 8 MB starting heap, 128 KB stacks, `-opt=z`), the glue below copied into `build/`, and a cache that gives back a Wasm built before from the same sources (a build of minutes, 0.6 s when nothing changed). charter-ts's build runs it; a Go repo without Node runs it itself, with tinygo and wasm-opt on its PATH:
 
 ```sh
-go tool charter build
+charter build
 ```
 
 Switches, each turning one part off so what it saves can be measured: `-reuse=false` (a Go runtime per request), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). `-compiler=go` builds with the standard compiler in seconds, for a dev loop; it is never deployed.
 
-What a request costs, `go tool charter bench`: the CPU a local workerd spends per request, from the operating system's count, in repeated runs (`-json` for a program). No Cloudflare account is needed, so anyone gets the same comparison:
+What a request costs, `charter bench`: the CPU a local workerd spends per request, from the operating system's count, in repeated runs (`-json` for a program). No Cloudflare account is needed, so anyone gets the same comparison:
 
 ```sh
-go tool charter bench -base http://localhost:8787 'GET /api/hello' 'POST /api/notes {"body":"x"}'
+charter bench -base http://localhost:8787 'GET /api/hello' 'POST /api/notes {"body":"x"}'
 ```
 
-Putting it on Cloudflare without Node, `go tool charter deploy`: the build in `build/`, static assets (`-assets`), bindings (`-var`, `-d1`, `-do`, `-ratelimit`), `migrations/*.sql` on every D1 database (each once), a Durable Object migration and custom domains (`-domain`), over the REST API. `-preview <name>` deploys a Worker Preview instead, and `-delete-preview`, `-prune-previews` remove them. So a commit is compiled once, CI publishes its build (`-publish-build <commit>`, with `GITHUB_TOKEN`) and Workers Builds deploys that (`-fetch-build <commit>`); `-configure-builds` sets Workers Builds up. `go tool charter deploy -h` lists every flag. Its live logs, `go tool charter tail`: requests, console output and exceptions, until Ctrl-C deletes the tail.
+Putting it on Cloudflare without Node, `charter deploy`: the build in `build/`, static assets (`-assets`), bindings (`-var`, `-d1`, `-do`, `-ratelimit`), `migrations/*.sql` on every D1 database (each once), a Durable Object migration and custom domains (`-domain`), over the REST API. `-preview <name>` deploys a Worker Preview instead, and `-delete-preview`, `-prune-previews` remove them. So a commit is compiled once, CI publishes its build (`-publish-build <commit>`, with `GITHUB_TOKEN`) and Workers Builds deploys that (`-fetch-build <commit>`); `-configure-builds` sets Workers Builds up. `charter deploy -h` lists every flag. Its live logs, `charter tail`: requests, console output and exceptions, until Ctrl-C deletes the tail.
 
 ```sh
-fnox exec -- go tool charter deploy -name my-api -compat <date> -allow-existing -d1 DB=my-api-db -d1-create -migrations migrations
-fnox exec -- go tool charter tail -name my-api
+fnox exec -- charter deploy -name my-api -compat <date> -allow-existing -d1 DB=my-api-db -d1-create -migrations migrations
+fnox exec -- charter tail -name my-api
 ```
 
 How Google sees a site with pages (robots.txt, the sitemap, an audit as Googlebot, Search Console, Lighthouse) is

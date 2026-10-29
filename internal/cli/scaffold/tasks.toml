@@ -1,31 +1,31 @@
-# Written by `go tool charter tasks` (github.com/joeblew999/charter): don't edit it; after upgrading charter, run it
-# again. Every task reads charter.toml through go tool charter. Cloudflare credentials (CLOUDFLARE_API_TOKEN,
+# Written by `charter tasks` (github.com/joeblew999/charter): don't edit it; after upgrading charter, run it
+# again. Every task reads charter.toml through charter. Cloudflare credentials (CLOUDFLARE_API_TOKEN,
 # CLOUDFLARE_ACCOUNT_ID) come from the environment, else from fnox when it is installed.
 
 ["charter:build"]
-description = "Build the Worker into build/ with TinyGo (go tool charter build); WORKER_COMPILER=go builds with the standard compiler, in seconds, never to deploy"
-run = 'go tool charter build ${WORKER_COMPILER:+-compiler=$WORKER_COMPILER}'
+description = "Build the Worker into build/ with TinyGo (charter build); WORKER_COMPILER=go builds with the standard compiler, in seconds, never to deploy"
+run = 'charter build ${WORKER_COMPILER:+-compiler=$WORKER_COMPILER}'
 
 ["charter:serve"]
-description = "Run the built Worker on local workerd, on charter.toml's port (PORT overrides it), in your time zone (go tool charter serve)"
-run = "go tool charter serve"
+description = "Run the built Worker on local workerd, on charter.toml's port (PORT overrides it), in your time zone (charter serve)"
+run = "charter serve"
 
 ["charter:with"]
-description = "Run a command against the built Worker on local workerd, a free port and fresh state, BASE its URL (go tool charter with)"
+description = "Run a command against the built Worker on local workerd, a free port and fresh state, BASE its URL (charter with)"
 usage = 'arg "<command>" var=#true help="the command and its arguments"'
-run = 'go tool charter with ${usage_command}'
+run = 'charter with ${usage_command}'
 
 ["charter:token"]
-description = "Check the Cloudflare token is active (go tool charter token)"
+description = "Check the Cloudflare token is active (charter token)"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
-if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec go tool charter token; fi
-exec fnox exec -- go tool charter token
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec charter token; fi
+exec fnox exec -- charter token
 '''
 
 ["charter:deploy"]
-description = "Deploy the built Worker to production, staging or a preview <name>, as charter.toml says (go tool charter deploy); prints its URL"
+description = "Deploy the built Worker to production, staging or a preview <name>, as charter.toml says (charter deploy); prints its URL"
 usage = '''
 arg "<environment>" help="production, staging or preview"
 arg "[name]" help="the preview's name, e.g. pr-7"
@@ -34,44 +34,44 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 args=("$usage_environment"); [ -z "${usage_name:-}" ] || args+=("$usage_name")
-if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec go tool charter deploy "${args[@]}"; fi
-exec fnox exec -- go tool charter deploy "${args[@]}"
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec charter deploy "${args[@]}"; fi
+exec fnox exec -- charter deploy "${args[@]}"
 '''
 
 ["charter:tail"]
-description = "Stream the deployed Worker's live logs until Ctrl-C (go tool charter tail)"
+description = "Stream the deployed Worker's live logs until Ctrl-C (charter tail)"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
-if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec go tool charter tail; fi
-exec fnox exec -- go tool charter tail
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec charter tail; fi
+exec fnox exec -- charter tail
 '''
 
 ["charter:check"]
-description = "Everything charter.toml and charter's files in this app should be (go tool charter check): exits 1 on any problem"
-run = "go tool charter check"
+description = "Everything charter.toml and charter's files in this app should be (charter check): exits 1 on any problem"
+run = "charter check"
 
 ["charter:ci"]
-description = "What CI runs, here (go tool charter ci run, charter.toml's [ci]): the build and the checks; on GitHub also the preview's build and a release"
-run = "go tool charter ci run"
+description = "What CI runs, here (charter ci run, charter.toml's [ci]): the build and the checks; on GitHub also the preview's build and a release"
+run = "charter ci run"
 
 ["charter:tasks"]
-description = "After upgrading charter: these tasks and the Workers Builds launcher again (go tool charter tasks)"
-run = "go tool charter tasks"
+description = "After upgrading charter: these tasks and the Workers Builds launcher again (charter tasks)"
+run = "charter tasks"
 
 ["charter:skill"]
-description = "After upgrading charter: its agent skill again, into .claude/skills/charter (go tool charter skill)"
-run = "go tool charter skill"
+description = "After upgrading charter: its agent skill again, into .claude/skills/charter (charter skill)"
+run = "charter skill"
 
 ["charter:workflow"]
-description = "After upgrading charter: the CI workflow again, .github/workflows/charter.yml (go tool charter workflow)"
-run = "go tool charter workflow"
+description = "After upgrading charter: the CI workflow again, .github/workflows/charter.yml (charter workflow)"
+run = "charter workflow"
 
 ["charter:builds-configure"]
-description = "Set Workers Builds up for the Worker: the repository, .mise/tasks/charter-builds as its build and deploy commands (go tool charter builds configure; Cloudflare credentials)"
+description = "Set Workers Builds up for the Worker: the repository, .mise/tasks/charter-builds as its build and deploy commands (charter builds configure; Cloudflare credentials)"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
-if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec go tool charter builds configure; fi
-exec fnox exec -- go tool charter builds configure
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec charter builds configure; fi
+exec fnox exec -- charter builds configure
 '''

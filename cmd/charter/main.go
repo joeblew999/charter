@@ -1,22 +1,24 @@
-// Command charter is a Go Worker's every step on Cloudflare without Node, one command for all of them (#100):
+// Command charter is a Worker's every step on Cloudflare, one command for all of them (#100, #121):
 //
-//	go tool charter build    the Worker into build/, with TinyGo (go doc .../internal/cli/build)
-//	go tool charter deploy   to Cloudflare over its REST API: production, Worker Previews, the preview pipeline
-//	go tool charter tail     the deployed Worker's live logs
-//	go tool charter bench    the CPU a local Worker spends per request
-//	go tool charter local    write .charter/ from charter.toml: what runs the Worker on plain workerd
-//	go tool charter serve    run it locally, in the developer's time zone
-//	go tool charter with     run a command against it on a free port (BASE its URL), then stop it
-//	go tool charter token    whether CLOUDFLARE_API_TOKEN is active
-//	go tool charter ci       CI's side of previews and releases: publish a commit's build, release a version
-//	go tool charter builds   Workers Builds' side: fetch a commit's build, deploy what its branch deploys
-//	go tool charter init     set an app up: charter.toml, .gitignore, the mise tasks, the skill, the CI workflow
-//	go tool charter tasks    the mise tasks and the Workers Builds launcher again (after upgrading charter)
-//	go tool charter skill    the agent skill again
-//	go tool charter workflow the CI workflow again
-//	go tool charter check    every problem with charter.toml and charter's files in the app
+//	charter build    the Worker into build/, with TinyGo (go doc .../internal/cli/build)
+//	charter deploy   to Cloudflare over its REST API: production, Worker Previews, the preview pipeline
+//	charter tail     the deployed Worker's live logs
+//	charter bench    the CPU a local Worker spends per request
+//	charter local    write .charter/ from charter.toml: what runs the Worker on plain workerd
+//	charter serve    run it locally, in the developer's time zone
+//	charter with     run a command against it on a free port (BASE its URL), then stop it
+//	charter token    whether CLOUDFLARE_API_TOKEN is active
+//	charter ci       CI's side of previews and releases: publish a commit's build, release a version
+//	charter builds   Workers Builds' side: fetch a commit's build, deploy what its branch deploys
+//	charter init     set an app up: charter.toml, .gitignore, the mise tasks, the skill, the CI workflow
+//	charter tasks    the mise tasks and the Workers Builds launcher again (after upgrading charter)
+//	charter skill    the agent skill again
+//	charter workflow the CI workflow again
+//	charter check    every problem with charter.toml and charter's files in the app
+//	charter version  the version of charter this is
 //
-// go.mod: tool github.com/joeblew999/charter/cmd/charter. `go tool charter <step> -h` lists a step's flags.
+// A repo takes it from mise, as a binary of charter's GitHub release: mise use github:joeblew999/charter.
+// `charter <step> -h` lists a step's flags.
 package main
 
 import (
@@ -32,6 +34,7 @@ import (
 	"github.com/joeblew999/charter/internal/cli/scaffold"
 	"github.com/joeblew999/charter/internal/cli/tail"
 	"github.com/joeblew999/charter/internal/cli/token"
+	"github.com/joeblew999/charter/internal/version"
 )
 
 var steps = map[string]func(args []string){
@@ -50,11 +53,12 @@ var steps = map[string]func(args []string){
 	"skill":    scaffold.Skill,
 	"workflow": scaffold.Workflow,
 	"check":    scaffold.Check,
+	"version":  func([]string) { fmt.Println("charter", version.String()) },
 }
 
 func main() {
 	if len(os.Args) < 2 || steps[os.Args[1]] == nil {
-		fmt.Fprintln(os.Stderr, "usage: go tool charter build | deploy | tail | bench | local | serve | with | token | ci | builds | init | tasks | skill | workflow | check [flags]   (go tool charter <step> -h: its flags)")
+		fmt.Fprintln(os.Stderr, "usage: charter build | deploy | tail | bench | local | serve | with | token | ci | builds | init | tasks | skill | workflow | check | version [flags]   (charter <step> -h: its flags)")
 		os.Exit(2)
 	}
 	steps[os.Args[1]](os.Args[2:])

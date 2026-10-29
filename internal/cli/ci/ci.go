@@ -1,14 +1,14 @@
-// Package ci is go tool charter ci run|publish|release: an app's CI, and the GitHub side of its previews and releases,
-// so a commit is compiled once, on CI, and Cloudflare deploys that build (go tool charter builds).
+// Package ci is charter ci run|publish|release: an app's CI, and the GitHub side of its previews and releases,
+// so a commit is compiled once, on CI, and Cloudflare deploys that build (charter builds).
 //
-//	go tool charter ci run                what .github/workflows/charter.yml runs, from charter.toml's [ci]: the tools,
+//	charter ci run                what .github/workflows/charter.yml runs, from charter.toml's [ci]: the tools,
 //	                                      the build, on a push its publishing (as ci publish), the checks, and for a
 //	                                      v* tag or a release/v* branch the release (as ci release), then a table of
 //	                                      where the time went; anywhere else (this machine), the build and the checks
-//	go tool charter ci publish            this commit's build (build/, the Static Assets) and this binary to the
+//	charter ci publish            this commit's build (build/, the Static Assets) and this binary to the
 //	                                      repository's preview-builds pre-release; on a branch with a preview, its
 //	                                      URL on the branch's pull request
-//	go tool charter ci release <version>  a v* tag or a release/v* branch whose checks passed: on main, tag it (a
+//	charter ci release <version>  a v* tag or a release/v* branch whose checks passed: on main, tag it (a
 //	                                      branch), run -hook, move the production branch to it (Workers Builds
 //	                                      deploys production), and delete the release branch
 //
@@ -61,13 +61,13 @@ func Main(args []string) {
 		os.Exit(publish(p, gh.repo, sha, ref, refType))
 	case "release":
 		if len(rest) != 1 {
-			log.Fatal("usage: go tool charter ci release [-hook command] <version>")
+			log.Fatal("usage: charter ci release [-hook command] <version>")
 		}
 		if err := release(gh, rest[0], sha, ref, refType, hook); err != nil {
 			log.Fatal("✗ ", err)
 		}
 	default:
-		log.Fatal("usage: go tool charter ci run | publish | release [-hook command] <version>")
+		log.Fatal("usage: charter ci run | publish | release [-hook command] <version>")
 	}
 }
 

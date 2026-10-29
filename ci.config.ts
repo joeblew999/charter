@@ -20,6 +20,8 @@ export default {
 				["npm", "run", "check", "-w", "ts"],
 				["npm", "run", "check", "-w", "charter-ts"],
 				["charter-ts", "check", "."],
+				// The release's config for the charter binary (.goreleaser.yaml), checked.
+				["goreleaser", "check"],
 				// The workflows, linted (rhysd/actionlint, which mise loads at this version).
 				["mise", "exec", "actionlint@1.7.12", "--", "actionlint"],
 			],
@@ -50,10 +52,10 @@ export default {
 			timeoutMinutes: 20,
 			run: [["node", "charter-ts/test/new-from-package.ts"]],
 		},
-		// What an outside Go app gets: one made by go tool charter init on this charter, with no TinyGo of its own, gets the
+		// What an outside Go app gets: one made by charter init on this charter, with no TinyGo of its own, gets the
 		// TinyGo its patch is for from charter, every way an app builds, and builds; its own TinyGo line is refused.
 		"go-app": {
-			about: "A Go app made by go tool charter init gets charter's TinyGo through mise, every way it builds, builds, and may not pin its own",
+			about: "A Go app made by charter init gets charter's TinyGo through mise, every way it builds, builds, and may not pin its own",
 			on: ["push", "pull_request", "tag"],
 			timeoutMinutes: 20,
 			run: [["bash", "examples/new-app.sh"]],

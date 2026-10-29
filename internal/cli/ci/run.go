@@ -11,14 +11,14 @@ import (
 	"github.com/joeblew999/charter/project"
 )
 
-// run is go tool charter ci run. It returns the exit code.
+// run is charter ci run. It returns the exit code.
 func run(p *project.Project) int {
 	var t timings
 	defer func() { t.report() }() // the phases as they are when run returns
 	onCI, pushed := os.Getenv("CI") != "", os.Getenv("GITHUB_ACTIONS") != "" && os.Getenv("GITHUB_EVENT_NAME") == "push"
 	var env []string
 	if repo := os.Getenv("GITHUB_REPOSITORY"); os.Getenv("GITHUB_ACTIONS") != "" && repo != "" {
-		// go tool charter build shares its builds through the repository's releases (charter-cache): a release, or a
+		// charter build shares its builds through the repository's releases (charter-cache): a release, or a
 		// change that leaves the Worker's inputs alone, takes the earlier build instead of compiling it again.
 		env = append(env, "CHARTER_CACHE_REPO="+repo)
 	}

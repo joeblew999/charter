@@ -1,4 +1,4 @@
-// Package skills holds the agent skills that ship with charter's Go side; go tool charter skill installs them into an
+// Package skills holds the agent skills that ship with charter's Go side; charter skill installs them into an
 // app's .claude/skills.
 package skills
 

@@ -1,6 +1,6 @@
 // Package project reads charter.toml, everything about a Go Worker on Cloudflare in one file at the app's root: its
 // name, compatibility date and modules, its Static Assets, its bindings (D1, Durable Objects, rate limits) and what
-// each environment (production, staging, previews, local workerd) gets. go tool charter reads it to run the Worker
+// each environment (production, staging, previews, local workerd) gets. charter reads it to run the Worker
 // locally (charter local, serve, with) and to deploy it (charter deploy production|staging|preview), and an app's
 // tests read it so that a fact kept anywhere else (a limit a test counts to) can be checked against it.
 //
@@ -42,9 +42,9 @@
 //	vars = { APP_ENV = "local" }
 //
 //	[build]                            # optional
-//	command = "mise run build"         # what builds the Worker and its assets (default: go tool charter build)
+//	command = "mise run build"         # what builds the Worker and its assets (default: charter build)
 //
-//	[ci]                               # optional: go tool charter ci run, on GitHub (.github/workflows/charter.yml)
+//	[ci]                               # optional: charter ci run, on GitHub (.github/workflows/charter.yml)
 //	tools = ["go", "tinygo", "workerd"]  # what CI installs, of mise.toml's (default: all of them)
 //	build = "mise run build ::: test"  # the build, before it is published for a preview (default: [build] command);
 //	                                   # checks that may run beside it go here too
@@ -95,15 +95,15 @@ type Build struct {
 	Command string `toml:"command"`
 }
 
-// BuildCommand is the command that builds the Worker: [build] command, else go tool charter build.
+// BuildCommand is the command that builds the Worker: [build] command, else charter build.
 func (p *Project) BuildCommand() string {
 	if p.Build.Command != "" {
 		return p.Build.Command
 	}
-	return "go tool charter build"
+	return "charter build"
 }
 
-// CI is what go tool charter ci run does on GitHub.
+// CI is what charter ci run does on GitHub.
 type CI struct {
 	Tools       []string `toml:"tools"`
 	Build       string   `toml:"build"`
@@ -139,8 +139,8 @@ type Environment struct {
 	Note   string            `toml:"note"` // preview: a sentence for the pull request's comment
 }
 
-// The branches that deploy something other than their own preview (go tool charter builds deploy): production
-// deploys production (CI moves it there on a release, go tool charter ci release), and main deploys staging.
+// The branches that deploy something other than their own preview (charter builds deploy): production
+// deploys production (CI moves it there on a release, charter ci release), and main deploys staging.
 const (
 	ProductionBranch = "production"
 	StagingBranch    = "main"

@@ -101,9 +101,9 @@ const tinygoEnv = (...command: string[]): [string, string[]] => ["mise", ["exec"
 /** goBuild builds the project's Go Worker into build/ with charter's build step (TinyGo with the
  * runtime patches, a starting heap, a stack per goroutine Huma fits in, the Worker glue, and a cache of
  * Wasm made before: internal/cli/build has why), with the TinyGo and wasm-opt charter pins on the
- * PATH, and fails over the size Workers Free allows. It is go tool charter build, the tool of the project's
- * go.mod (tool github.com/joeblew999/charter/cmd/charter), as a Go repo without charter-ts runs it, so both
- * build the same Wasm. */
+ * PATH, and fails over the size Workers Free allows. It is charter build, the step a Go repo without
+ * charter-ts runs from mise, so both build the same Wasm; here run as the tool of the project's go.mod (tool
+ * github.com/joeblew999/charter/cmd/charter), until the projects take charter from mise too (#121). */
 export function goBuild(config: GoConfig, limit = freeBundleLimit, fresh = false): void {
 	const { heapMB = 8, opt = "z", stack = "128kb" } = config.build ?? {};
 	const [program, args] = tinygoEnv("go", "tool", "charter", "build", `-heap=${heapMB}`, `-opt=${opt}`, `-stack=${stack}`, ...(fresh ? ["-fresh"] : []));

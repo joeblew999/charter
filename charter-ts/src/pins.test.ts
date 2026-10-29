@@ -54,7 +54,7 @@ test("charter's mise.toml pins every tool charter-ts runs through mise", () => {
 	}
 });
 
-test("a Go repo gets the same TinyGo file go tool charter tasks writes, and its own TinyGo line is refused", async () => {
+test("a Go repo gets the same TinyGo file charter tasks writes, and its own TinyGo line is refused", async () => {
 	const { goPinsConf, goPinsFile, ownToolPins } = await import("./charter-files.ts");
 	const { charterRepo } = await import("./package.ts");
 	assert.ok(charterRepo, "run from charter's repo");

@@ -49,8 +49,8 @@ export function miseStarter(project: boolean, go: boolean): string {
 		if (!version) throw new Error(`charter's mise.toml has no pin for ${tool}`);
 		return `${key(tool)} = ${JSON.stringify(version)}`;
 	};
-	// Not TinyGo or wasm-opt: charter pins those beside its TinyGo patch, in the file `go tool charter tasks` writes
-	// (.config/mise/conf.d/charter.toml), and `go tool charter check` refuses a repo's own.
+	// Not TinyGo or wasm-opt: charter pins those beside its TinyGo patch, in the file `charter tasks` writes
+	// (.config/mise/conf.d/charter.toml), and `charter check` refuses a repo's own.
 	const tools = ["node", ...(project ? ["github:jdx/fnox"] : []), ...(go ? ["go", "aqua:sqlc-dev/sqlc"] : [])];
 	return `# ${startMark}\n# The tools, which mise installs here and on GitHub (charter-ci.yml): ${tools.join(", ")}.\n[tools]\n${tools.map(pin).join("\n")}\n`;
 }
@@ -177,7 +177,7 @@ Another release of charter-ts: \`npm i -D https://github.com/joeblew999/charter/
 }
 
 /** charter's TinyGo and wasm-opt for a Go repo: the same file, from the same internal/pins/mise.toml, that
- * `go tool charter tasks` writes into a Go app, at the path mise reads beside the repo's own mise.toml. */
+ * `charter tasks` writes into a Go app, at the path mise reads beside the repo's own mise.toml. */
 export const goPinsFile = "internal/pins/mise.toml";
 export const goPinsConf = ".config/mise/conf.d/charter.toml";
 
@@ -186,7 +186,7 @@ export const goPinsConf = ".config/mise/conf.d/charter.toml";
 const takesGoPins = (root: string) => existsSync(join(root, "go.mod")) && !(charterRepo && resolve(root) === resolve(charterRepo));
 
 /** ownToolPins is each line of the repo's own mise config that pins TinyGo or wasm-opt, which charter pins (goPinsConf):
- * mise would install a second copy, and which one a build ran would be chance. As `go tool charter check` says. */
+ * mise would install a second copy, and which one a build ran would be chance. As `charter check` says. */
 export function ownToolPins(root: string): string[] {
 	const out: string[] = [];
 	// Only a Go repo gets charter's TinyGo file (filesFor), so only there is a pin of its own a second copy.

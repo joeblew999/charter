@@ -1,18 +1,18 @@
-// Package builds is go tool charter builds build|deploy|configure: what Workers Builds (Cloudflare's GitHub app) runs
-// for each pushed branch, from the charter binary CI published for that commit (go tool charter ci publish), so
-// nothing is compiled at Cloudflare. The launcher .mise/tasks/charter-builds (go tool charter tasks) fetches that
+// Package builds is charter builds build|deploy|configure: what Workers Builds (Cloudflare's GitHub app) runs
+// for each pushed branch, from the charter binary CI published for that commit (charter ci publish), so
+// nothing is compiled at Cloudflare. The launcher .mise/tasks/charter-builds (charter tasks) fetches that
 // binary and runs it.
 //
-//	go tool charter builds build      fetch this commit's build (build/, the Static Assets), verified against its
+//	charter builds build      fetch this commit's build (build/, the Static Assets), verified against its
 //	                                  manifest; exit 3 when CI never published one
-//	go tool charter builds build -compile   build it here instead: charter.toml's [ci] tools and [build] command
-//	go tool charter builds deploy     what the branch deploys (production, staging, or its preview, charter.toml's),
+//	charter builds build -compile   build it here instead: charter.toml's [ci] tools and [build] command
+//	charter builds deploy     what the branch deploys (production, staging, or its preview, charter.toml's),
 //	                                  then delete the previews of branches that are gone
-//	go tool charter builds configure  set Workers Builds up for the Worker: the repository, the launcher as its build
+//	charter builds configure  set Workers Builds up for the Worker: the repository, the launcher as its build
 //	                                  and deploy commands, every branch built (needs Cloudflare credentials)
 //
 // Workers Builds sets WORKERS_CI_BRANCH and WORKERS_CI_COMMIT_SHA, and its build token's CLOUDFLARE_API_TOKEN;
-// CLOUDFLARE_ACCOUNT_ID is a build variable (go tool charter deploy -configure-builds).
+// CLOUDFLARE_ACCOUNT_ID is a build variable (charter deploy -configure-builds).
 package builds
 
 import (
@@ -69,14 +69,14 @@ func Main(args []string) {
 		}
 		os.Exit(deploy(p, branch, sha))
 	default:
-		log.Fatal("usage: go tool charter builds build [-compile] | deploy | configure")
+		log.Fatal("usage: charter builds build [-compile] | deploy | configure")
 	}
 }
 
 func deploy(p *project.Project, branch, sha string) int {
 	env := project.BranchEnvironment(branch)
 	if env == "" {
-		log.Printf("· %s is a release request: CI releases it (go tool charter ci release)", branch)
+		log.Printf("· %s is a release request: CI releases it (charter ci release)", branch)
 		return 0
 	}
 	args := []string{"deploy", env}

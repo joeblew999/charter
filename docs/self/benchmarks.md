@@ -83,7 +83,7 @@ Left: the first use of each operation in a new isolate ([#22](https://github.com
 
 ## Each difference alone, measured by anyone
 
-`go tool charter build`'s switches turn each optimisation off: `-reuse=false` (a Go runtime per request, as workers-go's own entry), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). `go tool charter bench` measures the CPU a local workerd spends per request, from the operating system's count, in repeated runs. No Cloudflare account is needed, so a comparison can be checked by anyone on their own machine ([Libraries](libraries.md)).
+`charter build`'s switches turn each optimisation off: `-reuse=false` (a Go runtime per request, as workers-go's own entry), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). `charter bench` measures the CPU a local workerd spends per request, from the operating system's count, in repeated runs. No Cloudflare account is needed, so a comparison can be checked by anyone on their own machine ([Libraries](libraries.md)).
 
 [go-htmx4](https://github.com/joeblew999/go-htmx4) is a Go Worker that is not built from charter: htmx 4 and gsxui pages of 50 to 170 KB, 13 locales, the server's Intl, a live board on D1 and a Durable Object. `mise run bench:variants` builds its current code once per switch combination, measures each, and writes the table to its [docs/benchmarks.md](https://github.com/joeblew999/go-htmx4/blob/main/docs/benchmarks.md). Its CI runs the shipped build's half on every change.
 

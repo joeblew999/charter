@@ -1,10 +1,10 @@
-// Package bench is go tool charter bench: it measures the CPU a local Worker spends per request: the operating system's
+// Package bench is charter bench: it measures the CPU a local Worker spends per request: the operating system's
 // count of workerd's CPU time before and after n requests of one kind, divided by n. CPU, not
 // waiting, is what Cloudflare bills a Worker for and what its limits count; measured locally, without
 // Cloudflare, it is the same for anyone who runs it, so a comparison can be checked:
 //
 //	npm run dev -w examples/notes-go &                    # or any Worker under workerd
-//	go tool charter bench -base http://localhost:5174 \
+//	charter bench -base http://localhost:5174 \
 //	  -H 'Authorization: Bearer local-write-token' \
 //	  'GET /api/hello' 'GET /api/notes' 'POST /api/notes {"body":"bench"}'
 //

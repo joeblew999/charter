@@ -11,7 +11,7 @@ import (
 
 // The build cache CI shares through the repository's GitHub releases: a Wasm built from exactly the same inputs on an
 // earlier run (the commit a release is made of, a change to docs only) is fetched there instead of compiled again,
-// which saves the minutes TinyGo and wasm-opt take. go tool charter ci run turns it on, on GitHub, by setting
+// which saves the minutes TinyGo and wasm-opt take. charter ci run turns it on, on GitHub, by setting
 // CHARTER_CACHE_REPO; storing needs GITHUB_TOKEN's write permission (a fork's run only fetches).
 const sharedTag, sharedKeep = "charter-cache", 40
 
@@ -25,7 +25,7 @@ func shared() *previewbuild.GitHub {
 	}
 	return &previewbuild.GitHub{Repo: repo, Token: os.Getenv("GITHUB_TOKEN"), Title: "Build cache",
 		API: sharedURL, Uploads: sharedURL, Downloads: sharedURL,
-		About: "Wasm builds by their inputs, for go tool charter build on CI (charter). Not a release.",
+		About: "Wasm builds by their inputs, for charter build on CI (charter). Not a release.",
 		Logf:  func(format string, args ...any) { fmt.Printf(format+"\n", args...) }}
 }
 
