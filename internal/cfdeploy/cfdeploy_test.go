@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -30,7 +31,8 @@ type fakeCF struct {
 
 	scripts    map[string]string // name → applied Durable Object migration tag
 	dbs        map[string]string // name → uuid
-	migrations map[string]bool   // _migrations rows (all databases)
+	migrations map[string]bool   // d1_migrations rows, by file name (all databases)
+	old        map[string]bool   // the rows of a _migrations table charter used before, names without .sql
 	sql        []string          // migration SQL applied, in order
 	uploaded   map[string]string // hash → decoded asset content
 	putMeta    map[string]any    // last script metadata
@@ -125,14 +127,27 @@ func (f *fakeCF) serve(w http.ResponseWriter, r *http.Request) {
 		json.NewDecoder(r.Body).Decode(&body)
 		rows := []map[string]any{}
 		switch {
-		case strings.HasPrefix(body.SQL, "CREATE TABLE IF NOT EXISTS _migrations"):
-		case body.SQL == "SELECT name FROM _migrations":
+		case strings.HasPrefix(body.SQL, "CREATE TABLE IF NOT EXISTS d1_migrations("):
+		case strings.HasPrefix(body.SQL, "SELECT name FROM sqlite_master WHERE type = 'table' AND name = '_migrations'"):
+			if len(f.old) > 0 {
+				rows = append(rows, map[string]any{"name": "_migrations"})
+			}
+		case strings.HasPrefix(body.SQL, "INSERT OR IGNORE INTO d1_migrations (name) SELECT name || '.sql' FROM _migrations"):
+			for name := range f.old {
+				f.migrations[name+".sql"] = true
+			}
+		case body.SQL == "SELECT name FROM d1_migrations":
 			for name := range f.migrations {
 				rows = append(rows, map[string]any{"name": name})
 			}
-		case strings.HasPrefix(body.SQL, "INSERT INTO _migrations"):
-			f.migrations[fmt.Sprint(body.Params[0])] = true
 		default:
+			// A migration, recorded in the same query, as cf d1 migrations apply does.
+			m := regexp.MustCompile(`;\nINSERT INTO d1_migrations \(name\) VALUES \('([^']+)'\);$`).FindStringSubmatch(body.SQL)
+			if m == nil {
+				f.t.Errorf("a migration not recorded with it: %q", body.SQL)
+				break
+			}
+			f.migrations[m[1]] = true
 			f.sql = append(f.sql, body.SQL)
 		}
 		reply([]map[string]any{{"results": rows}})
@@ -372,10 +387,17 @@ func TestDeploy(t *testing.T) {
 	c := &cfdeploy.Client{Token: "tok", AccountID: "acc", BaseURL: srv.URL,
 		Logf: func(format string, args ...any) { logs = append(logs, fmt.Sprintf(format, args...)) }}
 	cfg := config(dir)
+	cfg.Secrets = map[string]string{"WRITE_TOKEN": "s3cret"}
 
 	url, err := c.Deploy(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("first deploy: %v\nlogs: %v", err, logs)
+	}
+	if !f.migrations["0001_board.sql"] || !f.migrations["0002_note.sql"] || len(f.migrations) != 2 {
+		t.Errorf("d1_migrations = %v, want each migration by its file name, as cf records it", f.migrations)
+	}
+	if strings.Contains(strings.Join(logs, "\n"), "s3cret") {
+		t.Errorf("a secret's value was logged: %v", logs)
 	}
 	if url != "https://app.acme.workers.dev" || !f.subdomain {
 		t.Errorf("url = %q, subdomain enabled %v", url, f.subdomain)
@@ -413,6 +435,8 @@ func TestDeploy(t *testing.T) {
 		`"main_module":"index.mjs"`, `"compatibility_date":"2026-09-11"`,
 		`"observability":{"enabled":true,"head_sampling_rate":1}`,
 		`{"name":"APP_ENV","text":"cloudflare","type":"plain_text"}`,
+		`{"name":"WRITE_TOKEN","text":"s3cret","type":"secret_text"}`,
+		`"keep_bindings":["secret_text","secret_key"]`,
 		`{"id":"` + f.dbs["app"] + `","name":"DB","type":"d1"}`,
 		`{"class_name":"Room","name":"ROOM","type":"durable_object_namespace"}`,
 		`{"name":"WRITES","namespace_id":"1001","simple":{"limit":60,"period":10},"type":"ratelimit"}`,
@@ -467,6 +491,34 @@ func TestDeploy(t *testing.T) {
 	cfg.MigrationTag = "v2"
 	if _, err := c.Deploy(context.Background(), cfg); err == nil || !strings.Contains(err.Error(), "explicit migration step") {
 		t.Errorf("migration v1 → v2: err = %v, want explicit migration step", err)
+	}
+}
+
+// TestMigrationsCarriedOver: a database cf migrated (d1_migrations, by file name) runs none again; one charter migrated
+// before into _migrations (names without .sql) has them copied across, so only a newer migration runs.
+func TestMigrationsCarriedOver(t *testing.T) {
+	dir := project(t)
+	f, srv := newFakeCF(t)
+	f.migrations = map[string]bool{"0001_board.sql": true, "0002_note.sql": true}
+	c := &cfdeploy.Client{Token: "tok", AccountID: "acc", BaseURL: srv.URL}
+	if _, err := c.Deploy(context.Background(), config(dir)); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.sql) != 0 {
+		t.Errorf("cf's migrations ran again: %q", f.sql)
+	}
+
+	f, srv = newFakeCF(t)
+	f.old = map[string]bool{"0001_board": true}
+	c = &cfdeploy.Client{Token: "tok", AccountID: "acc", BaseURL: srv.URL}
+	if _, err := c.Deploy(context.Background(), config(dir)); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.sql) != 1 || !strings.Contains(f.sql[0], "CREATE TABLE note") {
+		t.Errorf("after _migrations: applied %q, want 0002 only", f.sql)
+	}
+	if !f.migrations["0001_board.sql"] || !f.migrations["0002_note.sql"] {
+		t.Errorf("d1_migrations = %v", f.migrations)
 	}
 }
 

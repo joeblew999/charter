@@ -43,10 +43,14 @@ func Write(p *project.Project) error {
 	if err != nil {
 		return err
 	}
+	limits, err := p.Limits()
+	if err != nil {
+		return err
+	}
 	files := map[string]string{
 		".gitignore":   "# " + header + "\n*\n",
 		"config.capnp": config(p, build, migrations),
-		"local.mjs":    entry(p),
+		"local.mjs":    entry(p, limits),
 		"d1.mjs":       d1(p, migrations),
 		"assets.mjs":   assets,
 	}
@@ -184,7 +188,8 @@ func config(p *project.Project, build []string, migrations []migration) string {
 	return b.String()
 }
 
-func entry(p *project.Project) string {
+// entry is local.mjs, with an in-memory counter for each rate limit the Worker binds (limits, project.Limits).
+func entry(p *project.Project, limits []project.RateLimit) string {
 	var b strings.Builder
 	q := strconv.Quote
 	from := "../" + entryModule(p)
@@ -212,7 +217,7 @@ function rateLimit(limit, period) {
 }
 const rateLimits = {
 `)
-	for _, r := range p.RateLimits {
+	for _, r := range limits {
 		fmt.Fprintf(&b, "  %s: rateLimit(%d, %d),\n", q(r.Binding), r.Limit, r.Period)
 	}
 	b.WriteString("};\n\nexport default {\n  ...entry,\n  fetch(request, env, ctx) {\n" +
@@ -252,11 +257,19 @@ export class CharterD1 extends DurableObject {
   migrate(binding) {
     if (this.migrated) return;
     const sql = this.ctx.storage.sql;
-    sql.exec("CREATE TABLE IF NOT EXISTS _charter_migrations (name TEXT PRIMARY KEY)");
-    for (const [name, body] of MIGRATIONS[binding] ?? []) {
-      if (sql.exec("SELECT 1 FROM _charter_migrations WHERE name = ?", name).toArray().length) continue;
+    // Each migration once, by its file name in d1_migrations, as on Cloudflare (charter deploy, cf d1 migrations).
+    sql.exec("CREATE TABLE IF NOT EXISTS d1_migrations(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)");
+    // Local state charter migrated before, into _charter_migrations by path, keeps what it has.
+    if (sql.exec("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '_charter_migrations'").toArray().length) {
+      for (const { name } of sql.exec("SELECT name FROM _charter_migrations").toArray()) {
+        sql.exec("INSERT OR IGNORE INTO d1_migrations (name) VALUES (?)", name.split("/").pop());
+      }
+    }
+    for (const [path, body] of MIGRATIONS[binding] ?? []) {
+      const name = path.split("/").pop();
+      if (sql.exec("SELECT 1 FROM d1_migrations WHERE name = ?", name).toArray().length) continue;
       sql.exec(body);
-      sql.exec("INSERT INTO _charter_migrations (name) VALUES (?)", name);
+      sql.exec("INSERT INTO d1_migrations (name) VALUES (?)", name);
     }
     this.migrated = true;
   }

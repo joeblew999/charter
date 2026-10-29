@@ -86,7 +86,9 @@ func with(p *project.Project, strict bool, logPath string, command []string) int
 	check(workerd.Start())
 	socket.Close()
 	exited := make(chan error, 1)
-	go func() { exited <- workerd.Wait() }()
+	// Closed after its one value: healthy may take that value (workerd exited while starting), and stop's wait then
+	// returns at once instead of waiting forever.
+	go func() { exited <- workerd.Wait(); close(exited) }()
 	defer stop(workerd, exited)
 
 	base := fmt.Sprintf("http://127.0.0.1:%d", port)
