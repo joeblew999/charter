@@ -9,6 +9,7 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rm
 import { join, resolve } from "node:path";
 import { made } from "./sizes.ts";
 import type { Sdks } from "./config.ts";
+import { containerEnv, dockerReady } from "./docker.ts";
 import { cacheFolder, output, run, runQuietly, seconds } from "./run.ts";
 
 /** The hash of what an SDK is made from: every file in fern/. */
@@ -33,7 +34,8 @@ export function sdk(group: string, options: { ifStale?: boolean } = {}): void {
 		console.log(`sdk ${group}: up to date (made from fern/ as it is), not generated again`);
 		return;
 	}
-	run("fern", fernGenerate(group));
+	dockerReady();
+	run("fern", fernGenerate(group), containerEnv());
 	generatedOrFail(group);
 	stampMade(group);
 }
@@ -51,7 +53,8 @@ export function generatedOrFail(group: string, dir = "."): void {
  * several can run at once (each in a Docker container of its own) without their lines mixing. It
  * resolves with how long it took, and rejects with Fern's output if it fails. */
 export async function generateQuietly(group: string): Promise<number> {
-	const { ms } = await runQuietly("fern", fernGenerate(group));
+	dockerReady();
+	const { ms } = await runQuietly("fern", fernGenerate(group), containerEnv());
 	generatedOrFail(group);
 	stampMade(group);
 	return ms;
@@ -137,6 +140,7 @@ export async function proveGroup(group: string): Promise<void> {
 			await runQuietly("go", ["test", "./..."], { GOWORK: "off" }, dir);
 			return;
 		}
+		dockerReady();
 		await runQuietly("docker", ["compose", "-f", compose, "up", "-d", "--wait"]);
 		try {
 			const port = output("docker", ["compose", "-f", compose, "port", "wiremock", "8080"]).trim();
