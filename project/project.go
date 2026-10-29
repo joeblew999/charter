@@ -369,6 +369,7 @@ func Load(dir string) (*Project, error) {
 	if err != nil {
 		return nil, err
 	}
+	start := dir
 	for {
 		path := filepath.Join(dir, File)
 		if _, err := os.Stat(path); err == nil {
@@ -383,6 +384,9 @@ func Load(dir string) (*Project, error) {
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
+			if _, err := os.Stat(filepath.Join(start, "charter.config.ts")); err == nil {
+				return nil, errors.New("no " + File + " here, but a charter.config.ts: charter-ts's, which charter.toml takes the place of. " + UpgradePage)
+			}
 			return nil, errors.New("no " + File + " at or above the working directory")
 		}
 		dir = parent
@@ -410,6 +414,15 @@ func decode(dir string) (*Project, error) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if undecoded := md.Undecoded(); len(undecoded) > 0 {
+		var older []string
+		for _, k := range undecoded {
+			if len(k) == 1 && slices.Contains(olderKeys, k[0]) {
+				older = append(older, k[0])
+			}
+		}
+		if len(older) > 0 {
+			return nil, fmt.Errorf("%s: %s: an older charter's keys, which are [github]'s now (workflow is workflows; projects goes: charter finds a repo's projects). %s", path, strings.Join(older, ", "), UpgradePage)
+		}
 		return nil, fmt.Errorf("%s: unknown keys %v", path, undecoded)
 	}
 	if err := p.check(); err != nil {
@@ -417,6 +430,12 @@ func decode(dir string) (*Project, error) {
 	}
 	return p, nil
 }
+
+// olderKeys are what charter.toml said at its top before 0.20, which [github] says now.
+var olderKeys = []string{"description", "topics", "homepage", "docs", "renovate", "workflow", "projects"}
+
+// UpgradePage is where a repo on an older charter, or on charter-ts, finds what to change.
+const UpgradePage = "Moving from an older charter: https://joeblew999.github.io/charter/self/upgrade.html"
 
 // IsWorker is whether charter.toml says a Worker (a name), not only how a repo is kept.
 func (p *Project) IsWorker() bool { return p.Name != "" }
