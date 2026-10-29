@@ -1,0 +1,44 @@
+# Written by `charter init` (github.com/joeblew999/charter, .github/ISSUE_TEMPLATE/charter-upstream.yml): don't edit it in another repo, change it in charter.
+# For a form of the repo's own, write this file without the line above: charter then leaves it alone.
+# Each field's label is a heading in the issue body; `charter issues upstream` prints the same headings.
+name: Upstream bug
+description: A bug that looks like it is in a project this one is built on, to be recorded here and fixed there.
+title: "[upstream] "
+labels: ["upstream", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The upstream issues this repository tracks are its `Upstream:` tags
+        (`charter upstream`), and `docs/self/upstream.md` where it keeps that page: if your bug
+        is already there, add what you found to that issue instead of filing. It is upstream only
+        if a correct caller, reading only that project's public documentation, would hit it.
+  - type: input
+    id: project
+    attributes:
+      label: Project
+      description: The project and version the bug is in, for example "workerd 1.20261006.1".
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Smallest program that shows it
+      description: Without this repository if possible, so that a maintainer there can run it.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: measured
+    attributes:
+      label: What was measured
+      description: The output or the numbers, and the command that produced them.
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround here
+      description: The file that works around it, if there is one, and what to do when it is fixed.
+    validations:
+      required: false

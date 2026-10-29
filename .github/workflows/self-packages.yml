@@ -1,10 +1,10 @@
-# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
-# charter-ts and charter-lib with their tests, the Go library, this repo's own TypeScript, the projects kept the same, and these workflows linted. Here: npm run ci -- packages; on GitHub, from here: npm run ci -- packages --remote.
+# Written by `charter init` from charter.toml: don't edit, change charter.toml's [ci.jobs], then charter init.
+# charter-lib with its tests, the Go library and charter with theirs, the projects kept alike, the release's config, and these workflows linted. Here: charter ci packages; on GitHub, from here: charter ci packages -remote.
 name: self-packages
 on:
   push:
     branches: [main]
-    tags: ["ts-v*"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 jobs:

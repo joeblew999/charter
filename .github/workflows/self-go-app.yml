@@ -1,10 +1,10 @@
-# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
-# A Go app made by charter init gets charter's TinyGo through mise, every way it builds, builds, and may not pin its own. Here: npm run ci -- go-app; on GitHub, from here: npm run ci -- go-app --remote.
+# Written by `charter init` from charter.toml: don't edit, change charter.toml's [ci.jobs], then charter init.
+# A Go app made by charter init gets charter's TinyGo through mise, every way it builds, builds, and may not pin its own. Here: charter ci go-app; on GitHub, from here: charter ci go-app -remote.
 name: self-go-app
 on:
   push:
     branches: [main]
-    tags: ["ts-v*"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 jobs:

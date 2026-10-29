@@ -1,0 +1,10 @@
+# The tools a repo charter keeps starts its mise.toml with (charter init), at the versions charter itself is built and
+# tested with: node for its packages; in a project, fnox for its secrets and the workerd charter runs its Worker on; in
+# a Go one, go and the sqlc its queries are typed with. TinyGo and wasm-opt are not here: charter pins those beside its
+# TinyGo patch (mise.toml). Each line equals charter's own mise.toml's (TestSameAsCharters), and Renovate moves both.
+[tools]
+node = "26.13.0"
+"github:jdx/fnox" = "1.44.0"
+workerd = "1.20261019.1"
+go = "1.27.3"
+"aqua:sqlc-dev/sqlc" = "1.31.1"

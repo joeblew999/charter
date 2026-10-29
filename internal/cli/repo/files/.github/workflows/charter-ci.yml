@@ -1,0 +1,50 @@
+# Written by `charter init` (github.com/joeblew999/charter, .github/workflows/charter-ci.yml):
+# don't edit it in another repo, change it in charter. charter's job runner, the same in every repo:
+# every workflow calls it, charter's (charter-repo.yml) and the repo's own (self-<job>.yml, from
+# charter.toml's [ci.jobs]), to run one job on GitHub exactly as `charter ci <job> [<project>]` runs it on a
+# machine: mise installs the tools the repo's mise.toml pins (charter among them), npm the packages if the repo
+# has any, then the job. In charter's own repo, charter is that checkout's (go run ./cmd/charter). The repo's
+# secrets reach the job as CHARTER_SECRETS (GitHub masks them); charter gives each job only those it names.
+name: charter-ci
+on:
+  workflow_call:
+    inputs:
+      job:
+        description: The job, charter's or one of the repo's charter.toml
+        type: string
+        required: true
+      project:
+        description: The project to run it in, for a job that runs in each
+        type: string
+        default: ""
+      runs-on:
+        description: The runner
+        type: string
+        default: ubuntu-24.04
+      timeout-minutes:
+        type: number
+        default: 60
+jobs:
+  run:
+    name: ${{ inputs.job }} ${{ inputs.project }}
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.0.1
+      - name: npm ci, for a repo with packages
+        shell: bash
+        run: if [ -f package-lock.json ]; then npm ci; fi
+      - name: charter ci ${{ inputs.job }} ${{ inputs.project }}
+        shell: bash
+        env:
+          JOB: ${{ inputs.job }}
+          PROJECT: ${{ inputs.project }}
+          CHARTER_SECRETS: ${{ toJSON(secrets) }}
+          # gh, for a job that reads the repo on GitHub (the repo job): what the caller's permissions allow.
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if grep -qx 'module github.com/joeblew999/charter' go.mod 2>/dev/null; then
+            go build -o "$RUNNER_TEMP/charter" ./cmd/charter && PATH="$RUNNER_TEMP:$PATH"
+          fi
+          charter ci "$JOB" ${PROJECT:+"$PROJECT"}

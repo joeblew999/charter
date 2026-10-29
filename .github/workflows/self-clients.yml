@@ -1,10 +1,10 @@
-# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
-# Every client the conformance projects' fern/generators.yml declares, generated with Fern and proven in its language. Here: npm run ci -- clients [<project>]; on GitHub, from here: npm run ci -- clients [<project>] --remote.
+# Written by `charter init` from charter.toml: don't edit, change charter.toml's [ci.jobs], then charter init.
+# Every client the conformance projects' fern/generators.yml declares, generated with Fern and proven in its language. Here: charter ci clients [<project>]; on GitHub, from here: charter ci clients [<project>] -remote.
 name: self-clients
 on:
   push:
     branches: [main]
-    tags: ["ts-v*"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
     inputs:

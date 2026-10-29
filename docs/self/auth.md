@@ -78,7 +78,7 @@ How often each caller may call: [Rate limits](ratelimits.md).
 
 ## Proven
 
-- `npm run check` (2026-10-15): `examples/conformance-ts/test/auth.ts` serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After`, against examples/conformance-go natively and under workerd, and examples/conformance-ts under workerd. It does not run on Cloudflare, where an OIDC issuer has not been tried; rate limits have ([Rate limits](ratelimits.md)).
+- `charter check` (2026-10-29): `examples/conformance-ts/test/auth.ts` serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After`, against examples/conformance-go natively and under workerd, and examples/conformance-ts under workerd. It does not run on Cloudflare, where an OIDC issuer has not been tried; rate limits have ([Rate limits](ratelimits.md)).
 - On Cloudflare, 2026-10-03: a Go notes project behind Access. No token, or a wrong secret: a redirect to the login. The machine's token reads; writing is 403. The write token writes; the read token, 403; a JWT from an untrusted issuer, 401.
 
 ## Limits

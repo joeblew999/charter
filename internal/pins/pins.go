@@ -1,5 +1,6 @@
 // Package pins is the TinyGo and wasm-opt a Go Worker app builds with: mise.toml, which charter tasks
-// writes into an app (ConfFile) and charter build checks the TinyGo on PATH against.
+// writes into an app (ConfFile) and charter build checks the TinyGo on PATH against; and the tools a repo charter keeps
+// starts its mise.toml with (repo.toml, charter init).
 package pins
 
 import (
@@ -15,12 +16,20 @@ var File []byte
 // ConfFile is where an app has File: mise reads it beside the app's own mise.toml, with no configuration.
 const ConfFile = ".config/mise/conf.d/charter.toml"
 
-// Tools is what File pins, by mise's name for each: its [tools] lines, name = "version", a name bare or quoted. Read
-// with the standard library only, as the rest of the build step is.
-func Tools() map[string]string {
+// Repo is what a repo charter keeps starts its mise.toml with (charter init), by mise's name for each.
+//
+//go:embed repo.toml
+var Repo []byte
+
+// Tools is what File pins, by mise's name for each.
+func Tools() map[string]string { return In(File) }
+
+// In is what a mise config pins: its [tools] lines, name = "version", a name bare or quoted. Read with the standard
+// library only, as the rest of the build step is.
+func In(file []byte) map[string]string {
 	tools := map[string]string{}
 	in := false
-	for _, line := range strings.Split(string(File), "\n") {
+	for _, line := range strings.Split(string(file), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "[") {
 			in = line == "[tools]"

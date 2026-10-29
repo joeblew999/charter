@@ -38,4 +38,13 @@ func TestSameAsCharters(t *testing.T) {
 			t.Errorf("%s: internal/pins/mise.toml says %q, charter's mise.toml %q: make them the same", name, version, got)
 		}
 	}
+	// A new repo's tools, too (repo.toml), but never TinyGo's or wasm-opt's: charter pins those beside its patch.
+	for name, version := range In(Repo) {
+		if got, _ := charters.Tools[name].(string); got != version {
+			t.Errorf("%s: internal/pins/repo.toml says %q, charter's mise.toml %q: make them the same", name, version, got)
+		}
+		if Charters(name) {
+			t.Errorf("internal/pins/repo.toml pins %s, which charter pins beside its TinyGo patch", name)
+		}
+	}
 }

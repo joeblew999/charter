@@ -2,30 +2,8 @@
 	"name": "charter",
 	"private": true,
 	"type": "module",
-	"description": "Contract-first APIs on Cloudflare Workers with Huma (Go) or oRPC (TypeScript): OpenAPI and AsyncAPI generated, SDKs in any language with Fern, a CLI, MCP and real-time. Go at TypeScript's cost.",
-	"keywords": [
-		"asyncapi",
-		"cloudflare-workers",
-		"contract-first",
-		"d1",
-		"durable-objects",
-		"fern",
-		"golang",
-		"huma",
-		"mcp",
-		"openapi",
-		"orpc",
-		"sdk-generator",
-		"sse",
-		"tinygo",
-		"typescript",
-		"websocket",
-		"workers-go"
-	],
-	"homepage": "https://joeblew999.github.io/charter/",
 	"workspaces": [
 		"ts",
-		"charter-ts",
 		"examples/start-ts",
 		"examples/notes-ts",
 		"examples/conformance-ts",
@@ -36,24 +14,12 @@
 		"examples/conformance-go"
 	],
 	"scripts": {
-		"prepare": "npm run build -w ts -w charter-ts",
-		"adopt": "charter-ts adopt",
-		"issues": "charter-ts issues",
-		"check": "charter-ts check",
-		"docs": "charter-ts docs",
-		"repo": "charter-ts repo",
-		"upstream": "charter-ts upstream",
-		"ci": "charter-ts ci",
-		"release": "node release.ts"
+		"prepare": "npm run build -w ts"
 	},
 	"allowScripts": {
 		"workerd": true,
 		"esbuild": false,
 		"fsevents": false,
 		"@scarf/scarf": false
-	},
-	"devDependencies": {
-		"@types/node": "^22.12.0",
-		"typescript": "^7.0.2"
 	}
 }

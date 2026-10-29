@@ -1,8 +1,10 @@
-// Package scaffold is charter init, tasks, skill, workflow and check: a Go app set up to run on Cloudflare
+// Package scaffold is charter init, tasks, skill, workflow and check's first part: an app set up to run on Cloudflare
 // Workers with charter, the way intl and seo set an app up: a config file, its mise tasks, an agent skill, and a check
-// that says when any of them is stale.
+// that says when any of them is stale; and at the repo's top, charter's files in the repo (go doc
+// .../internal/cli/repo).
 //
-//	charter init [-name n] [-compat date]   charter.toml, build/ in .gitignore, and everything below
+//	charter init [-check] [-name n] [-compat date]   a Go module's charter.toml, build/ in .gitignore, everything
+//	                                                 below, and charter's files at the repo's top
 //	charter tasks                           the mise tasks (.mise/tasks/charter.toml) and Workers Builds'
 //	                                                launcher (.mise/tasks/charter-builds)
 //	charter skill                           the agent skill (.claude/skills/charter)
@@ -30,6 +32,7 @@ import (
 	"github.com/joeblew999/charter/project"
 	"github.com/joeblew999/charter/skills"
 
+	"github.com/joeblew999/charter/internal/cli/repo"
 	"github.com/joeblew999/charter/internal/pins"
 )
 
@@ -107,34 +110,58 @@ func root() {
 	}
 }
 
-// Init runs charter init, from the app's root (its go.mod's directory).
+// Init runs charter init: in a Go module with no charter.toml, a starter, then an app's files (charter.toml's folder:
+// build/ ignored, the mise tasks, the skill, the CI workflow); at the repo's top, charter's files (go doc
+// .../internal/cli/repo), and the mise tasks for a repo that is no app. -check writes nothing, and fails where a file
+// is not what this charter writes.
 func Init(args []string) {
 	fs := flag.NewFlagSet("charter init", flag.ExitOnError)
+	checkOnly := fs.Bool("check", false, "write nothing; fail where a file of charter's is not what this charter writes")
 	name := fs.String("name", "", "the Worker's name (default: the module path's last element)")
 	compat := fs.String("compat", "", "the compatibility date (default: the date of the workerd on PATH, which runs it locally)")
 	fs.Parse(args)
 	log.SetFlags(0)
-	if _, err := os.Stat("go.mod"); err != nil {
-		log.Fatal("✗ run charter init in the app's root, beside its go.mod")
+	_, err := repo.Root()
+	check(err)
+	if *checkOnly {
+		if !Report() {
+			os.Exit(1)
+		}
+		return
 	}
-	if _, err := os.Stat(project.File); err == nil {
-		log.Printf("· %s is there already: left as it is", project.File)
-	} else {
-		if *name == "" {
-			*name = workerName(modulePath())
+	app := false
+	if _, err := os.Stat("go.mod"); err == nil {
+		if _, err := os.Stat(project.File); err != nil {
+			if *name == "" {
+				*name = workerName(modulePath())
+			}
+			if *compat == "" {
+				*compat = workerdDate()
+			}
+			if *compat == "" {
+				log.Fatal("✗ no workerd on PATH to take the compatibility date from: give one, -compat 2026-09-25")
+			}
+			check(os.WriteFile(project.File, []byte(starter(*name, *compat)), 0o644))
+			log.Printf("✓ %s: the Worker %s, compatibility date %s", project.File, *name, *compat)
 		}
-		if *compat == "" {
-			*compat = workerdDate()
-		}
-		if *compat == "" {
-			log.Fatal("✗ no workerd on PATH to take the compatibility date from: give one, -compat 2026-09-25")
-		}
-		check(os.WriteFile(project.File, []byte(starter(*name, *compat)), 0o644))
-		log.Printf("✓ %s: the Worker %s, compatibility date %s", project.File, *name, *compat)
 	}
-	check(ignore(".gitignore", "/build/"))
-	for _, how := range []string{"charter tasks", "charter skill", "charter workflow"} {
-		write(how)
+	if p, err := project.Load("."); err == nil {
+		app = true
+		check(os.Chdir(p.Root))
+		check(ignore(".gitignore", "/build/"))
+		for _, how := range []string{"charter tasks", "charter skill", "charter workflow"} {
+			write(how)
+		}
+	}
+	if top, atTop := repo.AtTop(); atTop {
+		if !app && !repo.IsCharter(top) {
+			write("charter tasks")
+		}
+		check(repo.Init(top))
+	}
+	if !app {
+		log.Print("\nNext: charter check, and what docs/charter/README.md says, and when.")
+		return
 	}
 	log.Print(`
 Next:

@@ -56,6 +56,28 @@
 //	                                   # checks that may run beside it go here too
 //	test = "mise run e2e"              # the checks after it (default: none)
 //	release_hook = "ci/tag-modules.sh" # run when a release is tagged, before production moves (default: none)
+//
+// At a repo's top, charter.toml also says how the repo is kept (charter init writes charter's files from it, charter
+// repo the repo on GitHub, charter ci runs its jobs); a repo that is no Worker has these and no name:
+//
+//	[github]                           # the repo on GitHub, as charter repo makes it
+//	description = "What it is."
+//	topics = ["cloudflare-workers"]    # charter's own topic is added
+//	homepage = "https://…"             # default: its GitHub Pages site
+//	docs = "docs"                      # the docs folder, "docs" or "." (GitHub Pages serves one of those)
+//	renovate = true                    # charter's renovate.json (default: true)
+//	workflows = true                   # charter's job runner and a workflow per job (default: true)
+//
+//	[ci]
+//	check = ["lint", "test"]           # the jobs charter check runs here (default: every job run on a change)
+//	[ci.jobs.test]                     # charter ci test here; .github/workflows/self-test.yml on GitHub
+//	about = "The tests"
+//	on = ["push", "pull_request"]      # and "tag" (a version tag), "dispatch" (by hand)
+//	run = ["go test ./..."]            # commands, one after another; charter is this charter
+//	each = "project"                   # optional: in every project's folder (projects, or each with a charter.toml)
+//	os = ["linux", "macos"]            # default: linux
+//	secrets = ["CLOUDFLARE_API_TOKEN"] # the repo's GitHub secrets it needs
+//	timeout = 30                       # minutes (default: 60)
 package project
 
 import (
@@ -104,6 +126,7 @@ type Project struct {
 	Local              Environment     `toml:"local"`
 	Build              Build           `toml:"build"`
 	CI                 CI              `toml:"ci"`
+	GitHub             GitHub          `toml:"github"`
 
 	Root string `toml:"-"` // the directory charter.toml is in
 }
@@ -130,6 +153,32 @@ type CI struct {
 	Build       string   `toml:"build"`
 	Test        string   `toml:"test"`
 	ReleaseHook string   `toml:"release_hook"`
+	// The repo's jobs (charter ci <job>), and those charter check runs at the repo's top.
+	Check []string       `toml:"check"`
+	Jobs  map[string]Job `toml:"jobs"`
+}
+
+// Job is a job of the repo's CI: charter ci <name> here, .github/workflows/self-<name>.yml on GitHub.
+type Job struct {
+	About       string            `toml:"about"`
+	On          []string          `toml:"on"`   // push (to main), pull_request, tag (a version tag), dispatch (by hand)
+	Run         []string          `toml:"run"`  // commands, words split on spaces; charter is this charter
+	Each        string            `toml:"each"` // "project": in every project's folder
+	Projects    []string          `toml:"projects"`
+	OS          []string          `toml:"os"` // linux, macos, windows (default linux)
+	Secrets     []string          `toml:"secrets"`
+	Permissions map[string]string `toml:"permissions"` // its GitHub token's (default: the repo's)
+	Timeout     int               `toml:"timeout"`     // minutes (default 60)
+}
+
+// GitHub is the repo on GitHub, as charter repo makes it, and what charter init writes for it.
+type GitHub struct {
+	Description string   `toml:"description"`
+	Topics      []string `toml:"topics"`
+	Homepage    string   `toml:"homepage"`
+	Docs        string   `toml:"docs"`
+	Renovate    *bool    `toml:"renovate"`
+	Workflows   *bool    `toml:"workflows"`
 }
 
 // D1 is a D1 database binding. Its database is Database (by default the Worker's name), with -staging or -preview in
@@ -323,16 +372,12 @@ func Load(dir string) (*Project, error) {
 	for {
 		path := filepath.Join(dir, File)
 		if _, err := os.Stat(path); err == nil {
-			p := &Project{Root: dir}
-			md, err := toml.DecodeFile(path, p)
+			p, err := decode(dir)
 			if err != nil {
-				return nil, fmt.Errorf("%s: %w", path, err)
+				return nil, err
 			}
-			if undecoded := md.Undecoded(); len(undecoded) > 0 {
-				return nil, fmt.Errorf("%s: unknown keys %v", path, undecoded)
-			}
-			if err := p.check(); err != nil {
-				return nil, fmt.Errorf("%s: %w", path, err)
+			if p.Name == "" {
+				return nil, fmt.Errorf("%s: name is required: it is a repo's, which names no Worker", path)
 			}
 			return p, nil
 		}
@@ -344,10 +389,96 @@ func Load(dir string) (*Project, error) {
 	}
 }
 
+// LoadRepo reads the charter.toml at root, a repo's top: how the repo is kept ([github], [ci] jobs), and a Worker's
+// settings when it is one too. A repo with none has the defaults.
+func LoadRepo(root string) (*Project, error) {
+	root, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(filepath.Join(root, File)); os.IsNotExist(err) {
+		return &Project{Root: root}, nil
+	}
+	return decode(root)
+}
+
+func decode(dir string) (*Project, error) {
+	path := filepath.Join(dir, File)
+	p := &Project{Root: dir}
+	md, err := toml.DecodeFile(path, p)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if undecoded := md.Undecoded(); len(undecoded) > 0 {
+		return nil, fmt.Errorf("%s: unknown keys %v", path, undecoded)
+	}
+	if err := p.check(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return p, nil
+}
+
+// IsWorker is whether charter.toml says a Worker (a name), not only how a repo is kept.
+func (p *Project) IsWorker() bool { return p.Name != "" }
+
+// DocsFolder is the repo's docs folder: [github] docs, by default docs.
+func (g GitHub) DocsFolder() string {
+	if g.Docs == "" {
+		return "docs"
+	}
+	return g.Docs
+}
+
+// ReservedJobs are charter ci's own steps, which no job of the repo may be called.
+var ReservedJobs = []string{"run", "publish", "release"}
+
+// CharterJobs are charter's own jobs, the same in every repo (charter-<job>.yml), which [ci] check may name and no job
+// of the repo may be called.
+var CharterJobs = []string{"repo"}
+
 func (p *Project) check() error {
 	var problems []string
-	if p.Name == "" {
+	worker := p.Name != "" || p.CompatibilityDate != "" || p.Main != "" || p.Build.Entry != "" || len(p.D1) > 0 || len(p.DurableObjects) > 0
+	if worker && p.Name == "" {
 		problems = append(problems, "name is required")
+	}
+	if p.GitHub.Docs != "" && p.GitHub.Docs != "docs" && p.GitHub.Docs != "." {
+		problems = append(problems, `[github] docs is "docs" or "." (GitHub Pages serves a site from one of those)`)
+	}
+	for name, j := range p.CI.Jobs {
+		if slices.Contains(ReservedJobs, name) {
+			problems = append(problems, fmt.Sprintf("[ci.jobs.%s]: %s is a step of charter ci's own: name the job otherwise", name, name))
+		}
+		if slices.Contains(CharterJobs, name) {
+			problems = append(problems, fmt.Sprintf("[ci.jobs.%s]: that one is charter's (charter-%s.yml), so name yours otherwise", name, name))
+		}
+		if len(j.Run) == 0 || len(j.On) == 0 {
+			problems = append(problems, fmt.Sprintf("[ci.jobs.%s]: a job needs on and run", name))
+		}
+		for _, on := range j.On {
+			if !slices.Contains([]string{"push", "pull_request", "tag", "dispatch"}, on) {
+				problems = append(problems, fmt.Sprintf("[ci.jobs.%s]: on %q: push, pull_request, tag or dispatch", name, on))
+			}
+		}
+		for _, os := range j.OS {
+			if !slices.Contains([]string{"linux", "macos", "windows"}, os) {
+				problems = append(problems, fmt.Sprintf("[ci.jobs.%s]: os %q: linux, macos or windows", name, os))
+			}
+		}
+		if j.Each != "" && j.Each != "project" {
+			problems = append(problems, fmt.Sprintf(`[ci.jobs.%s]: each is "project" or none`, name))
+		}
+	}
+	for _, name := range p.CI.Check {
+		if _, ok := p.CI.Jobs[name]; !ok && !slices.Contains(CharterJobs, name) {
+			problems = append(problems, fmt.Sprintf("[ci] check: no job %s", name))
+		}
+	}
+	if !worker {
+		if len(problems) > 0 {
+			return errors.New(strings.Join(problems, "; "))
+		}
+		return nil
 	}
 	if p.CompatibilityDate == "" {
 		problems = append(problems, "compatibility_date is required")

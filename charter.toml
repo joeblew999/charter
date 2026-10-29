@@ -1,0 +1,80 @@
+# charter.toml: how this repo is kept (every key: go doc github.com/joeblew999/charter/project). It is no Worker: its
+# projects are in examples/, each with a charter.toml of its own. charter init writes charter's files and a workflow per
+# job from it (.github/workflows/self-<job>.yml); charter ci <job> runs one here, as GitHub runs it; charter check runs
+# the jobs check lists. In this repo charter is this checkout's: go tool charter <command>.
+
+[github]
+description = "Contract-first APIs on Cloudflare Workers with Huma (Go) or oRPC (TypeScript): OpenAPI and AsyncAPI generated, SDKs in any language with Fern, a CLI, MCP and real-time. Go at TypeScript's cost."
+topics = ["asyncapi", "cloudflare-workers", "contract-first", "d1", "durable-objects", "fern", "golang", "huma", "mcp", "openapi", "orpc", "sdk-generator", "sse", "tinygo", "typescript", "websocket", "workers-go"]
+homepage = "https://joeblew999.github.io/charter/"
+
+[ci]
+# What charter check runs at the top: everything that needs no Cloudflare account (Docker, for the conformance
+# projects' SDKs). The rest are the CI's: charter ci.
+check = ["packages", "repo", "projects"]
+
+# charter-lib with its tests, the Go library and the charter command with theirs (the projects kept alike among them:
+# examples/examples_test.go), the release's config, and these workflows linted.
+[ci.jobs.packages]
+about = "charter-lib with its tests, the Go library and charter with theirs, the projects kept alike, the release's config, and these workflows linted"
+on = ["push", "pull_request", "tag"]
+os = ["linux", "macos"]
+timeout = 20
+run = [
+  "npm run check -w ts",
+  "charter check -go",
+  "goreleaser check",
+  "mise exec actionlint@1.7.12 -- actionlint",
+]
+
+[ci.jobs.projects]
+about = "Every project's check (charter check): lint, its specs, its tests natively (Go) and under workerd"
+on = ["push", "pull_request", "tag"]
+each = "project"
+run = ["charter check"]
+
+# Each API that is here in TypeScript and in Go answers the same in both: the TypeScript project is the reference, and
+# every request its specs give rise to goes to both.
+[ci.jobs.twins]
+about = "Each API's TypeScript and Go projects under workerd, the same requests to both, and no answer may differ"
+on = ["push", "pull_request", "tag"]
+timeout = 30
+run = [
+  "charter twins examples/conformance-ts examples/conformance-go",
+  "charter twins examples/notes-ts examples/notes-go",
+  "charter twins examples/start-ts examples/start-go",
+]
+
+# What a user gets: a project made by charter new from this checkout, with charter-lib as a release packs it,
+# installed, and its own check passing (each template, in both languages).
+[ci.jobs.new]
+about = "A project made by charter new from each example, with charter from mise and charter-lib packed as a release packs it, installed, and its check passing"
+on = ["push", "pull_request", "tag"]
+timeout = 20
+run = ["bash examples/new-projects.sh"]
+
+# What an outside Go app gets: one made by charter init on this charter, with no TinyGo of its own, gets the TinyGo its
+# patch is for from charter, every way an app builds, and builds; its own TinyGo line is refused.
+[ci.jobs.go-app]
+about = "A Go app made by charter init gets charter's TinyGo through mise, every way it builds, builds, and may not pin its own"
+on = ["push", "pull_request", "tag"]
+timeout = 20
+run = ["bash examples/new-app.sh"]
+
+# The conformance projects carry every Fern feature, so their clients prove the generators; an example's specs are
+# checked by Fern in its own check, and its committed Go SDK by a hash.
+[ci.jobs.clients]
+about = "Every client the conformance projects' fern/generators.yml declares, generated with Fern and proven in its language"
+on = ["push", "pull_request", "tag"]
+each = "project"
+projects = ["examples/conformance-go", "examples/conformance-ts"]
+timeout = 60
+run = ["charter sdk -prove"]
+
+[ci.jobs.deploy]
+about = "A project's Worker deployed to Cloudflare, then its live tests against it"
+on = ["dispatch"]
+each = "project"
+secrets = ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "READ_TOKEN", "WRITE_TOKEN"]
+timeout = 30
+run = ["charter build", "charter deploy production", "charter live-test"]

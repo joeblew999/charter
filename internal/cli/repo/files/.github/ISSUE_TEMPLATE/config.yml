@@ -1,0 +1,5 @@
+# Written by `charter init` (github.com/joeblew999/charter, .github/ISSUE_TEMPLATE/config.yml): don't edit it in another repo, change it in charter.
+# For a form of the repo's own, write this file without the line above: charter then leaves it alone.
+# A blank issue skips every required field, so the web offers only the forms. gh and the API ignore
+# forms: `charter issues <kind>` prints the same headings as a body for them.
+blank_issues_enabled: false

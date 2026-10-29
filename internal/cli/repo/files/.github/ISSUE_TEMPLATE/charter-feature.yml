@@ -1,0 +1,42 @@
+# Written by `charter init` (github.com/joeblew999/charter, .github/ISSUE_TEMPLATE/charter-feature.yml): don't edit it in another repo, change it in charter.
+# For a form of the repo's own, write this file without the line above: charter then leaves it alone.
+# Each field's label is a heading in the issue body; `charter issues feature` prints the same headings.
+name: Feature request
+description: Your repository needs this project to do something it does not.
+title: "[feature] "
+labels: ["feature", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Say what your repository is trying to get done, not only the flag you want: the right
+        change is often a different one. **Agents:** `charter issues feature` prints the body, and on its first line
+        the gh command that files it.
+  - type: input
+    id: reporter
+    attributes:
+      label: Reporting repo and agent
+      description: The repository that needs this, and who is asking.
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What the calling repo is trying to do
+      description: The outcome, in a sentence or two.
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: The workflow today
+      description: The commands you run now, in order, and where it stops working or needs a workaround.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What you would run, and what it should print or do, for this to be done.
+    validations:
+      required: true

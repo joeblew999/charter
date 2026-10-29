@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Written by `charter-ts adopt` (github.com/joeblew999/charter, renovate.json): don't edit it in another repo, change it in charter. \"charter\": { \"renovate\": false } in package.json leaves this file to the repo. A new release of what the repo pins opens a pull request; minor and patch ones merge themselves once its checks pass.",
+  "description": "Written by `charter init` (github.com/joeblew999/charter, renovate.json): don't edit it in another repo, change it in charter. [github] renovate = false in charter.toml leaves this file to the repo. A new release of what the repo pins opens a pull request; minor and patch ones merge themselves once its checks pass.",
   "enabledManagers": [
     "mise",
     "gomod",
@@ -14,16 +14,16 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "charter-ts and charter-lib, which package.json installs from charter's GitHub Release (ts-vX.Y.Z), the version twice in the URL",
+      "description": "charter-lib, which package.json installs from charter's GitHub Release (vX.Y.Z), the version twice in the URL",
       "managerFilePatterns": [
         "/(^|/)package\\.json$/"
       ],
       "matchStrings": [
-        "\"https://github\\.com/(?<depName>joeblew999/charter)/releases/download/ts-v(?<currentValue>[0-9][0-9.]*)/(?<packageName>charter-(?:ts|lib))-[0-9][0-9.]*\\.tgz\""
+        "\"https://github\\.com/(?<depName>joeblew999/charter)/releases/download/v(?<currentValue>[0-9][0-9.]*)/(?<packageName>charter-lib)-[0-9][0-9.]*\\.tgz\""
       ],
       "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^ts-v(?<version>.+)$",
-      "autoReplaceStringTemplate": "\"https://github.com/{{{depName}}}/releases/download/ts-v{{{newValue}}}/{{{packageName}}}-{{{newValue}}}.tgz\""
+      "extractVersionTemplate": "^v(?<version>.+)$",
+      "autoReplaceStringTemplate": "\"https://github.com/{{{depName}}}/releases/download/v{{{newValue}}}/{{{packageName}}}-{{{newValue}}}.tgz\""
     }
   ],
   "packageRules": [
@@ -37,7 +37,7 @@
       "automerge": true
     },
     {
-      "description": "charter-ts, charter-lib and charter's Go library move together: one pull request",
+      "description": "charter (mise.toml), its Go library (go.mod) and charter-lib (package.json) move together: one pull request",
       "matchPackageNames": [
         "/(^|[:\\/])joeblew999\\/charter($|\\/)/"
       ],

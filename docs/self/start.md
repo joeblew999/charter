@@ -5,30 +5,30 @@ nav_order: 2
 
 # Getting started
 
-From nothing to an API on Cloudflare Workers, tested there, with a generated SDK. You need Node 26, git and [mise](https://mise.jdx.dev), which installs charter and what it runs (workerd; in Go, TinyGo); for an SDK, Docker; to deploy, a Cloudflare account and [fnox](https://github.com/jdx/fnox); for GitHub, `gh` signed in. In Go, also Go.
+From nothing to an API on Cloudflare Workers, tested there, with a generated SDK. You need git and [mise](https://mise.jdx.dev), which installs charter and what it runs (Node, workerd; in Go, TinyGo); for an SDK, Docker; to deploy, a Cloudflare account and [fnox](https://github.com/jdx/fnox); for GitHub, `gh` signed in. In Go, also Go.
 
 ## 1. Make the project
 
 ```sh
-npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.9.1/charter-ts-0.9.1.tgz charter-ts new billing-api --from notes --subdomain <your workers.dev subdomain>
+mise use -g github:joeblew999/charter   # charter, the one command
+charter new billing-api -from notes -subdomain <your workers.dev subdomain>
 cd billing-api
+mise install                            # what its mise.toml pins: charter, Node, workerd…
 npm install
-mise use github:joeblew999/charter
-mise install
 ```
 
-`billing-api` is the folder, the Worker and its database. `--from notes` starts from the notes API (sign-in, streams, rate limits); without it, from one route. `--go` makes it in Go ([Huma](https://huma.rocks)) instead of TypeScript. `charter.toml` says everything charter knows about it, and charter runs its steps. The project is a git repo of its own, kept by charter ([Any repo](any-repo.md)).
+`billing-api` is the folder, the Worker and its database. `-from notes` starts from the notes API (sign-in, streams, rate limits); without it, from one route. `-go` makes it in Go ([Huma](https://huma.rocks)) instead of TypeScript. `charter.toml` says everything charter knows about it, and charter runs its steps. The project is a git repo of its own, kept by charter ([Any repo](any-repo.md)).
 
 ## 2. Check it, and run it
 
 ```sh
-npm run check    # every check that needs no Cloudflare account (charter check)
+charter check    # every check that needs no Cloudflare account
 charter dev      # the API on charter.toml's port; until Ctrl-C
 ```
 
 ## 3. Make it yours
 
-The contract is `api/contract.ts` (in Go, `api/contract.go`). After a change to it, `charter spec`, then `npm run check` ([Your API](api.md)).
+The contract is `api/contract.ts` (in Go, `api/contract.go`). After a change to it, `charter spec`, then `charter check` ([Your API](api.md)).
 
 ## 4. An SDK
 
@@ -47,15 +47,15 @@ fnox exec -- charter deploy production
 fnox exec -- charter live-test
 ```
 
-Without `--subdomain`, put the URL the deploy printed into `charter.toml`'s `url`, then `charter spec` ([Deploy and CI](deploy.md)).
+Without `-subdomain`, put the URL the deploy printed into `charter.toml`'s `url`, then `charter spec` ([Deploy and CI](deploy.md)).
 
 ## 6. On GitHub
 
 ```sh
 git add -A && git commit -m "billing-api"
-gh repo create billing-api --private --source . --push   # its check runs npm run check
+gh repo create billing-api --private --source . --push   # its check job runs charter check
 ```
 
 What to run after that, and when: `docs/charter/README.md`, in the project.
 
-Checked on 2026-10-29 on macOS: steps 1 and 2 with each example in both languages, from the packed package and this checkout's charter through mise (the `new` job). Steps 4 and 5 were run on this repo's projects, not on a project made this way.
+Checked on 2026-10-29 on macOS: steps 1 and 2 with each example in both languages, with this checkout's charter through mise and charter-lib packed as a release packs it (the `new` job). Steps 4 and 5 were run on this repo's projects, not on a project made this way.

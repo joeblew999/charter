@@ -4,7 +4,7 @@ nav_order: 16
 ---
 # Upstream issues: every workaround, and the issue it waits for
 
-`npm run upstream` shows the state of each issue the code tags (`Upstream:`). A row without a link is not filed. When an issue closes, do what its row says, then `npm run check` and the soak.
+`charter upstream` shows the state of each issue the code tags (`Upstream:`). A row without a link is not filed. When an issue closes, do what its row says, then `charter check` and the soak.
 
 | Issue | Problem | Workaround | When fixed |
 |---|---|---|---|

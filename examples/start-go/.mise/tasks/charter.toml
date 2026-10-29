@@ -70,12 +70,37 @@ exec fnox exec -- charter tail
 '''
 
 ["charter:check"]
-description = "Everything charter.toml and charter's files in this app should be (charter check): exits 1 on any problem"
+description = "Every check that needs no Cloudflare account (charter check): charter's files, and a project's types, specs, tests and Worker; exits 1 on any problem"
 run = "charter check"
 
 ["charter:ci"]
-description = "What CI runs, here (charter ci run, charter.toml's [ci]): the build and the checks; on GitHub also the preview's build and a release"
-run = "charter ci run"
+description = "A job of charter.toml's [ci.jobs] here, as GitHub runs it (charter ci <job>); none: every job run on a change, or an app's own [ci] (charter ci run)"
+usage = '''
+arg "[job]" help="a job of charter.toml's [ci.jobs]"
+arg "[project]" help="the project to run it in, for a job that runs in each"
+'''
+run = 'charter ci ${usage_job:-} ${usage_project:-}'
+
+["charter:issues"]
+description = "First, whenever you start: the open issues (charter issues); with a kind (bug, feature, upstream, plan), a new one's body and the gh command that files it"
+usage = 'arg "[kind]" help="bug, feature, upstream or plan"'
+run = 'charter issues ${usage_kind:-}'
+
+["charter:docs"]
+description = "After changing a page in docs/: what a program can see wrong in it (charter docs)"
+run = "charter docs"
+
+["charter:upstream"]
+description = "Now and then: the upstream issues the code works around, and their state (charter upstream)"
+run = "charter upstream"
+
+["charter:repo"]
+description = "After changing charter.toml's [github]: the repo on GitHub as it says (charter repo)"
+run = "charter repo"
+
+["charter:init"]
+description = "After upgrading charter: charter's files, these tasks, the skill and the workflows again (charter init)"
+run = "charter init"
 
 ["charter:tasks"]
 description = "After upgrading charter: these tasks and the Workers Builds launcher again (charter tasks)"

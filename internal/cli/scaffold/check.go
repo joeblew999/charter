@@ -12,19 +12,42 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/joeblew999/charter/internal/cli/repo"
 	"github.com/joeblew999/charter/internal/pins"
 	"github.com/joeblew999/charter/internal/version"
 )
 
-// Report says every problem with charter.toml and the files charter writes into p's app, run from its root (charter
-// check's first part), and whether there was none.
-func Report(p *project.Project) bool {
-	problems := Problems(p)
+// Report says every problem with charter's files here (charter check's first part, and init -check): an app's, from
+// its root (charter.toml's folder, which it moves to), and at the repo's top, the repo's (go doc
+// .../internal/cli/repo); and whether there was none.
+func Report() bool {
+	var problems, what []string
+	p, err := project.Load(".")
+	if err == nil {
+		check(os.Chdir(p.Root))
+		problems = append(problems, Problems(p)...)
+		what = append(what, project.File+" and charter's files in this app")
+	}
+	if top, atTop := repo.AtTop(); atTop {
+		// A repo that is no app has the mise tasks too, but charter's own, which runs this checkout's charter.
+		if p == nil && !repo.IsCharter(top) {
+			if b, err := os.ReadFile(TasksFile); err != nil || !bytes.Equal(b, tasks) {
+				problems = append(problems, TasksFile+" isn't this charter's: charter tasks")
+			}
+		}
+		rp, err := repo.Problems(top)
+		check(err)
+		problems = append(problems, rp...)
+		what = append(what, "charter's files in this repo")
+	}
+	if len(what) == 0 {
+		problems = append(problems, "no "+project.File+" naming a Worker here, and this is not the repo's top: run it in a project's folder, or at the top")
+	}
 	for _, s := range problems {
 		fmt.Println("✗", s)
 	}
 	if len(problems) == 0 {
-		fmt.Printf("✓ %s and charter's files in this app\n", project.File)
+		fmt.Printf("✓ %s\n", strings.Join(what, ", and "))
 	}
 	return len(problems) == 0
 }
