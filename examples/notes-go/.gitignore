@@ -3,7 +3,7 @@ node_modules/
 .cloudflare/
 .wrangler/
 dist/
-build/
+/build/
 
 # Local secrets and logs
 .dev.vars*

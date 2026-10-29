@@ -78,6 +78,17 @@ func TestDeploy(t *testing.T) {
 	if _, err := p.Deploy("staging", ""); err == nil || !strings.Contains(err.Error(), "no [staging]") {
 		t.Errorf("staging without [staging]: %v", err)
 	}
+	// A database of its own name (as cf deploy named one, <worker>-db), with each environment's suffix.
+	named := project.D1{Binding: "DB", Database: "my-app-db"}
+	if got := p.DatabaseOf(named, prod); got != "my-app-db" {
+		t.Errorf("DatabaseOf production = %s", got)
+	}
+	if got := p.DatabaseOf(named, pr); got != "my-app-db-preview" {
+		t.Errorf("DatabaseOf preview = %s", got)
+	}
+	if got := p.DatabaseOf(project.D1{Binding: "DB"}, pr); got != "my-app-preview" {
+		t.Errorf("DatabaseOf preview, no name = %s", got)
+	}
 	if _, err := p.Deploy("preview", ""); err == nil {
 		t.Error("a preview without a name deployed")
 	}
@@ -102,7 +113,8 @@ func TestProblems(t *testing.T) {
 		{`compatibility_date = "2026-09-11"`, "name is required"},
 		{`name = "x"` + "\ncompatibility_date = \"2026-09-11\"\nnmae = \"y\"", "unknown keys"},
 		{`name = "x"` + "\ncompatibility_date = \"2026-09-11\"\n[[rate_limits]]\nbinding = \"W\"\nnamespace_id = 1\nlimit = 5\nperiod = 30", "period 10 or 60"},
-		{`name = "x"` + "\ncompatibility_date = \"2026-09-11\"\n[[durable_objects]]\nbinding = \"R\"\nclass = \"Room\"", "a migration"},
+		{`name = "x"` + "\ncompatibility_date = \"2026-09-11\"\n[[durable_objects]]\nbinding = \"R\"\nclass = \"Room\"\nmigration = \"v1\"\n[[durable_objects]]\nbinding = \"H\"\nclass = \"Hub\"", "or none does"},
+		{`name = "x"` + "\ncompatibility_date = \"2026-09-11\"\n[[durable_objects]]\nbinding = \"R\"", "a binding and a class"},
 	} {
 		if _, err := load(t, tc.toml); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%q: %v, want %q", tc.toml, err, tc.want)
@@ -120,5 +132,42 @@ func TestBranches(t *testing.T) {
 	p := &project.Project{Name: "my-app", Subdomain: "you"}
 	if got := p.PreviewURL("fix-x"); got != "https://fix-x-my-app.you.workers.dev" {
 		t.Errorf("PreviewURL = %s", got)
+	}
+}
+
+// TestLimits: the contract's x-rate-limit on an operation of the spec is a rate limit beside [[rate_limits]], once
+// however many operations name it; one binding said in both, or twice differently, is refused. A binding with no
+// namespace_id counts in the one named from the Worker and the binding, the same one charter-ts names.
+func TestLimits(t *testing.T) {
+	spec := `{"paths": {
+		"/api/notes": {"post": {"x-rate-limit": {"binding": "WRITE_LIMIT", "limit": 100, "period": 60}}, "get": {}},
+		"/api/notes/{id}": {"delete": {"x-rate-limit": {"binding": "WRITE_LIMIT", "limit": 100, "period": 60}}}
+	}}`
+	limits := func(toml, spec string) ([]project.RateLimit, error) {
+		t.Helper()
+		p, err := load(t, toml)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(p.Root, "openapi.json"), []byte(spec), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return p.Limits()
+	}
+	base := "name = \"x\"\ncompatibility_date = \"2026-09-11\"\nspec = \"openapi.json\"\n"
+	got, err := limits(base+"[[rate_limits]]\nbinding = \"LOGINS\"\nlimit = 5\nperiod = 60\n", spec)
+	want := []project.RateLimit{{Binding: "LOGINS", Limit: 5, Period: 60}, {Binding: "WRITE_LIMIT", Limit: 100, Period: 60}}
+	if err != nil || !slices.Equal(got, want) {
+		t.Errorf("Limits = %v, %v; want %v", got, err, want)
+	}
+	if _, err := limits(base+"[[rate_limits]]\nbinding = \"WRITE_LIMIT\"\nlimit = 5\nperiod = 60\n", spec); err == nil || !strings.Contains(err.Error(), "say it in one") {
+		t.Errorf("a binding in both: %v", err)
+	}
+	if _, err := limits(base, strings.Replace(spec, `"limit": 100, "period": 60}}}`, `"limit": 7, "period": 60}}}`, 1)); err == nil || !strings.Contains(err.Error(), "twice, differently") {
+		t.Errorf("declared twice, differently: %v", err)
+	}
+	// charter-ts's namespaceOf("charter-notes-go", "WRITE_LIMIT"), which the notes Worker counts in now.
+	if n := project.Namespace("charter-notes-go", "WRITE_LIMIT"); n != 390463246 {
+		t.Errorf("Namespace = %d, want charter-ts's 390463246", n)
 	}
 }

@@ -1,7 +1,6 @@
 {
 	"extends": "charter-ts/tsconfig.node.json",
 	"include": [
-		"charter.config.ts",
 		"test/soak.ts"
 	]
 }

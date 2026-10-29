@@ -80,11 +80,15 @@ if out=$(mise exec -- charter check 2>&1); then fail "check passed with the app'
 echo "$out" | grep -q "mise.toml pins tinygo: delete that line" || fail "check said: $out"
 echo "$out" | grep "pins tinygo"
 
-step "an app that doesn't pin charter is told to"
+step "an app on a release of charter's library that doesn't pin charter is told to"
+# This app is on this checkout (a replace in go.mod), which needs no pin: without the replace, it is on a release.
 printf '[tools]\ngo = "%s"\n' "$go_pin" > mise.toml
+cp go.mod go.mod.kept
+grep -v '^replace ' go.mod.kept > go.mod
 if out=$(PATH="$bin:$PATH" charter check 2>&1); then fail "check passed with no charter in mise.toml"; fi
 echo "$out" | grep -q "mise.toml doesn't pin charter: mise use github:joeblew999/charter@<version>" || fail "check said: $out"
 echo "$out" | grep "pin charter"
+mv go.mod.kept go.mod
 mv mise.toml.kept mise.toml
 
 step "pass: charter and TinyGo $want reach the app from mise, every way it builds"

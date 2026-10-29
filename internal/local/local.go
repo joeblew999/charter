@@ -12,6 +12,7 @@ package local
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -43,10 +44,14 @@ func Write(p *project.Project) error {
 	if err != nil {
 		return err
 	}
+	limits, err := p.Limits()
+	if err != nil {
+		return err
+	}
 	files := map[string]string{
 		".gitignore":   "# " + header + "\n*\n",
 		"config.capnp": config(p, build, migrations),
-		"local.mjs":    entry(p),
+		"local.mjs":    entry(p, limits),
 		"d1.mjs":       d1(p, migrations),
 		"assets.mjs":   assets,
 	}
@@ -124,6 +129,9 @@ func config(p *project.Project, build []string, migrations []migration) string {
 	q := strconv.Quote
 	fmt.Fprintf(&b, "# %s\n#\n# workerd serve .charter/config.capnp, from the app's root. Embed paths are relative to this file, disk paths to\n# the working directory.\n\n", header)
 	b.WriteString("using Workerd = import \"/workerd/workerd.capnp\";\n\nconst config :Workerd.Config = (\n  services = [\n")
+	// What the Worker's fetch reaches: workerd's own allows only the internet, where a local Worker calls what runs
+	// beside it too (a webhook's receiver, a token issuer), as cf dev's allows.
+	b.WriteString("    (name = \"internet\", network = (allow = [\"public\", \"private\", \"local\"], tlsOptions = (trustBrowserCas = true))),\n")
 	front := "app"
 	if p.Assets != "" {
 		front = "assets"
@@ -172,6 +180,18 @@ func config(p *project.Project, build []string, migrations []migration) string {
 	for _, k := range sortedKeys(p.Local.Vars) {
 		fmt.Fprintf(&b, "    (name = %s, text = %s),\n", q(k), q(p.Local.Vars[k]))
 	}
+	// A secret without a local value in [local] vars, and what [test] env gives the Worker under test: from workerd's
+	// environment (charter check sets them for its run). Only one the environment has is bound: workerd binds an unset
+	// one as null, where Cloudflare (and cf dev) leave an unset secret out, and the Worker must see the same.
+	var fromEnv []string
+	for _, k := range append(append(slices.Clone(p.Secrets.Required), p.Secrets.Optional...), slices.Sorted(maps.Keys(p.Test.Env))...) {
+		if _, ok := p.Local.Vars[k]; !ok && os.Getenv(k) != "" && !slices.Contains(fromEnv, k) {
+			fromEnv = append(fromEnv, k)
+		}
+	}
+	for _, k := range fromEnv {
+		fmt.Fprintf(&b, "    (name = %s, fromEnvironment = %s),\n", q(k), q(k))
+	}
 	for _, d := range p.DurableObjects {
 		fmt.Fprintf(&b, "    (name = %s, durableObjectNamespace = %s),\n", q(d.Binding), q(d.Class))
 	}
@@ -184,7 +204,8 @@ func config(p *project.Project, build []string, migrations []migration) string {
 	return b.String()
 }
 
-func entry(p *project.Project) string {
+// entry is local.mjs, with an in-memory counter for each rate limit the Worker binds (limits, project.Limits).
+func entry(p *project.Project, limits []project.RateLimit) string {
 	var b strings.Builder
 	q := strconv.Quote
 	from := "../" + entryModule(p)
@@ -212,7 +233,7 @@ function rateLimit(limit, period) {
 }
 const rateLimits = {
 `)
-	for _, r := range p.RateLimits {
+	for _, r := range limits {
 		fmt.Fprintf(&b, "  %s: rateLimit(%d, %d),\n", q(r.Binding), r.Limit, r.Period)
 	}
 	b.WriteString("};\n\nexport default {\n  ...entry,\n  fetch(request, env, ctx) {\n" +
@@ -252,11 +273,19 @@ export class CharterD1 extends DurableObject {
   migrate(binding) {
     if (this.migrated) return;
     const sql = this.ctx.storage.sql;
-    sql.exec("CREATE TABLE IF NOT EXISTS _charter_migrations (name TEXT PRIMARY KEY)");
-    for (const [name, body] of MIGRATIONS[binding] ?? []) {
-      if (sql.exec("SELECT 1 FROM _charter_migrations WHERE name = ?", name).toArray().length) continue;
+    // Each migration once, by its file name in d1_migrations, as on Cloudflare (charter deploy, cf d1 migrations).
+    sql.exec("CREATE TABLE IF NOT EXISTS d1_migrations(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)");
+    // Local state charter migrated before, into _charter_migrations by path, keeps what it has.
+    if (sql.exec("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '_charter_migrations'").toArray().length) {
+      for (const { name } of sql.exec("SELECT name FROM _charter_migrations").toArray()) {
+        sql.exec("INSERT OR IGNORE INTO d1_migrations (name) VALUES (?)", name.split("/").pop());
+      }
+    }
+    for (const [path, body] of MIGRATIONS[binding] ?? []) {
+      const name = path.split("/").pop();
+      if (sql.exec("SELECT 1 FROM d1_migrations WHERE name = ?", name).toArray().length) continue;
       sql.exec(body);
-      sql.exec("INSERT INTO _charter_migrations (name) VALUES (?)", name);
+      sql.exec("INSERT INTO d1_migrations (name) VALUES (?)", name);
     }
     this.migrated = true;
   }

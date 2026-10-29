@@ -6,7 +6,7 @@
 # npm run deploy). tinygo and binaryen build a Go Worker: internal/cli/build patches this
 # TinyGo's runtime, so a new TinyGo that the patch no longer fits fails the build and says so. sqlc
 # types a Go project's queries (db.ts). goreleaser builds the charter binary a release puts on GitHub (.goreleaser.yaml),
-# which a repo takes from mise.
+# which a repo takes from mise. workerd runs a Worker locally (charter dev, check, with), as Cloudflare does.
 [tools]
 go = "1.27.3"
 gh = "2.103.3"
@@ -18,3 +18,4 @@ tinygo = "0.44.0"
 "aqua:WebAssembly/binaryen" = "133"
 "aqua:sqlc-dev/sqlc" = "1.31.1"
 goreleaser = "2.18.3"
+workerd = "1.20261019.1"

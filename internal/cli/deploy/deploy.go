@@ -87,12 +87,16 @@ func Main(args []string) {
 	fs.StringVar(&cfg.MigrationsDir, "migrations", "", "apply these *.sql files (in name order) to every -d1 database")
 	fs.StringVar(&cfg.MigrationTag, "migration-tag", "", "Durable Object migration tag to reach (sent only if not yet applied)")
 	fs.Var(vars(cfg.Vars), "var", "plain_text binding KEY=VALUE (repeatable)")
+	var secrets, optionalSecrets list
+	fs.Var(&secrets, "secret", "secret_text binding NAME, its value from the environment, which must have it (repeatable; fnox exec -- charter deploy …)")
+	fs.Var(&optionalSecrets, "optional-secret", "secret_text binding NAME from the environment, set only where it has it (repeatable)")
 	fs.Var(vars(cfg.D1), "d1", "D1 binding NAME=DATABASE_NAME or NAME=DATABASE_ID (repeatable)")
 	fs.Var(vars(cfg.DurableObjects), "do", "Durable Object binding NAME=CLASS (repeatable)")
 	fs.Var(rateLimits(cfg.RateLimits), "ratelimit", "rate limiting binding NAME=NAMESPACE_ID:LIMIT/PERIOD, e.g. WRITES=1001:60/10 (repeatable)")
 	fs.Var((*list)(&cfg.Domains), "domain", "Workers Custom Domain to attach, e.g. app.example.com (repeatable; zone must be in the account)")
 	fs.Var((*list)(&cfg.Modules), "module", "extra ES module next to -main, e.g. worker/room.mjs (repeatable)")
 	fs.Var((*list)(&cfg.NewSQLiteClasses), "new-sqlite-class", "Durable Object class created by -migration-tag (repeatable)")
+	fs.Var((*list)(&cfg.ExportedClasses), "export-class", "Durable Object class (SQLite) declared in the upload's exports, as cf deploy declares one: no migration tag (repeatable)")
 	dryRun := fs.Bool("dry-run", false, "print what would be uploaded; make no API calls")
 	previewName := fs.String("preview", "", "deploy as this Worker Preview of -name (e.g. pr-7) instead of production; prints its URL")
 	deletePreview := fs.String("delete-preview", "", "delete this Worker Preview of -name and exit")
@@ -193,12 +197,24 @@ func Main(args []string) {
 		return
 	}
 
+	// The secrets' values come from the environment, and only their names are ever printed.
+	cfg.Secrets = map[string]string{}
+	for _, name := range secrets {
+		value := os.Getenv(name)
+		need(value != "", name+" is not set: the Worker needs it (fnox exec -- charter deploy …)")
+		cfg.Secrets[name] = value
+	}
+	for _, name := range optionalSecrets {
+		if value := os.Getenv(name); value != "" {
+			cfg.Secrets[name] = value
+		}
+	}
 	plan, err := cfdeploy.NewPlan(cfg)
 	if err != nil {
 		log.Fatalf("deploy: %v (build first: charter build)", err)
 	}
-	log.Printf("worker %q: %d modules (main %s), %d assets from %q, vars %v, d1 %v, do %v, ratelimit %v, domains %v, migration %q %v",
-		cfg.Name, len(plan.Modules), plan.Modules[0].Name, len(plan.Assets), cfg.AssetsDir, cfg.Vars, cfg.D1, cfg.DurableObjects, cfg.RateLimits, cfg.Domains, cfg.MigrationTag, cfg.NewSQLiteClasses)
+	log.Printf("worker %q: %d modules (main %s), %d assets from %q, vars %v, secrets %v, d1 %v, do %v, ratelimit %v, domains %v, migration %q %v",
+		cfg.Name, len(plan.Modules), plan.Modules[0].Name, len(plan.Assets), cfg.AssetsDir, cfg.Vars, slices.Sorted(maps.Keys(cfg.Secrets)), cfg.D1, cfg.DurableObjects, cfg.RateLimits, cfg.Domains, cfg.MigrationTag, cfg.NewSQLiteClasses)
 	if *dryRun {
 		for _, m := range plan.Modules {
 			log.Printf("  module %-22s ← %s", m.Name, m.Path)
@@ -268,7 +284,7 @@ func fromProject(args []string) []string {
 	}
 	migrations := ""
 	for _, db := range p.D1 {
-		out = append(out, "-d1", db.Binding+"="+d.Database)
+		out = append(out, "-d1", db.Binding+"="+p.DatabaseOf(db, d))
 		if db.Migrations != "" && migrations != "" && db.Migrations != migrations {
 			log.Fatal("deploy: every [[d1]] gets the same migrations (one folder applied to every database)")
 		}
@@ -291,11 +307,28 @@ func fromProject(args []string) []string {
 			out = append(out, "-new-sqlite-class", c)
 		}
 	}
-	for _, r := range p.RateLimits {
-		out = append(out, "-ratelimit", fmt.Sprintf("%s=%d:%d/%d", r.Binding, r.NamespaceID, r.Limit, r.Period))
+	for _, o := range p.DurableObjects {
+		if o.Migration == "" {
+			out = append(out, "-export-class", o.Class)
+		}
+	}
+	limits, err := p.Limits()
+	check(err)
+	for _, r := range limits {
+		ns := r.NamespaceID
+		if ns == 0 {
+			ns = project.Namespace(d.Worker, r.Binding)
+		}
+		out = append(out, "-ratelimit", fmt.Sprintf("%s=%d:%d/%d", r.Binding, ns, r.Limit, r.Period))
 	}
 	for _, k := range slices.Sorted(maps.Keys(d.Vars)) {
 		out = append(out, "-var", k+"="+d.Vars[k])
+	}
+	for _, name := range p.Secrets.Required {
+		out = append(out, "-secret", name)
+	}
+	for _, name := range p.Secrets.Optional {
+		out = append(out, "-optional-secret", name)
 	}
 	if d.Domain != "" {
 		out = append(out, "-domain", d.Domain)

@@ -132,6 +132,11 @@ func TestWrite(t *testing.T) {
 // Durable Object, its variables, the time zone, and the assets in front of it.
 func TestWorkerd(t *testing.T) {
 	bin, err := exec.LookPath("workerd")
+	// A mise shim picks its version by the folder it runs in, and the app is in a folder of its own: the binary the
+	// shim names here (mise.toml pins it) runs anywhere.
+	if out, err := exec.Command("mise", "which", "workerd").Output(); err == nil {
+		bin = strings.TrimSpace(string(out))
+	}
 	if err != nil || exec.Command(bin, "--version").Run() != nil {
 		t.Skip("no workerd that runs on PATH")
 	}

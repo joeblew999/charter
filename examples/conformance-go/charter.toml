@@ -1,0 +1,68 @@
+# charter.toml: the conformance API in Go on Cloudflare, every Fern feature and every way in, everything charter knows
+# about it (every key: go doc github.com/joeblew999/charter/project). Its steps are charter's: charter check, spec, sdk,
+# dev, deploy (fnox exec -- charter deploy production), live-test.
+name = "charter-conformance-go"
+compatibility_date = "2026-09-25"
+main = "worker.mjs"
+health = "/api/openapi.json"
+port = 5175
+# Where it is deployed (charter deploy prints it): the live test's target, and the server the specs name.
+url = "https://charter-conformance-go.gedw99.workers.dev"
+# Its rate limits are the contract's (x-rate-limit in the spec), each a Workers Rate Limiting binding.
+spec = "fern/openapi.json"
+# The queries of api/queries.sql as Go (api/queries.go), typed by sqlc against migrations/.
+db = "sqlc"
+
+[[d1]]
+binding = "DB"
+migrations = "migrations"
+database = "charter-conformance-go-db"
+
+# The live fan-out: the library's Hub class (build/hub.mjs), which worker.mjs exports.
+[[durable_objects]]
+binding = "HUB"
+class = "Hub"
+
+# The API's tokens (api/handlers.go), and whom else it trusts (Cloudflare Access, an OpenID Connect issuer) and how it
+# signs its webhooks: unset, it does without. Its other settings (CLIENT_ID, CLIENT_SECRET, TOKEN_SECRET) have the
+# tests' defaults (api/handlers.go): an API of its own would keep them as secrets.
+[secrets]
+required = ["READ_TOKEN", "WRITE_TOKEN"]
+optional = ["ACCESS_TEAM_DOMAIN", "ACCESS_AUD", "OIDC_ISSUER", "OIDC_AUDIENCE", "WEBHOOK_SECRET"]
+
+# Where the noteCreated webhook is sent; empty: nowhere.
+[production]
+vars = { WEBHOOK_URL = "" }
+
+# Throwaway tokens for the API on this machine and its tests.
+[local]
+vars = { READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
+
+[sdks]
+name = "Conformance"
+more = ["python", "cli"]
+audiences = ["public"]
+
+# The tests examples/conformance-ts has, against this server: the same API, so the same tests. The SDK test runs the
+# TypeScript SDKs made from this contract's specs (made first if fern/ changed: Docker); then MCP and every way in. The
+# tests serve the auth test's issuer of tokens ({port1}), which the server trusts as Cloudflare Access and as an OpenID
+# Connect issuer, and the webhook's receiver ({port2}), for the server's whole run.
+[test]
+native = true
+run = [
+  "charter sdk typescript-dist -if-stale",
+  "charter sdk typescript-public -if-stale",
+  "node ../conformance-ts/test/sdk.ts {base} --webhooks http://localhost:{port2}",
+  "node ../conformance-ts/test/mcp.ts {base}",
+  "node ../conformance-ts/test/auth.ts {base} {port1}",
+]
+env = { WEBHOOK_URL = "http://localhost:{port2}/webhook", ACCESS_TEAM_DOMAIN = "http://localhost:{port1}", ACCESS_AUD = "test-aud", OIDC_ISSUER = "http://localhost:{port1}", OIDC_AUDIENCE = "https://conformance.test" }
+serve = [{ command = "node ../conformance-ts/test/webhook-receiver.ts {port2}", ready = "http://localhost:{port2}/" }]
+# Against the deployed Worker: the SDK and MCP (never the auth test: its issuer is local). It writes test notes.
+live = [
+  "charter sdk typescript-dist -if-stale",
+  "charter sdk typescript-public -if-stale",
+  "node ../conformance-ts/test/sdk.ts {base}",
+  "node ../conformance-ts/test/mcp.ts {base}",
+  "node ../conformance-ts/test/ratelimit.ts {base}",
+]

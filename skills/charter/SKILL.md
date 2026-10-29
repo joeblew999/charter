@@ -45,11 +45,13 @@ binding = "ROOM"
 class = "Room"              # exported by main
 migration = "v1"            # a new class takes a new migration tag
 
-[[rate_limits]]
+[[rate_limits]]             # with a contract, declare the limit there instead (x-rate-limit; spec = its spec)
 binding = "WRITES"
-namespace_id = 1001         # unique in the account
 limit = 60
-period = 10                 # 10 or 60
+period = 10                 # 10 or 60; its counter is named from the Worker and binding
+
+[secrets]                   # values only ever from the environment of a deploy (fnox), never in a file
+required = ["WRITE_TOKEN"]  # [local] vars has a throwaway value for local runs
 ```
 
 An app's test can read charter.toml (`project.Load`) to check a value it copies.

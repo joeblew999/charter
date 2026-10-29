@@ -1,0 +1,44 @@
+# charter.toml: the start API with server-rendered pages (gsx, Datastar), in Go on Cloudflare, everything charter knows
+# about it (every key: go doc github.com/joeblew999/charter/project). Its steps are charter's: charter check, spec, sdk,
+# dev, deploy, live-test.
+name = "charter-start-datastar"
+compatibility_date = "2026-09-25"
+main = "worker.mjs"
+health = "/api/openapi.json"
+port = 5180
+# Where it is deployed (charter deploy prints it): the live test's target, and the server the specs name.
+url = "https://charter-start-datastar.gedw99.workers.dev"
+spec = "fern/openapi.json"
+# The queries of api/queries.sql as Go (api/queries.go), typed by sqlc against migrations/.
+db = "sqlc"
+
+[[d1]]
+binding = "DB"
+migrations = "migrations"
+database = "charter-start-datastar-db"
+
+# The live fan-out of messages: the library's Hub class (build/hub.mjs), which worker.mjs exports.
+[[durable_objects]]
+binding = "HUB"
+class = "Hub"
+
+[production]
+vars = { APP_NAME = "charter-start-datastar" }
+
+[local]
+vars = { APP_NAME = "charter-start-datastar" }
+
+[sdks]
+name = "Api"
+
+# Its pages' *.x.go are gsx's, committed; gofmt checks api/ and pages/.
+[go]
+lint = ["api", "pages"]
+gsx = true
+
+# Its test against a server is the TypeScript start project's (the hello route every start project has); its messages
+# and pages are tested by go test (api/api_test.go, pages/pages_test.go).
+[test]
+run = ["node ../start-ts/test/live.ts {base}"]
+native = true
+live = ["node ../start-ts/test/live.ts {base}"]

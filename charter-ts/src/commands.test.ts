@@ -160,13 +160,15 @@ describe("new", () => {
 		const into = join(scratch, "made-go");
 		const made = charter(scratch, "new", "demo-go", "--from", "start", "--go", "--into", into);
 		assert.equal(made.code, 0, made.out);
-		for (const file of ["main.go", "api/contract.go", "charter.config.ts", "test/live.ts", "test/schemas.ts", "ci.config.ts", ".github/workflows/self-check.yml"]) assert.ok(existsSync(join(into, file)), `${file} is there`);
+		for (const file of ["main.go", "api/contract.go", "charter.toml", ".mise/tasks/charter.toml", "test/live.ts", "test/schemas.ts", "ci.config.ts", ".github/workflows/self-check.yml"]) assert.ok(existsSync(join(into, file)), `${file} is there`);
+		assert.ok(!existsSync(join(into, "charter.config.ts")), "a Go project is charter's: no charter.config.ts");
 		const mod = read(into, "go.mod");
 		assert.match(mod, /^module demo-go$/m);
 		assert.match(mod, new RegExp(`github\\.com/joeblew999/charter v${version.replaceAll(".", "\\.")}`));
 		assert.doesNotMatch(mod, /^replace /m);
 		assert.match(read(into, "test/live.ts"), /from "\.\/schemas\.ts"/);
-		assert.match(read(into, "charter.config.ts"), /node\("test\/live\.ts"/);
+		assert.match(read(into, "charter.toml"), /"node test\/live\.ts \{base\}"/);
+		assert.match(read(into, "charter.toml"), /^name = "demo-go"$/m);
 		const outside = spawnSync("grep", ["-rlE", "-e", "examples/[a-z-]+-(ts|go)", "-e", "charter-start-go", into], { encoding: "utf8" }).stdout.trim();
 		assert.equal(outside, "", `it points outside itself, or keeps the example's names:\n${outside}`);
 	});

@@ -63,4 +63,5 @@ export function settings(root: string): Settings {
 }
 
 /** isProject: an API project, which charter.config.ts configures. */
-export const isProject = (root: string) => existsSync(join(root, "charter.config.ts"));
+/** A project: charter.config.ts (TypeScript), or charter.toml (a Go one, whose steps are charter's, #121). */
+export const isProject = (root: string) => existsSync(join(root, "charter.config.ts")) || existsSync(join(root, "charter.toml"));

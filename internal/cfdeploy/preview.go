@@ -152,6 +152,9 @@ func (c *Client) DeployPreview(ctx context.Context, cfg Config, name string, ann
 	if doMigration != nil {
 		meta["migrations"] = doMigration
 	}
+	if e := exports(cfg); e != nil {
+		meta["exports"] = e
+	}
 	if jwt != "" {
 		meta["assets"] = map[string]string{"jwt": jwt}
 	}

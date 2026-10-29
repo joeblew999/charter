@@ -7,10 +7,13 @@ nav_order: 8
 `examples/start-htmx` is a project whose one Worker serves HTML pages beside the API, its specs and MCP. The pages are written in [gsx](https://github.com/gsxhq/gsx) and made live with [htmx 4](https://four.htmx.org), in Go, built with TinyGo like the rest. A message posted on one page shows on every open page at once, as HTML over SSE. `examples/start-datastar` is the same project with [Datastar](https://data-star.dev) in place of htmx.
 
 ```sh
-npm ci                       # at this repo's root
-npm run check -w examples/start-htmx
-npm run dev -w examples/start-htmx -- --native   # http://localhost:5179/ : open it in two windows, post in one
+npm ci                          # at this repo's root: the TypeScript tests the project runs
+cd examples/start-htmx
+go tool charter check
+go tool charter dev -native     # http://localhost:5179/ : open it in two windows, post in one
 ```
+
+A Go project's steps are charter's, from its `charter.toml`: in charter's repo `go tool charter <step>` runs this checkout's, and in a project of your own `mise run charter:<step>` runs the one `mise.toml` pins.
 
 The projects are `examples/start-htmx/` and `examples/start-datastar/` (port 5180) in this repo.
 
@@ -19,7 +22,7 @@ The projects are `examples/start-htmx/` and `examples/start-datastar/` (port 518
 | Path | What it is |
 |---|---|
 | `pages/*.gsx` | The pages and fragments: `Layout`, `Home`, `Form`, `Item` |
-| `pages/*.x.go` | Generated from the `.gsx` by `go tool gsx generate`; never edit. `npm run check` writes them and fails if they were stale |
+| `pages/*.x.go` | Generated from the `.gsx` by `go tool gsx generate`; never edit. `charter check` writes them and fails if they were stale |
 | `pages/pages.go` | The routes: `GET /`, `POST /messages`, `GET /static/...`. Every other path goes to the API |
 | `pages/stream.go` | `GET /messages/stream`: new messages as HTML, over SSE, by `charter/fragments` ([Libraries](libraries.md)) |
 | `pages/static/` | htmx 4 and its SSE extension, as the npm package `htmx.org` has them, or Datastar's `bundles/datastar.js`, as its release has it, each file named with its version; and `site.css`. The Worker serves them, the versioned ones as immutable |

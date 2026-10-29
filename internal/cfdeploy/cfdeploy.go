@@ -2,7 +2,7 @@
 // no wrangler, no Node. It follows https://developers.cloudflare.com/workers/static-assets/direct-upload/:
 //
 //  0. D1: find (or create) each database by name and apply migrations/*.sql not yet recorded in its
-//     _migrations table (D1 REST API)
+//     d1_migrations table, cf's (D1 REST API)
 //  1. hash every file in the assets directory into a manifest → POST …/assets-upload-session
 //  2. upload the buckets Cloudflare asks for (base64 multipart, upload JWT) → completion JWT
 //  3. PUT the script: entry module + extra JS modules + build/ (TinyGo) + metadata (compatibility
@@ -60,6 +60,7 @@ type Config struct {
 	Modules    []string // extra ES modules next to MainModule, e.g. "worker/room.mjs"
 
 	Vars          map[string]string // plain_text bindings
+	Secrets       map[string]string // secret_text bindings, set by this deploy (never logged); others stay as they are
 	D1            map[string]string // binding → database name or id
 	D1Create      bool              // create D1 databases in D1 that don't exist yet
 	MigrationsDir string            // apply these *.sql files (in name order) to every D1 database
@@ -74,6 +75,10 @@ type Config struct {
 	DurableObjects   map[string]string // binding → class name
 	MigrationTag     string            // Durable Object migration tag to reach (sent only if not yet applied)
 	NewSQLiteClasses []string          // classes created by MigrationTag
+
+	// ExportedClasses are Durable Object classes (SQLite storage) declared in the upload's exports, as cf deploy
+	// declares them: no migration tags, a class live as long as it is declared.
+	ExportedClasses []string
 }
 
 // RateLimit is a Workers Rate Limiting binding: a simple fixed window of Limit requests per Period seconds
@@ -409,12 +414,24 @@ func (c *Client) resolveD1(ctx context.Context, ref string, create bool) (string
 	return created.UUID, nil
 }
 
-// migrateD1 applies dir/*.sql in name order, recording each in _migrations so it runs once.
+// migrateD1 applies dir/*.sql in name order, each once. It records each by its file name in d1_migrations, in the
+// same query as the migration, as cf d1 migrations apply does (cf's table, its schema), so a database either one
+// migrated is the same to both. A database charter migrated before into _migrations (names without .sql) has those
+// names copied across first, so none runs again.
 func (c *Client) migrateD1(ctx context.Context, id, dir string) error {
-	if _, err := c.d1Query(ctx, id, `CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT (datetime('now')))`); err != nil {
+	if _, err := c.d1Query(ctx, id, `CREATE TABLE IF NOT EXISTS d1_migrations(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)`); err != nil {
 		return err
 	}
-	rows, err := c.d1Query(ctx, id, `SELECT name FROM _migrations`)
+	old, err := c.d1Query(ctx, id, `SELECT name FROM sqlite_master WHERE type = 'table' AND name = '_migrations'`)
+	if err != nil {
+		return err
+	}
+	if len(old) > 0 {
+		if _, err := c.d1Query(ctx, id, `INSERT OR IGNORE INTO d1_migrations (name) SELECT name || '.sql' FROM _migrations ORDER BY applied_at, name`); err != nil {
+			return fmt.Errorf("copy _migrations into d1_migrations: %w", err)
+		}
+	}
+	rows, err := c.d1Query(ctx, id, `SELECT name FROM d1_migrations`)
 	if err != nil {
 		return err
 	}
@@ -428,7 +445,7 @@ func (c *Client) migrateD1(ctx context.Context, id, dir string) error {
 	}
 	slices.Sort(files)
 	for _, f := range files {
-		name := strings.TrimSuffix(filepath.Base(f), ".sql")
+		name := filepath.Base(f)
 		if applied[name] {
 			continue
 		}
@@ -436,11 +453,9 @@ func (c *Client) migrateD1(ctx context.Context, id, dir string) error {
 		if err != nil {
 			return err
 		}
-		if _, err := c.d1Query(ctx, id, string(body)); err != nil {
+		sql := strings.TrimRight(strings.TrimSpace(string(body)), ";") + ";\nINSERT INTO d1_migrations (name) VALUES ('" + strings.ReplaceAll(name, "'", "''") + "');"
+		if _, err := c.d1Query(ctx, id, sql); err != nil {
 			return fmt.Errorf("%s: %w", name, err)
-		}
-		if _, err := c.d1Query(ctx, id, `INSERT INTO _migrations (name) VALUES (?)`, name); err != nil {
-			return err
 		}
 		c.logf("✓ d1 migration %s applied", name)
 	}
@@ -529,9 +544,14 @@ func (c *Client) putScript(ctx context.Context, cfg Config, modules []Module, d1
 		// Workers Logs: every request's logs and CPU time, in the dashboard and the observability
 		// API. An upload without it turns logging off, so every deploy says so.
 		"observability": map[string]any{"enabled": true, "head_sampling_rate": 1},
+		// A secret this deploy doesn't set (set before, or by hand) stays, as cf deploy keeps it.
+		"keep_bindings": []string{"secret_text", "secret_key"},
 	}
 	if doMigration != nil {
 		meta["migrations"] = doMigration
+	}
+	if e := exports(cfg); e != nil {
+		meta["exports"] = e
 	}
 	if assetsJWT != "" {
 		meta["assets"] = map[string]string{"jwt": assetsJWT}
@@ -543,11 +563,27 @@ func (c *Client) putScript(ctx context.Context, cfg Config, modules []Module, d1
 	return c.do(ctx, "PUT", c.accountPath("/workers/scripts/"+cfg.Name), "", body, nil)
 }
 
+// exports declares cfg's ExportedClasses in the upload, as cf deploy does: each a Durable Object class with SQLite
+// storage, live as long as it is declared, with no migration tags. nil when there are none.
+func exports(cfg Config) map[string]any {
+	if len(cfg.ExportedClasses) == 0 {
+		return nil
+	}
+	out := map[string]any{}
+	for _, class := range cfg.ExportedClasses {
+		out[class] = map[string]string{"type": "durable-object", "storage": "sqlite"}
+	}
+	return out
+}
+
 // bindings are cfg's bindings in the script upload format (production and previews alike).
 func bindings(cfg Config, d1IDs map[string]string) []map[string]any {
 	bindings := []map[string]any{}
 	for _, k := range slices.Sorted(maps.Keys(cfg.Vars)) {
 		bindings = append(bindings, map[string]any{"type": "plain_text", "name": k, "text": cfg.Vars[k]})
+	}
+	for _, k := range slices.Sorted(maps.Keys(cfg.Secrets)) {
+		bindings = append(bindings, map[string]any{"type": "secret_text", "name": k, "text": cfg.Secrets[k]})
 	}
 	for _, k := range slices.Sorted(maps.Keys(d1IDs)) {
 		bindings = append(bindings, map[string]any{"type": "d1", "name": k, "id": d1IDs[k]})

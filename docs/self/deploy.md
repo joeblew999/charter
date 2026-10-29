@@ -21,11 +21,11 @@ fnox exec -- npm run live-test   # REMOTE: the standard test, then the project's
 - **Migrations** are `migrations/*.sql`, applied in name order, each once: `npm run deploy` applies them on Cloudflare, `npm run dev` locally. Never edit one that was applied.
 - **The URL is `url` in `charter.config.ts`** (`API_URL` overrides it): the specs name it and the live test calls it. After changing it, `npm run spec`.
 - **A Go repo without Node** deploys with `charter deploy` and reads the Worker's logs with `charter tail` ([Libraries](libraries.md#go-githubcomjoeblew999charter)).
-- **The size:** `npm run check` fails when the Worker, gzipped as a deploy uploads it (and in Go, its Wasm), is over `bundleLimit` in `charter.config.ts`: 3 MB by default, what Workers Free allows; Workers Paid allows 10 MB.
+- **The size:** `npm run check` fails when the Worker, gzipped as a deploy uploads it, is over `bundleLimit` in `charter.config.ts`: 3 MB by default, what Workers Free allows; Workers Paid allows 10 MB. In Go, `charter check` holds the Worker's Wasm to Workers Free's 3 MB.
 
 ## Secrets
 
-`secrets` in `charter.config.ts` must be set for a deploy; `optionalSecrets` go with it when the environment has them. `npm run deploy` takes them from the environment: `fnox exec --` here, the repo's GitHub secrets in CI. They reach cf in a file only you can read, removed after. Making them, and who may call: [Auth](auth.md).
+`secrets` in `charter.config.ts` (in Go, `[secrets]` `required` in `charter.toml`) must be set for a deploy; `optionalSecrets` (`optional`) go with it when the environment has them. `npm run deploy` (in Go, `charter deploy production`) takes them from the environment: `fnox exec --` here, the repo's GitHub secrets in CI. They reach Cloudflare without being printed or kept in a file of the repo; a secret a deploy doesn't set stays as it was. Making them, and who may call: [Auth](auth.md).
 
 ## CI on GitHub
 
