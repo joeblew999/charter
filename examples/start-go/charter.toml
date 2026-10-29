@@ -1,0 +1,32 @@
+# charter.toml: the start API in Go on Cloudflare, everything charter knows about it (every key: go doc
+# github.com/joeblew999/charter/project). Its steps are charter's: charter check, spec, sdk, dev, deploy, live-test.
+name = "charter-start-go"
+compatibility_date = "2026-09-25"
+main = "worker.mjs"
+health = "/api/openapi.json"
+port = 5177
+# Where it is deployed (charter deploy prints it): the live test's target, and the server the specs name.
+url = "https://charter-start-go.gedw99.workers.dev"
+spec = "fern/openapi.json"
+
+[[d1]]
+binding = "DB"
+migrations = "migrations"
+database = "charter-start-go-db"
+
+[production]
+vars = { APP_NAME = "charter-start-go" }
+
+[local]
+vars = { APP_NAME = "charter-start-go" }
+
+# The SDKs Fern makes (charter spec writes fern/generators.yml from this and the spec).
+[sdks]
+name = "Api"
+
+# Its test against a server is the TypeScript start project's (the hello route every start project has), natively and
+# under workerd, and against the deployed Worker.
+[test]
+run = ["node ../start-ts/test/live.ts {base}"]
+native = true
+live = ["node ../start-ts/test/live.ts {base}"]

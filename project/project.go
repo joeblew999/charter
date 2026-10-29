@@ -91,6 +91,12 @@ type Project struct {
 	RateLimits        []RateLimit     `toml:"rate_limits"`
 	Spec              string          `toml:"spec"`
 	Secrets           Secrets         `toml:"secrets"`
+	URL               string          `toml:"url"`
+	SpecServer        string          `toml:"spec_server"`
+	DB                string          `toml:"db"`
+	SDKs              SDKs            `toml:"sdks"`
+	Go                Go              `toml:"go"`
+	Test              Test            `toml:"test"`
 	Production        Environment     `toml:"production"`
 	Staging           *Environment    `toml:"staging"`
 	Preview           *Environment    `toml:"preview"`
@@ -122,10 +128,21 @@ type CI struct {
 	ReleaseHook string   `toml:"release_hook"`
 }
 
-// D1 is a D1 database binding. Its database is the Worker's name, with -staging or -preview in those environments.
+// D1 is a D1 database binding. Its database is Database (by default the Worker's name), with -staging or -preview in
+// those environments.
 type D1 struct {
 	Binding    string `toml:"binding"`
 	Migrations string `toml:"migrations"`
+	Database   string `toml:"database"` // the production database's name, e.g. one cf deploy named <worker>-db
+}
+
+// DatabaseOf is the name of the database bound as d in the deploy dep: Database, else the Worker's name, with the
+// environment's -staging or -preview.
+func (p *Project) DatabaseOf(d D1, dep Deploy) string {
+	if d.Database == "" {
+		return dep.Database
+	}
+	return d.Database + strings.TrimPrefix(dep.Database, p.Name)
 }
 
 // DurableObject is a Durable Object namespace binding, with SQLite storage.
@@ -192,6 +209,43 @@ func (p *Project) Limits() ([]RateLimit, error) {
 		}
 	}
 	return out, nil
+}
+
+// Go is a Go project's own checks, beside gofmt, go vet and go test of its root package.
+type Go struct {
+	Lint []string `toml:"lint"` // the folders gofmt checks beside the root's Go files (default ["api"])
+	GSX  bool     `toml:"gsx"`  // its pages' *.x.go are gsx's, committed: check fails when they are stale
+}
+
+// Test is how charter check and charter live-test try the Worker: commands, each run against it. A command is its
+// words, run as they are (no shell): {base} is the Worker's URL, {port1}…{port3} free ports for what the tests serve,
+// and a command that is charter runs as this charter.
+type Test struct {
+	Run    []string          `toml:"run"`    // check: against the Worker on local workerd, after the standard test
+	Native bool              `toml:"native"` // check: the same against the app run natively (go run .), first
+	Live   []string          `toml:"live"`   // live-test: against the deployed Worker (url), after the standard test
+	Env    map[string]string `toml:"env"`    // more environment for the Worker under test and its commands
+	Serve  []Helper          `toml:"serve"`  // what the tests serve beside the Worker for its whole run
+}
+
+// Helper is a server the tests start before the Worker and stop after it (a webhook's receiver).
+type Helper struct {
+	Command string `toml:"command"`
+	Ready   string `toml:"ready"` // a URL that answers once it is up
+}
+
+// IsProject reports whether the app is a charter project: a contract with specs and SDKs, tested the standard way,
+// whose check (charter check) builds and tries it too; an app that only runs on Workers with charter is not.
+func (p *Project) IsProject() bool {
+	return p.SDKs.Name != "" || len(p.Test.Run) > 0 || len(p.Test.Live) > 0
+}
+
+// SDKs are the clients Fern makes from the specs: charter spec writes fern/generators.yml from them and the spec.
+type SDKs struct {
+	Name      string   `toml:"name"`      // the TypeScript SDK's namespace (Notes); lower case, the Go package and the CLI's command
+	More      []string `toml:"more"`      // more languages: python, and cli (a command-line client in Rust, Fern's early access)
+	Audiences []string `toml:"audiences"` // a TypeScript SDK each, of only what the contract tags for that audience
+	Go        bool     `toml:"go"`        // the Go SDK is committed in sdk/go (charter sdk -publish): check fails when the specs moved on
 }
 
 // Secrets are the Worker's secret_text bindings. Their values come from the environment a deploy runs in (fnox exec --

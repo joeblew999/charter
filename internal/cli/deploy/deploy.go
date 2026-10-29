@@ -283,7 +283,7 @@ func fromProject(args []string) []string {
 	}
 	migrations := ""
 	for _, db := range p.D1 {
-		out = append(out, "-d1", db.Binding+"="+d.Database)
+		out = append(out, "-d1", db.Binding+"="+p.DatabaseOf(db, d))
 		if db.Migrations != "" && migrations != "" && db.Migrations != migrations {
 			log.Fatal("deploy: every [[d1]] gets the same migrations (one folder applied to every database)")
 		}

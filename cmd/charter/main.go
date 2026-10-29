@@ -14,7 +14,12 @@
 //	charter tasks    the mise tasks and the Workers Builds launcher again (after upgrading charter)
 //	charter skill    the agent skill again
 //	charter workflow the CI workflow again
-//	charter check    every problem with charter.toml and charter's files in the app
+//	charter check    every problem with charter.toml and charter's files in the app; in a project, every check that
+//	                 needs no Cloudflare account (go doc .../internal/cli/projectsteps)
+//	charter spec     a project's specs from its contract, Fern's settings, its database's code
+//	charter sdk      a project's SDKs with Fern: one, every one proven (-prove), the Go SDK it commits (-publish)
+//	charter dev      a project's Worker on local workerd (-native: the app run natively), until Ctrl-C
+//	charter live-test  the standard test and a project's live tests against the deployed Worker
 //	charter version  the version of charter this is
 //
 // A repo takes it from mise, as a binary of charter's GitHub release: mise use github:joeblew999/charter.
@@ -31,6 +36,7 @@ import (
 	"github.com/joeblew999/charter/internal/cli/ci"
 	"github.com/joeblew999/charter/internal/cli/deploy"
 	"github.com/joeblew999/charter/internal/cli/local"
+	"github.com/joeblew999/charter/internal/cli/projectsteps"
 	"github.com/joeblew999/charter/internal/cli/scaffold"
 	"github.com/joeblew999/charter/internal/cli/tail"
 	"github.com/joeblew999/charter/internal/cli/token"
@@ -38,27 +44,32 @@ import (
 )
 
 var steps = map[string]func(args []string){
-	"build":    build.Main,
-	"deploy":   deploy.Main,
-	"tail":     tail.Main,
-	"bench":    bench.Main,
-	"local":    local.Local,
-	"serve":    local.Serve,
-	"with":     local.With,
-	"token":    token.Main,
-	"ci":       ci.Main,
-	"builds":   builds.Main,
-	"init":     scaffold.Init,
-	"tasks":    scaffold.Tasks,
-	"skill":    scaffold.Skill,
-	"workflow": scaffold.Workflow,
-	"check":    scaffold.Check,
-	"version":  func([]string) { fmt.Println("charter", version.String()) },
+	"build":     build.Main,
+	"deploy":    deploy.Main,
+	"tail":      tail.Main,
+	"bench":     bench.Main,
+	"local":     local.Local,
+	"serve":     local.Serve,
+	"with":      local.With,
+	"token":     token.Main,
+	"ci":        ci.Main,
+	"builds":    builds.Main,
+	"init":      scaffold.Init,
+	"tasks":     scaffold.Tasks,
+	"skill":     scaffold.Skill,
+	"workflow":  scaffold.Workflow,
+	"check":     projectsteps.Check,
+	"spec":      projectsteps.Spec,
+	"sdk":       projectsteps.SDK,
+	"dev":       projectsteps.Dev,
+	"live-test": projectsteps.LiveTest,
+	"test":      projectsteps.Test, // what check runs under charter with: no step to run alone
+	"version":   func([]string) { fmt.Println("charter", version.String()) },
 }
 
 func main() {
 	if len(os.Args) < 2 || steps[os.Args[1]] == nil {
-		fmt.Fprintln(os.Stderr, "usage: charter build | deploy | tail | bench | local | serve | with | token | ci | builds | init | tasks | skill | workflow | check | version [flags]   (charter <step> -h: its flags)")
+		fmt.Fprintln(os.Stderr, "usage: charter build | deploy | tail | bench | local | serve | with | token | ci | builds | init | tasks | skill | workflow | check | spec | sdk | dev | live-test | version [flags]   (charter <step> -h: its flags)")
 		os.Exit(2)
 	}
 	steps[os.Args[1]](os.Args[2:])

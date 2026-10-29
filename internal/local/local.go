@@ -12,6 +12,7 @@ package local
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -175,6 +176,17 @@ func config(p *project.Project, build []string, migrations []migration) string {
 	b.WriteString("  ],\n  durableObjectStorage = (localDisk = \"state\"),\n  bindings = [\n")
 	for _, k := range sortedKeys(p.Local.Vars) {
 		fmt.Fprintf(&b, "    (name = %s, text = %s),\n", q(k), q(p.Local.Vars[k]))
+	}
+	// A secret without a local value in [local] vars, and what [test] env gives the Worker under test: from workerd's
+	// environment (charter check sets them for its run), and absent where it has none, as an unset secret is.
+	var fromEnv []string
+	for _, k := range append(append(slices.Clone(p.Secrets.Required), p.Secrets.Optional...), slices.Sorted(maps.Keys(p.Test.Env))...) {
+		if _, ok := p.Local.Vars[k]; !ok && !slices.Contains(fromEnv, k) {
+			fromEnv = append(fromEnv, k)
+		}
+	}
+	for _, k := range fromEnv {
+		fmt.Fprintf(&b, "    (name = %s, fromEnvironment = %s),\n", q(k), q(k))
 	}
 	for _, d := range p.DurableObjects {
 		fmt.Fprintf(&b, "    (name = %s, durableObjectNamespace = %s),\n", q(d.Binding), q(d.Class))

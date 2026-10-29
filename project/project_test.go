@@ -78,6 +78,17 @@ func TestDeploy(t *testing.T) {
 	if _, err := p.Deploy("staging", ""); err == nil || !strings.Contains(err.Error(), "no [staging]") {
 		t.Errorf("staging without [staging]: %v", err)
 	}
+	// A database of its own name (as cf deploy named one, <worker>-db), with each environment's suffix.
+	named := project.D1{Binding: "DB", Database: "my-app-db"}
+	if got := p.DatabaseOf(named, prod); got != "my-app-db" {
+		t.Errorf("DatabaseOf production = %s", got)
+	}
+	if got := p.DatabaseOf(named, pr); got != "my-app-db-preview" {
+		t.Errorf("DatabaseOf preview = %s", got)
+	}
+	if got := p.DatabaseOf(project.D1{Binding: "DB"}, pr); got != "my-app-preview" {
+		t.Errorf("DatabaseOf preview, no name = %s", got)
+	}
 	if _, err := p.Deploy("preview", ""); err == nil {
 		t.Error("a preview without a name deployed")
 	}

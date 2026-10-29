@@ -1,0 +1,28 @@
+#!/bin/sh
+# docker, for a machine whose internet is a proxy on the machine itself with its own CA: a Claude cloud
+# session. charter puts this folder first on the PATH of the Fern runs it makes there (internal/fern), so
+# the generators' containers can reach npm: `docker run` gets the host's network, the proxy and the CA
+# (TLS is still verified). Everything else, and everywhere else, is the real docker unchanged.
+case $0 in */*) here=${0%/*} ;; *) here=. ;; esac
+here=$(cd "$here" && pwd)
+real=
+IFS=:
+for dir in $PATH; do
+	[ "$dir" = "$here" ] && continue
+	if [ -x "$dir/docker" ]; then real="$dir/docker"; break; fi
+done
+unset IFS
+[ -n "$real" ] || { echo "charter: no docker on the PATH" >&2; exit 127; }
+ca=${CHARTER_PROXY_CA:-}
+if [ "${1:-}" = run ] && [ -n "$ca" ] && [ -n "${HTTPS_PROXY:-}" ]; then
+	shift
+	exec "$real" run --network host \
+		-e "HTTPS_PROXY=$HTTPS_PROXY" -e "https_proxy=$HTTPS_PROXY" \
+		-e "HTTP_PROXY=${HTTP_PROXY:-$HTTPS_PROXY}" -e "http_proxy=${HTTP_PROXY:-$HTTPS_PROXY}" \
+		-e "NO_PROXY=${NO_PROXY:-}" -e "no_proxy=${NO_PROXY:-}" \
+		-v "$ca:/etc/charter-proxy-ca.crt:ro" \
+		-e NODE_EXTRA_CA_CERTS=/etc/charter-proxy-ca.crt -e SSL_CERT_FILE=/etc/charter-proxy-ca.crt \
+		-e REQUESTS_CA_BUNDLE=/etc/charter-proxy-ca.crt -e GIT_SSL_CAINFO=/etc/charter-proxy-ca.crt \
+		"$@"
+fi
+exec "$real" "$@"

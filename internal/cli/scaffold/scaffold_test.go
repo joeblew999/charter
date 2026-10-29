@@ -83,7 +83,7 @@ func TestSkew(t *testing.T) {
 func TestUnpinned(t *testing.T) {
 	t.Chdir(t.TempDir())
 	os.WriteFile("mise.toml", []byte("[tools]\ngo = \"1.27.3\"\n"), 0o644)
-	if p := ownPins(); len(p) != 1 || !strings.Contains(p[0], "mise use github:joeblew999/charter@<version>") {
+	if p := ownPins(true); len(p) != 1 || !strings.Contains(p[0], "mise use github:joeblew999/charter@<version>") {
 		t.Errorf("ownPins: %q", p)
 	}
 }
