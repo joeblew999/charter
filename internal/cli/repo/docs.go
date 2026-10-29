@@ -139,10 +139,15 @@ func Lint(root string) ([]string, int, error) {
 	for _, c := range Extra {
 		commands[c] = true
 	}
+	// A span is a path of the repo's when its first folder is one at the repo's top that git tracks: what is on this
+	// disk and not in git (an agent's .claude/, a build's folders) would make one checkout's answer differ from
+	// another's.
 	top := map[string]bool{}
-	entries, _ := os.ReadDir(root)
-	for _, e := range entries {
-		top[e.Name()] = true
+	tracked, _ := exec.Command("git", "-C", root, "ls-files").Output()
+	for _, f := range strings.Split(string(tracked), "\n") {
+		if first, _, _ := strings.Cut(f, "/"); first != "" {
+			top[first] = true
+		}
 	}
 	// Every page must be reachable: linked from at least one other page.
 	linked := map[string]bool{}
