@@ -4,15 +4,15 @@ nav_order: 8
 ---
 # Server-rendered pages: gsx with htmx 4 or Datastar
 
-`go/examples-start-htmx` is a project whose one Worker serves HTML pages beside the API, its specs and MCP. The pages are written in [gsx](https://github.com/gsxhq/gsx) and made live with [htmx 4](https://four.htmx.org), in Go, built with TinyGo like the rest. A message posted on one page shows on every open page at once, as HTML over SSE. `go/examples-start-datastar` is the same project with [Datastar](https://data-star.dev) in place of htmx.
+`examples/start-htmx` is a project whose one Worker serves HTML pages beside the API, its specs and MCP. The pages are written in [gsx](https://github.com/gsxhq/gsx) and made live with [htmx 4](https://four.htmx.org), in Go, built with TinyGo like the rest. A message posted on one page shows on every open page at once, as HTML over SSE. `examples/start-datastar` is the same project with [Datastar](https://data-star.dev) in place of htmx.
 
 ```sh
 npm ci                       # at this repo's root
-npm run check -w go/examples-start-htmx
-npm run dev -w go/examples-start-htmx -- --native   # http://localhost:5179/ : open it in two windows, post in one
+npm run check -w examples/start-htmx
+npm run dev -w examples/start-htmx -- --native   # http://localhost:5179/ : open it in two windows, post in one
 ```
 
-The projects are `go/examples-start-htmx/` and `go/examples-start-datastar/` (port 5180) in this repo.
+The projects are `examples/start-htmx/` and `examples/start-datastar/` (port 5180) in this repo.
 
 ## What is where
 
@@ -21,7 +21,7 @@ The projects are `go/examples-start-htmx/` and `go/examples-start-datastar/` (po
 | `pages/*.gsx` | The pages and fragments: `Layout`, `Home`, `Form`, `Item` |
 | `pages/*.x.go` | Generated from the `.gsx` by `go tool gsx generate`; never edit. `npm run check` writes them and fails if they were stale |
 | `pages/pages.go` | The routes: `GET /`, `POST /messages`, `GET /static/...`. Every other path goes to the API |
-| `pages/stream.go` | `GET /messages/stream`: new messages as HTML, over SSE, by `go/lib/fragments` ([Libraries](libraries.md)) |
+| `pages/stream.go` | `GET /messages/stream`: new messages as HTML, over SSE, by `charter/fragments` ([Libraries](libraries.md)) |
 | `pages/static/` | htmx 4 and its SSE extension, as the npm package `htmx.org` has them, or Datastar's `bundles/datastar.js`, as its release has it, each file named with its version; and `site.css`. The Worker serves them, the versioned ones as immutable |
 | `api/` | The contract: `GET /api/hello`, `GET` and `POST /api/messages`. The pages call its `Env.Post`, `Env.Recent` and `Env.Feed` in the process |
 | `gsx.toml` | htmx only: gsx's settings, which htmx attributes hold URLs |
@@ -60,4 +60,4 @@ To push another fragment, write a function like `htmxEvent` or `datastarEvent` t
 
 ## Limits
 
-The pages and `POST /messages` are public, as is the API: a bearer token (`go/lib/auth`) does not fit a browser form, and the project has no sign-in.
+The pages and `POST /messages` are public, as is the API: a bearer token (`charter/auth`) does not fit a browser form, and the project has no sign-in.

@@ -213,7 +213,7 @@ const configOf = async (dir: string) => ((await import(pathToFileURL(resolve(dir
 
 export async function twins(args: string[]): Promise<void> {
 	const [reference, other] = args;
-	if (!reference || !other) throw new Error("twins needs two projects, the reference first: charter-ts twins ts/conformance go/conformance");
+	if (!reference || !other) throw new Error("twins needs two projects, the reference first: charter-ts twins examples/conformance-ts examples/conformance-go");
 	const [refConfig, otherConfig] = [await configOf(reference), await configOf(other)];
 	const secrets = { ...otherConfig.localSecrets, ...refConfig.localSecrets };
 	const state = mkdtempSync(join(tmpdir(), "charter-twins-"));

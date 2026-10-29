@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON(inputs.project && format('["{0}"]', inputs.project) || '["go/conformance","ts/conformance"]') }}
+        project: ${{ fromJSON(inputs.project && format('["{0}"]', inputs.project) || '["examples/conformance-go","examples/conformance-ts"]') }}
     uses: ./.github/workflows/charter-ci.yml
     with:
       job: clients

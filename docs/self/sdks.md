@@ -52,7 +52,7 @@ Then another repo runs `go get <your module>/sdk/go@main`, or `@<tag>`.
 
 ## Fern features
 
-The conformance (`go/conformance/`, and `ts/conformance/` from oRPC) switches each on; copy the lines from its contract and `api/spec.go`.
+The conformance (`examples/conformance-go/`, and `examples/conformance-ts/` from oRPC) switches each on; copy the lines from its contract and `api/spec.go`.
 
 | Feature | In the Go contract | The caller gets |
 |---|---|---|

@@ -141,7 +141,7 @@ describe("new", () => {
 		// It stands alone: its tests import its own contract, and nothing points outside it.
 		assert.match(read(into, "test/live.ts"), /from "\.\.\/api\/schemas\.ts"/);
 		assert.match(read(into, "tsconfig.node.json"), /"test"/);
-		const outside = spawnSync("grep", ["-rl", "-e", "ts/examples-", join(into, "test"), join(into, "charter.config.ts"), join(into, "tsconfig.node.json")], { encoding: "utf8" }).stdout.trim();
+		const outside = spawnSync("grep", ["-rlE", "-e", "examples/[a-z-]+-(ts|go)", join(into, "test"), join(into, "charter.config.ts"), join(into, "tsconfig.node.json")], { encoding: "utf8" }).stdout.trim();
 		assert.equal(outside, "", `it points outside itself:\n${outside}`);
 		const pkg = JSON.parse(read(into, "package.json")) as { name: string; scripts: Record<string, string>; dependencies: Record<string, string>; devDependencies: Record<string, string> };
 		assert.equal(pkg.name, "demo-api");
@@ -163,11 +163,11 @@ describe("new", () => {
 		for (const file of ["main.go", "api/contract.go", "charter.config.ts", "test/live.ts", "test/schemas.ts", "ci.config.ts", ".github/workflows/self-check.yml"]) assert.ok(existsSync(join(into, file)), `${file} is there`);
 		const mod = read(into, "go.mod");
 		assert.match(mod, /^module demo-go$/m);
-		assert.match(mod, new RegExp(`github\\.com/joeblew999/charter/go/lib v${version.replaceAll(".", "\\.")}`));
+		assert.match(mod, new RegExp(`github\\.com/joeblew999/charter v${version.replaceAll(".", "\\.")}`));
 		assert.doesNotMatch(mod, /^replace /m);
 		assert.match(read(into, "test/live.ts"), /from "\.\/schemas\.ts"/);
 		assert.match(read(into, "charter.config.ts"), /node\("test\/live\.ts"/);
-		const outside = spawnSync("grep", ["-rl", "-e", "ts/examples-", "-e", "charter/go/examples-", "-e", "charter-start-go", into], { encoding: "utf8" }).stdout.trim();
+		const outside = spawnSync("grep", ["-rlE", "-e", "examples/[a-z-]+-(ts|go)", "-e", "charter-start-go", into], { encoding: "utf8" }).stdout.trim();
 		assert.equal(outside, "", `it points outside itself, or keeps the example's names:\n${outside}`);
 	});
 

@@ -59,7 +59,7 @@ test("a Go repo gets the same TinyGo file go tool charter tasks writes, and its 
 	const { charterRepo } = await import("./package.ts");
 	assert.ok(charterRepo, "run from charter's repo");
 	const goPins = readFileSync(join(charterRepo!, goPinsFile), "utf8");
-	assert.equal(pinIn(goPins, "tinygo"), pinIn(readFileSync(charterMise(), "utf8"), "tinygo"), "go/lib's pins equal charter's mise.toml");
+	assert.equal(pinIn(goPins, "tinygo"), pinIn(readFileSync(charterMise(), "utf8"), "tinygo"), "the Go library's pins equal charter's mise.toml");
 	const repo = mkdtempSync(join(tmpdir(), "go-repo-"));
 	mkdirSync(join(repo, ".config", "mise", "conf.d"), { recursive: true });
 	writeFileSync(join(repo, goPinsConf), goPins);

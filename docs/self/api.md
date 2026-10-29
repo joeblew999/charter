@@ -21,7 +21,7 @@ npm run check    # fails on a stale spec, a failing test, or (in Go) a TinyGo ga
 | The storage | `api/store.ts` (D1, with Drizzle on `api/tables.ts`) | `api/store.go` (`Store`, and `MemStore` for `go test` and `--native`), `api/store_d1.go` (D1, through `api/queries.go`) |
 | The schema and its typed code | `migrations/*.sql`; `api/tables.ts`, written from them | `migrations/*.sql` and `api/queries.sql`; `api/queries.go`, written from them ([below](#the-database)) |
 | The specs' document | `api/spec.ts` | `api/spec.go`: `API(Env)`, which `npm run spec` writes the specs from |
-| The Worker | `worker.ts` | `main.go`, with the bindings in `platform_js.go`; `worker.mjs`, the Worker's entry. Its module (`go.mod`) is the project's name, on the Go library `github.com/joeblew999/charter/go/lib` |
+| The Worker | `worker.ts` | `main.go`, with the bindings in `platform_js.go`; `worker.mjs`, the Worker's entry. Its module (`go.mod`) is the project's name, on the Go library `github.com/joeblew999/charter` |
 | The tests | `test/`, and unit tests beside the code (`api/*.test.ts`) | `test/`, the TypeScript twin's tests, with the schemas they check answers against (`test/schemas.ts`); unit tests in `api/*_test.go` |
 | Cloudflare's | `cloudflare.config.ts` (the Worker, its database `DB`, and with a stream the hub `HUB`), `migrations/*.sql` | the same |
 | charter's | `charter.config.ts` ([below](#charterconfigts)) | the same |
@@ -47,9 +47,9 @@ The schema is `migrations/*.sql`, the one place the tables are said: a deploy ap
 | `db` | You write | `npm run spec` writes |
 |---|---|---|
 | `"drizzle"` (TypeScript) | The queries with [Drizzle](https://orm.drizzle.team), on `drizzle(env.DB)` | `api/tables.ts`: each table, as SQLite has it once the migrations ran |
-| `"sqlc"` (Go) | The queries in `api/queries.sql`, each named (`-- name: CreateNote :one`, `:many` or `:exec`), with a comment that starts with its name as its doc | `api/queries.go`: a function for each, over `go/lib/d1`, its arguments and rows typed by [sqlc](https://sqlc.dev) against the schema. A row of a whole table is that table's type (`NotesRow`); a column that may be NULL is a pointer |
+| `"sqlc"` (Go) | The queries in `api/queries.sql`, each named (`-- name: CreateNote :one`, `:many` or `:exec`), with a comment that starts with its name as its doc | `api/queries.go`: a function for each, over `charter/d1`, its arguments and rows typed by [sqlc](https://sqlc.dev) against the schema. A row of a whole table is that table's type (`NotesRow`); a column that may be NULL is a pointer |
 
-The Go is written over `go/lib/d1`, not `database/sql`, which D1 does not need: a statement is one call, and its rows come back as one string. The notes examples keep their notes this way.
+The Go is written over `charter/d1`, not `database/sql`, which D1 does not need: a statement is one call, and its rows come back as one string. The notes examples keep their notes this way.
 
 ## Write for Workers
 

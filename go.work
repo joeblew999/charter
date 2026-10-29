@@ -1,0 +1,12 @@
+go 1.27.1
+
+use (
+	.
+	./examples/conformance-go
+	./examples/notes-go
+	./examples/notes-go/sdk/go
+	./examples/notes-go/test/soak-go
+	./examples/start-datastar
+	./examples/start-go
+	./examples/start-htmx
+)

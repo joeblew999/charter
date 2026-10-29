@@ -9,7 +9,7 @@ A Worker imports charter's library; the tool, `charter-ts`, only runs its comman
 
 ## TypeScript: charter-lib
 
-`charter-lib` (`ts/lib/`) is in a project's `dependencies`, and `charter-ts` in its `devDependencies`, at the same version. It is built with no Node types, so nothing in it can need Node: it runs on Workers.
+`charter-lib` (`ts/`) is in a project's `dependencies`, and `charter-ts` in its `devDependencies`, at the same version. It is built with no Node types, so nothing in it can need Node: it runs on Workers.
 
 | Import | What it is |
 |---|---|
@@ -30,9 +30,9 @@ From the tool, for a project's own files:
 | `"charter-ts/vite"` | The Vite config every project's is | `vite.config.ts` |
 | `"charter-ts/ci"` | `CI`, the type of a repo's own jobs | `ci.config.ts` |
 
-## Go: github.com/joeblew999/charter/go/lib
+## Go: github.com/joeblew999/charter
 
-The packages of `go/lib/`. The rest is in their doc comments: `go doc github.com/joeblew999/charter/go/lib/<name>`.
+The packages at the repo's top, its root module. The rest is in their doc comments: `go doc github.com/joeblew999/charter/<name>`.
 
 | Package | What it is for | What you call |
 |---|---|---|
@@ -51,9 +51,7 @@ The packages of `go/lib/`. The rest is in their doc comments: `go doc github.com
 | `specs` | What `npm run spec` runs for a Go project's `api.API`, which stops on what the specs don't show (a route that does not name its operation, an operation that cannot be its tool, an example missing or invalid) | `specs.Must(specs.Problems(spec))`, `specs.Main(spec.OpenAPI, spec.AsyncAPI)` |
 
 A Go Worker's steps on Cloudflare are one command, `go tool charter <step>` (go.mod: `tool
-github.com/joeblew999/charter/go/lib/cmd/charter`); `go tool charter <step> -h` lists a step's flags. `go tool
-workerbuild`, `workerdeploy`, `workertail` and `workerbench` are the same steps by their old names, kept while repos
-move over.
+github.com/joeblew999/charter/cmd/charter`); `go tool charter <step> -h` lists a step's flags.
 
 A Go app is set up for Workers the way go-htmx4's intl and seo set one up: one command, a config file, its own mise
 tasks, an agent skill, and a check. `go tool charter init`, from the app's root, writes:
@@ -72,7 +70,7 @@ charter tasks`, `skill` and `workflow` write them again. The app writes one `mai
 which is the Worker on Cloudflare and a plain HTTP server off it, and its bindings in `charter.toml`. go-htmx4's
 `e2e/fresh` makes such an app from nothing and runs it on workerd (and, asked to, on Cloudflare).
 
-Everything about the Worker on Cloudflare is one file at the app's root, `charter.toml` (package `go/lib/project`
+Everything about the Worker on Cloudflare is one file at the app's root, `charter.toml` (package `charter/project`
 documents every key): its name, compatibility date and modules, Static Assets, D1 databases, Durable Objects and
 rate limits, and what production, staging, previews and local workerd each get. The steps read it, and an app's tests
 can (`project.Load`), so a limit a test counts to is checked against the one that ships.
@@ -145,7 +143,7 @@ fnox exec -- go tool charter tail -name my-api
 How Google sees a site with pages (robots.txt, the sitemap, an audit as Googlebot, Search Console, Lighthouse) is
 [seo](https://github.com/joeblew999/go-htmx4/tree/main/seo), its own Go module, not part of charter.
 
-The Worker glue, in `go/lib/worker/`, written into `build/` by the build:
+The Worker glue, in `worker/`, written into `build/` by the build:
 
 | File | What it gives |
 |---|---|

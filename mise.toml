@@ -3,7 +3,7 @@
 # moves them, and charter-ts reads its pins from here (go.ts, db.ts) and starts a new repo's mise.toml
 # from them (charter-files.ts). node runs everything; go builds and tests the Go side; gh is what the
 # repo commands talk to GitHub with; fnox holds the secrets a deploy and a live test take (fnox exec --
-# npm run deploy). tinygo and binaryen build a Go Worker: go/lib/internal/cli/build patches this
+# npm run deploy). tinygo and binaryen build a Go Worker: internal/cli/build patches this
 # TinyGo's runtime, so a new TinyGo that the patch no longer fits fails the build and says so. sqlc
 # types a Go project's queries (db.ts).
 [tools]

@@ -5,7 +5,7 @@
 // a file only where it may: in its own places always, elsewhere where there is none, or the one there
 // carries its mark. What a repo wrote itself is never written over.
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, posix } from "node:path";
+import { basename, dirname, join, posix, resolve } from "node:path";
 import { charterRepo, packageDir } from "./package.ts";
 import { pinIn } from "./pins.ts";
 import { isProject, readPackage, settings } from "./settings.ts";
@@ -176,17 +176,21 @@ Another release of charter-ts: \`npm i -D https://github.com/joeblew999/charter/
 `;
 }
 
-/** charter's TinyGo and wasm-opt for a Go repo: the same file, from the same go/lib/internal/pins/mise.toml, that
+/** charter's TinyGo and wasm-opt for a Go repo: the same file, from the same internal/pins/mise.toml, that
  * `go tool charter tasks` writes into a Go app, at the path mise reads beside the repo's own mise.toml. */
-export const goPinsFile = "go/lib/internal/pins/mise.toml";
+export const goPinsFile = "internal/pins/mise.toml";
 export const goPinsConf = ".config/mise/conf.d/charter.toml";
+
+/** takesGoPins: a Go repo gets charter's TinyGo file, but not charter's own, whose mise.toml is where the version is said
+ * (internal/pins/mise.toml is the same lines, TestSameAsCharters). */
+const takesGoPins = (root: string) => existsSync(join(root, "go.mod")) && !(charterRepo && resolve(root) === resolve(charterRepo));
 
 /** ownToolPins is each line of the repo's own mise config that pins TinyGo or wasm-opt, which charter pins (goPinsConf):
  * mise would install a second copy, and which one a build ran would be chance. As `go tool charter check` says. */
 export function ownToolPins(root: string): string[] {
 	const out: string[] = [];
-	// Only a Go repo gets charter's TinyGo file (filesFor): charter's own mise.toml is where the version is said.
-	if (!existsSync(join(root, "go.mod"))) return out;
+	// Only a Go repo gets charter's TinyGo file (filesFor), so only there is a pin of its own a second copy.
+	if (!takesGoPins(root)) return out;
 	for (const file of ["mise.toml", ".mise.toml", "mise.local.toml", ".config/mise.toml", ".config/mise/config.toml"]) {
 		if (!existsSync(join(root, file))) continue;
 		let tools = false;
@@ -221,7 +225,7 @@ function filesFor(root: string): Map<string, string> {
 		if (rel === "ci.config.ts" && !workflows) continue;
 		files.set(inDocs(rel), content);
 	}
-	if (existsSync(join(root, "go.mod"))) files.set(goPinsConf, readFileSync(charterFile(goPinsFile), "utf8"));
+	if (takesGoPins(root)) files.set(goPinsConf, readFileSync(charterFile(goPinsFile), "utf8"));
 	files.set(posix.join(s.docs, charterFolder, "README.md"), whatToDoPage(root));
 	if (workflows) for (const [name, job] of Object.entries(charterJobs)) files.set(`.github/workflows/charter-${name}.yml`, workflow(root, name, job));
 	return files;

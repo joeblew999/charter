@@ -5,7 +5,7 @@ nav_order: 6
 
 # Auth: who may call, and how they prove it
 
-The contract says which scopes each operation needs; one middleware checks every request against it: `go/lib/auth` in Go, `charter-lib/auth` in TypeScript. In the notes examples, reading is public and writing needs `write`.
+The contract says which scopes each operation needs; one middleware checks every request against it: `charter/auth` in Go, `charter-lib/auth` in TypeScript. In the notes examples, reading is public and writing needs `write`.
 
 ## The ways in
 
@@ -33,7 +33,7 @@ var Trusted = []auth.Trusted{            // api/handlers.go: who may call
 }
 ```
 
-In TypeScript: `base: oidcScheme(accessScheme(info.title, scheme()))` in the document, `spec: needs(["write"])`, and `trusted` in `serve`'s options (`ts/examples-notes/api/handlers.ts`). The specs then list every way in for each operation, and a public one says `security: []`.
+In TypeScript: `base: oidcScheme(accessScheme(info.title, scheme()))` in the document, `spec: needs(["write"])`, and `trusted` in `serve`'s options (`examples/notes-ts/api/handlers.ts`). The specs then list every way in for each operation, and a public one says `security: []`.
 
 ## Bearer tokens
 
@@ -78,7 +78,7 @@ How often each caller may call: [Rate limits](ratelimits.md).
 
 ## Proven
 
-- `npm run check` (2026-10-15): `ts/conformance/test/auth.ts` serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After`, against go/conformance natively and under workerd, and ts/conformance under workerd. It does not run on Cloudflare, where an OIDC issuer has not been tried; rate limits have ([Rate limits](ratelimits.md)).
+- `npm run check` (2026-10-15): `examples/conformance-ts/test/auth.ts` serves a test issuer as Access and as an OIDC issuer, and checks 200, 401 and 403 for each way in, then 429 with `Retry-After`, against examples/conformance-go natively and under workerd, and examples/conformance-ts under workerd. It does not run on Cloudflare, where an OIDC issuer has not been tried; rate limits have ([Rate limits](ratelimits.md)).
 - On Cloudflare, 2026-10-03: a Go notes project behind Access. No token, or a wrong secret: a redirect to the login. The machine's token reads; writing is 403. The write token writes; the read token, 403; a JWT from an untrusted issuer, 401.
 
 ## Limits

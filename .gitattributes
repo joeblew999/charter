@@ -6,9 +6,9 @@
 # What writes each one is in docs/self/contributing.md ("What is generated").
 */*/fern/openapi.json                  linguist-generated=true
 */*/fern/asyncapi.json                 linguist-generated=true
-go/*/sdk/go/**                         linguist-generated=true
-go/*/pages/*.x.go                      linguist-generated=true
-go/*/pages/static/*.js                 linguist-vendored=true
+examples/*/sdk/go/**                   linguist-generated=true
+examples/*/pages/*.x.go                linguist-generated=true
+examples/*/pages/static/*.js           linguist-vendored=true
 package-lock.json                      linguist-generated=true
 .github/workflows/self-*.yml           linguist-generated=true
 .github/workflows/charter-repo.yml     linguist-generated=true
