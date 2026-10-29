@@ -2,11 +2,11 @@
 // from charter's repo, where they are changed; and charter's mise.toml, whose pins a repo's starts from.
 import { cpSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { charterFiles } from "./src/charter-files.ts";
+import { charterFiles, goPinsFile } from "./src/charter-files.ts";
 
 rmSync("charter-files", { recursive: true, force: true });
-for (const rel of [...charterFiles, "mise.toml"]) {
+for (const rel of [...charterFiles, "mise.toml", goPinsFile]) {
 	mkdirSync(dirname(join("charter-files", rel)), { recursive: true });
 	cpSync(join("..", rel), join("charter-files", rel));
 }
-console.log(`charter-files/: ${charterFiles.length} files, and mise.toml`);
+console.log(`charter-files/: ${charterFiles.length} files, mise.toml, and the Go app pins (${goPinsFile})`);

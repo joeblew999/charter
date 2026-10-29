@@ -1,7 +1,7 @@
-// The versions of the tools charter-ts runs, as mise.toml pins them: the one place they are said, so
-// mise installs them, Renovate moves them, and every developer and CI get the same ones. A repo's own
-// mise.toml (the nearest one above where charter-ts runs) wins; charter's (which the package carries)
-// is what a repo without the pin gets.
+// The versions of the tools charter-ts runs, as mise pins them: so mise installs them, Renovate moves them, and every
+// developer and CI get the same ones. A repo's own mise.toml (the nearest above where charter-ts runs) wins, then the
+// TinyGo and wasm-opt charter writes beside it (.config/mise/conf.d/charter.toml); charter's own mise.toml (which the
+// package carries) is what a repo with neither gets.
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { charterRepo, packageDir } from "./package.ts";
@@ -29,10 +29,10 @@ export function pinIn(text: string, tool: string): string | undefined {
 	return undefined;
 }
 
-/** The nearest mise.toml at or above dir. */
-function nearestMise(dir: string): string | undefined {
+/** The nearest file at rel at or above dir. */
+function nearest(dir: string, rel: string): string | undefined {
 	for (let at = resolve(dir); ; at = dirname(at)) {
-		if (existsSync(join(at, "mise.toml"))) return join(at, "mise.toml");
+		if (existsSync(join(at, rel))) return join(at, rel);
 		if (dirname(at) === at) return undefined;
 	}
 }
@@ -40,7 +40,9 @@ function nearestMise(dir: string): string | undefined {
 /** The version of tool to run: the nearest mise.toml's pin, else charter's. Throws when neither pins it,
  * so a tool charter-ts runs is never left to whatever version a machine has. */
 export function pinned(tool: string, dir = process.cwd()): string {
-	for (const file of [nearestMise(dir), charterMise()]) {
+	// The repo's mise.toml; the TinyGo and wasm-opt charter writes beside it (charter-files.ts goPinsConf), which mise
+	// reads too; then charter's own.
+	for (const file of [nearest(dir, "mise.toml"), nearest(dir, ".config/mise/conf.d/charter.toml"), charterMise()]) {
 		if (!file || !existsSync(file)) continue;
 		const version = pinIn(readFileSync(file, "utf8"), tool);
 		if (version) return version;
