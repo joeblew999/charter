@@ -2,8 +2,11 @@
 // OpenID Connect restated, any of them; the groups asked for, with the generators charter-ts pins.
 //   node --test src/*.test.ts   (npm run check -w charter-ts runs them)
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { it } from "node:test";
-import { fernSettings } from "./sdk.ts";
+import { fernSettings, generatedOrFail } from "./sdk.ts";
 
 const spec = { components: { securitySchemes: {
 	bearer: { type: "http", scheme: "bearer" },
@@ -37,4 +40,13 @@ it("has no auth for a spec without schemes, and the groups asked for", () => {
 
 it("refuses a scheme the SDKs cannot send", () => {
 	assert.throws(() => fernSettings({ components: { securitySchemes: { basic: { type: "http", scheme: "basic" } } } }, { name: "Api" }, "a/sdk/go", false), /bearer tokens, header keys and OAuth client credentials/);
+});
+
+it("fails, naming the group, when Fern finished without writing it", () => {
+	const dir = mkdtempSync(join(tmpdir(), "sdk-out-"));
+	assert.throws(() => generatedOrFail("typescript-dist", dir), /typescript-dist finished but wrote nothing/);
+	mkdirSync(join(dir, "sdk", "out", "typescript-dist"), { recursive: true });
+	assert.throws(() => generatedOrFail("typescript-dist", dir), /wrote nothing/, "an empty folder is nothing written");
+	writeFileSync(join(dir, "sdk", "out", "typescript-dist", "package.json"), "{}");
+	generatedOrFail("typescript-dist", dir);
 });

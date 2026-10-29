@@ -7,6 +7,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, posix } from "node:path";
 import { charterRepo, packageDir } from "./package.ts";
+import { pinIn } from "./pins.ts";
 import { isProject, readPackage, settings } from "./settings.ts";
 import { charterJobs, workflow } from "./ci.ts";
 import { type Command, commands } from "./commands.ts";
@@ -39,11 +40,16 @@ const startMark = "Started by `charter-ts adopt` (github.com/joeblew999/charter)
 
 /** The tools a repo needs, as mise.toml pins them (mise installs them, here and on GitHub), at the
  * versions charter's own mise.toml pins: node for charter-ts; in a project, fnox for its secrets; in
- * a Go one, go. */
-function miseStarter(project: boolean, go: boolean): string {
-	const pins = readFileSync(charterFile("mise.toml"), "utf8").split("\n");
-	const pin = (tool: string) => pins.find(line => line.startsWith(`${tool} = `)) ?? "";
-	const tools = ["node", ...(project ? ["fnox"] : []), ...(go ? ["go"] : [])];
+ * a Go one, go, and the TinyGo, wasm-opt and sqlc its Worker and queries are built with. */
+export function miseStarter(project: boolean, go: boolean): string {
+	const charters = readFileSync(charterFile("mise.toml"), "utf8");
+	const key = (tool: string) => (/^[A-Za-z0-9_-]+$/.test(tool) ? tool : JSON.stringify(tool));
+	const pin = (tool: string) => {
+		const version = pinIn(charters, tool);
+		if (!version) throw new Error(`charter's mise.toml has no pin for ${tool}`);
+		return `${key(tool)} = ${JSON.stringify(version)}`;
+	};
+	const tools = ["node", ...(project ? ["github:jdx/fnox"] : []), ...(go ? ["go", "tinygo", "aqua:WebAssembly/binaryen", "aqua:sqlc-dev/sqlc"] : [])];
 	return `# ${startMark}\n# The tools, which mise installs here and on GitHub (charter-ci.yml): ${tools.join(", ")}.\n[tools]\n${tools.map(pin).join("\n")}\n`;
 }
 

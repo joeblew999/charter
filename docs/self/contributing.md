@@ -18,6 +18,8 @@ npm run check   # the packages, repo and projects jobs (Docker for the conforman
 npm run ci      # every job GitHub runs, the clients in every language among them (Docker)
 ```
 
+Docker: charter-ts starts it where it is installed but not running and may be started (a Claude cloud session), and otherwise says to start it. Where the internet is a proxy on the machine itself with its own CA (a Claude cloud session), Fern's generators run their containers through `charter-ts/bin/cloud/docker`, which gives them the host's network, the proxy and its CA (`charter-ts/src/docker.ts`); on a Mac or a GitHub runner the containers are as Docker makes them.
+
 ## What is where
 
 | Folder | What it is |

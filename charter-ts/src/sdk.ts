@@ -9,6 +9,7 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rm
 import { join, resolve } from "node:path";
 import { made } from "./sizes.ts";
 import type { Sdks } from "./config.ts";
+import { containerEnv, dockerReady } from "./docker.ts";
 import { cacheFolder, output, run, runQuietly, seconds } from "./run.ts";
 
 /** The hash of what an SDK is made from: every file in fern/. */
@@ -33,15 +34,28 @@ export function sdk(group: string, options: { ifStale?: boolean } = {}): void {
 		console.log(`sdk ${group}: up to date (made from fern/ as it is), not generated again`);
 		return;
 	}
-	run("fern", fernGenerate(group));
+	dockerReady();
+	run("fern", fernGenerate(group), containerEnv());
+	generatedOrFail(group);
 	stampMade(group);
+}
+
+/** generatedOrFail fails, naming the group, when Fern finished without writing it. A generator that
+ * fails inside its container (pnpm unable to reach npm, say) exits 0 there, and Fern then reports
+ * "Finished" over an empty folder, so the failure only showed later, as a module the SDK lacked. */
+export function generatedOrFail(group: string, dir = "."): void {
+	const out = join(dir, "sdk", "out", group);
+	if (existsSync(out) && readdirSync(out).length > 0) return;
+	throw new Error(`fern generate --group ${group} finished but wrote nothing to ${join("sdk", "out", group)}: its generator failed inside its container, and Fern does not pass that on. Its own output says why: fern generate --local --group ${group} --log-level debug`);
 }
 
 /** generateQuietly generates a group as sdk does, with Fern's output kept rather than shown, so that
  * several can run at once (each in a Docker container of its own) without their lines mixing. It
  * resolves with how long it took, and rejects with Fern's output if it fails. */
 export async function generateQuietly(group: string): Promise<number> {
-	const { ms } = await runQuietly("fern", fernGenerate(group));
+	dockerReady();
+	const { ms } = await runQuietly("fern", fernGenerate(group), containerEnv());
+	generatedOrFail(group);
 	stampMade(group);
 	return ms;
 }
@@ -126,6 +140,7 @@ export async function proveGroup(group: string): Promise<void> {
 			await runQuietly("go", ["test", "./..."], { GOWORK: "off" }, dir);
 			return;
 		}
+		dockerReady();
 		await runQuietly("docker", ["compose", "-f", compose, "up", "-d", "--wait"]);
 		try {
 			const port = output("docker", ["compose", "-f", compose, "port", "wiremock", "8080"]).trim();

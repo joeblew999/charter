@@ -1,6 +1,7 @@
 // charter-ts repo [--check]: the repo on GitHub in shape from its package.json: the labels (charter's
 // .github/charter-labels.tsv), its description, homepage and topics (package.json's description,
-// homepage and keywords), and GitHub Pages serving docs/. It writes no file: adopt writes charter's files.
+// homepage and keywords), GitHub Pages serving docs/, and a pull request's branch deleted once it is
+// merged (so merged branches never pile up). It writes no file: adopt writes charter's files.
 // --check changes nothing and fails on drift.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,6 +17,7 @@ interface GitHubRepo {
 	homepageUrl: string;
 	repositoryTopics: { name: string }[] | null;
 	defaultBranchRef: { name: string };
+	deleteBranchOnMerge: boolean;
 }
 
 /** The labels GitHub gives a new repo: those no issue uses and charter does not list go. */
@@ -28,7 +30,7 @@ export function repo(args: string[]): void {
 	const s = settings(root);
 	if (!s.description) throw new Error("package.json has no description: GitHub shows it as the repo's (npm run adopt writes one)");
 	const gh = (...a: string[]) => output("gh", a, root);
-	const repo = JSON.parse(gh("repo", "view", "--json", "nameWithOwner,name,description,homepageUrl,repositoryTopics,defaultBranchRef")) as GitHubRepo;
+	const repo = JSON.parse(gh("repo", "view", "--json", "nameWithOwner,name,description,homepageUrl,repositoryTopics,defaultBranchRef,deleteBranchOnMerge")) as GitHubRepo;
 	const owner = repo.nameWithOwner.split("/")[0];
 	const homepage = s.homepage ?? `https://${owner.toLowerCase()}.github.io/${repo.name}/`;
 	const edit = (flag: string, have: string, want: string) => () => {
@@ -42,6 +44,12 @@ export function repo(args: string[]): void {
 		["homepage", edit("--homepage", repo.homepageUrl ?? "", homepage)],
 		["topics", () => topics(gh, repo, s, check)],
 		["GitHub Pages", () => pages(gh, repo, s, check)],
+		// A merged pull request's branch goes with it: squash merges leave branches no merge reaches.
+		["delete branches once merged", () => {
+			if (repo.deleteBranchOnMerge) return [];
+			if (!check) gh("repo", "edit", repo.nameWithOwner, "--delete-branch-on-merge");
+			return ["off, want on"];
+		}],
 	];
 	let drift = 0;
 	for (const [name, sync] of items) {

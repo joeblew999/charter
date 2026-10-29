@@ -3,6 +3,7 @@
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { GoConfig } from "./config.ts";
+import { miseTool } from "./pins.ts";
 import { output, run } from "./run.ts";
 import { sdk, specsHash } from "./sdk.ts";
 import { freeBundleLimit, made } from "./sizes.ts";
@@ -87,11 +88,11 @@ function gsxCheck(): void {
 	console.log("gsx: the committed *.x.go are what the components generate");
 }
 
-// The TinyGo the build uses, and the wasm-opt it runs: the compiler and the patch below are one
-// thing, so they are pinned here together. mise installs them the first time.
-const tinygoVersion = "0.43.0", binaryenVersion = "133";
-/** tinygoEnv runs a command with the TinyGo and wasm-opt charter pins on the PATH. */
-const tinygoEnv = (...command: string[]): [string, string[]] => ["mise", ["exec", `tinygo@${tinygoVersion}`, `aqua:WebAssembly/binaryen@${binaryenVersion}`, "--", ...command]];
+// The TinyGo the build uses, and the wasm-opt it runs, at the versions mise.toml pins (pins.ts): the
+// repo's own, else charter's. The build patches TinyGo's runtime (go/lib/internal/cli/build), and
+// fails, saying so, when a TinyGo no longer has what a patch changes. mise installs them the first time.
+/** tinygoEnv runs a command with the pinned TinyGo and wasm-opt on the PATH. */
+const tinygoEnv = (...command: string[]): [string, string[]] => ["mise", ["exec", miseTool("tinygo"), miseTool("aqua:WebAssembly/binaryen"), "--", ...command]];
 
 /** goBuild builds the project's Go Worker into build/ with go/lib's workerbuild command (TinyGo with the
  * runtime patches, a starting heap, a stack per goroutine Huma fits in, the Worker glue, and a cache of

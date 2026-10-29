@@ -34,12 +34,12 @@ func Home(messages []api.Message, after int64) _gsxrt.Node {
 			_gsxgw.NodeResult(_gsxrenderForm(ctx, _gsxgw, "", ""))
 //line home.gsx:21:3
 			_gsxgw.S("<ul id=\"messages\" data-init=\"")
-			_gsxgw.AttrValue(string(follows(after)))
+			_gsxgw.AttrValue(string( /*line home.gsx:21:32*/ follows(after)))
 			_gsxgw.S("\">")
 //line home.gsx:22:4
-			for _, message := range messages {
+			for /*line home.gsx:22:10*/ _, message := range messages {
 //line home.gsx:23:5
-				_gsxgw.NodeResult(_gsxrenderItem(ctx, _gsxgw, message))
+				_gsxgw.NodeResult(_gsxrenderItem(ctx, _gsxgw /*line home.gsx:23:20*/, message))
 			}
 			_gsxgw.S("</ul>")
 			return _gsxgw.Err()
@@ -75,9 +75,9 @@ func _gsxrenderForm(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, body string, pro
 	_gsxgw.S("<form id=\"post\" data-on:submit=\"@post(&#39;/messages&#39;, {contentType: &#39;form&#39;})\">")
 //line home.gsx:39:3
 	_gsxgw.S("<input name=\"body\" value=\"")
-	_gsxgw.AttrValue(string(body))
+	_gsxgw.AttrValue(string( /*line home.gsx:41:11*/ body))
 	_gsxgw.S("\" maxlength=\"")
-	_gsxgw.AttrValue(string(strconv.Itoa(api.MaxBody)))
+	_gsxgw.AttrValue(string( /*line home.gsx:42:15*/ strconv.Itoa(api.MaxBody)))
 	_gsxgw.S("\"")
 	_gsxgw.BoolAttr("required", true)
 	_gsxgw.BoolAttr("autofocus", true)
@@ -85,11 +85,11 @@ func _gsxrenderForm(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, body string, pro
 //line home.gsx:49:3
 	_gsxgw.S("<button type=\"submit\">Post</button>")
 //line home.gsx:50:3
-	if problem != "" {
+	if /*line home.gsx:50:8*/ problem != "" {
 //line home.gsx:51:4
 		_gsxgw.S("<p class=\"problem\">")
 //line home.gsx:51:23
-		_gsxgw.Text(string(problem))
+		_gsxgw.Text(string( /*line home.gsx:51:24*/ problem))
 		_gsxgw.S("</p>")
 	}
 	_gsxgw.S("</form>")
@@ -113,17 +113,17 @@ func _gsxrenderItem(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, message api.Mess
 	}
 //line home.gsx:58:2
 	_gsxgw.S("<li id=\"")
-	_gsxgw.AttrValue(string("message-" + strconv.FormatInt(message.ID, 10)))
+	_gsxgw.AttrValue(string( /*line home.gsx:58:10*/ "message-" + strconv.FormatInt(message.ID, 10)))
 	_gsxgw.S("\">")
 //line home.gsx:59:3
 	_gsxgw.S("<span>")
 //line home.gsx:59:9
-	_gsxgw.Text(string(message.Body))
+	_gsxgw.Text(string( /*line home.gsx:59:10*/ message.Body))
 	_gsxgw.S("</span>")
 //line home.gsx:60:3
 	_gsxgw.S("<time>")
 //line home.gsx:60:9
-	_gsxgw.Text(string(message.CreatedAt))
+	_gsxgw.Text(string( /*line home.gsx:60:10*/ message.CreatedAt))
 	_gsxgw.S("</time></li>")
 	return _gsxgw.Err()
 }

@@ -37,7 +37,7 @@ func _gsxrenderLayout(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, title string, 
 //line layout.gsx:13:4
 	_gsxgw.S("<title>")
 //line layout.gsx:13:11
-	_gsxgw.Text(string(title))
+	_gsxgw.Text(string( /*line layout.gsx:13:12*/ title))
 	_gsxgw.S("</title>")
 //line layout.gsx:14:4
 	_gsxgw.S("<link rel=\"stylesheet\" href=\"/static/site.css\"")
@@ -52,7 +52,7 @@ func _gsxrenderLayout(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, title string, 
 //line layout.gsx:18:4
 	_gsxgw.S("<main>")
 //line layout.gsx:18:10
-	_gsxgw.Node(ctx, children)
+	_gsxgw.Node(ctx /*line layout.gsx:18:11*/, children)
 	_gsxgw.S("</main></body></html>")
 	return _gsxgw.Err()
 }

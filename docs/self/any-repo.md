@@ -14,7 +14,7 @@ In the repo:
 ```sh
 npx --package https://github.com/joeblew999/charter/releases/download/ts-v0.9.1/charter-ts-0.9.1.tgz charter-ts adopt --description "<what the repo is>"
 npm install
-npm run repo        # the repo on GitHub: labels, description, homepage, topics, Pages
+npm run repo        # the repo on GitHub: labels, description, homepage, topics, Pages, merged branches deleted
 npm run ci -- repo  # what the check on GitHub runs
 ```
 
@@ -28,7 +28,7 @@ Then commit what it wrote, `package-lock.json` among it. Run again, `adopt` chan
 | What it starts, then the repo's | `docs/self/README.md` and `docs/self/rules.md` (the repo's own pages go in `docs/self/`), `mise.toml` (the tools), `.gitattributes`; in a project, `ci.config.ts` |
 | A `CLAUDE.md` or `AGENTS.md` of its own | Outside a project: moves what it says to the end of `docs/self/rules.md`, and writes charter's in its place |
 
-It changes nothing on GitHub: `npm run repo` does that, from `package.json`: the labels (charter's `.github/charter-labels.tsv`, GitHub's unused defaults removed), the description, homepage and topics (its `keywords`, and `charter`, so charter's repos can be found), and GitHub Pages for the docs folder. `npm run repo -- --check` changes nothing and fails on a difference.
+It changes nothing on GitHub: `npm run repo` does that, from `package.json`: the labels (charter's `.github/charter-labels.tsv`, GitHub's unused defaults removed), the description, homepage and topics (its `keywords`, and `charter`, so charter's repos can be found), GitHub Pages for the docs folder, and a pull request's branch deleted once it is merged (squash merges leave branches no merge reaches, so without it they pile up). `npm run repo -- --check` changes nothing and fails on a difference.
 
 ## What to do, and when
 
