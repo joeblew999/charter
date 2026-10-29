@@ -176,6 +176,33 @@ Another release of charter-ts: \`npm i -D https://github.com/joeblew999/charter/
 `;
 }
 
+/** charter's TinyGo and wasm-opt for a Go repo: the same file, from the same go/lib/internal/pins/mise.toml, that
+ * `go tool charter tasks` writes into a Go app, at the path mise reads beside the repo's own mise.toml. */
+export const goPinsFile = "go/lib/internal/pins/mise.toml";
+export const goPinsConf = ".config/mise/conf.d/charter.toml";
+
+/** ownToolPins is each line of the repo's own mise config that pins TinyGo or wasm-opt, which charter pins (goPinsConf):
+ * mise would install a second copy, and which one a build ran would be chance. As `go tool charter check` says. */
+export function ownToolPins(root: string): string[] {
+	const out: string[] = [];
+	// Only a Go repo gets charter's TinyGo file (filesFor): charter's own mise.toml is where the version is said.
+	if (!existsSync(join(root, "go.mod"))) return out;
+	for (const file of ["mise.toml", ".mise.toml", "mise.local.toml", ".config/mise.toml", ".config/mise/config.toml"]) {
+		if (!existsSync(join(root, file))) continue;
+		let tools = false;
+		for (const raw of readFileSync(join(root, file), "utf8").split("\n")) {
+			const line = raw.trim();
+			if (line.startsWith("[")) {
+				tools = line === "[tools]";
+				continue;
+			}
+			const name = /^"?([^"=\s]+)"?\s*=/.exec(line)?.[1];
+			if (tools && name && /tinygo|binaryen/i.test(name)) out.push(`${file} pins ${name}: delete that line; charter pins it, at the version its TinyGo patch is for (${goPinsConf})`);
+		}
+	}
+	return out;
+}
+
 /** charter's files for the repo at root, by path in the repo: each as charter has it, less what the repo
  * does not take (renovate.json; with "workflow": false, the workflows and the CI starter); the starters;
  * docs/charter/README.md, written from the repo's scripts; and charter's job workflows (charter-<job>.yml). */
@@ -194,6 +221,7 @@ function filesFor(root: string): Map<string, string> {
 		if (rel === "ci.config.ts" && !workflows) continue;
 		files.set(inDocs(rel), content);
 	}
+	if (existsSync(join(root, "go.mod"))) files.set(goPinsConf, readFileSync(charterFile(goPinsFile), "utf8"));
 	files.set(posix.join(s.docs, charterFolder, "README.md"), whatToDoPage(root));
 	if (workflows) for (const [name, job] of Object.entries(charterJobs)) files.set(`.github/workflows/charter-${name}.yml`, workflow(root, name, job));
 	return files;
@@ -203,7 +231,7 @@ function filesFor(root: string): Map<string, string> {
  * in the docs, its forms and workflows (charter-*). Other names are the repo's. */
 function ownPlace(path: string): boolean {
 	const base = basename(path);
-	return path.startsWith(`${charterFolder}/`) || path.includes(`/${charterFolder}/`) || base.startsWith("charter-");
+	return path === goPinsConf || path.startsWith(`${charterFolder}/`) || path.includes(`/${charterFolder}/`) || base.startsWith("charter-");
 }
 
 /** writeFiles writes charter's files into the repo at root: charter's own places as this version has them, with

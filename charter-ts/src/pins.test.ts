@@ -53,3 +53,24 @@ test("charter's mise.toml pins every tool charter-ts runs through mise", () => {
 		assert.ok(pinIn(text, tool), `${tool} is pinned in charter's mise.toml`);
 	}
 });
+
+test("a Go repo gets the same TinyGo file go tool charter tasks writes, and its own TinyGo line is refused", async () => {
+	const { goPinsConf, goPinsFile, ownToolPins } = await import("./charter-files.ts");
+	const { charterRepo } = await import("./package.ts");
+	assert.ok(charterRepo, "run from charter's repo");
+	const goPins = readFileSync(join(charterRepo!, goPinsFile), "utf8");
+	assert.equal(pinIn(goPins, "tinygo"), pinIn(readFileSync(charterMise(), "utf8"), "tinygo"), "go/lib's pins equal charter's mise.toml");
+	const repo = mkdtempSync(join(tmpdir(), "go-repo-"));
+	mkdirSync(join(repo, ".config", "mise", "conf.d"), { recursive: true });
+	writeFileSync(join(repo, goPinsConf), goPins);
+	writeFileSync(join(repo, "mise.toml"), '[tools]\ngo = "1.27.3"\n');
+	writeFileSync(join(repo, "go.mod"), "module example.com/app\n");
+	assert.deepEqual(ownToolPins(charterRepo!), [], "charter's own mise.toml says the version: not refused");
+	assert.equal(pinned("tinygo", repo), pinIn(goPins, "tinygo"), "the build's TinyGo is the one charter's file pins");
+	assert.deepEqual(ownToolPins(repo), []);
+	writeFileSync(join(repo, "mise.toml"), '[tools]\ngo = "1.27.3"\ntinygo = "0.43.0"\n"github:WebAssembly/binaryen" = "version_133"\n');
+	const refused = ownToolPins(repo);
+	assert.equal(refused.length, 2, refused.join("\n"));
+	assert.match(refused[0]!, /^mise\.toml pins tinygo: delete that line/);
+	assert.match(refused[1]!, /^mise\.toml pins github:WebAssembly\/binaryen: delete that line/);
+});

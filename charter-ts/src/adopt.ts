@@ -6,7 +6,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { writeWorkflows } from "./ci.ts";
-import { marked, writeFiles } from "./charter-files.ts";
+import { marked, writeFiles, ownToolPins } from "./charter-files.ts";
 import { charterRepo, releaseURL, version } from "./package.ts";
 import { output } from "./run.ts";
 import { renamed } from "./commands.ts";
@@ -85,6 +85,9 @@ async function adoptCheck(root: string): Promise<void> {
 	for (const name of changed) console.error(`differs  ${name.replace(/^removed /, "")}${name.startsWith("removed ") ? " (not charter's: it goes)" : ""}: charter-ts adopt writes it`);
 	if (changed.length > 0) throw new Error(`${changed.length} of charter's files differ from what this version writes: npm run adopt`);
 	say("ok", "charter's files", ": every one is what this version writes");
+	const own = ownToolPins(root);
+	for (const problem of own) console.error(`differs  ${problem}`);
+	if (own.length > 0) throw new Error(`the repo pins TinyGo or wasm-opt itself (${own.length}), which charter pins: delete those lines`);
 	if (settings(root).workflow) await writeWorkflows(root, true);
 	const old = Object.entries(readPackage(root)?.scripts ?? {}).filter(([, command]) => renamed[/^charter-ts ([a-z:-]+)$/.exec(command)?.[1] ?? ""]);
 	if (old.length > 0) throw new Error(`scripts that run a command by its old name: ${old.map(([name, command]) => `${name} (${command})`).join(", ")}: npm run adopt`);
