@@ -123,13 +123,22 @@ func TestLint(t *testing.T) {
 	if problems, _, err := Lint(dir); err != nil || len(problems) > 0 {
 		t.Fatalf("lint of a fresh repo: %v %v", problems, err)
 	}
-	write(t, dir, "docs/self/guide.md", "---\ntitle: Guide\nnav_order: 3\n---\n\n# Guide\n\n[Nowhere](nowhere.md). Run `charter frobnicate`.\n")
+	// A path is the repo's when git tracks its first folder: one under docs/ that is not there is a problem; one under
+	// a folder only this disk has (an agent's .claude/) is no path of the repo's, in any checkout.
+	write(t, dir, ".claude/worktrees/x/README.md", "an agent's\n")
+	if err := exec.Command("git", "-C", dir, "add", "docs", "AGENTS.md").Run(); err != nil {
+		t.Fatal(err)
+	}
+	write(t, dir, "docs/self/guide.md", "---\ntitle: Guide\nnav_order: 3\n---\n\n# Guide\n\n[Nowhere](nowhere.md). Run `charter frobnicate`. See `docs/self/missing.md`, and a project's `.claude/skills/charter`.\n")
 	problems, _, _ := Lint(dir)
 	joined := strings.Join(problems, "\n")
-	for _, want := range []string{"docs/self/guide.md: link to nowhere.md: no such file", "docs/self/guide.md: no other page links to it", "`charter frobnicate`: charter has no such command"} {
+	for _, want := range []string{"docs/self/guide.md: link to nowhere.md: no such file", "docs/self/guide.md: no other page links to it", "`charter frobnicate`: charter has no such command", "`docs/self/missing.md`: no such path in the repo"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("no %q in:\n%s", want, joined)
 		}
+	}
+	if strings.Contains(joined, ".claude/skills/charter") {
+		t.Errorf("a path under a folder git does not track was checked:\n%s", joined)
 	}
 }
 
