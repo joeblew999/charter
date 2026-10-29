@@ -9,23 +9,23 @@ How to put a project on Cloudflare Workers, test it there, and run the same from
 
 ## Deploy
 
-In the project's folder (or with `-w <project>` from this repo's root):
+In the project's folder (in this repo, `go tool charter` in place of `charter`), with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in fnox:
 
 ```sh
-npx cf auth login                # once per machine; or set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
-fnox exec -- npm run deploy      # a Go Worker built first; the Worker with its secrets, then its migrations
-fnox exec -- npm run live-test   # REMOTE: the standard test, then the project's tests (the notes ones write notes)
+charter build                            # the Worker into build/: Go with TinyGo, TypeScript bundled
+fnox exec -- charter deploy production   # the Worker with its secrets, then its migrations
+fnox exec -- charter live-test           # REMOTE: the standard test, then the project's (the notes ones write notes)
 ```
 
-- **`cloudflare.config.ts`** declares the Worker, its database `<name>-db` (binding `DB`) and, with a stream, the hub. A second deploy keeps the database. A project may deploy the same code as a second Worker (`deployModes`: `examples/conformance-ts` does).
-- **Migrations** are `migrations/*.sql`, applied in name order, each once: `npm run deploy` applies them on Cloudflare, `npm run dev` locally. Never edit one that was applied.
-- **The URL is `url` in `charter.config.ts`** (`API_URL` overrides it): the specs name it and the live test calls it. After changing it, `npm run spec`.
-- **A Go repo without Node** deploys with `charter deploy` and reads the Worker's logs with `charter tail` ([Libraries](libraries.md#go-githubcomjoeblew999charter)).
-- **The size:** `npm run check` fails when the Worker, gzipped as a deploy uploads it, is over `bundleLimit` in `charter.config.ts`: 3 MB by default, what Workers Free allows; Workers Paid allows 10 MB. In Go, `charter check` holds the Worker's Wasm to Workers Free's 3 MB.
+- **`charter.toml`** declares the Worker, its database (`[[d1]]`, `database` its name on Cloudflare) and, with a stream, the hub (`[[durable_objects]]`). A second deploy keeps the database. The same code may deploy as more Workers (`[production] also`: `examples/conformance-ts` does), each with a database and counters of its own.
+- **Migrations** are `migrations/*.sql`, applied in name order, each once, recorded in the database's `d1_migrations`: `charter deploy` applies them on Cloudflare, `charter dev` locally. Never edit one that was applied.
+- **The URL is `url` in `charter.toml`:** the specs name it and the live test calls it. After changing it, `charter spec`.
+- **The logs:** `fnox exec -- charter tail` streams the deployed Worker's.
+- **The size:** `charter check` fails when the Worker, gzipped as a deploy uploads it, is over 3 MB, what Workers Free allows.
 
 ## Secrets
 
-`secrets` in `charter.config.ts` (in Go, `[secrets]` `required` in `charter.toml`) must be set for a deploy; `optionalSecrets` (`optional`) go with it when the environment has them. `npm run deploy` (in Go, `charter deploy production`) takes them from the environment: `fnox exec --` here, the repo's GitHub secrets in CI. They reach Cloudflare without being printed or kept in a file of the repo; a secret a deploy doesn't set stays as it was. Making them, and who may call: [Auth](auth.md).
+`[secrets]` `required` in `charter.toml` must be set for a deploy; `optional` go with it when the environment has them. `charter deploy production` takes them from the environment: `fnox exec --` here, the repo's GitHub secrets in CI. They reach Cloudflare without being printed or kept in a file of the repo; a secret a deploy doesn't set stays as it was. Making them, and who may call: [Auth](auth.md).
 
 ## CI on GitHub
 
@@ -37,6 +37,6 @@ fnox exec -- sh -c 'gh secret set CLOUDFLARE_ACCOUNT_ID --body "$CLOUDFLARE_ACCO
 fnox exec -- sh -c 'gh secret set WRITE_TOKEN --body "$WRITE_TOKEN" && gh secret set READ_TOKEN --body "$READ_TOKEN"'
 ```
 
-This repo has one, `deploy`, run by hand: `npm run ci -- deploy examples/notes-go --remote`. It has not yet run on GitHub; it was run here, with every project, on 2026-10-15.
+This repo has one, `deploy`, run by hand: `npm run ci -- deploy examples/notes-go --remote`. It has not run on GitHub; its three steps were run here by hand, on the five Go projects on 2026-10-29.
 
-Limits: one Worker and database per deploy mode, no staging, no custom domain.
+This repo's projects deploy to production only. `charter.toml` also takes `[staging]` and `[preview]`, each with its own Worker, and a custom domain (every key: `go doc github.com/joeblew999/charter/project`).

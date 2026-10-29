@@ -9,7 +9,7 @@ import { chunk, END, note } from "./schemas.ts";
 
 // The conformance API, contract first: one API with every Fern feature we use (docs/self/sdks.md). The
 // Worker implements it (api/handlers.ts, served the standard way under /api) and both specs are
-// generated from it (npm run spec -> fern/{openapi,asyncapi}.json). Each feature is switched on here:
+// generated from it (charter spec -> fern/{openapi,asyncapi}.json). Each feature is switched on here:
 // - on an operation, by `openapi({ operationId, tags, spec })`: the SDK names and Fern's x-fern-*;
 // - for the whole document, by `base` below: oRPC's contract has no place for those;
 // - the WebSocket by `asyncapi({...})` (charter-lib/asyncapi), and the webhooks by `webhooks` below.
@@ -19,8 +19,8 @@ import { chunk, END, note } from "./schemas.ts";
 export const info = { title: "Conformance", version: "1.0.0", description: "Every Fern feature we care about, via standard OpenAPI + x-fern-* extensions." };
 
 /**
- * How often one caller may create notes: the Worker's WRITE_LIMIT binding, which cloudflare.config.ts
- * declares from the spec. Over it: 429, with Retry-After.
+ * How often one caller may create notes: the Worker's WRITE_LIMIT binding, which charter.toml
+ * binds from the spec. Over it: 429, with Retry-After.
  */
 export const writeLimit: Limit = { binding: "WRITE_LIMIT", limit: 100, period: 60 };
 
@@ -28,7 +28,7 @@ export const writeLimit: Limit = { binding: "WRITE_LIMIT", limit: 100, period: 6
 const int32 = (examples: number[]) => ({ format: "int32", examples });
 
 type Operation = OpenAPIV3_2.OperationObject;
-/** Fern's audiences: the group `typescript-public` (charter.config.ts: sdks.audiences) keeps only the "public" operations. */
+/** Fern's audiences: the group `typescript-public` (charter.toml: [sdks] audiences) keeps only the "public" operations. */
 const everyone = { "x-fern-audiences": ["public", "internal"] };
 const internal = { "x-fern-audiences": ["internal"] };
 const fern = (extensions: Record<string, unknown>) => (op: Operation): Operation => ({ ...op, ...extensions });

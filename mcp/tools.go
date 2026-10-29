@@ -117,7 +117,7 @@ func toolList(ops []*huma.Operation, registry huma.Registry) []mcpTool {
 }
 
 // Check is why each operation that would be a tool cannot be one: nil for an API whose tools/list
-// is complete. charter-ts spec calls it (specs.Problems), before the specs are written, so that a missing
+// is complete. charter spec calls it (specs.Problems), before the specs are written, so that a missing
 // tool is found there and not by a client. The fix is to rename what clashes, or NotATool(op).
 func Check(api *humaworkers.API) []error {
 	var problems []error

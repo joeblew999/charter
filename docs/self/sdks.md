@@ -10,8 +10,8 @@ nav_order: 5
 ## Generate
 
 ```sh
-npm run sdk                       # the TypeScript SDK -> sdk/out/typescript-dist (not committed)
-npm run sdk -- go                 # any group of fern/generators.yml -> sdk/out/<group>
+charter sdk        # the TypeScript SDK -> sdk/out/typescript-dist (not committed)
+charter sdk go     # any group of fern/generators.yml -> sdk/out/<group>
 ```
 
 ```ts
@@ -22,19 +22,21 @@ for await (const n of await client.notes.list({ limit: 50 })) console.log(n.id);
 
 ## Prove them, in every language
 
-`npm run sdk -- --prove` generates every group of `fern/generators.yml` at once, each in a Docker container of its own, and proves each in its language as soon as it is generated: Go built, vetted and tested against WireMock; TypeScript typechecked; Python checked by mypy and its own tests; the Rust CLI built. Each says how long it took. The toolchains come from mise, at versions charter-ts pins. This repo's CI proves the conformance projects' clients, which carry every Fern feature.
+`charter sdk -prove` generates every group of `fern/generators.yml` at once, each in a Docker container of its own, and proves each in its language as soon as it is generated: Go built, vetted and tested against WireMock; TypeScript typechecked; Python checked by mypy and its own tests; the Rust CLI built. Each says how long it took. The toolchains come from mise, at versions charter pins. This repo's CI proves the conformance projects' clients, which carry every Fern feature.
 
-Which SDKs a project has is `sdks` in `charter.config.ts` (in Go, `[sdks]` in `charter.toml`); `npm run spec` (`charter spec`) writes Fern's settings, `fern/generators.yml`, from it and the spec, with the generators charter pins:
+Which SDKs a project has is `[sdks]` in `charter.toml`; `charter spec` writes Fern's settings, `fern/generators.yml`, from it and the spec, with the generators charter pins:
 
-```ts
-sdks: { name: "Notes", more: ["python", "cli"] },
+```toml
+[sdks]
+name = "Notes"
+more = ["python", "cli"]
 ```
 
 | Field | Gives |
 |---|---|
 | `name` | The TypeScript SDK's namespace; in lower case, the Go package and the CLI's command |
 | (always) | The groups `go`, `typescript` (sources) and `typescript-dist` (compiled); the Go SDK's module is the project's Go module, or in TypeScript the Worker's name, with `/sdk/go` |
-| `more` | `python`, and `cli`: a command-line client in Rust (Fern's early access), which `npm run sdk -- --prove cli` builds |
+| `more` | `python`, and `cli`: a command-line client in Rust (Fern's early access), which `charter sdk -prove cli` builds |
 | `audiences` | For each, a TypeScript SDK of only what the contract tags for it (`x-fern-audiences`): the group `typescript-<audience>` |
 
 The credentials each SDK sends are the spec's security schemes, restated there: bearer tokens, header keys (a Cloudflare Access service token) and OAuth client credentials, any of them.

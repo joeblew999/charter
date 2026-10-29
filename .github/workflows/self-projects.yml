@@ -1,5 +1,5 @@
 # Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
-# Every project's check: lint, its specs, its tests natively (Go) and under workerd. Here: npm run ci -- projects [<project>]; on GitHub, from here: npm run ci -- projects [<project>] --remote.
+# Every project's check (charter check): lint, its specs, its tests natively (Go) and under workerd. Here: npm run ci -- projects [<project>]; on GitHub, from here: npm run ci -- projects [<project>] --remote.
 name: self-projects
 on:
   push:

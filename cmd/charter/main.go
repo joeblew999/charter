@@ -1,6 +1,7 @@
 // Command charter is a Worker's every step on Cloudflare, one command for all of them (#100, #121):
 //
-//	charter build    the Worker into build/, with TinyGo (go doc .../internal/cli/build)
+//	charter build    the Worker into build/: a Go one with TinyGo (go doc .../internal/cli/build), a TypeScript one
+//	                 bundled with esbuild ([build] entry)
 //	charter deploy   to Cloudflare over its REST API: production, Worker Previews, the preview pipeline
 //	charter tail     the deployed Worker's live logs
 //	charter bench    the CPU a local Worker spends per request
@@ -20,6 +21,7 @@
 //	charter sdk      a project's SDKs with Fern: one, every one proven (-prove), the Go SDK it commits (-publish)
 //	charter dev      a project's Worker on local workerd (-native: the app run natively), until Ctrl-C
 //	charter live-test  the standard test and a project's live tests against the deployed Worker
+//	charter twins    two projects of the same API (a TypeScript one and its Go twin) answer the same
 //	charter version  the version of charter this is
 //
 // A repo takes it from mise, as a binary of charter's GitHub release: mise use github:joeblew999/charter.
@@ -40,6 +42,7 @@ import (
 	"github.com/joeblew999/charter/internal/cli/scaffold"
 	"github.com/joeblew999/charter/internal/cli/tail"
 	"github.com/joeblew999/charter/internal/cli/token"
+	"github.com/joeblew999/charter/internal/twins"
 	"github.com/joeblew999/charter/internal/version"
 )
 
@@ -63,13 +66,14 @@ var steps = map[string]func(args []string){
 	"sdk":       projectsteps.SDK,
 	"dev":       projectsteps.Dev,
 	"live-test": projectsteps.LiveTest,
+	"twins":     twins.Main,
 	"test":      projectsteps.Test, // what check runs under charter with: no step to run alone
 	"version":   func([]string) { fmt.Println("charter", version.String()) },
 }
 
 func main() {
 	if len(os.Args) < 2 || steps[os.Args[1]] == nil {
-		fmt.Fprintln(os.Stderr, "usage: charter build | deploy | tail | bench | local | serve | with | token | ci | builds | init | tasks | skill | workflow | check | spec | sdk | dev | live-test | version [flags]   (charter <step> -h: its flags)")
+		fmt.Fprintln(os.Stderr, "usage: charter build | deploy | tail | bench | local | serve | with | token | ci | builds | init | tasks | skill | workflow | check | spec | sdk | dev | live-test | twins | version [flags]   (charter <step> -h: its flags)")
 		os.Exit(2)
 	}
 	steps[os.Args[1]](os.Args[2:])

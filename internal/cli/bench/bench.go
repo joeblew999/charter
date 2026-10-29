@@ -3,7 +3,7 @@
 // waiting, is what Cloudflare bills a Worker for and what its limits count; measured locally, without
 // Cloudflare, it is the same for anyone who runs it, so a comparison can be checked:
 //
-//	npm run dev -w examples/notes-go &                    # or any Worker under workerd
+//	(cd examples/notes-go && go tool charter dev) &       # or any Worker under workerd
 //	charter bench -base http://localhost:5174 \
 //	  -H 'Authorization: Bearer local-write-token' \
 //	  'GET /api/hello' 'GET /api/notes' 'POST /api/notes {"body":"bench"}'

@@ -1,8 +1,5 @@
-# What npm, cf and the Go build write
+# What npm and charter's build write
 node_modules/
-.cloudflare/
-.wrangler/
-dist/
 /build/
 
 # Local secrets and logs
@@ -11,5 +8,5 @@ dist/
 *.log
 .DS_Store
 
-# What npm run sdk writes
+# What charter sdk writes
 sdk/out/

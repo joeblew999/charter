@@ -1,13 +1,13 @@
-# Written by `charter-ts spec` from fern/openapi.json and charter.config.ts (sdks): don't edit, change
-# those and run npm run spec. Fern's generators are charter-ts's, at the versions it pins.
+# Written by `charter spec` from fern/openapi.json and charter.toml ([sdks]): don't edit, change
+# those and run charter spec. Fern's generators are charter's, at the versions it pins.
 api:
   specs:
     - openapi: openapi.json
     - asyncapi: asyncapi.json
 
-# The SDKs. Generate one: npm run sdk -- <group>   (into sdk/out/<group>)
+# The SDKs. Generate one: charter sdk <group>   (into sdk/out/<group>)
 groups:
-  # Go: the module npm run sdk -- --publish commits in sdk/go, in a project that keeps it.
+  # Go: the module charter sdk -publish commits in sdk/go, in a project that keeps it.
   go:
     generators:
       - name: fernapi/fern-go-sdk

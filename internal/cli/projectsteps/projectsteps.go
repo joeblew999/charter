@@ -1,5 +1,5 @@
 // Package projectsteps is a charter project's own steps, beside the Worker's (build, serve, deploy): what a project
-// with a contract, specs and SDKs runs, as charter-ts ran them for it.
+// with a contract, specs and SDKs runs, in Go or in TypeScript.
 //
 //	charter spec [-check]                          both specs from the contract (fern/), Fern's settings, the database's code
 //	charter sdk [group] [-prove [group…]] [-publish] an SDK with Fern (Docker) into sdk/out; every client proven; the Go SDK

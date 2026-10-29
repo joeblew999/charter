@@ -42,16 +42,16 @@ openssl rand -hex 32 | fnox set WRITE_TOKEN -k "<name> WRITE_TOKEN" -p keychain
 openssl rand -hex 32 | fnox set READ_TOKEN -k "<name> READ_TOKEN" -p keychain
 ```
 
-They are the Worker's secrets (`secrets.ts`): every `fnox exec -- npm run deploy` sets them from the environment. Local runs use throwaway ones (`localSecrets` in `charter.config.ts`). Nothing prints a value. A repo whose CI deploys also keeps them as GitHub secrets ([Deploy and CI](deploy.md#ci-on-github)).
+They are the Worker's secrets (`[secrets]` in `charter.toml`): every `fnox exec -- charter deploy production` sets them from the environment. Local runs use throwaway ones (`[local] vars`). Nothing prints a value. A repo whose CI deploys also keeps them as GitHub secrets ([Deploy and CI](deploy.md#ci-on-github)).
 
 ## Cloudflare Access
 
-In Cloudflare's dashboard (Zero Trust, Access, Applications), make a self-hosted application for the Worker's host: a policy for the people who may log in, and a Service Auth policy for each machine's service token (`cf zero-trust access service-tokens create`). Then give the Worker the application's two values, and deploy:
+In Cloudflare's dashboard (Zero Trust, Access, Applications), make a self-hosted application for the Worker's host: a policy for the people who may log in, and a Service Auth policy for each machine's service token (made in the same place: Access, Service credentials). Then give the Worker the application's two values, and deploy:
 
 ```sh
 echo "https://<team>.cloudflareaccess.com" | fnox set ACCESS_TEAM_DOMAIN -k "<name> ACCESS_TEAM_DOMAIN" -p keychain
 echo "<the application's audience tag>" | fnox set ACCESS_AUD -k "<name> ACCESS_AUD" -p keychain
-fnox exec -- npm run deploy    # sets them: they are optionalSecrets
+fnox exec -- charter deploy production   # sets them: they are [secrets] optional
 ```
 
 A machine keeps its service token as `<WORKER>_ACCESS_CLIENT_ID` and `_SECRET`, which the SDKs and the live tests read. Behind Access every request needs it, even a public one: without it Access answers with a redirect to its login, and the Worker never sees the request. Access's own settings live in Cloudflare; a deploy does not change them.

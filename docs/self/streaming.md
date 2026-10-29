@@ -7,7 +7,7 @@ nav_order: 4
 A project made `--from notes` streams notes over Server-Sent Events (`watchNotes`) and a WebSocket (`liveNotes`). Both survive deploys and dropped connections. Code comments cite the rules below by number.
 
 ```sh
-npm run dev
+charter dev
 curl -N 'localhost:<port>/api/notes/watch?after=0&seconds=5'   # every note after id 0, then the end marker
 ```
 
@@ -36,7 +36,7 @@ A WebSocket the client also sends on: see `examples/conformance-go/api/contract.
 
 ## Check it
 
-`npm run check` runs the live test of the streams (in Go, natively too). The soak test, in `examples/notes-go`, runs seven kinds of client through a redeploy and a client drop:
+`charter check` runs the live test of the streams (in Go, natively too). The soak test, in `examples/notes-go`, runs seven kinds of client through a redeploy and a client drop:
 
 ```sh
 fnox exec -- node test/soak.ts <url>             # REMOTE, redeploys

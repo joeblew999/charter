@@ -3,7 +3,7 @@
 // server agree.
 //
 // A limit is a Cloudflare Workers Rate Limiting binding (the Worker's config names it, with the
-// same limit and period: cloudflare.config.ts reads them from the spec), counted per caller: the
+// same limit and period: charter.toml binds them from the spec), counted per caller: the
 // key is who auth let in ([auth.CallerOf]: the service token, the subject, the email or the
 // token's secret), or the client's IP (CF-Connecting-IP) for an operation that is public. An
 // operation has a limit of its own ([On], in its Extensions), or the limit of a scope it needs

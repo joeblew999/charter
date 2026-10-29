@@ -48,8 +48,8 @@ export interface Document {
 	rateLimits?: Limit[];
 }
 
-/** Both specs of a router (or its contract) with its document, by server: what npm run spec writes
- * (charter.config.ts's specs) and what serve() answers /api/openapi.json and /api/asyncapi.json with. */
+/** Both specs of a router (or its contract) with its document, by server: what charter spec writes
+ * (the specs api/spec.ts exports) and what serve() answers /api/openapi.json and /api/asyncapi.json with. */
 export interface Specs {
 	openapi(server: string): Promise<OpenAPIV3_1.OpenAPIObject>;
 	asyncapi(server: string): Promise<AsyncAPIDocument>;

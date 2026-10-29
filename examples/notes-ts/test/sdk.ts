@@ -1,4 +1,4 @@
-// The generated TypeScript SDK (sdk/out/typescript-dist, npm run sdk) against the live API, real-time
+// The generated TypeScript SDK (sdk/out/typescript-dist, charter sdk) against the live API, real-time
 // paths only: notes.watch() (SSE) and liveNotes.connect() (WebSocket, the hub Durable Object) must
 // both receive a note created with notes.create(), each checked against the contract's schema.
 // Usage, from the project's folder (the SDK is the one in its sdk/out): node test/sdk.ts <origin>

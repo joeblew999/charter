@@ -89,6 +89,11 @@ func TestDeploy(t *testing.T) {
 	if got := p.DatabaseOf(project.D1{Binding: "DB"}, pr); got != "my-app-preview" {
 		t.Errorf("DatabaseOf preview, no name = %s", got)
 	}
+	// Another Worker of the same code (also): its own database, its name in place of the Worker's, as cf named one.
+	api := p.As(prod, "my-app-api")
+	if got := p.DatabaseOf(named, api); api.Worker != "my-app-api" || api.Domain != "" || got != "my-app-api-db" {
+		t.Errorf("As: %+v, DatabaseOf = %s", api, got)
+	}
 	if _, err := p.Deploy("preview", ""); err == nil {
 		t.Error("a preview without a name deployed")
 	}
@@ -137,7 +142,7 @@ func TestBranches(t *testing.T) {
 
 // TestLimits: the contract's x-rate-limit on an operation of the spec is a rate limit beside [[rate_limits]], once
 // however many operations name it; one binding said in both, or twice differently, is refused. A binding with no
-// namespace_id counts in the one named from the Worker and the binding, the same one charter-ts names.
+// namespace_id counts in the one named from the Worker and the binding, the one the deployed Workers count in.
 func TestLimits(t *testing.T) {
 	spec := `{"paths": {
 		"/api/notes": {"post": {"x-rate-limit": {"binding": "WRITE_LIMIT", "limit": 100, "period": 60}}, "get": {}},
@@ -166,8 +171,8 @@ func TestLimits(t *testing.T) {
 	if _, err := limits(base, strings.Replace(spec, `"limit": 100, "period": 60}}}`, `"limit": 7, "period": 60}}}`, 1)); err == nil || !strings.Contains(err.Error(), "twice, differently") {
 		t.Errorf("declared twice, differently: %v", err)
 	}
-	// charter-ts's namespaceOf("charter-notes-go", "WRITE_LIMIT"), which the notes Worker counts in now.
+	// The counter charter-notes-go's WRITE_LIMIT counts in, deployed.
 	if n := project.Namespace("charter-notes-go", "WRITE_LIMIT"); n != 390463246 {
-		t.Errorf("Namespace = %d, want charter-ts's 390463246", n)
+		t.Errorf("Namespace = %d, want the deployed 390463246", n)
 	}
 }

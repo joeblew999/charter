@@ -9,7 +9,7 @@ import (
 )
 
 // D1Store is the messages table (migrations/) on the D1 binding, through the queries of
-// api/queries.sql, which npm run spec writes as typed Go (api/queries.go): one awaited call per
+// api/queries.sql, which charter spec writes as typed Go (api/queries.go): one awaited call per
 // statement, and the rows reach Go as one string (package d1).
 type D1Store struct{ DB d1.DB }
 

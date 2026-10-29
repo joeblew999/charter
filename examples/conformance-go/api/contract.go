@@ -32,7 +32,7 @@ const (
 	LiveTitle   = "Conformance live"
 )
 
-// OAuth is the security scheme's name: npm run spec restates it in fern/generators.yml, for the SDKs.
+// OAuth is the security scheme's name: charter spec restates it in fern/generators.yml, for the SDKs.
 const OAuth = "OAuth"
 
 // The webhook's signature: x-fern-webhook-signature in the spec, and what notify sends.
@@ -153,7 +153,7 @@ type UploadOutput struct {
 }
 
 // WriteLimit is how often one caller may create notes: the Worker's WRITE_LIMIT binding, which
-// cloudflare.config.ts declares from the spec. Over it: 429, with Retry-After.
+// charter.toml binds from the spec. Over it: 429, with Retry-After.
 var WriteLimit = ratelimit.Limit{Binding: "WRITE_LIMIT", Limit: 100, Period: 60}
 
 // END is what a planned end of watchNotes sends: SSE `event: close` with `data: "[end-of-stream]"`,

@@ -79,6 +79,27 @@ func TestSkew(t *testing.T) {
 	}
 }
 
+// TestTypeScriptApp: an app with no go.mod (a TypeScript Worker, bundled) gets no TinyGo pins; in a checkout of
+// charter (its examples) it needs no pin of charter, which the checkout's runs.
+func TestTypeScriptApp(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(dir+"/go.mod", []byte("module github.com/joeblew999/charter\n\ngo 1.27.1\n"), 0o644)
+	os.MkdirAll(dir+"/examples/app", 0o755)
+	t.Chdir(dir + "/examples/app")
+	for _, f := range owned() {
+		if strings.HasSuffix(f.path, "conf.d/charter.toml") {
+			t.Errorf("a TypeScript app gets %s", f.path)
+		}
+	}
+	if !inCharter() {
+		t.Error("an app in charter's checkout is not in it")
+	}
+	os.WriteFile(dir+"/go.mod", []byte("module example.com/other\n"), 0o644)
+	if inCharter() {
+		t.Error("an app under another module is in charter's checkout")
+	}
+}
+
 // TestUnpinned: without charter in its mise.toml, an app is told how to pin it.
 func TestUnpinned(t *testing.T) {
 	t.Chdir(t.TempDir())

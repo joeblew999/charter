@@ -4,7 +4,7 @@
 // and docs. Everything the SDKs need is said here too: OperationID and Tags name the SDK methods,
 // and Extensions carry Fern's x-fern-*. The `example` tags are what the SDKs' READMEs and references
 // show: without one Fern makes a value up, which a pattern or a bound then refuses
-// (npm run spec checks them: specs.Problems).
+// (charter spec checks them: specs.Problems).
 package api
 
 import (
@@ -28,7 +28,7 @@ const (
 )
 
 // WriteLimit is how often one caller may create notes: the Worker's WRITE_LIMIT binding, which
-// cloudflare.config.ts declares from the spec. Over it: 429.
+// charter.toml binds from the spec. Over it: 429.
 var WriteLimit = ratelimit.Limit{Binding: "WRITE_LIMIT", Limit: 100, Period: 60}
 
 // END is what a planned stream end returns: SSE `event: close` with `data: "[end-of-stream]"`,

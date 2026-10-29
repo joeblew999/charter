@@ -15,11 +15,11 @@ import (
 // DB is a D1 database: the binding itself. There is no connection to open or close.
 type DB struct{ binding js.Value }
 
-// Open is the database bound as name (cloudflare.config.ts).
+// Open is the database bound as name (charter.toml's [[d1]]).
 func Open(name string) (DB, error) {
 	binding := cloudflare.GetBinding(name)
 	if !binding.Truthy() {
-		return DB{}, fmt.Errorf("%s is not bound (cloudflare.config.ts)", name)
+		return DB{}, fmt.Errorf("%s is not bound (charter.toml's [[d1]])", name)
 	}
 	return DB{binding}, nil
 }

@@ -2,7 +2,8 @@
 // installed, and its own check passing, in TypeScript and in Go. The packages are packed here, and the
 // new project installs them, as it would the release's. new copies its example from an archive of this
 // checkout's files (CHARTER_SOURCE), as it would from the release's on GitHub; a Go project takes this
-// repo's Go library, as it would the release's.
+// repo's Go library, as it would the release's; and every project takes this checkout's charter from mise, as
+// it would the release's (mise use github:joeblew999/charter), which its check runs.
 //   node charter-ts/test/new-from-package.ts [start notes go-start go-notes]   (the ci job new; slow: it installs)
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -28,6 +29,11 @@ try {
 	const unpacked = join(scratch, "charter-ts");
 	mkdirSync(unpacked);
 	run("tar", ["-xzf", tarball("charter-ts"), "-C", unpacked], scratch);
+	// charter, which runs a project's steps: this checkout's, as mise's version local of the release a repo takes
+	// (mise use github:joeblew999/charter), as the go-app job links it.
+	const bin = join(scratch, "bin");
+	run("go", ["build", "-o", join(bin, "charter"), "./cmd/charter"], resolve("."));
+	run("mise", ["link", "-f", "github:joeblew999/charter@local", bin], scratch);
 	for (const template of projects) {
 		// A name that sorts after github.com: the project's own imports move past the Go library's.
 		const into = join(scratch, `my-${template}`);
@@ -46,7 +52,9 @@ try {
 		if (pkg.devDependencies?.["charter-ts"]) pkg.devDependencies["charter-ts"] = `file:${tarball("charter-ts")}`;
 		writeFileSync(file, JSON.stringify(pkg, null, "\t") + "\n");
 		run("npm", ["install", "--no-audit", "--no-fund"], into);
-		run("npm", ["run", "check"], into);
+		const mise = { MISE_TRUSTED_CONFIG_PATHS: into, MISE_YES: "1" };
+		run("mise", ["use", "github:joeblew999/charter@local"], into, mise);
+		run("mise", ["exec", "--", "npm", "run", "check"], into, mise);
 		console.log(`PASS  a project made by charter-ts new --from ${template.replace(/^go-/, "")}${go ? " --go" : ""}, from the packed package, passes its check`);
 	}
 } finally {

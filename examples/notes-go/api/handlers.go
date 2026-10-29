@@ -28,7 +28,7 @@ type Env struct {
 }
 
 // Trusted is who may do what (reads are public, writing needs write):
-//   - the Worker's secrets (secrets.ts), each with its scopes: READ_TOKEN may not write;
+//   - the Worker's secrets (charter.toml's [secrets]), each with its scopes: READ_TOKEN may not write;
 //   - Cloudflare Access, once it is in front of the Worker: a person who
 //     logged in writes, a machine's service token reads (and writes with the write token beside it);
 //   - an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): what each token's scope claim says.

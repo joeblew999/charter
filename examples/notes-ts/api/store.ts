@@ -9,7 +9,7 @@ import { notes as table } from "./tables.ts";
 
 // Where the notes are kept: D1 (DB) is the log, and the Hub Durable Object (HUB, worker.ts) only wakes
 // the followers when one is added (docs/self/streaming.md). The queries are Drizzle's, on the tables
-// npm run spec writes from migrations/ (api/tables.ts).
+// charter spec writes from migrations/ (api/tables.ts).
 
 export type Note = z.infer<typeof note>;
 

@@ -116,7 +116,7 @@ await auto.connect(new StreamableHTTPClientTransport(endpoint, { requestInit: { 
 check("auto negotiation picks 2026-07-28", auto.getNegotiatedProtocolVersion() === "2026-07-28", auto.getNegotiatedProtocolVersion());
 await auto.close();
 
-// A notification has no answer (JSON-RPC's own errors are the standard test's: charter-ts). Streamable
+// A notification has no answer (JSON-RPC's own errors are the standard test's: charter). Streamable
 // HTTP lets a server answer a request as JSON or as one Server-Sent Event (the client takes both).
 const notified = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream", authorization }, body: '{"jsonrpc":"2.0","method":"notifications/initialized"}' });
 check("a notification is 202 with no body", notified.status === 202 && (await notified.text()) === "", notified.status);

@@ -27,21 +27,21 @@ export default {
 			],
 		},
 		projects: {
-			about: "Every project's check: lint, its specs, its tests natively (Go) and under workerd",
+			about: "Every project's check (charter check): lint, its specs, its tests natively (Go) and under workerd",
 			on: ["push", "pull_request", "tag"],
 			each: "project",
-			run: [["charter-ts", "check"]],
+			run: [["go", "tool", "charter", "check"]],
 		},
 		// Each API that is here in TypeScript and in Go answers the same in both: the TypeScript project is
-		// the reference, and every request its specs give rise to goes to both (charter-ts twins).
+		// the reference, and every request its specs give rise to goes to both (charter twins).
 		twins: {
 			about: "Each API's TypeScript and Go projects under workerd, the same requests to both, and no answer may differ",
 			on: ["push", "pull_request", "tag"],
 			timeoutMinutes: 30,
 			run: [
-				["charter-ts", "twins", "examples/conformance-ts", "examples/conformance-go"],
-				["charter-ts", "twins", "examples/notes-ts", "examples/notes-go"],
-				["charter-ts", "twins", "examples/start-ts", "examples/start-go"],
+				["go", "tool", "charter", "twins", "examples/conformance-ts", "examples/conformance-go"],
+				["go", "tool", "charter", "twins", "examples/notes-ts", "examples/notes-go"],
+				["go", "tool", "charter", "twins", "examples/start-ts", "examples/start-go"],
 			],
 		},
 		// What a user gets: a project made by charter-ts new from the package as a release packs it,
@@ -68,7 +68,7 @@ export default {
 			each: "project",
 			projects: ["examples/conformance-go", "examples/conformance-ts"],
 			timeoutMinutes: 60,
-			run: [["charter-ts", "sdk", "--prove"]],
+			run: [["go", "tool", "charter", "sdk", "-prove"]],
 		},
 		deploy: {
 			about: "A project's Worker deployed to Cloudflare, then its live tests against it",
@@ -76,7 +76,7 @@ export default {
 			each: "project",
 			secrets: ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "READ_TOKEN", "WRITE_TOKEN"],
 			timeoutMinutes: 30,
-			run: [["charter-ts", "deploy"], ["charter-ts", "live-test"]],
+			run: [["go", "tool", "charter", "build"], ["go", "tool", "charter", "deploy", "production"], ["go", "tool", "charter", "live-test"]],
 		},
 	},
 } satisfies CI;

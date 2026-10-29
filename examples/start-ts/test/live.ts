@@ -1,5 +1,5 @@
 // Live test of the API's own routes, against a local server or the deployed Worker (what every API
-// must serve is charter-ts's standard test, which check and live-test run first).
+// must serve is charter's standard test, which check and live-test run first).
 // What it gets back is checked against the contract's schemas. Add a check for each route you add.
 // Usage, from the project's folder: node test/live.ts <origin>
 import { hello } from "../api/schemas.ts";

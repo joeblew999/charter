@@ -77,32 +77,33 @@ const File = "charter.toml"
 
 // Project is charter.toml.
 type Project struct {
-	Name              string          `toml:"name"`
-	CompatibilityDate string          `toml:"compatibility_date"`
-	Main              string          `toml:"main"`
-	Modules           []string        `toml:"modules"`
-	Assets            string          `toml:"assets"`
-	Health            string          `toml:"health"`
-	Port              int             `toml:"port"`
-	Repo              string          `toml:"repo"`
-	Subdomain         string          `toml:"subdomain"`
-	D1                []D1            `toml:"d1"`
-	DurableObjects    []DurableObject `toml:"durable_objects"`
-	RateLimits        []RateLimit     `toml:"rate_limits"`
-	Spec              string          `toml:"spec"`
-	Secrets           Secrets         `toml:"secrets"`
-	URL               string          `toml:"url"`
-	SpecServer        string          `toml:"spec_server"`
-	DB                string          `toml:"db"`
-	SDKs              SDKs            `toml:"sdks"`
-	Go                Go              `toml:"go"`
-	Test              Test            `toml:"test"`
-	Production        Environment     `toml:"production"`
-	Staging           *Environment    `toml:"staging"`
-	Preview           *Environment    `toml:"preview"`
-	Local             Environment     `toml:"local"`
-	Build             Build           `toml:"build"`
-	CI                CI              `toml:"ci"`
+	Name               string          `toml:"name"`
+	CompatibilityDate  string          `toml:"compatibility_date"`
+	CompatibilityFlags []string        `toml:"compatibility_flags"`
+	Main               string          `toml:"main"`
+	Modules            []string        `toml:"modules"`
+	Assets             string          `toml:"assets"`
+	Health             string          `toml:"health"`
+	Port               int             `toml:"port"`
+	Repo               string          `toml:"repo"`
+	Subdomain          string          `toml:"subdomain"`
+	D1                 []D1            `toml:"d1"`
+	DurableObjects     []DurableObject `toml:"durable_objects"`
+	RateLimits         []RateLimit     `toml:"rate_limits"`
+	Spec               string          `toml:"spec"`
+	Secrets            Secrets         `toml:"secrets"`
+	URL                string          `toml:"url"`
+	SpecServer         string          `toml:"spec_server"`
+	DB                 string          `toml:"db"`
+	SDKs               SDKs            `toml:"sdks"`
+	Go                 Go              `toml:"go"`
+	Test               Test            `toml:"test"`
+	Production         Environment     `toml:"production"`
+	Staging            *Environment    `toml:"staging"`
+	Preview            *Environment    `toml:"preview"`
+	Local              Environment     `toml:"local"`
+	Build              Build           `toml:"build"`
+	CI                 CI              `toml:"ci"`
 
 	Root string `toml:"-"` // the directory charter.toml is in
 }
@@ -110,6 +111,9 @@ type Project struct {
 // Build is how the app builds its Worker into build/ and its Static Assets.
 type Build struct {
 	Command string `toml:"command"`
+	// Entry is a TypeScript (or JavaScript) Worker's entry module (worker.ts): charter build bundles it into
+	// build/worker.mjs (esbuild), the Worker's one module. Without it, charter build builds a Go Worker (TinyGo).
+	Entry string `toml:"entry"`
 }
 
 // BuildCommand is the command that builds the Worker: [build] command, else charter build.
@@ -139,10 +143,15 @@ type D1 struct {
 // DatabaseOf is the name of the database bound as d in the deploy dep: Database, else the Worker's name, with the
 // environment's -staging or -preview.
 func (p *Project) DatabaseOf(d D1, dep Deploy) string {
-	if d.Database == "" {
-		return dep.Database
+	name := d.Database
+	if name == "" {
+		name = p.Name
 	}
-	return d.Database + strings.TrimPrefix(dep.Database, p.Name)
+	// Another Worker of the same code (also) has its own: its name in place of the Worker's.
+	if dep.As != "" {
+		name = strings.Replace(name, p.Name, dep.As, 1)
+	}
+	return name + strings.TrimPrefix(dep.Database, p.Name)
 }
 
 // DurableObject is a Durable Object namespace binding, with SQLite storage. Its class is declared in each upload's
@@ -165,7 +174,7 @@ type RateLimit struct {
 
 // Namespace is a rate limit's counter when charter.toml names none: a positive integer, unique in the account as
 // Cloudflare needs, named from the Worker and the binding (FNV-1a), so no app numbers its own, two Workers never share
-// a counter by mistake, and a Worker keeps its counter across deploys. charter-ts names the same (namespaceOf).
+// a counter by mistake, and a Worker keeps its counter across deploys.
 func Namespace(worker, binding string) int {
 	h := fnv.New32a()
 	h.Write([]byte(worker + "/" + binding))
@@ -248,6 +257,9 @@ type SDKs struct {
 	More      []string `toml:"more"`      // more languages: python, and cli (a command-line client in Rust, Fern's early access)
 	Audiences []string `toml:"audiences"` // a TypeScript SDK each, of only what the contract tags for that audience
 	Go        bool     `toml:"go"`        // the Go SDK is committed in sdk/go (charter sdk -publish): check fails when the specs moved on
+	// InWorker is a folder the compiled TypeScript SDK (typescript-dist) is copied into before the Worker is built,
+	// for a Worker that runs the SDK itself; made first when the specs are newer (Docker).
+	InWorker string `toml:"in_worker"`
 }
 
 // Secrets are the Worker's secret_text bindings. Their values come from the environment a deploy runs in (fnox exec --
@@ -262,6 +274,15 @@ type Environment struct {
 	Domain string            `toml:"domain"`
 	Vars   map[string]string `toml:"vars"`
 	Note   string            `toml:"note"` // preview: a sentence for the pull request's comment
+	// Also are more Workers the same code deploys as (production): each with databases of its own (its name in
+	// place of the Worker's in theirs) and its own rate limit counters, as cf deploy --mode deployed one.
+	Also []string `toml:"also"`
+}
+
+// As is the deploy d of another Worker, worker: the same code under its name, with its own databases (DatabaseOf).
+func (p *Project) As(d Deploy, worker string) Deploy {
+	d.Worker, d.As, d.Domain = worker, worker, ""
+	return d
 }
 
 // The branches that deploy something other than their own preview (charter builds deploy): production
@@ -387,9 +408,10 @@ func (p *Project) RateLimit(binding string) (RateLimit, bool) {
 type Deploy struct {
 	Worker   string            // the script: name, or name-staging
 	Preview  string            // the Worker Preview's name, for a preview
-	Database string            // every D1 binding's database
+	Database string            // every D1 binding's database (DatabaseOf names one with its own)
 	Vars     map[string]string // the environment's, with {preview} filled in
 	Domain   string
+	As       string // another Worker of the same code (Environment.Also), whose name its databases have
 }
 
 // Deploy is the deploy to env: "production", "staging" or "preview" (preview names the Worker Preview).

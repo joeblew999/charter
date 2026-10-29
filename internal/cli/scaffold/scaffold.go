@@ -53,17 +53,21 @@ type file struct {
 	how     string // the command that writes it
 }
 
-// owned are the files charter writes into an app, but charter.toml.
+// owned are the files charter writes into an app, but charter.toml, run from its root: the TinyGo pins only for a Go
+// app (a go.mod), which TinyGo builds.
 func owned() []file {
 	b, err := fs.ReadFile(skills.FS, "charter/SKILL.md")
 	check(err)
-	return []file{
+	out := []file{
 		{TasksFile, tasks, 0o644, "charter tasks"},
 		{".mise/tasks/charter-builds", launcher, 0o755, "charter tasks"},
-		{pins.ConfFile, pins.File, 0o644, "charter tasks"},
 		{".claude/skills/charter/SKILL.md", b, 0o644, "charter skill"},
 		{".github/workflows/charter.yml", workflow, 0o644, "charter workflow"},
 	}
+	if _, err := os.Stat("go.mod"); err == nil {
+		out = append(out, file{pins.ConfFile, pins.File, 0o644, "charter tasks"})
+	}
+	return out
 }
 
 // write writes the owned files that how writes.

@@ -30,7 +30,7 @@ The same APIs are kept here in TypeScript and in Go, and a program holds them to
 | Page | What it is |
 |---|---|
 | [Getting started](start.md) | A new API, deployed, with an SDK |
-| [Your API](api.md) | The contract, handlers and storage; the database's typed code; MCP; `charter.config.ts` |
+| [Your API](api.md) | The contract, handlers and storage; the database's typed code; MCP; `charter.toml` |
 | [Streaming](streaming.md) | Streams that lose nothing across deploys |
 | [SDKs](sdks.md) | Generating, proving and publishing them; Fern's features |
 | [Auth](auth.md) | Who may call, and how they prove it |

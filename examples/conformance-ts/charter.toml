@@ -1,0 +1,81 @@
+# charter.toml: the conformance API in TypeScript on Cloudflare, every Fern feature and every way in, everything charter
+# knows about it (every key: go doc github.com/joeblew999/charter/project). Its steps are charter's: charter check,
+# spec, sdk, dev, deploy (fnox exec -- charter deploy production), live-test.
+name = "charter-conformance-ts"
+compatibility_date = "2026-09-25"
+# Lets the Worker call another Worker on the same workers.dev zone (else Cloudflare error 1042): the WebSocket test
+# connects from charter-conformance-ts to charter-conformance-ts-api.
+compatibility_flags = ["global_fetch_strictly_public"]
+health = "/api/openapi.json"
+port = 5176
+# Where it is deployed (charter deploy prints it): the live test's target.
+url = "https://charter-conformance-ts.gedw99.workers.dev"
+# The server the specs name: the second Worker ([production] also), which serves the API they describe.
+spec_server = "https://charter-conformance-ts-api.gedw99.workers.dev"
+# Its rate limits are the contract's (x-rate-limit in the spec), each a Workers Rate Limiting binding.
+spec = "fern/openapi.json"
+# The tables of migrations/ as Drizzle has them (api/tables.ts).
+db = "drizzle"
+
+# The Worker: worker.ts and all it imports (the API, and the harness at /harness/), bundled into build/worker.mjs.
+[build]
+entry = "worker.ts"
+
+# Each Worker keeps its notes in a D1 of its own (charter-conformance-ts-api's: charter-conformance-ts-api-db).
+[[d1]]
+binding = "DB"
+migrations = "migrations"
+database = "charter-conformance-ts-db"
+
+# The live fan-out: oRPC's Durable Object publisher (Hub, which worker.ts exports).
+[[durable_objects]]
+binding = "HUB"
+class = "Hub"
+
+# The API's tokens (api/handlers.ts), and whom else it trusts (Cloudflare Access, an OpenID Connect issuer) and how it
+# signs its webhooks: unset, it does without. Its other settings (CLIENT_ID, CLIENT_SECRET, TOKEN_SECRET) have the
+# tests' defaults (api/handlers.ts): an API of its own would keep them as secrets.
+[secrets]
+required = ["READ_TOKEN", "WRITE_TOKEN"]
+optional = ["ACCESS_TEAM_DOMAIN", "ACCESS_AUD", "OIDC_ISSUER", "OIDC_AUDIENCE", "WEBHOOK_SECRET"]
+
+# Where the noteCreated webhook is sent; empty: nowhere. The same code also deploys as a second Worker: on Cloudflare a
+# Worker can't open a WebSocket to itself.
+[production]
+vars = { APP_NAME = "charter-conformance-ts", WEBHOOK_URL = "" }
+also = ["charter-conformance-ts-api"]
+
+# Throwaway tokens for the API on this machine and its tests.
+[local]
+vars = { APP_NAME = "charter-conformance-ts", READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
+
+# The SDKs Fern makes. The Worker runs the TypeScript one itself (the harness): it is copied into client/ first.
+[sdks]
+name = "Conformance"
+more = ["python", "cli"]
+audiences = ["public"]
+in_worker = "client"
+
+# Under workerd: the SDK test inside the Worker, then from Node the SDK (the public one made first if fern/ changed:
+# Docker), MCP and every way in, the tests examples/conformance-go runs too. The tests serve the auth test's issuer of
+# tokens ({port1}), which the Worker trusts as Cloudflare Access and as an OpenID Connect issuer, and the webhook's
+# receiver ({port2}), for the Worker's whole run.
+[test]
+run = [
+  "node test/sdk-in-worker.ts {base}",
+  "charter sdk typescript-public -if-stale",
+  "node test/sdk.ts {base} --webhooks http://localhost:{port2}",
+  "node test/mcp.ts {base}",
+  "node test/auth.ts {base} {port1}",
+]
+env = { WEBHOOK_URL = "http://localhost:{port2}/webhook", ACCESS_TEAM_DOMAIN = "http://localhost:{port1}", ACCESS_AUD = "test-aud", OIDC_ISSUER = "http://localhost:{port1}", OIDC_AUDIENCE = "https://conformance.test" }
+serve = [{ command = "node test/webhook-receiver.ts {port2}", ready = "http://localhost:{port2}/" }]
+# Against the deployed Workers: the SDK test inside this one, against the second; then the SDK, MCP and the rate limit
+# from here against that one (never the auth test: its issuer is local). It writes test notes.
+live = [
+  "node test/sdk-in-worker.ts {base} https://charter-conformance-ts-api.gedw99.workers.dev",
+  "charter sdk typescript-public -if-stale",
+  "node test/sdk.ts https://charter-conformance-ts-api.gedw99.workers.dev",
+  "node test/mcp.ts https://charter-conformance-ts-api.gedw99.workers.dev",
+  "node test/ratelimit.ts https://charter-conformance-ts-api.gedw99.workers.dev",
+]

@@ -7,8 +7,8 @@
 //
 //	charter build              (mise use github:joeblew999/charter)
 //
-// charter-ts runs it too (its check, dev and deploy build a Go Worker with it), so a repo without Node builds its
-// Worker the same way.
+// charter check, dev and twins run it too. A TypeScript Worker ([build] entry in charter.toml) it bundles with esbuild
+// instead (internal/bundle).
 //
 // The Wasm has TinyGo's runtime patched (patches, below), a starting heap so an ordinary request never
 // collects (-heap), a stack per goroutine that Huma fits in (-stack), and the smallest code (-opt z,
@@ -32,7 +32,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/joeblew999/charter/internal/bundle"
 	"github.com/joeblew999/charter/internal/pins"
+	"github.com/joeblew999/charter/project"
 )
 
 const library = "github.com/joeblew999/charter"
@@ -64,6 +66,14 @@ func Main(args []string) {
 	reuse := fs.Bool("reuse", true, "keep Go runtimes between requests (-reuse=false: one per request, as workers-go's own entry, to measure what reuse saves)")
 	compiler := fs.String("compiler", "tinygo", `"tinygo", or "go": the standard compiler, seconds per build, for a dev loop (a bigger Wasm, a runtime per request; never deploy it)`)
 	fs.Parse(args)
+	// A TypeScript Worker (charter.toml's [build] entry): bundled, one module, no Go.
+	if p, err := project.Load("."); err == nil && p.Build.Entry != "" {
+		if err := bundleWorker(p, *limit); err != nil {
+			fmt.Fprintln(os.Stderr, "charter build:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if !*usePatches {
 		patches = nil
 	}
@@ -86,6 +96,25 @@ func Main(args []string) {
 		fmt.Fprintln(os.Stderr, "charter build:", err)
 		os.Exit(1)
 	}
+}
+
+// bundleWorker bundles p's TypeScript Worker into build/worker.mjs, and fails over limit bytes gzipped (0: none).
+func bundleWorker(p *project.Project, limit int) error {
+	if err := bundle.Prepare(p); err != nil {
+		return err
+	}
+	if _, err := bundle.Build(p.Root, p.Build.Entry); err != nil {
+		return err
+	}
+	raw, gz, err := sizes(filepath.Join(p.Root, bundle.Out))
+	if err != nil {
+		return err
+	}
+	fmt.Printf("made %s: %.2f MB, %.2f MB gzipped\n", bundle.Out, float64(raw)/1e6, float64(gz)/1e6)
+	if limit > 0 && gz > limit {
+		return fmt.Errorf("%s is %d bytes gzipped, over the limit of %d", bundle.Out, gz, limit)
+	}
+	return nil
 }
 
 func build(heapMB int, opt, stack string, limit int, fresh, reuse bool) error {
@@ -352,7 +381,7 @@ func tinygoRoot() (string, error) {
 	return root, nil
 }
 
-// cacheDir is charter's cache folder (the same one charter-ts uses), with parts under it.
+// cacheDir is charter's cache folder, with parts under it.
 func cacheDir(parts ...string) string {
 	base, err := os.UserCacheDir()
 	if err != nil {

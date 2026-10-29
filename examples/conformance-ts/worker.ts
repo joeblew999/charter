@@ -2,7 +2,7 @@
 // on D1 and the hub: api/store_d1.ts), and the harness (harness.ts) at /harness/.
 import { env } from "cloudflare:workers";
 import { DurablePublisherObject } from "@orpc/cloudflare";
-import { type Deployment, handler, oauthOf, type Settings, trusted, webhookOf } from "./api/handlers.ts";
+import { type Deployment, handler, oauthOf, trusted, webhookOf } from "./api/handlers.ts";
 import { d1Notes } from "./api/store_d1.ts";
 import { sdkTest, wsTest } from "./harness.ts";
 
@@ -12,9 +12,8 @@ export class Hub extends DurablePublisherObject {}
 
 // The notes in D1 behind the hub; whom the API trusts, from the Worker's secrets; its Rate Limiting
 // bindings; where its webhook goes. The four settings for Access and OIDC are optional secrets
-// (cloudflare.config.ts), so the generated Env may not name them.
-const settings = env as typeof env & Settings;
-const deployment: Deployment = { notes: d1Notes(), trusted: trusted(settings), oauth: oauthOf(settings), limits: env, webhook: webhookOf(settings) };
+// (charter.toml's [secrets]).
+const deployment: Deployment = { notes: d1Notes(), trusted: trusted(env), oauth: oauthOf(env), limits: env, webhook: webhookOf(env) };
 
 export default {
 	async fetch(request) {

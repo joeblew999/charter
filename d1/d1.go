@@ -11,8 +11,8 @@
 // Off Workers (go test, an ordinary Go server) the same calls run on SQLite in memory, one database per binding, with
 // the migrations charter.toml's [[d1]] names applied when it is opened: the app's own SQL, tested as it runs.
 //
-// npm run spec writes a project's queries (api/queries.sql) as functions over these, typed by sqlc
-// (charter.config.ts: db: "sqlc").
+// charter spec writes a project's queries (api/queries.sql) as functions over these, typed by sqlc
+// (charter.toml: db = "sqlc").
 package d1
 
 import "errors"

@@ -14,7 +14,7 @@ import (
 )
 
 // DurableObject is the hub on Cloudflare: the object called name of the Durable Object namespace
-// bound as binding (cloudflare.config.ts). The class is worker/hub.mjs, which sends each published
+// bound as binding (charter.toml's [[durable_objects]]). The class is worker/hub.mjs, which sends each published
 // body to every subscriber as it is and knows nothing of the type, so one class serves every feed:
 // each name is its own object, with its own subscribers.
 //
@@ -22,7 +22,7 @@ import (
 func DurableObject[T any](binding, name string) (Hub[T], error) {
 	namespace := cloudflare.GetBinding(binding)
 	if !namespace.Truthy() {
-		return nil, fmt.Errorf("%s is not bound (cloudflare.config.ts)", binding)
+		return nil, fmt.Errorf("%s is not bound (charter.toml's [[durable_objects]])", binding)
 	}
 	return durableObject[T]{name: name, stub: namespace.Call("get", namespace.Call("idFromName", name))}, nil
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/joeblew999/charter/hub"
 )
 
-// env binds the API and the pages to the Worker's bindings (cloudflare.config.ts): APP_NAME, DB
+// env binds the API and the pages to the Worker's bindings (charter.toml): APP_NAME, DB
 // (D1, the log), HUB (the hub Durable Object, build/hub.mjs: the wake-up of every open page).
 func env() api.Env {
 	return api.Env{

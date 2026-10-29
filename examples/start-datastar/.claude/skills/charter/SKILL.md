@@ -1,15 +1,22 @@
 ---
 name: charter
-description: Use when a Go app runs on Cloudflare Workers with github.com/joeblew999/charter (charter.toml, the charter command from mise) — adding or changing a binding (D1, a Durable Object, a rate limit, a variable), a migration, a route or handler on Workers, running it locally on workerd, deploying it (production, staging, a preview), its CI and Workers Builds, or when charter check reports a problem.
+description: Use when a Go or TypeScript app runs on Cloudflare Workers with github.com/joeblew999/charter (charter.toml, the charter command from mise) — adding or changing a binding (D1, a Durable Object, a rate limit, a variable), a migration, a route or handler on Workers, its contract, specs and SDKs, running it locally on workerd, deploying it (production, staging, a preview), its CI and Workers Builds, or when charter check reports a problem.
 ---
 
-# A Go Worker with charter
+# A Worker with charter
 
 Everything about the Worker on Cloudflare is `charter.toml` at the app's root (every key: `go doc
 github.com/joeblew999/charter/project`). `charter` reads it for every step, and `charter check`
 says what is wrong or stale. Never hand-write workerd config, wrangler files or deploy scripts: they are generated.
 
-## The app's code
+## The app's code in TypeScript
+
+`[build] entry` in charter.toml (`worker.ts`) is the Worker: charter bundles it and all it imports into
+build/worker.mjs. Its bindings are `env` from `cloudflare:workers`, typed from charter.toml in `.charter/env.d.ts`
+(charter build and check write it; tsconfig.json includes it). An API serves its oRPC contract with charter-lib
+(`charter-lib/serve`); `api/spec.ts` exports its `specs`, which `charter spec` writes into fern/.
+
+## The app's code in Go
 
 - One `main` package: `func main() { transport.Run(handler) }` (`charter/transport`). It is the Worker on Cloudflare
   and a plain HTTP server on `$PORT` anywhere else.
@@ -60,8 +67,13 @@ An app's test can read charter.toml (`project.Load`) to check a value it copies.
 
 | Command | What |
 |---|---|
-| `charter build` | the Worker into build/ with TinyGo (`-compiler=go`: seconds, never deployed) |
+| `charter build` | the Worker into build/: Go with TinyGo (`-compiler=go`: seconds, never deployed), TypeScript bundled |
 | `charter serve` | on local workerd, charter.toml's port (`PORT` overrides), in your time zone |
+| `charter dev` | build, then serve, until Ctrl-C |
+| `charter check` | every check that needs no Cloudflare account: types, specs, tests, the Worker under workerd |
+| `charter spec` | after changing the contract, `[sdks]` or migrations/: the specs, Fern's settings, the database's code |
+| `charter sdk [group]` | an SDK with Fern (Docker) into sdk/out (`-prove`: every client proven) |
+| `charter live-test` | the standard test and `[test] live` against the deployed Worker |
 | `charter with <cmd>` | `<cmd>` against it on a free port, fresh state, `BASE` its URL (`-strict`: a panic fails it) |
 | `charter deploy production\|staging\|preview <name>` | to Cloudflare, as charter.toml says; prints its URL |
 | `charter tail` | the deployed Worker's live logs |
@@ -84,6 +96,6 @@ A commit is compiled once, on CI:
 ## Upgrading charter
 
 charter is two pins at one version: the command in `mise.toml` (`mise use github:joeblew999/charter@<version>`) and
-the library in `go.mod` (`go get github.com/joeblew999/charter@v<version>`). After moving both, `charter tasks`,
-`charter workflow` and `charter skill` write their files again; `charter check` says when one is stale, and when the
-two pins differ.
+the library, in Go in `go.mod` (`go get github.com/joeblew999/charter@v<version>`), in TypeScript charter-lib in
+`package.json`. After moving both, `charter tasks`, `charter workflow` and `charter skill` write their files again;
+`charter check` says when one is stale, and when the two Go pins differ.

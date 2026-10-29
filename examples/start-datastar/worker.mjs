@@ -1,11 +1,11 @@
 // The Worker's entry: everything goes to the Go Worker (TinyGo Wasm in build/, made by
-// npm run dev, check and deploy). The build also writes the Go library's glue into build/, from the
+// charter dev, check and deploy). The build also writes the Go library's glue into build/, from the
 // version of github.com/joeblew999/charter that go.mod requires (its worker/ folder): go.mjs
 // runs Go, keeping its runtimes alive between requests; hub.mjs is the hub Durable Object class,
 // which has to be JavaScript.
 import { goWorker } from "./build/go.mjs";
 
-// The hub's class is the library's, under the name cloudflare.config.ts declares.
+// The hub's class is the library's, under the name charter.toml declares.
 export { Hub } from "./build/hub.mjs";
 
 const go = goWorker();

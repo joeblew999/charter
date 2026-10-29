@@ -26,8 +26,8 @@ import (
 	"time"
 )
 
-// methods are the methods an OpenAPI path item may have.
-var methods = []string{"get", "put", "post", "delete", "patch"}
+// Methods are the methods an OpenAPI path item may have.
+var Methods = []string{"get", "put", "post", "delete", "patch"}
 
 type operation struct {
 	OperationID string                 `json:"operationId"`
@@ -136,7 +136,7 @@ func Run(origin string, say func(string)) error {
 	var ops []op
 	paths := orderedPaths(specAnswer.body)
 	for _, p := range paths {
-		for _, m := range methods {
+		for _, m := range Methods {
 			if raw, ok := s.Paths[p][m]; ok {
 				var o operation
 				json.Unmarshal(raw, &o)
@@ -148,7 +148,7 @@ func Run(origin string, say func(string)) error {
 	if i := slices.IndexFunc(paths, func(p string) bool { return !strings.Contains(p, "{") }); i >= 0 {
 		p := paths[i]
 		var has []string
-		for _, m := range methods {
+		for _, m := range Methods {
 			if _, ok := s.Paths[p][m]; ok {
 				has = append(has, strings.ToUpper(m))
 			}
@@ -188,7 +188,8 @@ func Run(origin string, say func(string)) error {
 	getMcp := get("/api/mcp")
 	check("GET /api/mcp is 405, with Allow: POST", getMcp.status == 405 && getMcp.header.Get("allow") == "POST", map[string]any{"status": getMcp.status, "allow": getMcp.header.Get("allow")})
 	code := func(a answer) float64 {
-		c, _ := object(a)["error"].(map[string]any)["code"].(float64)
+		e, _ := object(a)["error"].(map[string]any)
+		c, _ := e["code"].(float64)
 		return c
 	}
 	parse := mcp("tools/list", map[string]any{}, `{"jsonrpc":"2.0","id":1,"method":`)
@@ -270,10 +271,18 @@ func orderedPaths(specJSON []byte) []string {
 	var raw struct {
 		Paths json.RawMessage `json:"paths"`
 	}
-	if json.Unmarshal(specJSON, &raw) != nil || len(raw.Paths) == 0 {
+	if json.Unmarshal(specJSON, &raw) != nil {
 		return nil
 	}
-	dec := json.NewDecoder(strings.NewReader(string(raw.Paths)))
+	return Keys(raw.Paths)
+}
+
+// Keys are a JSON object's keys in its own order (a Go map has none); none when it is no object.
+func Keys(object json.RawMessage) []string {
+	if len(object) == 0 {
+		return nil
+	}
+	dec := json.NewDecoder(strings.NewReader(string(object)))
 	if t, err := dec.Token(); err != nil || t != json.Delim('{') {
 		return nil
 	}

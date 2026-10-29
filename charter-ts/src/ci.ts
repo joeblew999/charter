@@ -22,7 +22,7 @@ export interface Job {
 	on: readonly ("push" | "pull_request" | "tag" | "dispatch")[];
 	/** Once at the repo's root, or in every project's folder: a matrix on GitHub, one after another here. */
 	each?: "project";
-	/** The projects, by default every workspace that is a project (charter.config.ts, or charter.toml). */
+	/** The projects, by default every workspace that is a project (charter.toml). */
 	projects?: readonly string[];
 	run: Argv[];
 	/** The repo's GitHub secrets the job needs, as environment variables of the same names. */
@@ -77,8 +77,7 @@ async function load(root: string): Promise<CI> {
 /** A job's workflow file: charter-<job>.yml for charter's, self-<job>.yml for the repo's own. */
 const workflowOf = (name: string) => `${charterJobs[name] ? "charter" : "self"}-${name}.yml`;
 
-/** The projects a job runs in: those it names, or every workspace that is a project (charter.config.ts, or a Go
- * project's charter.toml). */
+/** The projects a job runs in: those it names, or every workspace that is a project (charter.toml). */
 function projectsOf(root: string, job: Job): string[] {
 	if (job.projects) return [...job.projects];
 	return (readPackage(root)?.workspaces ?? []).filter(dir => isProject(join(root, dir)));

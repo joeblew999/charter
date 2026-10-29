@@ -3,8 +3,30 @@
 # CLOUDFLARE_ACCOUNT_ID) come from the environment, else from fnox when it is installed.
 
 ["charter:build"]
-description = "Build the Worker into build/ with TinyGo (charter build); WORKER_COMPILER=go builds with the standard compiler, in seconds, never to deploy"
+description = "Build the Worker into build/ (charter build): a Go one with TinyGo (WORKER_COMPILER=go: the standard compiler, in seconds, never to deploy), a TypeScript one bundled with esbuild"
 run = 'charter build ${WORKER_COMPILER:+-compiler=$WORKER_COMPILER}'
+
+["charter:dev"]
+description = "Build the Worker and run it on local workerd, on charter.toml's port, until Ctrl-C (charter dev)"
+run = "charter dev"
+
+["charter:spec"]
+description = "After changing the contract, [sdks] or migrations/: both specs from the contract, Fern's settings and the database's code (charter spec)"
+run = "charter spec"
+
+["charter:sdk"]
+description = "An SDK with Fern (Docker) into sdk/out, by default the TypeScript one (charter sdk; charter sdk -prove proves every client, -publish commits the Go SDK)"
+usage = 'arg "[group]" help="a group of fern/generators.yml, e.g. python"'
+run = 'charter sdk ${usage_group:-}'
+
+["charter:live-test"]
+description = "The standard test and charter.toml's [test] live against the deployed Worker (charter live-test)"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || ! command -v fnox >/dev/null; then exec charter live-test; fi
+exec fnox exec -- charter live-test
+'''
 
 ["charter:serve"]
 description = "Run the built Worker on local workerd, on charter.toml's port (PORT overrides it), in your time zone (charter serve)"

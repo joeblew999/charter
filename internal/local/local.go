@@ -1,10 +1,14 @@
-// Package local writes what runs a Go Worker on plain workerd, no wrangler and no Node, from charter.toml: into
-// .charter/ at the app's root, rebuilt by every command that needs it and never committed (.charter/.gitignore).
+// Package local writes what runs a Worker (Go or TypeScript) on plain workerd, no wrangler and no Node, from
+// charter.toml: into .charter/ at the app's root, rebuilt by every command that needs it and never committed
+// (.charter/.gitignore). What Cloudflare gives a Worker and workerd alone doesn't is given as Cloudflare gives it, as
+// bindings, so the Worker sees it however it reads its env (the fetch's, or cloudflare:workers'):
 //
 //	.charter/config.capnp   workerd's config: the app's modules and the build, its bindings, the port
-//	.charter/local.mjs      the entry: the app's own entry, given what Cloudflare would give it and workerd can't
-//	                        (a D1 database, rate limits, the visitor's time zone in request.cf)
-//	.charter/d1.mjs         D1 on a Durable Object's SQLite, the migrations applied on first use
+//	.charter/local.mjs      the entry: the app's own entry, given the visitor's time zone in request.cf
+//	.charter/d1.mjs         D1 on a Durable Object's SQLite, the migrations applied on first use, answering what
+//	                        workerd's own D1 client (cloudflare-internal:d1-api) asks, as a D1 binding's database
+//	.charter/d1-entry.mjs   the service each D1 binding's client calls: its database's object
+//	.charter/ratelimit.mjs  a Workers Rate Limiting binding, counting in memory
 //	.charter/assets.mjs     Static Assets: a file from the assets folder when there is one, else the Worker
 //
 // workerd serve .charter/config.capnp runs it from the app's root (disk paths are relative to it).
@@ -49,11 +53,13 @@ func Write(p *project.Project) error {
 		return err
 	}
 	files := map[string]string{
-		".gitignore":   "# " + header + "\n*\n",
-		"config.capnp": config(p, build, migrations),
-		"local.mjs":    entry(p, limits),
-		"d1.mjs":       d1(p, migrations),
-		"assets.mjs":   assets,
+		".gitignore":    "# " + header + "\n*\n",
+		"config.capnp":  config(p, build, migrations, limits),
+		"local.mjs":     entry(p),
+		"d1.mjs":        d1(p, migrations),
+		"d1-entry.mjs":  d1Entry,
+		"ratelimit.mjs": rateLimit,
+		"assets.mjs":    assets,
 	}
 	for name, content := range files {
 		if err := write(filepath.Join(dir, name), content); err != nil {
@@ -124,7 +130,10 @@ func entryModule(p *project.Project) string {
 	return filepath.Base(p.Main)
 }
 
-func config(p *project.Project, build []string, migrations []migration) string {
+// d1Service is the name of the service binding's D1 client calls.
+func d1Service(binding string) string { return "charter-d1-" + binding }
+
+func config(p *project.Project, build []string, migrations []migration, limits []project.RateLimit) string {
 	var b strings.Builder
 	q := strconv.Quote
 	fmt.Fprintf(&b, "# %s\n#\n# workerd serve .charter/config.capnp, from the app's root. Embed paths are relative to this file, disk paths to\n# the working directory.\n\n", header)
@@ -138,8 +147,21 @@ func config(p *project.Project, build []string, migrations []migration) string {
 		fmt.Fprintf(&b, "    (name = \"assets\", worker = .assets),\n    (name = \"public\", disk = %s),\n", q(p.Assets))
 	}
 	b.WriteString("    (name = \"app\", worker = .app),\n")
+	for i, d := range p.D1 {
+		fmt.Fprintf(&b, "    (name = %s, worker = .d1x%d),\n", q(d1Service(d.Binding)), i)
+	}
 	fmt.Fprintf(&b, "    (name = \"state\", disk = (path = %s, writable = true)),\n  ],\n", q(StateDir))
-	fmt.Fprintf(&b, "  sockets = [ (name = \"http\", address = %s, http = (), service = %s) ],\n);\n\n", q("127.0.0.1:"+p.LocalPort()), q(front))
+	fmt.Fprintf(&b, "  sockets = [ (name = \"http\", address = %s, http = (), service = %s) ],\n", q("127.0.0.1:"+p.LocalPort()), q(front))
+	if len(limits) > 0 {
+		// The module behind each rate limit binding: one of workerd's wrapped bindings, made from an internal module.
+		b.WriteString("  extensions = [ (modules = [ (name = \"charter-internal:ratelimit\", esModule = embed \"ratelimit.mjs\", internal = true) ]) ],\n")
+	}
+	b.WriteString(");\n\n")
+	for i, d := range p.D1 {
+		fmt.Fprintf(&b, "const d1x%d :Workerd.Worker = (\n  modules = [ (name = \"d1-entry.mjs\", esModule = embed \"d1-entry.mjs\") ],\n"+
+			"  bindings = [ (name = \"D1\", durableObjectNamespace = (className = \"CharterD1\", serviceName = \"app\")), (name = \"BINDING\", text = %s) ],\n"+
+			"  compatibilityDate = %s,\n);\n\n", i, q(d.Binding), q(p.CompatibilityDate))
+	}
 	if p.Assets != "" {
 		fmt.Fprintf(&b, "const assets :Workerd.Worker = (\n  modules = [ (name = \"assets.mjs\", esModule = embed \"assets.mjs\") ],\n"+
 			"  bindings = [ (name = \"ASSETS\", service = \"public\"), (name = \"APP\", service = \"app\") ],\n  compatibilityDate = %s,\n);\n\n", q(p.CompatibilityDate))
@@ -195,31 +217,57 @@ func config(p *project.Project, build []string, migrations []migration) string {
 	for _, d := range p.DurableObjects {
 		fmt.Fprintf(&b, "    (name = %s, durableObjectNamespace = %s),\n", q(d.Binding), q(d.Class))
 	}
-	if len(p.D1) > 0 {
-		b.WriteString("    (name = \"CHARTER_D1\", durableObjectNamespace = \"CharterD1\"),\n")
+	// Each D1 database is workerd's own D1 client, calling its service (d1-entry.mjs, d1.mjs).
+	for _, d := range p.D1 {
+		fmt.Fprintf(&b, "    (name = %s, wrapped = (moduleName = \"cloudflare-internal:d1-api\", innerBindings = [ (name = \"fetcher\", service = %s) ])),\n",
+			q(d.Binding), q(d1Service(d.Binding)))
+	}
+	for _, r := range limits {
+		fmt.Fprintf(&b, "    (name = %s, wrapped = (moduleName = \"charter-internal:ratelimit\", innerBindings = [ (name = \"limit\", json = %s), (name = \"period\", json = %s) ])),\n",
+			q(r.Binding), q(strconv.Itoa(r.Limit)), q(strconv.Itoa(r.Period)))
 	}
 	b.WriteString("    # The developer's own zone, standing in for Cloudflare's request.cf.timezone: charter serve sets it, charter with\n" +
 		"    # doesn't, so tests run in UTC on every machine.\n    (name = \"LOCAL_TIME_ZONE\", fromEnvironment = \"LOCAL_TIME_ZONE\"),\n")
-	fmt.Fprintf(&b, "  ],\n  compatibilityDate = %s,\n);\n", q(p.CompatibilityDate))
+	fmt.Fprintf(&b, "  ],\n  compatibilityDate = %s,\n", q(p.CompatibilityDate))
+	if len(p.CompatibilityFlags) > 0 {
+		var flags []string
+		for _, f := range p.CompatibilityFlags {
+			flags = append(flags, q(f))
+		}
+		fmt.Fprintf(&b, "  compatibilityFlags = [%s],\n", strings.Join(flags, ", "))
+	}
+	b.WriteString(");\n")
 	return b.String()
 }
 
-// entry is local.mjs, with an in-memory counter for each rate limit the Worker binds (limits, project.Limits).
-func entry(p *project.Project, limits []project.RateLimit) string {
+// entry is local.mjs: the app's own entry, given the visitor's time zone in request.cf, and charter's D1 class.
+func entry(p *project.Project) string {
 	var b strings.Builder
 	q := strconv.Quote
 	from := "../" + entryModule(p)
-	fmt.Fprintf(&b, "// %s\n//\n// The app's entry (%s), given what Cloudflare gives a Worker and workerd alone doesn't.\n\n", header, entryModule(p))
+	fmt.Fprintf(&b, "// %s\n//\n// The app's entry (%s), given what Cloudflare gives a Worker's request and workerd alone doesn't.\n\n", header, entryModule(p))
 	fmt.Fprintf(&b, "import entry from %s;\nexport * from %s;\n", q(from), q(from))
 	if len(p.D1) > 0 {
-		b.WriteString("import { database } from \"./d1.mjs\";\nexport { CharterD1 } from \"./d1.mjs\";\n")
+		b.WriteString("export { CharterD1 } from \"./d1.mjs\";\n")
 	}
-	b.WriteString(`
-// A Workers Rate Limiting binding's fixed window, in memory: limit({ key }) → { success }.
-function rateLimit(limit, period) {
+	b.WriteString("\nexport default {\n  ...entry,\n  fetch(request, env, ctx) {\n" +
+		"    // Cloudflare gives the Worker each visitor's zone from their IP (request.cf.timezone); locally, the developer's.\n" +
+		"    if (env.LOCAL_TIME_ZONE && !request.cf?.timezone) {\n" +
+		"      request = new Request(request, { cf: { ...request.cf, timezone: env.LOCAL_TIME_ZONE } });\n    }\n" +
+		"    return entry.fetch(request, env, ctx);\n  },\n};\n")
+	return b.String()
+}
+
+// rateLimit is ratelimit.mjs: a Workers Rate Limiting binding (one of workerd's wrapped bindings, made from its limit
+// and period), a fixed window per key, in memory, as Cloudflare's counts: limit({ key }) → { success }.
+const rateLimit = "// " + header + `
+//
+// A Workers Rate Limiting binding, in memory: a fixed window of limit calls per period seconds, per key.
+
+export default function ({ limit, period }) {
   const windows = new Map();
   return {
-    async limit({ key }) {
+    async limit({ key = "" } = {}) {
       const now = Date.now();
       const w = windows.get(key);
       if (!w || now - w.start >= period * 1000) {
@@ -231,28 +279,29 @@ function rateLimit(limit, period) {
     },
   };
 }
-const rateLimits = {
-`)
-	for _, r := range limits {
-		fmt.Fprintf(&b, "  %s: rateLimit(%d, %d),\n", q(r.Binding), r.Limit, r.Period)
-	}
-	b.WriteString("};\n\nexport default {\n  ...entry,\n  fetch(request, env, ctx) {\n" +
-		"    // Cloudflare gives the Worker each visitor's zone from their IP (request.cf.timezone); locally, the developer's.\n" +
-		"    if (env.LOCAL_TIME_ZONE && !request.cf?.timezone) {\n" +
-		"      request = new Request(request, { cf: { ...request.cf, timezone: env.LOCAL_TIME_ZONE } });\n    }\n" +
-		"    const local = { ...rateLimits };\n")
-	for _, d := range p.D1 {
-		fmt.Fprintf(&b, "    local[%s] = database(env.CHARTER_D1, %s);\n", q(d.Binding), q(d.Binding))
-	}
-	b.WriteString("    return entry.fetch(request, { ...env, ...local }, ctx);\n  },\n};\n")
-	return b.String()
-}
+`
+
+// d1Entry is d1-entry.mjs: the service a D1 binding's client (workerd's own) calls, which hands each request to the
+// binding's database, its own CharterD1 object.
+const d1Entry = "// " + header + `
+//
+// The service a D1 binding's client calls: every request to its database, the binding's own CharterD1 object.
+
+export default {
+  fetch(request, env) {
+    const headers = new Headers(request.headers);
+    headers.set("x-charter-d1-binding", env.BINDING);
+    return env.D1.get(env.D1.idFromName(env.BINDING)).fetch(new Request(request, { headers }));
+  },
+};
+`
 
 func d1(p *project.Project, migrations []migration) string {
 	var b strings.Builder
 	q := strconv.Quote
-	fmt.Fprintf(&b, "// %s\n//\n// D1 on a Durable Object's SQLite, one object per binding, its migrations applied on first use. The D1 API that Go's\n"+
-		"// drivers call: prepare(sql).bind(...args) then run(), all(), first() or raw({ columnNames }).\n\n", header)
+	fmt.Fprintf(&b, "// %s\n//\n// D1 on a Durable Object's SQLite, one object per binding, its migrations applied on first use. It answers what\n"+
+		"// workerd's own D1 client (cloudflare-internal:d1-api, the binding) asks of a database, as Cloudflare's does: POST\n"+
+		"// /query or /execute, a statement or a batch ({ sql, params }), in one transaction, each result with its meta.\n\n", header)
 	b.WriteString("import { DurableObject } from \"cloudflare:workers\";\n")
 	for i, m := range migrations {
 		fmt.Fprintf(&b, "import m%d from %s;\n", i, q("../"+m.path))
@@ -290,35 +339,64 @@ export class CharterD1 extends DurableObject {
     this.migrated = true;
   }
 
-  query(binding, query, params, mode) {
-    this.migrate(binding);
-    const sql = this.ctx.storage.sql;
-    const cursor = sql.exec(query, ...params);
-    if (mode === "raw") return [cursor.columnNames, ...cursor.raw().toArray()];
-    const results = mode === "all" ? cursor.toArray() : [];
-    const { changes, id } = sql.exec("SELECT changes() AS changes, last_insert_rowid() AS id").one();
-    return { success: true, results, meta: { changes, last_row_id: id } };
+  // What D1's client sends: its statements, run in one transaction; their results, or { success: false, error }.
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (request.method !== "POST" || (url.pathname !== "/query" && url.pathname !== "/execute")) {
+      return new Response("not a D1 request", { status: 404 });
+    }
+    try {
+      this.migrate(request.headers.get("x-charter-d1-binding"));
+      let queries = await request.json();
+      if (!Array.isArray(queries)) queries = [queries];
+      queries = queries.filter((query) => query.sql.replace(/^\s+--.*/gm, "").trim().length > 0);
+      if (queries.length === 0) throw new Error("No SQL statements detected.");
+      const format = url.searchParams.get("resultsFormat") === "ROWS_AND_COLUMNS" ? "ROWS_AND_COLUMNS" : "ARRAY_OF_OBJECTS";
+      const results = this.ctx.storage.transactionSync(() => queries.map((query) => this.run(query, format)));
+      const headers = {};
+      try {
+        headers["x-cf-d1-session-commit-token"] = await this.ctx.storage.getCurrentBookmark();
+      } catch {}
+      return Response.json(results, { headers });
+    } catch (e) {
+      return Response.json({ success: false, error: e instanceof Error ? e.message : String(e) });
+    }
   }
-}
 
-// database is binding's D1 database, on its own CharterD1 object.
-export function database(namespace, binding) {
-  const db = () => namespace.get(namespace.idFromName(binding));
-  const statement = (query, params) => ({
-    bind: (...args) => statement(query, args),
-    run: () => db().query(binding, query, params, "run"),
-    all: () => db().query(binding, query, params, "all"),
-    raw: async (options) => {
-      const [columns, ...rows] = await db().query(binding, query, params, "raw");
-      return options?.columnNames ? [columns, ...rows] : rows;
-    },
-    first: async (column) => {
-      const { results } = await db().query(binding, query, params, "all");
-      const row = results[0] ?? null;
-      return column === undefined || row === null ? row : row[column];
-    },
-  });
-  return { prepare: (query) => statement(query, []) };
+  // run runs one statement: its rows (as objects, or columns and rows), and the meta D1 gives with them.
+  run(query, format) {
+    const sql = this.ctx.storage.sql;
+    const counts = () => sql.exec("SELECT total_changes() AS total, last_insert_rowid() AS id").one();
+    const before = counts();
+    const sizeBefore = sql.databaseSize;
+    // A blob comes as an array of bytes.
+    const params = (query.params ?? []).map((p) => (Array.isArray(p) ? new Uint8Array(p).buffer : p));
+    const start = performance.now();
+    const cursor = sql.exec(query.sql, ...params);
+    const columns = cursor.columnNames;
+    const rows = [...cursor.raw()].map((row) => row.map((v) => (v instanceof ArrayBuffer ? [...new Uint8Array(v)] : v)));
+    const duration = performance.now() - start;
+    const after = counts();
+    const size = sql.databaseSize;
+    const results = format === "ROWS_AND_COLUMNS" ? { columns, rows } : rows.map((row) => Object.fromEntries(columns.map((name, i) => [name, row[i]])));
+    return {
+      success: true,
+      results,
+      meta: {
+        served_by: "charter.local",
+        served_by_primary: true,
+        total_attempts: 1,
+        timings: { sql_duration_ms: duration },
+        duration,
+        changes: after.total - before.total,
+        last_row_id: after.id,
+        changed_db: after.total !== before.total || after.id !== before.id || size !== sizeBefore,
+        size_after: size,
+        rows_read: cursor.rowsRead,
+        rows_written: cursor.rowsWritten,
+      },
+    };
+  }
 }
 `)
 	return b.String()
