@@ -37,6 +37,6 @@ fnox exec -- sh -c 'gh secret set CLOUDFLARE_ACCOUNT_ID --body "$CLOUDFLARE_ACCO
 fnox exec -- sh -c 'gh secret set WRITE_TOKEN --body "$WRITE_TOKEN" && gh secret set READ_TOKEN --body "$READ_TOKEN"'
 ```
 
-This repo has one, `deploy`, run by hand: `npm run ci -- deploy examples/notes-go --remote`. It has not run on GitHub; its three steps were run here by hand, on the five Go projects on 2026-10-29.
+This repo has one, `deploy`, run by hand: `npm run ci -- deploy examples/notes-go --remote`. It has not run on GitHub; its three steps were run here by hand, on all eight projects on 2026-10-29.
 
 This repo's projects deploy to production only. `charter.toml` also takes `[staging]` and `[preview]`, each with its own Worker, and a custom domain (every key: `go doc github.com/joeblew999/charter/project`).
