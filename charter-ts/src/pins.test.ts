@@ -64,6 +64,8 @@ test("a Go repo gets the same TinyGo file go tool charter tasks writes, and its 
 	mkdirSync(join(repo, ".config", "mise", "conf.d"), { recursive: true });
 	writeFileSync(join(repo, goPinsConf), goPins);
 	writeFileSync(join(repo, "mise.toml"), '[tools]\ngo = "1.27.3"\n');
+	writeFileSync(join(repo, "go.mod"), "module example.com/app\n");
+	assert.deepEqual(ownToolPins(charterRepo!), [], "charter's own mise.toml says the version: not refused");
 	assert.equal(pinned("tinygo", repo), pinIn(goPins, "tinygo"), "the build's TinyGo is the one charter's file pins");
 	assert.deepEqual(ownToolPins(repo), []);
 	writeFileSync(join(repo, "mise.toml"), '[tools]\ngo = "1.27.3"\ntinygo = "0.43.0"\n"github:WebAssembly/binaryen" = "version_133"\n');

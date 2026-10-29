@@ -185,6 +185,8 @@ export const goPinsConf = ".config/mise/conf.d/charter.toml";
  * mise would install a second copy, and which one a build ran would be chance. As `go tool charter check` says. */
 export function ownToolPins(root: string): string[] {
 	const out: string[] = [];
+	// Only a Go repo gets charter's TinyGo file (filesFor): charter's own mise.toml is where the version is said.
+	if (!existsSync(join(root, "go.mod"))) return out;
 	for (const file of ["mise.toml", ".mise.toml", "mise.local.toml", ".config/mise.toml", ".config/mise/config.toml"]) {
 		if (!existsSync(join(root, file))) continue;
 		let tools = false;
