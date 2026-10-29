@@ -50,6 +50,14 @@ export default {
 			timeoutMinutes: 20,
 			run: [["node", "charter-ts/test/new-from-package.ts"]],
 		},
+		// What an outside Go app gets: one made by go tool charter init on this charter, with no TinyGo of its own, gets the
+		// TinyGo its patch is for from charter, every way an app builds, and builds; its own TinyGo line is refused.
+		"go-app": {
+			about: "A Go app made by go tool charter init gets charter's TinyGo through mise, every way it builds, builds, and may not pin its own",
+			on: ["push", "pull_request", "tag"],
+			timeoutMinutes: 20,
+			run: [["bash", "go/new-app.sh"]],
+		},
 		// The conformance projects carry every Fern feature, so their clients prove the generators; an
 		// example's specs are checked by Fern in its own check, and its committed Go SDK by a hash.
 		clients: {

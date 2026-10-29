@@ -29,6 +29,8 @@ import (
 
 	"github.com/joeblew999/charter/go/lib/project"
 	"github.com/joeblew999/charter/go/lib/skills"
+
+	"github.com/joeblew999/charter/go/lib/internal/pins"
 )
 
 var (
@@ -58,6 +60,7 @@ func owned() []file {
 	return []file{
 		{TasksFile, tasks, 0o644, "go tool charter tasks"},
 		{".mise/tasks/charter-builds", launcher, 0o755, "go tool charter tasks"},
+		{pins.ConfFile, pins.File, 0o644, "go tool charter tasks"},
 		{".claude/skills/charter/SKILL.md", b, 0o644, "go tool charter skill"},
 		{".github/workflows/charter.yml", workflow, 0o644, "go tool charter workflow"},
 	}

@@ -31,6 +31,8 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+
+	"github.com/joeblew999/charter/go/lib/internal/pins"
 )
 
 const library = "github.com/joeblew999/charter/go/lib"
@@ -87,6 +89,9 @@ func Main(args []string) {
 }
 
 func build(heapMB int, opt, stack string, limit int, fresh, reuse bool) error {
+	if err := pinnedTinyGo(); err != nil {
+		return err
+	}
 	if err := run(nil, "go", "run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=tinygo"); err != nil {
 		return err
 	}
@@ -401,4 +406,20 @@ func sizes(path string) (raw, gzipped int, err error) {
 	w.Write(b)
 	w.Close()
 	return len(b), buf.Len(), nil
+}
+
+// pinnedTinyGo fails unless the TinyGo on PATH is the one the patches are for (internal/pins), saying how to get it:
+// a build outside mise, or an app whose mise.toml still pins its own, would otherwise fail later, on a patch's text.
+func pinnedTinyGo() error {
+	if len(patches) == 0 {
+		return nil // TinyGo as it ships: any version
+	}
+	have, err := output(nil, "tinygo", "version")
+	if err != nil {
+		return fmt.Errorf("no tinygo on PATH: run this through mise (mise run charter:build), which installs TinyGo %s from %s", pins.TinyGo(), pins.ConfFile)
+	}
+	if want := pins.TinyGo(); !strings.Contains(have, "tinygo version "+want+" ") {
+		return fmt.Errorf("the tinygo on PATH is %s, and this charter's TinyGo patches are for %s: run it through mise (mise run charter:build), with %s up to date (go tool charter tasks) and no tinygo line in the app's own mise.toml (go tool charter check)", strings.TrimSpace(have), want, pins.ConfFile)
+	}
+	return nil
 }

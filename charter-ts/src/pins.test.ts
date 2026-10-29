@@ -35,14 +35,16 @@ test("pinned: a repo's own mise.toml wins, charter's is the fallback, nothing pi
 	assert.throws(() => pinned("no-such-tool", project), /no version in mise\.toml/);
 });
 
-test("a new Go project's mise.toml carries charter's pins for every tool its build runs", async () => {
+test("a new Go project's mise.toml carries charter's pins, but not TinyGo's or wasm-opt's", async () => {
 	const { miseStarter } = await import("./charter-files.ts");
 	const started = miseStarter(true, true);
 	const charters = readFileSync(charterMise(), "utf8");
-	for (const tool of ["node", "github:jdx/fnox", "go", "tinygo", "aqua:WebAssembly/binaryen", "aqua:sqlc-dev/sqlc"]) {
+	for (const tool of ["node", "github:jdx/fnox", "go", "aqua:sqlc-dev/sqlc"]) {
 		assert.equal(pinIn(started, tool), pinIn(charters, tool), `${tool} in a new Go project's mise.toml`);
 	}
-	assert.equal(pinIn(miseStarter(false, false), "tinygo"), undefined, "a repo without Go gets no TinyGo");
+	for (const tool of ["tinygo", "aqua:WebAssembly/binaryen"]) {
+		assert.equal(pinIn(started, tool), undefined, `${tool}: charter pins it beside its patch (.config/mise/conf.d/charter.toml), not the repo`);
+	}
 });
 
 test("charter's mise.toml pins every tool charter-ts runs through mise", () => {

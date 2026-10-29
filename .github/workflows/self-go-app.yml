@@ -1,0 +1,16 @@
+# Written by `charter-ts adopt` from ci.config.ts: don't edit, change ci.config.ts, then npm run adopt.
+# A Go app made by go tool charter init gets charter's TinyGo through mise, every way it builds, builds, and may not pin its own. Here: npm run ci -- go-app; on GitHub, from here: npm run ci -- go-app --remote.
+name: self-go-app
+on:
+  push:
+    branches: [main]
+    tags: ["ts-v*"]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  go-app:
+    uses: ./.github/workflows/charter-ci.yml
+    with:
+      job: go-app
+      runs-on: ubuntu-24.04
+      timeout-minutes: 20
