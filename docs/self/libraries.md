@@ -61,6 +61,9 @@ tasks, an agent skill, and a check. `go tool charter init`, from the app's root,
 - `build/` into `.gitignore`;
 - the mise tasks, `.mise/tasks/charter.toml` (`charter:build`, `serve`, `with`, `deploy`, `tail`, `token`, `check`,
   `ci`, `builds-configure`, …), and Workers Builds' launcher beside them, `.mise/tasks/charter-builds`;
+- the TinyGo and wasm-opt its Worker builds with, `.config/mise/conf.d/charter.toml`, which mise reads beside the app's
+  own `mise.toml`: the versions this charter's TinyGo patch is for, so the app pins neither itself (`go tool charter
+  check` refuses a `tinygo` or binaryen line in its `mise.toml`, and the build refuses another TinyGo);
 - the agent skill, `.claude/skills/charter`;
 - the CI workflow, `charter.yml` in the app's GitHub workflows folder, which runs `go tool charter ci run`.
 

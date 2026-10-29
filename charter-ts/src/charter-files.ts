@@ -40,7 +40,7 @@ const startMark = "Started by `charter-ts adopt` (github.com/joeblew999/charter)
 
 /** The tools a repo needs, as mise.toml pins them (mise installs them, here and on GitHub), at the
  * versions charter's own mise.toml pins: node for charter-ts; in a project, fnox for its secrets; in
- * a Go one, go, and the TinyGo, wasm-opt and sqlc its Worker and queries are built with. */
+ * a Go one, go, and the sqlc its queries are typed with. */
 export function miseStarter(project: boolean, go: boolean): string {
 	const charters = readFileSync(charterFile("mise.toml"), "utf8");
 	const key = (tool: string) => (/^[A-Za-z0-9_-]+$/.test(tool) ? tool : JSON.stringify(tool));
@@ -49,7 +49,9 @@ export function miseStarter(project: boolean, go: boolean): string {
 		if (!version) throw new Error(`charter's mise.toml has no pin for ${tool}`);
 		return `${key(tool)} = ${JSON.stringify(version)}`;
 	};
-	const tools = ["node", ...(project ? ["github:jdx/fnox"] : []), ...(go ? ["go", "tinygo", "aqua:WebAssembly/binaryen", "aqua:sqlc-dev/sqlc"] : [])];
+	// Not TinyGo or wasm-opt: charter pins those beside its TinyGo patch, in the file `go tool charter tasks` writes
+	// (.config/mise/conf.d/charter.toml), and `go tool charter check` refuses a repo's own.
+	const tools = ["node", ...(project ? ["github:jdx/fnox"] : []), ...(go ? ["go", "aqua:sqlc-dev/sqlc"] : [])];
 	return `# ${startMark}\n# The tools, which mise installs here and on GitHub (charter-ci.yml): ${tools.join(", ")}.\n[tools]\n${tools.map(pin).join("\n")}\n`;
 }
 

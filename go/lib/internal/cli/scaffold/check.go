@@ -10,6 +10,10 @@ import (
 	"strings"
 
 	"github.com/joeblew999/charter/go/lib/project"
+
+	"github.com/BurntSushi/toml"
+
+	"github.com/joeblew999/charter/go/lib/internal/pins"
 )
 
 // Check runs go tool charter check: every problem with charter.toml and the files charter writes into the app.
@@ -50,6 +54,7 @@ func Problems(p *project.Project) []string {
 			}
 		}
 	}
+	out = append(out, ownPins()...)
 	if b, err := os.ReadFile(".gitignore"); err != nil || !strings.Contains("\n"+string(b), "\n/build/") {
 		out = append(out, ".gitignore doesn't ignore /build/: go tool charter init")
 	}
@@ -75,6 +80,31 @@ func Problems(p *project.Project) []string {
 	if p.CI.Build != "" || p.CI.Test != "" {
 		if p.Repo == "" {
 			out = append(out, fmt.Sprintf("%s: [ci] publishes each commit's build to repo, which isn't set", project.File))
+		}
+	}
+	return out
+}
+
+// ownPins is each line of the app's own mise config that pins TinyGo or wasm-opt: mise would install a second copy
+// beside the one charter pins (pins.ConfFile), and which the build ran would be chance.
+func ownPins() []string {
+	var out []string
+	for _, file := range []string{"mise.toml", ".mise.toml", "mise.local.toml", ".config/mise.toml", ".config/mise/config.toml"} {
+		b, err := os.ReadFile(file)
+		if err != nil {
+			continue
+		}
+		var config struct {
+			Tools map[string]any `toml:"tools"`
+		}
+		if _, err := toml.Decode(string(b), &config); err != nil {
+			out = append(out, fmt.Sprintf("%s: %v", file, err))
+			continue
+		}
+		for name := range config.Tools {
+			if pins.Charters(name) {
+				out = append(out, fmt.Sprintf("%s pins %s: delete that line; charter pins it, at the version its TinyGo patch is for (%s: go tool charter tasks)", file, name, pins.ConfFile))
+			}
 		}
 	}
 	return out
