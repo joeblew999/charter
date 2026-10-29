@@ -1,9 +1,18 @@
-# The tools, and nothing else: every command is an npm script (package.json here and in each project),
-# and charter-ts asks mise for the TinyGo it builds Go Workers with. node runs everything; go builds
-# and tests the Go side; gh is what the repo commands talk to GitHub with; fnox holds the secrets a
-# deploy and a live test take (fnox exec -- npm run deploy).
+# The tools, and nothing else: every command is an npm script (package.json here and in each project).
+# This file is the one place their versions are said: mise installs them here and on GitHub, Renovate
+# moves them, and charter-ts reads its pins from here (go.ts, db.ts) and starts a new repo's mise.toml
+# from them (charter-files.ts). node runs everything; go builds and tests the Go side; gh is what the
+# repo commands talk to GitHub with; fnox holds the secrets a deploy and a live test take (fnox exec --
+# npm run deploy). tinygo and binaryen build a Go Worker: go/lib/internal/cli/build patches this
+# TinyGo's runtime, so a new TinyGo that the patch no longer fits fails the build and says so. sqlc
+# types a Go project's queries (db.ts).
 [tools]
 go = "1.27.3"
-gh = "2.101.0"
-node = "26.11.1"
-fnox = { version = "1.40.0", workflow = "release.yml" }
+gh = "2.103.3"
+node = "26.13.0"
+# github:, not mise's packslip install: packslip fails on fnox's skill (a 404 upstream, mise 2026.10.22).
+# github: still checks the checksum and fnox's GitHub artifact attestations.
+"github:jdx/fnox" = "1.44.0"
+tinygo = "0.44.0"
+"aqua:WebAssembly/binaryen" = "133"
+"aqua:sqlc-dev/sqlc" = "1.31.1"

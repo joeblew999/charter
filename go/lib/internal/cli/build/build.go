@@ -43,8 +43,11 @@ var patches = []patch{
 	// 32 finalizers were registered since the last one. Every JavaScript reference registers one, and a
 	// Worker goes idle at every await, so it collected on every request: the first step in "What closed
 	// the gap" (docs/self/benchmarks.md). The collector still runs when the heap is full.
+	// TinyGo 0.44 moved the threshold to gc_finalizer_common.go and made the trigger grow with the number
+	// of finalizers (finalizerGCTrigger), but a threshold of 0 still turns it off: the trigger is then 0,
+	// and finalizerPressureGC never collects. mise.toml pins the TinyGo this text is in.
 	// Upstream: tinygo-org/tinygo#5800 (when fixed: drop the patch)
-	{"src/runtime/gc_finalizer.go", "const finalizerGCThreshold = 32", "const finalizerGCThreshold = 0"},
+	{"src/runtime/gc_finalizer_common.go", "const finalizerGCThreshold = 32", "const finalizerGCThreshold = 0"},
 }
 
 // Main runs the command with args, the arguments after its name.

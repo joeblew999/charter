@@ -46,7 +46,7 @@ func Serve(args []string) {
 	check(os.Chdir(p.Root))
 	log.Printf("→ http://127.0.0.1:%s (workerd, in %s)", p.LocalPort(), Zone())
 	env := append(os.Environ(), "LOCAL_TIME_ZONE="+Zone())
-	check(syscall.Exec(bin, []string{"workerd", "serve", local.Dir + "/config.capnp", "--socket-addr", "http=127.0.0.1:" + p.LocalPort()}, env))
+	check(becomeProcess(bin, []string{"workerd", "serve", local.Dir + "/config.capnp", "--socket-addr", "http=127.0.0.1:" + p.LocalPort()}, env))
 }
 
 // With runs go tool charter with.

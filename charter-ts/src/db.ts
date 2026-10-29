@@ -10,10 +10,8 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { miseTool } from "./pins.ts";
 import { output } from "./run.ts";
-
-/** The sqlc that works out the Go queries' types: mise installs it the first time. */
-const sqlcVersion = "1.31.1";
 
 /** A column or a parameter as sqlc has it (its codegen request, in JSON). */
 interface SqlcColumn {
@@ -55,7 +53,8 @@ function analyze(): SqlcRequest {
 			"        out: out",
 			"",
 		].join("\n"));
-		output("mise", ["exec", `aqua:sqlc-dev/sqlc@${sqlcVersion}`, "--", "sqlc", "generate", "-f", join(dir, "sqlc.yaml")]);
+		// The sqlc that works out the Go queries' types, at the version mise.toml pins (pins.ts).
+		output("mise", ["exec", miseTool("aqua:sqlc-dev/sqlc"), "--", "sqlc", "generate", "-f", join(dir, "sqlc.yaml")]);
 		return JSON.parse(readFileSync(join(dir, "out", "codegen_request.json"), "utf8")) as SqlcRequest;
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
