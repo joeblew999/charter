@@ -62,7 +62,7 @@ tasks, an agent skill, and a check. `go tool charter init`, from the app's root,
 - the mise tasks, `.mise/tasks/charter.toml` (`charter:build`, `serve`, `with`, `deploy`, `tail`, `token`, `check`,
   `ci`, `builds-configure`, …), and Workers Builds' launcher beside them, `.mise/tasks/charter-builds`;
 - the agent skill, `.claude/skills/charter`;
-- the CI workflow, `.github/workflows/charter.yml`, which runs `go tool charter ci run`.
+- the CI workflow, `charter.yml` in the app's GitHub workflows folder, which runs `go tool charter ci run`.
 
 `go tool charter check` names every problem with `charter.toml` and with those files: after upgrading charter, `go tool
 charter tasks`, `skill` and `workflow` write them again. The app writes one `main` package, `transport.Run(handler)`,
