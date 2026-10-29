@@ -5,8 +5,6 @@ package pins
 import (
 	_ "embed"
 	"strings"
-
-	"github.com/BurntSushi/toml"
 )
 
 // File is mise.toml as an app gets it, at ConfFile.
@@ -17,15 +15,30 @@ var File []byte
 // ConfFile is where an app has File: mise reads it beside the app's own mise.toml, with no configuration.
 const ConfFile = ".config/mise/conf.d/charter.toml"
 
-// Tools is what File pins, by mise's name for each.
+// Tools is what File pins, by mise's name for each: its [tools] lines, name = "version", a name bare or quoted. Read
+// with the standard library only: go tool charter build imports this, and a project runs it (go run) with no go.sum
+// lines for anything the build needs beyond what the project already has.
 func Tools() map[string]string {
-	var f struct {
-		Tools map[string]string `toml:"tools"`
+	tools := map[string]string{}
+	in := false
+	for _, line := range strings.Split(string(File), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "[") {
+			in = line == "[tools]"
+			continue
+		}
+		name, value, ok := strings.Cut(line, "=")
+		if !in || !ok || strings.HasPrefix(line, "#") {
+			continue
+		}
+		name, value = strings.Trim(strings.TrimSpace(name), `"`), strings.TrimSpace(value)
+		if v, ok := strings.CutPrefix(value, `"`); ok {
+			if end := strings.Index(v, `"`); end >= 0 {
+				tools[name] = v[:end]
+			}
+		}
 	}
-	if _, err := toml.Decode(string(File), &f); err != nil {
-		panic("pins: mise.toml: " + err.Error())
-	}
-	return f.Tools
+	return tools
 }
 
 // TinyGo is the TinyGo version this charter's runtime patches are for.
