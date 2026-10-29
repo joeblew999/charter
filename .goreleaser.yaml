@@ -29,9 +29,10 @@ release:
   make_latest: true
   # A release run again (charter release is safe to run again) puts its files there again.
   replace_existing_artifacts: true
-  # charter-lib, what a TypeScript Worker imports, packed by charter release into dist/ before goreleaser runs.
+  # charter-lib, what a TypeScript Worker imports, packed by charter release into dist/lib/ (emptied first, so only
+  # this release's) before goreleaser runs.
   extra_files:
-    - glob: ./dist/charter-lib-*.tgz
+    - glob: ./dist/lib/charter-lib-*.tgz
 # Each release lists every commit since the previous one, each with its link and author.
 changelog:
   use: github

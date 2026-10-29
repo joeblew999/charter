@@ -176,3 +176,30 @@ func TestLimits(t *testing.T) {
 		t.Errorf("Namespace = %d, want the deployed 390463246", n)
 	}
 }
+
+// TestOlderRepos: a charter.toml of an older charter (its repo's settings at the top) is refused naming those keys and
+// where they go now, and a charter-ts project (a charter.config.ts, no charter.toml) is pointed to the upgrade page;
+// a repo's charter.toml with [github] and jobs, but no Worker, loads with LoadRepo and not with Load.
+func TestOlderRepos(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, project.File), []byte("description = \"ours\"\ntopics = [\"go\"]\n"), 0o644)
+	if _, err := project.LoadRepo(dir); err == nil || !strings.Contains(err.Error(), "description, topics: an older charter's keys") {
+		t.Errorf("an older charter's keys: %v", err)
+	}
+	os.WriteFile(filepath.Join(dir, project.File), []byte("[github]\ndescription = \"ours\"\n\n[ci]\ncheck = [\"repo\", \"test\"]\n\n[ci.jobs.test]\nabout = \"the tests\"\non = [\"push\"]\nrun = [\"go test ./...\"]\n"), 0o644)
+	if p, err := project.LoadRepo(dir); err != nil || p.IsWorker() || p.CI.Jobs["test"].Run[0] != "go test ./..." {
+		t.Errorf("a repo's charter.toml: %+v, %v", p, err)
+	}
+	if _, err := project.Load(dir); err == nil || !strings.Contains(err.Error(), "name is required") {
+		t.Errorf("Load of a repo's charter.toml: %v", err)
+	}
+	os.WriteFile(filepath.Join(dir, project.File), []byte("[ci.jobs.run]\nabout = \"x\"\non = [\"push\"]\nrun = [\"x\"]\n"), 0o644)
+	if _, err := project.LoadRepo(dir); err == nil || !strings.Contains(err.Error(), "a step of charter ci's own") {
+		t.Errorf("a job named run: %v", err)
+	}
+	ts := t.TempDir()
+	os.WriteFile(filepath.Join(ts, "charter.config.ts"), []byte("export default {}\n"), 0o644)
+	if _, err := project.Load(ts); err == nil || !strings.Contains(err.Error(), "charter-ts's") {
+		t.Errorf("a charter-ts project: %v", err)
+	}
+}

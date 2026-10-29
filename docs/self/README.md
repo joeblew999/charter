@@ -39,6 +39,7 @@ The same APIs are kept here in TypeScript and in Go, and a program holds them to
 | [Deploy and CI](deploy.md) | Cloudflare, secrets, the checks on GitHub |
 | [Repos that use each other](repos.md) | Who pins what, breaking changes, Renovate |
 | [Any repo](any-repo.md) | charter's docs, rules and checks in a repo you have |
+| [Moving from an older charter](upgrade.md) | A repo on charter-ts, on charter's Go tool before 0.20, or on the library at `go/lib` or `go` |
 | [The standard API](standard.md) | What every API serves, and how it refuses |
 | [Libraries](libraries.md) | The Go packages and the TypeScript library |
 | [How to help](contributing.md) | Set up, the CI, the tests, a release |

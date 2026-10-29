@@ -18,7 +18,7 @@ import (
 //  1. The version: charter-lib's (ts/package.json) and every example's dependency on it, and every install command the
 //     docs show (charter-lib's URL, mise use github:joeblew999/charter@X.Y.Z), committed.
 //  2. charter check: the jobs charter.toml's [ci] check lists (the rest are the CI's: charter ci).
-//  3. charter-lib packed (npm pack, into dist/), and the charter binary for every machine, built as a snapshot
+//  3. charter-lib packed (npm pack, into dist/lib/), and the charter binary for every machine, built as a snapshot
 //     (goreleaser, dist/charter), which proves it builds. -dry-run stops here and changes no file.
 //  4. The tag vX.Y.Z (the Go library's: the repo's root module), pushed with main.
 //  5. The GitHub Release vX.Y.Z, marked latest, with the binaries and charter-lib (.goreleaser.yaml): mise use
@@ -119,12 +119,15 @@ func Release(args []string) {
 	if *dryRun {
 		packed = have[1]
 	}
-	check(os.MkdirAll(filepath.Join(r, "dist"), 0o755))
-	check(run.Run(r, nil, "npm", "pack", "-w", "ts", "--pack-destination", filepath.Join(r, "dist")))
-	tarball := filepath.Join(r, "dist", "charter-lib-"+packed+".tgz")
+	// Into dist/lib/, emptied first: goreleaser puts every charter-lib there on the release (.goreleaser.yaml).
+	packs := filepath.Join(r, "dist", "lib")
+	check(os.RemoveAll(packs))
+	check(os.MkdirAll(packs, 0o755))
+	check(run.Run(r, nil, "npm", "pack", "-w", "ts", "--pack-destination", packs))
+	tarball := filepath.Join(packs, "charter-lib-"+packed+".tgz")
 	info, err := os.Stat(tarball)
 	check(err)
-	fmt.Printf("made dist/charter-lib-%s.tgz (charter-lib, which the release carries): %.2f MB\n", packed, float64(info.Size())/1e6)
+	fmt.Printf("made dist/lib/charter-lib-%s.tgz (charter-lib, which the release carries): %.2f MB\n", packed, float64(info.Size())/1e6)
 	check(run.Run(r, nil, "goreleaser", "build", "--snapshot", "--clean"))
 	if *dryRun {
 		fmt.Println("dry run: charter-lib and the binaries are what the release would carry; nothing tagged, pushed or published")

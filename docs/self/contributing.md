@@ -45,7 +45,7 @@ Never edit these: change the source, then run the command.
 | `sdk/go/` (committed) | `charter sdk -publish` |
 | `sdk/out/`, `build/`, `ts/dist/` | `charter sdk`; the Worker's build (`charter build`: TinyGo's, or the TypeScript bundle) and the program that writes a project's specs (`build/_spec`, `build/_spec.mjs`: `charter spec`); `npm ci` |
 | `examples/conformance-ts/client/` | The SDK the conformance Worker runs, copied in by `check`, `dev` and `deploy` |
-| `dist/` | `charter release`: charter-lib packed, the binaries in `dist/charter/` (goreleaser) |
+| `dist/` | `charter release`: charter-lib packed in `dist/lib/`, the binaries in `dist/charter/` (goreleaser) |
 | `docs/charter/`, `AGENTS.md`, `CLAUDE.md`, `.github/` (forms, labels, workflows) | `charter init`, from `internal/cli/repo/files/`, charter's commands and the top's `charter.toml` |
 | A project's `.mise/tasks/`, `.claude/skills/charter/`, `.config/mise/conf.d/charter.toml` | `charter tasks` and `charter skill` |
 | `package-lock.json` | `npm install` |
@@ -103,7 +103,7 @@ Each test checks one thing, at one level, and the same level is in the same plac
 ## Cut a release
 
 ```sh
-go tool charter release X.Y.Z -dry-run   # every check, charter-lib into dist/, the binaries into dist/charter
+go tool charter release X.Y.Z -dry-run   # every check, charter-lib into dist/lib, the binaries into dist/charter
 go tool charter release X.Y.Z            # the version, the tag, the GitHub Release with charter-lib and the binaries
 ```
 
