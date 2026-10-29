@@ -45,13 +45,18 @@ const DefaultBaseURL = cfapi.DefaultBaseURL
 // BuildFiles are what workers-assets-gen + tinygo write to the build directory.
 var BuildFiles = []string{"worker.mjs", "wasm_exec.js", "runtime.mjs", "app.wasm"}
 
+// charters is whether a file in the build directory is charter's own, never the Worker's: a name that starts with _
+// (the program charter spec writes there, build/_spec.mjs).
+func charters(name string) bool { return strings.HasPrefix(name, "_") }
+
 // Config describes one Worker deploy.
 type Config struct {
-	Name              string // Worker script name (required)
-	BuildDir          string // directory with BuildFiles (default "build")
-	AssetsDir         string // Static Assets directory ("" for none)
-	CompatibilityDate string // compatibility_date (required)
-	AllowExisting     bool   // update the Worker if a script with this name already exists
+	Name               string   // Worker script name (required)
+	BuildDir           string   // directory with BuildFiles (default "build")
+	AssetsDir          string   // Static Assets directory ("" for none)
+	CompatibilityDate  string   // compatibility_date (required)
+	CompatibilityFlags []string // compatibility_flags, e.g. global_fetch_strictly_public
+	AllowExisting      bool     // update the Worker if a script with this name already exists
 
 	// MainModule is the entry module, which imports from ./build/ (e.g. "worker/index.mjs"); "" makes
 	// build/worker.mjs the entry. JS modules are named by file name ("worker/index.mjs" → "index.mjs"), so
@@ -143,8 +148,31 @@ func NewPlan(cfg Config) (*Plan, error) {
 		}
 	}
 	if cfg.MainModule == "" {
-		for _, f := range BuildFiles {
-			p.Modules = append(p.Modules, Module{f, filepath.Join(buildDir, f)})
+		// build/worker.mjs is the entry, with the other modules the build wrote: TinyGo's (BuildFiles, in their
+		// order), or a bundled Worker's one module and nothing else.
+		p.Modules = append(p.Modules, Module{"worker.mjs", filepath.Join(buildDir, "worker.mjs")})
+		var rest []string
+		for _, ext := range []string{"*.mjs", "*.js", "*.wasm"} {
+			found, _ := filepath.Glob(filepath.Join(buildDir, ext))
+			rest = append(rest, found...)
+		}
+		slices.SortStableFunc(rest, func(a, b string) int {
+			ia, ib := slices.Index(BuildFiles, filepath.Base(a)), slices.Index(BuildFiles, filepath.Base(b))
+			if ia < 0 {
+				ia = len(BuildFiles)
+			}
+			if ib < 0 {
+				ib = len(BuildFiles)
+			}
+			if ia != ib {
+				return ia - ib
+			}
+			return strings.Compare(a, b)
+		})
+		for _, path := range rest {
+			if f := filepath.Base(path); f != "worker.mjs" && !charters(f) {
+				p.Modules = append(p.Modules, Module{f, path})
+			}
 		}
 	} else {
 		p.Modules = append(p.Modules, Module{filepath.Base(cfg.MainModule), cfg.MainModule})
@@ -157,7 +185,7 @@ func NewPlan(cfg Config) (*Plan, error) {
 		// Every other module the build wrote (charter's go.mjs, tinygo-clock.mjs, websocket.mjs, …).
 		extra, _ := filepath.Glob(filepath.Join(buildDir, "*.mjs"))
 		for _, path := range extra {
-			if f := filepath.Base(path); !slices.Contains(BuildFiles, f) {
+			if f := filepath.Base(path); !slices.Contains(BuildFiles, f) && !charters(f) {
 				p.Modules = append(p.Modules, Module{"build/" + f, path})
 			}
 		}
@@ -538,9 +566,10 @@ func (c *Client) uploadAssets(ctx context.Context, name string, plan *Plan) (str
 // putScript runs step 3: the multipart script upload with its metadata part.
 func (c *Client) putScript(ctx context.Context, cfg Config, modules []Module, d1IDs map[string]string, doMigration map[string]any, assetsJWT string) error {
 	meta := map[string]any{
-		"main_module":        modules[0].Name,
-		"compatibility_date": cfg.CompatibilityDate,
-		"bindings":           bindings(cfg, d1IDs),
+		"main_module":         modules[0].Name,
+		"compatibility_date":  cfg.CompatibilityDate,
+		"compatibility_flags": append([]string{}, cfg.CompatibilityFlags...),
+		"bindings":            bindings(cfg, d1IDs),
 		// Workers Logs: every request's logs and CPU time, in the dashboard and the observability
 		// API. An upload without it turns logging off, so every deploy says so.
 		"observability": map[string]any{"enabled": true, "head_sampling_rate": 1},

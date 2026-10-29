@@ -14,7 +14,8 @@
 //   node test/soak.ts <origin> --idle 20
 // Run it from the project's folder, with WRITE_TOKEN set (fnox exec --). It uses the generated SDKs:
 // the TypeScript SDK (sdk/out/typescript-dist), the CLI (sdk/out/cli) and the Go SDK (sdk/out/go)
-// through soak-go beside this file; the redeploy runs `npm run deploy` there.
+// through soak-go beside this file; the redeploy runs `go tool charter deploy production` there (the Worker built
+// before: go tool charter build).
 import { execFileSync, spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -154,9 +155,9 @@ async function drive(c: Driven) {
 function redeploy(): Promise<void> {
   console.log(`${t()}s hub restart: redeploying...`);
   return new Promise(resolve => {
-    const proc = spawn("npm", ["run", "deploy"], { cwd: root, shell: process.platform === "win32" });
+    const proc = spawn("go", ["tool", "charter", "deploy", "production"], { cwd: root, shell: process.platform === "win32" });
     let out = ""; proc.stdout.on("data", d => out += d); proc.stderr.on("data", d => out += d);
-    proc.on("exit", code => { console.log(`${t()}s redeploy exited ${code}, version ${/Current Version ID: (\S+)/.exec(out)?.[1] ?? "?"}`); resolve(); });
+    proc.on("exit", code => { console.log(`${t()}s redeploy exited ${code}${/✓ script uploaded/.test(out) ? ", script uploaded" : ""}`); resolve(); });
   });
 }
 

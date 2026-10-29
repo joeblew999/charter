@@ -11,7 +11,7 @@ import (
 	"github.com/joeblew999/charter/hub"
 )
 
-// env binds the API to the Worker's bindings (cloudflare.config.ts): its settings, DB (D1), HUB (the
+// env binds the API to the Worker's bindings (charter.toml): its settings, DB (D1), HUB (the
 // hub Durable Object, build/hub.mjs); webhooks go out with the Worker's fetch.
 func env() api.Env {
 	return api.Env{

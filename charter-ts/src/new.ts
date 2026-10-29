@@ -15,8 +15,8 @@ type Example = (typeof examples)[number];
 /** A project's language: TypeScript (oRPC) or Go (Huma). */
 type Language = "ts" | "go";
 
-/** What a copy leaves out: what npm, cf, charter's local runner (.charter), Fern and the build write, and local secrets. */
-const left = new Set(["node_modules", ".wrangler", ".cloudflare", ".charter", "dist", "build", "package-lock.json", ".DS_Store"]);
+/** What a copy leaves out: what npm, charter's local runner (.charter), Fern and the build write, and local secrets. */
+const left = new Set(["node_modules", ".charter", "build", "package-lock.json", ".DS_Store"]);
 const leftPaths = new Set(["sdk/out"]);
 const leftFile = (name: string) => name.startsWith(".dev.vars") || name.endsWith(".log") || name.endsWith(".tsbuildinfo");
 
@@ -45,8 +45,9 @@ function copyExample(repo: string, example: Example, language: Language, to: str
 	rewrite(join(to, "test"), content => content.replaceAll('from "../api/schemas.ts"', 'from "./schemas.ts"'));
 	// A Go project is charter's (charter.toml, #121): its tests run from its own test/ now.
 	rewrite(to, (content, file) => (basename(file) === "charter.toml" ? content.replaceAll(`../${example}-ts/test`, "test") : content));
-	// Its tests are TypeScript, typechecked by charter check (tsc -p tsconfig.node.json).
-	writeFileSync(join(to, "tsconfig.node.json"), JSON.stringify({ extends: "charter-ts/tsconfig.node.json", include: ["test"] }, null, "\t") + "\n");
+	// Its tests are TypeScript, typechecked by charter check (tsc -p tsconfig.node.json), as its twin's are.
+	const tsconfig = JSON.parse(readFileSync(join(twin, "tsconfig.node.json"), "utf8")) as { include: string[] };
+	writeFileSync(join(to, "tsconfig.node.json"), JSON.stringify({ ...tsconfig, include: ["test"] }, null, "\t") + "\n");
 }
 
 /** The repo the examples are copied from: charter's own checkout, when charter-ts runs from it; else the
@@ -161,7 +162,8 @@ export async function newProject(args: string[]): Promise<void> {
 	console.log(`next:
   cd ${relative(process.cwd(), into) || "."}
 ${tidy ? "" : "  go mod tidy          # the Go library\n"}  npm install          # the packages, charter-ts ${version()} among them
-  npm run check        # every check that needs no Cloudflare account
-  npm run dev          # the API on charter.config.ts's port
-${values.subdomain ? "" : `Your workers.dev subdomain goes in charter.config.ts's url (cf deploy prints it; your-subdomain for now), then npm run spec.\n`}`);
+  mise use github:joeblew999/charter   # charter, which runs the project's steps (charter.toml)
+  npm run check        # every check that needs no Cloudflare account (charter check)
+  charter dev          # the API on charter.toml's port
+${values.subdomain ? "" : `Your workers.dev subdomain goes in charter.toml's url (charter deploy prints it; your-subdomain for now), then charter spec.\n`}`);
 }

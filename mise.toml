@@ -1,11 +1,11 @@
-# The tools, and nothing else: every command is an npm script (package.json here and in each project).
+# The tools, and nothing else: the repo's commands are npm scripts (package.json), a project's charter's (charter.toml).
 # This file is the one place their versions are said: mise installs them here and on GitHub, Renovate
-# moves them, and charter-ts reads its pins from here (go.ts, db.ts) and starts a new repo's mise.toml
+# moves them, charter runs them from here (mise exec: sqlc, TinyGo), and charter-ts starts a new repo's mise.toml
 # from them (charter-files.ts). node runs everything; go builds and tests the Go side; gh is what the
 # repo commands talk to GitHub with; fnox holds the secrets a deploy and a live test take (fnox exec --
-# npm run deploy). tinygo and binaryen build a Go Worker: internal/cli/build patches this
+# charter deploy production). tinygo and binaryen build a Go Worker: internal/cli/build patches this
 # TinyGo's runtime, so a new TinyGo that the patch no longer fits fails the build and says so. sqlc
-# types a Go project's queries (db.ts). goreleaser builds the charter binary a release puts on GitHub (.goreleaser.yaml),
+# types a Go project's queries (internal/dbcode). goreleaser builds the charter binary a release puts on GitHub (.goreleaser.yaml),
 # which a repo takes from mise. workerd runs a Worker locally (charter dev, check, with), as Cloudflare does.
 [tools]
 go = "1.27.3"

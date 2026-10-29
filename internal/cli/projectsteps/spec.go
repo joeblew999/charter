@@ -3,14 +3,13 @@ package projectsteps
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/joeblew999/charter/internal/dbcode"
 	"github.com/joeblew999/charter/internal/fern"
 	"github.com/joeblew999/charter/internal/run"
-	"github.com/joeblew999/charter/internal/sqlc"
 	"github.com/joeblew999/charter/project"
 )
 
@@ -24,12 +23,9 @@ func Spec(args []string) {
 	check(spec(load(), *checkOnly))
 }
 
-// spec writes (or with check, compares) what the contract gives, in the project's root.
+// spec writes (or with check, compares) what the contract gives, in the project's root: from a Go project's api.API,
+// or a TypeScript project's api/spec.ts.
 func spec(p *project.Project, checkOnly bool) error {
-	module := goModule(p.Root)
-	if module == "" {
-		return errors.New("charter spec writes a Go project's specs: this one has no go.mod")
-	}
 	server := p.SpecServer
 	if server == "" {
 		server = p.URL
@@ -37,26 +33,36 @@ func spec(p *project.Project, checkOnly bool) error {
 	if server == "" {
 		return errors.New("charter.toml has no url: the specs name the server the Worker is deployed at")
 	}
-	program, err := specProgram(p.Root, module)
-	if err != nil {
-		return err
+	// The Go SDK's module: the project's own Go module, or the Worker's name, with /sdk/go.
+	module := goModule(p.Root)
+	var command []string
+	switch {
+	case module != "":
+		program, err := specProgram(p.Root, module)
+		if err != nil {
+			return err
+		}
+		command = []string{"go", "run", program}
+	case exists(filepath.Join(p.Root, "api", "spec.ts")):
+		program, err := tsSpecProgram(p.Root)
+		if err != nil {
+			return err
+		}
+		command, module = []string{"node", program}, p.Name
+	default:
+		return errors.New("charter spec writes the specs from the contract: a Go project's api.API (go.mod), or a TypeScript project's api/spec.ts, and this project has neither")
 	}
-	args := []string{"run", program}
 	if checkOnly {
-		args = append(args, "-check")
+		command = append(command, "-check")
 	}
-	if err := run.Run(p.Root, nil, "go", append(args, "fern/openapi.json", "fern/asyncapi.json", server)...); err != nil {
+	if err := run.Run(p.Root, nil, command[0], append(command[1:], "fern/openapi.json", "fern/asyncapi.json", server)...); err != nil {
 		return err
 	}
 	if err := fernSettings(p, module+"/sdk/go", checkOnly); err != nil {
 		return err
 	}
-	switch p.DB {
-	case "":
-	case "sqlc":
-		return sqlc.Write(p.Root, checkOnly)
-	default:
-		return fmt.Errorf(`charter.toml: db = %q: a Go project's is "sqlc"`, p.DB)
+	if p.DB != "" {
+		return dbcode.Write(p.Root, p.DB, checkOnly)
 	}
 	return nil
 }
@@ -84,6 +90,34 @@ func main() {
 	specs.Must(specs.Problems(spec))
 	specs.Main(spec.OpenAPI, spec.AsyncAPI)
 }
+`), 0o644)
+}
+
+// tsSpecProgram writes the program that writes a TypeScript project's specs, and returns its path: the specs
+// api/spec.ts exports (the contract's, with charter-lib/serve's specsOf), each written as JSON.stringify indents it or,
+// with -check, compared. Node runs it, and the TypeScript it imports, as it is. It is the same in every project, so
+// charter writes it, into build/ (charter's).
+func tsSpecProgram(root string) (string, error) {
+	if err := os.MkdirAll(filepath.Join(root, "build"), 0o755); err != nil {
+		return "", err
+	}
+	return "build/_spec.mjs", os.WriteFile(filepath.Join(root, "build", "_spec.mjs"), []byte(`// Written by charter spec, each time it runs: don't edit. The program that writes the API's
+// specs (node build/_spec.mjs [-check] <openapi.json> <asyncapi.json> <server>).
+import { readFileSync, writeFileSync } from "node:fs";
+import { specs } from "../api/spec.ts";
+
+const args = process.argv.slice(2);
+const check = args[0] === "-check";
+const [openapi, asyncapi, server] = check ? args.slice(1) : args;
+for (const [file, spec] of [[openapi, await specs.openapi(server)], [asyncapi, await specs.asyncapi(server)]]) {
+	const text = JSON.stringify(spec, null, 2) + "\n";
+	if (!check) writeFileSync(file, text);
+	else if (readFileSync(file, "utf8") !== text) {
+		console.error(file + " is stale: write the specs again from the contract (charter spec)");
+		process.exit(1);
+	}
+}
+console.log(check ? "specs match the TypeScript contract" : openapi + ", " + asyncapi + " (" + server + ")");
 `), 0o644)
 }
 

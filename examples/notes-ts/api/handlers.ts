@@ -12,16 +12,14 @@ import { before, followNotes, insert } from "./store.ts";
 //   - Cloudflare Access, once it is in front of the Worker: a person who
 //     logged in writes, a machine's service token reads (and writes with the write token beside it);
 //   - an OpenID Connect issuer (OIDC_ISSUER, OIDC_AUDIENCE): what each token's scope claim says.
-// An unset secret or setting trusts no one. The four settings are optional secrets
-// (cloudflare.config.ts), so the generated Env may not name them.
-const settings = env as typeof env & Partial<Record<"ACCESS_TEAM_DOMAIN" | "ACCESS_AUD" | "OIDC_ISSUER" | "OIDC_AUDIENCE", string>>;
+// An unset secret or setting trusts no one. The four settings are optional secrets (charter.toml's [secrets]).
 const trusted = (): Trusted => ({
 	tokens: [
 		{ secret: "WRITE_TOKEN", value: env.WRITE_TOKEN, scopes: ["read", "write"] },
 		{ secret: "READ_TOKEN", value: env.READ_TOKEN, scopes: ["read"] },
 	],
-	access: { team: settings.ACCESS_TEAM_DOMAIN, aud: settings.ACCESS_AUD, people: ["read", "write"], machines: ["read"] },
-	oidc: { issuer: settings.OIDC_ISSUER, audience: settings.OIDC_AUDIENCE },
+	access: { team: env.ACCESS_TEAM_DOMAIN, aud: env.ACCESS_AUD, people: ["read", "write"], machines: ["read"] },
+	oidc: { issuer: env.OIDC_ISSUER, audience: env.OIDC_AUDIENCE },
 });
 
 // The contract (api/contract.ts) implemented on D1 (api/store.ts), and served the standard way (charter-lib/serve):
@@ -73,5 +71,5 @@ const router = os.router({
 });
 
 /** The API, as a fetch function: what the Worker (worker.ts) answers with. The Rate Limiting bindings
- * are the Worker's own (cloudflare.config.ts). */
+ * are the Worker's own (charter.toml binds each limit of the spec). */
 export const handler = serve(router, { document, trusted, limits: () => env });

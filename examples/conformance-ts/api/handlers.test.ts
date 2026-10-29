@@ -1,7 +1,7 @@
 // The conformance API (handlers.ts) without a Worker: the same fetch function the Worker serves,
 // called from Node, on a log in memory (store.ts). What the SDK does with it inside workerd, on D1
-// and the hub, is in `npm run check`, under workerd.
-//   node --test api/handlers.test.ts   (npm run check runs it)
+// and the hub, is in `charter check`, under workerd.
+//   node --test api/handlers.test.ts   (charter check runs it)
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { call } from "@orpc/server";

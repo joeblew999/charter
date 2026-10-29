@@ -6,7 +6,7 @@
 // feed: each feed is an object of it, by name. It is JavaScript because a Durable Object class has
 // to be: workers-go can call one, not be one.
 //
-// A project's entry exports it under the name its cloudflare.config.ts declares:
+// A project's entry exports it under the name its charter.toml declares ([[durable_objects]] class):
 //
 //	export { Hub } from "./build/hub.mjs";
 //

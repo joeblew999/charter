@@ -1,0 +1,33 @@
+# charter.toml: the start API in TypeScript on Cloudflare, everything charter knows about it (every key: go doc
+# github.com/joeblew999/charter/project). Its steps are charter's: charter check, spec, sdk, dev, deploy, live-test.
+name = "charter-start-ts"
+compatibility_date = "2026-09-25"
+health = "/api/openapi.json"
+port = 5178
+# Where it is deployed (charter deploy prints it): the live test's target, and the server the specs name.
+url = "https://charter-start-ts.gedw99.workers.dev"
+spec = "fern/openapi.json"
+
+# The Worker: worker.ts and all it imports, bundled into build/worker.mjs.
+[build]
+entry = "worker.ts"
+
+[[d1]]
+binding = "DB"
+migrations = "migrations"
+database = "charter-start-ts-db"
+
+[production]
+vars = { APP_NAME = "charter-start-ts" }
+
+[local]
+vars = { APP_NAME = "charter-start-ts" }
+
+# The SDKs Fern makes (charter spec writes fern/generators.yml from this and the spec).
+[sdks]
+name = "Api"
+
+# The live test of its own routes, under workerd and against the deployed Worker.
+[test]
+run = ["node test/live.ts {base}"]
+live = ["node test/live.ts {base}"]

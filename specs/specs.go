@@ -1,5 +1,5 @@
 // Package specs is the body of a spec command: it writes the specs a contract generates to
-// files, for Fern, or checks that the committed files are what the contract gives. charter-ts spec
+// files, for Fern, or checks that the committed files are what the contract gives. charter spec
 // writes that command for a Go project (build/_spec) and runs it: it calls Main with the contract's
 // spec functions, after Must(Problems(api)), what else is wrong with the contract that no spec shows.
 package specs
@@ -89,7 +89,7 @@ func one(spec func(string) ([]byte, error), file, server string, check bool) err
 		return os.WriteFile(file, pretty.Bytes(), 0o644)
 	}
 	if committed, _ := os.ReadFile(file); !bytes.Equal(committed, pretty.Bytes()) {
-		return fmt.Errorf("%s is stale: write the specs again from the contract (npm run spec)", file)
+		return fmt.Errorf("%s is stale: write the specs again from the contract (charter spec)", file)
 	}
 	return nil
 }

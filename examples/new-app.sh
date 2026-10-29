@@ -8,7 +8,7 @@
 # ci.config.ts runs it as the go-app job.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
-compat=$(sed -n 's/.*compatibilityDate = "\([0-9-]*\)".*/\1/p' "$root/charter-ts/src/cloudflare.ts")
+compat=$(sed -n 's/^compatibility_date = "\([0-9-]*\)".*/\1/p' "$root/examples/start-go/charter.toml")
 want=$(sed -n 's/^tinygo = "\(.*\)"/\1/p' "$root/internal/pins/mise.toml")
 go_pin=$(sed -n 's/^go = "\(.*\)"/\1/p' "$root/mise.toml")
 app=$(mktemp -d)/app

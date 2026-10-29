@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joeblew999/charter/internal/bundle"
 	"github.com/joeblew999/charter/internal/cli/scaffold"
 	"github.com/joeblew999/charter/internal/fern"
 	"github.com/joeblew999/charter/internal/run"
@@ -55,10 +56,15 @@ func projectCheck(p *project.Project, fresh bool) error {
 		times = append(times, name+" "+run.Seconds(took))
 		return nil
 	}
-	if err := timed("lint", func() error { return lint(p) }); err != nil {
-		return err
-	}
-	if err := timed("go test", func() error { return run.Run(p.Root, nil, "go", "test", "./...") }); err != nil {
+	goProject := goModule(p.Root) != ""
+	if goProject {
+		if err := timed("lint", func() error { return lint(p) }); err != nil {
+			return err
+		}
+		if err := timed("go test", func() error { return run.Run(p.Root, nil, "go", "test", "./...") }); err != nil {
+			return err
+		}
+	} else if err := timed("types", func() error { return types(p) }); err != nil {
 		return err
 	}
 	if err := timed("specs", func() error { return spec(p, true) }); err != nil {
@@ -66,6 +72,15 @@ func projectCheck(p *project.Project, fresh bool) error {
 	}
 	if exists(filepath.Join(p.Root, "fern")) {
 		if err := timed("fern check", func() error { return fernCheck(p, fresh) }); err != nil {
+			return err
+		}
+	}
+	// A TypeScript project's unit tests sit beside the code they test (api/*.test.ts), as Go's _test.go files do.
+	if unit, _ := filepath.Glob(filepath.Join(p.Root, "api", "*.test.ts")); !goProject && len(unit) > 0 {
+		for i := range unit {
+			unit[i], _ = filepath.Rel(p.Root, unit[i])
+		}
+		if err := timed("unit tests", func() error { return run.Run(p.Root, nil, "node", append([]string{"--test"}, unit...)...) }); err != nil {
 			return err
 		}
 	}
@@ -119,6 +134,21 @@ func lint(p *project.Project) error {
 		if err := fern.GoSDKFresh(p.Root); err != nil {
 			return err
 		}
+	}
+	if exists(filepath.Join(p.Root, "tsconfig.node.json")) {
+		return run.Run(p.Root, nil, "tsc", "-p", "tsconfig.node.json")
+	}
+	return nil
+}
+
+// types is a TypeScript project's lint: its sources readied (bundle.Prepare: the SDK its Worker runs, its env's
+// types), then the Worker's TypeScript typed (tsconfig.json) and its tests' (tsconfig.node.json).
+func types(p *project.Project) error {
+	if err := bundle.Prepare(p); err != nil {
+		return err
+	}
+	if err := run.Run(p.Root, nil, "tsc", "-p", "tsconfig.json"); err != nil {
+		return err
 	}
 	if exists(filepath.Join(p.Root, "tsconfig.node.json")) {
 		return run.Run(p.Root, nil, "tsc", "-p", "tsconfig.node.json")

@@ -10,7 +10,7 @@ import (
 )
 
 // D1Store is the notes table (migrations/) on the D1 binding, through the queries of
-// api/queries.sql, which npm run spec writes as typed Go (api/queries.go): what runs on Cloudflare.
+// api/queries.sql, which charter spec writes as typed Go (api/queries.go): what runs on Cloudflare.
 type D1Store struct{ DB d1.DB }
 
 func (s D1Store) Page(_ context.Context, offset, limit int) ([]Entry, error) {

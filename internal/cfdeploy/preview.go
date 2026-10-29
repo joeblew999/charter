@@ -145,9 +145,10 @@ func (c *Client) DeployPreview(ctx context.Context, cfg Config, name string, ann
 
 	// 6. The deployment.
 	meta := map[string]any{
-		"main_module":        plan.Modules[0].Name,
-		"compatibility_date": cfg.CompatibilityDate,
-		"bindings":           bindings(cfg, d1IDs),
+		"main_module":         plan.Modules[0].Name,
+		"compatibility_date":  cfg.CompatibilityDate,
+		"compatibility_flags": append([]string{}, cfg.CompatibilityFlags...),
+		"bindings":            bindings(cfg, d1IDs),
 	}
 	if doMigration != nil {
 		meta["migrations"] = doMigration

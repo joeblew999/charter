@@ -1,8 +1,17 @@
 {
-	"extends": "charter-ts/tsconfig.node.json",
-	"include": [
-		"charter.config.ts",
-		"test",
-		"api/**/*.test.ts"
-	]
+	"//": "The tests, which run in Node, and the unit tests beside the code (api/*.test.ts).",
+	"compilerOptions": {
+		"target": "es2024",
+		"lib": ["es2024"],
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"types": ["node"],
+		"strict": true,
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"skipLibCheck": true
+	},
+	"include": ["test", "api/**/*.test.ts"]
 }

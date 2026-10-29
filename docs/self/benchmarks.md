@@ -55,12 +55,12 @@ The smallest build is also the quickest: most of a build is wasm-opt's asyncify 
 
 ## The Worker as a deploy uploads it
 
-What `cf build` makes of each notes Worker (`npm run check` measures it), 2026-10-15, TinyGo 0.43.0:
+What `charter build` makes of each notes Worker (`charter check` measures it), every module it uploads, 2026-10-29 on macOS (arm64), TinyGo 0.44.0:
 
 | Worker | Bundle | Gzipped |
 |---|---|---|
-| `examples/notes-ts` | 1.02 MB | 0.24 MB |
-| `examples/notes-go` (the Wasm is 1.38 MB of it, gzipped) | 3.83 MB | 1.38 MB |
+| `examples/notes-ts` (esbuild, minified) | 1.32 MB | 0.27 MB |
+| `examples/notes-go` (the Wasm is 1.36 MB of it, gzipped) | 3.79 MB | 1.36 MB |
 
 Workers Free allows 3 MB gzipped, Workers Paid 10 MB.
 

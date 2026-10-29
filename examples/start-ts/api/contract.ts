@@ -3,10 +3,10 @@ import { openapi, type OpenAPIV3_2 } from "@orpc/openapi";
 import { hello } from "./schemas.ts";
 
 // The API, contract first: every route with its method, path, input and output as Zod 4 schemas.
-// The Worker implements it (api/handlers.ts) and the specs are generated from it (npm run spec ->
+// The Worker implements it (api/handlers.ts) and the specs are generated from it (charter spec ->
 // fern/openapi.json, fern/asyncapi.json), from which Fern makes the SDKs. Everything the
 // SDKs need is said here too: operationId/tags name the SDK methods, and `spec` adds Fern's
-// extensions (x-fern-*) to the generated operation. Add a route here, then: npm run spec.
+// extensions (x-fern-*) to the generated operation. Add a route here, then: charter spec.
 
 /** The API's name, version and what it is: the specs' info (api/spec.ts). */
 export const info = { title: "charter-start-ts", version: "1.0.0", description: "charter-start-ts: contract -> OpenAPI -> Fern." };

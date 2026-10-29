@@ -1,7 +1,7 @@
 // The notes' log on Cloudflare (as examples/conformance-go's api/store_d1.go): the notes table in D1 (migrations/), and Hub (worker.ts), oRPC's
 // Durable Object publisher, which fans every new note out to the WebSocket's follow() loops. The hub
 // keeps no log: D1 is the log, so the hub may restart at any time (docs/self/streaming.md). The
-// queries are Drizzle's, on the tables npm run spec writes from migrations/ (api/tables.ts).
+// queries are Drizzle's, on the tables charter spec writes from migrations/ (api/tables.ts).
 import { env } from "cloudflare:workers";
 import { DurablePublisher } from "@orpc/cloudflare";
 import { eq, gt, sql } from "drizzle-orm";

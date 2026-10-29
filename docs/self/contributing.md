@@ -18,15 +18,15 @@ npm run check   # the packages, repo and projects jobs (Docker for the conforman
 npm run ci      # every job GitHub runs, the clients in every language among them (Docker)
 ```
 
-Docker: charter-ts starts it where it is installed but not running and may be started (a Claude cloud session), and otherwise says to start it. Where the internet is a proxy on the machine itself with its own CA (a Claude cloud session), Fern's generators run their containers through `charter-ts/bin/cloud/docker`, which gives them the host's network, the proxy and its CA (`charter-ts/src/docker.ts`); on a Mac or a GitHub runner the containers are as Docker makes them.
+Docker: charter starts it where it is installed but not running and may be started (a Claude cloud session), and otherwise says to start it. Where the internet is a proxy on the machine itself with its own CA (a Claude cloud session), Fern's generators run their containers through `internal/fern/cloud/docker`, which gives them the host's network, the proxy and its CA (`internal/fern/docker.go`); on a Mac or a GitHub runner the containers are as Docker makes them.
 
 ## What is where
 
 | Folder | What it is |
 |---|---|
-| `charter-ts/` | The tool: its commands are in `charter-ts/src/commands.ts`. The files it writes into every repo are this repo's own, listed in `charter-ts/src/charter-files.ts` |
+| `charter-ts/` | The repo's tool (issues, docs, ci, adopt, new): its commands are in `charter-ts/src/commands.ts`. The files it writes into every repo are this repo's own, listed in `charter-ts/src/charter-files.ts` |
 | `ts/` | `charter-lib`, what a TypeScript Worker imports |
-| The top (`go.mod`) | The Go library, one package per folder (`auth/`, `serve/`…), with its Worker glue in `worker/`, and the command, `charter`, in `cmd/charter/` (its steps in `internal/cli/`) |
+| The top (`go.mod`) | The Go library, one package per folder (`auth/`, `serve/`…), with its Worker glue in `worker/`, and the command, `charter`, in `cmd/charter/` (its steps in `internal/cli/`), which runs every project's steps from its `charter.toml` |
 | `examples/start-ts/`, `examples/notes-ts/` | The TypeScript examples, which `charter-ts new` copies: one route, and the notes API (sign-in, streams, rate limits) |
 | `examples/start-go/`, `examples/notes-go/` | The same two APIs in Go, held to the TypeScript ones by `twins` |
 | `examples/start-htmx/`, `examples/start-datastar/` | Go with server-rendered pages ([Server-rendered pages](pages.md)) |
@@ -40,11 +40,11 @@ Never edit these: change the source, then run the command.
 
 | Path | Written by |
 |---|---|
-| `fern/openapi.json`, `fern/asyncapi.json`, `fern/generators.yml` | `npm run spec`, from the contract; Fern's settings from the spec and `charter.config.ts` (`sdks`) |
-| `api/queries.go`, `api/tables.ts` | `charter spec` (Go) or `npm run spec` (TypeScript), from `migrations/*.sql` (and in Go `api/queries.sql`), as `db` in `charter.toml` or `charter.config.ts` says |
+| `fern/openapi.json`, `fern/asyncapi.json`, `fern/generators.yml` | `charter spec`, from the contract; Fern's settings from the spec and `charter.toml` (`[sdks]`) |
+| `api/queries.go`, `api/tables.ts` | `charter spec`, from `migrations/*.sql` (and in Go `api/queries.sql`), as `db` in `charter.toml` says |
 | `pages/*.x.go` (committed) | gsx, from the components; `npm run check` writes them and fails while they were stale |
-| `sdk/go/` (committed) | `npm run sdk -- --publish` |
-| `sdk/out/`, `build/`, `charter-ts/dist/`, `ts/dist/` | `npm run sdk`; the Go Worker's build (`dev`, `check`, `deploy`) and the program that writes a Go project's specs (`build/_spec`, `spec`); `npm ci` |
+| `sdk/go/` (committed) | `charter sdk -publish` |
+| `sdk/out/`, `build/`, `charter-ts/dist/`, `ts/dist/` | `charter sdk`; the Worker's build (`charter build`: TinyGo's, or the TypeScript bundle) and the program that writes a project's specs (`build/_spec`, `build/_spec.mjs`: `charter spec`); `npm ci` |
 | `examples/conformance-ts/client/` | The SDK the conformance Worker runs, copied in by `check`, `dev` and `deploy` |
 | `charter-ts/charter-files/`, `dist/` | `npm pack`, and `npm run release` (its binaries in `dist/charter/`, goreleaser) |
 | `.github/workflows/self-*.yml`, `charter-repo.yml` | `npm run adopt`, from `ci.config.ts` and charter's own job |
@@ -99,10 +99,10 @@ Each test checks one thing, at one level, and the same level is in the same plac
 
 | # | Level | Who needs it | Where | When it runs |
 |---|---|---|---|---|
-| 1 | **The standard:** a running API serves its specs, lists its MCP tools, leads a client to sign in, refuses with problem details | Every API | Built into charter-ts (`charter-ts/src/standard.ts`): it reads the API's own spec, so nothing is written or copied | Every project's `check` and `live-test`, first |
+| 1 | **The standard:** a running API serves its specs, lists its MCP tools, leads a client to sign in, refuses with problem details | Every API | Built into charter (`internal/standard`): it reads the API's own spec, so nothing is written or copied | Every project's `check` and `live-test`, first |
 | 2 | **The API's own:** it does what it is for | Every API | The project's `test/` (`test/live.ts`, `test/sdk.ts`…); a Go twin runs its TypeScript reference's, as its `charter.toml`'s `[test]` says | The project's `check` and `live-test` |
 | 3 | **Unit tests:** a handler on its own | Where wanted | Beside the code: `api/*_test.go`, `api/*.test.ts` | The project's `check` |
-| 4 | **Twins:** the Go project answers as its TypeScript reference | An API in both languages | Built into charter-ts (`charter-ts twins`) | The `twins` job |
+| 4 | **Twins:** the Go project answers as its TypeScript reference | An API in both languages | Built into charter (`charter twins`, `internal/twins`) | The `twins` job |
 | 5 | **The libraries** | charter's developers | Beside the code: `*/*_test.go` at the top, `ts/src/*.test.ts`, `charter-ts/src/*.test.ts` | The `packages` job |
 | 6 | **This repo only:** the projects are alike; a project made from the release works | charter's developers | `projects.test.ts`, `charter-ts/test/new-from-package.ts` | The `packages` and `new` jobs |
 

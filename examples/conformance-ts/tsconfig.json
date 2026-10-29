@@ -1,14 +1,18 @@
 {
-	"extends": "charter-ts/tsconfig.worker.json",
-	"include": [
-		"api",
-		"worker.ts",
-		"harness.ts",
-		"client",
-		"cloudflare.config.ts",
-		".cloudflare/types"
-	],
-	"exclude": [
-		"api/**/*.test.ts"
-	]
+	"//": "The Worker: Cloudflare's runtime types and its env from charter.toml (.charter/env.d.ts, which charter build and check write), no Node.",
+	"compilerOptions": {
+		"target": "es2024",
+		"lib": ["es2024"],
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"types": ["@cloudflare/workers-types"],
+		"strict": true,
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"skipLibCheck": true
+	},
+	"include": ["api", "worker.ts", "harness.ts", "client", ".charter/env.d.ts"],
+	"exclude": ["api/**/*.test.ts"]
 }

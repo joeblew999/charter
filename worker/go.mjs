@@ -1,7 +1,7 @@
 // Runs a Go Worker (the TinyGo Wasm in build/), keeping Go runtimes alive between requests.
 //
 // This file and the others in this folder ship with the Go library and are not copied into a
-// project: charter-ts writes them into the project's build/ folder (its Go build), beside the Wasm and
+// project: charter build writes them into the project's build/ folder, beside the Wasm and
 // workers-go's wasm_exec.js and runtime.mjs, from the version of the library the project builds
 // against. So the JavaScript here and the Go it talks to (transport, hub) always match, and the
 // imports below are of files in build/.

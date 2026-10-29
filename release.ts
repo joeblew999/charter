@@ -12,11 +12,10 @@
 // The version goes into every install command that README.md and docs/ show too: npx keeps what it
 // fetched for a URL, so only a URL with the version in it gives the version it names.
 // Safe to run again: a step already done is skipped. --dry-run does steps 2 and 3 only, and changes no file.
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { releaseURL } from "./charter-ts/src/package.ts";
 import { output, run } from "./charter-ts/src/run.ts";
-import { made } from "./charter-ts/src/sizes.ts";
 
 process.on("uncaughtException", error => {
 	console.error(`release: ${error.message}`);
@@ -80,7 +79,7 @@ mkdirSync("dist", { recursive: true });
 run("npm", ["pack", "-w", "charter-ts", "-w", "ts", "--pack-destination", resolve("dist")]);
 for (const tarball of tarballs) {
 	if (!existsSync(tarball)) throw new Error(`npm pack wrote no ${tarball}`);
-	made(tarball, "a package the release carries");
+	console.log(`made ${tarball} (a package the release carries): ${(statSync(tarball).size / 1e6).toFixed(2)} MB`);
 }
 // The binaries, every machine's, as step 5 releases them: built here first, so a dry run proves they build.
 run("goreleaser", ["build", "--snapshot", "--clean"]);

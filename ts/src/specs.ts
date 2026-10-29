@@ -1,4 +1,4 @@
-// Both specs from one contract or router: for a project's npm run spec (offline, into its fern/ folder) and for a
+// Both specs from one contract or router: for a project's charter spec (offline, into its fern/ folder) and for a
 // Worker (/api/openapi.json, /api/asyncapi.json). It knows no contract: the caller passes its `info`
 // and URL. No Workers APIs and no files here, so Node and a Worker can both run it.
 import { getOpenAPIMeta, OpenAPIGenerator, type OpenAPIV3_1, type OpenAPIV3_2 } from "@orpc/openapi";

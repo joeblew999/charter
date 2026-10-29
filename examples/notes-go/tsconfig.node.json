@@ -1,6 +1,17 @@
 {
-	"extends": "charter-ts/tsconfig.node.json",
-	"include": [
-		"test/soak.ts"
-	]
+	"//": "The soak test, which runs in Node.",
+	"compilerOptions": {
+		"target": "es2024",
+		"lib": ["es2024"],
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"types": ["node"],
+		"strict": true,
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"skipLibCheck": true
+	},
+	"include": ["test/soak.ts"]
 }

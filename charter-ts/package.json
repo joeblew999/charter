@@ -1,7 +1,7 @@
 {
 	"name": "charter-ts",
 	"version": "0.9.1",
-	"description": "charter-ts, the command of charter: contract-first APIs on Cloudflare Workers, in TypeScript or Go, and the repos that hold them. In a project (its charter.config.ts): dev, check, spec, sdk, deploy, live-test. In any repo: issues, docs, ci, upstream, repo, adopt, new. A repo's npm scripts run them, each the command of its name. A TypeScript Worker imports charter-lib (ts), from the same release: npm i -D https://github.com/joeblew999/charter/releases/download/ts-vX.Y.Z/charter-ts-X.Y.Z.tgz",
+	"description": "charter-ts keeps a repo the charter way: issues, docs, ci, upstream, repo, adopt, new; a repo's npm scripts run them, each the command of its name. A project's steps (charter.toml) are charter's, the Go command: mise use github:joeblew999/charter. A TypeScript Worker imports charter-lib (ts).",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -20,9 +20,7 @@
 		"bin",
 		"dist",
 		"charter-files",
-		"review.md",
-		"tsconfig.node.json",
-		"tsconfig.worker.json"
+		"review.md"
 	],
 	"scripts": {
 		"build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
@@ -30,45 +28,13 @@
 		"prepack": "npm run build && node pack.ts"
 	},
 	"exports": {
-		"./config": {
-			"types": "./dist/config.d.ts",
-			"default": "./dist/config.js"
-		},
-		"./cloudflare": {
-			"types": "./dist/cloudflare.d.ts",
-			"default": "./dist/cloudflare.js"
-		},
-		"./sdk": {
-			"types": "./dist/sdk.d.ts",
-			"default": "./dist/sdk.js"
-		},
-		"./vite": {
-			"types": "./dist/vite.d.ts",
-			"default": "./dist/vite.js"
-		},
-		"./tsconfig.node.json": "./tsconfig.node.json",
-		"./tsconfig.worker.json": "./tsconfig.worker.json",
 		"./ci": {
 			"types": "./dist/ci.d.ts",
 			"default": "./dist/ci.js"
 		}
 	},
-	"peerDependencies": {
-		"@cloudflare/vite-plugin": "*",
-		"vite": "*"
-	},
 	"devDependencies": {
-		"@cloudflare/vite-plugin": "2.0.0-beta.v.0",
 		"@types/node": "^22.12.0",
-		"typescript": "^7.0.2",
-		"vite": "^8.3.0"
-	},
-	"peerDependenciesMeta": {
-		"@cloudflare/vite-plugin": {
-			"optional": true
-		},
-		"vite": {
-			"optional": true
-		}
+		"typescript": "^7.0.2"
 	}
 }

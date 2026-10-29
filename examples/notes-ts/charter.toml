@@ -1,0 +1,56 @@
+# charter.toml: the notes API in TypeScript on Cloudflare (oRPC on D1: auth, SSE and WebSocket streams, MCP, rate
+# limits), everything charter knows about it (every key: go doc github.com/joeblew999/charter/project). Its steps are
+# charter's: charter check, spec, sdk, dev, deploy (fnox exec -- charter deploy production), live-test.
+name = "charter-notes-ts"
+compatibility_date = "2026-09-25"
+health = "/api/openapi.json"
+port = 5173
+# Where it is deployed (charter deploy prints it): the live test's target, and the server the specs name.
+url = "https://charter-notes-ts.gedw99.workers.dev"
+# Its rate limits are the contract's (x-rate-limit in the spec), each a Workers Rate Limiting binding.
+spec = "fern/openapi.json"
+# The tables of migrations/ as Drizzle has them (api/tables.ts).
+db = "drizzle"
+
+# The Worker: worker.ts and all it imports, bundled into build/worker.mjs.
+[build]
+entry = "worker.ts"
+
+[[d1]]
+binding = "DB"
+migrations = "migrations"
+database = "charter-notes-ts-db"
+
+# The hibernating live fan-out of new notes: oRPC's Durable Object publisher (Hub, which worker.ts exports).
+[[durable_objects]]
+binding = "HUB"
+class = "Hub"
+
+# The API's tokens (api/handlers.ts), and whom else it trusts (Cloudflare Access, an OpenID Connect issuer): unset, it
+# trusts no one that way.
+[secrets]
+required = ["READ_TOKEN", "WRITE_TOKEN"]
+optional = ["ACCESS_TEAM_DOMAIN", "ACCESS_AUD", "OIDC_ISSUER", "OIDC_AUDIENCE"]
+
+[production]
+vars = { APP_NAME = "charter-notes-ts" }
+
+# Throwaway tokens for the API on this machine and its tests.
+[local]
+vars = { APP_NAME = "charter-notes-ts", READ_TOKEN = "local-read-token", WRITE_TOKEN = "local-write-token" }
+
+# The SDKs Fern makes.
+[sdks]
+name = "Notes"
+more = ["python", "cli"]
+
+# The live test, under workerd (auth, rate limits and MCP are charter-lib/serve's, which the conformance projects test
+# every way); against the deployed Worker, through the generated TypeScript SDK too (made first if the specs are newer:
+# Docker). The live test writes test notes.
+[test]
+run = ["node test/live.ts {base}"]
+live = [
+  "charter sdk typescript-dist -if-stale",
+  "node test/live.ts {base}",
+  "node test/sdk.ts {base}",
+]

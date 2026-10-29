@@ -22,7 +22,7 @@ What else is the same in every project:
 |---|---|
 | The D1 database | binding `DB` |
 | The hub (a Durable Object), in a project with a stream | class `Hub`, binding `HUB` |
-| A rate limit | a Workers Rate Limiting binding named as in the contract (`WRITE_LIMIT`); its counter is named from the Worker's name (`rateLimits` from `"charter-ts/cloudflare"`) |
+| A rate limit | a Workers Rate Limiting binding named as in the contract (`WRITE_LIMIT`); its counter is named from the Worker's name (charter binds it from the spec) |
 | What the tests wait for | `/api/openapi.json` answering |
 
 Every project has the same npm scripts ([What to do](../charter/README.md)); in this repo, `projects.test.ts` fails if they differ, or two projects use one package at different versions.
@@ -56,14 +56,14 @@ Both libraries write the OpenAPI document the same way, so the SDKs Fern makes f
 
 ## Checked
 
-`charter-ts`'s standard test checks a running API from outside, against its own spec: the OpenAPI spec names its address, and the AsyncAPI spec its host when it has channels; an unknown path is a 404 and a method a path lacks a 405, as problem details; `/api/mcp` lists tools that are the spec's operations, answers a GET with 405 and MCP's protocol errors; an operation that needs credentials, called without them, is a 401 whose challenge leads to the API's metadata, through MCP too; and an API that takes no credentials answers 404 at `/.well-known/`. Every project's `check` runs it on its own server, and `live-test` on the deployed Worker, before the project's own tests.
+charter's standard test (`internal/standard`) checks a running API from outside, against its own spec: the OpenAPI spec names its address, and the AsyncAPI spec its host when it has channels; an unknown path is a 404 and a method a path lacks a 405, as problem details; `/api/mcp` lists tools that are the spec's operations, answers a GET with 405 and MCP's protocol errors; an operation that needs credentials, called without them, is a 401 whose challenge leads to the API's metadata, through MCP too; and an API that takes no credentials answers 404 at `/.well-known/`. Every project's `check` runs it on its own server, and `live-test` on the deployed Worker, before the project's own tests.
 
 ## Held the same
 
 Each API that is here in TypeScript and in Go (conformance, notes, start) answers the same in both, with the TypeScript project as the reference:
 
 ```sh
-npx charter-ts twins examples/conformance-ts examples/conformance-go
+go tool charter twins examples/conformance-ts examples/conformance-go
 ```
 
 It runs both under workerd, as deployed, and sends both the requests the reference's specs give rise to: for each operation the right one and each kind of wrong one, for each channel one that is no upgrade, and what every API serves. It prints every answer that differs and fails if one does, or if their saved specs (`fern/`) or migrations differ; the `twins` job runs it for each pair. The requests come from the spec, so a new route is covered without editing anything.
@@ -79,7 +79,7 @@ func API(env Env) serve.API {
 // api/handlers.go
 func Handler(env Env) http.Handler { return API(env).Handler() }
 
-// what npm run spec runs (charter-ts writes it into build/)
+// what charter spec runs (it writes it into build/)
 spec := api.API(api.Env{})
 specs.Must(specs.Problems(spec))
 specs.Main(spec.OpenAPI, spec.AsyncAPI)
@@ -97,4 +97,4 @@ const served = serve(router, { document, trusted: () => trusted, limits: () => e
 export default { fetch: request => served(request, {}) } satisfies ExportedHandler;
 ```
 
-`document` is the API's `info`, its channels' `asyncInfo`, the OpenAPI `base` (security schemes) and its `webhooks`; `specsOf(contract, document)` gives `charter.config.ts`'s `specs`. The handler finds its caller at `context.caller`. The router is built from `os`, without the guard, or oRPC runs it twice per call. A channel whose input is the client's messages takes them from the socket; a refused message closes it with 1008, a feed that gives up with 1011.
+`document` is the API's `info`, its channels' `asyncInfo`, the OpenAPI `base` (security schemes) and its `webhooks`; `specsOf(contract, document)` gives the `specs` `api/spec.ts` exports, which `charter spec` writes. The handler finds its caller at `context.caller`. The router is built from `os`, without the guard, or oRPC runs it twice per call. A channel whose input is the client's messages takes them from the socket; a refused message closes it with 1008, a feed that gives up with 1011.

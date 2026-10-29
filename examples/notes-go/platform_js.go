@@ -10,7 +10,7 @@ import (
 	"github.com/joeblew999/charter/hub"
 )
 
-// env binds the API to the Worker's bindings (cloudflare.config.ts): APP_NAME, DB (D1), HUB (the hub Durable Object, build/hub.mjs).
+// env binds the API to the Worker's bindings (charter.toml): APP_NAME, DB (D1), HUB (the hub Durable Object, build/hub.mjs).
 func env() api.Env {
 	return api.Env{
 		Var: cloudflare.Getenv,

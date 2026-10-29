@@ -135,23 +135,26 @@ describe("new", () => {
 		const into = join(scratch, "made");
 		const made = charter(scratch, "new", "demo-api", "--from", "notes", "--subdomain", "example", "--into", into);
 		assert.equal(made.code, 0, made.out);
-		for (const file of ["charter.config.ts", "cloudflare.config.ts", "worker.ts", "api/contract.ts", "api/handlers.ts", "api/spec.ts", "api/store.ts", "test/live.ts", "test/sdk.ts", "test/access.ts", ".gitignore", ".git", "ci.config.ts", ".github/workflows/self-check.yml", ".github/workflows/charter-repo.yml", ".github/workflows/charter-ci.yml", "docs/charter/README.md", "docs/self/README.md", "AGENTS.md"]) {
+		for (const file of ["charter.toml", ".mise/tasks/charter.toml", ".claude/skills/charter/SKILL.md", "worker.ts", "api/contract.ts", "api/handlers.ts", "api/spec.ts", "api/store.ts", "test/live.ts", "test/sdk.ts", "test/access.ts", ".gitignore", ".git", "ci.config.ts", ".github/workflows/self-check.yml", ".github/workflows/charter-repo.yml", ".github/workflows/charter-ci.yml", "docs/charter/README.md", "docs/self/README.md", "AGENTS.md"]) {
 			assert.ok(existsSync(join(into, file)), `${file} is there`);
 		}
+		// A project is charter's (charter.toml): no TinyGo pins for a TypeScript one, and none of cf's files.
+		for (const file of ["charter.config.ts", "cloudflare.config.ts", "vite.config.ts", ".config/mise/conf.d/charter.toml"]) assert.ok(!existsSync(join(into, file)), `${file} is there`);
 		// It stands alone: its tests import its own contract, and nothing points outside it.
 		assert.match(read(into, "test/live.ts"), /from "\.\.\/api\/schemas\.ts"/);
 		assert.match(read(into, "tsconfig.node.json"), /"test"/);
-		const outside = spawnSync("grep", ["-rlE", "-e", "examples/[a-z-]+-(ts|go)", join(into, "test"), join(into, "charter.config.ts"), join(into, "tsconfig.node.json")], { encoding: "utf8" }).stdout.trim();
+		const outside = spawnSync("grep", ["-rlE", "-e", "examples/[a-z-]+-(ts|go)", join(into, "test"), join(into, "charter.toml"), join(into, "tsconfig.node.json")], { encoding: "utf8" }).stdout.trim();
 		assert.equal(outside, "", `it points outside itself:\n${outside}`);
 		const pkg = JSON.parse(read(into, "package.json")) as { name: string; scripts: Record<string, string>; dependencies: Record<string, string>; devDependencies: Record<string, string> };
 		assert.equal(pkg.name, "demo-api");
-		// A project's scripts, then those every repo has: each the command of its name.
-		assert.deepEqual(Object.keys(pkg.scripts), ["dev", "check", "spec", "sdk", "deploy", "live-test", "adopt", "issues", "docs", "repo", "upstream", "ci"]);
+		// The scripts every repo has, each the command of its name; a project's steps are charter's.
+		assert.deepEqual(Object.keys(pkg.scripts), ["adopt", "issues", "check", "docs", "repo", "upstream", "ci"]);
 		assert.match(read(into, "ci.config.ts"), /check: \{[^}]*run: \[\["charter-ts", "check"\]\]/);
+		assert.match(read(into, "mise.toml"), /^workerd = /m);
 		assert.match(pkg.dependencies["charter-lib"], new RegExp(`/ts-v${version}/charter-lib-${version}\\.tgz$`));
 		assert.match(pkg.devDependencies["charter-ts"], new RegExp(`/ts-v${version}/charter-ts-${version}\\.tgz$`));
-		assert.match(read(into, "charter.config.ts"), /worker: "demo-api"/);
-		assert.match(read(into, "charter.config.ts"), /https:\/\/demo-api\.example\.workers\.dev/);
+		assert.match(read(into, "charter.toml"), /^name = "demo-api"$/m);
+		assert.match(read(into, "charter.toml"), /https:\/\/demo-api\.example\.workers\.dev/);
 		const everything = spawnSync("grep", ["-rl", "-e", "charter-notes-ts", "-e", "gedw99", into], { encoding: "utf8" }).stdout.trim();
 		assert.equal(everything, "", `the template's own names are left in:\n${everything}`);
 	});

@@ -2,7 +2,7 @@
 // feature the conformance API has must work. The same test runs against examples/conformance-go and this
 // project's, each by its origin, each with the SDK made from its own specs: the one in the folder
 // it runs in (sdk/out/typescript-dist). It is typed by this project's copy (client/), which the
-// twins check (charter-ts twins) holds to the same specs.
+// twins check (charter twins) holds to the same specs.
 // Usage: node test/sdk.ts <origin> [--webhooks <receiver>]
 //   --webhooks  the receiver the server sends the noteCreated webhook to (test/webhook-receiver.ts):
 //               its deliveries are read at <receiver>/deliveries
@@ -211,7 +211,7 @@ await check("websocket with the token as ?access_token= (what a browser or a Wor
 
 await check("audiences: the public SDK has notes and auth, not the internal upload", async () => {
 	const resource = (name: string) => existsSync(new URL(`typescript-public/api/resources/${name}`, out));
-	if (!existsSync(new URL("typescript-public", out))) return [false, "no sdk/out/typescript-public: npm run sdk -- typescript-public"];
+	if (!existsSync(new URL("typescript-public", out))) return [false, "no sdk/out/typescript-public: charter sdk typescript-public"];
 	return [resource("notes") && resource("auth") && !resource("files") && existsSync(new URL("typescript-dist/esm/api/resources/files", out)), { notes: resource("notes"), files: resource("files") }];
 });
 
@@ -226,9 +226,7 @@ await check("a call without a token, or with a forged one, is 401", async () => 
 });
 
 await check("a websocket without a token is refused, and a message the channel refuses closes it (1008)", async () => {
-	// The refusal is a 401. cf dev's server (the Vite plugin) drops the connection instead of passing it
-	// on (an error, no status).
-	// Upstream: cloudflare/workers-sdk#15170 (when fixed: expect only the 401)
+	// The refusal is a 401.
 	const refused = await new Promise<number | string>(resolve => {
 		const socket = new RawWebSocket(`${wsBase}/api/notes/live`);
 		socket.on("unexpected-response", (_, response) => { resolve(response.statusCode ?? "no status"); socket.terminate(); });
@@ -244,7 +242,7 @@ await check("a websocket without a token is refused, and a message the channel r
 	});
 	const notSubscribe = await closedBy({ subject: "not a subscribe message" });
 	const otherTopic = await closedBy({ topic: "other" });
-	return [(refused === 401 || (typeof refused === "string" && refused !== "opened")) && notSubscribe === 1008 && otherTopic === 1008, { refused, notSubscribe, otherTopic }];
+	return [refused === 401 && notSubscribe === 1008 && otherTopic === 1008, { refused, notSubscribe, otherTopic }];
 });
 
 console.log(failed ? `${failed} failed against ${base}` : `all passed against ${base} (SDK: sdk/out)`);

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { END, note } from "./schemas.ts";
 
 // The API, contract first: every route with its method, path, input and output as Zod 4 schemas.
-// The Worker implements it (api/handlers.ts) and the specs are generated from it (npm run spec ->
+// The Worker implements it (api/handlers.ts) and the specs are generated from it (charter spec ->
 // fern/openapi.json, fern/asyncapi.json), from which Fern makes the SDKs and a CLI. Everything the SDKs
 // need is said here too: operationId/tags name the SDK methods, and `spec` adds Fern's extensions
 // (x-fern-*) to the generated operation, so nothing is patched afterwards.
@@ -21,7 +21,7 @@ const after = z.string().regex(/^\d+$/).optional()
 
 /**
  * How often one caller may create notes: the Worker's WRITE_LIMIT binding, which
- * cloudflare.config.ts declares from the spec. Over it: 429.
+ * charter.toml binds from the spec. Over it: 429.
  */
 const writeLimit: Limit = { binding: "WRITE_LIMIT", limit: 100, period: 60 };
 

@@ -9,7 +9,7 @@ import { writeWorkflows } from "./ci.ts";
 import { marked, writeFiles, ownToolPins } from "./charter-files.ts";
 import { charterRepo, releaseURL, version } from "./package.ts";
 import { output } from "./run.ts";
-import { renamed } from "./commands.ts";
+import { renamed, renamedTo } from "./commands.ts";
 import { isProject, type PackageJson, readPackage, repoRoot, settings } from "./settings.ts";
 
 /** The scripts every repo kept the charter way runs, in the order it runs them: each is the charter-ts
@@ -35,7 +35,7 @@ export async function adopt(args: string[]): Promise<void> {
 		const old = /^charter-ts ([a-z:-]+)$/.exec(command)?.[1];
 		if (old && renamed[old]) {
 			delete scripts[name];
-			say("removed", "package.json", `: the script ${name} (charter-ts ${old} is charter-ts ${renamed[old]} now)`);
+			say("removed", "package.json", `: the script ${name} (charter-ts ${old} is ${renamedTo(old)} now)`);
 		}
 	}
 	const theirs = Object.keys(repoScripts).filter(name => scripts[name] !== undefined && scripts[name] !== repoScripts[name]);

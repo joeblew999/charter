@@ -1,6 +1,6 @@
 // A webhook's receiver, as a customer of the API runs one: it takes every POST (the noteCreated webhook)
-// and keeps its body and signature, for the tests to read at GET /deliveries. charter-ts runs it beside
-// the server for the server's whole run (charter.config.ts: serve), so every note the tests create has
+// and keeps its body and signature, for the tests to read at GET /deliveries. charter runs it beside
+// the server for the server's whole run (charter.toml: [test] serve), so every note the tests create has
 // somewhere to be delivered. Usage: node test/webhook-receiver.ts <port>
 import { createServer } from "node:http";
 

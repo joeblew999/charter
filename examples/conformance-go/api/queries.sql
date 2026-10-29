@@ -1,4 +1,4 @@
--- The conformance API's queries, against the schema in migrations/. npm run spec writes them as Go
+-- The conformance API's queries, against the schema in migrations/. charter spec writes them as Go
 -- functions over charter/d1 (api/queries.go), their types worked out by sqlc.
 
 -- name: NotesPage :many

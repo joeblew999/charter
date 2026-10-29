@@ -2,8 +2,8 @@
 // auth: the contract declares each limit, and one check enforces it, so the specs, the SDKs and the
 // server agree.
 //
-// A limit is a Cloudflare Workers Rate Limiting binding (cloudflare.config.ts declares it, with the
-// same limit and period, from the spec), counted per caller: the key is who `authorize` let in (the
+// A limit is a Cloudflare Workers Rate Limiting binding (charter binds it from the spec, with the
+// same limit and period), counted per caller: the key is who `authorize` let in (the
 // service token, the subject, the email or the token's secret), or the client's IP
 // (CF-Connecting-IP) for an operation that is public. An operation has a limit of its own
 // (`limited`, in its `spec`), or the limit of a scope it needs (the Document's `rateLimits`, and the

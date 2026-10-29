@@ -62,6 +62,5 @@ export function settings(root: string): Settings {
 	return { description: pkg.description ?? "", topics, homepage: pkg.homepage, docs, renovate: pkg.charter?.renovate ?? true, workflow: pkg.charter?.workflow ?? true };
 }
 
-/** isProject: an API project, which charter.config.ts configures. */
-/** A project: charter.config.ts (TypeScript), or charter.toml (a Go one, whose steps are charter's, #121). */
-export const isProject = (root: string) => existsSync(join(root, "charter.config.ts")) || existsSync(join(root, "charter.toml"));
+/** A project: a folder with a charter.toml, whose steps are charter's own (#121). */
+export const isProject = (root: string) => existsSync(join(root, "charter.toml"));

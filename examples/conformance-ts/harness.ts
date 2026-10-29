@@ -1,4 +1,4 @@
-// The harness: does the Fern-generated TypeScript SDK (client/, copied from sdk/out by npm run check)
+// The harness: does the Fern-generated TypeScript SDK (client/, copied from sdk/out by charter build and check)
 // work on Cloudflare Workers? /harness/sdk-test (worker.ts) runs the SDK against the API
 // inside workerd, through the SDK's own `fetch` option (no network round trip); /harness/ws-test opens
 // its WebSocket client from inside a Worker. test/sdk-in-worker.ts reads what they answer.

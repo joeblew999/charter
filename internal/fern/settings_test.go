@@ -12,8 +12,7 @@ import (
 )
 
 // TestSettingsAsCommitted: for every example, the settings written from its spec and SDKs are the ones it commits,
-// which charter-ts wrote: the same groups, generators and schemes, line for line, but for the words that name the
-// command that writes them.
+// line for line.
 func TestSettingsAsCommitted(t *testing.T) {
 	notes := project.SDKs{Name: "Notes", More: []string{"python", "cli"}}
 	conformance := project.SDKs{Name: "Conformance", More: []string{"python", "cli"}, Audiences: []string{"public"}}
@@ -41,24 +40,14 @@ func TestSettingsAsCommitted(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if want := charterTSWording.Replace(string(committed)); got != want {
+			if want := string(committed); got != want {
 				t.Errorf("settings differ from the committed ones\ngot:\n%s\nwant:\n%s", got, want)
 			}
 		})
 	}
 }
 
-// charterTSWording is what charter-ts wrote where charter writes its own command.
-var charterTSWording = strings.NewReplacer(
-	"# Written by `charter-ts spec` from fern/openapi.json and charter.config.ts (sdks): don't edit, change\n# those and run npm run spec. Fern's generators are charter-ts's, at the versions it pins.",
-	"# Written by `charter spec` from fern/openapi.json and charter.toml ([sdks]): don't edit, change\n# those and run charter spec. Fern's generators are charter's, at the versions it pins.",
-	"# The SDKs. Generate one: npm run sdk -- <group>   (into sdk/out/<group>)",
-	"# The SDKs. Generate one: charter sdk <group>   (into sdk/out/<group>)",
-	"Go: the module npm run sdk -- --publish commits in sdk/go",
-	"Go: the module charter sdk -publish commits in sdk/go",
-)
-
-// TestSpecsHashAsCommitted: the hash of fern/ is the one charter-ts recorded beside the Go SDK notes-go commits (made
+// TestSpecsHashAsCommitted: the hash of fern/ is the one recorded beside the Go SDK notes-go commits (made
 // from these specs), so a Go SDK made before stays fresh; and the groups are its settings', in their order.
 func TestSpecsHashAsCommitted(t *testing.T) {
 	dir := filepath.Join("..", "..", "examples", "notes-go")
@@ -93,26 +82,5 @@ func TestProxyCA(t *testing.T) {
 	}
 	if ca := ProxyCA(env(nil), has); ca != "" {
 		t.Errorf("no proxy: %q", ca)
-	}
-}
-
-// TestSamePinsAsChartersTS: until the TypeScript projects move to charter too (#121), charter-ts pins Fern's generators
-// and the toolchains of a proof for them: the same versions as these, so both kinds of project get the same SDKs.
-func TestSamePinsAsChartersTS(t *testing.T) {
-	b, err := os.ReadFile(filepath.Join("..", "..", "charter-ts", "src", "sdk.ts"))
-	if err != nil {
-		t.Skipf("no charter-ts beside it: %v", err)
-	}
-	ts := string(b)
-	for _, g := range generators {
-		if want := `name: "` + g.name + `", version: "` + g.version + `"`; !strings.Contains(ts, want) {
-			t.Errorf("charter-ts/src/sdk.ts has no %s", want)
-		}
-	}
-	for _, want := range []string{`rustVersion = "` + rustVersion + `"`, `uvVersion = "` + uvVersion + `", pythonVersion = "` + pythonVersion + `"`,
-		`pythonPackages = ["` + strings.Join(pythonPackages, `", "`) + `"]`} {
-		if !strings.Contains(ts, want) {
-			t.Errorf("charter-ts/src/sdk.ts has no %s", want)
-		}
 	}
 }

@@ -48,9 +48,9 @@ func Problems(p *project.Project) []string {
 		}
 	}
 	gomod, _ := os.ReadFile("go.mod")
-	// An app on a checkout of charter's library (a replace in go.mod, as charter's own examples are) runs that
-	// checkout's charter, not a release from mise.
-	out = append(out, ownPins(!replaced.Match(gomod))...)
+	// An app on a checkout of charter's library (a replace in go.mod, as charter's own Go examples are), or in one
+	// (charter's TypeScript examples), runs that checkout's charter, not a release from mise.
+	out = append(out, ownPins(!replaced.Match(gomod) && !inCharter())...)
 	if s := skew(string(gomod), version.String(), version.Released()); s != "" {
 		out = append(out, s)
 	}
@@ -117,6 +117,24 @@ func ownPins(requirePin bool) []string {
 
 // replaced matches a go.mod that replaces charter's library with a checkout of it.
 var replaced = regexp.MustCompile(`(?m)^\s*(replace\s+)?github\.com/joeblew999/charter\s+=>`)
+
+// charterModule matches charter's own go.mod.
+var charterModule = regexp.MustCompile(`(?m)^module\s+github\.com/joeblew999/charter\s*$`)
+
+// inCharter is whether the app, run from its root, is in a checkout of charter: the nearest go.mod above it is
+// charter's own.
+func inCharter() bool {
+	dir, err := os.Getwd()
+	if err != nil {
+		return false
+	}
+	for d := filepath.Dir(dir); d != filepath.Dir(d); d = filepath.Dir(d) {
+		if b, err := os.ReadFile(filepath.Join(d, "go.mod")); err == nil {
+			return charterModule.Match(b)
+		}
+	}
+	return false
+}
 
 // CharterTool is charter as mise has it: the binary of charter's GitHub release.
 const CharterTool = "github:joeblew999/charter"

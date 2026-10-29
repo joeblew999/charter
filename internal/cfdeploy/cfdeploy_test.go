@@ -578,6 +578,16 @@ func TestNewPlan(t *testing.T) {
 		t.Errorf("modules = %v, assets %d; want %v and none", names, len(p.Assets), cfdeploy.BuildFiles)
 	}
 
+	// A bundled Worker (charter build of a TypeScript one): build/worker.mjs alone, not the spec program charter spec
+	// writes beside it.
+	bundled := t.TempDir()
+	os.WriteFile(filepath.Join(bundled, "worker.mjs"), []byte("export default {}"), 0o644)
+	os.WriteFile(filepath.Join(bundled, "_spec.mjs"), []byte("// charter spec's"), 0o644)
+	p, err = cfdeploy.NewPlan(cfdeploy.Config{Name: "x", CompatibilityDate: "2026-09-11", BuildDir: bundled})
+	if err != nil || len(p.Modules) != 1 || p.Modules[0].Name != "worker.mjs" {
+		t.Errorf("a bundled Worker: modules %v, %v", p, err)
+	}
+
 	cfg := config(dir)
 	cfg.Modules = append(cfg.Modules, filepath.Join(dir, "worker/missing.mjs"))
 	if _, err := cfdeploy.NewPlan(cfg); err == nil || !strings.Contains(err.Error(), "missing.mjs") {

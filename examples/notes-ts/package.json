@@ -2,15 +2,7 @@
 	"name": "charter-notes-ts",
 	"private": true,
 	"type": "module",
-	"description": "The notes API in TypeScript on Cloudflare Workers, from an oRPC contract. npm run check is every check that needs no Cloudflare account; npm run dev runs it here; npx charter-ts help lists every command.",
-	"scripts": {
-		"dev": "charter-ts dev",
-		"check": "charter-ts check",
-		"spec": "charter-ts spec",
-		"sdk": "charter-ts sdk",
-		"deploy": "charter-ts deploy",
-		"live-test": "charter-ts live-test"
-	},
+	"description": "The notes API in TypeScript on Cloudflare Workers, from an oRPC contract: auth, SSE and WebSocket streams, MCP, rate limits. charter check is every local check (no Cloudflare account); charter dev runs it locally; charter.toml says everything about it.",
 	"dependencies": {
 		"@orpc/cloudflare": "2.0.0-beta.40",
 		"@orpc/contract": "2.0.0-beta.40",
@@ -23,15 +15,12 @@
 		"zod": "^4.6.5"
 	},
 	"devDependencies": {
-		"@cloudflare/vite-plugin": "2.0.0-beta.v.0",
+		"@cloudflare/workers-types": "^5.20261019.1",
 		"@types/node": "^22.12.0",
 		"@types/ws": "^8.5.12",
-		"cf": "1.0.0-beta.5",
-		"charter-ts": "^0.9.1",
 		"fern-api": "5.158.0",
 		"typescript": "^7.0.2",
 		"typescript-sdk": "npm:typescript@~5.9.3",
-		"vite": "^8.3.0",
 		"ws": "^8.18.0"
 	}
 }

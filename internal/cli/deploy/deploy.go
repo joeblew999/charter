@@ -81,6 +81,8 @@ func Main(args []string) {
 	fs.StringVar(&cfg.BuildDir, "build", "build", "directory with worker.mjs, wasm_exec.js, runtime.mjs, app.wasm")
 	fs.StringVar(&cfg.AssetsDir, "assets", "", `static assets directory ("" for none)`)
 	fs.StringVar(&cfg.CompatibilityDate, "compat", "", "compatibility_date (required): the one the Worker is tested with")
+	fs.Var((*list)(&cfg.CompatibilityFlags), "compat-flag", "compatibility flag, e.g. global_fetch_strictly_public (repeatable)")
+	fs.String("as", "", "with production: deploy as this other Worker of the same code, one of [production] also (charter deploy runs it)")
 	fs.BoolVar(&cfg.AllowExisting, "allow-existing", false, "update the Worker if a script with this name already exists")
 	fs.StringVar(&cfg.MainModule, "main", "", `entry module that imports ./build/worker.mjs, e.g. worker/index.mjs ("" = build/worker.mjs is the entry)`)
 	fs.BoolVar(&cfg.D1Create, "d1-create", false, "create D1 databases named in -d1 that don't exist yet")
@@ -246,10 +248,22 @@ func Main(args []string) {
 		url = "https://" + publicDomain
 	}
 	fmt.Println(url)
+	// The other Workers the same code deploys as ([production] also), each a deploy of its own.
+	for _, worker := range also {
+		self, err := os.Executable()
+		check(err)
+		log.Printf("also: %s, the same code", worker)
+		cmd := exec.Command(self, "deploy", "production", "-as", worker)
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		check(cmd.Run())
+	}
 }
 
 // publicDomain is the production environment's custom domain: its URL is what a deploy to it prints.
 var publicDomain string
+
+// also are the other Workers a production deploy of charter.toml deploys too ([production] also).
+var also []string
 
 // fromProject is the flags for a deploy to an environment of charter.toml (production, staging, or preview and its
 // name), followed by the flags after it.
@@ -267,7 +281,19 @@ func fromProject(args []string) []string {
 	d, err := p.Deploy(env, preview)
 	check(err)
 	check(os.Chdir(p.Root))
+	// Another Worker of the same code (-as, one of [production] also), or the Worker and then those.
+	if i := slices.Index(rest, "-as"); i >= 0 && i+1 < len(rest) {
+		if env != "production" || !slices.Contains(p.Production.Also, rest[i+1]) {
+			log.Fatalf("deploy: -as %s: not one of charter.toml's [production] also", rest[i+1])
+		}
+		d = p.As(d, rest[i+1])
+	} else if env == "production" {
+		also = p.Production.Also
+	}
 	out := []string{"-name", d.Worker, "-compat", p.CompatibilityDate}
+	for _, f := range p.CompatibilityFlags {
+		out = append(out, "-compat-flag", f)
+	}
 	if preview == "" {
 		out = append(out, "-allow-existing")
 	} else {
