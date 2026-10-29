@@ -1,6 +1,6 @@
 {
 	"name": "charter-lib",
-	"version": "0.9.1",
+	"version": "0.20.0",
 	"description": "charter's TypeScript library, what a Worker imports (the counterpart of charter's Go library): serve, which serves an API the standard way, and what it is made of: the AsyncAPI generator (asyncapi), follow() for the gap-free feed, auth (bearer tokens, Cloudflare Access, an OpenID Connect issuer, with scopes), rate limits per caller (ratelimit), the API as MCP tools (mcp, on the official MCP SDK). It runs on Workers: its build has no Node types. Installed from charter's GitHub Release: npm i https://github.com/joeblew999/charter/releases/download/vX.Y.Z/charter-lib-X.Y.Z.tgz",
 	"license": "MIT",
 	"repository": {
