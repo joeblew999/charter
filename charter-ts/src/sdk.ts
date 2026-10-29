@@ -34,7 +34,17 @@ export function sdk(group: string, options: { ifStale?: boolean } = {}): void {
 		return;
 	}
 	run("fern", fernGenerate(group));
+	generatedOrFail(group);
 	stampMade(group);
+}
+
+/** generatedOrFail fails, naming the group, when Fern finished without writing it. A generator that
+ * fails inside its container (pnpm unable to reach npm, say) exits 0 there, and Fern then reports
+ * "Finished" over an empty folder, so the failure only showed later, as a module the SDK lacked. */
+export function generatedOrFail(group: string, dir = "."): void {
+	const out = join(dir, "sdk", "out", group);
+	if (existsSync(out) && readdirSync(out).length > 0) return;
+	throw new Error(`fern generate --group ${group} finished but wrote nothing to ${join("sdk", "out", group)}: its generator failed inside its container, and Fern does not pass that on. Its own output says why: fern generate --local --group ${group} --log-level debug`);
 }
 
 /** generateQuietly generates a group as sdk does, with Fern's output kept rather than shown, so that
@@ -42,6 +52,7 @@ export function sdk(group: string, options: { ifStale?: boolean } = {}): void {
  * resolves with how long it took, and rejects with Fern's output if it fails. */
 export async function generateQuietly(group: string): Promise<number> {
 	const { ms } = await runQuietly("fern", fernGenerate(group));
+	generatedOrFail(group);
 	stampMade(group);
 	return ms;
 }
