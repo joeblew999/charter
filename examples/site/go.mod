@@ -7,6 +7,7 @@ require (
 	github.com/gsxhq/gsx v0.5.0
 	github.com/jackielii/tailwind-merge-go v0.0.0-20260726184505-8a911ed0cf9a
 	github.com/joeblew999/charter v0.24.0
+	github.com/syumai/workers-go v0.36.0
 )
 
 require (
@@ -24,7 +25,6 @@ require (
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/syumai/workers-go v0.36.0 // indirect
 	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f // indirect
 	github.com/tdewolff/minify/v2 v2.24.13 // indirect
 	github.com/tdewolff/parse/v2 v2.8.13 // indirect

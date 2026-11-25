@@ -38,6 +38,8 @@ func main() {
 		Hub: func() (api.Hub, error) { return hub.DurableObject[api.Message]("HUB", "messages") },
 	}
 	// The site: Vite's files, a URL per language, robots.txt and the sitemap, around the pages and the API.
-	s := &gsxapp.App{Name: "charter-site", Dist: dist, Pages: []string{"/"}}
+	s := &gsxapp.App{Name: "charter-site", Dist: dist, Pages: []string{"/", "/cloud"}}
+	// What the Worker does that is no request: a Cron Trigger and a queue's consumer (pages/cloud_js.go).
+	pages.Background()
 	transport.Run(s.Handler(pages.Handler(env, api.Handler(env))))
 }

@@ -14,5 +14,13 @@
   "d1_databases": [{ "binding": "DB", "database_name": "charter-site", "database_id": "local", "migrations_dir": "migrations" }],
   // One hub wakes every open page when a message is posted (charter's hub.mjs).
   "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }]
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }],
+  // The Cloudflare page (/cloud): one binding of each kind, used through workers-go (pages/cloud_js.go).
+  "kv_namespaces": [{ "binding": "KV", "id": "local" }],
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "charter-site" }],
+  "queues": {
+    "producers": [{ "binding": "QUEUE", "queue": "charter-site" }],
+    "consumers": [{ "queue": "charter-site", "max_batch_timeout": 1 }]
+  },
+  "triggers": { "crons": ["*/5 * * * *"] }
 }

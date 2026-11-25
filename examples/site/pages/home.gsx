@@ -20,6 +20,7 @@ component Home(messages []api.Message, after int64) {
 					<h1>{ locales.HomeHeading }</h1>
 				</ui.CardTitle>
 				<ui.CardDescription>{ locales.HomeIntro }</ui.CardDescription>
+				<a href={"/cloud" |> localize} class="text-sm underline underline-offset-4">{ locales.CloudLink }</a>
 			</ui.CardHeader>
 			<ui.CardContent class="flex flex-col gap-4">
 				<Form body="" problem=""/>

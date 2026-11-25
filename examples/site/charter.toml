@@ -5,6 +5,10 @@ url = "https://charter-site.gedw99.workers.dev"
 spec = "fern/openapi.json"
 db = "sqlc"
 
+# Asked of the Worker on wrangler dev (go tool charter test): the Cloudflare page, card by card.
+[test]
+run = ["go test -count=1 ./test"]
+
 [sdks]
 name = "Api"
 
