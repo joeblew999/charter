@@ -116,9 +116,9 @@ type Build struct {
 
 // SDKs are the clients Fern makes from the specs: charter spec writes fern/generators.yml from them and the spec.
 type SDKs struct {
-	Name      string   `toml:"name"`      // the TypeScript SDK's namespace (Notes); lower case, the Go package and the CLI's command
-	More      []string `toml:"more"`      // more languages: python, and cli (a command-line client in Rust)
-	Audiences []string `toml:"audiences"` // a TypeScript SDK each, of only what the contract tags for that audience
+	Name      string   `toml:"name"`      // the API's name in its SDKs (Notes); lower case, the Go package and the CLI's command
+	More      []string `toml:"more"`      // more than Go: typescript, python, and cli (a command-line client in Rust)
+	Audiences []string `toml:"audiences"` // with typescript: an SDK each, of only what the contract tags for that audience
 	Go        bool     `toml:"go"`        // the Go SDK is committed in sdk/go (charter sdk -publish): check fails when the specs moved on
 }
 

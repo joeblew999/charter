@@ -39,35 +39,6 @@ groups:
             version: "1.22"
           packageName: notes
 
-  # TypeScript, as sources (.ts).
-  typescript:
-    generators:
-      - name: fernapi/fern-typescript-sdk
-        version: 3.106.1
-        output:
-          location: local-file-system
-          path: ../sdk/out/typescript
-        config:
-          namespaceExport: Notes
-          generateWebSocketClients: true
-          # Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.
-          guardProcessEnvAccess: true
-
-  # TypeScript, compiled (.js and .d.ts): what a Worker or a Node program imports.
-  typescript-dist:
-    generators:
-      - name: fernapi/fern-typescript-sdk
-        version: 3.106.1
-        output:
-          location: local-file-system
-          path: ../sdk/out/typescript-dist
-        config:
-          namespaceExport: Notes
-          generateWebSocketClients: true
-          # Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.
-          guardProcessEnvAccess: true
-          outputSourceFiles: false
-
   # Python.
   python:
     generators:

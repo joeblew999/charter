@@ -20,32 +20,3 @@ groups:
             path: github.com/joeblew999/charter/examples/site/sdk/go
             version: "1.22"
           packageName: api
-
-  # TypeScript, as sources (.ts).
-  typescript:
-    generators:
-      - name: fernapi/fern-typescript-sdk
-        version: 3.106.1
-        output:
-          location: local-file-system
-          path: ../sdk/out/typescript
-        config:
-          namespaceExport: Api
-          generateWebSocketClients: true
-          # Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.
-          guardProcessEnvAccess: true
-
-  # TypeScript, compiled (.js and .d.ts): what a Worker or a Node program imports.
-  typescript-dist:
-    generators:
-      - name: fernapi/fern-typescript-sdk
-        version: 3.106.1
-        output:
-          location: local-file-system
-          path: ../sdk/out/typescript-dist
-        config:
-          namespaceExport: Api
-          generateWebSocketClients: true
-          # Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.
-          guardProcessEnvAccess: true
-          outputSourceFiles: false

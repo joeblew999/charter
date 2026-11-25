@@ -360,7 +360,7 @@ func TestContext(t *testing.T) {
 // TestAddLocale: a language goes into charter.toml's [intl] and gets a catalog.
 func TestAddLocale(t *testing.T) {
 	a := newApp(t)
-	a.write("charter.toml's [intl]", "# the app's languages\nlocales = [\"en\", \"de\"]\ncatalogs = \"cat\"\n")
+	a.write("charter.toml", "# the app's languages\n[intl]\nlocales = [\"en\", \"de\"]\ncatalogs = \"cat\"\n")
 	a.write("cat/en.toml", "hi = \"Hi\"\n")
 	c, err := config.Find(a.root)
 	if err != nil {
@@ -369,7 +369,7 @@ func TestAddLocale(t *testing.T) {
 	if err := catalog.AddLocale(c, "fr-CA", "français (Canada)"); err != nil {
 		t.Fatal(err)
 	}
-	if got := a.read("charter.toml's [intl]"); !strings.Contains(got, `locales = ["en", "de", "fr-CA"]`) || !strings.HasPrefix(got, "# the app's languages\n") {
+	if got := a.read("charter.toml"); !strings.Contains(got, `locales = ["en", "de", "fr-CA"]`) || !strings.HasPrefix(got, "# the app's languages\n") {
 		t.Errorf("charter.toml's [intl]:\n%s", got)
 	}
 	if got := a.read("cat/fr-CA.toml"); !strings.HasPrefix(got, "# français (Canada) (fr-CA): the translations of en.toml") {

@@ -139,19 +139,6 @@ func Generate(dir, group string, ifStale, quiet bool) (time.Duration, error) {
 	return time.Since(start), stamp(dir, group)
 }
 
-// tsconfig is how a generated TypeScript SDK is typechecked: standard fetch, none of the project's own settings.
-// The projects stay on @types/node 22: with 26, a generated TypeScript SDK's Headers does not typecheck.
-// Upstream: fern-api/fern#18313 (when fixed: @types/node 26 in every package.json)
-func tsconfig(entry string) []byte {
-	b, _ := json.MarshalIndent(map[string]any{
-		"//": "Written by charter sdk -prove: how a generated TypeScript SDK is typechecked (bundler mode, default libs).",
-		"compilerOptions": map[string]any{"target": "es2022", "module": "preserve", "moduleResolution": "bundler", "allowImportingTsExtensions": true,
-			"strict": true, "noEmit": true, "skipLibCheck": true},
-		"include": []string{entry},
-	}, "", "  ")
-	return b
-}
-
 // ProveGroup proves a generated group, in its language, by what is in sdk/out/<group>. What it runs keeps its
 // output, shown only if it fails: the groups are proven side by side.
 func ProveGroup(dir, group string) error {
@@ -187,21 +174,6 @@ func ProveGroup(dir, group string) error {
 		}
 		_, err = run.Quietly(out, map[string]string{"GOWORK": "off", "WIREMOCK_URL": "http://" + strings.TrimSpace(port)}, "go", "test", "./...")
 		return err
-	case firstOf(out, "index.ts", "src/index.ts", "sdk/index.ts") != "":
-		// Fern's SDKs are written for TypeScript 5: a project on a newer one has 5.9 beside it as typescript-sdk
-		// ("npm:typescript@~5.9.3"); a project on 5.9 already, its own.
-		entry := firstOf(out, "index.ts", "src/index.ts", "sdk/index.ts")
-		config := filepath.Join(out, "tsconfig.check.json")
-		if err := os.WriteFile(config, tsconfig(entry), 0o644); err != nil {
-			return err
-		}
-		defer os.Remove(config)
-		if tsc := firstOf(dir, "node_modules/typescript-sdk/bin/tsc", "../../node_modules/typescript-sdk/bin/tsc"); tsc != "" {
-			_, err := run.Quietly(dir, nil, "node", filepath.Join(dir, tsc), "-p", config)
-			return err
-		}
-		_, err := run.Quietly(dir, nil, "tsc", "-p", config)
-		return err
 	case exists("__init__.py") && exists("client.py"):
 		return python(dir, out, group)
 	case exists("esm/index.mjs") && exists("esm/index.d.mts"):
@@ -229,7 +201,7 @@ func ProveGroup(dir, group string) error {
 		_, err = run.Quietly(out, map[string]string{"CARGO_TARGET_DIR": target}, "cargo", args...)
 		return err
 	}
-	fmt.Printf("%s: generated; charter proves Go, TypeScript, Python and the Rust CLI, not this language\n", out)
+	fmt.Printf("%s: generated; charter proves Go, Python and the Rust CLI, not this language\n", out)
 	return nil
 }
 

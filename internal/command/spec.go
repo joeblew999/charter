@@ -127,7 +127,7 @@ func flagsFirst(args []string) []string {
 	return append(flags, rest...)
 }
 
-// SDK runs charter sdk: an SDK with Fern (Docker) into sdk/out, by default the TypeScript one; -prove: every client,
+// SDK runs charter sdk: an SDK with Fern (Docker) into sdk/out, by default the Go one; -prove: every client,
 // proven in its language; -publish: the Go SDK into sdk/go, which the project commits.
 func SDK(args []string) {
 	fs := flag.NewFlagSet("charter sdk", flag.ExitOnError)
@@ -145,7 +145,7 @@ func SDK(args []string) {
 	case *prove:
 		check(fern.Prove(p.Root, fs.Args(), p.SDKs.Go))
 	default:
-		group := "typescript-dist"
+		group := "go"
 		if fs.NArg() > 0 {
 			group = fs.Arg(0)
 		}
