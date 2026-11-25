@@ -17,6 +17,7 @@ import (
 	"github.com/syumai/workers-go/cloudflare/queues"
 	"github.com/syumai/workers-go/cloudflare/r2"
 
+	"github.com/joeblew999/charter/email"
 	"github.com/joeblew999/charter/transport"
 	"github.com/joeblew999/charter/web"
 )
@@ -38,6 +39,14 @@ func Background() {
 			return err
 		}
 		return ns.PutString("cron", event.Cron+"  "+time.Now().UTC().Format(time.RFC3339), nil)
+	})
+	// Email in (charter/email: workers-go has none yet): who wrote, and the subject.
+	email.ConsumeNonBlock(func(_ context.Context, m *email.Message) error {
+		ns, err := kv.NewNamespace("KV")
+		if err != nil {
+			return err
+		}
+		return ns.PutString("received", m.From+": "+m.Header("subject"), nil)
 	})
 	// The queue's consumer: each message goes to the top of a short list in KV.
 	queues.ConsumeNonBlock(func(batch *queues.MessageBatch) error {
@@ -62,7 +71,7 @@ func Background() {
 	})
 }
 
-// cloud serves /cloud and its two forms.
+// cloud serves /cloud and its forms.
 func cloud(w http.ResponseWriter, r *http.Request) {
 	ns, err := kv.NewNamespace("KV")
 	if err != nil {
@@ -78,6 +87,19 @@ func cloud(w http.ResponseWriter, r *http.Request) {
 	case r.URL.Path == "/cloud/note" && r.Method == http.MethodPost:
 		// R2: the note is one object.
 		if _, err := bucket.Put("note.txt", io.NopCloser(strings.NewReader(r.PostFormValue("note"))), nil); err != nil {
+			fail(w, err)
+			return
+		}
+		back(w, r)
+	case r.URL.Path == "/cloud/email" && r.Method == http.MethodPost:
+		// Email out, through the send_email binding MAIL.
+		to := r.PostFormValue("to")
+		raw := "From: site@example.com\r\nTo: " + to + "\r\nSubject: Hello from charter-site\r\nMessage-ID: <" + strconv.FormatInt(time.Now().UnixNano(), 36) + "@example.com>\r\nMIME-Version: 1.0\r\nContent-Type: text/plain\r\n\r\nSent from a Go Worker.\r\n"
+		if err := email.Send("MAIL", "site@example.com", to, []byte(raw)); err != nil {
+			fail(w, err)
+			return
+		}
+		if err := ns.PutString("sent", "→ "+to, nil); err != nil {
 			fail(w, err)
 			return
 		}
@@ -111,6 +133,8 @@ func cloud(w http.ResponseWriter, r *http.Request) {
 			s.Queued = strings.Split(log, "\n")
 		}
 		s.Cron, _ = ns.GetString("cron", nil)
+		s.Sent, _ = ns.GetString("sent", nil)
+		s.Received, _ = ns.GetString("received", nil)
 		// What Cloudflare knows of the request (request.cf), as charter's transport carries it.
 		cf := transport.CFOf(r)
 		s.Place = strings.TrimSpace(cf.Country + " " + cf.Timezone)

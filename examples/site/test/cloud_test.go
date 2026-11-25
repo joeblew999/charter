@@ -109,3 +109,18 @@ func TestTheGermanPage(t *testing.T) {
 		t.Error("/de/cloud is not in German")
 	}
 }
+
+func TestEmail(t *testing.T) {
+	post(t, "/cloud/email", url.Values{"to": {"you@example.com"}})
+	if !strings.Contains(page(t, "/cloud"), "→ you@example.com") {
+		t.Error("the page does not say whom the message was sent to")
+	}
+	// wrangler dev hands the Worker a message posted here, as Email Routing would.
+	raw := "From: ada@example.com\r\nTo: site@example.com\r\nSubject: A note for the site\r\nMessage-ID: <note@example.com>\r\n\r\nHello.\r\n"
+	res, err := http.Post(base+"/cdn-cgi/handler/email?from=ada@example.com&to=site@example.com", "message/rfc822", strings.NewReader(raw))
+	if err != nil || res.StatusCode/100 != 2 {
+		t.Fatalf("POST /cdn-cgi/handler/email: %v %v", res, err)
+	}
+	res.Body.Close()
+	soon(t, "the received email", "ada@example.com: A note for the site")
+}

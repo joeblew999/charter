@@ -16,5 +16,7 @@
   "d1_databases": [{ "binding": "DB", "database_name": "charter-workers", "database_id": "local", "migrations_dir": "migrations" }],
   "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }],
-  "triggers": { "crons": ["*/5 * * * *"] }
+  "triggers": { "crons": ["*/5 * * * *"] },
+  // Email out (charter/email's Send). Email in is Email Routing's, set in the dashboard or with "email" here.
+  "send_email": [{ "name": "MAIL" }]
 }

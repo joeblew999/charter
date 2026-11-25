@@ -22,5 +22,6 @@
     "producers": [{ "binding": "QUEUE", "queue": "charter-site" }],
     "consumers": [{ "queue": "charter-site", "max_batch_timeout": 1 }]
   },
-  "triggers": { "crons": ["*/5 * * * *"] }
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "send_email": [{ "name": "MAIL" }]
 }

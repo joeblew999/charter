@@ -44,6 +44,8 @@ queues = "A message sent to a queue. The consumer takes it a moment later: open 
 message = "Message"
 send = "Send"
 cron = "The schedule that last ran, and when."
+email = "A message sent through a send_email binding, and the last one Email Routing handed this Worker."
+email_to = "Send to"
 fetch = "A request this Worker made, to its own health check."
 vars = "A variable of the Worker, and what Cloudflare knows of your request."
 

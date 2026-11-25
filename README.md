@@ -135,11 +135,40 @@ Every package is at the top: `github.com/joeblew999/charter/<name>`.
 
 | For | Packages |
 |---|---|
-| Cloudflare from Go | `transport` (run a handler as a Worker), `bindings` (variables, static assets, rate limits, fetch), `d1`, `hub` (Durable Object fan-out), `ratelimit` |
+| Cloudflare from Go, beside workers-go | `transport` (run a handler as a Worker), `bindings` (variables, static assets, rate limits, fetch), `d1`, `hub` (Durable Object fan-out), `ratelimit`, `email` |
 | APIs from a contract | `serve` (the standard API), `specs`, `asyncapi`, `humaworkers` (Huma on Workers), `mcp`, `auth`, `problem`, `follow` (SSE and WebSocket streams) |
 | Sites | `gsxapp` (the one call above), `web`, `fragments`, `intl` and `gsxintl` (languages), `seo` and `gsxseo` (search engines) |
 
-Every binding has a stand-in off Workers: `d1.Open` is SQLite in memory with your migrations applied, a rate limit
+## All of workers-go
+
+Everything [workers-go](https://github.com/syumai/workers-go) has works as its own docs say: import its packages and
+call them. charter's build serves `workers.Serve` programs as well as its own `transport.Run`, and its Worker entry
+handles requests, Cron Triggers, queues and email.
+
+| Cloudflare | Use | From |
+|---|---|---|
+| KV | `kv.NewNamespace("KV")` | workers-go |
+| R2 | `r2.NewBucket("BUCKET")` | workers-go |
+| Queues | `queues.NewProducer("QUEUE")`, `queues.ConsumeNonBlock(f)` | workers-go |
+| D1 | `d1.OpenConnector("DB")` with `database/sql` | workers-go |
+| Cron Triggers | `cron.ScheduleTaskNonBlock(f)` | workers-go |
+| Cache API | `cache.New()` | workers-go |
+| Durable Objects | `cloudflare.NewDurableObjectNamespace("NAME")`, its stub's `Fetch` | workers-go |
+| fetch, service bindings | `fetch.NewClient()` | workers-go |
+| TCP sockets | `sockets.Connect(ctx, addr, nil)` | workers-go |
+| Variables, waitUntil, request.cf | `cloudflare.Getenv`, `cloudflare.WaitUntil`, `fetch.NewIncomingProperties` | workers-go |
+| Email, out and in | `email.Send("MAIL", from, to, raw)`, `email.ConsumeNonBlock(f)` | charter (`charter/email`), until workers-go has it |
+| Rate limits, a fan-out hub | `bindings.Allow`, `hub.DurableObject` | charter |
+| Any other binding | `cloudflare.GetBinding("NAME")`, a `js.Value` | workers-go |
+
+[`examples/workers`](examples/workers) uses every one of them with a test each, and
+[`examples/site`](examples/site)'s `/cloud` page uses them in a page you can click through.
+
+A file that imports workers-go's packages builds only for a Worker (`//go:build js && wasm`): they are `syscall/js`.
+That is fine now that `charter dev` and `charter test` run the Worker itself. For code that should also run under
+`go test`, charter has stand-ins:
+
+Every binding below has a stand-in off Workers: `d1.Open` is SQLite in memory with your migrations applied, a rate limit
 counts in memory, the hub is in the process, Intl is a local workerd. So one `main.go` serves both, and `go test` runs
 the real SQL.
 
@@ -151,7 +180,8 @@ The rest of the repo: [`cmd/charter`](cmd/charter) is the command, [`internal/`]
 | Example | What it shows |
 |---|---|
 | [`examples/api`](examples/api) | The smallest API: one route from a contract, its specs, MCP |
-| [`examples/site`](examples/site) | An API and its pages in one Worker: gsx, gsxui, htmx 4, Vite, three languages (one right-to-left), search engines, D1, live over SSE |
+| [`examples/site`](examples/site) | An API and its pages in one Worker: gsx, gsxui, htmx 4, Vite, three languages (one right-to-left), search engines, D1, live over SSE, and a page that uses KV, R2, Queues, Cron, email and fetch |
+| [`examples/workers`](examples/workers) | Every workers-go binding, the workers-go way, and email: KV, R2, Queues, D1, Cache, Cron, Durable Objects, fetch, sockets |
 | [`examples/notes`](examples/notes) | A full API: auth, D1, SSE and WebSocket streams, rate limits, SDKs in Go and Python and a command-line client |
 
 In this repo: `npm install` once at the top (the examples share one `node_modules`), then `go tool charter dev` or

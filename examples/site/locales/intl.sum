@@ -2,6 +2,8 @@
 de cloud.back 5140e5742aeb 7e934e52572d
 de cloud.cron 29a6ef9dab9f f7481768ddbf
 de cloud.description a56f26e29e22 548c7b0604cc
+de cloud.email 1faca4204508 87cbd750fafa
+de cloud.email_to 9bcbb3bc11e2 35161c221813
 de cloud.fetch 09696da4e844 b57dfe92825c
 de cloud.heading 9037ac83f542 d6c88464466d
 de cloud.intro 36cef2e4a003 62a2cba21db8
@@ -28,6 +30,8 @@ de site.title 6f3c0d094892 0d8250e41009
 ar cloud.back 5140e5742aeb 07e9736b65b3
 ar cloud.cron 29a6ef9dab9f 38953174ee70
 ar cloud.description a56f26e29e22 1e55f49ec9b0
+ar cloud.email 1faca4204508 be337a17bc92
+ar cloud.email_to 9bcbb3bc11e2 999d1bb11d1a
 ar cloud.fetch 09696da4e844 57d701fda624
 ar cloud.heading 9037ac83f542 83a78fa9c862
 ar cloud.intro 36cef2e4a003 64aff22dc559

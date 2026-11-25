@@ -131,3 +131,14 @@ func TestRequestProperties(t *testing.T) {
 		t.Errorf("GET /cf: HTTP %d %q, want what Cloudflare knows of the request", s, b)
 	}
 }
+
+func TestEmailSend(t *testing.T) { want(t, "POST", "/email/you@example.com", "", 200, "") }
+
+func TestEmailReceive(t *testing.T) {
+	// wrangler dev hands the Worker a message posted here, as Email Routing would.
+	raw := "From: ada@example.com\r\nTo: app@example.com\r\nSubject: A note for the Worker\r\nMessage-ID: <note@example.com>\r\n\r\nHello.\r\n"
+	if s, b, _ := do(t, "POST", "/cdn-cgi/handler/email?from=ada@example.com&to=app@example.com", raw); s/100 != 2 {
+		t.Fatalf("POST /cdn-cgi/handler/email: HTTP %d %s", s, b)
+	}
+	soon(t, "/kv/email:ada@example.com", "A note for the Worker")
+}

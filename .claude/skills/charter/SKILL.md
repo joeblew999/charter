@@ -23,10 +23,12 @@ wrong.
 
 ## Rules
 
-- **Bindings through charter, never workers-go directly**: `bindings.Var`, `bindings.Allow`, `bindings.StaticAssets`,
-  `bindings.HTTPClient`, `d1.Open`, `hub.DurableObject`, `transport.CFOf(r)` (all under
-  `github.com/joeblew999/charter/`). Each has a stand-in off Workers, so there is no file per platform and
-  `go test` runs the real SQL.
+- **Bindings are workers-go's**, imported and called directly (`workers-go/cloudflare/kv`, `r2`, `queues`, `d1`,
+  `cron`, `cache`, `fetch`, `sockets`), in a file that builds only for a Worker (`//go:build js && wasm`). Email is
+  `charter/email`. Register what is no request before the program serves: `cron.ScheduleTaskNonBlock`,
+  `queues.ConsumeNonBlock`, `email.ConsumeNonBlock`.
+- **For code that should also run under `go test`**, charter's stand-ins: `d1.Open`, `bindings.Var`,
+  `bindings.Allow`, `hub.DurableObject`, `transport.CFOf(r)`.
 - **Memory between requests is a cache, never state**: charter keeps Go runtimes between requests, and any request may
   start a new one.
 - **D1 has no interactive transactions**: single statements with `RETURNING`, or `d1.Batch`.

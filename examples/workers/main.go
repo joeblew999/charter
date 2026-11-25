@@ -1,11 +1,13 @@
 //go:build js && wasm
 
 // Everything workers-go has, used the workers-go way (github.com/syumai/workers-go): its own packages, called directly,
-// with no charter in the code at all: charter builds it and wrangler runs it. One route per binding, and test/ asks each of them on wrangler
+// with no charter in the way: charter builds it and wrangler runs it. One route per binding, and test/ asks each of them on wrangler
 // dev (go tool charter test).
 //
 //	KV, R2, Queues (a producer and a consumer), D1, the Cache API, a Durable Object stub, fetch, TCP sockets,
 //	variables, waitUntil, a Cron Trigger, and what Cloudflare knows of a request (request.cf)
+//
+// And email, sent and received, which workers-go does not have yet: charter/email, written in the same style.
 //
 // A file that imports workers-go's packages builds only for a Worker (js && wasm): they are syscall/js. Code that
 // should also run in go test goes through charter's stand-ins instead (charter/d1, charter/bindings), as the other
@@ -31,6 +33,8 @@ import (
 	"github.com/syumai/workers-go/cloudflare/queues"
 	"github.com/syumai/workers-go/cloudflare/r2"
 	"github.com/syumai/workers-go/cloudflare/sockets"
+
+	"github.com/joeblew999/charter/email"
 )
 
 func main() {
@@ -63,6 +67,16 @@ func main() {
 			m.Ack()
 		}
 		return nil
+	})
+
+	// Email, which workers-go does not have: charter/email, in workers-go's style. A message Email Routing hands the
+	// Worker is noted in KV by its sender.
+	email.ConsumeNonBlock(func(_ context.Context, m *email.Message) error {
+		ns, err := kv.NewNamespace("KV")
+		if err != nil {
+			return err
+		}
+		return ns.PutString("email:"+m.From, m.Header("subject"), nil)
 	})
 
 	mux := http.NewServeMux()
@@ -205,6 +219,13 @@ func main() {
 			return
 		}
 		io.WriteString(w, line)
+	})
+
+	// Email: a message sent through the send_email binding.
+	mux.HandleFunc("POST /email/{to}", func(w http.ResponseWriter, r *http.Request) {
+		to := r.PathValue("to")
+		raw := "From: app@example.com\r\nTo: " + to + "\r\nSubject: Hello from a Go Worker\r\nMessage-ID: <hello@example.com>\r\nMIME-Version: 1.0\r\nContent-Type: text/plain\r\n\r\nSent with charter/email.\r\n"
+		failed(w, email.Send("MAIL", "app@example.com", to, []byte(raw)))
 	})
 
 	// waitUntil: work that goes on after the answer.

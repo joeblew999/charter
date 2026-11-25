@@ -28,6 +28,8 @@ queues = "Eine Nachricht an eine Queue. Der Consumer holt sie einen Moment spät
 message = "Nachricht"
 send = "Senden"
 cron = "Der Zeitplan, der zuletzt lief, und wann."
+email = "Eine Nachricht, über ein send_email-Binding gesendet, und die letzte, die Email Routing diesem Worker übergeben hat."
+email_to = "Senden an"
 fetch = "Eine Anfrage dieses Workers an seinen eigenen Health-Check."
 vars = "Eine Variable des Workers und was Cloudflare über Ihre Anfrage weiß."
 

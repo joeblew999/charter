@@ -20,6 +20,8 @@ type CloudState struct {
 	Name      string   // a variable of the Worker
 	Place     string   // what Cloudflare knows of the request: country and time zone
 	Fetched   string   // fetch: what this Worker's own /healthz answered
+	Sent      string   // email: whom the last message was sent to
+	Received  string   // email: the sender and subject of the last message received
 }
 
 // Cloud is the page at /cloud: one card per thing Cloudflare gives the Worker, each used through workers-go's own
@@ -54,6 +56,21 @@ component Cloud(s CloudState) {
 		</CloudCard>
 		<CloudCard name="Cron Triggers" about={locales.CloudCron}>
 			<p id="cron" class="text-sm" translate="no">{ s.Cron }</p>
+		</CloudCard>
+		<CloudCard name="Email" about={locales.CloudEmail}>
+			<form method="post" action="/cloud/email" class="flex flex-wrap gap-2">
+				<ui.Input
+					name="to"
+					type="email"
+					class="flex-1"
+					required
+					placeholder="you@example.com"
+					aria-label={locales.CloudEmailTo}
+				/>
+				<ui.Button type="submit" variant="secondary">{ locales.CloudSend }</ui.Button>
+			</form>
+			<p id="sent" class="text-sm" translate="no">{ s.Sent }</p>
+			<p id="received" class="text-sm text-muted-foreground" translate="no">{ s.Received }</p>
 		</CloudCard>
 		<CloudCard name="fetch" about={locales.CloudFetch}>
 			<p id="fetched" class="text-sm" translate="no">{ s.Fetched }</p>

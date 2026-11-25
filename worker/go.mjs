@@ -27,9 +27,10 @@
 //	import { goWorker } from "./build/go.mjs";
 //	const go = goWorker();
 //	await go.warm({ paths: ["/api/hello"] });
-//	export default { fetch: go.fetch, scheduled: go.scheduled, queue: go.queue };
+//	export default { fetch: go.fetch, scheduled: go.scheduled, queue: go.queue, email: go.email };
 import "./wasm_exec.js"; // the compiler's (workers-go writes it), for its global Go class
 import * as build from "./runtime.mjs";
+import { EmailMessage } from "cloudflare:email"; // for charter/email's Send: what a send_email binding takes
 import { webSocket } from "./websocket.mjs";
 
 // request.cf's fields transport.CF has (cf.go), under the header name it reads (lower case, as
@@ -64,6 +65,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 	function begin(module, env, ctx, warm) {
 		const go = new Go();
 		const binding = warm ? { warm } : {};
+		binding.EmailMessage = EmailMessage;
 		const context = createRuntimeContext({ env, ctx, binding });
 		const runtime = { go, binding, context, started: false, served: 0, warm: Boolean(warm) };
 		runtime.isReady = new Promise(resolve => {
@@ -129,7 +131,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		if (!runtime.go.exited && !runtime.binding.full && waiting.length < MAX_WAITING) waiting.push(runtime);
 	}
 
-	return { fetch, scheduled, queue, warm };
+	return { fetch, scheduled, queue, email, warm };
 
 	// run takes a runtime for one event that is no request (a cron trigger, a batch from a queue): one that is
 	// waiting, or a new one. The bindings and waitUntil are this event's. It gives the event to what the Go program
@@ -158,6 +160,11 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 	// scheduled is the Worker's handler for a Cron Trigger: workers-go's cron.ScheduleTaskNonBlock gets the event.
 	function scheduled(event, env, ctx) {
 		return run(env, ctx, "runScheduler", event, "a Cron Trigger (cron.ScheduleTaskNonBlock, before transport.Run)");
+	}
+
+	// email is the Worker's handler for a message Email Routing hands it: charter/email's ConsumeNonBlock gets it.
+	function email(message, env, ctx) {
+		return run(env, ctx, "handleEmail", message, "an email (email.ConsumeNonBlock, before the program serves)");
 	}
 
 	// queue is the Worker's handler for a batch from a queue: workers-go's queues.ConsumeNonBlock gets it.
