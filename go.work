@@ -3,8 +3,8 @@ go 1.27.1
 use (
 	.
 	./examples/api
-	./examples/notes-go
-	./examples/notes-go/sdk/go
-	./examples/notes-go/test/soak-go
+	./examples/notes
+	./examples/notes/sdk/go
+	./examples/notes/test/soak-go
 	./examples/site
 )
