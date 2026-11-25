@@ -19,12 +19,13 @@ const library = "github.com/joeblew999/charter"
 // Build runs charter build: everything wrangler needs to run or deploy the Worker. wrangler.jsonc names it as its
 // build command, so wrangler dev and wrangler deploy run it themselves.
 //
-//	generate   the messages (an intl.toml) and the components' Go (a gsx.toml)
-//	vite       the browser's files into dist/ (a vite.config.ts)
+//	generate   the messages (an intl.toml), the components' Go (a gsx.toml), and the browser's files into dist/
+//	           (Vite, a vite.config.ts)
 //	go         the Wasm into build/, with workers-go's JavaScript and charter's glue, which keeps Go runtimes
 //	           between requests
 //
-// -only generate stops after the first: what go test and go vet need.
+// -only generate stops before the Wasm: what go test and go vet need (the generated Go, and Vite's manifest, which
+// main.go embeds).
 func Build(args []string) {
 	fs := flag.NewFlagSet("charter build", flag.ExitOnError)
 	only := fs.String("only", "", `"generate": stop once the Go that go test and go vet need is written`)
@@ -38,15 +39,10 @@ func Build(args []string) {
 	if *only == "generate" {
 		return
 	}
-	if hasVite(p) {
-		vite, err := npm(p, "vite")
-		check(err)
-		check(run.Run(p.Root, nil, vite, "build"))
-	}
 	check(wasm(p, *limit))
 }
 
-// generate writes the Go the app's own Go needs before it compiles.
+// generate writes what the app's own Go needs before it compiles: the messages, the components' Go, Vite's output.
 func generate(p *project.Project) error {
 	if hasIntl(p) {
 		intl.Main([]string{"gen"})
@@ -55,7 +51,17 @@ func generate(p *project.Project) error {
 		}
 	}
 	if hasGSX(p) {
-		return run.Run(p.Root, nil, "go", "tool", "gsx", "generate")
+		if err := run.Run(p.Root, nil, "go", "tool", "gsx", "generate"); err != nil {
+			return err
+		}
+	}
+	// The browser's files, with the manifest the Go embeds: before anything compiles the Go.
+	if hasVite(p) {
+		vite, err := npm(p, "vite")
+		if err != nil {
+			return err
+		}
+		return run.Run(p.Root, nil, vite, "build")
 	}
 	return nil
 }

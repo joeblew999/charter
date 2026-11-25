@@ -223,20 +223,18 @@ func keep(capnp string) int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
+	// A free port, found and let go again: workerd then listens on it. (Handing workerd the open socket would close
+	// the gap between the two, but Windows cannot pass one to a program it starts.)
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
-	socket, err := ln.(*net.TCPListener).File()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return 1
-	}
-	url := fmt.Sprintf("http://127.0.0.1:%d", ln.Addr().(*net.TCPAddr).Port)
+	addr := ln.Addr().String()
 	ln.Close()
-	cmd := exec.Command(bin, "serve", capnp, "--socket-fd", "http=3")
-	cmd.Stderr, cmd.ExtraFiles = os.Stderr, []*os.File{socket}
+	url := "http://" + addr
+	cmd := exec.Command(bin, "serve", capnp, "--socket-addr", "http="+addr)
+	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, "intl/workerd:", err)
 		return 1

@@ -71,8 +71,17 @@ const sqlcVersion = "v1.30.0"
 // Analyze runs sqlc on dir's schema (migrations/) and queries (api/queries.sql), and returns what it worked out. sqlc
 // is run with go run, at sqlcVersion.
 func Analyze(dir string) (*Request, error) {
-	tmp, err := os.MkdirTemp("", "charter-sqlc-")
+	// In the app's build folder, not the system's: sqlc reads its paths relative to its config, and on Windows the
+	// system's temporary folder can be on another drive, which no relative path reaches.
+	work := filepath.Join(dir, "build")
+	if err := os.MkdirAll(work, 0o755); err != nil {
+		return nil, err
+	}
+	tmp, err := os.MkdirTemp(work, "sqlc-")
 	if err != nil {
+		return nil, err
+	}
+	if tmp, err = filepath.Abs(tmp); err != nil {
 		return nil, err
 	}
 	defer os.RemoveAll(tmp)
