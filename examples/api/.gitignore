@@ -10,3 +10,5 @@ node_modules/
 
 # What charter sdk writes
 sdk/out/
+# charter's scratch files
+/.charter/

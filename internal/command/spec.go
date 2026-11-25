@@ -61,14 +61,15 @@ func spec(p *project.Project, checkOnly bool) error {
 // specProgram writes the program that writes a Go project's specs, and returns its package: the contract's API
 // (api.API in the project's module) given to charter's specs package, which first stops on what the specs don't show
 // (specs.Problems), then writes both specs or, with -check, compares them. It is the same in every project, so charter
-// writes it, into build/ (charter's); go vet and go test leave out a folder whose name starts with _.
+// writes it, into .charter/ (charter's scratch folder, which no build empties); go vet and go test leave out a
+// folder whose name starts with a dot.
 func specProgram(root, module string) (string, error) {
-	dir := filepath.Join(root, "build", "_spec")
+	dir := filepath.Join(root, ".charter", "spec")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
-	return "./build/_spec", os.WriteFile(filepath.Join(dir, "main.go"), []byte(`// Written by charter check --fix, each time it runs: don't edit. The program that writes the API's
-// specs (go run ./build/_spec [-check] <openapi.json> <asyncapi.json> <server>).
+	return "./.charter/spec", os.WriteFile(filepath.Join(dir, "main.go"), []byte(`// Written by charter check --fix, each time it runs: don't edit. The program that writes the API's
+// specs (go run ./.charter/spec [-check] <openapi.json> <asyncapi.json> <server>).
 package main
 
 import (

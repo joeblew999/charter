@@ -257,7 +257,7 @@ func Env(args []string) {
 }
 
 // generated are what a build writes, in an app: charter cache clean removes them.
-var generated = []string{"build", "dist", ".wrangler", filepath.Join("web", "intl"), filepath.Join("sdk", "out")}
+var generated = []string{"build", "dist", ".wrangler", ".charter", filepath.Join("web", "intl"), filepath.Join("sdk", "out")}
 
 // Cache runs charter cache clean: everything a build wrote is removed, so the next one starts from the sources.
 func Cache(args []string) {
