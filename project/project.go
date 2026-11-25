@@ -16,6 +16,8 @@
 //	subdomain = "you"                  # the account's workers.dev subdomain: a preview is <branch>-my-app.you.workers.dev
 //
 //	traces = 0.01                      # optional: trace this share of requests (0 to 1) on Cloudflare; default none
+//	tasks = false                      # optional: no .mise/tasks/charter.toml, for an app that calls charter itself
+//	                                   # (each task there is charter <command>); default: charter writes it
 //
 //	[[d1]]                             # databases my-app, my-app-staging and my-app-preview
 //	binding = "DB"
@@ -113,6 +115,7 @@ type Project struct {
 	Repo               string          `toml:"repo"`
 	Subdomain          string          `toml:"subdomain"`
 	Traces             float64         `toml:"traces"`
+	Tasks              *bool           `toml:"tasks"`
 	D1                 []D1            `toml:"d1"`
 	DurableObjects     []DurableObject `toml:"durable_objects"`
 	RateLimits         []RateLimit     `toml:"rate_limits"`

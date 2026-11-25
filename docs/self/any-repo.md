@@ -49,6 +49,7 @@ It changes nothing on GitHub: `charter repo` does that, from `charter.toml`'s `[
 | Its homepage | `homepage`; by default its GitHub Pages site (a public repo's) |
 | The docs folder | `docs = "."`; by default `docs` |
 | No `renovate.json`, no workflows | `renovate = false`, `workflows = false` |
+| No mise tasks of charter's in an app (`.mise/tasks/charter.toml`): for one that calls `charter` from tasks of its own | `tasks = false`, at the top of `charter.toml`, not under `[github]` |
 
 ## Tell what is charter's
 

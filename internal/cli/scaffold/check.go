@@ -70,6 +70,9 @@ func Problems(p *project.Project) []string {
 			}
 		}
 	}
+	if _, err := os.Stat(TasksFile); err == nil && !wantsTasks() {
+		out = append(out, fmt.Sprintf("%s is there, and %s says tasks = false: charter tasks removes it", TasksFile, project.File))
+	}
 	gomod, _ := os.ReadFile("go.mod")
 	// An app on a checkout of charter's library (a replace in go.mod, as charter's own Go examples are), or in one
 	// (charter's TypeScript examples), runs that checkout's charter, not a release from mise.
