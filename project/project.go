@@ -15,6 +15,8 @@
 //	repo = "you/my-app"                # its GitHub repository: CI publishes each commit's build there for Workers Builds
 //	subdomain = "you"                  # the account's workers.dev subdomain: a preview is <branch>-my-app.you.workers.dev
 //
+//	traces = 0.01                      # optional: trace this share of requests (0 to 1) on Cloudflare; default none
+//
 //	[[d1]]                             # databases my-app, my-app-staging and my-app-preview
 //	binding = "DB"
 //	migrations = "migrations"          # *.sql, applied in name order, each once
@@ -109,6 +111,7 @@ type Project struct {
 	Port               int             `toml:"port"`
 	Repo               string          `toml:"repo"`
 	Subdomain          string          `toml:"subdomain"`
+	Traces             float64         `toml:"traces"`
 	D1                 []D1            `toml:"d1"`
 	DurableObjects     []DurableObject `toml:"durable_objects"`
 	RateLimits         []RateLimit     `toml:"rate_limits"`

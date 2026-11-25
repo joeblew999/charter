@@ -246,7 +246,7 @@ func exists(p string) bool {
 
 // Extra are charter's commands that are no step of a developer's (Commands leaves them out): what charter's own files
 // and CI run.
-var Extra = []string{"serve", "with", "local", "token", "tail", "bench", "builds", "tasks", "skill", "workflow", "test", "version"}
+var Extra = []string{"serve", "with", "local", "token", "tail", "logs", "bench", "builds", "tasks", "skill", "workflow", "test", "version"}
 
 // Docs runs charter docs [-review [-print]]: what a program can see wrong in the repo's docs (front matter, links and
 // their anchors, pages nothing links to, commands, scripts and paths that don't exist, release versions that go

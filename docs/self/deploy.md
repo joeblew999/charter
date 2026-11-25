@@ -20,7 +20,9 @@ fnox exec -- charter live-test           # REMOTE: the standard test, then the p
 - **`charter.toml`** declares the Worker, its database (`[[d1]]`, `database` its name on Cloudflare) and, with a stream, the hub (`[[durable_objects]]`). A second deploy keeps the database. The same code may deploy as more Workers (`[production] also`: `examples/conformance-ts` does), each with a database and counters of its own.
 - **Migrations** are `migrations/*.sql`, applied in name order, each once, recorded in the database's `d1_migrations`: `charter deploy` applies them on Cloudflare, `charter dev` locally. Never edit one that was applied.
 - **The URL is `url` in `charter.toml`:** the specs name it and the live test calls it. After changing it, `charter spec`.
-- **The logs:** `fnox exec -- charter tail` streams the deployed Worker's.
+- **The logs:** `fnox exec -- charter tail` streams the deployed Worker's as they happen; `-status error`, `-method POST`, `-search text`, `-header`, `-ip self` and `-sampling 0.25` narrow it on Cloudflare's side, so a busy Worker's tail keeps what you asked for. `fnox exec -- charter logs` reads what it logged before now, which every deploy keeps (Workers Logs): `-since 1h`, `-level error`, `-status 500`, `-search text`, `-limit 200`, `-json`.
+- **Traces:** `traces = 0.01` in `charter.toml` has Cloudflare trace that share of requests (the handler, its fetches and binding calls) with no code in the Worker. Not set, none are. Not yet run against Cloudflare by charter's own deploys.
+- **An agent's deploy:** Claude Code in auto mode stops a production deploy unless the person asked for exactly that ("deploy my-api to production"). A repo can't allow it for itself: the allowance is the person's own, `autoMode.allow` in `~/.claude/settings.json` ([Claude Code's docs](https://code.claude.com/docs/en/auto-mode-config)).
 - **The size:** `charter check` fails when the Worker, gzipped as a deploy uploads it, is over 3 MB, what Workers Free allows.
 
 ## Secrets
