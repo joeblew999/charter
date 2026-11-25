@@ -8,6 +8,7 @@ import (
 	"syscall/js"
 
 	"github.com/syumai/workers-go/cloudflare"
+	"github.com/syumai/workers-go/cloudflare/fetch"
 
 	"github.com/joeblew999/charter/internal/promise"
 )
@@ -35,3 +36,8 @@ func Allow(name, key string) (bool, error) {
 // StaticAssets is a 404: on Cloudflare the Static Assets answer for their files before the Worker runs, so a request
 // that reaches it is for none of them.
 func StaticAssets(dir string) http.Handler { return http.NotFoundHandler() }
+
+// HTTPClient is a client for the requests the Worker makes: they go out through the Worker's fetch (a Worker has no
+// sockets, so net/http's own transport can't), following redirects. Each call returns a new client, the caller's to
+// set (its Timeout).
+func HTTPClient() *http.Client { return fetch.NewClient().HTTPClient(fetch.RedirectModeFollow) }

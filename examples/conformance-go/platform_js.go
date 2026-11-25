@@ -4,8 +4,8 @@ package main
 
 import (
 	"github.com/syumai/workers-go/cloudflare"
-	"github.com/syumai/workers-go/cloudflare/fetch"
 
+	"github.com/joeblew999/charter/bindings"
 	"github.com/joeblew999/charter/d1"
 	"github.com/joeblew999/charter/examples/conformance-go/api"
 	"github.com/joeblew999/charter/hub"
@@ -24,6 +24,6 @@ func env() api.Env {
 			return api.D1Store{DB: db}, nil
 		},
 		Hub:  func() (api.Hub, error) { return hub.DurableObject[api.Entry]("HUB", "notes") },
-		HTTP: fetch.NewClient().HTTPClient(fetch.RedirectModeFollow),
+		HTTP: bindings.HTTPClient(),
 	}
 }

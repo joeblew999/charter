@@ -13,6 +13,8 @@ import (
 
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+
+	"github.com/joeblew999/charter/bindings"
 )
 
 // The JWT checks, made by go-jose: the algorithms it accepts (never none, never HMAC), and the
@@ -206,7 +208,7 @@ func fetchJSON(ctx context.Context, url string, into any) error {
 	if err != nil {
 		return err
 	}
-	res, err := client().Do(req)
+	res, err := bindings.HTTPClient().Do(req)
 	if err != nil {
 		return fmt.Errorf("fetching %s: %w", url, err)
 	}

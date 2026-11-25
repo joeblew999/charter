@@ -3,9 +3,9 @@
 package main
 
 import (
-	"net/http"
 	"os"
 
+	"github.com/joeblew999/charter/bindings"
 	"github.com/joeblew999/charter/examples/conformance-go/api"
 )
 
@@ -18,6 +18,6 @@ func env() api.Env {
 		Var:   os.Getenv,
 		Store: func() (api.Store, error) { return memory, nil },
 		Hub:   func() (api.Hub, error) { return memory, nil },
-		HTTP:  http.DefaultClient,
+		HTTP:  bindings.HTTPClient(),
 	}
 }
