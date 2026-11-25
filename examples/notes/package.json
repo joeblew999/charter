@@ -8,7 +8,7 @@
     "deploy": "go tool charter deploy"
   },
   "devDependencies": {
-    "fern-api": "5.158.0",
+    "fern-api": "5.227.0",
     "wrangler": "^4.168.0"
   }
 }
