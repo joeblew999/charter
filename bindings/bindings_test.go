@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/joeblew999/charter/bindings"
 )
@@ -62,5 +63,25 @@ func TestOffWorkers(t *testing.T) {
 	r.Header.Set("CF-Connecting-IP", "203.0.113.7")
 	if bindings.ClientKey(r) != "203.0.113.7" {
 		t.Errorf("ClientKey = %q", bindings.ClientKey(r))
+	}
+}
+
+// TestHTTPClient: off Workers the client reaches a server, and each call gives a client of the caller's own, so a
+// Timeout set on one is not another's.
+func TestHTTPClient(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) }))
+	defer server.Close()
+	client := bindings.HTTPClient()
+	client.Timeout = time.Second
+	res, err := client.Get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("status %d", res.StatusCode)
+	}
+	if other := bindings.HTTPClient(); other == client || other.Timeout != 0 {
+		t.Errorf("a second client shares the first's settings: timeout %v", other.Timeout)
 	}
 }

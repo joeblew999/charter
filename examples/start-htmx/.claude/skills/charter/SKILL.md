@@ -30,6 +30,7 @@ build/worker.mjs. Its bindings are `env` from `cloudflare:workers`, typed from c
 | `bindings.Allow("WRITES", bindings.ClientKey(r))` | a rate limit binding | charter.toml's limit, counted |
 | `hub.DurableObject[T]("ROOM", name).Publish(ctx, item)` | Workers RPC to the object | in memory |
 | `transport.CFOf(r)` | `request.cf` | zero (`transport.WithCF` in a test) |
+| `bindings.HTTPClient()` | the Worker's fetch, for a request the app makes | net/http's own transport |
 | `bindings.StaticAssets("dist/site")` | 404 (assets answer first) | the folder |
 
 - TinyGo builds what ships: register plain paths (`"/notes"`) and check the method with `web.Allow(w, r, "GET")`,

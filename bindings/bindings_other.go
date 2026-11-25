@@ -20,6 +20,10 @@ const OnWorkers = false
 // Var is the process's environment variable called name, standing in for the Worker's variable.
 func Var(name string) string { return os.Getenv(name) }
 
+// HTTPClient is a client for the requests the app makes, standing in for the Worker's fetch: net/http's own
+// transport. Each call returns a new client, the caller's to set (its Timeout).
+func HTTPClient() *http.Client { return &http.Client{} }
+
 // Allow counts key's calls to the limit charter.toml's [[rate_limits]] names, in memory: a fixed window of its period,
 // as the binding counts.
 func Allow(name, key string) (bool, error) {
