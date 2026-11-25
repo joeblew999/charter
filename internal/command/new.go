@@ -12,14 +12,15 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/joeblew999/charter/internal/run"
 	"github.com/joeblew999/charter/internal/version"
 )
 
 const repository = "https://github.com/joeblew999/charter"
 
 // New runs charter new <dir> [-from example]: a new app, copied from one of charter's examples (api, site, notes) at
-// this charter's release, under the folder's name: its Go module, its Worker, its npm package. Then npm install and
-// go tool charter dev.
+// this charter's release, under the folder's name: its Go module, its Worker, its npm package, tidied and formatted.
+// Then npm install and go tool charter dev.
 func New(args []string) {
 	log.SetFlags(0)
 	flags := flag.NewFlagSet("charter new", flag.ExitOnError)
@@ -89,7 +90,16 @@ func New(args []string) {
 		check(os.MkdirAll(filepath.Dir(skill), 0o755))
 		check(os.WriteFile(skill, b, 0o644))
 	}
-	say("✓ %s: the %s example as %s (module %s)\n\nNext:\n  cd %s\n  go mod tidy\n  npm install\n  go tool charter dev", dir, *from, name, *module, dir)
+	// The example's README points into charter's repo: the app gets its own.
+	readme := fmt.Sprintf("# %s\n\nA Go app on Cloudflare Workers, made with [charter](%s) from its `%s` example.\n\n```sh\nnpm install\ngo tool charter dev      # work on it\ngo tool charter check    # before a push\ngo tool charter deploy   # ship it\n```\n", name, repository, *from)
+	check(os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0o644))
+	// The new module path sorts differently among the imports: written as gofmt and gsx fmt have them.
+	check(run.Run(dir, nil, "go", "mod", "tidy"))
+	check(run.Run(dir, nil, "gofmt", "-w", "."))
+	if exists(filepath.Join(dir, "gsx.toml")) {
+		check(run.Run(dir, nil, "go", "tool", "gsx", "fmt", "-w", "."))
+	}
+	say("✓ %s: the %s example as %s (module %s)\n\nNext:\n  cd %s\n  npm install\n  go tool charter dev", dir, *from, name, *module, dir)
 }
 
 // workerName is a folder's name as a Worker's: lower case letters, digits and hyphens.
