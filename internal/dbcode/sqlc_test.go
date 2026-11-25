@@ -16,7 +16,7 @@ func TestAsCommitted(t *testing.T) {
 	if _, err := exec.LookPath("mise"); err != nil {
 		t.Skip("no mise to load sqlc")
 	}
-	for _, example := range []string{"notes-go", "conformance-go", "start-htmx", "start-datastar"} {
+	for _, example := range []string{"notes", "site"} {
 		t.Run(example, func(t *testing.T) {
 			dir := filepath.Join("..", "..", "examples", example)
 			committed, err := os.ReadFile(filepath.Join(dir, "api", "queries.go"))

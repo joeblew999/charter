@@ -14,12 +14,12 @@ import (
 	"github.com/joeblew999/charter/d1"
 )
 
-// TestOffWorkers: off Workers a binding is SQLite in memory, migrated as charter.toml says, and the calls behave as on
+// TestOffWorkers: off Workers a binding is SQLite in memory, migrated as wrangler.jsonc says, and the calls behave as on
 // D1: rows as JSON objects, RETURNING, no rows, one database shared by every Open.
 func TestOffWorkers(t *testing.T) {
 	dir := t.TempDir()
 	for name, content := range map[string]string{
-		"charter.toml":        "name = \"t\"\ncompatibility_date = \"2026-09-11\"\n[[d1]]\nbinding = \"DB\"\nmigrations = \"migrations\"\n",
+		"wrangler.jsonc":      `{"name": "t", "d1_databases": [{"binding": "DB", "database_name": "t"}]}`,
 		"migrations/0001.sql": "CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL, data BLOB);\n",
 		"migrations/0002.sql": "INSERT INTO notes (body) VALUES ('first');\n",
 	} {
@@ -58,16 +58,16 @@ func TestOffWorkers(t *testing.T) {
 		t.Errorf("blob: %+v, %v", blobs, err)
 	}
 	if _, err := d1.Open("OTHER"); err == nil {
-		t.Error("a binding charter.toml doesn't have opened")
+		t.Error("a binding wrangler.jsonc doesn't have opened")
 	}
 }
 
-// project writes a charter.toml with one D1 binding and its migrations into a new folder, and runs the test there.
+// project writes a wrangler.jsonc with one D1 binding and its migrations into a new folder, and runs the test there.
 func project(t *testing.T, binding string, migrations ...string) d1.DB {
 	t.Helper()
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, "migrations"), 0o755)
-	os.WriteFile(filepath.Join(dir, "charter.toml"), []byte("name = \"t\"\ncompatibility_date = \"2026-09-11\"\n[[d1]]\nbinding = \""+binding+"\"\nmigrations = \"migrations\"\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "wrangler.jsonc"), []byte(`{"name": "t", "d1_databases": [{"binding": "`+binding+`", "database_name": "t"}]}`), 0o644)
 	for i, sql := range migrations {
 		os.WriteFile(filepath.Join(dir, "migrations", fmt.Sprintf("%04d.sql", i+1)), []byte(sql), 0o644)
 	}

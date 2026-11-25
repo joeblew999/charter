@@ -1,10 +1,10 @@
 > **Generated code.** Fern generated this Go client from the API's contract (the specs in `fern/`). Don't edit it: change the contract, then `charter sdk -publish` writes this folder again.
 
-# CharterNotesGo Go Library
+# CharterNotes Go Library
 
-[![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=CharterNotesGo%2FGo)
+[![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=CharterNotes%2FGo)
 
-The CharterNotesGo Go library provides convenient access to the CharterNotesGo APIs from Go.
+The CharterNotes Go library provides convenient access to the CharterNotes APIs from Go.
 
 ## Table of Contents
 
@@ -186,8 +186,8 @@ response, err := client.Notes.Create(
 When credentials are not explicitly provided, the client reads them from the
 following environment variables:
 
-- `CHARTER_NOTES_GO_ACCESS_CLIENT_ID`
-- `CHARTER_NOTES_GO_ACCESS_CLIENT_SECRET`
+- `CHARTER_NOTES_ACCESS_CLIENT_ID`
+- `CHARTER_NOTES_ACCESS_CLIENT_SECRET`
 
 ## Advanced
 

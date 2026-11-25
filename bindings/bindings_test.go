@@ -14,12 +14,12 @@ import (
 	"github.com/joeblew999/charter/bindings"
 )
 
-// TestOffWorkers: off Workers, a rate limit counts as charter.toml says, per key; a binding it doesn't have is
+// TestOffWorkers: off Workers, a rate limit counts as wrangler.jsonc says, per key; a binding it doesn't have is
 // allowed and reported; Static Assets are the folder from disk; a variable is the environment's.
 func TestOffWorkers(t *testing.T) {
 	dir := t.TempDir()
 	for name, content := range map[string]string{
-		"charter.toml": "name = \"t\"\ncompatibility_date = \"2026-09-11\"\n[[rate_limits]]\nbinding = \"WRITES\"\nnamespace_id = 1\nlimit = 2\nperiod = 60\n",
+		"wrangler.jsonc": `{"name": "t", "ratelimits": [{"name": "WRITES", "namespace_id": "1", "simple": {"limit": 2, "period": 60}}]}`,
 		"site/a.txt":   "asset\n",
 	} {
 		os.MkdirAll(filepath.Join(dir, filepath.Dir(name)), 0o755)
@@ -27,7 +27,7 @@ func TestOffWorkers(t *testing.T) {
 	}
 	sub := filepath.Join(dir, "app")
 	os.MkdirAll(sub, 0o755)
-	t.Chdir(sub) // a test runs in its package's folder, below charter.toml
+	t.Chdir(sub) // a test runs in its package's folder, below wrangler.jsonc
 
 	for i, want := range []bool{true, true, false} {
 		if ok, err := bindings.Allow("WRITES", "me"); ok != want || err != nil {

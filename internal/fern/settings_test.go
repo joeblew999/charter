@@ -14,12 +14,8 @@ import (
 // TestSettingsAsCommitted: for every example, the settings written from its spec and SDKs are the ones it commits,
 // line for line.
 func TestSettingsAsCommitted(t *testing.T) {
-	notes := project.SDKs{Name: "Notes", More: []string{"python", "cli"}}
-	conformance := project.SDKs{Name: "Conformance", More: []string{"python", "cli"}, Audiences: []string{"public"}}
-	api := project.SDKs{Name: "Api"}
 	for example, sdks := range map[string]project.SDKs{
-		"notes-go": notes, "notes-ts": notes, "conformance-go": conformance, "conformance-ts": conformance,
-		"start-go": api, "start-ts": api, "start-htmx": api, "start-datastar": api,
+		"notes": {Name: "Notes", More: []string{"python", "cli"}}, "api": {Name: "Api"}, "site": {Name: "Api"},
 	} {
 		t.Run(example, func(t *testing.T) {
 			dir := filepath.Join("..", "..", "examples", example)
@@ -47,10 +43,10 @@ func TestSettingsAsCommitted(t *testing.T) {
 	}
 }
 
-// TestSpecsHashAsCommitted: the hash of fern/ is the one recorded beside the Go SDK notes-go commits (made
+// TestSpecsHashAsCommitted: the hash of fern/ is the one recorded beside the Go SDK notes commits (made
 // from these specs), so a Go SDK made before stays fresh; and the groups are its settings', in their order.
 func TestSpecsHashAsCommitted(t *testing.T) {
-	dir := filepath.Join("..", "..", "examples", "notes-go")
+	dir := filepath.Join("..", "..", "examples", "notes")
 	made, err := os.ReadFile(filepath.Join(dir, "sdk", "go", ".made-from"))
 	if err != nil {
 		t.Fatal(err)

@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joeblew999/charter/internal/intlkit/js"
 	"github.com/joeblew999/charter/intl"
 	"github.com/joeblew999/charter/intl/config"
 )
@@ -118,6 +119,46 @@ func Start() error {
 	return nil
 }
 
+// served is the workerd config to serve: the one charter intl gen wrote beside the app's catalogs (intl-workerd/), for
+// the app whose intl.toml is found up from the working directory; with no intl.toml, intl's own modules with no
+// catalogs, in charter's cache: Intl's formats with no messages, which is all a program without catalogs asks for.
+func served() (string, error) {
+	c, err := config.Find(".")
+	if err == nil {
+		capnp := filepath.Join(c.CatalogDir(), "intl-workerd", "intl-workerd.capnp")
+		if _, err := os.Stat(capnp); err != nil {
+			return "", fmt.Errorf("%s: %w (charter intl gen writes it)", capnp, err)
+		}
+		return capnp, nil
+	}
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(cache, "charter", "intl-workerd")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	files := map[string][]byte{"intl-messages.mjs": []byte("export default {};\n")}
+	for _, name := range js.Workerd {
+		b, err := js.FS.ReadFile(name)
+		if err != nil {
+			return "", err
+		}
+		files[name] = b
+	}
+	for name, b := range files {
+		// Written only when it differs: several test programs start at once, and workerd may be reading one.
+		if old, err := os.ReadFile(filepath.Join(dir, name)); err == nil && bytes.Equal(old, b) {
+			continue
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), b, 0o644); err != nil {
+			return "", err
+		}
+	}
+	return filepath.Join(dir, "intl-workerd.capnp"), nil
+}
+
 // keeper is the variable that makes this program workerd's keeper instead of itself: its value is workerd's config.
 const keeper = "CHARTER_INTL_KEEPER"
 
@@ -125,13 +166,9 @@ const keeper = "CHARTER_INTL_KEEPER"
 // again (init), which holds workerd for as long as its stdin stays open: this program's end, of any kind, closes it,
 // and the keeper stops workerd. So no workerd outlives the tests or the command that started it.
 func serve() (string, error) {
-	c, err := config.Find(".")
+	capnp, err := served()
 	if err != nil {
 		return "", err
-	}
-	capnp := filepath.Join(c.CatalogDir(), "intl-workerd", "intl-workerd.capnp")
-	if _, err := os.Stat(capnp); err != nil {
-		return "", fmt.Errorf("%s: %w (charter intl gen writes it)", capnp, err)
 	}
 	if _, err := Path(); err != nil { // downloaded here, where the reader sees why it waits
 		return "", err

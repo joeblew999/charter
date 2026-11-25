@@ -23,10 +23,10 @@ type Client struct {
 
 func NewClient(options *core.RequestOptions) *Client {
 	if options.AccessClientID == "" {
-		options.AccessClientID = os.Getenv("CHARTER_NOTES_GO_ACCESS_CLIENT_ID")
+		options.AccessClientID = os.Getenv("CHARTER_NOTES_ACCESS_CLIENT_ID")
 	}
 	if options.AccessClientSecret == "" {
-		options.AccessClientSecret = os.Getenv("CHARTER_NOTES_GO_ACCESS_CLIENT_SECRET")
+		options.AccessClientSecret = os.Getenv("CHARTER_NOTES_ACCESS_CLIENT_SECRET")
 	}
 	return &Client{
 		WithRawResponse: NewRawClient(options),
