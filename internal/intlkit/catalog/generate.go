@@ -15,7 +15,7 @@ import (
 )
 
 // ImportPath is the intl package, which the generated code imports.
-const ImportPath = "github.com/joeblew999/charter/intl"
+const ImportPath = "github.com/joeblew999/charter/site/intl"
 
 // PseudoCatalog is the en-XA catalog: the source, pseudo-localized (accented, bracketed, ~40% longer).
 const PseudoCatalog = "en-XA"

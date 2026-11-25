@@ -14,9 +14,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/auth"
-	"github.com/joeblew999/charter/follow"
-	"github.com/joeblew999/charter/transport"
+	"github.com/joeblew999/charter/api/auth"
+	"github.com/joeblew999/charter/api/follow"
+	"github.com/joeblew999/charter/cf/transport"
 )
 
 // Env is what the platform supplies: bindings on Cloudflare (platform_js.go), memory elsewhere.

@@ -18,7 +18,7 @@ import (
 
 	"github.com/gsxhq/gsx"
 
-	"github.com/joeblew999/charter/bindings"
+	"github.com/joeblew999/charter/cf/bindings"
 	"github.com/joeblew999/charter/examples/site/api"
 )
 

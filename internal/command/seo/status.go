@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/internal/seokit/searchconsole"
-	"github.com/joeblew999/charter/seo/audit"
+	"github.com/joeblew999/charter/site/seo/audit"
 )
 
 // JSON of charter seo status --json.

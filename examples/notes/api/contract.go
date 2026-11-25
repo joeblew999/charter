@@ -13,10 +13,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/asyncapi"
-	"github.com/joeblew999/charter/auth"
-	"github.com/joeblew999/charter/humaworkers"
-	"github.com/joeblew999/charter/ratelimit"
+	"github.com/joeblew999/charter/api/asyncapi"
+	"github.com/joeblew999/charter/api/auth"
+	"github.com/joeblew999/charter/api/humaworkers"
+	"github.com/joeblew999/charter/cf/ratelimit"
 )
 
 // What the specs say about the API as a whole.

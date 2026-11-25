@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/joeblew999/charter/intl/config"
+	"github.com/joeblew999/charter/site/intl/config"
 )
 
 // markup is charter intl markup: the app's own markup files, the .gsx and .go files beside its .gsx (not gsxui's, not

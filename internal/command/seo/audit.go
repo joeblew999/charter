@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/joeblew999/charter/seo/audit"
+	"github.com/joeblew999/charter/site/seo/audit"
 )
 
 // auditReport is charter seo audit --json. Its field names are the stable interface; the text renders the same values.

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/joeblew999/charter/intl/workerd"
+	"github.com/joeblew999/charter/site/intl/workerd"
 )
 
 // daemon is charter intl daemon (intl:daemon), what the repo's intl daemon runs (pitchfork.toml): workerd serving Intl

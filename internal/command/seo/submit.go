@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/joeblew999/charter/seo/audit"
+	"github.com/joeblew999/charter/site/seo/audit"
 )
 
 // submit is charter seo submit (seo:submit): the site's sitemap.xml submitted (or submitted again) to Search Console,

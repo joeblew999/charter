@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/joeblew999/charter/internal/intlkit/catalog"
-	"github.com/joeblew999/charter/intl/config"
-	"github.com/joeblew999/charter/intl/workerd"
+	"github.com/joeblew999/charter/site/intl/config"
+	"github.com/joeblew999/charter/site/intl/workerd"
 )
 
 // writeChanged writes b to path unless it holds b already, and names what it wrote relative to root.

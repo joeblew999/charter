@@ -59,7 +59,7 @@ func TestInitFresh(t *testing.T) {
 		t.Fatal(err)
 	}
 	// gsxui's text renderer waits for gsxui's i18n package: a renderer for a package that isn't there breaks gsx.
-	if len(g.FilterPackages) != 1 || g.Renderers["github.com/joeblew999/charter/intl.Msg"] != "github.com/joeblew999/charter/intl.Translate" ||
+	if len(g.FilterPackages) != 1 || g.Renderers["github.com/joeblew999/charter/site/intl.Msg"] != "github.com/joeblew999/charter/site/intl.Translate" ||
 		g.Renderers["example.com/shop/ui/i18n.T"] != "" {
 		t.Errorf("gsx.toml before gsxui's i18n: %+v", g)
 	}

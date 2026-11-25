@@ -26,8 +26,8 @@ type Options struct {
 }
 
 const (
-	intlPkg    = "github.com/joeblew999/charter/intl"
-	gsxintlPkg = "github.com/joeblew999/charter/gsxintl" // intl.Value's renderer, the only gsx of intl
+	intlPkg    = "github.com/joeblew999/charter/site/intl"
+	gsxintlPkg = "github.com/joeblew999/charter/site/gsxintl" // intl.Value's renderer, the only gsx of intl
 )
 
 // Init writes intl.toml, the catalogs, gsx.toml's filters and renderers, and .gitignore's generated files into the
@@ -52,7 +52,7 @@ func Init(root string, o Options, log io.Writer) error {
 	for i, id := range o.Locales {
 		q[i] = `"` + id + `"`
 	}
-	conf := "# The app's languages (github.com/joeblew999/charter/intl): BCP 47 ids, the source first.\n" +
+	conf := "# The app's languages (github.com/joeblew999/charter/site/intl): BCP 47 ids, the source first.\n" +
 		"locales = [" + strings.Join(q, ", ") + "]\n" +
 		"# <locale>.toml per language, ICU MessageFormat; charter intl gen writes the Go package of messages there.\n" +
 		"catalogs = " + `"` + o.Catalogs + `"` + "\n"

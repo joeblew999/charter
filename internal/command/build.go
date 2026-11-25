@@ -74,9 +74,9 @@ func wasm(p *project.Project, limit int) error {
 	if err != nil {
 		return fmt.Errorf("go.mod must require %s: %w", library, err)
 	}
-	glue, _ := filepath.Glob(filepath.Join(strings.TrimSpace(dir), "worker", "*.mjs"))
+	glue, _ := filepath.Glob(filepath.Join(strings.TrimSpace(dir), "cf", "worker", "*.mjs"))
 	if len(glue) == 0 {
-		return fmt.Errorf("no Worker glue (worker/*.mjs) in %s", dir)
+		return fmt.Errorf("no Worker glue (cf/worker/*.mjs) in %s", dir)
 	}
 	for _, f := range glue {
 		b, err := os.ReadFile(f)

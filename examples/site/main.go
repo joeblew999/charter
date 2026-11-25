@@ -13,12 +13,12 @@ import (
 
 	"github.com/gsxhq/vite"
 
-	"github.com/joeblew999/charter/bindings"
-	"github.com/joeblew999/charter/d1"
+	"github.com/joeblew999/charter/cf/bindings"
+	"github.com/joeblew999/charter/cf/d1"
+	"github.com/joeblew999/charter/cf/hub"
+	"github.com/joeblew999/charter/cf/transport"
 	"github.com/joeblew999/charter/examples/site/api"
 	"github.com/joeblew999/charter/examples/site/pages"
-	"github.com/joeblew999/charter/hub"
-	"github.com/joeblew999/charter/transport"
 )
 
 // Vite's manifest (charter build): which hashed file each entry in web/ became. The files themselves are Workers

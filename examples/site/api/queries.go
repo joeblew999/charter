@@ -3,7 +3,7 @@
 
 package api
 
-import "github.com/joeblew999/charter/d1"
+import "github.com/joeblew999/charter/cf/d1"
 
 // MessagesRow is a row of the table messages.
 type MessagesRow struct {

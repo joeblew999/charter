@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/joeblew999/charter/d1"
+	"github.com/joeblew999/charter/cf/d1"
 )
 
 // TestD1Store: the queries the Worker runs (api/queries.sql, as charter spec wrote them) on the project's own

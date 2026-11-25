@@ -318,7 +318,7 @@ func GoQueries(r *Request, pkg string) (string, error) {
 		"",
 		"package " + pkg,
 		"",
-		`import "github.com/joeblew999/charter/d1"`,
+		`import "github.com/joeblew999/charter/cf/d1"`,
 		"",
 	}, types...), strings.Join(functions, "\n\n"), ""), "\n")
 	out, err := format.Source([]byte(source))

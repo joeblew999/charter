@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/joeblew999/charter/internal/intlkit/catalog"
-	"github.com/joeblew999/charter/intl/config"
-	"github.com/joeblew999/charter/intl/intltest"
+	"github.com/joeblew999/charter/site/intl/config"
+	"github.com/joeblew999/charter/site/intl/intltest"
 )
 
 func TestMain(m *testing.M) { os.Exit(intltest.Main(m)) }

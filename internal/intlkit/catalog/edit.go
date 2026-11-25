@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/joeblew999/charter/intl/config"
+	"github.com/joeblew999/charter/site/intl/config"
 )
 
 // SetMessages writes msgs (key → ICU MessageFormat) into the catalog at path, created if need be. A key already there
