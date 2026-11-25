@@ -259,14 +259,33 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 			runtime = await start(env, ctx);
 		}
 		runtime.served++;
-		try {
-			const response = await runtime.binding.handleRequest(request);
-			if (!request.headers.has("x-go-runtime")) return response;
-			const told = new Response(response.body, response);
-			told.headers.set("x-go-runtime", warmFailure ? `${kind}; ${warmFailure}` : kind);
-			return told;
-		} finally {
+		// If this throws, the runtime is not offered again.
+		const response = await runtime.binding.handleRequest(request);
+		const headers = new Headers(response.headers);
+		if (request.headers.has("x-go-runtime")) headers.set("x-go-runtime", warmFailure ? `${kind}; ${warmFailure}` : kind);
+		const answer = { status: response.status, statusText: response.statusText, headers, webSocket: response.webSocket };
+		if (!response.body) {
 			done(runtime);
+			return new Response(null, answer);
 		}
+		// workers-go answers when the handler has written its headers: Go is still writing the body. The runtime
+		// serves one request at a time, so it waits for the next only when the body has gone out whole. A body with
+		// a length keeps it: without, Cloudflare would send it in chunks.
+		//
+		// If the reader goes away first (a closed event stream), Cloudflare says so on request.signal, and Go is told:
+		// transport.Serve ends the request's context, so a handler that waits returns. Cloudflare gives that signal
+		// from compatibility date 2026-11-17, or with the flag enable_request_signal before it; without it the
+		// handler is left waiting until Cloudflare ends the invocation, some 30 seconds later.
+		const left = () => runtime.binding.cancel?.();
+		if (request.signal?.aborted) left();
+		else request.signal?.addEventListener("abort", left, { once: true });
+		const length = headers.get("content-length");
+		const through = length === null ? new IdentityTransformStream() : new FixedLengthStream(Number(length));
+		const ended = response.body.pipeTo(through.writable).then(
+			() => done(runtime),
+			() => left(), // the runtime is not offered again
+		);
+		ctx?.waitUntil?.(ended);
+		return new Response(through.readable, answer);
 	}
 }

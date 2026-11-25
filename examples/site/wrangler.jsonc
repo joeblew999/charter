@@ -5,6 +5,9 @@
   "name": "charter-site",
   "main": "build/worker.mjs",
   "compatibility_date": "2026-09-25",
+  // Cloudflare tells the Worker when a reader has left (request.signal): a handler that waits then returns. The
+  // default from compatibility date 2026-11-17.
+  "compatibility_flags": ["enable_request_signal"],
   // charter build writes dist/ (Vite) and build/ (the Wasm, and the JavaScript that runs it).
   "build": { "command": "go tool charter build" },
   // Vite's output, served before the Worker runs.

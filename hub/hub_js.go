@@ -85,6 +85,10 @@ func (h durableObject[T]) Subscribe(listener func(T), onError func(error)) (func
 	socket.Call("addEventListener", "close", onClose)
 	socket.Call("addEventListener", "error", onErr)
 	return func() {
+		// The socket's close comes after this: it must find no listener, not a released one.
+		socket.Call("removeEventListener", "message", onMessage)
+		socket.Call("removeEventListener", "close", onClose)
+		socket.Call("removeEventListener", "error", onErr)
 		if open {
 			open = false
 			func() {

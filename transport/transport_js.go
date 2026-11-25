@@ -3,6 +3,7 @@
 package transport
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"runtime"
@@ -17,6 +18,18 @@ var served int
 
 // binding is what worker/go.mjs and this runtime say to each other through.
 var binding = js.Global().Get("context").Get("binding")
+
+// gone ends the context of the request this runtime is serving (it serves one at a time): the binding's "cancel".
+var gone context.CancelFunc
+
+func init() {
+	binding.Set("cancel", js.FuncOf(func(js.Value, []js.Value) any {
+		if gone != nil {
+			gone()
+		}
+		return nil
+	}))
+}
 
 // Run serves h on Cloudflare the workers-go way and never returns: the handler is workers-go's
 // (workers.ServeNonBlock), so a request reaches it through workers-go's own path and everything of workers-go that
@@ -56,7 +69,12 @@ func Serve(h http.Handler) http.Handler {
 		if r.RemoteAddr == "" {
 			r.RemoteAddr = r.Header.Get("Cf-Connecting-Ip")
 		}
-		h.ServeHTTP(w, incoming(r))
+		// workers-go's request context never ends. Here it ends with the handler, or before it when the reader has
+		// gone away (go.mjs calls the binding's "cancel"): a handler that waits, an event stream, then returns.
+		ctx, cancel := context.WithCancel(r.Context())
+		gone = cancel
+		defer cancel()
+		h.ServeHTTP(w, incoming(r.WithContext(ctx)))
 
 		// Reading the heap's state is not free: for the first request, then for one in eight.
 		if served++; served%8 != 1 {
