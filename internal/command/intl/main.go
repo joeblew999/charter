@@ -28,10 +28,6 @@ const help = `charter intl: the app's languages, through the runtime's own Intl,
 And:
   charter intl add             intl's screens, in a gsx app (--diff, --overwrite): language-list, language-offer, preferences
   charter intl assets          the JavaScript a Worker and a page import (--worker dir, --browser dir)
-  charter intl daemon          workerd serving Intl outside a Worker, in the foreground, on $PORT
-  charter intl locales         the shipped locales, comma-separated
-  charter intl catalogs        the catalogs' Go package name
-  charter intl markup          the app's own markup files, for gsx's checks
   charter intl help            this
 `
 
@@ -70,14 +66,6 @@ func Main(args []string) {
 		add(args)
 	case "assets":
 		assets(args)
-	case "daemon":
-		daemon(args)
-	case "locales":
-		locales(args)
-	case "catalogs":
-		catalogs(args)
-	case "markup":
-		markup(args)
 	case "show-help", "help":
 		showHelp()
 	default:

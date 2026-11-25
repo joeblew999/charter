@@ -3,7 +3,6 @@
 //   - A response workers-go streams arrives chunked, which broke htmx's history restore on Workers: Render buffers a
 //     page and sends it with a Content-Length.
 //   - A Worker's request URL is absolute, a Go server's isn't: Origin is the scheme and host either way.
-//   - NewServeMux is http.NewServeMux, kept for the apps that call it.
 package web
 
 import (
