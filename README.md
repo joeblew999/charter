@@ -42,7 +42,7 @@ tool that owns the job. Run them as `go tool charter <command>` in the app's fol
 | `dev` | The loop you work in, on the real runtime. Leave it running |
 | `check` | Everything that can be said without running the app: format, lint, the contract, the languages. `--fix` writes what it can |
 | `fmt`, `lint` | The two halves of `check`, alone |
-| `test` | `go test`, then the Worker on wrangler dev: its API, the app's own tests, the search-engine audit. `test e2e` runs a suite; `--base <url>` tests a deployed Worker |
+| `test` | `go test`, then the Worker on wrangler dev: its API, the app's own tests, the search-engine audit. The same tests ask a deployed Worker with `--env <environment>` (its address in `charter.toml`'s `[urls]`) or `--base <url>`. `test e2e` runs a suite |
 | `build` | The messages, the components' Go, the browser's files and the Wasm. wrangler runs it itself |
 | `preview` | The production build on wrangler dev |
 | `deploy` | The D1 migrations, then wrangler deploy: `deploy staging` |

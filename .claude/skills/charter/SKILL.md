@@ -42,5 +42,6 @@ wrong.
 ## Commands
 
 `go tool charter` lists them: Vite+'s verbs. Keep `go tool charter dev` running and run everything else beside it.
-Before a push: `go tool charter check && go tool charter test`. To ship: `go tool charter deploy [environment]`, with
+Before a push: `go tool charter check && go tool charter test`. The same tests ask a deployed Worker:
+`go tool charter test --env <environment>` (its address in `charter.toml`'s `[urls]`) or `--base <url>`. To ship: `go tool charter deploy [environment]`, with
 `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment, or fnox, or `wrangler login`.

@@ -130,6 +130,16 @@ func Deploy(args []string) {
 		check(cloudflare(p, append([]string{"d1", "migrations", "apply", db.Binding, "--remote"}, env...), nil))
 	}
 	check(cloudflare(p, append([]string{"deploy"}, env...), args))
+	// What next: the same tests that ask the local Worker ask the deployed one.
+	switch {
+	case len(env) == 0 && p.URL != "":
+		say("deployed. To test it: go tool charter test --base %s", p.URL)
+	case len(env) == 0:
+	case p.URLs[env[1]] != "":
+		say("deployed. To test it: go tool charter test --env %s", env[1])
+	default:
+		say("deployed. To test it: go tool charter test --base <the address above>, or put the address in charter.toml under [urls] as %s and use --env %s", env[1], env[1])
+	}
 }
 
 // migrate applies every D1 database's migrations with wrangler (its own record of which ran).

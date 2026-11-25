@@ -4,7 +4,7 @@
 //
 //	# charter.toml: only what wrangler has no place for
 //	health = "/healthz"                # a path that answers once the Worker is up (default "/")
-//	url = "https://app.example.com"    # where it is deployed: the live test's target, the server the specs name
+//	url = "https://app.example.com"    # where it is deployed: the server the specs name, the site search engines read
 //	spec = "fern/openapi.json"         # an API with a contract: charter check --fix writes its specs, charter check tests them
 //	db = "sqlc"                        # api/queries.sql: charter check --fix writes its Go (api/queries.go), with sqlc
 //
@@ -15,10 +15,13 @@
 //	name = "Notes"
 //
 //	[test]                             # commands run against the Worker: {base} is its URL, BASE in their environment
-//	run = ["go test ./test/..."]       # charter check, against wrangler dev
-//	live = ["go test ./test/..."]      # charter test --base, against url
-//	[test.suites]                      # more, by name: charter test e2e [-base https://…]
+//	run = ["go test ./test/..."]       # charter test: against wrangler dev, or a deployed Worker (--env, --base)
+//	live = ["go test ./test/..."]      # only when a deployed Worker is asked something else than run
+//	[test.suites]                      # more, by name: charter test e2e [--env preview | --base https://…]
 //	e2e = ["go test -C e2e ."]
+//
+//	[urls]                             # where each of wrangler.jsonc's environments is deployed: charter test --env preview
+//	preview = "https://app-preview.example.workers.dev"
 //
 //	[run.tasks.seed]                   # the app's own tasks: charter run seed
 //	about = "Fill the local database"
@@ -61,7 +64,9 @@ type Project struct {
 	Build      Build  `toml:"build"`
 	SDKs       SDKs   `toml:"sdks"`
 	Test       Test   `toml:"test"`
-	Run        Run    `toml:"run"`
+	// URLs is where each of wrangler.jsonc's environments is deployed, by its name: what charter test --env asks.
+	URLs map[string]string `toml:"urls"`
+	Run  Run               `toml:"run"`
 	// The app's languages and how it answers search engines: intl/config and seo/config read them.
 	Intl map[string]any `toml:"intl"`
 	SEO  map[string]any `toml:"seo"`
@@ -171,8 +176,9 @@ type SDKs struct {
 	Go        bool     `toml:"go"`        // the Go SDK is committed in sdk/go (charter pack -publish): check fails when the specs moved on
 }
 
-// Test is how charter check and charter test --base try the Worker: commands, each its words, run as they are (no
-// shell). {base} is the Worker's URL, also BASE in their environment; a command that is charter runs as this charter.
+// Test is how charter test tries the Worker, on wrangler dev or deployed: commands, each its words, run as they are
+// (no shell). {base} is the Worker's URL, also BASE in their environment; a command that is charter runs as this
+// charter. The same commands ask a local Worker and a deployed one (Run), unless Live names others for a deployed one.
 type Test struct {
 	Run    []string            `toml:"run"`
 	Live   []string            `toml:"live"`

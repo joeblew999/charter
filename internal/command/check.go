@@ -96,9 +96,21 @@ func Test(args []string) {
 		suite, args = args[0], args[1:]
 	}
 	fs := flag.NewFlagSet("charter test", flag.ExitOnError)
-	base := fs.String("base", "", "a Worker already running or deployed, instead of wrangler dev")
+	base := fs.String("base", "", "the address of a Worker already running or deployed, instead of wrangler dev")
+	env := fs.String("env", "", "an environment of "+project.Wrangler+", deployed: its address is charter.toml's [urls]")
 	fs.Parse(args)
 	p := load()
+	if *env != "" {
+		if *base != "" {
+			check(errors.New("--env and --base both name the Worker to test: give one"))
+		}
+		if _, ok := p.Worker.Env[*env]; !ok {
+			check(fmt.Errorf("%s has no environment %q", project.Wrangler, *env))
+		}
+		if *base = p.URLs[*env]; *base == "" {
+			check(fmt.Errorf("charter.toml has no address for %s: under [urls], %s = \"https://…\" (go tool charter deploy %s prints it)", *env, *env, *env))
+		}
+	}
 	*base = strings.TrimRight(*base, "/")
 	if suite != "" {
 		commands, ok := p.Test.Suites[suite]
@@ -107,6 +119,7 @@ func Test(args []string) {
 		}
 		only := &project.Project{Root: p.Root} // a suite is its own commands, without the standard test
 		if *base != "" {
+			say("testing %s", *base)
 			check(try(only, commands, *base))
 			return
 		}
@@ -114,7 +127,15 @@ func Test(args []string) {
 		return
 	}
 	if *base != "" {
-		check(try(p, p.Test.Live, *base))
+		// A deployed Worker is asked what the local one is: the standard test and the app's own. Not go test (it
+		// asks no Worker), and not the search-engine audit, which is of the site at url.
+		commands := p.Test.Live
+		if len(commands) == 0 {
+			commands = p.Test.Run
+		}
+		t := newTimes("test of " + *base)
+		t.part("worker", func() error { return try(p, commands, *base) })
+		t.done()
 		return
 	}
 	t := newTimes("test")
