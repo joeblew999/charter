@@ -8,7 +8,7 @@ import (
 	"github.com/joeblew999/charter/internal/intlkit/catalog"
 )
 
-// prune is charter intl prune: the keys the source no longer has, removed from the catalogs.
+// prune is charter run prune: the keys the source no longer has, removed from the catalogs.
 func prune(args []string) {
 	c := app()
 	p := read(c)

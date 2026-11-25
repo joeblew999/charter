@@ -4,7 +4,7 @@
 //
 //	func TestMain(m *testing.M) { os.Exit(intltest.Main(m)) }
 //
-// It is workerd.Start: npm's workerd, with the catalogs charter intl gen wrote.
+// It is workerd.Start: npm's workerd, with the catalogs charter build wrote.
 package intltest
 
 import (
@@ -102,7 +102,7 @@ func PluralProblems(p *catalog.Project) ([]string, error) {
 	return out, nil
 }
 
-// Tree formats a message tree as charter intl gen writes it (js/intl.mjs message) in lang with args.
+// Tree formats a message tree as charter build writes it (js/intl.mjs message) in lang with args.
 func Tree(lang string, tree json.RawMessage, args ...string) (string, error) {
 	return workerd.Tree(lang, tree, args...)
 }

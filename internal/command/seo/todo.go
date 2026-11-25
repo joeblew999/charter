@@ -11,7 +11,7 @@ import (
 	"github.com/joeblew999/charter/seo/audit"
 )
 
-// todoReport is charter seo todo --json.
+// todoReport is charter run search todo --json.
 type todoReport struct {
 	Total    int       `json:"total"`
 	Indexed  int       `json:"indexed"`
@@ -19,7 +19,7 @@ type todoReport struct {
 	Findings []finding `json:"findings"`
 }
 
-// todo is charter seo todo: Google's verdict for every sitemap URL, from its index (not a live fetch):
+// todo is charter run search todo: Google's verdict for every sitemap URL, from its index (not a live fetch):
 // indexed as its own page, waiting for a crawl, a duplicate of another, or a problem, each with its Search Console
 // link; exit 1 on a problem, and --open opens each problem's page there (Test live URL, Request indexing, which have no
 // API).

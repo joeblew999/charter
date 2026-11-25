@@ -18,15 +18,15 @@ import (
 
 const repository = "https://github.com/joeblew999/charter"
 
-// New runs charter new <dir> [-from example]: a new app, copied from one of charter's examples (api, site, notes) at
+// Create runs charter create <dir> [-from example]: a new app, copied from one of charter's examples (api, site, notes) at
 // this charter's release, under the folder's name: its Go module, its Worker, its npm package, tidied and formatted.
 // Then npm install and go tool charter dev.
-func New(args []string) {
+func Create(args []string) {
 	log.SetFlags(0)
-	flags := flag.NewFlagSet("charter new", flag.ExitOnError)
+	flags := flag.NewFlagSet("charter create", flag.ExitOnError)
 	from := flags.String("from", "api", "the example to start from: api, site or notes")
 	module := flags.String("module", "", "the Go module's path (default: the folder's name)")
-	usage := errors.New("usage: charter new <dir> [-from api|site|notes] [-module example.com/my-app]")
+	usage := errors.New("usage: charter create <dir> [-from api|site|notes] [-module example.com/my-app]")
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		check(usage)
 	}
@@ -72,6 +72,8 @@ func New(args []string) {
 		}
 		text := strings.ReplaceAll(string(b), oldModule, *module)
 		text = strings.ReplaceAll(text, oldName, name)
+		// The template's own address on Cloudflare is its owner's: the new app gets a place to write its own.
+		text = templateURL.ReplaceAllString(text, "https://"+name+".example.workers.dev")
 		switch rel {
 		case "go.mod":
 			// The example builds against the checkout beside it; an app, against the release.
@@ -91,7 +93,7 @@ func New(args []string) {
 		check(os.WriteFile(skill, b, 0o644))
 	}
 	// The example's README points into charter's repo: the app gets its own.
-	readme := fmt.Sprintf("# %s\n\nA Go app on Cloudflare Workers, made with [charter](%s) from its `%s` example.\n\n```sh\nnpm install\ngo tool charter dev      # work on it\ngo tool charter check    # before a push\ngo tool charter deploy   # ship it\n```\n", name, repository, *from)
+	readme := fmt.Sprintf("# %s\n\nA Go app on Cloudflare Workers, made with [charter](%s) from its `%s` template.\n\n```sh\nnpm install\ngo tool charter dev                              # work on it; leave it running\ngo tool charter check && go tool charter test    # before a push\ngo tool charter deploy                           # ship it\n```\n\n`go tool charter` lists every command.\n", name, repository, *from)
 	check(os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0o644))
 	// The new module path sorts differently among the imports: written as gofmt and gsx fmt have them.
 	check(run.Run(dir, nil, "go", "mod", "tidy"))
@@ -101,6 +103,9 @@ func New(args []string) {
 	}
 	say("✓ %s: the %s example as %s (module %s)\n\nNext:\n  cd %s\n  npm install\n  go tool charter dev", dir, *from, name, *module, dir)
 }
+
+// templateURL is where a template is deployed, under its owner's workers.dev subdomain.
+var templateURL = regexp.MustCompile(`https://[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev`)
 
 // workerName is a folder's name as a Worker's: lower case letters, digits and hyphens.
 func workerName(s string) string {

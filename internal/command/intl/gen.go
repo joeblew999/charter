@@ -6,7 +6,7 @@ import (
 	"github.com/joeblew999/charter/internal/intlkit/setup"
 )
 
-// gen is charter intl gen (charter intl gen): the catalogs compiled into the app's messages package
+// gen is charter build (charter build): the catalogs compiled into the app's messages package
 // (intl_gen.go, intl-messages.mjs), the gsxui translator, and intl.sum.
 func gen(args []string) {
 	c := app()

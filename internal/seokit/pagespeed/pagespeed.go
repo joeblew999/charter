@@ -14,7 +14,7 @@ import (
 )
 
 // Scope is the OAuth scope PageSpeed Insights takes from a service account's token (searchconsole.Key.Token). The
-// API has to be enabled in the account's Google Cloud project (charter seo setup does).
+// API has to be enabled in the account's Google Cloud project (charter run search setup does).
 const Scope = "openid"
 
 // Auth is how a run identifies itself to PageSpeed Insights. An API key is all it needs: a free one, from the Google

@@ -13,11 +13,11 @@ import (
 	"github.com/joeblew999/charter/internal/run"
 )
 
-// Spec runs charter spec: both specs from the contract (fern/openapi.json, fern/asyncapi.json), Fern's settings
+// Spec runs charter check --fix: both specs from the contract (fern/openapi.json, fern/asyncapi.json), Fern's settings
 // (fern/generators.yml) from them and [sdks], and the database's code from migrations/ (db = "sqlc"). With -check it
 // writes nothing, and fails where what is there is not what the contract gives.
 func Spec(args []string) {
-	fs := flag.NewFlagSet("charter spec", flag.ExitOnError)
+	fs := flag.NewFlagSet("charter check --fix", flag.ExitOnError)
 	checkOnly := fs.Bool("check", false, "write nothing; fail where a file is not what the contract gives")
 	fs.Parse(args)
 	check(spec(load(), *checkOnly))
@@ -35,7 +35,7 @@ func spec(p *project.Project, checkOnly bool) error {
 	// The Go SDK's module: the project's own Go module, or the Worker's name, with /sdk/go.
 	module := goModule(p.Root)
 	if module == "" {
-		return errors.New("charter spec writes the specs from the contract, api.API in the app's Go module, and there is no go.mod here")
+		return errors.New("charter check --fix writes the specs from the contract, api.API in the app's Go module, and there is no go.mod here")
 	}
 	program, err := specProgram(p.Root, module)
 	if err != nil {
@@ -67,7 +67,7 @@ func specProgram(root, module string) (string, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
-	return "./build/_spec", os.WriteFile(filepath.Join(dir, "main.go"), []byte(`// Written by charter spec, each time it runs: don't edit. The program that writes the API's
+	return "./build/_spec", os.WriteFile(filepath.Join(dir, "main.go"), []byte(`// Written by charter check --fix, each time it runs: don't edit. The program that writes the API's
 // specs (go run ./build/_spec [-check] <openapi.json> <asyncapi.json> <server>).
 package main
 
@@ -101,7 +101,7 @@ func fernSettings(p *project.Project, goModule string, checkOnly bool) error {
 	file := filepath.Join(p.Root, "fern", "generators.yml")
 	if checkOnly {
 		if b, err := os.ReadFile(file); err != nil || string(b) != text {
-			return errors.New("fern/generators.yml is not what the spec and charter.toml's [sdks] give: charter spec")
+			return errors.New("fern/generators.yml is not what the spec and charter.toml's [sdks] give: charter check --fix")
 		}
 		say("fern/generators.yml is what the spec and charter.toml's [sdks] give")
 		return nil
@@ -113,8 +113,8 @@ func fernSettings(p *project.Project, goModule string, checkOnly bool) error {
 	return nil
 }
 
-// flagsFirst is args with its flags (-x) before the rest, which Go's flag package stops at: charter sdk group -if-stale
-// is charter sdk -if-stale group. sdk's flags take no values, so none is taken from its place.
+// flagsFirst is args with its flags (-x) before the rest, which Go's flag package stops at: charter pack group -if-stale
+// is charter pack -if-stale group. sdk's flags take no values, so none is taken from its place.
 func flagsFirst(args []string) []string {
 	var flags, rest []string
 	for _, a := range args {
@@ -127,10 +127,10 @@ func flagsFirst(args []string) []string {
 	return append(flags, rest...)
 }
 
-// SDK runs charter sdk: an SDK with Fern (Docker) into sdk/out, by default the Go one; -prove: every client,
+// SDK runs charter pack: an SDK with Fern (Docker) into sdk/out, by default the Go one; -prove: every client,
 // proven in its language; -publish: the Go SDK into sdk/go, which the project commits.
 func SDK(args []string) {
-	fs := flag.NewFlagSet("charter sdk", flag.ExitOnError)
+	fs := flag.NewFlagSet("charter pack", flag.ExitOnError)
 	prove := fs.Bool("prove", false, "generate every client (or those named) and prove each in its language")
 	publish := fs.Bool("publish", false, "the Go SDK into sdk/go, proven ([sdks] go = true)")
 	ifStale := fs.Bool("if-stale", false, "only when fern/ is not what the SDK was made from")

@@ -144,7 +144,7 @@ func Generate(dir, group string, ifStale, quiet bool) (time.Duration, error) {
 func ProveGroup(dir, group string) error {
 	out := filepath.Join(dir, "sdk", "out", group)
 	if entries, _ := os.ReadDir(out); len(entries) == 0 {
-		return fmt.Errorf("%s: nothing generated (charter sdk %s)", out, group)
+		return fmt.Errorf("%s: nothing generated (charter pack %s)", out, group)
 	}
 	exists := func(rel string) bool { _, err := os.Stat(filepath.Join(out, rel)); return err == nil }
 	switch {
@@ -330,7 +330,7 @@ func GoSDKFresh(dir string) error {
 		return err
 	}
 	if strings.TrimSpace(string(made)) != hash {
-		return errors.New("sdk/go was not made from the specs in fern/ as they are now: charter sdk -publish writes it again (Docker), then commit it")
+		return errors.New("sdk/go was not made from the specs in fern/ as they are now: charter pack -publish writes it again (Docker), then commit it")
 	}
 	fmt.Println("sdk/go was made from the specs in fern/ as they are now")
 	return nil
@@ -382,13 +382,13 @@ func Publish(dir string, check bool) error {
 		module = string(m[1])
 	}
 	if !strings.HasSuffix(module, "/sdk/go") {
-		return fmt.Errorf("%s/go.mod declares %s: charter spec writes the go group's module as <the project's module>/sdk/go", out, module)
+		return fmt.Errorf("%s/go.mod declares %s: charter check --fix writes the go group's module as <the project's module>/sdk/go", out, module)
 	}
 	generated, err := sources(out)
 	if err != nil {
 		return err
 	}
-	generated["README.md"] = append([]byte("> **Generated code.** Fern generated this Go client from the API's contract (the specs in `fern/`). Don't edit it: change the contract, then `charter sdk -publish` writes this folder again.\n\n"), generated["README.md"]...)
+	generated["README.md"] = append([]byte("> **Generated code.** Fern generated this Go client from the API's contract (the specs in `fern/`). Don't edit it: change the contract, then `charter pack -publish` writes this folder again.\n\n"), generated["README.md"]...)
 	sdk := filepath.Join(dir, "sdk", "go")
 	if check {
 		committed := map[string][]byte{}
@@ -412,7 +412,7 @@ func Publish(dir string, check bool) error {
 			}
 		}
 		if len(stale) > 0 {
-			return fmt.Errorf("sdk/go is stale against the specs in fern/ (charter sdk -publish writes it again):\n%s", strings.Join(stale, "\n"))
+			return fmt.Errorf("sdk/go is stale against the specs in fern/ (charter pack -publish writes it again):\n%s", strings.Join(stale, "\n"))
 		}
 		fmt.Printf("sdk/go is what the specs in fern/ generate (%d files)\n", len(generated))
 		return nil

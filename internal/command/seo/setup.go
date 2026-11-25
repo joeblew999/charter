@@ -16,7 +16,7 @@ import (
 	"github.com/joeblew999/charter/seo/config"
 )
 
-// setup is charter seo setup, once per person, not per site: one service account serves every site it is
+// setup is charter run search setup, once per person, not per site: one service account serves every site it is
 // added to, and Lighthouse when there's no PAGESPEED_API_KEY. With the person's gcloud login (gcloud auth login), it
 // makes or checks the Google Cloud project (SEO_PROJECT, else the key's own, else <the site's first label>-search),
 // enables the Search Console and PageSpeed Insights APIs there, and makes the service account and stores its key in
@@ -58,7 +58,7 @@ func (r repo) setup(args []string) {
 		if _, err := gcloud("iam", "service-accounts", "describe", sa, "--project", project, "--quiet"); err != nil {
 			mustGcloud("iam", "service-accounts", "create", "search-console", "--project", project, "--display-name=Search Console", "--quiet")
 		}
-		dir, err := os.MkdirTemp("", "charter seo-key")
+		dir, err := os.MkdirTemp("", "charter run search-key")
 		must(err)
 		defer os.RemoveAll(dir)
 		file := filepath.Join(dir, "key.json")
@@ -75,7 +75,7 @@ func (r repo) setup(args []string) {
 		fmt.Printf("✓ %s has Full access to the property\n", sa)
 		return
 	}
-	fmt.Printf("Next: Search Console → the property → Settings → Users and permissions → Add user %s (Full), then charter seo sites\n", sa)
+	fmt.Printf("Next: Search Console → the property → Settings → Users and permissions → Add user %s (Full), then charter run search sites\n", sa)
 }
 
 // hasAccess reports whether the service account in fnox has Full access to the property of the site, asking quietly:

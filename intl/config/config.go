@@ -6,18 +6,18 @@
 //	locales = ["en", "de", "ar"]   # BCP 47 ids, the source (default) first
 //	catalogs = "locales"           # <locale>.toml (ICU MessageFormat), and the generated package
 //	gsxui = "ui"                   # optional: where gsxui add vendors components; gen translates their i18n.T
-//	ui = "pages/intl"              # optional: where charter intl add copies intl's screens (default pages/intl)
-//	xliff = "xliff"                # optional: where charter intl export writes and import reads (default xliff)
+//	ui = "pages/intl"              # optional: where charter add screen:<name> copies intl's screens (default pages/intl)
+//	xliff = "xliff"                # optional: where charter run export writes and import reads (default xliff)
 //	badge = "docs/badges/intl.svg" # optional: an SVG badge gen keeps current, "languages | 14, all translated"
 //
 //	[intl.inherit]                 # optional: a locale that takes what it doesn't translate from another
-//	en-IN = "en"                   # (charter intl check confirms with Intl that both write the same script)
+//	en-IN = "en"                   # (charter check confirms with Intl that both write the same script)
 //
-//	[intl.translate]               # optional: charter intl translate (Claude Code)
+//	[intl.translate]               # optional: charter run translate (Claude Code)
 //	model = "sonnet"               # the model it runs on (claude --model); default: Claude Code's
 //	workers = 6                    # languages translated at once (default 6)
 //
-//	[intl.notes]                   # optional: guidance for whoever translates (people, and Claude: charter intl todo)
+//	[intl.notes]                   # optional: guidance for whoever translates (people, and Claude: charter run todo)
 //	"*" = "A developer tool. Keep product names in English."
 //	de = "Address the reader as du."
 package config
@@ -64,7 +64,7 @@ func (c Config) XLIFFDir() string {
 	return filepath.Join(c.Root, c.XLIFF)
 }
 
-// UIDir is where charter intl add copies intl's screens, relative to the app's root: [intl] ui, else pages/intl.
+// UIDir is where charter add screen:<name> copies intl's screens, relative to the app's root: [intl] ui, else pages/intl.
 func (c Config) UIDir() string {
 	if c.UI == "" {
 		return filepath.Join("pages", "intl")

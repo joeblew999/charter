@@ -1,11 +1,11 @@
 # What charter adds to wrangler.jsonc (go doc github.com/joeblew999/charter/internal/project).
 health = "/api/openapi.json"
 url = "https://charter-notes.gedw99.workers.dev"
-# The API's contract: charter spec writes fern/ from api/contract.go, and api/queries.go from api/queries.sql.
+# The API's contract: charter check --fix writes fern/ from api/contract.go, and api/queries.go from api/queries.sql.
 spec = "fern/openapi.json"
 db = "sqlc"
 
-# The SDKs Fern makes from the specs (charter sdk). The Go one is committed in sdk/go (charter sdk -publish).
+# The SDKs Fern makes from the specs (charter pack). The Go one is committed in sdk/go (charter pack -publish).
 [sdks]
 name = "Notes"
 more = ["python", "cli"]

@@ -2,9 +2,7 @@ package command
 
 import (
 	"errors"
-	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,7 +25,7 @@ import (
 //
 // Everything else a developer runs meanwhile, in another terminal, reaches the open page by itself: gsx dev watches
 // the Go and gsx files (gsxui add), Vite the browser's files (npm install), and charter the languages: a change to a
-// catalog or to charter.toml (charter intl add-locale, charter intl translate, an edit by hand) compiles the
+// catalog or to charter.toml (charter add locale:<id>, charter run translate, an edit by hand) compiles the
 // messages again, which gsx dev then picks up.
 func Dev(args []string) {
 	if len(args) > 0 && args[0] == "-worker" {
@@ -116,8 +114,8 @@ func Preview(args []string) {
 }
 
 // Deploy runs charter deploy [environment]: the D1 migrations, then wrangler deploy. An environment is one of
-// wrangler.jsonc's env (production, staging). More arguments are wrangler deploy's. Credentials are wrangler's:
-// CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in the environment, or wrangler login.
+// wrangler.jsonc's env (production, staging). More arguments are wrangler deploy's. Credentials are wrangler's
+// (cloudflare, in verbs.go, says where they come from).
 func Deploy(args []string) {
 	p := load()
 	var env []string
@@ -127,8 +125,10 @@ func Deploy(args []string) {
 		}
 		env, args = []string{"--env", args[0]}, args[1:]
 	}
-	check(migrate(p, nil, append([]string{"--remote"}, env...)...))
-	check(wrangler(p, nil, append(append([]string{"deploy"}, env...), args...)...))
+	for _, db := range p.Worker.D1 {
+		check(cloudflare(p, append([]string{"d1", "migrations", "apply", db.Binding, "--remote"}, env...), nil))
+	}
+	check(cloudflare(p, append([]string{"deploy"}, env...), args))
 }
 
 // migrate applies every D1 database's migrations with wrangler (its own record of which ran).
@@ -154,20 +154,6 @@ func passthrough(p *project.Project, program string, args ...string) error {
 	cmd := exec.Command(program, args...)
 	cmd.Dir, cmd.Stdin, cmd.Stdout, cmd.Stderr = p.Root, os.Stdin, os.Stdout, os.Stderr
 	return cmd.Run()
-}
-
-// With runs charter with <command>: the Worker on wrangler dev, on a free port with local state of its own, for as
-// long as the command runs. BASE in the command's environment is the Worker's URL.
-func With(args []string) {
-	fs := flag.NewFlagSet("charter with", flag.ExitOnError)
-	fs.Parse(args)
-	if fs.NArg() == 0 {
-		log.Fatal("usage: charter with <command> [args…]")
-	}
-	p := load()
-	check(serving(p, func(base string) error {
-		return run.Run(p.Root, map[string]string{"BASE": base}, fs.Arg(0), fs.Args()[1:]...)
-	}))
 }
 
 // serving runs body with the Worker on wrangler dev at base: a free port, and state in a folder of its own that goes

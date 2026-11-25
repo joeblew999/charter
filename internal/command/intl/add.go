@@ -12,7 +12,7 @@ import (
 	"github.com/joeblew999/charter/internal/intlkit/setup"
 )
 
-// add is charter intl add: intl's screens, copied into the app the way gsxui add copies components (#77), into
+// add is charter add screen:<name>: intl's screens, copied into the app the way gsxui add copies components (#77), into
 // [intl] ui (views/intl, package intlui), with their text, already translated, written into the catalogs. The
 // copying is intl/registry's, which gsxkit's components use too (#164).
 func add(args []string) {
@@ -22,7 +22,7 @@ func add(args []string) {
 	overwrite := f.Bool("overwrite", false, "replace copies the app changed")
 	f.Parse(args)
 	if f.NArg() == 0 || *diff && *overwrite {
-		fmt.Fprintf(os.Stderr, "usage: charter intl add [-diff | -overwrite] <screen>…   screens: %s\n", strings.Join(intlui.Screens.Names(), ", "))
+		fmt.Fprintf(os.Stderr, "usage: charter add screen:<name> [-diff | -overwrite] <screen>…   screens: %s\n", strings.Join(intlui.Screens.Names(), ", "))
 		os.Exit(2)
 	}
 	if !*diff && c.UI == "" {

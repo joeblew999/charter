@@ -7,14 +7,14 @@ import (
 	"github.com/joeblew999/charter/internal/seokit/searchconsole"
 )
 
-// inspectReport is charter seo inspect --json.
+// inspectReport is charter run search inspect --json.
 type inspectReport struct {
 	URL string `json:"url"`
 	searchconsole.Inspection
 	Link string `json:"link"`
 }
 
-// inspect is charter seo inspect: one URL, the home page or the one named (a path, /de/, or a full URL),
+// inspect is charter run search inspect: one URL, the home page or the one named (a path, /de/, or a full URL),
 // as Google's index has it: its verdict, coverage, last crawl, Google's canonical and the app's, and its Search
 // Console page (--open opens it), where Test live URL and Request indexing are.
 func (r repo) inspect(args []string) {

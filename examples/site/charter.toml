@@ -1,7 +1,7 @@
 # What charter adds to wrangler.jsonc (go doc github.com/joeblew999/charter/internal/project).
 health = "/healthz"
 url = "https://charter-site.gedw99.workers.dev"
-# The API's contract: charter spec writes fern/ from api/contract.go, and api/queries.go from api/queries.sql.
+# The API's contract: charter check --fix writes fern/ from api/contract.go, and api/queries.go from api/queries.sql.
 spec = "fern/openapi.json"
 db = "sqlc"
 
@@ -21,6 +21,6 @@ catalogs = "locales"
 # Where gsxui add vendors components: their own text is translated from the catalogs' [gsxui].
 gsxui = "ui"
 
-# Guidance for whoever translates, people or Claude (charter intl todo shows it); "*" is for every language.
+# Guidance for whoever translates, people or Claude (charter run todo shows it); "*" is for every language.
 [intl.notes]
 "*" = ""

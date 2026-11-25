@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-// status is charter intl status: per locale, translated, inherited, stale, missing; exit 1 if one is incomplete.
+// status is charter run languages: per locale, translated, inherited, stale, missing; exit 1 if one is incomplete.
 func status(args []string) {
 	c := app()
 	p := read(c)
@@ -15,7 +15,7 @@ func status(args []string) {
 		ok = ok && l.Current() && len(l.Obsolete) == 0
 	}
 	if !ok {
-		fmt.Println("charter intl todo lists what is left")
+		fmt.Println("charter run todo lists what is left")
 		os.Exit(1)
 	}
 }

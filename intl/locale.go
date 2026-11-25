@@ -74,7 +74,7 @@ var (
 )
 
 // Use registers the app's locales, the source first, each with its catalog and whether that translates every
-// message. The package charter intl gen writes calls it from init.
+// message. The package charter build writes calls it from init.
 func Use(locales Locales, completeCatalogs []bool) {
 	shipped, complete = locales, map[string]bool{}
 	for i, l := range locales {
@@ -89,7 +89,7 @@ func Complete(id string) bool { return complete[id] }
 // Default is the source locale: the language of a render without a request.
 func Default() *Locale {
 	if len(shipped) == 0 {
-		panic("intl: no locales: import the package charter intl gen writes")
+		panic("intl: no locales: import the package charter build writes")
 	}
 	return shipped[0]
 }

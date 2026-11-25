@@ -1,5 +1,5 @@
 // Package audit reads a live site as Googlebot does, robots.txt, the sitemap and every page in it, and returns what
-// would keep a page out of Google's index or look wrong in a result: what charter seo audit runs, and what an app's own
+// would keep a page out of Google's index or look wrong in a result: what charter run audit runs, and what an app's own
 // tests run on a local build (Audit), so a page Google couldn't index fails before it ships.
 package audit
 

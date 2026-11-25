@@ -2,7 +2,7 @@
 // rate limits, a D1 database, SDKs in several languages.
 //
 //	go tool charter dev      wrangler dev → http://localhost:8787/api/docs
-//	go tool charter check    everything before a push
+//	go tool charter check && go tool charter test    before a push
 //	go run .                 the same handler as a plain Go server, no Cloudflare
 package main
 

@@ -2,9 +2,11 @@ package command
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,72 +15,153 @@ import (
 
 	"github.com/joeblew999/charter/internal/command/intl"
 	"github.com/joeblew999/charter/internal/command/seo"
+	"github.com/joeblew999/charter/internal/dbcode"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
 	"github.com/joeblew999/charter/internal/standard"
 )
 
-// Check runs charter check: everything before a push, needing no Cloudflare account. Each part says how long it took.
+// Fmt runs charter fmt: Go and gsx files written as gofmt and gsx fmt have them. --check writes nothing, and fails
+// where a file would change. gsxui's own vendored files (gsxui.json's ui folder) are gsxui's to format.
+func Fmt(args []string) {
+	fs := flag.NewFlagSet("charter fmt", flag.ExitOnError)
+	checkOnly := fs.Bool("check", false, "write nothing; fail where a file would change")
+	fs.Parse(args)
+	check(format(load(), !*checkOnly))
+}
+
+// Lint runs charter lint: go.mod as go mod tidy writes it, go vet for the host and as the Worker is built
+// (GOOS=js GOARCH=wasm), and structpages-lint when go.mod has it.
+func Lint(args []string) {
+	flag.NewFlagSet("charter lint", flag.ExitOnError).Parse(args)
+	p := load()
+	check(generate(p))
+	check(lint(p))
+}
+
+// Check runs charter check: everything that can be said without running the app. It starts nothing, so it is safe
+// beside a running charter dev. --fix writes what it can.
 //
-//	generate   the messages, the components' Go and the browser's files (charter build -only generate)
-//	tidy       go.mod and go.sum as go mod tidy writes them
-//	format     gofmt, and gsx fmt for .gsx files
-//	vet        go vet, for the host and as the Worker is built (GOOS=js GOARCH=wasm); structpages-lint when go.mod has it
-//	specs      the committed specs are what the contract gives (charter.toml's spec)
-//	test       go test ./...
-//	languages  charter intl check: every language complete, plural forms, unused messages, gsxui's own text, and
-//	           right-to-left set up as gsxui documents it
-//	worker     the build, then on wrangler dev: the standard test of an API with a contract, [test] run, and for a
-//	           site ([seo]) the audit a search engine would pass or fail it on
+//	generate   the messages, the components' Go and the browser's files, which everything after reads
+//	fmt        charter fmt --check (with --fix: charter fmt)
+//	lint       charter lint (with --fix: go mod tidy)
+//	contract   the committed specs, Fern's settings and the queries' Go are what the contract gives (with --fix: they
+//	           are written), and each rate limit the contract declares is in wrangler.jsonc
+//	languages  every language complete, plural forms, unused messages, gsxui's own text, right-to-left set up
 func Check(args []string) {
 	fs := flag.NewFlagSet("charter check", flag.ExitOnError)
+	fix := fs.Bool("fix", false, "write what can be written: formatting, go.mod, the specs and the queries' Go")
 	fs.Parse(args)
 	p := load()
-	var times []string
-	start := time.Now()
-	part := func(name string, f func() error) {
-		t := time.Now()
-		if err := f(); err != nil {
-			check(fmt.Errorf("%s: %w", name, err))
-		}
-		times = append(times, name+" "+run.Seconds(time.Since(t)))
+	t := newTimes("check")
+	if p.Spec != "" && p.DB != "" && *fix {
+		t.part("queries", func() error { return dbcode.Write(p.Root, p.DB, false) })
 	}
-	// Generated first: a clean checkout has no messages package or components' Go yet, and everything after reads them.
-	part("generate", func() error { return generate(p) })
-	part("tidy", func() error { return run.Run(p.Root, nil, "go", "mod", "tidy", "-diff") })
-	part("format", func() error { return format(p) })
-	part("vet", func() error { return vet(p) })
+	t.part("generate", func() error { return generate(p) })
+	t.part("fmt", func() error { return format(p, *fix) })
+	if *fix {
+		t.part("tidy", func() error { return run.Run(p.Root, nil, "go", "mod", "tidy") })
+	}
+	t.part("lint", func() error { return lint(p) })
 	if p.Spec != "" {
-		part("specs", func() error { return spec(p, true) })
+		t.part("contract", func() error {
+			if err := spec(p, !*fix); err != nil {
+				return err
+			}
+			return limitsDeclared(p)
+		})
 	}
-	part("test", func() error { return run.Run(p.Root, nil, "go", "test", "./...") })
 	if hasIntl(p) {
-		part("languages", func() error {
+		t.part("languages", func() error {
 			if !intl.Check() {
-				return errors.New("charter intl check found problems (above)")
+				return errors.New("the languages have problems (above)")
 			}
 			return nil
 		})
 	}
+	t.done()
+}
+
+// Test runs charter test: the app's Go tests, then the Worker itself, built and run on wrangler dev on a port and
+// with state of its own: the standard test of an API with a contract, charter.toml's [test] run, and for a site
+// ([seo]) the audit a search engine would pass or fail it on.
+//
+//	charter test                  all of that
+//	charter test e2e              one of charter.toml's [test.suites], against the Worker on wrangler dev
+//	charter test --base <url>     the standard test and [test] live against a Worker already deployed
+//	charter test e2e --base <url> a suite against a deployed Worker
+func Test(args []string) {
+	suite := ""
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		suite, args = args[0], args[1:]
+	}
+	fs := flag.NewFlagSet("charter test", flag.ExitOnError)
+	base := fs.String("base", "", "a Worker already running or deployed, instead of wrangler dev")
+	fs.Parse(args)
+	p := load()
+	*base = strings.TrimRight(*base, "/")
+	if suite != "" {
+		commands, ok := p.Test.Suites[suite]
+		if !ok {
+			check(fmt.Errorf("charter.toml's [test.suites] has no %s", suite))
+		}
+		only := &project.Project{Root: p.Root} // a suite is its own commands, without the standard test
+		if *base != "" {
+			check(try(only, commands, *base))
+			return
+		}
+		check(serving(p, func(base string) error { return try(only, commands, base) }))
+		return
+	}
+	if *base != "" {
+		check(try(p, p.Test.Live, *base))
+		return
+	}
+	t := newTimes("test")
+	t.part("go test", func() error {
+		if err := generate(p); err != nil {
+			return err
+		}
+		return run.Run(p.Root, nil, "go", "test", "./...")
+	})
 	// wrangler dev builds the Worker itself (wrangler.jsonc's build command).
-	part("worker", func() error {
+	t.part("worker", func() error {
 		return serving(p, func(base string) error {
 			if err := try(p, p.Test.Run, base); err != nil {
 				return err
 			}
-			// A site (charter.toml's [seo]): what a search engine would read of it, robots.txt, the sitemap and
-			// every page in it.
 			if p.SEO != nil {
 				seo.Main([]string{"audit", "--site", base})
 			}
 			return nil
 		})
 	})
-	say("✓ check took %s: %s", run.Seconds(time.Since(start)), strings.Join(times, ", "))
+	t.done()
 }
 
-// format fails on a Go file gofmt would change, or a .gsx file gsx fmt would.
-func format(p *project.Project) error {
+// times says how long each part of a command took.
+type times struct {
+	name  string
+	start time.Time
+	parts []string
+}
+
+func newTimes(name string) *times { return &times{name: name, start: time.Now()} }
+
+func (t *times) part(name string, f func() error) {
+	start := time.Now()
+	if err := f(); err != nil {
+		check(fmt.Errorf("%s: %w", name, err))
+	}
+	t.parts = append(t.parts, name+" "+run.Seconds(time.Since(start)))
+}
+
+func (t *times) done() {
+	say("✓ %s took %s: %s", t.name, run.Seconds(time.Since(t.start)), strings.Join(t.parts, ", "))
+}
+
+// format fails on a Go file gofmt would change or a .gsx file gsx fmt would; with write, it writes them instead.
+func format(p *project.Project, write bool) error {
 	dirs, err := run.Output(p.Root, nil, "go", "list", "-f", "{{.Dir}}", "./...")
 	if err != nil {
 		return err
@@ -88,21 +171,101 @@ func format(p *project.Project) error {
 		m, _ := filepath.Glob(filepath.Join(dir, "*.go"))
 		files = append(files, m...)
 	}
-	out, err := run.Output(p.Root, nil, "gofmt", append([]string{"-l"}, files...)...)
+	mode := "-l"
+	if write {
+		mode = "-w"
+	}
+	out, err := run.Output(p.Root, nil, "gofmt", append([]string{mode}, files...)...)
 	if err != nil {
 		return err
 	}
 	if s := strings.TrimSpace(out); s != "" {
-		return fmt.Errorf("not formatted (gofmt -w writes them as they should be):\n%s", s)
+		return fmt.Errorf("not formatted (charter fmt writes them as they should be):\n%s", s)
 	}
 	if !hasGSX(p) {
 		return nil
 	}
+	// The app's own .gsx files: every folder that has some, but the one gsxui vendors its components into.
+	var conf struct {
+		UI string `json:"ui"`
+	}
+	if b, err := os.ReadFile(filepath.Join(p.Root, "gsxui.json")); err == nil {
+		json.Unmarshal(b, &conf)
+	}
+	seen := map[string]bool{}
+	var own []string
+	filepath.WalkDir(p.Root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		rel, _ := filepath.Rel(p.Root, path)
+		if d.IsDir() {
+			if rel != "." && (strings.HasPrefix(d.Name(), ".") || d.Name() == "node_modules" || d.Name() == "build" || d.Name() == "dist" || (conf.UI != "" && rel == filepath.FromSlash(conf.UI))) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if strings.HasSuffix(path, ".gsx") && !seen[filepath.Dir(rel)] {
+			seen[filepath.Dir(rel)] = true
+			own = append(own, filepath.Dir(rel))
+		}
+		return nil
+	})
+	if len(own) == 0 {
+		return nil
+	}
 	// gsx fmt -l lists what it would change, and fails when there is any.
-	cmd := exec.Command("go", "tool", "gsx", "fmt", "-l", ".")
+	cmd := exec.Command("go", append([]string{"tool", "gsx", "fmt", mode}, own...)...)
 	cmd.Dir = p.Root
-	if listed, err := cmd.CombinedOutput(); err != nil || len(bytes.TrimSpace(listed)) > 0 {
-		return fmt.Errorf("not formatted (go tool gsx fmt -w . writes them as they should be):\n%s", bytes.TrimSpace(listed))
+	if listed, err := cmd.CombinedOutput(); err != nil || (!write && len(bytes.TrimSpace(listed)) > 0) {
+		return fmt.Errorf("not formatted (charter fmt writes them as they should be):\n%s", bytes.TrimSpace(listed))
+	}
+	return nil
+}
+
+// lint is go.mod as go mod tidy writes it, go vet for the host and for the Worker, and structpages' linter for an app
+// that has it as a tool.
+func lint(p *project.Project) error {
+	if err := run.Run(p.Root, nil, "go", "mod", "tidy", "-diff"); err != nil {
+		return fmt.Errorf("go.mod is not tidy (charter check --fix): %w", err)
+	}
+	return vet(p)
+}
+
+// limitsDeclared fails when the contract declares a rate limit (x-rate-limit on an operation of the spec) that
+// wrangler.jsonc does not bind, or binds with another limit or period: the Worker would count against nothing.
+func limitsDeclared(p *project.Project) error {
+	b, err := os.ReadFile(filepath.Join(p.Root, p.Spec))
+	if err != nil {
+		return err
+	}
+	var doc struct {
+		Paths map[string]map[string]json.RawMessage `json:"paths"`
+	}
+	if err := json.Unmarshal(b, &doc); err != nil {
+		return fmt.Errorf("%s: %w", p.Spec, err)
+	}
+	for path, ops := range doc.Paths {
+		for method, raw := range ops {
+			var op struct {
+				Limit *struct {
+					Binding string `json:"binding"`
+					Limit   int    `json:"limit"`
+					Period  int    `json:"period"`
+				} `json:"x-rate-limit"`
+			}
+			if json.Unmarshal(raw, &op) != nil || op.Limit == nil {
+				continue
+			}
+			have, ok := p.RateLimit(op.Limit.Binding)
+			want := fmt.Sprintf(`{ "name": %q, "namespace_id": "<a number of your own>", "simple": { "limit": %d, "period": %d } }`, op.Limit.Binding, op.Limit.Limit, op.Limit.Period)
+			switch {
+			case !ok:
+				return fmt.Errorf("%s %s counts against the rate limit %s, which %s does not bind: add to its ratelimits %s", strings.ToUpper(method), path, op.Limit.Binding, project.Wrangler, want)
+			case have.Simple.Limit != op.Limit.Limit || have.Simple.Period != op.Limit.Period:
+				return fmt.Errorf("the rate limit %s is %d per %d s in the contract and %d per %d s in %s: make them the same", op.Limit.Binding, op.Limit.Limit, op.Limit.Period, have.Simple.Limit, have.Simple.Period, project.Wrangler)
+			}
+		}
 	}
 	return nil
 }
@@ -142,41 +305,4 @@ func try(p *project.Project, commands []string, base string) error {
 		}
 	}
 	return nil
-}
-
-// Test runs charter test <suite> [-base url]: one of charter.toml's [test.suites], against the Worker built and run
-// on wrangler dev, or with -base against one already running or deployed.
-func Test(args []string) {
-	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
-		check(errors.New("usage: charter test <suite> [-base https://…]   (charter.toml's [test.suites])"))
-	}
-	fs := flag.NewFlagSet("charter test", flag.ExitOnError)
-	base := fs.String("base", "", "a Worker already running or deployed, instead of wrangler dev")
-	fs.Parse(args[1:])
-	p := load()
-	commands, ok := p.Test.Suites[args[0]]
-	if !ok {
-		check(fmt.Errorf("charter.toml's [test.suites] has no %s", args[0]))
-	}
-	if *base != "" {
-		check(try(&project.Project{Root: p.Root}, commands, strings.TrimRight(*base, "/")))
-		return
-	}
-	check(serving(p, func(base string) error { return try(&project.Project{Root: p.Root}, commands, base) }))
-}
-
-// LiveTest runs charter live-test [-base url]: the standard test and [test] live against the deployed Worker
-// (charter.toml's url).
-func LiveTest(args []string) {
-	fs := flag.NewFlagSet("charter live-test", flag.ExitOnError)
-	base := fs.String("base", "", "the deployed Worker's address (default: charter.toml's url)")
-	fs.Parse(args)
-	p := load()
-	if *base == "" {
-		*base = p.URL
-	}
-	if *base == "" {
-		check(errors.New("charter.toml has no url: where the Worker is deployed (or -base)"))
-	}
-	check(try(p, p.Test.Live, strings.TrimRight(*base, "/")))
 }

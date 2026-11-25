@@ -7,7 +7,7 @@ import (
 )
 
 // Msg is a translated message, written in markup where its text goes: gsx renders it (Translate, registered in
-// gsx.toml [renderers]) in the request's language. charter intl gen writes one per catalog key, so a missing key is a
+// gsx.toml [renderers]) in the request's language. charter build writes one per catalog key, so a missing key is a
 // compile error: a value for a message without arguments, a constructor for one with.
 //
 //	<h1>{ locales.HomeHeading }</h1>

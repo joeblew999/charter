@@ -2,7 +2,7 @@
 // llms.txt, marks what isn't a page noindex and gives every page one address; Sitemap and LLMsTxt, what it serves; and
 // SnippetWidth, how wide Google shows a title. It imports no gsx and is small enough for a Worker. Beside it:
 // seo/audit (the site as Googlebot reads it, for an app's tests), seo/config (an app's charter.toml's [seo]), gsxseo (the page's
-// <head>, for a gsx app) and the command, charter seo. A gsx site gets all of it wired by package site.
+// <head>, for a gsx app) and the command, charter run search. A gsx site gets all of it wired by package site.
 package seo
 
 import (

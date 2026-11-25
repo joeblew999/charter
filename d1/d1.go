@@ -21,7 +21,7 @@
 // the migrations charter.toml's [[d1]] names applied when it is opened: the app's own SQL, tested as it runs. Foreign
 // keys are enforced there as D1 enforces them.
 //
-// charter spec writes a project's queries (api/queries.sql) as functions over these, typed by sqlc
+// charter check --fix writes a project's queries (api/queries.sql) as functions over these, typed by sqlc
 // (charter.toml: db = "sqlc").
 package d1
 

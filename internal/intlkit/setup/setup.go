@@ -1,4 +1,4 @@
-// Package setup is charter intl init: it sets a gsx app up for intl, from its go.mod's directory. Every step leaves
+// Package setup is charter add locale:<id>: it sets a gsx app up for intl, from its go.mod's directory. Every step leaves
 // alone what is already there, so it can run again (after gsxui init, say).
 package setup
 
@@ -50,7 +50,7 @@ func Init(root string, o Options, log io.Writer) error {
 	for i, id := range o.Locales {
 		q[i] = `"` + id + `"`
 	}
-	conf := "\n# The app's languages (charter intl; go doc github.com/joeblew999/charter/intl/config): BCP 47 ids, the\n# source first.\n[intl]\n" +
+	conf := "\n# The app's languages (charter run languages; go doc github.com/joeblew999/charter/intl/config): BCP 47 ids, the\n# source first.\n[intl]\n" +
 		"locales = [" + strings.Join(q, ", ") + "]\n" +
 		"# <locale>.toml per language, ICU MessageFormat; charter build writes the Go package of messages there.\n" +
 		"catalogs = " + `"` + o.Catalogs + `"` + "\n"
@@ -58,7 +58,7 @@ func Init(root string, o Options, log io.Writer) error {
 		conf += "# Where gsxui add vendors components: their own text is translated from the catalogs' [gsxui].\n" +
 			"gsxui = " + `"` + o.Gsxui + `"` + "\n"
 	}
-	conf += "\n# Guidance for whoever translates, people or Claude (charter intl todo shows it); \"*\" is for every language.\n" +
+	conf += "\n# Guidance for whoever translates, people or Claude (charter run todo shows it); \"*\" is for every language.\n" +
 		"[intl.notes]\n\"*\" = \"\"\n"
 	path := filepath.Join(root, "charter.toml")
 	have, _ := os.ReadFile(path)
@@ -79,7 +79,7 @@ func Init(root string, o Options, log io.Writer) error {
 	}
 	for _, id := range o.Locales[1:] {
 		if err := write(filepath.Join(o.Catalogs, id+".toml"),
-			"# "+id+": the translations of "+source+".toml, same tables and keys. charter intl todo lists what is left.\n"); err != nil {
+			"# "+id+": the translations of "+source+".toml, same tables and keys. charter run todo lists what is left.\n"); err != nil {
 			return err
 		}
 	}
@@ -103,7 +103,7 @@ func Init(root string, o Options, log io.Writer) error {
 
 // UsesGsx reports whether the app at root is a gsx app: it has gsxui (gsxui), a gsx.toml, or .gsx files of its own.
 // Its go.mod isn't the sign: the module an app is a folder of may require gsx for packages of its own (the template,
-// where it is, is a folder of charter intl's, which gsxintl needs gsx for).
+// where it is, is a folder of charter run languages's, which gsxintl needs gsx for).
 func UsesGsx(root, gsxui string) bool {
 	if gsxui != "" {
 		return true
@@ -133,7 +133,7 @@ func UsesGsx(root, gsxui string) bool {
 }
 
 // GoMod is the go.mod of the module root is in, the nearest up from it: the app's own, or for the template where it is,
-// charter intl's. "" when root is in none. It reads the files, so it needs no Go.
+// charter run languages's. "" when root is in none. It reads the files, so it needs no Go.
 func GoMod(root string) string {
 	for dir := root; ; dir = filepath.Dir(dir) {
 		if p := filepath.Join(dir, "go.mod"); fileExists(p) {
@@ -157,10 +157,10 @@ func DetectGsxui(root string) string {
 var catalogsKey = regexp.MustCompile(`(?m)^catalogs\s*=.*\n`)
 
 // addGsxui writes gsxui = dir into an charter.toml's [intl] set up before gsxui was: init run again after gsxui init.
-// UI writes ui = dir into the app's charter.toml's [intl] when it has no ui: where charter intl add put intl's screens.
+// UI writes ui = dir into the app's charter.toml's [intl] when it has no ui: where charter add screen:<name> put intl's screens.
 func UI(root, dir string, log io.Writer) error {
 	return addKey(filepath.Join(root, "charter.toml"), "ui", dir,
-		"Where charter intl add copies intl's screens (package intlui): the language list, the language offer, the time zone\n# and clock dialog.", log)
+		"Where charter add screen:<name> copies intl's screens (package intlui): the language list, the language offer, the time zone\n# and clock dialog.", log)
 }
 
 // addKey writes key = value, below its comment, after [intl] catalogs line, unless the file sets key already.
@@ -185,7 +185,7 @@ func addKey(path, key, value, comment string, log io.Writer) error {
 
 // GsxuiRenderer registers the renderer for the text gsxui components write themselves (i18n.T) in gsx.toml, once
 // the app has gsxui's i18n package: gsxui add vendors it with the first component that writes text, and until then
-// gsx would fail on a renderer for a package that isn't there. charter intl gen calls it every time, so the renderer
+// gsx would fail on a renderer for a package that isn't there. charter build calls it every time, so the renderer
 // arrives with the package.
 func GsxuiRenderer(root, gsxui string, log io.Writer) error {
 	if gsxui == "" {
@@ -269,7 +269,7 @@ func addToTable(s, name, lines string) string {
 	return s + "[" + name + "]\n" + lines
 }
 
-// gitignore keeps charter intl gen's output out of git (intl.sum stays in).
+// gitignore keeps charter build's output out of git (intl.sum stays in).
 func gitignore(path string, log io.Writer) error {
 	b, err := os.ReadFile(path)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -288,7 +288,7 @@ func gitignore(path string, log io.Writer) error {
 	if s != "" && !strings.HasSuffix(s, "\n") {
 		s += "\n"
 	}
-	s += "# charter intl gen output (charter intl)\n" + strings.Join(add, "\n") + "\n"
+	s += "# charter build output (charter run languages)\n" + strings.Join(add, "\n") + "\n"
 	fmt.Fprintln(log, "updated .gitignore:", strings.Join(add, ", "))
 	return os.WriteFile(path, []byte(s), 0o644)
 }

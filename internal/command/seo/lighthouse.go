@@ -13,7 +13,7 @@ import (
 	"github.com/joeblew999/charter/seo/config"
 )
 
-// lighthouse is charter seo lighthouse: Lighthouse on the live site through PageSpeed Insights, on
+// lighthouse is charter run lighthouse: Lighthouse on the live site through PageSpeed Insights, on
 // Google's servers, so no Node and no local Chrome: every page of the sitemap (one per page, whatever its languages),
 // [seo] pages, or the one named. It prints each page's four scores, what fails and on which elements, and real
 // users' Core Web Vitals, and exits 1 when a category of any page scores under [seo] min. Mobile, what Google

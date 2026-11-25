@@ -15,7 +15,7 @@ import (
 	"github.com/joeblew999/charter/intl/intltest"
 )
 
-// check is charter intl check: every problem, for CI: syntax, arguments, plural categories, completeness, unused
+// check is charter check: every problem, for CI: syntax, arguments, plural categories, completeness, unused
 // messages, gsxui text, intl.sum, and intl's files as this version writes them (exit 1 if any). With locales, only
 // theirs, writing nothing; --missing warn only reports missing and stale translations (a contributor's pull request).
 // Without --missing, INTL_MISSING says, else GitHub Actions' pull_request runs only warn: a contributor's pull request
@@ -91,10 +91,10 @@ func localeProblems(p *catalog.Project, locs []*catalog.Locale) []string {
 	var out []string
 	for _, l := range locs {
 		if n := l.Count(catalog.Missing) + l.Count(catalog.Stale); n > 0 {
-			out = append(out, l.Summary(len(p.Messages))+": charter intl translate "+l.ID+" (or todo)")
+			out = append(out, l.Summary(len(p.Messages))+": charter run translate "+l.ID+" (or todo)")
 		}
 		if len(l.Obsolete) > 0 {
-			out = append(out, fmt.Sprintf("%s has %s, which the source no longer does: charter intl prune", l.File, strings.Join(l.Obsolete, ", ")))
+			out = append(out, fmt.Sprintf("%s has %s, which the source no longer does: charter run prune", l.File, strings.Join(l.Obsolete, ", ")))
 		}
 	}
 	return out
@@ -117,7 +117,7 @@ func checkAll(c config.Config, warnMissing bool) int {
 			}
 		}
 		for _, s := range localeProblems(p, p.Locales) {
-			if !strings.Contains(s, ": charter intl translate ") {
+			if !strings.Contains(s, ": charter run translate ") {
 				add(s)
 			}
 		}
@@ -125,10 +125,10 @@ func checkAll(c config.Config, warnMissing bool) int {
 		add(localeProblems(p, p.Locales)...)
 	}
 	if !p.SumCurrent() {
-		add(p.SumFile() + " is not up to date: charter intl gen, and commit it")
+		add(p.SumFile() + " is not up to date: charter build, and commit it")
 	}
 	if !p.BadgeCurrent() {
-		add(p.BadgeFile() + " is not up to date: charter intl gen, and commit it")
+		add(p.BadgeFile() + " is not up to date: charter build, and commit it")
 	}
 	gs, err := p.GsxuiProblems()
 	must(err)

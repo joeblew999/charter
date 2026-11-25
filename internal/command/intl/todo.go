@@ -14,7 +14,7 @@ import (
 	"github.com/joeblew999/charter/intl/intltest"
 )
 
-// todo is charter intl todo: what is left to translate, with what a translator needs, for people and agents
+// todo is charter run todo: what is left to translate, with what a translator needs, for people and agents
 // (--json).
 func todo(args []string) {
 	c := app()
@@ -24,7 +24,7 @@ func todo(args []string) {
 	todoList(c, read(c), *asJSON, f.Args())
 }
 
-// todoLocale is a locale in charter intl todo -json.
+// todoLocale is a locale in charter run todo -json.
 type todoLocale struct {
 	ID      string     `json:"id"`
 	Name    string     `json:"name"`

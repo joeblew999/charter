@@ -1,4 +1,4 @@
-# intl.sum: the source text each translation was made from (charter intl gen writes it: commit it, don't edit it).
+# intl.sum: the source text each translation was made from (charter build writes it: commit it, don't edit it).
 de gsxui.close 7d9eb7acb13e b808f6e97075
 de home.heading 04d7b4833927 1fd65f7e85bb
 de home.intro ea0b5bec5938 e41641a84cd0

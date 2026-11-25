@@ -173,7 +173,7 @@ func tableName(header string) string {
 	return strings.Trim(strings.TrimSpace(strings.TrimPrefix(header, "[")), `"`)
 }
 
-// RemoveMessages deletes keys from the catalog at path (charter intl prune: keys the source no longer has), each with
+// RemoveMessages deletes keys from the catalog at path (charter run prune: keys the source no longer has), each with
 // the comment above it, and a table they leave without keys, with the comment above its header.
 func RemoveMessages(path string, keys []string) error {
 	b, err := os.ReadFile(path)
@@ -293,7 +293,7 @@ func AddLocale(c config.Config, id, name string) error {
 	if _, err := os.Stat(file); err == nil {
 		return nil
 	}
-	head := fmt.Sprintf("# %s (%s): the translations of %s.toml, same tables and keys. charter intl todo lists what is left.\n",
+	head := fmt.Sprintf("# %s (%s): the translations of %s.toml, same tables and keys. charter run todo lists what is left.\n",
 		name, id, c.Locales[0])
 	return os.WriteFile(file, []byte(head), 0o644)
 }

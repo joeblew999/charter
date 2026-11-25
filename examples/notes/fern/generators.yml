@@ -1,5 +1,5 @@
-# Written by `charter spec` from fern/openapi.json and charter.toml ([sdks]): don't edit, change
-# those and run charter spec. Fern's generators are charter's, at the versions it pins.
+# Written by `charter check --fix` from fern/openapi.json and charter.toml ([sdks]): don't edit, change
+# those and run charter check --fix. Fern's generators are charter's, at the versions it pins.
 api:
   specs:
     - openapi: openapi.json
@@ -23,9 +23,9 @@ api:
       - accessClientId
       - accessClientSecret
 
-# The SDKs. Generate one: charter sdk <group>   (into sdk/out/<group>)
+# The SDKs. Generate one: charter pack <group>   (into sdk/out/<group>)
 groups:
-  # Go: the module charter sdk -publish commits in sdk/go, in a project that keeps it.
+  # Go: the module charter pack -publish commits in sdk/go, in a project that keeps it.
   go:
     generators:
       - name: fernapi/fern-go-sdk

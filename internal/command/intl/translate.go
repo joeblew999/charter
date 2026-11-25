@@ -13,15 +13,15 @@ import (
 	"github.com/joeblew999/charter/internal/intlkit/catalog"
 )
 
-// translate is charter intl translate [locale…]: Claude Code translates what is missing or stale with the
+// translate is charter run translate [locale…]: Claude Code translates what is missing or stale with the
 // intl skill, one worker per language at once (charter.toml's [intl] [translate] workers, default 6) on [translate]
-// model. Each worker edits only its own catalog and checks it with charter intl check <locale>, which writes nothing;
+// model. Each worker edits only its own catalog and checks it with charter run languages <locale>, which writes nothing;
 // then gen and the full check run once.
 func translate(ids []string) {
 	c := app()
 	claude, err := exec.LookPath("claude")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "✗ charter intl translate runs Claude Code (https://code.claude.com): install it, or translate by hand (charter intl todo)")
+		fmt.Fprintln(os.Stderr, "✗ charter run translate runs Claude Code (https://code.claude.com): install it, or translate by hand (charter run todo)")
 		os.Exit(1)
 	}
 	p := read(c)
@@ -56,15 +56,15 @@ func translate(ids []string) {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			rel, _ := filepath.Rel(c.Root, l.File)
-			prompt := fmt.Sprintf("Translate this app's messages into %[1]s with the intl skill: the %[2]d missing and stale "+
+			prompt := fmt.Sprintf("Translate this app's messages into %[1]s: the %[2]d missing and stale "+
 				"messages of %[1]s, nothing else. Other languages are being translated at the same time, so edit only %[3]s, never run "+
-				"charter intl gen, and check your work with charter intl check %[1]s until it passes. Then say in one line what you did.",
+				"go tool charter build, and check your work with go tool charter run languages %[1]s until it passes. Then say in one line what you did.",
 				l.ID, todo, rel)
 			// Fenced to its own language: it may edit only its catalog (an Edit rule covers every file-editing tool,
 			// Write too), and confirm only its own stale messages.
 			args := []string{"-p", prompt, "--allowedTools",
 				"Edit(" + rel + ")", "Read", "Glob", "Grep",
-				"Bash(charter intl todo -json " + l.ID + ")", "Bash(charter intl check " + l.ID + ")", "Bash(charter intl confirm " + l.ID + ":*)"}
+				"Bash(go tool charter run todo -json " + l.ID + ")", "Bash(go tool charter run languages " + l.ID + ")", "Bash(go tool charter run confirm " + l.ID + ":*)"}
 			if c.Translate.Model != "" {
 				args = append(args, "--model", c.Translate.Model)
 			}

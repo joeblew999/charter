@@ -7,7 +7,7 @@ import (
 	"github.com/joeblew999/charter/d1"
 )
 
-// TestD1Store: the queries the Worker runs (api/queries.sql, as charter spec wrote them) on the project's own
+// TestD1Store: the queries the Worker runs (api/queries.sql, as charter check --fix wrote them) on the project's own
 // migrations. Off Workers d1.Open("DB") is SQLite in memory, migrated as charter.toml's [[d1]] says, so the SQL that
 // runs on Cloudflare is the SQL tested here.
 func TestD1Store(t *testing.T) {

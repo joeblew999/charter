@@ -5,26 +5,31 @@
 //	# charter.toml: only what wrangler has no place for
 //	health = "/healthz"                # a path that answers once the Worker is up (default "/")
 //	url = "https://app.example.com"    # where it is deployed: the live test's target, the server the specs name
-//	spec = "fern/openapi.json"         # an API with a contract: charter spec writes its specs, charter check tests them
-//	db = "sqlc"                        # api/queries.sql: charter spec writes its Go (api/queries.go), with sqlc
+//	spec = "fern/openapi.json"         # an API with a contract: charter check --fix writes its specs, charter check tests them
+//	db = "sqlc"                        # api/queries.sql: charter check --fix writes its Go (api/queries.go), with sqlc
 //
 //	[build]
 //	limit = 10000000                   # fail the build over this many bytes of Wasm, gzipped (default: none)
 //
-//	[sdks]                             # the clients Fern makes from the specs (charter sdk)
+//	[sdks]                             # the clients Fern makes from the specs (charter pack)
 //	name = "Notes"
 //
 //	[test]                             # commands run against the Worker: {base} is its URL, BASE in their environment
 //	run = ["go test ./test/..."]       # charter check, against wrangler dev
-//	live = ["go test ./test/..."]      # charter live-test, against url
+//	live = ["go test ./test/..."]      # charter test --base, against url
 //	[test.suites]                      # more, by name: charter test e2e [-base https://…]
 //	e2e = ["go test -C e2e ."]
 //
-//	[intl]                             # the app's languages (charter intl; go doc …/intl/config)
+//	[run.tasks.seed]                   # the app's own tasks: charter run seed
+//	about = "Fill the local database"
+//	command = "go run ./cmd/seed {base}"
+//	worker = true                      # with the Worker on wrangler dev, BASE its URL
+//
+//	[intl]                             # the app's languages (charter run languages; go doc …/intl/config)
 //	locales = ["en", "de"]
 //	catalogs = "locales"
 //
-//	[seo]                              # how it answers search engines (charter seo; go doc …/seo/config)
+//	[seo]                              # how it answers search engines (charter run search; go doc …/seo/config)
 package project
 
 import (
@@ -56,6 +61,7 @@ type Project struct {
 	Build      Build  `toml:"build"`
 	SDKs       SDKs   `toml:"sdks"`
 	Test       Test   `toml:"test"`
+	Run        Run    `toml:"run"`
 	// The app's languages and how it answers search engines: intl/config and seo/config read them.
 	Intl map[string]any `toml:"intl"`
 	SEO  map[string]any `toml:"seo"`
@@ -143,15 +149,29 @@ type Build struct {
 	Limit int `toml:"limit"`
 }
 
-// SDKs are the clients Fern makes from the specs: charter spec writes fern/generators.yml from them and the spec.
+// Run is charter run's settings: the app's own tasks, beside the built-in ones.
+type Run struct {
+	Tasks map[string]Task `toml:"tasks"`
+}
+
+// Task is one command of the app's own, run by name (charter run <name>): its words, run as they are (no shell).
+// With Worker, the app runs on wrangler dev for as long as the command does, and BASE in its environment (and {base}
+// in its words) is the Worker's URL.
+type Task struct {
+	Command string `toml:"command"`
+	About   string `toml:"about"`
+	Worker  bool   `toml:"worker"`
+}
+
+// SDKs are the clients Fern makes from the specs: charter check --fix writes fern/generators.yml from them and the spec.
 type SDKs struct {
 	Name      string   `toml:"name"`      // the API's name in its SDKs (Notes); lower case, the Go package and the CLI's command
 	More      []string `toml:"more"`      // more than Go: typescript, python, and cli (a command-line client in Rust)
 	Audiences []string `toml:"audiences"` // with typescript: an SDK each, of only what the contract tags for that audience
-	Go        bool     `toml:"go"`        // the Go SDK is committed in sdk/go (charter sdk -publish): check fails when the specs moved on
+	Go        bool     `toml:"go"`        // the Go SDK is committed in sdk/go (charter pack -publish): check fails when the specs moved on
 }
 
-// Test is how charter check and charter live-test try the Worker: commands, each its words, run as they are (no
+// Test is how charter check and charter test --base try the Worker: commands, each its words, run as they are (no
 // shell). {base} is the Worker's URL, also BASE in their environment; a command that is charter runs as this charter.
 type Test struct {
 	Run    []string            `toml:"run"`
@@ -178,7 +198,7 @@ func Load(dir string) (*Project, error) {
 			return read(root)
 		}
 		if filepath.Dir(root) == root {
-			return nil, errors.New("no " + Wrangler + " at or above " + dir + ": the Worker's configuration (charter new makes an app)")
+			return nil, errors.New("no " + Wrangler + " at or above " + dir + ": the Worker's configuration (charter create makes an app)")
 		}
 	}
 }

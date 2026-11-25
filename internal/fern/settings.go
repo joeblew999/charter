@@ -44,8 +44,8 @@ type scheme struct {
 // whether fern/ has an overlay of the OpenAPI spec (overlays.yml).
 func Settings(specJSON []byte, sdks project.SDKs, goModule string, overlays bool) (string, error) {
 	lines := []string{
-		"# Written by `charter spec` from fern/openapi.json and charter.toml ([sdks]): don't edit, change",
-		"# those and run charter spec. Fern's generators are charter's, at the versions it pins.",
+		"# Written by `charter check --fix` from fern/openapi.json and charter.toml ([sdks]): don't edit, change",
+		"# those and run charter check --fix. Fern's generators are charter's, at the versions it pins.",
 		"api:",
 		"  specs:",
 		"    - openapi: openapi.json",
@@ -156,8 +156,8 @@ func Settings(specJSON []byte, sdks project.SDKs, goModule string, overlays bool
 	}
 	typescript := []string{"namespaceExport: " + sdks.Name, "generateWebSocketClients: true",
 		"# Workers (without nodejs_compat) have no `process`: the SDK's lookups of it are guarded.", "guardProcessEnvAccess: true"}
-	lines = append(lines, "", "# The SDKs. Generate one: charter sdk <group>   (into sdk/out/<group>)", "groups:")
-	lines = append(lines, group("go", "Go: the module charter sdk -publish commits in sdk/go, in a project that keeps it.", generators["go"],
+	lines = append(lines, "", "# The SDKs. Generate one: charter pack <group>   (into sdk/out/<group>)", "groups:")
+	lines = append(lines, group("go", "Go: the module charter pack -publish commits in sdk/go, in a project that keeps it.", generators["go"],
 		[]string{"module:", "  path: " + goModule, `  version: "1.22"`, "packageName: " + lower})[1:]...)
 	// Other languages are the app's choice ([sdks] more): its API's users write in them, charter does not.
 	if slices.Contains(sdks.More, "typescript") {

@@ -1,9 +1,8 @@
 // An API and its pages as one Cloudflare Worker in Go: the contract and handlers in api/, the server-rendered pages
 // (gsx, gsxui and htmx 4, live over SSE) in pages/, their text in locales/, the browser's files in web/ (Vite).
 //
-//	go tool charter dev      gsx dev: a save rebuilds and reloads
-//	go tool charter preview  wrangler dev: the Worker as Cloudflare runs it
-//	go tool charter check    everything before a push
+//	go tool charter dev      a save rebuilds and reloads, on wrangler; leave it running
+//	go tool charter check && go tool charter test    before a push
 package main
 
 import (

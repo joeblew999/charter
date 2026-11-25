@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "go tool charter dev",
     "check": "go tool charter check",
+    "test": "go tool charter test",
     "deploy": "go tool charter deploy"
   },
   "devDependencies": {

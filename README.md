@@ -22,35 +22,57 @@ Windows. (Docker only to generate SDKs.)
 
 ## Start
 
-Copy an example:
-
 ```sh
-go run github.com/joeblew999/charter/cmd/charter@latest new my-app            # the smallest API
-go run github.com/joeblew999/charter/cmd/charter@latest new my-site -from site
-cd my-app
+go run github.com/joeblew999/charter/cmd/charter@latest create my-site -from site
+cd my-site
 npm install
 go tool charter dev
 ```
 
+`-from api` is the smallest API, `-from notes` a full one. `go tool charter env` says what your machine has.
+
 ## Commands
 
-`go tool charter <command>`, in the app's folder:
+The commands are [Vite+](https://viteplus.dev/guide/)'s, for a Go app on Workers: the same verbs, each driving the
+tool that owns the job. Run them as `go tool charter <command>` in the app's folder.
 
 | Command | What it does |
 |---|---|
-| `dev` | The loop you work in: a save rebuilds and reloads (gsx dev; wrangler dev for an app with no gsx) |
+| `create` | A new app from a template |
+| `install` | Everything the app pins: npm's packages, Go's modules |
+| `dev` | The loop you work in, on the real runtime. Leave it running |
+| `check` | Everything that can be said without running the app: format, lint, the contract, the languages. `--fix` writes what it can |
+| `fmt`, `lint` | The two halves of `check`, alone |
+| `test` | `go test`, then the Worker on wrangler dev: its API, the app's own tests, the search-engine audit. `test e2e` runs a suite; `--base <url>` tests a deployed Worker |
 | `build` | The messages, the components' Go, the browser's files and the Wasm. wrangler runs it itself |
-| `preview` | The Worker as Cloudflare runs it, on wrangler dev |
-| `check` | Everything before a push: format, vet, the specs, `go test`, the languages, the Worker on wrangler dev |
-| `test <suite>` | One of `charter.toml`'s `[test.suites]` against the Worker; `-base https://…` for a deployed one |
-| `with <command>` | A command run with the Worker on wrangler dev, `BASE` its URL |
-| `deploy [env]` | The D1 migrations, then wrangler deploy |
-| `live-test` | The standard test and `[test] live` against the deployed Worker |
-| `spec` | An API's OpenAPI and AsyncAPI from its contract, Fern's settings, the queries' Go |
-| `sdk` | An SDK from the specs with Fern |
-| `intl …` | The app's languages: `charter intl help` |
-| `seo …` | What search engines read: `charter seo help` |
-| `new <dir>` | A new app from an example |
+| `preview` | The production build on wrangler dev |
+| `deploy` | The D1 migrations, then wrangler deploy: `deploy staging` |
+| `pack` | What others consume: an SDK from the contract |
+| `run <task>` | Everything that is not a verb: `translate`, `languages`, `lighthouse`, `badges`, `logs`, `bench`, and the app's own tasks. Alone, it lists them |
+| `exec <tool>` | One of the app's tools as it pins it: `exec wrangler …`, `vite`, `gsx`, `gsxui` |
+| `add`, `remove` | `add locale:de`, `add ui:dialog`, `add d1:DB`, a Go module, an npm package |
+| `update`, `outdated` | Every pin, Go's and npm's |
+| `upgrade`, `migrate` | charter itself to its latest; an older app moved onto this one |
+| `staged` | Format and check what is staged for a commit; `staged install` makes it the pre-commit hook |
+| `cache clean` | Everything a build wrote, removed |
+| `env` | What this machine has of what an app needs |
+
+Before a push: `go tool charter check && go tool charter test`.
+
+## Leave `dev` running
+
+`charter dev` is gsx's loop with wrangler as its server and Vite in front, so what you look at is the Workers
+runtime with `wrangler.jsonc`'s bindings, as in production. Everything else you do in a second terminal reaches the
+open page by itself, in about three seconds:
+
+| You | The page |
+|---|---|
+| Save Go or a `.gsx` file | rebuilds, restarts the Worker, reloads |
+| Break the build | keeps the last version that worked, and says what is wrong |
+| `charter add locale:fr`, `charter run translate`, or edit a catalog | the language appears, the text changes |
+| `charter add ui:badge` and use it | appears |
+| `charter add leaflet` and import it in `web/` | Vite serves it |
+| Change a variable in `wrangler.jsonc` | wrangler reloads |
 
 ## An app
 
@@ -93,15 +115,15 @@ func main() {
 ```
 
 That is Vite's files in dev and in production, a URL per language (`/about`, `/de/about`) with every alternate in
-`<head>`, `robots.txt`, a sitemap in every language, and `noindex` on previews. `charter check` then audits the site
-the way a search engine reads it.
+`<head>`, `robots.txt`, a sitemap in every language, `/healthz`, and `noindex` on previews. `charter test` then
+audits the site the way a search engine reads it.
 
 Languages and search engines are two tables of `charter.toml`:
 
 ```toml
 url = "https://app.example.com"
 
-[intl]                # charter intl init writes it
+[intl]                # charter add locale:de writes it
 locales = ["en", "de"]
 catalogs = "locales"
 
@@ -133,8 +155,8 @@ The rest of the repo: [`cmd/charter`](cmd/charter) is the command, [`internal/`]
 | [`examples/site`](examples/site) | An API and its pages in one Worker: gsx, gsxui, htmx 4, Vite, three languages (one right-to-left), search engines, D1, live over SSE |
 | [`examples/notes`](examples/notes) | A full API: auth, D1, SSE and WebSocket streams, rate limits, SDKs in Go and Python and a command-line client |
 
-In this repo: `npm install` once at the top (the examples share one `node_modules`), then `go tool charter check` in
-an example.
+In this repo: `npm install` once at the top (the examples share one `node_modules`), then `go tool charter dev` or
+`go tool charter check && go tool charter test` in an example.
 
 ## Size
 

@@ -53,3 +53,5 @@ jobs:
       - run: npm ci
       - run: go tool charter check
         working-directory: examples/${{ matrix.example }}
+      - run: go tool charter test
+        working-directory: examples/${{ matrix.example }}

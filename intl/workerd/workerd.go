@@ -1,6 +1,6 @@
 // Package workerd is intl's Intl outside a Cloudflare Worker: workerd, the Workers runtime, serving intl's
 // js/intl-worker.mjs with the app's catalogs, set as intl.Runtime. On a Worker, Intl is the Worker's own; anywhere
-// else (an ordinary Go server, go test, charter intl) it is this one, so every place formats with the same engine.
+// else (an ordinary Go server, go test, charter run languages) it is this one, so every place formats with the same engine.
 //
 // An app on an ordinary Go server starts it before serving:
 //
@@ -9,7 +9,7 @@
 //	}
 //
 // workerd is the one npm installed for the app (Path). The first Start runs it on a free port, serving the
-// files charter intl gen writes beside the catalogs (intl-workerd/), and it stops when the program that started it
+// files charter build writes beside the catalogs (intl-workerd/), and it stops when the program that started it
 // ends, however it ends. INTL_WORKERD_URL names a workerd of your own instead (a server's, deployed with it). Each Intl
 // call is a request to it on 127.0.0.1, about 0.1 ms.
 package workerd
@@ -119,7 +119,7 @@ func Start() error {
 	return nil
 }
 
-// served is the workerd config to serve: the one charter intl gen wrote beside the app's catalogs (intl-workerd/), for
+// served is the workerd config to serve: the one charter build wrote beside the app's catalogs (intl-workerd/), for
 // the app whose charter.toml's [intl] is found up from the working directory; with no charter.toml's [intl], intl's own modules with no
 // catalogs, in charter's cache: Intl's formats with no messages, which is all a program without catalogs asks for.
 func served() (string, error) {
@@ -127,7 +127,7 @@ func served() (string, error) {
 	if err == nil {
 		capnp := filepath.Join(c.CatalogDir(), "intl-workerd", "intl-workerd.capnp")
 		if _, err := os.Stat(capnp); err != nil {
-			return "", fmt.Errorf("%s: %w (charter intl gen writes it)", capnp, err)
+			return "", fmt.Errorf("%s: %w (charter build writes it)", capnp, err)
 		}
 		return capnp, nil
 	}
@@ -252,7 +252,7 @@ func keep(capnp string) int {
 	return 0
 }
 
-// Tree formats a message tree as charter intl gen writes it (js/intl.mjs message) in lang with args: for tests of
+// Tree formats a message tree as charter build writes it (js/intl.mjs message) in lang with args: for tests of
 // the catalogs' compiler.
 func Tree(lang string, tree json.RawMessage, args ...string) (string, error) {
 	return post(map[string]any{"method": "tree", "args": append([]string{lang}, args...), "tree": tree})

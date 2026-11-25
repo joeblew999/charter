@@ -10,12 +10,12 @@
 //	property = "sc-domain:example.com"   # its Search Console property; default the site's Domain property
 //
 //	[seo.lighthouse]
-//	pages = ["/", "/de/board"]           # what charter seo lighthouse scores; default one URL per page of the live sitemap
+//	pages = ["/", "/de/board"]           # what charter run lighthouse scores; default one URL per page of the live sitemap
 //	strategy = "mobile"                  # mobile (what Google indexes) or desktop
 //	min = 90                             # a category scoring under it fails
 //
 //	[seo.badges]
-//	dir = "docs/badges"                  # where charter seo badges writes its SVG badges
+//	dir = "docs/badges"                  # where charter run badges writes its SVG badges
 //	readme = "README.md"                 # the file whose <!-- seo scores --> … <!-- /seo scores --> it rewrites
 package config
 

@@ -100,7 +100,7 @@ export function zoneName(lang, id, now = Date.now()) {
   return label;
 }
 
-// message formats one message of the catalogs charter intl gen writes (intl-messages.mjs) in lang: a string, or a list of
+// message formats one message of the catalogs charter build writes (intl-messages.mjs) in lang: a string, or a list of
 // parts, each a string or ["a", i] (a text argument), ["n", i, style] (a number; style "integer"), ["p" or "o", i,
 // offset, cases] (plural, selectordinal: an exact "=N" case, else the category Intl.PluralRules picks, else
 // "other"), ["s", i, cases] (select) or ["#"] (the plural's number less its offset). args are strings, numbers as
