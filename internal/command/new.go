@@ -19,8 +19,8 @@ import (
 const repository = "https://github.com/joeblew999/charter"
 
 // Create runs charter create <dir> [-from example]: a new app, copied from one of charter's examples (api, site, notes) at
-// this charter's release, under the folder's name: its Go module, its Worker, its npm package, tidied and formatted.
-// Then npm install and go tool charter dev.
+// this charter's release, under the folder's name: its Go module, its Worker, its npm package, installed, tidied and
+// formatted, its specs written. Then go tool charter dev.
 func Create(args []string) {
 	log.SetFlags(0)
 	flags := flag.NewFlagSet("charter create", flag.ExitOnError)
@@ -101,7 +101,13 @@ func Create(args []string) {
 	if exists(filepath.Join(dir, "gsx.toml")) {
 		check(run.Run(dir, nil, "go", "tool", "gsx", "fmt", "-w", "."))
 	}
-	say("✓ %s: the %s example as %s (module %s)\n\nNext:\n  cd %s\n  npm install\n  go tool charter dev", dir, *from, name, *module, dir)
+	// As Vite+'s create does: what the app pins is installed, and what is written from its own name (the specs, which
+	// name the app and where it is deployed) is written, so the first check passes.
+	if exists(filepath.Join(dir, "package.json")) {
+		check(run.Run(dir, nil, "npm", "install"))
+	}
+	check(run.Run(dir, nil, "go", "tool", "charter", "check", "--fix"))
+	say("✓ %s: the %s template as %s (module %s)\n\nNext:\n  cd %s\n  go tool charter dev", dir, *from, name, *module, dir)
 }
 
 // templateURL is where a template is deployed, under its owner's workers.dev subdomain.

@@ -25,7 +25,6 @@ Windows. (Docker only to generate SDKs.)
 ```sh
 go run github.com/joeblew999/charter/cmd/charter@latest create my-site -from site
 cd my-site
-npm install
 go tool charter dev
 ```
 
