@@ -87,6 +87,17 @@ func wasm(p *project.Project, limit int) error {
 			return err
 		}
 	}
+	// The Worker's entry, in place of workers-go's (a Go runtime per request): charter's go.mjs keeps runtimes between
+	// requests, and starts one while the module loads when charter.toml names a health path, which must touch no
+	// binding. An app with more to export (a Durable Object) has an entry of its own, importing ./build/go.mjs.
+	warm := ""
+	if p.Health != "" {
+		warm = fmt.Sprintf("await go.warm({ paths: [%q] });\n", p.Health)
+	}
+	entry := "// Written by charter build: the Worker's entry.\nimport { goWorker } from \"./go.mjs\";\n\nconst go = goWorker();\n" + warm + "\nexport default { fetch: go.fetch };\n"
+	if err := os.WriteFile(filepath.Join(p.Root, "build", "worker.mjs"), []byte(entry), 0o644); err != nil {
+		return err
+	}
 	if hasIntl(p) {
 		intl.Main([]string{"assets", "-worker", "build"})
 	}

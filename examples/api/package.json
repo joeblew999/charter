@@ -1,0 +1,12 @@
+{
+  "name": "charter-api",
+  "private": true,
+  "scripts": {
+    "dev": "go tool charter dev",
+    "check": "go tool charter check",
+    "deploy": "go tool charter deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.168.0"
+  }
+}
