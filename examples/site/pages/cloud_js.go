@@ -59,7 +59,7 @@ func Background() {
 		if err != nil {
 			return err
 		}
-		log, _ := ns.GetString("queued", nil)
+		log := value(ns, "queued")
 		lines := strings.Split(log, "\n")
 		for _, m := range batch.Messages {
 			body, err := m.StringBody()
@@ -123,7 +123,7 @@ func cloud(w http.ResponseWriter, r *http.Request) {
 	case r.URL.Path == "/cloud" && r.Method == http.MethodGet:
 		s := CloudState{OnWorkers: true, Name: cloudflare.Getenv("APP_NAME")}
 		// KV: a counter.
-		n, _ := ns.GetString("visits", nil)
+		n := value(ns, "visits")
 		s.Visits, _ = strconv.Atoi(n)
 		s.Visits++
 		if err := ns.PutString("visits", strconv.Itoa(s.Visits), nil); err != nil {
@@ -134,12 +134,12 @@ func cloud(w http.ResponseWriter, r *http.Request) {
 			b, _ := io.ReadAll(object.Body)
 			s.Note = string(b)
 		}
-		if log, _ := ns.GetString("queued", nil); log != "" {
+		if log := value(ns, "queued"); log != "" {
 			s.Queued = strings.Split(log, "\n")
 		}
-		s.Cron, _ = ns.GetString("cron", nil)
-		s.Sent, _ = ns.GetString("sent", nil)
-		s.Received, _ = ns.GetString("received", nil)
+		s.Cron = value(ns, "cron")
+		s.Sent = value(ns, "sent")
+		s.Received = value(ns, "received")
 		origin := web.Origin(r)
 		// D1, through workers-go's database/sql driver: how many messages the home page's list has.
 		if connector, err := d1.OpenConnector("DB"); err == nil {
@@ -199,7 +199,7 @@ func cloud(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		// waitUntil: work that goes on after this answer has left. The page shows when the last such work finished.
-		s.After, _ = ns.GetString("after", nil)
+		s.After = value(ns, "after")
 		cloudflare.WaitUntil(func() {
 			ns.PutString("after", time.Now().UTC().Format(time.RFC3339Nano), nil)
 		})
@@ -235,4 +235,13 @@ func back(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.Redirect(w, r, to, http.StatusSeeOther)
+}
+
+// value is what KV has under key, "" when it has nothing: workers-go gives a missing key as the text "<null>".
+func value(ns *kv.Namespace, key string) string {
+	v, err := ns.GetString(key, nil)
+	if err != nil || v == "<null>" {
+		return ""
+	}
+	return v
 }
