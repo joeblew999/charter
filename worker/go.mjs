@@ -29,7 +29,6 @@
 //	await go.warm({ paths: ["/api/hello"] });
 //	export default { fetch: go.fetch };
 import "./wasm_exec.js"; // the compiler's (workers-go writes TinyGo's or Go's), for its global Go class
-import "./tinygo-clock.mjs"; // before anything creates a Go runtime
 import * as build from "./runtime.mjs";
 import { webSocket } from "./websocket.mjs";
 

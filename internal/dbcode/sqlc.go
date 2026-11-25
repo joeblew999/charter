@@ -65,6 +65,9 @@ type Request struct {
 	Queries []Query `json:"queries"`
 }
 
+// sqlcVersion is the sqlc charter analyzes queries with: a Go program, run with go run, so every system gets it.
+const sqlcVersion = "v1.30.0"
+
 // Analyze runs sqlc on dir's schema (migrations/) and queries (api/queries.sql), and returns what it worked out. sqlc
 // is the one the repo's mise.toml pins (aqua:sqlc-dev/sqlc), loaded by mise.
 func Analyze(dir string) (*Request, error) {
@@ -93,7 +96,7 @@ func Analyze(dir string) (*Request, error) {
 	if err := os.WriteFile(filepath.Join(tmp, "sqlc.yaml"), []byte(config), 0o644); err != nil {
 		return nil, err
 	}
-	if _, err := run.Output(dir, nil, "mise", "exec", "aqua:sqlc-dev/sqlc", "--", "sqlc", "generate", "-f", filepath.Join(tmp, "sqlc.yaml")); err != nil {
+	if _, err := run.Output(dir, map[string]string{"CGO_ENABLED": "0"}, "go", "run", "github.com/sqlc-dev/sqlc/cmd/sqlc@"+sqlcVersion, "generate", "-f", filepath.Join(tmp, "sqlc.yaml")); err != nil {
 		return nil, err
 	}
 	b, err := os.ReadFile(filepath.Join(tmp, "out", "codegen_request.json"))
@@ -325,23 +328,20 @@ func GoQueries(r *Request, pkg string) (string, error) {
 	return string(out), nil
 }
 
-// Write writes dir's database code for db ("sqlc" or "drizzle") from its schema; with check it writes nothing, and
-// fails if what is there is not what the schema gives.
+// Write writes dir's database code (db = "sqlc") from its schema; with check it writes nothing, and fails if what is
+// there is not what the schema gives.
 func Write(dir, db string, check bool) error {
-	switch db {
-	case "sqlc":
-		return writeQueries(dir, check)
-	case "drizzle":
-		return writeTables(dir, check)
+	if db != "sqlc" {
+		return fmt.Errorf(`charter.toml: db = %q: "sqlc"`, db)
 	}
-	return fmt.Errorf(`charter.toml: db = %q: "sqlc" (Go) or "drizzle" (TypeScript)`, db)
+	return writeQueries(dir, check)
 }
 
 // writeQueries writes dir's api/queries.go from its schema and queries; with check it writes nothing, and fails if the
 // one there is not what they give.
 func writeQueries(dir string, check bool) error {
 	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
-		return errors.New(`db = "sqlc" writes Go: this project has no go.mod (a TypeScript project takes db = "drizzle")`)
+		return errors.New(`db = "sqlc" writes Go: there is no go.mod here`)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "api", "queries.sql")); err != nil {
 		return errors.New(`db = "sqlc" writes the queries of api/queries.sql, and there is none`)

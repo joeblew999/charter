@@ -1,0 +1,44 @@
+package intlui
+
+import (
+	"github.com/gsxhq/gsx"
+	"github.com/gsxhq/gsxui/ui"
+	"github.com/gsxhq/gsxui/ui/icon"
+	"github.com/joeblew999/charter/intl"
+	"github.com/joeblew999/charter/gsxintl/screens/locales"
+)
+
+// LanguageList links the current page in every language the site ships (intl.Links): plain links, crawlable without
+// JavaScript, each named in its own language with lang and hreflang, and translate="no" (a language's own name must
+// not be machine-translated). Keep it out of boosted navigation: switching language is a full page load, since a
+// boosted swap keeps the old <html lang dir>. Extra attributes fall through to the <nav>.
+//
+// From mise-intl add language-list: the app's own now, to change as it likes.
+component LanguageList(attrs gsx.Attrs) {
+	<nav aria-label={locales.IntlLanguages} class={ "flex flex-wrap items-center gap-1" } { attrs... }>
+		<icon.Languages class="me-1 size-4 text-muted-foreground"/>
+		{ for _, l := range intl.Links(ctx) {
+			<ui.Button
+				variant={languageVariant(l.Current)}
+				size="sm"
+				href={l.Href}
+				hreflang={l.Lang}
+				lang={l.Lang}
+				translate="no"
+				{ if l.Current {
+					aria-current="page"
+				} }
+			>
+				{ l.Name }
+			</ui.Button>
+		} }
+	</nav>
+}
+
+// languageVariant marks the page's own language.
+func languageVariant(current bool) string {
+	if current {
+		return "secondary"
+	}
+	return "ghost"
+}

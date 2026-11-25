@@ -24,7 +24,7 @@ var open = struct {
 }{dbs: map[string]*sql.DB{}}
 
 // Open is the database standing in for the D1 binding called name: SQLite in memory, made on the first Open and
-// migrated with the *.sql files charter.toml's [[d1]] of that binding names (found from the working directory), in
+// migrated with the *.sql files of that binding in wrangler.jsonc's d1_databases (migrations_dir; found from the working directory), in
 // name order. Later Opens in the process share it.
 func Open(name string) (DB, error) {
 	open.mu.Lock()
@@ -36,16 +36,16 @@ func Open(name string) (DB, error) {
 	if err != nil {
 		return DB{}, fmt.Errorf("d1: %s: %w", name, err)
 	}
-	i := slices.IndexFunc(p.D1, func(d project.D1) bool { return d.Binding == name })
+	i := slices.IndexFunc(p.Worker.D1, func(d project.D1) bool { return d.Binding == name })
 	if i < 0 {
-		return DB{}, fmt.Errorf("d1: charter.toml has no [[d1]] binding %s", name)
+		return DB{}, fmt.Errorf("d1: wrangler.jsonc's d1_databases has no binding %s", name)
 	}
 	db, err := sql.Open("sqlite", "file:charter-d1-"+name+"?mode=memory&cache=shared&_pragma=foreign_keys(1)") // D1 enforces foreign keys
 	if err != nil {
 		return DB{}, err
 	}
 	db.SetMaxOpenConns(1) // one connection: the database lives as long as it does
-	if dir := p.D1[i].Migrations; dir != "" {
+	if dir := p.Worker.D1[i].MigrationsDir(); dir != "" {
 		files, err := filepath.Glob(filepath.Join(p.Root, dir, "*.sql"))
 		if err != nil {
 			return DB{}, err

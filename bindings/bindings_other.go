@@ -24,7 +24,7 @@ func Var(name string) string { return os.Getenv(name) }
 // transport. Each call returns a new client, the caller's to set (its Timeout).
 func HTTPClient() *http.Client { return &http.Client{} }
 
-// Allow counts key's calls to the limit charter.toml's [[rate_limits]] names, in memory: a fixed window of its period,
+// Allow counts key's calls to the limit wrangler.jsonc's ratelimits names, in memory: a fixed window of its period,
 // as the binding counts.
 func Allow(name, key string) (bool, error) {
 	p, err := app()
@@ -33,18 +33,18 @@ func Allow(name, key string) (bool, error) {
 	}
 	limit, ok := p.RateLimit(name)
 	if !ok {
-		return true, fmt.Errorf("%w: %s (charter.toml has no such [[rate_limits]])", ErrNoBinding, name)
+		return true, fmt.Errorf("%w: %s (wrangler.jsonc's ratelimits has none of that name)", ErrNoBinding, name)
 	}
 	limits.mu.Lock()
 	defer limits.mu.Unlock()
 	now := time.Now()
 	w := limits.windows[name+"\x00"+key]
-	if w == nil || now.Sub(w.start) >= time.Duration(limit.Period)*time.Second {
+	if w == nil || now.Sub(w.start) >= time.Duration(limit.Simple.Period)*time.Second {
 		limits.windows[name+"\x00"+key] = &window{start: now, count: 1}
 		return true, nil
 	}
 	w.count++
-	return w.count <= limit.Limit, nil
+	return w.count <= limit.Simple.Limit, nil
 }
 
 type window struct {
