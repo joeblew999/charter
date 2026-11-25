@@ -40,9 +40,12 @@ func Test(args []string) {
 }
 
 // try runs the standard test against the Worker at pl.base, then each command, in the project's root with env; it
-// fails at the first that fails.
+// fails at the first that fails. The standard test is an API's (its specs, its MCP tools, its refusals): an app with
+// no contract (no spec in charter.toml) has only its own commands.
 func try(p *project.Project, commands []string, pl places, env map[string]string) error {
-	if err := standard.Run(pl.base, func(line string) { say("%s", line) }); err != nil {
+	if p.Spec == "" {
+		say("no spec in charter.toml: an app with no contract, so no standard test; its own tests only")
+	} else if err := standard.Run(pl.base, func(line string) { say("%s", line) }); err != nil {
 		return err
 	}
 	for _, line := range commands {
@@ -57,18 +60,23 @@ func try(p *project.Project, commands []string, pl places, env map[string]string
 	return nil
 }
 
-// LiveTest runs charter live-test: the standard test, then [test] live, against the deployed Worker (url). Behind
-// Cloudflare Access, its service token comes from the environment (fnox exec -- charter live-test).
+// LiveTest runs charter live-test: the standard test, then [test] live, against the deployed Worker (url, or -base:
+// another place the same Worker is deployed, staging's). Behind Cloudflare Access, its service token comes from the
+// environment (fnox exec -- charter live-test). Each command also gets the address as BASE.
 func LiveTest(args []string) {
 	fs := flag.NewFlagSet("charter live-test", flag.ExitOnError)
+	base := fs.String("base", "", "the deployed Worker's address (default: charter.toml's url)")
 	fs.Parse(args)
 	p := load()
-	if p.URL == "" {
-		check(errors.New("charter.toml has no url: where the Worker is deployed"))
+	if *base == "" {
+		*base = p.URL
+	}
+	if *base == "" {
+		check(errors.New("charter.toml has no url: where the Worker is deployed (or -base)"))
 	}
 	if len(p.Test.Live) == 0 {
 		check(errors.New("charter.toml has no [test] live: the tests against the deployed Worker"))
 	}
 	// The deployed Worker's tokens are the environment's (fnox), never [local]'s throwaway ones.
-	check(try(p, p.Test.Live, places{base: p.URL}, nil))
+	check(try(p, p.Test.Live, places{base: strings.TrimRight(*base, "/")}, map[string]string{"BASE": strings.TrimRight(*base, "/")}))
 }

@@ -288,7 +288,7 @@ type Go struct {
 type Test struct {
 	Run    []string          `toml:"run"`    // check: against the Worker on local workerd, after the standard test
 	Native bool              `toml:"native"` // check: the same against the app run natively (go run .), first
-	Live   []string          `toml:"live"`   // live-test: against the deployed Worker (url), after the standard test
+	Live   []string          `toml:"live"`   // live-test: against the deployed Worker (url, BASE in its environment), after the standard test; Workers Builds runs it after it deploys production or staging
 	Env    map[string]string `toml:"env"`    // more environment for the Worker under test and its commands
 	Serve  []Helper          `toml:"serve"`  // what the tests serve beside the Worker for its whole run
 }
