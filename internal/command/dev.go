@@ -60,7 +60,8 @@ func devWorker() {
 	check(err)
 	bin, err := npm(p, "wrangler")
 	check(err)
-	args := []string{"dev", "--port", port, "--inspector-port", strconv.Itoa(inspector), "--show-interactive-dev-session=false"}
+	// --test-scheduled: a Cron Trigger can be fired by hand, GET /__scheduled?cron=*+*+*+*+*
+	args := []string{"dev", "--port", port, "--inspector-port", strconv.Itoa(inspector), "--show-interactive-dev-session=false", "--test-scheduled"}
 	if vite := os.Getenv("VITE_DEV_URL"); vite != "" {
 		args = append(args, "--var", "VITE_DEV_URL:"+vite)
 	}
@@ -178,7 +179,7 @@ func serving(p *project.Project, body func(base string) error) error {
 	}
 	base := "http://127.0.0.1:" + strconv.Itoa(ports[0])
 	server := run.Server{
-		Command: []string{bin, "dev", "--port", strconv.Itoa(ports[0]), "--inspector-port", strconv.Itoa(ports[1]), "--persist-to", state, "--show-interactive-dev-session=false"},
+		Command: []string{bin, "dev", "--port", strconv.Itoa(ports[0]), "--inspector-port", strconv.Itoa(ports[1]), "--persist-to", state, "--show-interactive-dev-session=false", "--test-scheduled"},
 		Dir:     p.Root, Env: quiet, Ready: base + p.HealthPath(),
 	}
 	return run.With(server, func() error { return body(base) })

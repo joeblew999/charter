@@ -1,0 +1,13 @@
+{
+  "name": "charter-workers",
+  "private": true,
+  "scripts": {
+    "dev": "go tool charter dev",
+    "check": "go tool charter check",
+    "test": "go tool charter test",
+    "deploy": "go tool charter deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.168.0"
+  }
+}

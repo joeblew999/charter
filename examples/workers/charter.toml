@@ -1,0 +1,6 @@
+# What charter adds to wrangler.jsonc.
+health = "/healthz"
+
+# Asked of the Worker on wrangler dev (go tool charter test): one test per binding.
+[test]
+run = ["go test -count=1 ./test"]

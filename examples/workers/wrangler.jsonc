@@ -1,0 +1,20 @@
+// The Worker: wrangler dev runs it, wrangler deploy ships it. Every kind of binding workers-go has.
+// https://developers.cloudflare.com/workers/wrangler/configuration/
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "charter-workers",
+  "main": "build/worker.mjs",
+  "compatibility_date": "2026-09-25",
+  "build": { "command": "go tool charter build" },
+  "vars": { "APP_NAME": "charter-workers" },
+  "kv_namespaces": [{ "binding": "KV", "id": "local" }],
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "charter-workers" }],
+  "queues": {
+    "producers": [{ "binding": "QUEUE", "queue": "charter-workers" }],
+    "consumers": [{ "queue": "charter-workers", "max_batch_timeout": 1 }]
+  },
+  "d1_databases": [{ "binding": "DB", "database_name": "charter-workers", "database_id": "local", "migrations_dir": "migrations" }],
+  "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }],
+  "triggers": { "crons": ["*/5 * * * *"] }
+}

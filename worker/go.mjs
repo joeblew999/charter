@@ -27,7 +27,7 @@
 //	import { goWorker } from "./build/go.mjs";
 //	const go = goWorker();
 //	await go.warm({ paths: ["/api/hello"] });
-//	export default { fetch: go.fetch };
+//	export default { fetch: go.fetch, scheduled: go.scheduled, queue: go.queue };
 import "./wasm_exec.js"; // the compiler's (workers-go writes it), for its global Go class
 import * as build from "./runtime.mjs";
 import { webSocket } from "./websocket.mjs";
@@ -56,6 +56,7 @@ globalThis.tryCatch = fn => {
 // goWorker is a Worker (its fetch) over the workers-go build beside this file (runtime.mjs).
 export function goWorker({ createRuntimeContext, loadModule } = build) {
 	const waiting = [];
+	let workersGo; // whether the Go program serves with workers.Serve (true) or charter's transport.Run (false)
 	let warmFailure = ""; // why no runtime was started while the module loaded, for the x-go-runtime header
 
 	// begin starts a runtime. Go's start-up runs inside go.run, up to workers.Ready(): started says
@@ -116,11 +117,53 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		return runtime;
 	}
 
+	// take is a waiting runtime whose Go program is still running. One that served with workers-go's blocking
+	// workers.Serve ends itself when its answer's body closes, as workers-go means it to (a runtime per request): it
+	// is passed over, and the request starts a new one.
+	function take() {
+		for (let runtime = waiting.pop(); runtime; runtime = waiting.pop()) if (!runtime.go.exited) return runtime;
+		return undefined;
+	}
+
 	function done(runtime) {
 		if (!runtime.go.exited && !runtime.binding.full && waiting.length < MAX_WAITING) waiting.push(runtime);
 	}
 
-	return { fetch, warm };
+	return { fetch, scheduled, queue, warm };
+
+	// run takes a runtime for one event that is no request (a cron trigger, a batch from a queue): one that is
+	// waiting, or a new one. The bindings and waitUntil are this event's. It gives the event to what the Go program
+	// registered for it, as workers-go's own entry does, and the runtime is free again when that settles.
+	async function run(env, ctx, handler, event, what) {
+		let runtime = take();
+		if (runtime) {
+			runtime.context.env = env;
+			runtime.context.ctx = ctx;
+		} else {
+			runtime = await start(env, ctx);
+		}
+		runtime.served++;
+		const handle = runtime.binding[handler];
+		if (typeof handle !== "function") {
+			done(runtime);
+			throw new Error(`the Worker got ${what}, and its Go registers nothing for it`);
+		}
+		try {
+			return await handle(event);
+		} finally {
+			done(runtime);
+		}
+	}
+
+	// scheduled is the Worker's handler for a Cron Trigger: workers-go's cron.ScheduleTaskNonBlock gets the event.
+	function scheduled(event, env, ctx) {
+		return run(env, ctx, "runScheduler", event, "a Cron Trigger (cron.ScheduleTaskNonBlock, before transport.Run)");
+	}
+
+	// queue is the Worker's handler for a batch from a queue: workers-go's queues.ConsumeNonBlock gets it.
+	function queue(batch, env, ctx) {
+		return run(env, ctx, "handleQueueMessageBatch", batch, "a batch from a queue (queues.ConsumeNonBlock, before transport.Run)");
+	}
 
 	// fetch is the Worker's: a WebSocket upgrade is carried by websocket.mjs (which gives it to Go
 	// as plain HTTP), everything else goes to Go as it is.
@@ -160,16 +203,49 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		}
 	}
 
+	// serveWorkersGo gives a request to a Go program that serves the workers-go way, workers.Serve(handler): the
+	// request itself goes to workers-go's handleRequest, so everything of workers-go that reads it works as its docs
+	// say (fetch.NewIncomingProperties, the Cache API). What charter adds is only that the runtime is kept for the next
+	// request instead of started again.
+	async function serveWorkersGo(request, env, ctx) {
+		let runtime = take();
+		const kind = runtime ? (runtime.served ? "reused" : runtime.warm ? "warm" : "new") : "new";
+		if (runtime) {
+			runtime.context.env = env;
+			runtime.context.ctx = ctx;
+		} else {
+			runtime = await start(env, ctx);
+		}
+		runtime.served++;
+		try {
+			const response = await runtime.binding.handleRequest(request);
+			if (!request.headers.has("x-go-runtime")) return response;
+			const told = new Response(response.body, response);
+			told.headers.set("x-go-runtime", warmFailure ? `${kind}; ${warmFailure}` : kind);
+			return told;
+		} finally {
+			done(runtime);
+		}
+	}
+
 	// serve gives a request to a Go runtime as two values, and gets the answer in one call when the
 	// handler did not stream (answer in transport_js.go has the protocol): every value that crosses
 	// between JavaScript and Go costs, and so does every call into Go.
 	async function serve(request, env, ctx) {
+		// Which way the Go program serves is known once a runtime has started: charter's transport.Run registers
+		// serve; workers-go's own workers.Serve registers handleRequest.
+		if (workersGo === undefined) {
+			const first = take() ?? (await start(env, ctx));
+			workersGo = typeof first.binding.serve !== "function";
+			waiting.push(first);
+		}
+		if (workersGo) return serveWorkersGo(request, env, ctx);
 		let head = `${request.method}\n${request.url}`;
 		for (const [name, value] of request.headers) if (name !== CF_HEADER) head += `\n${name}\n${value}`;
 		// request.cf, for transport.CFOf: the fields it reads, as one JSON line.
 		if (request.cf) head += `\n${CF_HEADER}\n${JSON.stringify(cfFields(request.cf))}`;
 		const body = request.body ? new Uint8Array(await request.arrayBuffer()) : null;
-		let runtime = waiting.pop();
+		let runtime = take();
 		// Which kind of runtime a request got, in the answer's x-go-runtime: for looking into a slow one.
 		const kind = runtime ? (runtime.served ? "reused" : runtime.warm ? "warm" : "new") : "new";
 		if (runtime) {
