@@ -51,8 +51,13 @@ func pick(p *catalog.Project, ids []string) []*catalog.Locale {
 	return out
 }
 
-// startIntl sets intl's Intl: the repo's intl daemon (workerd.Start), which stays for every command after.
+// startIntl sets intl's Intl: workerd (workerd.Start), which stays for every command after. In a checkout that has
+// not been built yet, the files workerd serves are written first, so the first command a developer runs works.
 func startIntl() {
+	c := app()
+	if _, err := os.Stat(filepath.Join(c.CatalogDir(), "intl-workerd", "intl-workerd.capnp")); err != nil {
+		must(read(c).Generate(os.Stderr))
+	}
 	if err := workerd.Start(); err != nil {
 		fail(fmt.Errorf("intl: Intl needs workerd: %w", err))
 	}
