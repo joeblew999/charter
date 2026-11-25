@@ -1,6 +1,7 @@
 package command
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -16,24 +17,56 @@ import (
 	intlconfig "github.com/joeblew999/charter/intl/config"
 )
 
-// Dev runs charter dev: the loop a developer works in. With gsx (a gsx.toml) it is gsx's own, go tool gsx dev: a save
-// regenerates, rebuilds and reloads the browser, through Vite. Without, wrangler dev.
+// Dev runs charter dev: the loop a developer works in, on the runtime the app ships on.
+//
+// With gsx (a gsx.toml) it is gsx's own loop, go tool gsx dev, with its two documented hooks: the build is charter
+// build -dev (the Wasm, about half a second) and the server is wrangler dev (about a second to start when the build
+// is there). So a save regenerates, rebuilds, restarts the Worker and reloads the browser through Vite, and what is
+// on screen is workers-go on the Workers runtime with wrangler.jsonc's bindings, as in production. Without gsx it is
+// wrangler dev alone.
 //
 // Everything else a developer runs meanwhile, in another terminal, reaches the open page by itself: gsx dev watches
-// the Go and gsx files (charter add, gsxui add), Vite the browser's files, and charter the languages: a change to a
+// the Go and gsx files (gsxui add), Vite the browser's files (npm install), and charter the languages: a change to a
 // catalog or to charter.toml (charter intl add-locale, charter intl translate, an edit by hand) compiles the
 // messages again, which gsx dev then picks up.
 func Dev(args []string) {
-	p := load()
-	if hasGSX(p) {
-		if hasIntl(p) {
-			check(generate(p)) // the first build needs the messages and Vite's manifest
-			go watchLanguages(p)
-		}
-		check(passthrough(p, "go", append([]string{"tool", "gsx", "dev"}, args...)...))
+	if len(args) > 0 && args[0] == "-worker" {
+		devWorker()
 		return
 	}
-	Preview(args)
+	p := load()
+	if !hasGSX(p) {
+		Preview(args)
+		return
+	}
+	check(generate(p)) // the first build needs the messages and Vite's manifest
+	check(migrate(p, map[string]string{"WRANGLER_SEND_METRICS": "false"}, "--local"))
+	if hasIntl(p) {
+		go watchLanguages(p)
+	}
+	// As gsx's flags take them: a command line, split on spaces. go tool charter is this charter, by the app's go.mod.
+	gsx := []string{"tool", "gsx", "dev", "--build", "go tool charter build -dev", "--run", "go tool charter dev -worker"}
+	check(passthrough(p, "go", append(gsx, args...)...))
+}
+
+// devWorker is charter dev -worker, the server gsx dev starts after each build and stops before the next: wrangler
+// dev on the port gsx chose (GO_PORT), told where Vite's dev server is (VITE_DEV_URL, which gsxapp reads as a
+// variable of the Worker) and that the build is done.
+func devWorker() {
+	p := load()
+	port := os.Getenv("GO_PORT")
+	if port == "" {
+		check(errors.New("charter dev -worker is what charter dev has gsx run: it needs GO_PORT, which gsx dev sets"))
+	}
+	inspector, err := run.FreePort()
+	check(err)
+	bin, err := npm(p, "wrangler")
+	check(err)
+	args := []string{"dev", "--port", port, "--inspector-port", strconv.Itoa(inspector), "--show-interactive-dev-session=false"}
+	if vite := os.Getenv("VITE_DEV_URL"); vite != "" {
+		args = append(args, "--var", "VITE_DEV_URL:"+vite)
+	}
+	check(run.Foreground(p.Root, map[string]string{devBuilt: "1", "WRANGLER_SEND_METRICS": "false"}, bin, args...))
 }
 
 // watchLanguages compiles the messages again whenever a catalog or charter.toml changes, for as long as dev runs. It

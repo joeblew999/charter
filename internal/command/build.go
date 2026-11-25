@@ -16,6 +16,9 @@ import (
 
 const library = "github.com/joeblew999/charter"
 
+// devBuilt is set for the wrangler dev that charter dev runs: the build is already there.
+const devBuilt = "CHARTER_DEV_BUILT"
+
 // Build runs charter build: everything wrangler needs to run or deploy the Worker. wrangler.jsonc names it as its
 // build command, so wrangler dev and wrangler deploy run it themselves.
 //
@@ -29,11 +32,21 @@ const library = "github.com/joeblew999/charter"
 func Build(args []string) {
 	fs := flag.NewFlagSet("charter build", flag.ExitOnError)
 	only := fs.String("only", "", `"generate": stop once the Go that go test and go vet need is written`)
+	dev := fs.Bool("dev", false, "the Wasm only: what charter dev runs on each save, after gsx has regenerated")
 	limit := fs.Int("limit", 0, "fail when build/app.wasm is more than this many bytes gzipped (default: charter.toml's [build] limit)")
 	fs.Parse(args)
+	// Under charter dev the build is done before wrangler starts: wrangler's own call of its build command has
+	// nothing left to do, which is what lets it start in a second.
+	if os.Getenv(devBuilt) != "" {
+		return
+	}
 	p := load()
 	if *limit == 0 {
 		*limit = p.Build.Limit
+	}
+	if *dev {
+		check(wasm(p, 0))
+		return
 	}
 	check(generate(p))
 	if *only == "generate" {

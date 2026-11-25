@@ -12,9 +12,11 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -205,5 +207,32 @@ func stop(cmd *exec.Cmd, exited <-chan error) {
 		if cmd.Process != nil {
 			cmd.Process.Kill()
 		}
+	}
+}
+
+// Foreground runs program until it ends, as this process's own job: its output is the terminal's, and when this
+// process is told to stop (Ctrl-C, or a parent stopping it) the program and what it started stop with it.
+func Foreground(dir string, env map[string]string, program string, args ...string) error {
+	cmd := exec.Command(Bin(program, dir), args...)
+	cmd.Dir, cmd.Env, cmd.Stdin, cmd.Stdout, cmd.Stderr = dir, Env(env), os.Stdin, os.Stdout, os.Stderr
+	group(cmd)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	stopped := make(chan os.Signal, 1)
+	signal.Notify(stopped, os.Interrupt, syscall.SIGTERM)
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	select {
+	case err := <-done:
+		return err
+	case <-stopped:
+		kill(cmd)
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			cmd.Process.Kill()
+		}
+		return nil
 	}
 }

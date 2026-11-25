@@ -109,6 +109,12 @@ func (s *App) Handler(next http.Handler) http.Handler {
 		}.Handler(h)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A path that touches no binding: what gsx dev probes after each rebuild, what a Go runtime answers as it
+		// starts warm, what a health check asks.
+		if r.URL.Path == "/healthz" {
+			w.Write([]byte("ok"))
+			return
+		}
 		v, err := s.assets()
 		if err != nil {
 			http.Error(w, "site: "+err.Error(), http.StatusInternalServerError)
@@ -126,7 +132,9 @@ func (s *App) Handler(next http.Handler) http.Handler {
 	})
 }
 
-// assets is what the site needs before its first request, made once: off Workers the languages' Intl, and Vite: in dev (VITE_DEV_URL, which gsx dev sets) the dev server's URLs, else the manifest's.
+// assets is what the site needs before its first request, made once: off Workers the languages' Intl, and Vite
+// (VITE_DEV_URL is a variable of the Worker under charter dev, and the environment's on a plain Go server): in dev
+// the dev server's URLs, else the manifest's.
 func (s *App) assets() (*vite.Vite, error) {
 	s.once.Do(func() {
 		dist := s.Dist
@@ -138,7 +146,7 @@ func (s *App) assets() (*vite.Vite, error) {
 				return
 			}
 		}
-		s.vite, s.err = vite.New(vite.Config{DevURL: os.Getenv("VITE_DEV_URL"), DevBase: "/__vite/", Dist: dist, DistDir: "dist", StaticURL: "/"})
+		s.vite, s.err = vite.New(vite.Config{DevURL: bindings.Var("VITE_DEV_URL"), DevBase: "/__vite/", Dist: dist, DistDir: "dist", StaticURL: "/"})
 	})
 	return s.vite, s.err
 }
