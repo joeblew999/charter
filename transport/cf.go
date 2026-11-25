@@ -8,12 +8,9 @@ import (
 	"strings"
 )
 
-// CF is what Cloudflare knows of where a request came from: its request.cf, the fields an app
-// uses. On Cloudflare, worker/go.mjs passes it with every request (and with a WebSocket upgrade);
-// natively, and for a request that did not come through go.mjs, it is the zero CF.
-//
-// workers-go's fetch.NewIncomingProperties reads the same from workers-go's own request path,
-// which Run does not use (it panics there: "trigger object was not found"). Use this instead.
+// CF is what Cloudflare knows of where a request came from: its request.cf, the fields an app uses. On Cloudflare it
+// is read from workers-go's own request properties (fetch.NewIncomingProperties, which a handler may call itself
+// for the rest); off Workers it is the zero CF, or what a test gave the request with WithCF.
 type CF struct {
 	Country     string `json:"country"`     // ISO 3166-1 alpha-2, e.g. "DE"
 	Region      string `json:"region"`      // e.g. "Bavaria"
@@ -29,9 +26,9 @@ type CF struct {
 	IsEUCountry string `json:"isEUCountry"` // "1" in the EU (Cloudflare sends "1" or true), else ""
 }
 
-// cfHeader carries request.cf from worker/go.mjs to answer as one line of the request's head.
-// go.mjs drops a header of that name the client sent, and answer removes it from the request, so
-// a handler never sees it and a client cannot set CF.
+// cfHeader carries the upgrade's request.cf from worker/websocket.mjs with each WebSocket message it gives Go as a
+// request of its own, which has none. worker/go.mjs drops a header of that name a client sent, so a client cannot
+// set CF.
 const cfHeader = "X-Charter-Cf"
 
 type cfKey struct{}
@@ -52,11 +49,14 @@ func CFOf(r *http.Request) CF {
 // from. On Cloudflare, worker/go.mjs passes the real one.
 func WithCF(r *http.Request, cf CF) *http.Request {
 	raw, _ := json.Marshal(cf)
-	return r.WithContext(context.WithValue(r.Context(), cfKey{}, cfValue{cf, raw}))
+	return r.WithContext(withValue(r.Context(), cfValue{cf, raw}))
 }
 
-// CFJSON is r's request.cf as worker/go.mjs passed it (CF's fields, exactly as Cloudflare sent them), nil without
-// one: for an app that reads a field its own way.
+func withValue(ctx context.Context, v cfValue) context.Context {
+	return context.WithValue(ctx, cfKey{}, v)
+}
+
+// CFJSON is r's request.cf as JSON (CF's fields), nil without one.
 func CFJSON(r *http.Request) json.RawMessage {
 	v, _ := r.Context().Value(cfKey{}).(cfValue)
 	return v.raw

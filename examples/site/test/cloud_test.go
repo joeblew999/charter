@@ -124,3 +124,61 @@ func TestEmail(t *testing.T) {
 	res.Body.Close()
 	soon(t, "the received email", "ada@example.com: A note for the site")
 }
+
+// card is what the card called id shows.
+func card(t *testing.T, id string) string {
+	t.Helper()
+	m := regexp.MustCompile(`<p id="` + id + `"[^>]*>([^<]*)</p>`).FindStringSubmatch(page(t, "/cloud"))
+	if m == nil {
+		t.Fatalf("the page has no card %q", id)
+	}
+	return m[1]
+}
+
+func TestD1ThroughWorkersGo(t *testing.T) {
+	before := card(t, "rows")
+	// A message posted on the home page is a row more.
+	res, err := http.PostForm(base+"/messages", url.Values{"body": {"counted by D1"}})
+	if err != nil || res.StatusCode != 200 {
+		t.Fatalf("POST /messages: %v %v", res, err)
+	}
+	res.Body.Close()
+	if after := card(t, "rows"); !regexp.MustCompile(`^\d+$`).MatchString(before) || after == before {
+		t.Errorf("rows: %q then %q, want a count that went up", before, after)
+	}
+}
+
+func TestCacheAPI(t *testing.T) {
+	card(t, "cached") // the first visit stores it
+	if got := card(t, "cached"); !strings.HasPrefix(got, "hit: stored 20") {
+		t.Errorf("cached: %q, want a hit", got)
+	}
+}
+
+func TestDurableObjectStub(t *testing.T) {
+	if got := card(t, "object"); !regexp.MustCompile(`^Hub → HTTP \d{3}$`).MatchString(got) {
+		t.Errorf("object: %q, want the hub's status", got)
+	}
+}
+
+func TestTCPSocket(t *testing.T) {
+	if got := card(t, "socket"); !strings.Contains(got, "→ HTTP/1.") {
+		t.Errorf("socket: %q, want the first line of an HTTP answer", got)
+	}
+}
+
+func TestWaitUntil(t *testing.T) {
+	card(t, "after") // this visit's work runs after its answer
+	for start := time.Now(); time.Since(start) < 30*time.Second; time.Sleep(300 * time.Millisecond) {
+		if strings.HasPrefix(card(t, "after"), "20") {
+			return
+		}
+	}
+	t.Error("after: the work after an answer never finished")
+}
+
+func TestRequestProperties(t *testing.T) {
+	if got := card(t, "request"); strings.Trim(got, " ·") == "" || !strings.Contains(got, " · ") {
+		t.Errorf("request: %q, want what Cloudflare knows of the request", got)
+	}
+}

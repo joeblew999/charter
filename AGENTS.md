@@ -12,8 +12,8 @@ How the repo works: [README.md](README.md). Plans and open work are GitHub issue
 - **`charter.toml` holds only what wrangler has no place for** (the contract, SDKs, tests, `[intl]`, `[seo]`). A
   Worker's facts are wrangler's. No other settings file: languages and search engines are tables of it.
 - **workers-go is used the workers-go way.** Everything it has (KV, R2, Queues, D1, Cron, Cache, Durable Objects,
-  fetch, sockets) is imported and called directly, and must work under charter's build: `examples/workers` has a test
-  for each. charter adds only what workers-go lacks, in its style, and says so where it is defined (`email`).
+  fetch, sockets) is imported and called directly, and must work under charter's build: `examples/site`'s `/cloud`
+  page has a card for each, and a test for each card. charter adds only what workers-go lacks, in its style, and says so where it is defined (`email`).
 - **charter's own bindings have a stand-in off Workers** (`d1`, `bindings`, `hub`), for code that should run under
   `go test`.
 - **Every library package is at the top** (`charter/intl`, `charter/d1`, …): no grouping folders in import paths.

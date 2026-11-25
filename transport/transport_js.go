@@ -3,44 +3,29 @@
 package transport
 
 import (
-	"bytes"
-	"context"
-	"io"
+	"encoding/json"
 	"net/http"
 	"runtime"
-	"strings"
 	"syscall/js"
 
 	"github.com/syumai/workers-go"
+	"github.com/syumai/workers-go/cloudflare/fetch"
 )
 
-// What this Go runtime has served: how many requests, the allocation counter after the last one,
-// and the most one request allocated.
-var (
-	served      int
-	allocated   uint64
-	mostRequest uint64
-)
+// What this Go runtime has served, for deciding when it should serve no more.
+var served int
 
-// What worker/go.mjs and this runtime call each other through, and JavaScript's byte array.
-var (
-	binding    = js.Global().Get("context").Get("binding")
-	uint8Array = js.Global().Get("Uint8Array")
-)
+// binding is what worker/go.mjs and this runtime say to each other through.
+var binding = js.Global().Get("context").Get("binding")
 
-// Run serves h on Cloudflare and never returns, so the Go runtime stays alive after a response and
-// worker/go.mjs can give it the next request. (workers.Serve returns when the first response's body
-// is closed, and the program ends.)
+// Run serves h on Cloudflare the workers-go way and never returns: the handler is workers-go's
+// (workers.ServeNonBlock), so a request reaches it through workers-go's own path and everything of workers-go that
+// reads the request works in h (fetch.NewIncomingProperties, the Cache API). The program does not end with the
+// answer, as workers.Serve's does, so worker/go.mjs can give this Go runtime the next request.
 //
-// A runtime that go.mjs starts while the Worker's module loads is given paths to warm up with (the
-// binding's "warm"): Run then answers a GET of each before any request comes, into nothing. A path
-// must be one whose handler touches no binding, like the OpenAPI route, which also registers every
-// operation. What a new isolate's first request would have paid for is then done already.
-//
-// Requests come through the binding's "serve" (answer, below), not through workers-go's
-// handleRequest, which costs a hello a dozen goroutines and some hundred values crossing between
-// JavaScript and Go. workers-go still gets the handler, so its own entry (build/worker.mjs) works
-// too.
+// A runtime that go.mjs starts while the Worker's module loads is given paths to warm up with (the binding's "warm"):
+// Run then answers a GET of each before any request comes, into nothing. A path must be one whose handler touches no
+// binding. What a new isolate's first request would have paid for is then done already.
 func Run(h http.Handler) {
 	if paths := binding.Get("warm"); paths.Type() == js.TypeObject {
 		for i := 0; i < paths.Length(); i++ {
@@ -49,16 +34,7 @@ func Run(h http.Handler) {
 			}
 		}
 	}
-	var stats runtime.MemStats
-	runtime.ReadMemStats(&stats)
-	allocated = stats.TotalAlloc // start-up is not a request's allocation
-	handler := Serve(h)
-	binding.Set("serve", js.FuncOf(func(_ js.Value, args []js.Value) any {
-		head, body := args[0].String(), args[1]
-		fromJS(func() { answer(handler, head, body) })
-		return nil
-	}))
-	workers.ServeNonBlock(handler)
+	workers.ServeNonBlock(Serve(h))
 	workers.Ready()
 	select {}
 }
@@ -70,179 +46,47 @@ func (d *discard) Header() http.Header         { return d.header }
 func (d *discard) Write(p []byte) (int, error) { return len(p), nil }
 func (d *discard) WriteHeader(int)             {}
 
-// answer runs one request, in the goroutine of the call from JavaScript. Every value that crosses
-// between JavaScript and Go costs, so worker/go.mjs gives the request as two: head is the method,
-// the URL, and then each header's name and its value, one per line; body is the bytes (a
-// Uint8Array), or null.
-//
-// The answer goes back through two functions go.mjs puts on the binding:
-//
-//   - respond(status, head, body, more): the status, the headers (a name and its value, one per
-//     line), and what was written so far. A handler that returns without flushing, as every JSON
-//     answer does, costs this one call, with more false.
-//   - write(body, more): what was written since, once the answer is a stream. It returns false
-//     when the client has gone.
-//
-// An answer becomes a stream at the handler's first Flush (http.Flusher), or when streamLimit
-// bytes are waiting. Nothing else sends bytes before the handler returns, as with net/http.
-func answer(h http.Handler, head string, body js.Value) {
-	lines := strings.Split(head, "\n")
-	w := &response{header: http.Header{}}
-	r, err := http.NewRequest(lines[0], lines[1], http.NoBody)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		w.send(false)
-		return
-	}
-	for i := 2; i+1 < len(lines); i += 2 {
-		r.Header.Add(lines[i], lines[i+1])
-	}
-	r.RemoteAddr = r.Header.Get("Cf-Connecting-Ip")
-	r = withCF(r)
-	if !body.IsNull() {
-		r.Body, r.ContentLength = &requestBody{js: body}, int64(body.Length())
-	}
-	h.ServeHTTP(w, r)
-	w.send(false)
-}
-
-// requestBody copies the request's body out of JavaScript when the handler first reads it.
-type requestBody struct {
-	js     js.Value
-	copied bool
-	data   bytes.Reader
-}
-
-func (b *requestBody) Read(p []byte) (int, error) {
-	if !b.copied {
-		data := make([]byte, b.js.Length())
-		js.CopyBytesToGo(data, b.js)
-		b.data.Reset(data)
-		b.copied = true
-	}
-	return b.data.Read(p)
-}
-
-func (b *requestBody) Close() error { return nil }
-
-// streamLimit is how much of an answer waits in Go before it is sent on as a stream.
-const streamLimit = 1 << 20
-
-// response is the ResponseWriter of answer: it keeps what the handler writes until send.
-type response struct {
-	header    http.Header
-	status    int
-	body      []byte
-	streaming bool // the status and headers have gone to JavaScript
-	closed    bool // nothing more can be sent: the handler has returned, or the client has gone
-}
-
-func (w *response) Header() http.Header { return w.header }
-
-func (w *response) WriteHeader(status int) {
-	if w.status == 0 {
-		w.status = status
-	}
-}
-
-func (w *response) Write(p []byte) (int, error) {
-	if w.closed {
-		return 0, io.ErrClosedPipe
-	}
-	w.WriteHeader(http.StatusOK)
-	if w.body = append(w.body, p...); len(w.body) > streamLimit {
-		w.send(true)
-	}
-	return len(p), nil
-}
-
-// Flush sends what was written so far: the answer is a stream from here on.
-func (w *response) Flush() { w.send(true) }
-
-// send gives JavaScript what was written since the last send. more says whether the handler is
-// still running: after the last send the binding's functions are the next request's.
-func (w *response) send(more bool) {
-	if w.closed {
-		return
-	}
-	body := js.Null()
-	if len(w.body) > 0 {
-		body = uint8Array.New(len(w.body))
-		js.CopyBytesToJS(body, w.body)
-		w.body = w.body[:0]
-	}
-	if w.streaming {
-		w.closed = !binding.Call("write", body, more).Bool() || !more
-		return
-	}
-	w.streaming, w.closed = true, !more
-	w.WriteHeader(http.StatusOK)
-	var head []byte
-	for name, values := range w.header {
-		for _, value := range values {
-			head = append(append(append(append(head, name...), '\n'), newlines.Replace(value)...), '\n')
-		}
-	}
-	binding.Call("respond", w.status, string(head), body, more)
-}
-
-// A header's value is one line: a newline in it would be read as the next header.
-var newlines = strings.NewReplacer("\n", " ", "\r", " ")
-
-// Serve cancels the request's context when the client has gone, and says when this Go runtime
-// should not get another request.
-//
-// The client has gone: the Worker's entry says so. worker/go.mjs calls the binding's cancel
-// function, which is this request's while it runs (a runtime serves one request at a time). Under
-// workers-go's own entry, which runs one request per runtime, workers.Done() says it: it is closed
-// when the response body is closed or cancelled.
-//
-// No more requests: a runtime is reused only while its heap has room for another request without
-// the collector running. A collection in a full heap cost 65 to 293 ms of CPU on Cloudflare, far
-// more than a new runtime does, and TinyGo's collector got little back. When the room is gone the
-// binding's "full" is set, and worker/go.mjs drops the runtime after this response.
+// Serve is h with what charter adds to a request on Cloudflare: where it came from (CFOf, read from workers-go's own
+// request properties), its client's address as RemoteAddr, and, after it, whether this Go runtime should get another
+// request: one that holds too much memory sets the binding's "full", and worker/go.mjs lets it go.
 //
 // The WebSocket adapter is JavaScript here: worker/websocket.mjs.
 func Serve(h http.Handler) http.Handler {
-	// One function for the life of the runtime: it cancels whichever request is running.
-	var cancelRequest context.CancelFunc
-	binding.Set("cancel", js.FuncOf(func(js.Value, []js.Value) any {
-		if cancelRequest != nil {
-			cancelRequest()
-		}
-		return nil
-	}))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithCancel(r.Context())
-		cancelRequest = cancel
-		defer func() {
-			cancelRequest = nil
-			cancel()
-		}()
-		if served++; served == 1 {
-			go func() {
-				select {
-				case <-workers.Done():
-					cancel()
-				case <-ctx.Done():
-				}
-			}()
+		if r.RemoteAddr == "" {
+			r.RemoteAddr = r.Header.Get("Cf-Connecting-Ip")
 		}
-		h.ServeHTTP(w, r.WithContext(ctx))
+		h.ServeHTTP(w, incoming(r))
 
-		// Reading the heap's state walks its whole block table, so it is done for the first request
-		// and then for one in eight, with room kept for the eight in between.
-		if served%8 != 1 {
+		// Reading the heap's state is not free: for the first request, then for one in eight.
+		if served++; served%8 != 1 {
 			return
 		}
 		var stats runtime.MemStats
 		runtime.ReadMemStats(&stats)
-		if since := stats.TotalAlloc - allocated; since > mostRequest {
-			mostRequest = since
-		}
-		allocated = stats.TotalAlloc
-		if full(&stats, mostRequest) {
+		if full(&stats, 0) {
 			binding.Set("full", true)
 		}
 	})
+}
+
+// incoming is r carrying what Cloudflare knows of it (request.cf), as workers-go reads it. A request with none (the
+// warm-up's, a WebSocket message the adapter made) is r as it is.
+func incoming(r *http.Request) (out *http.Request) {
+	// A WebSocket message: the adapter passes the upgrade's request.cf along, since its own request has none.
+	if r.Header.Get(cfHeader) != "" {
+		return withCF(r)
+	}
+	out = r
+	defer func() { recover() }() // no request object behind this one: workers-go says so by panicking
+	p, err := fetch.NewIncomingProperties(r.Context())
+	if err != nil || p == nil {
+		return r
+	}
+	cf := CF{
+		Country: p.Country, Region: p.Region, RegionCode: p.RegionCode, City: p.City, PostalCode: p.PostalCode,
+		Continent: p.Continent, Timezone: p.Timezone, Latitude: p.Latitude, Longitude: p.Longitude, Colo: p.Colo, ASN: p.Asn,
+	}
+	raw, _ := json.Marshal(cf)
+	return r.WithContext(withValue(r.Context(), cfValue{cf, raw}))
 }

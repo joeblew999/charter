@@ -142,8 +142,8 @@ Every package is at the top: `github.com/joeblew999/charter/<name>`.
 ## All of workers-go
 
 Everything [workers-go](https://github.com/syumai/workers-go) has works as its own docs say: import its packages and
-call them. charter's build serves `workers.Serve` programs as well as its own `transport.Run`, and its Worker entry
-handles requests, Cron Triggers, queues and email.
+call them. charter's `transport.Run` serves through workers-go's own request path, a plain `workers.Serve` program
+works too, and the Worker entry handles requests, Cron Triggers, queues and email.
 
 | Cloudflare | Use | From |
 |---|---|---|
@@ -161,8 +161,8 @@ handles requests, Cron Triggers, queues and email.
 | Rate limits, a fan-out hub | `bindings.Allow`, `hub.DurableObject` | charter |
 | Any other binding | `cloudflare.GetBinding("NAME")`, a `js.Value` | workers-go |
 
-[`examples/workers`](examples/workers) uses every one of them with a test each, and
-[`examples/site`](examples/site)'s `/cloud` page uses them in a page you can click through.
+[`examples/site`](examples/site)'s `/cloud` page uses every one of them, a card each, in a page you can click
+through (`pages/cloud_js.go`), with a test per card that runs on wrangler dev (`test/cloud_test.go`).
 
 A file that imports workers-go's packages builds only for a Worker (`//go:build js && wasm`): they are `syscall/js`.
 That is fine now that `charter dev` and `charter test` run the Worker itself. For code that should also run under
@@ -180,8 +180,7 @@ The rest of the repo: [`cmd/charter`](cmd/charter) is the command, [`internal/`]
 | Example | What it shows |
 |---|---|
 | [`examples/api`](examples/api) | The smallest API: one route from a contract, its specs, MCP |
-| [`examples/site`](examples/site) | An API and its pages in one Worker: gsx, gsxui, htmx 4, Vite, three languages (one right-to-left), search engines, D1, live over SSE, and a page that uses KV, R2, Queues, Cron, email and fetch |
-| [`examples/workers`](examples/workers) | Every workers-go binding, the workers-go way, and email: KV, R2, Queues, D1, Cache, Cron, Durable Objects, fetch, sockets |
+| [`examples/site`](examples/site) | An API and its pages in one Worker: gsx, gsxui, htmx 4, Vite, three languages (one right-to-left), search engines, D1, live over SSE, and `/cloud`, a page with a card for everything workers-go gives a Worker, and email |
 | [`examples/notes`](examples/notes) | A full API: auth, D1, SSE and WebSocket streams, rate limits, SDKs in Go and Python and a command-line client |
 
 In this repo: `npm install` once at the top (the examples share one `node_modules`), then `go tool charter dev` or

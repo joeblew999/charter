@@ -7,5 +7,4 @@ use (
 	./examples/notes/sdk/go
 	./examples/notes/test/soak-go
 	./examples/site
-	./examples/workers
 )

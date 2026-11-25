@@ -11,8 +11,3 @@ const maxSys = 48 << 20
 // full says whether this runtime should serve no more requests. The standard compiler's collector does its job and its
 // heap grows as it needs, so a collection is no reason to go: the runtime goes when it holds too much memory.
 func full(stats *runtime.MemStats, _ uint64) bool { return stats.Sys > maxSys }
-
-// fromJS runs f for a call from JavaScript. With the standard compiler such a call must return before JavaScript can
-// go on, so nothing in it may wait: a promise it waited for could never settle ("all goroutines are asleep"). f runs
-// in a goroutine of its own.
-func fromJS(f func()) { go f() }

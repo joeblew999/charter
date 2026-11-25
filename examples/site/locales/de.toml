@@ -28,10 +28,16 @@ queues = "Eine Nachricht an eine Queue. Der Consumer holt sie einen Moment spät
 message = "Nachricht"
 send = "Senden"
 cron = "Der Zeitplan, der zuletzt lief, und wann."
+d1 = "Zeilen in der D1-Datenbank, gezählt über den database/sql-Treiber von workers-go: die Nachrichten der Startseite."
+cache = "Ein Wert, der eine Minute lang in der Cache API liegt. Der erste Besuch speichert ihn, die nächsten lesen ihn."
+object = "Ein Durable Object, über seinen Stub aufgerufen: der Hub hinter der Live-Liste."
+socket = "Ein TCP-Socket zur eigenen Adresse dieser Website und die erste Zeile der Antwort."
+after = "Arbeit, die lief, nachdem die vorige Antwort gesendet war, und wann sie fertig wurde."
+request = "Was Cloudflare über Ihre Anfrage weiß: Land, Stadt, Zeitzone, Rechenzentrum, Protokoll."
 email = "Eine Nachricht, über ein send_email-Binding gesendet, und die letzte, die Email Routing diesem Worker übergeben hat."
 email_to = "Senden an"
 fetch = "Eine Anfrage dieses Workers an seinen eigenen Health-Check."
-vars = "Eine Variable des Workers und was Cloudflare über Ihre Anfrage weiß."
+vars = "Eine Variable des Workers, aus wrangler.jsonc."
 
 [gsxui]
 close = "Schließen"

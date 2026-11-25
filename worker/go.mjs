@@ -33,8 +33,8 @@ import * as build from "./runtime.mjs";
 import { EmailMessage } from "cloudflare:email"; // for charter/email's Send: what a send_email binding takes
 import { webSocket } from "./websocket.mjs";
 
-// request.cf's fields transport.CF has (cf.go), under the header name it reads (lower case, as
-// Headers gives names). A client's own header of that name is dropped.
+// request.cf's fields transport.CF has (cf.go), under the header name it reads for a WebSocket's messages (lower
+// case, as Headers gives names). A client's own header of that name is dropped.
 const CF_HEADER = "x-charter-cf";
 const CF_FIELDS = ["country", "region", "regionCode", "city", "postalCode", "continent", "timezone", "latitude", "longitude", "colo", "asn", "isEUCountry"];
 function cfFields(cf) {
@@ -57,7 +57,6 @@ globalThis.tryCatch = fn => {
 // goWorker is a Worker (its fetch) over the workers-go build beside this file (runtime.mjs).
 export function goWorker({ createRuntimeContext, loadModule } = build) {
 	const waiting = [];
-	let workersGo; // whether the Go program serves with workers.Serve (true) or charter's transport.Run (false)
 	let warmFailure = ""; // why no runtime was started while the module loaded, for the x-go-runtime header
 
 	// begin starts a runtime. Go's start-up runs inside go.run, up to workers.Ready(): started says
@@ -175,7 +174,18 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 	// fetch is the Worker's: a WebSocket upgrade is carried by websocket.mjs (which gives it to Go
 	// as plain HTTP), everything else goes to Go as it is.
 	function fetch(request, env, ctx) {
-		if (request.headers.get("upgrade") === "websocket") return webSocket({ fetch: serve }, request, env, ctx);
+		// Only websocket.mjs may say where a request came from this way: a client's own header of that name goes.
+		if (request.headers.has(CF_HEADER)) {
+			request = new Request(request);
+			request.headers.delete(CF_HEADER);
+		}
+		if (request.headers.get("upgrade") === "websocket") {
+			// Each message of the socket reaches Go as a request the adapter makes, which Cloudflare knows nothing
+			// of: the upgrade's request.cf goes along with them, as a header.
+			const upgrade = new Request(request);
+			if (request.cf) upgrade.headers.set(CF_HEADER, JSON.stringify(cfFields(request.cf)));
+			return webSocket({ fetch: serve }, upgrade, env, ctx);
+		}
 		return serve(request, env, ctx);
 	}
 
@@ -210,11 +220,13 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		}
 	}
 
-	// serveWorkersGo gives a request to a Go program that serves the workers-go way, workers.Serve(handler): the
-	// request itself goes to workers-go's handleRequest, so everything of workers-go that reads it works as its docs
-	// say (fetch.NewIncomingProperties, the Cache API). What charter adds is only that the runtime is kept for the next
-	// request instead of started again.
-	async function serveWorkersGo(request, env, ctx) {
+	// serve gives a request to a Go runtime through workers-go's own path (the handleRequest that workers.Serve,
+	// workers.ServeNonBlock and so charter's transport.Run register): the request itself goes to Go, so everything
+	// of workers-go that reads it works as its docs say. What charter adds is that the runtime is kept for the next
+	// request instead of started again for each. (charter had a path of its own here, two strings in and one call
+	// back; measured on 2026-11-25 with the standard compiler it saved 0.2 to 0.3 ms a request, and cost workers-go's
+	// request properties and Cache API. It went.)
+	async function serve(request, env, ctx) {
 		let runtime = take();
 		const kind = runtime ? (runtime.served ? "reused" : runtime.warm ? "warm" : "new") : "new";
 		if (runtime) {
@@ -233,77 +245,5 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		} finally {
 			done(runtime);
 		}
-	}
-
-	// serve gives a request to a Go runtime as two values, and gets the answer in one call when the
-	// handler did not stream (answer in transport_js.go has the protocol): every value that crosses
-	// between JavaScript and Go costs, and so does every call into Go.
-	async function serve(request, env, ctx) {
-		// Which way the Go program serves is known once a runtime has started: charter's transport.Run registers
-		// serve; workers-go's own workers.Serve registers handleRequest.
-		if (workersGo === undefined) {
-			const first = take() ?? (await start(env, ctx));
-			workersGo = typeof first.binding.serve !== "function";
-			waiting.push(first);
-		}
-		if (workersGo) return serveWorkersGo(request, env, ctx);
-		let head = `${request.method}\n${request.url}`;
-		for (const [name, value] of request.headers) if (name !== CF_HEADER) head += `\n${name}\n${value}`;
-		// request.cf, for transport.CFOf: the fields it reads, as one JSON line.
-		if (request.cf) head += `\n${CF_HEADER}\n${JSON.stringify(cfFields(request.cf))}`;
-		const body = request.body ? new Uint8Array(await request.arrayBuffer()) : null;
-		let runtime = take();
-		// Which kind of runtime a request got, in the answer's x-go-runtime: for looking into a slow one.
-		const kind = runtime ? (runtime.served ? "reused" : runtime.warm ? "warm" : "new") : "new";
-		if (runtime) {
-			// The bindings and waitUntil are this request's.
-			runtime.context.env = env;
-			runtime.context.ctx = ctx;
-		} else {
-			runtime = await start(env, ctx);
-		}
-		runtime.served++;
-		return new Promise(resolve => {
-			const { binding } = runtime;
-			let stream; // the controller of a streamed body, until the client goes away
-			binding.respond = (status, head, body, more) => {
-				const headers = new Headers();
-				const lines = head.split("\n");
-				for (let i = 0; i + 1 < lines.length; i += 2) headers.append(lines[i], lines[i + 1]);
-				if (request.headers.has("x-go-runtime")) headers.set("x-go-runtime", warmFailure ? `${kind}; ${warmFailure}` : kind);
-				// The whole answer: the runtime is free for the next request.
-				if (!more) {
-					const response = new Response(body, { status, headers });
-					done(runtime);
-					return resolve(response);
-				}
-				// A stream: the runtime is free when Go has written the last of it. If the client goes
-				// away first, Go is told (transport.Serve cancels the request's context) and the
-				// runtime is dropped.
-				let readable = new ReadableStream({
-					start(controller) {
-						stream = controller;
-						if (body) controller.enqueue(body);
-					},
-					cancel() {
-						stream = null;
-						binding.cancel?.();
-					},
-				});
-				const length = headers.get("content-length");
-				if (length !== null) readable = readable.pipeThrough(new FixedLengthStream(Number(length)));
-				resolve(new Response(readable, { status, headers }));
-			};
-			binding.write = (body, more) => {
-				if (!stream) return false;
-				if (body) stream.enqueue(body);
-				if (!more) {
-					stream.close();
-					done(runtime);
-				}
-				return true;
-			};
-			binding.serve(head, body);
-		});
 	}
 }

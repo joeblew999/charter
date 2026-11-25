@@ -10,7 +10,8 @@ import (
 	"github.com/joeblew999/charter/intl"
 )
 
-// CloudState is what the Cloudflare page shows, read from the Worker's bindings (cloud_js.go).
+// CloudState is what the Cloudflare page shows: everything workers-go gives a Worker, read through its own packages
+// (cloud_js.go), and email (charter/email).
 type CloudState struct {
 	OnWorkers bool     // false off Workers (go test): the bindings are workers-go's, which a Worker has
 	Visits    int      // KV: how often the page was opened
@@ -18,8 +19,13 @@ type CloudState struct {
 	Queued    []string // Queues: the messages the consumer has taken, newest first
 	Cron      string   // Cron Triggers: the schedule that last ran, and when
 	Name      string   // a variable of the Worker
-	Place     string   // what Cloudflare knows of the request: country and time zone
 	Fetched   string   // fetch: what this Worker's own /healthz answered
+	Rows      string   // D1: how many messages the database has, through workers-go's database/sql driver
+	Cached    string   // the Cache API: whether the value came from the cache, and when it was stored
+	Object    string   // a Durable Object: what its stub answered
+	Socket    string   // a TCP socket: the first line the other end sent
+	After     string   // waitUntil: when the work after the last answer finished
+	Request   string   // the request's properties, as workers-go reads them (request.cf)
 	Sent      string   // email: whom the last message was sent to
 	Received  string   // email: the sender and subject of the last message received
 }
@@ -54,6 +60,24 @@ component Cloud(s CloudState) {
 				} }
 			</ul>
 		</CloudCard>
+		<CloudCard name="D1" about={locales.CloudD1}>
+			<p id="rows" class="text-3xl font-semibold tabular-nums">{ s.Rows }</p>
+		</CloudCard>
+		<CloudCard name="Cache API" about={locales.CloudCache}>
+			<p id="cached" class="text-sm" translate="no">{ s.Cached }</p>
+		</CloudCard>
+		<CloudCard name="Durable Objects" about={locales.CloudObject}>
+			<p id="object" class="text-sm" translate="no">{ s.Object }</p>
+		</CloudCard>
+		<CloudCard name="TCP sockets" about={locales.CloudSocket}>
+			<p id="socket" class="text-sm" translate="no">{ s.Socket }</p>
+		</CloudCard>
+		<CloudCard name="waitUntil" about={locales.CloudAfter}>
+			<p id="after" class="text-sm" translate="no">{ s.After }</p>
+		</CloudCard>
+		<CloudCard name="request.cf" about={locales.CloudRequest}>
+			<p id="request" class="text-sm" translate="no">{ s.Request }</p>
+		</CloudCard>
 		<CloudCard name="Cron Triggers" about={locales.CloudCron}>
 			<p id="cron" class="text-sm" translate="no">{ s.Cron }</p>
 		</CloudCard>
@@ -77,7 +101,6 @@ component Cloud(s CloudState) {
 		</CloudCard>
 		<CloudCard name="wrangler.jsonc" about={locales.CloudVars}>
 			<p id="name" class="text-sm" translate="no">{ s.Name }</p>
-			<p id="place" class="text-sm text-muted-foreground" translate="no">{ s.Place }</p>
 		</CloudCard>
 	</Layout>
 }

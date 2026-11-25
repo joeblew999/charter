@@ -44,10 +44,16 @@ queues = "A message sent to a queue. The consumer takes it a moment later: open 
 message = "Message"
 send = "Send"
 cron = "The schedule that last ran, and when."
+d1 = "Rows in the D1 database, counted through workers-go's database/sql driver: the messages of the home page."
+cache = "A value kept in the Cache API for a minute. The first visit stores it; the next ones read it."
+object = "A Durable Object called through its stub: the hub behind the live list."
+socket = "A TCP socket opened to this site's own address, and the first line that came back."
+after = "Work that ran after the previous answer had been sent, and when it finished."
+request = "What Cloudflare knows of your request: country, city, time zone, data center, protocol."
 email = "A message sent through a send_email binding, and the last one Email Routing handed this Worker."
 email_to = "Send to"
 fetch = "A request this Worker made, to its own health check."
-vars = "A variable of the Worker, and what Cloudflare knows of your request."
+vars = "A variable of the Worker, from wrangler.jsonc."
 
 [gsxui]
 close = "Close"
