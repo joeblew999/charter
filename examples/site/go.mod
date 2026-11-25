@@ -5,7 +5,7 @@ go 1.27.1
 require (
 	github.com/danielgtaylor/huma/v2 v2.41.0
 	github.com/gsxhq/gsx v0.5.0
-	github.com/gsxhq/vite v0.3.2
+	github.com/jackielii/tailwind-merge-go v0.0.0-20260726184505-8a911ed0cf9a
 	github.com/joeblew999/charter v0.24.0
 )
 
@@ -17,8 +17,12 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/gsxhq/gsxui v0.0.0-20261124142639-b9ffdfaa8826 // indirect
+	github.com/gsxhq/vite v0.3.2 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
+	github.com/mazznoer/csscolorparser v0.1.8 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/syumai/workers-go v0.36.0 // indirect
 	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f // indirect
@@ -27,9 +31,10 @@ require (
 	golang.org/x/exp/typeparams v0.0.0-20260611194520-c48552f49976 // indirect
 	golang.org/x/mod v0.43.0 // indirect
 	golang.org/x/net v0.63.0 // indirect
-	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sync v0.25.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/term v0.48.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/tools v0.52.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	modernc.org/libc v1.80.1 // indirect
@@ -42,5 +47,6 @@ replace github.com/joeblew999/charter => ../..
 
 tool (
 	github.com/gsxhq/gsx/cmd/gsx
+	github.com/gsxhq/gsxui/cmd/gsxui
 	github.com/joeblew999/charter/cmd/charter
 )

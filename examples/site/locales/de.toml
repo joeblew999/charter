@@ -1,0 +1,16 @@
+# Deutsch (de): the translations of en.toml, same tables and keys. charter intl todo lists what is left.
+
+[site]
+title = "Nachrichten, live"
+description = "Eine kleine Website auf Cloudflare Workers in Go: Schreiben Sie eine Nachricht, und sie erscheint sofort auf jeder geöffneten Seite."
+
+[home]
+heading = "Nachrichten"
+intro = "Schreiben Sie eine, und sie erscheint sofort auf jeder hier geöffneten Seite."
+placeholder = "Schreiben Sie etwas"
+label = "Nachricht"
+post = "Senden"
+languages = "Sprachen"
+
+[gsxui]
+close = "Schließen"

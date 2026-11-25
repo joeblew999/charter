@@ -3,7 +3,7 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "charter-site",
-  "main": "worker.mjs",
+  "main": "build/worker.mjs",
   "compatibility_date": "2026-09-25",
   // charter build writes dist/ (Vite) and build/ (the Wasm, and the JavaScript that runs it).
   "build": { "command": "go tool charter build" },

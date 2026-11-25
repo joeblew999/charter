@@ -1,16 +1,10 @@
-// Package humaworkers runs a Huma API (github.com/danielgtaylor/huma) on Cloudflare Workers through
-// workers-go and TinyGo. It exists for three reasons, each
-// measured under workerd:
+// Package humaworkers runs a Huma API (github.com/danielgtaylor/huma) on Cloudflare Workers:
 //
-//   - workers-go starts a fresh Go runtime for every request, so registering every operation at
-//     start-up would be paid on every request. Here only the operation a request matches is registered
-//     (ServeHTTP by path, Operation by id). Specs register them all (Operations, OpenAPI).
-//   - TinyGo's http.ServeMux has no "GET /path/{id}" patterns, which Huma's own net/http adapter
-//     needs. Routes are matched here: the most specific one wins, whatever their order.
-//   - Huma's default config installs a hook that calls reflect.StructOf, which TinyGo does not have.
-//     Config leaves it out.
-//
-// Build with `tinygo build -target wasm -stack-size=128kb` (charter build does): Huma overflows TinyGo's default stack.
+//   - A new Go runtime pays for everything registered at start-up, so only the operation a request matches is
+//     registered (ServeHTTP by path, Operation by id). Specs register them all (Operations, OpenAPI).
+//   - Routes are matched here: the most specific one wins, whatever their order.
+//   - Config is Huma's default without its built-in /openapi, /docs and /schemas routes: charter/api/serve serves the
+//     specs, with the request's origin as their server.
 package humaworkers
 
 import (
@@ -41,11 +35,8 @@ type Route struct {
 	Register    func(api huma.API)
 }
 
-// Upstream: tinygo-org/net#56 (when merged and in a TinyGo release: Huma's own humago adapter can do the routing, on http.ServeMux)
-// Upstream: tinygo-org/tinygo#3599 (when fixed: keep huma.DefaultConfig's CreateHooks, the schema links work)
-// Config is huma.DefaultConfig without what does not run or is not wanted on Workers: no
-// schema-link hook (reflect.StructOf), and no built-in /openapi, /docs and /schemas routes (serve
-// the specs yourself, with the request's origin as their server).
+// Config is huma.DefaultConfig without its schema-link hook and its built-in /openapi, /docs and /schemas routes
+// (serve the specs yourself, with the request's origin as their server).
 func Config(title, version string) huma.Config {
 	config := huma.DefaultConfig(title, version)
 	config.CreateHooks = nil

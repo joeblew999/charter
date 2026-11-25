@@ -1,4 +1,5 @@
 import { defineConfig, loadEnv, createLogger } from "vite";
+import tailwindcss from "@tailwindcss/vite";
 import { gsx, devFallback } from "@gsxhq/vite-plugin-gsx";
 
 export default defineConfig(({ command, mode }) => {
@@ -32,9 +33,11 @@ export default defineConfig(({ command, mode }) => {
     // prod uses the default base ("/"): hashed assets are /assets/…, which
     // Workers Static Assets serve from dist (wrangler.jsonc).
     base: command === "serve" ? "/__vite/" : "/",
-    publicDir: false,
+    // public/ (the favicon) is copied into dist as it is.
+    publicDir: "public",
     customLogger: logger,
     plugins: [
+      tailwindcss(),
       gsx(),
       fallback.plugin,
       {

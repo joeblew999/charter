@@ -3,4 +3,8 @@ import "virtual:gsx-devpanel"; // gsx's dev panel: Cmd-D / Ctrl-D
 // htmx's module sets window.htmx, which the extension after it registers with.
 import "htmx.org";
 import "htmx.org/dist/ext/hx-sse.js";
-import "./site.css";
+// The browser's half of the languages (charter build writes web/intl).
+import "./intl/intl-browser.mjs";
+// gsxui's behaviours and its CSS (Tailwind).
+import "./gsxui/index.js";
+import "./gsxui/index.css";

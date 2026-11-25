@@ -7,17 +7,19 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/gsxhq/vite"
-
 	"github.com/joeblew999/charter/examples/site/api"
+	_ "github.com/joeblew999/charter/examples/site/locales"
+	"github.com/joeblew999/charter/site"
+	"github.com/joeblew999/charter/site/intl/intltest"
 )
 
 // site is the pages over the API, as `go run .` serves them, on one in-memory store and hub.
-func site(t *testing.T) (*httptest.Server, api.Env) {
+func serve(t *testing.T) (*httptest.Server, api.Env) {
 	t.Helper()
 	memory := &api.MemStore{}
 	env := api.Env{
@@ -26,14 +28,15 @@ func site(t *testing.T) (*httptest.Server, api.Env) {
 		Hub:   func() (api.Hub, error) { return memory, nil },
 	}
 	// Vite as gsx dev has it, so no build is needed: the page names Vite's dev server for web/main.js.
-	v, err := vite.New(vite.Config{DevURL: "http://vite.test", DevBase: "/__vite/"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	srv := httptest.NewServer(v.Middleware(Handler(env, api.Handler(env))))
+	t.Setenv("VITE_DEV_URL", "http://vite.test")
+	s := &site.Site{Name: "test", Pages: []string{"/"}}
+	srv := httptest.NewServer(s.Handler(Handler(env, api.Handler(env))))
 	t.Cleanup(srv.Close)
 	return srv, env
 }
+
+// Intl as a Worker has it: the tests render through workerd's Intl.
+func TestMain(m *testing.M) { os.Exit(intltest.Main(m)) }
 
 func get(t *testing.T, url string) (int, string, http.Header) {
 	t.Helper()
@@ -58,12 +61,12 @@ func postForm(t *testing.T, srv *httptest.Server, body string) (int, string) {
 }
 
 func TestTheHomePageShowsTheMessagesNewestFirstAndFollowsFromTheNewest(t *testing.T) {
-	srv, env := site(t)
+	srv, env := serve(t)
 	status, page, header := get(t, srv.URL+"/")
 	if status != 200 || header.Get("Content-Type") != "text/html; charset=utf-8" || !strings.HasPrefix(page, "<!DOCTYPE html>") {
 		t.Fatalf("HTTP %d %s\n%s", status, header.Get("Content-Type"), page)
 	}
-	for _, want := range []string{`<script type="module" src="/__vite/web/main.js">`, `<form id="post" hx-post="/messages"`, `hx-sse:connect="/messages/stream?after=0"`} {
+	for _, want := range []string{`<script type="module" src="/__vite/web/main.js">`, `<link rel="alternate" hreflang="de"`, `<title>Messages, live</title>`, `hx-post="/messages"`, `hx-sse:connect="/messages/stream?after=0"`} {
 		if !strings.Contains(page, want) {
 			t.Errorf("no %s in\n%s", want, page)
 		}
@@ -74,7 +77,7 @@ func TestTheHomePageShowsTheMessagesNewestFirstAndFollowsFromTheNewest(t *testin
 		}
 	}
 	_, page, _ = get(t, srv.URL+"/")
-	second, first := strings.Index(page, `<li id="message-2"><span>second</span>`), strings.Index(page, `<li id="message-1"><span>first</span>`)
+	second, first := strings.Index(page, `<span dir="auto">second</span>`), strings.Index(page, `<span dir="auto">first</span>`)
 	if second < 0 || first < second || !strings.Contains(page, `hx-sse:connect="/messages/stream?after=2"`) {
 		t.Errorf("not the two messages, newest first, followed from 2:\n%s", page)
 	}
@@ -83,7 +86,7 @@ func TestTheHomePageShowsTheMessagesNewestFirstAndFollowsFromTheNewest(t *testin
 // The form posts as the API does, and is answered with itself: empty, or with what was refused and
 // why (422, which htmx 4 swaps in too). The message reaches every page, this one too, by the stream.
 func TestTheFormPostsAndIsAnsweredWithItself(t *testing.T) {
-	srv, env := site(t)
+	srv, env := serve(t)
 	status, form := postForm(t, srv, "  hello  ")
 	if status != 200 || !strings.HasPrefix(form, `<form id="post"`) || !strings.Contains(form, `value=""`) || strings.Contains(form, "<li") {
 		t.Fatalf("HTTP %d %s", status, form)
@@ -92,7 +95,7 @@ func TestTheFormPostsAndIsAnsweredWithItself(t *testing.T) {
 		t.Errorf("stored: %v", messages)
 	}
 	status, form = postForm(t, srv, "   ")
-	if status != 422 || !strings.Contains(form, `<p class="problem">a message is 1 to 280 characters`) {
+	if status != 422 || !strings.Contains(form, `text-destructive">a message is 1 to 280 characters`) {
 		t.Errorf("an empty message: HTTP %d %s", status, form)
 	}
 	if messages, _ := env.Recent(context.Background(), 10); len(messages) != 1 {
@@ -144,20 +147,20 @@ func stream(t *testing.T, address string, header http.Header) func() string {
 // Every message posted, from a page or the API, reaches every open stream as the Item fragment,
 // escaped; a stream that connects again with Last-Event-ID goes on from there.
 func TestTheStreamSendsEachNewMessageAsItsFragment(t *testing.T) {
-	srv, env := site(t)
+	srv, env := serve(t)
 	if _, err := env.Post(context.Background(), "before the page"); err != nil {
 		t.Fatal(err)
 	}
 	next := stream(t, srv.URL+"/messages/stream?after=1", nil)
 	postForm(t, srv, "from the form <b>bold</b>")
 	// An event with no name (htmx swaps its data in), one data line: the fragment.
-	if event := next(); !strings.HasPrefix(event, "id: 2\ndata: <li id=\"message-2\"><span>from the form &lt;b&gt;bold&lt;/b&gt;</span><time>") || strings.Count(event, "\n") != 2 || !strings.HasSuffix(event, "</time></li>\n") {
+	if event := next(); !strings.HasPrefix(event, "id: 2\ndata: <li id=\"message-2\"") || !strings.Contains(event, "from the form &lt;b&gt;bold&lt;/b&gt;</span>") || strings.Count(event, "\n") != 2 || !strings.HasSuffix(event, "</li>\n") {
 		t.Errorf("event:\n%s", event)
 	}
 	if status, body := postJSON(t, srv, `{"body":"from the API"}`); status != 200 {
 		t.Fatalf("POST /api/messages: HTTP %d %s", status, body)
 	}
-	if event := next(); !strings.HasPrefix(event, "id: 3\ndata: <li id=\"message-3\"><span>from the API</span>") {
+	if event := next(); !strings.HasPrefix(event, "id: 3\ndata: <li id=\"message-3\"") || !strings.Contains(event, "from the API</span>") {
 		t.Errorf("event:\n%s", event)
 	}
 	// A browser that comes back sends the last id it had: the URL's after is older, Last-Event-ID wins.
@@ -184,13 +187,13 @@ func TestALineBreakIsADataLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := "data: <li id=\"message-7\"><span>one\ndata: two\ndata: three\ndata: four</span><time></time></li>"; event != want {
+	if want := "data: <li id=\"message-7\" class=\"rounded-md border px-3 py-2\"><span dir=\"auto\">one\ndata: two\ndata: three\ndata: four</span></li>"; event != want {
 		t.Errorf("got\n%s\nwant\n%s", event, want)
 	}
 }
 
 func TestTheAPIAnswersEveryOtherPath(t *testing.T) {
-	srv, _ := site(t)
+	srv, _ := serve(t)
 	if status, body, _ := get(t, srv.URL+"/api/hello"); status != 200 || !strings.Contains(body, "Hello from test") {
 		t.Errorf("/api/hello: HTTP %d %s", status, body)
 	}

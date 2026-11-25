@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/internal/command/intl"
+	"github.com/joeblew999/charter/internal/command/seo"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
 	"github.com/joeblew999/charter/internal/standard"
@@ -26,7 +27,8 @@ import (
 //	specs      the committed specs are what the contract gives (charter.toml's spec)
 //	test       go test ./...
 //	languages  every language complete (an charter.toml's [intl])
-//	worker     the build, then on wrangler dev: the standard test of an API with a contract, and [test] run
+//	worker     the build, then on wrangler dev: the standard test of an API with a contract, [test] run, and for a
+//	           site ([seo]) the audit a search engine would pass or fail it on
 func Check(args []string) {
 	fs := flag.NewFlagSet("charter check", flag.ExitOnError)
 	fs.Parse(args)
@@ -53,7 +55,17 @@ func Check(args []string) {
 	}
 	// wrangler dev builds the Worker itself (wrangler.jsonc's build command).
 	part("worker", func() error {
-		return serving(p, func(base string) error { return try(p, p.Test.Run, base) })
+		return serving(p, func(base string) error {
+			if err := try(p, p.Test.Run, base); err != nil {
+				return err
+			}
+			// A site (charter.toml's [seo]): what a search engine would read of it, robots.txt, the sitemap and
+			// every page in it.
+			if p.SEO != nil {
+				seo.Main([]string{"audit", "--site", base})
+			}
+			return nil
+		})
 	})
 	say("✓ check took %s: %s", run.Seconds(time.Since(start)), strings.Join(times, ", "))
 }

@@ -18,15 +18,13 @@ import (
 
 	"github.com/gsxhq/gsx"
 
-	"github.com/joeblew999/charter/cf/bindings"
 	"github.com/joeblew999/charter/examples/site/api"
 )
 
 // The newest messages the home page shows.
 const shown = 50
 
-// Handler serves the pages, and next (the API) for every other path. Vite's files (/assets/) are Workers Static
-// Assets, answered before the Worker runs; off Workers they come from dist on disk.
+// Handler serves the pages, and next (the API) for every other path.
 func Handler(env api.Env, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path, method := r.URL.Path, r.Method
@@ -37,8 +35,6 @@ func Handler(env api.Env, next http.Handler) http.Handler {
 			post(w, r, env)
 		case path == "/messages/stream" && method == http.MethodGet:
 			serveStream(w, r, env, htmxEvent)
-		case strings.HasPrefix(path, "/assets/") && method == http.MethodGet:
-			bindings.StaticAssets("dist").ServeHTTP(w, r)
 		case path == "/" || strings.HasPrefix(path, "/messages"):
 			w.Header().Set("Allow", "GET, POST")
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)

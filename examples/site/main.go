@@ -1,5 +1,5 @@
 // An API and its pages as one Cloudflare Worker in Go: the contract and handlers in api/, the server-rendered pages
-// (gsx and htmx 4, live over SSE) in pages/, the browser's files in web/ (Vite).
+// (gsx, gsxui and htmx 4, live over SSE) in pages/, their text in locales/, the browser's files in web/ (Vite).
 //
 //	go tool charter dev      gsx dev: a save rebuilds and reloads
 //	go tool charter preview  wrangler dev: the Worker as Cloudflare runs it
@@ -8,31 +8,23 @@ package main
 
 import (
 	"embed"
-	"log"
-	"os"
-
-	"github.com/gsxhq/vite"
 
 	"github.com/joeblew999/charter/cf/bindings"
 	"github.com/joeblew999/charter/cf/d1"
 	"github.com/joeblew999/charter/cf/hub"
 	"github.com/joeblew999/charter/cf/transport"
 	"github.com/joeblew999/charter/examples/site/api"
+	_ "github.com/joeblew999/charter/examples/site/locales" // the app's languages (charter.toml's [intl])
 	"github.com/joeblew999/charter/examples/site/pages"
+	"github.com/joeblew999/charter/site"
 )
 
-// Vite's manifest (charter build): which hashed file each entry in web/ became. The files themselves are Workers
-// Static Assets (wrangler.jsonc's assets).
+// Vite's manifest (charter build): which hashed file each entry in web/ became.
 //
 //go:embed dist/.vite/manifest.json
 var dist embed.FS
 
 func main() {
-	// VITE_DEV_URL is set by gsx dev: the browser's files come from Vite's dev server. Without it, from dist.
-	v, err := vite.New(vite.Config{DevURL: os.Getenv("VITE_DEV_URL"), DevBase: "/__vite/", Dist: dist, DistDir: "dist", StaticURL: "/"})
-	if err != nil {
-		log.Fatal(err)
-	}
 	// The bindings of wrangler.jsonc, through charter: each has a stand-in off Workers (go run ., go test), so there
 	// is no file per platform. DB is D1, the log; HUB the Durable Object that wakes every open page.
 	env := api.Env{
@@ -46,5 +38,7 @@ func main() {
 		},
 		Hub: func() (api.Hub, error) { return hub.DurableObject[api.Message]("HUB", "messages") },
 	}
-	transport.Run(v.Middleware(pages.Handler(env, api.Handler(env))))
+	// The site: Vite's files, a URL per language, robots.txt and the sitemap, around the pages and the API.
+	s := &site.Site{Name: "charter-site", Dist: dist, Pages: []string{"/"}}
+	transport.Run(s.Handler(pages.Handler(env, api.Handler(env))))
 }

@@ -95,12 +95,18 @@ func wasm(p *project.Project, limit int) error {
 	}
 	// The Worker's entry, in place of workers-go's (a Go runtime per request): charter's go.mjs keeps runtimes between
 	// requests, and starts one while the module loads when charter.toml names a health path, which must touch no
-	// binding. An app with more to export (a Durable Object) has an entry of its own, importing ./build/go.mjs.
-	warm := ""
-	if p.Health != "" {
-		warm = fmt.Sprintf("await go.warm({ paths: [%q] });\n", p.Health)
+	// binding. It exports Hub, the Durable Object class of charter's hub, for a Worker that binds one, and gives Go
+	// the app's languages. An app with more of its own (another Durable Object, routes in JavaScript) has an entry of
+	// its own that imports from ./build/ the same way.
+	entry := "// Written by charter build: the Worker's entry (wrangler.jsonc's main).\nimport { goWorker } from \"./go.mjs\";\n"
+	if hasIntl(p) {
+		entry += "import { goIntl } from \"./intl-worker.mjs\";\n\n// The app's languages, for Go (charter's site/intl).\nglobalThis.goIntl = goIntl;\n"
 	}
-	entry := "// Written by charter build: the Worker's entry.\nimport { goWorker } from \"./go.mjs\";\n\nconst go = goWorker();\n" + warm + "\nexport default { fetch: go.fetch };\n"
+	entry += "\nexport { Hub } from \"./hub.mjs\";\n\nconst go = goWorker();\n"
+	if p.Health != "" {
+		entry += fmt.Sprintf("await go.warm({ paths: [%q] });\n", p.Health)
+	}
+	entry += "\nexport default { fetch: go.fetch };\n"
 	if err := os.WriteFile(filepath.Join(p.Root, "build", "worker.mjs"), []byte(entry), 0o644); err != nil {
 		return err
 	}

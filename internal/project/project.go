@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/BurntSushi/toml"
 	"github.com/tailscale/hujson"
@@ -157,7 +158,9 @@ func read(root string) (*Project, error) {
 	p := &Project{Root: root}
 	path := filepath.Join(root, File)
 	if md, err := toml.DecodeFile(path, p); err == nil {
-		if extra := md.Undecoded(); len(extra) > 0 {
+		// [intl] and [seo] are read by their own packages.
+		extra := slices.DeleteFunc(md.Undecoded(), func(k toml.Key) bool { return k[0] == "intl" || k[0] == "seo" })
+		if len(extra) > 0 {
 			return nil, fmt.Errorf("%s: unknown keys %v (the Worker's own settings are %s's)", path, extra, Wrangler)
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
