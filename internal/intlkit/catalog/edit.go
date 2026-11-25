@@ -270,7 +270,7 @@ func tomlString(s string) string {
 
 var localesLine = regexp.MustCompile(`(?ms)^(locales\s*=\s*\[)(.*?)(\])`)
 
-// AddLocale adds id to intl.toml's locales and creates its catalog, headed with the language's name.
+// AddLocale adds id to [intl] locales and creates its catalog, headed with the language's name.
 func AddLocale(c config.Config, id, name string) error {
 	if slices.ContainsFunc(c.Locales, func(l string) bool { return strings.EqualFold(l, id) }) {
 		return fmt.Errorf("intl: %s is already in %s", id, config.File)

@@ -1,4 +1,4 @@
-// Package seo is charter seo: how a Go web app answers search engines, from its seo.toml (found up from the working
+// Package seo is charter seo: how a Go web app answers search engines, from its charter.toml's [seo] (found up from the working
 // directory): the live site audited as Googlebot reads it, Lighthouse on Google's servers, the README's badges, and
 // Google Search Console. Each command is a file of its own, holding the method named for it (audit.go holds audit).
 // The app imports seo's packages from this same module (github.com/joeblew999/charter/site/seo, gsxseo).
@@ -20,10 +20,10 @@ type command struct{ name, does, when string }
 // commands are every command, in the order a repo meets them.
 var commands = []command{
 	{"audit", "the site as Googlebot reads it, robots.txt, the sitemap and every page in it: whatever would keep a page out of the index or look wrong in a result (--site: another server, a local build or a preview)", "after every production deploy, and on a local build before it"},
-	{"lighthouse", "Lighthouse on the live site on Google's servers: performance, accessibility, best practices and SEO out of 100 for every page or the one named, what fails and on which elements, real users' Core Web Vitals; fails under seo.toml's min (--desktop: the desktop page)", "after a production deploy, and to fix a score"},
+	{"lighthouse", "Lighthouse on the live site on Google's servers: performance, accessibility, best practices and SEO out of 100 for every page or the one named, what fails and on which elements, real users' Core Web Vitals; fails under [seo] min (--desktop: the desktop page)", "after a production deploy, and to fix a score"},
 	{"badges", "Lighthouse on every page and the audit, then the README's badges and its scores table", "after a production release, then commit them"},
 	{"setup", "the Google Cloud project, its Search Console and PageSpeed Insights APIs, and a service account key (asks first; needs gcloud auth login)", "once per person, before the commands that ask Google"},
-	{"sites", "the Search Console properties the service account can use; fails without Full access to seo.toml's", "after setup, and after adding the account to a property"},
+	{"sites", "the Search Console properties the service account can use; fails without Full access to charter.toml's [seo]'s", "after setup, and after adding the account to a property"},
 	{"submit", "the sitemap submitted to Search Console, after a passing audit (asks first)", "once the site is live, and after its pages change"},
 	{"status", "the sitemap's status in Search Console, and Google's index status of every URL in it", "to see what Google has of the site"},
 	{"todo", "Google's verdict for every sitemap URL: indexed, waiting, duplicate or a problem; fails on a problem (--open: each problem's Search Console page)", "days after submitting, and whenever Search Console reports a problem"},
@@ -34,7 +34,7 @@ var commands = []command{
 // help is every command, from commands, and the flags.
 var help = func() string {
 	var b strings.Builder
-	b.WriteString("charter seo: how the app answers search engines, from its seo.toml.\n\n")
+	b.WriteString("charter seo: how the app answers search engines, from its charter.toml's [seo].\n\n")
 	for _, c := range commands {
 		fmt.Fprintf(&b, "  charter seo %-12s %s\n", c.name, c.does)
 	}

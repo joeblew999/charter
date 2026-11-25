@@ -11,10 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/joeblew999/charter/internal/intlkit/catalog"
 )
 
@@ -30,8 +28,8 @@ const (
 	gsxintlPkg = "github.com/joeblew999/charter/site/gsxintl" // intl.Value's renderer, the only gsx of intl
 )
 
-// Init writes intl.toml, the catalogs, gsx.toml's filters and renderers, and .gitignore's generated files into the
-// app at root, logging each change.
+// Init writes charter.toml's [intl], the catalogs, gsx.toml's filters and renderers, and .gitignore's generated files
+// into the app at root, logging each change.
 func Init(root string, o Options, log io.Writer) error {
 	if len(o.Locales) == 0 || o.Catalogs == "" {
 		return errors.New("intl init: locales and catalogs are required")
@@ -52,23 +50,23 @@ func Init(root string, o Options, log io.Writer) error {
 	for i, id := range o.Locales {
 		q[i] = `"` + id + `"`
 	}
-	conf := "# The app's languages (github.com/joeblew999/charter/site/intl): BCP 47 ids, the source first.\n" +
+	conf := "\n# The app's languages (charter intl; go doc github.com/joeblew999/charter/site/intl/config): BCP 47 ids, the\n# source first.\n[intl]\n" +
 		"locales = [" + strings.Join(q, ", ") + "]\n" +
-		"# <locale>.toml per language, ICU MessageFormat; charter intl gen writes the Go package of messages there.\n" +
+		"# <locale>.toml per language, ICU MessageFormat; charter build writes the Go package of messages there.\n" +
 		"catalogs = " + `"` + o.Catalogs + `"` + "\n"
 	if o.Gsxui != "" {
-		conf += "# Where gsxui add vendors components: gen translates the text they write themselves from [gsxui].\n" +
+		conf += "# Where gsxui add vendors components: their own text is translated from the catalogs' [gsxui].\n" +
 			"gsxui = " + `"` + o.Gsxui + `"` + "\n"
 	}
-	conf += "# Optional: a README badge charter intl gen keeps current, \"languages | 2, all translated\".\n" +
-		"# badge = \"docs/badges/intl.svg\"\n"
 	conf += "\n# Guidance for whoever translates, people or Claude (charter intl todo shows it); \"*\" is for every language.\n" +
-		"[notes]\n\"*\" = \"\"\n"
-	if err := write("intl.toml", conf); err != nil {
-		return err
-	}
-	if err := addGsxui(filepath.Join(root, "intl.toml"), o.Gsxui, log); err != nil {
-		return err
+		"[intl.notes]\n\"*\" = \"\"\n"
+	path := filepath.Join(root, "charter.toml")
+	have, _ := os.ReadFile(path)
+	if !regexp.MustCompile(`(?m)^\[intl\]`).Match(have) {
+		if err := os.WriteFile(path, append(have, conf...), 0o644); err != nil {
+			return err
+		}
+		fmt.Fprintln(log, "wrote charter.toml's [intl]")
 	}
 	source := o.Locales[0]
 	if err := write(filepath.Join(o.Catalogs, source+".toml"),
@@ -158,21 +156,14 @@ func DetectGsxui(root string) string {
 
 var catalogsKey = regexp.MustCompile(`(?m)^catalogs\s*=.*\n`)
 
-// addGsxui writes gsxui = dir into an intl.toml set up before gsxui was: init run again after gsxui init.
-func addGsxui(path, dir string, log io.Writer) error {
-	if dir == "" {
-		return nil
-	}
-	return addKey(path, "gsxui", dir, "Where gsxui add vendors components: gen translates the text they write themselves from [gsxui].", log)
-}
-
-// UI writes ui = dir into the app's intl.toml when it has no ui: where charter intl add put intl's screens.
+// addGsxui writes gsxui = dir into an charter.toml's [intl] set up before gsxui was: init run again after gsxui init.
+// UI writes ui = dir into the app's charter.toml's [intl] when it has no ui: where charter intl add put intl's screens.
 func UI(root, dir string, log io.Writer) error {
-	return addKey(filepath.Join(root, "intl.toml"), "ui", dir,
+	return addKey(filepath.Join(root, "charter.toml"), "ui", dir,
 		"Where charter intl add copies intl's screens (package intlui): the language list, the language offer, the time zone\n# and clock dialog.", log)
 }
 
-// addKey writes key = value, below its comment, after intl.toml's catalogs line, unless the file sets key already.
+// addKey writes key = value, below its comment, after [intl] catalogs line, unless the file sets key already.
 func addKey(path, key, value, comment string, log io.Writer) error {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -188,47 +179,7 @@ func addKey(path, key, value, comment string, log io.Writer) error {
 	} else {
 		s = line + s
 	}
-	fmt.Fprintf(log, "updated intl.toml: %s = %s\n", key, value)
-	return os.WriteFile(path, []byte(s), 0o644)
-}
-
-var includesKey = regexp.MustCompile(`(?m)^includes\s*=\s*\[`)
-
-// TaskIncludes lists the task file at rel (relative to root) in mise.toml's [task_config] includes, when the app
-// lists its task files there: mise then looks nowhere else, not even in .mise/tasks.
-func TaskIncludes(root, rel string, log io.Writer) error {
-	path := filepath.Join(root, "mise.toml")
-	b, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		return err
-	}
-	var m struct {
-		TaskConfig struct {
-			Includes []string `toml:"includes"`
-		} `toml:"task_config"`
-	}
-	if _, err := toml.Decode(string(b), &m); err != nil || m.TaskConfig.Includes == nil || slices.Contains(m.TaskConfig.Includes, rel) {
-		return err
-	}
-	for _, inc := range m.TaskConfig.Includes { // intl's tasks listed from elsewhere already (this repo lists intl/mise's)
-		if b, err := os.ReadFile(filepath.Join(root, inc)); err == nil && strings.Contains(string(b), `["intl:check"]`) {
-			return nil
-		}
-	}
-	s := string(b)
-	h := header(s, "task_config")
-	var at []int
-	if h >= 0 {
-		at = includesKey.FindStringIndex(s[h:])
-	}
-	if at == nil {
-		return fmt.Errorf("%s: [task_config] includes isn't a list intl can add to: add %q to it", path, rel)
-	}
-	s = s[:h+at[1]] + `"` + rel + `", ` + s[h+at[1]:]
-	fmt.Fprintf(log, "updated mise.toml: %s in [task_config] includes\n", rel)
+	fmt.Fprintf(log, "updated charter.toml's [intl]: %s = %s\n", key, value)
 	return os.WriteFile(path, []byte(s), 0o644)
 }
 

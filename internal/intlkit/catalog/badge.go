@@ -5,14 +5,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/joeblew999/charter/internal/intlkit/badge"
+	"github.com/joeblew999/charter/internal/badge"
 )
 
-// The languages badge (intl.toml's badge) for a README: how many languages the app ships and whether every one is
+// The languages badge ([intl] badge) for a README: how many languages the app ships and whether every one is
 // translated, drawn like seo's Lighthouse badges. gen writes it from the catalogs, so it can't go stale; check says
 // when the file isn't what gen would write.
 
-// BadgeFile is intl.toml's badge, "" without one.
+// BadgeFile is [intl] badge, "" without one.
 func (p *Project) BadgeFile() string {
 	if p.Config.Badge == "" {
 		return ""
@@ -34,7 +34,7 @@ func (p *Project) badgeBytes() []byte {
 	return []byte(badge.SVG("languages", value, color))
 }
 
-// WriteBadge writes the badge, when intl.toml names one.
+// WriteBadge writes the badge, when charter.toml's [intl] names one.
 func (p *Project) WriteBadge() error {
 	f := p.BadgeFile()
 	if f == "" {

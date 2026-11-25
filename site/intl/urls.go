@@ -48,7 +48,7 @@ type Link struct {
 	Current bool // the request's own locale
 }
 
-// Links is the request's page in every shipped locale, in intl.toml's order. The source locale's home links to
+// Links is the request's page in every shipped locale, in [intl] order. The source locale's home links to
 // "/?locale=<id>": the bare "/" follows a remembered locale, and choosing the source locale must override it.
 func Links(ctx context.Context) []Link {
 	path := "/"

@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
-	"github.com/joeblew999/charter/project"
 )
 
 // Dev runs charter dev: the loop a developer works in. With gsx (a gsx.toml) it is gsx's own, go tool gsx dev: a save

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joeblew999/charter/internal/seokit/badge"
+	"github.com/joeblew999/charter/internal/badge"
 	"github.com/joeblew999/charter/internal/seokit/pagespeed"
 	"github.com/joeblew999/charter/site/seo/audit"
 )
@@ -25,8 +25,8 @@ var categories = []struct{ id, name, title string }{
 }
 
 // badges is charter seo badges (seo:badges): Lighthouse on every page and the audit, then an SVG badge per Lighthouse
-// category into seo.toml's [badges] dir (the lowest page's score: a badge never flatters) and one for the audit, and
-// the README's scores block (seo.toml's [badges] readme) rewritten with every page's scores. Run it after a production
+// category into charter.toml's [seo.badges] dir (the lowest page's score: a badge never flatters) and one for the audit, and
+// the README's scores block (charter.toml's [seo.badges] readme) rewritten with every page's scores. Run it after a production
 // release, and commit what it wrote.
 func (r repo) badges(args []string) {
 	parse(flags("badges"), args, 0)

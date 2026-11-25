@@ -43,7 +43,7 @@ func secret(name string) string {
 // noConsoleKey is what a command that asks Search Console says without the key.
 var noConsoleKey = errors.New(consoleKey + " is neither in the environment nor in fnox: charter seo setup makes a service account and stores its key in fnox (once per person)")
 
-// console is a Search Console client for the property of seo.toml's site, with the service account key's token, and
+// console is a Search Console client for the property of [seo] site, with the service account key's token, and
 // the key; without the key it fails, saying how to make one.
 func console(ctx context.Context, c config.Config, site string) (*searchconsole.Client, searchconsole.Key) {
 	raw := secret(consoleKey)
@@ -108,7 +108,7 @@ func pagespeedAuth(ctx context.Context) pagespeed.Auth {
 }
 
 // domainProperty is the Domain property of a host's registrable domain: app.example.com → sc-domain:example.com (its
-// last two labels: good enough for .net and .com hosts; set property in seo.toml otherwise). An IP address or a
+// last two labels: good enough for .net and .com hosts; set property in charter.toml's [seo] otherwise). An IP address or a
 // single-label host (localhost) has none: "".
 func domainProperty(host string) string {
 	labels := strings.Split(host, ".")

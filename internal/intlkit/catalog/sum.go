@@ -94,7 +94,7 @@ func readSum(path string) (sum, map[string]string, error) {
 	return s, files, sc.Err()
 }
 
-// sumBytes is intl.sum as it should be: the project's locales in intl.toml order, keys sorted.
+// sumBytes is intl.sum as it should be: the project's locales in charter.toml's [intl] order, keys sorted.
 func (p *Project) sumBytes() []byte {
 	var b bytes.Buffer
 	b.WriteString(sumHeader)

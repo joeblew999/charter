@@ -9,7 +9,7 @@ import (
 
 // Site puts each request's language in its context (Handler), by the URL rules a site with languages needs:
 //
-//	/about        the source locale (intl.toml's first): unprefixed, and hreflang x-default
+//	/about        the source locale ([intl] first): unprefixed, and hreflang x-default
 //	/de/about     every other shipped locale, under its lowercase id ("/pt-br/", "/zh-hant/")
 //	/en/about     301 → /about;  /DE/about, /pt-BR/ → 301 to the lowercase prefix;  /de → 301 /de/
 //

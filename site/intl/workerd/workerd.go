@@ -99,7 +99,7 @@ var (
 )
 
 // Start sets intl.Runtime to workerd's Intl: INTL_WORKERD_URL's, or else a workerd of this program's own, started
-// here for the app whose intl.toml is found up from the working directory.
+// here for the app whose charter.toml's [intl] is found up from the working directory.
 func Start() error {
 	if base = strings.TrimSuffix(os.Getenv("INTL_WORKERD_URL"), "/"); base == "" {
 		var err error
@@ -120,7 +120,7 @@ func Start() error {
 }
 
 // served is the workerd config to serve: the one charter intl gen wrote beside the app's catalogs (intl-workerd/), for
-// the app whose intl.toml is found up from the working directory; with no intl.toml, intl's own modules with no
+// the app whose charter.toml's [intl] is found up from the working directory; with no charter.toml's [intl], intl's own modules with no
 // catalogs, in charter's cache: Intl's formats with no messages, which is all a program without catalogs asks for.
 func served() (string, error) {
 	c, err := config.Find(".")

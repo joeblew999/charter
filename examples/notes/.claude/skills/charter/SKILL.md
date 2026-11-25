@@ -6,7 +6,7 @@ description: Use when a Go or TypeScript app runs on Cloudflare Workers with git
 # A Worker with charter
 
 Everything about the Worker on Cloudflare is `charter.toml` at the app's root (every key: `go doc
-github.com/joeblew999/charter/project`). `charter` reads it for every step, and `charter check`
+github.com/joeblew999/charter/internal/project`). `charter` reads it for every step, and `charter check`
 says what is wrong or stale. Never hand-write workerd config, wrangler files or deploy scripts: they are generated.
 
 ## The app's code in TypeScript

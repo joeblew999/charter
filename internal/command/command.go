@@ -18,8 +18,8 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
-	"github.com/joeblew999/charter/project"
 )
 
 // load is the app of the working directory, which the command moves to the root of.
@@ -85,9 +85,9 @@ func wrangler(p *project.Project, env map[string]string, args ...string) error {
 }
 
 // hasGSX reports whether the app has gsx components; hasVite whether Vite builds browser files for it; hasIntl whether
-// it has languages (charter intl).
+// it has languages (charter.toml's [intl]).
 func hasGSX(p *project.Project) bool  { return exists(filepath.Join(p.Root, "gsx.toml")) }
-func hasIntl(p *project.Project) bool { return exists(filepath.Join(p.Root, "intl.toml")) }
+func hasIntl(p *project.Project) bool { return p.Intl != nil }
 func hasVite(p *project.Project) bool {
 	m, _ := filepath.Glob(filepath.Join(p.Root, "vite.config.*"))
 	return len(m) > 0

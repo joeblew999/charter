@@ -11,7 +11,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/joeblew999/charter/project"
+	"github.com/joeblew999/charter/internal/project"
 	_ "modernc.org/sqlite" // SQLite in pure Go, as D1 is SQLite
 )
 

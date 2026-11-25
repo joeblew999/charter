@@ -14,7 +14,7 @@ import (
 )
 
 // translate is charter intl translate [locale…]: Claude Code translates what is missing or stale with the
-// intl skill, one worker per language at once (intl.toml [translate] workers, default 6) on [translate]
+// intl skill, one worker per language at once (charter.toml's [intl] [translate] workers, default 6) on [translate]
 // model. Each worker edits only its own catalog and checks it with charter intl check <locale>, which writes nothing;
 // then gen and the full check run once.
 func translate(ids []string) {

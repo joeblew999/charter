@@ -14,7 +14,7 @@ import (
 	"github.com/joeblew999/charter/site/seo/config"
 )
 
-// conf is the repo's seo.toml, found up from its folder, its defaults filled in; every default without one.
+// conf is the repo's charter.toml's [seo], found up from its folder, its defaults filled in; every default without one.
 func (r repo) conf() config.Config {
 	c, err := config.Find(r.dir)
 	if err != nil {
@@ -23,7 +23,7 @@ func (r repo) conf() config.Config {
 	return c
 }
 
-// siteOf is the site a command works on, without its trailing /: flagSite when it's given (--site), else seo.toml's.
+// siteOf is the site a command works on, without its trailing /: flagSite when it's given (--site), else charter.toml's [seo]'s.
 // It says which, and where that came from, on stderr before anything else: a run on the wrong site must be obvious.
 // None fails, saying how to set it.
 func (r repo) siteOf(c config.Config, flagSite string) string {

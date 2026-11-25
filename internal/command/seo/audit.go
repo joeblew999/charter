@@ -20,11 +20,11 @@ type auditReport struct {
 
 // audit is charter seo audit (seo:audit): robots.txt, the sitemap and every URL in it fetched live as Googlebot, and
 // every problem that would keep a page out of Google's index or look wrong in a result, one a line (audit.Audit); exit
-// 1 on any. seo.toml's site, or --site's: a local build, a preview. It needs no Google account.
+// 1 on any. [seo] site, or --site's: a local build, a preview. It needs no Google account.
 func (r repo) audit(args []string) {
 	f := flags("audit")
 	jsonOut := f.Bool("json", false, "one JSON document on stdout")
-	site := f.String("site", "", "another server than seo.toml's site: a local build, a preview")
+	site := f.String("site", "", "another server than [seo] site: a local build, a preview")
 	parse(f, args, 0)
 	base := r.siteOf(r.conf(), *site)
 	urls, problems, err := audit.Audit(context.Background(), &http.Client{Timeout: time.Minute}, base)

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/joeblew999/charter/internal/intlkit/badge"
+	"github.com/joeblew999/charter/internal/badge"
 )
 
 // TestSVG: a well-formed SVG that names itself for screen readers, wider for a longer label, escaped.

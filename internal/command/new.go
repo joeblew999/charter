@@ -84,7 +84,7 @@ func New(args []string) {
 		return os.WriteFile(to, []byte(text), 0o644)
 	}))
 	// The agent skill, for Claude Code and others that read .claude/skills.
-	if b, err := os.ReadFile(filepath.Join(tmp, "skills", "charter", "SKILL.md")); err == nil {
+	if b, err := os.ReadFile(filepath.Join(tmp, ".claude", "skills", "charter", "SKILL.md")); err == nil {
 		skill := filepath.Join(dir, ".claude", "skills", "charter", "SKILL.md")
 		check(os.MkdirAll(filepath.Dir(skill), 0o755))
 		check(os.WriteFile(skill, b, 0o644))

@@ -1,18 +1,20 @@
-// Package config reads an app's seo.toml: the live site, and how Lighthouse scores it. charter seo finds it by walking up
-// from the working directory, so every seo task runs with no arguments; a flag still overrides the site for one run.
-// The site has no default (charter seo init --site writes it): a default taken from the environment once audited the
-// wrong site. Every other setting has one, so the file only says what differs:
+// Package config reads how an app answers search engines from its charter.toml: [seo], the live site and how
+// Lighthouse scores it. charter seo finds it by walking up from the working directory. Every setting has a default,
+// so the table only says what differs:
 //
-//	# seo.toml
-//	site = "https://app.example.com"     # the live site; no default
+//	# charter.toml
+//	url = "https://app.example.com"      # where the app is deployed: the live site, unless [seo] site names another
+//
+//	[seo]
+//	site = "https://app.example.com"     # the live site; default: url
 //	property = "sc-domain:example.com"   # its Search Console property; default the site's Domain property
 //
-//	[lighthouse]
+//	[seo.lighthouse]
 //	pages = ["/", "/de/board"]           # what charter seo lighthouse scores; default one URL per page of the live sitemap
 //	strategy = "mobile"                  # mobile (what Google indexes) or desktop
 //	min = 90                             # a category scoring under it fails
 //
-//	[badges]
+//	[seo.badges]
 //	dir = "docs/badges"                  # where charter seo badges writes its SVG badges
 //	readme = "README.md"                 # the file whose <!-- seo scores --> … <!-- /seo scores --> it rewrites
 package config
@@ -20,16 +22,14 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
 
 	"github.com/BurntSushi/toml"
 )
 
-// File is the config file's name.
-const File = "seo.toml"
+// File is the file the settings are in, as its [seo].
+const File = "charter.toml"
 
-// Config is an app's seo.toml, with its defaults filled in.
+// Config is charter.toml's [seo], with its defaults filled in.
 type Config struct {
 	Site       string `toml:"site"`
 	Property   string `toml:"property"`
@@ -45,20 +45,24 @@ type Config struct {
 	Path string `toml:"-"` // the file read, "" without one
 }
 
-// Find reads the nearest seo.toml at or above dir, and fills in the defaults; without one, it is every default.
+// Find reads [seo] of the nearest charter.toml at or above dir, and fills in the defaults; without one, it is every
+// default.
 func Find(dir string) (Config, error) {
-	var c Config
+	var file struct {
+		URL string `toml:"url"`
+		SEO Config `toml:"seo"`
+	}
 	dir, err := filepath.Abs(dir)
 	if err != nil {
-		return c, err
+		return file.SEO, err
 	}
 	for {
 		path := filepath.Join(dir, File)
 		if _, err := os.Stat(path); err == nil {
-			if _, err := toml.DecodeFile(path, &c); err != nil {
-				return c, err
+			if _, err := toml.DecodeFile(path, &file); err != nil {
+				return file.SEO, err
 			}
-			c.Path = path
+			file.SEO.Path = path
 			break
 		}
 		parent := filepath.Dir(dir)
@@ -66,6 +70,10 @@ func Find(dir string) (Config, error) {
 			break
 		}
 		dir = parent
+	}
+	c := file.SEO
+	if c.Site == "" {
+		c.Site = file.URL
 	}
 	if c.Lighthouse.Strategy == "" {
 		c.Lighthouse.Strategy = "mobile"
@@ -80,48 +88,4 @@ func Find(dir string) (Config, error) {
 		c.Badges.Readme = "README.md"
 	}
 	return c, nil
-}
-
-// Template is the seo.toml charter seo init writes: every setting, commented out at its default.
-const Template = `# seo.toml: this app and search engines, for charter seo and its tasks (github.com/joeblew999/mise-seo:
-# docs/seo/README.md). The tasks read it, so none needs an argument. Every line is optional: uncomment what differs
-# from its default.
-
-# The live site, which every task works on. No default: charter seo init --site https://app.example.com writes it.
-# site = "https://app.example.com"
-
-# Its Search Console property. Default: the site's Domain property (app.example.com → sc-domain:example.com).
-# property = "sc-domain:example.com"
-
-[lighthouse]
-# The pages charter seo lighthouse scores. Default: one URL per page of the live sitemap.
-# pages = ["/", "/about"]
-# mobile (what Google indexes) or desktop.
-# strategy = "mobile"
-# A category scoring under this fails.
-# min = 90
-
-[badges]
-# Where charter seo badges writes its badges (Lighthouse's four categories, the audit), for the README to show.
-# dir = "docs/badges"
-# The file whose <!-- seo scores --> … <!-- /seo scores --> lines charter seo badges rewrites with every page's
-# scores.
-# readme = "README.md"
-`
-
-// siteLine is seo.toml's site line, set or commented out as Template has it.
-var siteLine = regexp.MustCompile(`(?m)^(# )?site[ \t]*=[ \t]*"[^"]*"[ \t]*$`)
-
-// SetSite is seo.toml's text b with its site set to site, when it sets none: its commented-out site line (Template's)
-// written as site's, else a site line at its top. b that sets a site of its own comes back as it is, and false.
-func SetSite(b, site string) (string, bool) {
-	line := `site = "` + strings.TrimRight(site, "/") + `"`
-	m := siteLine.FindStringSubmatchIndex(b)
-	switch {
-	case m != nil && m[2] < 0: // a site of its own
-		return b, false
-	case m != nil:
-		return b[:m[0]] + line + b[m[1]:], true
-	}
-	return line + "\n\n" + b, true
 }

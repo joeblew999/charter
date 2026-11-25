@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/joeblew999/charter/project"
+	"github.com/joeblew999/charter/internal/project"
 )
 
 // generator is a Fern generator, at the version charter pins: here, the one place.

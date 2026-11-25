@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joeblew999/charter/project"
+	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/site/web"
 )
 

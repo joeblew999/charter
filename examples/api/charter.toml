@@ -1,4 +1,4 @@
-# What charter adds to wrangler.jsonc (go doc github.com/joeblew999/charter/project).
+# What charter adds to wrangler.jsonc (go doc github.com/joeblew999/charter/internal/project).
 health = "/api/openapi.json"
 # Where it is deployed: the server the specs name, and what charter live-test tries.
 url = "https://charter-api.gedw99.workers.dev"

@@ -9,8 +9,8 @@ import (
 
 	"github.com/joeblew999/charter/internal/dbcode"
 	"github.com/joeblew999/charter/internal/fern"
+	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
-	"github.com/joeblew999/charter/project"
 )
 
 // Spec runs charter spec: both specs from the contract (fern/openapi.json, fern/asyncapi.json), Fern's settings

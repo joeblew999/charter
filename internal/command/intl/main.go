@@ -1,4 +1,4 @@
-// Package intl is charter intl: an app's languages, from its intl.toml (found up from the working directory). Each
+// Package intl is charter intl: an app's languages, from its charter.toml's [intl] (found up from the working directory). Each
 // command is a file of its own, holding the function named for it (gen.go holds gen). The app imports intl's
 // packages from this same module (github.com/joeblew999/charter/site/intl, gsxintl).
 package intl
@@ -11,8 +11,9 @@ import (
 	"github.com/joeblew999/charter/site/intl/config"
 )
 
-const help = `charter intl: the app's languages, through the runtime's own Intl, from its intl.toml.
+const help = `charter intl: the app's languages, through the runtime's own Intl, from its charter.toml's [intl].
 
+  charter intl init            languages for this app: charter.toml's [intl], a catalog each (--locales en,de)
   charter intl                 per language: translated, inherited, stale, missing (status)
   charter intl check           every problem, for CI (--missing warn; or only the locales named)
   charter intl gen             the catalogs compiled into the app's messages package (charter build runs it)
@@ -43,6 +44,8 @@ func Main(args []string) {
 	switch command {
 	case "":
 		status(args)
+	case "init":
+		initApp(args)
 	case "check":
 		check(args)
 	case "gen":
@@ -85,7 +88,7 @@ func Main(args []string) {
 	}
 }
 
-// app is the app's intl.toml, found up from the working directory.
+// app is the app's charter.toml's [intl], found up from the working directory.
 func app() config.Config {
 	c, err := config.Find(".")
 	if err != nil {

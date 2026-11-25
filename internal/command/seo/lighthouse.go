@@ -15,8 +15,8 @@ import (
 
 // lighthouse is charter seo lighthouse (seo:lighthouse): Lighthouse on the live site through PageSpeed Insights, on
 // Google's servers, so no Node and no local Chrome: every page of the sitemap (one per page, whatever its languages),
-// seo.toml's pages, or the one named. It prints each page's four scores, what fails and on which elements, and real
-// users' Core Web Vitals, and exits 1 when a category of any page scores under seo.toml's min. Mobile, what Google
+// [seo] pages, or the one named. It prints each page's four scores, what fails and on which elements, and real
+// users' Core Web Vitals, and exits 1 when a category of any page scores under [seo] min. Mobile, what Google
 // indexes, or --desktop.
 func (r repo) lighthouse(args []string) {
 	f := flags("lighthouse")
@@ -56,7 +56,7 @@ func (r repo) lighthouse(args []string) {
 	}
 }
 
-// pages are the pages Lighthouse scores, as full URLs: the one named, else seo.toml's, else one per page of the live
+// pages are the pages Lighthouse scores, as full URLs: the one named, else charter.toml's [seo]'s, else one per page of the live
 // sitemap.
 func (r repo) pages(ctx context.Context, c config.Config, site string, named []string) []string {
 	pages := c.Lighthouse.Pages

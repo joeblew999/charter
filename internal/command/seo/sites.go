@@ -16,7 +16,7 @@ type sitesReport struct {
 }
 
 // sites is charter seo sites (seo:sites): the Search Console properties the service account can use, and whether it
-// has Full access to seo.toml's property (its property, else its site's Domain property); exit 1 without it, saying
+// has Full access to [seo] property (its property, else its site's Domain property); exit 1 without it, saying
 // how to add the account there.
 func (r repo) sites(args []string) {
 	f := flags("sites")

@@ -1,8 +1,8 @@
-// Package catalog is an app's message catalogs as charter intl sees them (intl.toml's catalogs directory:
+// Package catalog is an app's message catalogs as charter intl sees them ([intl] catalogs directory:
 // <locale>.toml per shipped locale, ICU MessageFormat, the source locale first): read and checked against the source
 // (Read), compiled for package intl (Generate), and what is left to translate (Locale.Todo).
 //
-// A key missing from a translation comes from the locale intl.toml's [inherit] names for it (en-IN = "en"), so a
+// A key missing from a translation comes from the locale charter.toml's [intl.inherit] names for it (en-IN = "en"), so a
 // regional catalog holds only what differs; inheriting from the source locale counts as translated. A key with
 // nowhere to come from is missing, and shows the source text. intl.sum, beside the catalogs, records the source text
 // each translation was made from: when the source changes, the translation is stale until it is updated or
@@ -114,7 +114,7 @@ func (p *Project) Message(key string) *Message {
 // same kinds and no key the source lacks.
 func Read(c config.Config) (*Project, error) {
 	if len(c.Locales) == 0 || c.Catalogs == "" {
-		return nil, errors.New("intl: intl.toml needs locales and catalogs")
+		return nil, errors.New("intl: charter.toml's [intl] needs locales and catalogs")
 	}
 	dir, source := c.CatalogDir(), c.Locales[0]
 	srcFile := filepath.Join(dir, source+".toml")
@@ -339,7 +339,7 @@ func kindName(k argKind) string {
 	return "string"
 }
 
-// parent is the shipped locale id takes what it doesn't translate from (intl.toml's [inherit]), or "".
+// parent is the shipped locale id takes what it doesn't translate from (charter.toml's [intl.inherit]), or "".
 func parent(c config.Config, id string) string {
 	if p := c.Inherit[id]; slices.Contains(c.Locales, p) {
 		return p

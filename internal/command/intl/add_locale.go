@@ -11,7 +11,7 @@ import (
 	"github.com/joeblew999/charter/site/intl/config"
 )
 
-// addLocale is charter intl add-locale <locale>…: a language, its id as Intl writes it, added to intl.toml with
+// addLocale is charter intl add-locale <locale>…: a language, its id as Intl writes it, added to charter.toml's [intl] with
 // its catalog.
 func addLocale(args []string) {
 	c := app()

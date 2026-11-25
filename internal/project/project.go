@@ -19,6 +19,12 @@
 //	live = ["go test ./test/..."]      # charter live-test, against url
 //	[test.suites]                      # more, by name: charter test e2e [-base https://…]
 //	e2e = ["go test -C e2e ."]
+//
+//	[intl]                             # the app's languages (charter intl; go doc …/site/intl/config)
+//	locales = ["en", "de"]
+//	catalogs = "locales"
+//
+//	[seo]                              # how it answers search engines (charter seo; go doc …/site/seo/config)
 package project
 
 import (
@@ -48,6 +54,9 @@ type Project struct {
 	Build      Build  `toml:"build"`
 	SDKs       SDKs   `toml:"sdks"`
 	Test       Test   `toml:"test"`
+	// The app's languages and how it answers search engines: site/intl/config and site/seo/config read them.
+	Intl map[string]any `toml:"intl"`
+	SEO  map[string]any `toml:"seo"`
 
 	Root   string `toml:"-"` // the app's folder
 	Worker Worker `toml:"-"` // wrangler.jsonc

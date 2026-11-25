@@ -13,7 +13,7 @@ import (
 )
 
 // add is charter intl add: intl's screens, copied into the app the way gsxui add copies components (#77), into
-// intl.toml's ui (views/intl, package intlui), with their text, already translated, written into the catalogs. The
+// [intl] ui (views/intl, package intlui), with their text, already translated, written into the catalogs. The
 // copying is intl/registry's, which gsxkit's components use too (#164).
 func add(args []string) {
 	c := app()

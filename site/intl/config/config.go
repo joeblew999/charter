@@ -1,22 +1,23 @@
-// Package config reads an app's intl.toml: the languages it ships and where their catalogs are. charter intl and
-// intltest find it by walking up from the working directory.
+// Package config reads an app's languages from its charter.toml: [intl], the languages it ships and where their
+// catalogs are. charter intl and intltest find it by walking up from the working directory.
 //
-//	# intl.toml
+//	# charter.toml
+//	[intl]
 //	locales = ["en", "de", "ar"]   # BCP 47 ids, the source (default) first
 //	catalogs = "locales"           # <locale>.toml (ICU MessageFormat), and the generated package
 //	gsxui = "ui"                   # optional: where gsxui add vendors components; gen translates their i18n.T
-//	ui = "views/intl"              # optional: where charter intl add copies intl's screens (default views/intl)
+//	ui = "pages/intl"              # optional: where charter intl add copies intl's screens (default pages/intl)
 //	xliff = "xliff"                # optional: where charter intl export writes and import reads (default xliff)
 //	badge = "docs/badges/intl.svg" # optional: an SVG badge gen keeps current, "languages | 14, all translated"
 //
-//	[inherit]                      # optional: a locale that takes what it doesn't translate from another
+//	[intl.inherit]                 # optional: a locale that takes what it doesn't translate from another
 //	en-IN = "en"                   # (charter intl check confirms with Intl that both write the same script)
 //
-//	[translate]                    # optional: charter intl translate (Claude Code)
+//	[intl.translate]               # optional: charter intl translate (Claude Code)
 //	model = "sonnet"               # the model it runs on (claude --model); default: Claude Code's
 //	workers = 6                    # languages translated at once (default 6)
 //
-//	[notes]                        # optional: guidance for whoever translates (people, and Claude: charter intl todo)
+//	[intl.notes]                   # optional: guidance for whoever translates (people, and Claude: charter intl todo)
 //	"*" = "A developer tool. Keep product names in English."
 //	de = "Address the reader as du."
 package config
@@ -30,10 +31,10 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// File is the config file's name.
-const File = "intl.toml"
+// File is the file the languages are in, as its [intl].
+const File = "charter.toml"
 
-// Config is an app's intl.toml.
+// Config is charter.toml's [intl].
 type Config struct {
 	Locales   []string          `toml:"locales"`
 	Catalogs  string            `toml:"catalogs"`
@@ -47,7 +48,7 @@ type Config struct {
 		Model   string `toml:"model"`
 		Workers int    `toml:"workers"`
 	} `toml:"translate"`
-	Root string `toml:"-"` // the directory intl.toml is in
+	Root string `toml:"-"` // the app's folder: charter.toml's
 }
 
 // Note is the translators' guidance for locale id: the notes for every locale ("*"), then its own.
@@ -55,7 +56,7 @@ func (c Config) Note(id string) string {
 	return strings.TrimSpace(c.Notes["*"] + " " + c.Notes[id])
 }
 
-// XLIFFDir is where export writes and import reads XLIFF: intl.toml's xliff, else "xliff".
+// XLIFFDir is where export writes and import reads XLIFF: [intl] xliff, else "xliff".
 func (c Config) XLIFFDir() string {
 	if c.XLIFF == "" {
 		return filepath.Join(c.Root, "xliff")
@@ -63,10 +64,10 @@ func (c Config) XLIFFDir() string {
 	return filepath.Join(c.Root, c.XLIFF)
 }
 
-// UIDir is where charter intl add copies intl's screens, relative to the app's root: intl.toml's ui, else views/intl.
+// UIDir is where charter intl add copies intl's screens, relative to the app's root: [intl] ui, else pages/intl.
 func (c Config) UIDir() string {
 	if c.UI == "" {
-		return filepath.Join("views", "intl")
+		return filepath.Join("pages", "intl")
 	}
 	return filepath.FromSlash(c.UI)
 }
@@ -74,7 +75,7 @@ func (c Config) UIDir() string {
 // CatalogDir is the catalogs' directory.
 func (c Config) CatalogDir() string { return filepath.Join(c.Root, c.Catalogs) }
 
-// Find reads the nearest intl.toml at or above dir.
+// Find reads [intl] of the nearest charter.toml at or above dir.
 func Find(dir string) (Config, error) {
 	dir, err := filepath.Abs(dir)
 	if err != nil {
@@ -83,19 +84,25 @@ func Find(dir string) (Config, error) {
 	for {
 		path := filepath.Join(dir, File)
 		if _, err := os.Stat(path); err == nil {
-			var c Config
-			if _, err := toml.DecodeFile(path, &c); err != nil {
+			var file struct {
+				Intl *Config `toml:"intl"`
+			}
+			if _, err := toml.DecodeFile(path, &file); err != nil {
 				return Config{}, err
 			}
+			if file.Intl == nil {
+				return Config{}, errors.New(path + " has no [intl]: the app's languages")
+			}
+			c := *file.Intl
 			if len(c.Locales) == 0 || c.Catalogs == "" {
-				return Config{}, errors.New(path + ": locales and catalogs are required")
+				return Config{}, errors.New(path + ": [intl] locales and catalogs are required")
 			}
 			c.Root = dir
 			return c, nil
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return Config{}, errors.New("no " + File + " at or above the working directory")
+			return Config{}, errors.New("no " + File + " with an [intl] at or above the working directory")
 		}
 		dir = parent
 	}

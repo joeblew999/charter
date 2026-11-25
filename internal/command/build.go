@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/joeblew999/charter/internal/command/intl"
+	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
-	"github.com/joeblew999/charter/project"
 )
 
 const library = "github.com/joeblew999/charter"
@@ -19,7 +19,7 @@ const library = "github.com/joeblew999/charter"
 // Build runs charter build: everything wrangler needs to run or deploy the Worker. wrangler.jsonc names it as its
 // build command, so wrangler dev and wrangler deploy run it themselves.
 //
-//	generate   the messages (an intl.toml), the components' Go (a gsx.toml), and the browser's files into dist/
+//	generate   the messages (an charter.toml's [intl]), the components' Go (a gsx.toml), and the browser's files into dist/
 //	           (Vite, a vite.config.ts)
 //	go         the Wasm into build/, with workers-go's JavaScript and charter's glue, which keeps Go runtimes
 //	           between requests

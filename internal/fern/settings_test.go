@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/joeblew999/charter/project"
+	"github.com/joeblew999/charter/internal/project"
 )
 
 // TestSettingsAsCommitted: for every example, the settings written from its spec and SDKs are the ones it commits,

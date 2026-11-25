@@ -11,7 +11,7 @@ import (
 )
 
 // export is charter intl export [--all] [--out dir] [locale…]: XLIFF 2.0 for translators, what is left (or
-// everything), into xliff/out (intl.toml's xliff).
+// everything), into xliff/out ([intl] xliff).
 func export(args []string) {
 	c := app()
 	f := flag.NewFlagSet("export", flag.ExitOnError)

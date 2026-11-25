@@ -148,7 +148,7 @@ func TestGenerate(t *testing.T) {
 		}
 	}
 
-	// A language just added to intl.toml gets its catalog.
+	// A language just added to charter.toml's [intl] gets its catalog.
 	if err := a.project("en", "en-IN", "de", "fr").Generate(nil); err != nil {
 		t.Fatal(err)
 	}
@@ -357,10 +357,10 @@ func TestContext(t *testing.T) {
 	}
 }
 
-// TestAddLocale: a language goes into intl.toml and gets a catalog.
+// TestAddLocale: a language goes into charter.toml's [intl] and gets a catalog.
 func TestAddLocale(t *testing.T) {
 	a := newApp(t)
-	a.write("intl.toml", "# the app's languages\nlocales = [\"en\", \"de\"]\ncatalogs = \"cat\"\n")
+	a.write("charter.toml's [intl]", "# the app's languages\nlocales = [\"en\", \"de\"]\ncatalogs = \"cat\"\n")
 	a.write("cat/en.toml", "hi = \"Hi\"\n")
 	c, err := config.Find(a.root)
 	if err != nil {
@@ -369,8 +369,8 @@ func TestAddLocale(t *testing.T) {
 	if err := catalog.AddLocale(c, "fr-CA", "français (Canada)"); err != nil {
 		t.Fatal(err)
 	}
-	if got := a.read("intl.toml"); !strings.Contains(got, `locales = ["en", "de", "fr-CA"]`) || !strings.HasPrefix(got, "# the app's languages\n") {
-		t.Errorf("intl.toml:\n%s", got)
+	if got := a.read("charter.toml's [intl]"); !strings.Contains(got, `locales = ["en", "de", "fr-CA"]`) || !strings.HasPrefix(got, "# the app's languages\n") {
+		t.Errorf("charter.toml's [intl]:\n%s", got)
 	}
 	if got := a.read("cat/fr-CA.toml"); !strings.HasPrefix(got, "# français (Canada) (fr-CA): the translations of en.toml") {
 		t.Errorf("fr-CA.toml:\n%s", got)
@@ -415,7 +415,7 @@ func TestGsxui(t *testing.T) {
 	}
 }
 
-// TestBadge: intl.toml's badge, written by gen from the catalogs: how many languages, and whether all are translated.
+// TestBadge: [intl] badge, written by gen from the catalogs: how many languages, and whether all are translated.
 func TestBadge(t *testing.T) {
 	a := newApp(t)
 	a.write("cat/en.toml", "hello = \"Hello\"\n")

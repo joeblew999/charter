@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/internal/command/intl"
+	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
 	"github.com/joeblew999/charter/internal/standard"
-	"github.com/joeblew999/charter/project"
 )
 
 // Check runs charter check: everything before a push, needing no Cloudflare account. Each part says how long it took.
@@ -25,7 +25,7 @@ import (
 //	vet        go vet, for the host and as the Worker is built (GOOS=js GOARCH=wasm); structpages-lint when go.mod has it
 //	specs      the committed specs are what the contract gives (charter.toml's spec)
 //	test       go test ./...
-//	languages  every language complete (an intl.toml)
+//	languages  every language complete (an charter.toml's [intl])
 //	worker     the build, then on wrangler dev: the standard test of an API with a contract, and [test] run
 func Check(args []string) {
 	fs := flag.NewFlagSet("charter check", flag.ExitOnError)
