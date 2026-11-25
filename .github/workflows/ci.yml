@@ -76,5 +76,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # The test is in the app's own package, which compiles only once its messages, components and Vite's manifest are written.
+      - run: go tool charter build -only generate
+        working-directory: examples/site
       - run: go test -count=1 -run TestDev -v -timeout 15m .
         working-directory: examples/site
