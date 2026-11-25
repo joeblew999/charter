@@ -26,7 +26,7 @@ build/worker.mjs. Its bindings are `env` from `cloudflare:workers`, typed from c
 | Call | On Workers | Off Workers |
 |---|---|---|
 | `bindings.Var("APP_ENV")` | a variable | the environment |
-| `d1.Open("DB")`, `d1.Query[T]`, `d1.One[T]`, `d1.Exec` | D1 | SQLite in memory, migrated |
+| `d1.Open("DB")`, `d1.Query[T]`, `d1.One[T]`, `d1.Exec`, `d1.ExecRows`, `d1.Batch(db, d1.Stmt(sql, args...), …)` | D1 | SQLite in memory, migrated, foreign keys on |
 | `bindings.Allow("WRITES", bindings.ClientKey(r))` | a rate limit binding | charter.toml's limit, counted |
 | `hub.DurableObject[T]("ROOM", name).Publish(ctx, item)` | Workers RPC to the object | in memory |
 | `transport.CFOf(r)` | `request.cf` | zero (`transport.WithCF` in a test) |
@@ -36,7 +36,8 @@ build/worker.mjs. Its bindings are `env` from `cloudflare:workers`, typed from c
 - TinyGo builds what ships: register plain paths (`"/notes"`) and check the method with `web.Allow(w, r, "GET")`,
   never `"GET /notes"` or `{$}`; render pages with `web.Render` (buffered, a Content-Length); no `html/template`.
   Absolute URLs come from `web.Origin(r)`.
-- D1 has no interactive transactions: one statement each, `RETURNING` for what it wrote.
+- D1 has no interactive transactions: one statement each, `RETURNING` for what it wrote; statements that must all
+  happen or none are one `d1.Batch`.
 - Memory between requests is a cache, never state: any request may start a new runtime.
 
 ## Bindings and migrations

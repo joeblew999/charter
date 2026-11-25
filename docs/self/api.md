@@ -46,9 +46,11 @@ The schema is `migrations/*.sql`, the one place the tables are said: a deploy ap
 | `db` | You write | `charter spec` writes |
 |---|---|---|
 | `"drizzle"` (TypeScript) | The queries with [Drizzle](https://orm.drizzle.team), on `drizzle(env.DB)` | `api/tables.ts`: each table, as SQLite has it once the migrations ran |
-| `"sqlc"` (Go) | The queries in `api/queries.sql`, each named (`-- name: CreateNote :one`, `:many` or `:exec`), with a comment that starts with its name as its doc | `api/queries.go`: a function for each, over `charter/d1`, its arguments and rows typed by [sqlc](https://sqlc.dev) against the schema. A row of a whole table is that table's type (`NotesRow`); a column that may be NULL is a pointer |
+| `"sqlc"` (Go) | The queries in `api/queries.sql`, each named (`-- name: CreateNote :one`, `:many`, `:exec`, or `:execrows` for the number of rows a statement changed), with a comment that starts with its name as its doc | `api/queries.go`: a function for each, over `charter/d1`, its arguments and rows typed by [sqlc](https://sqlc.dev) against the schema. A row of a whole table is that table's type (`NotesRow`); a column that may be NULL is a pointer |
 
 The Go is written over `charter/d1`, not `database/sql`, which D1 does not need: a statement is one call, and its rows come back as one string. The notes examples keep their notes this way.
+
+The same functions run off Workers: there `d1.Open` is SQLite in memory with the project's migrations applied and foreign keys enforced, as D1 enforces them, so a Go test runs the SQL the Worker runs (`examples/notes-go/api/store_d1_test.go`). Statements that must all happen or none go as one `d1.Batch`, which D1 runs as a transaction.
 
 ## Write for Workers
 

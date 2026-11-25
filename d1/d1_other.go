@@ -40,7 +40,7 @@ func Open(name string) (DB, error) {
 	if i < 0 {
 		return DB{}, fmt.Errorf("d1: charter.toml has no [[d1]] binding %s", name)
 	}
-	db, err := sql.Open("sqlite", "file:charter-d1-"+name+"?mode=memory&cache=shared")
+	db, err := sql.Open("sqlite", "file:charter-d1-"+name+"?mode=memory&cache=shared&_pragma=foreign_keys(1)") // D1 enforces foreign keys
 	if err != nil {
 		return DB{}, err
 	}
@@ -117,6 +117,37 @@ func Query[T any](db DB, query string, args ...any) ([]T, error) {
 // Exec runs one statement whose rows, if it has any, are not wanted.
 func Exec(db DB, query string, args ...any) error {
 	if _, err := db.sql.Exec(query, args...); err != nil {
+		return fmt.Errorf("d1: %w", err)
+	}
+	return nil
+}
+
+// ExecRows runs one statement and returns how many rows it changed (an INSERT, UPDATE or DELETE).
+func ExecRows(db DB, query string, args ...any) (int64, error) {
+	result, err := db.sql.Exec(query, args...)
+	if err != nil {
+		return 0, fmt.Errorf("d1: %w", err)
+	}
+	changed, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("d1: %w", err)
+	}
+	return changed, nil
+}
+
+// Batch runs the statements in order as one transaction, as D1's batch does: if one fails, none of them happened.
+func Batch(db DB, statements ...Statement) error {
+	tx, err := db.sql.Begin()
+	if err != nil {
+		return fmt.Errorf("d1: %w", err)
+	}
+	for i, s := range statements {
+		if _, err := tx.Exec(s.Query, s.Args...); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("d1: batch statement %d: %w", i+1, err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("d1: %w", err)
 	}
 	return nil

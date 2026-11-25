@@ -51,3 +51,28 @@ func Exec(db DB, query string, args ...any) error {
 	}
 	return nil
 }
+
+// ExecRows runs one statement and returns how many rows it changed (an INSERT, UPDATE or DELETE): D1's meta.changes.
+func ExecRows(db DB, query string, args ...any) (int64, error) {
+	result, err := promise.Await(db.binding.Call("prepare", query).Call("bind", args...).Call("run"))
+	if err != nil {
+		return 0, fmt.Errorf("d1: %w", err)
+	}
+	return int64(result.Get("meta").Get("changes").Int()), nil
+}
+
+// Batch runs the statements in order as one transaction, D1's batch: one call, and if a statement fails, none of
+// them happened. No statements is no call: D1 refuses an empty batch.
+func Batch(db DB, statements ...Statement) error {
+	if len(statements) == 0 {
+		return nil
+	}
+	prepared := make([]any, len(statements))
+	for i, s := range statements {
+		prepared[i] = db.binding.Call("prepare", s.Query).Call("bind", s.Args...)
+	}
+	if _, err := promise.Await(db.binding.Call("batch", js.ValueOf(prepared))); err != nil {
+		return fmt.Errorf("d1: batch: %w", err)
+	}
+	return nil
+}
