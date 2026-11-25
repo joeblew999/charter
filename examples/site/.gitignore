@@ -1,0 +1,10 @@
+*.x.go
+/dist/
+/build/
+/.wrangler/
+/sdk/out/
+# charter intl gen output (charter intl)
+intl_gen.go
+intl-messages.mjs
+intl-workerd/
+/xliff/

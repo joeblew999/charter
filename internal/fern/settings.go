@@ -2,7 +2,7 @@
 // written from the spec and charter.toml's [sdks]; a group generated (Docker) into sdk/out/<group> when fern/ is newer
 // than what made it; proven in its language (Go: build, vet, and Fern's tests against WireMock; TypeScript:
 // typechecked with the TypeScript its SDKs are written for; Python: mypy and its own tests; the CLI, in Rust: built);
-// and the Go SDK a project commits, in sdk/go. The toolchains a proof needs are mise's, at the versions pinned here.
+// and the Go SDK a project commits, in sdk/go. The toolchains a proof needs (cargo, uv) are the developer's own.
 package fern
 
 import (
@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/joeblew999/charter/project"
+	"github.com/joeblew999/charter/internal/project"
 )
 
 // generator is a Fern generator, at the version charter pins: here, the one place.
@@ -159,18 +159,21 @@ func Settings(specJSON []byte, sdks project.SDKs, goModule string, overlays bool
 	lines = append(lines, "", "# The SDKs. Generate one: charter sdk <group>   (into sdk/out/<group>)", "groups:")
 	lines = append(lines, group("go", "Go: the module charter sdk -publish commits in sdk/go, in a project that keeps it.", generators["go"],
 		[]string{"module:", "  path: " + goModule, `  version: "1.22"`, "packageName: " + lower})[1:]...)
-	lines = append(lines, group("typescript", "TypeScript, as sources (.ts).", generators["typescript"], typescript)...)
-	lines = append(lines, group("typescript-dist", "TypeScript, compiled (.js and .d.ts): what a Worker or a Node program imports.", generators["typescript"],
-		append(slices.Clone(typescript), "outputSourceFiles: false"))...)
+	// Other languages are the app's choice ([sdks] more): its API's users write in them, charter does not.
+	if slices.Contains(sdks.More, "typescript") {
+		lines = append(lines, group("typescript", "TypeScript, as sources (.ts).", generators["typescript"], typescript)...)
+		lines = append(lines, group("typescript-dist", "TypeScript, compiled (.js and .d.ts): what a Worker or a Node program imports.", generators["typescript"],
+			append(slices.Clone(typescript), "outputSourceFiles: false"))...)
+		for _, audience := range sdks.Audiences {
+			lines = append(lines, group("typescript-"+audience, "TypeScript, only what the contract tags for the audience "+audience+".", generators["typescript"],
+				typescript, "    audiences:", "      - "+audience)...)
+		}
+	}
 	if slices.Contains(sdks.More, "python") {
 		lines = append(lines, group("python", "Python.", generators["python"], nil)...)
 	}
 	if slices.Contains(sdks.More, "cli") {
 		lines = append(lines, group("cli", "A command-line client, in Rust (Fern's early access).", generators["cli"], []string{"binaryName: " + lower})...)
-	}
-	for _, audience := range sdks.Audiences {
-		lines = append(lines, group("typescript-"+audience, "TypeScript, only what the contract tags for the audience "+audience+".", generators["typescript"],
-			typescript, "    audiences:", "      - "+audience)...)
 	}
 	return strings.Join(lines, "\n") + "\n", nil
 }

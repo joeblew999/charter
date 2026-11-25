@@ -20,12 +20,10 @@ import (
 	"github.com/joeblew999/charter/internal/run"
 )
 
-// The toolchains a proof needs, as mise loads them: the Rust a CLI is built with; the uv and Python a Python
+// The toolchains a proof needs, the developer's own (cargo, uv): the Rust a CLI is built with; the uv and Python a Python
 // client is proven with, and the packages: the client's own (httpx, pydantic, typing-extensions, anyio) and the
 // checkers.
 const (
-	rustVersion   = "1.98.1"
-	uvVersion     = "0.13.0"
 	pythonVersion = "3.13"
 )
 
@@ -141,19 +139,6 @@ func Generate(dir, group string, ifStale, quiet bool) (time.Duration, error) {
 	return time.Since(start), stamp(dir, group)
 }
 
-// tsconfig is how a generated TypeScript SDK is typechecked: standard fetch, none of the project's own settings.
-// The projects stay on @types/node 22: with 26, a generated TypeScript SDK's Headers does not typecheck.
-// Upstream: fern-api/fern#18313 (when fixed: @types/node 26 in every package.json)
-func tsconfig(entry string) []byte {
-	b, _ := json.MarshalIndent(map[string]any{
-		"//": "Written by charter sdk -prove: how a generated TypeScript SDK is typechecked (bundler mode, default libs).",
-		"compilerOptions": map[string]any{"target": "es2022", "module": "preserve", "moduleResolution": "bundler", "allowImportingTsExtensions": true,
-			"strict": true, "noEmit": true, "skipLibCheck": true},
-		"include": []string{entry},
-	}, "", "  ")
-	return b
-}
-
 // ProveGroup proves a generated group, in its language, by what is in sdk/out/<group>. What it runs keeps its
 // output, shown only if it fails: the groups are proven side by side.
 func ProveGroup(dir, group string) error {
@@ -189,21 +174,6 @@ func ProveGroup(dir, group string) error {
 		}
 		_, err = run.Quietly(out, map[string]string{"GOWORK": "off", "WIREMOCK_URL": "http://" + strings.TrimSpace(port)}, "go", "test", "./...")
 		return err
-	case firstOf(out, "index.ts", "src/index.ts", "sdk/index.ts") != "":
-		// Fern's SDKs are written for TypeScript 5: a project on a newer one has 5.9 beside it as typescript-sdk
-		// ("npm:typescript@~5.9.3"); a project on 5.9 already, its own.
-		entry := firstOf(out, "index.ts", "src/index.ts", "sdk/index.ts")
-		config := filepath.Join(out, "tsconfig.check.json")
-		if err := os.WriteFile(config, tsconfig(entry), 0o644); err != nil {
-			return err
-		}
-		defer os.Remove(config)
-		if tsc := firstOf(dir, "node_modules/typescript-sdk/bin/tsc", "../../node_modules/typescript-sdk/bin/tsc"); tsc != "" {
-			_, err := run.Quietly(dir, nil, "node", filepath.Join(dir, tsc), "-p", config)
-			return err
-		}
-		_, err := run.Quietly(dir, nil, "tsc", "-p", config)
-		return err
 	case exists("__init__.py") && exists("client.py"):
 		return python(dir, out, group)
 	case exists("esm/index.mjs") && exists("esm/index.d.mts"):
@@ -222,15 +192,16 @@ func ProveGroup(dir, group string) error {
 		if err != nil {
 			return err
 		}
-		args := []string{"exec", "rust@" + rustVersion, "--", "cargo", "build"}
+		// The developer's own Rust (https://rustup.rs): only an app with a Rust CLI among its SDKs needs it.
+		args := []string{"build"}
 		if bin != "" {
 			args = append(args, "--bin", bin)
 		}
 		args = append(args, "--no-default-features", "--features", "rustls")
-		_, err = run.Quietly(out, map[string]string{"CARGO_TARGET_DIR": target}, "mise", args...)
+		_, err = run.Quietly(out, map[string]string{"CARGO_TARGET_DIR": target}, "cargo", args...)
 		return err
 	}
-	fmt.Printf("%s: generated; charter proves Go, TypeScript, Python and the Rust CLI, not this language\n", out)
+	fmt.Printf("%s: generated; charter proves Go, Python and the Rust CLI, not this language\n", out)
 	return nil
 }
 
@@ -267,11 +238,12 @@ func python(dir, out, group string) error {
 		return err
 	}
 	uv := func(args ...string) error {
-		full := []string{"exec", "uv@" + uvVersion, "--", "uv", "run", "--no-project", "--python", pythonVersion}
+		// The developer's own uv (https://docs.astral.sh/uv/), which gets the Python: only an app with a Python SDK needs it.
+		full := []string{"run", "--no-project", "--python", pythonVersion}
 		for _, p := range pythonPackages {
 			full = append(full, "--with", p)
 		}
-		_, err := run.Quietly(site, nil, "mise", append(append(full, "--"), args...)...)
+		_, err := run.Quietly(site, nil, "uv", append(append(full, "--"), args...)...)
 		return err
 	}
 	if err := uv("mypy", "-p", name); err != nil {

@@ -1,0 +1,26 @@
+# What charter adds to wrangler.jsonc (go doc github.com/joeblew999/charter/internal/project).
+health = "/api/openapi.json"
+url = "https://charter-site.gedw99.workers.dev"
+# The API's contract: charter spec writes fern/ from api/contract.go, and api/queries.go from api/queries.sql.
+spec = "fern/openapi.json"
+db = "sqlc"
+
+[sdks]
+name = "Api"
+
+# How it answers search engines (charter seo): charter check audits the site as a crawler reads it. Its live site is
+# url, above.
+[seo]
+
+# The app's languages (charter intl; go doc github.com/joeblew999/charter/site/intl/config): BCP 47 ids, the
+# source first.
+[intl]
+locales = ["en", "de"]
+# <locale>.toml per language, ICU MessageFormat; charter build writes the Go package of messages there.
+catalogs = "locales"
+# Where gsxui add vendors components: their own text is translated from the catalogs' [gsxui].
+gsxui = "ui"
+
+# Guidance for whoever translates, people or Claude (charter intl todo shows it); "*" is for every language.
+[intl.notes]
+"*" = ""

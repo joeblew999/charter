@@ -1,4 +1,4 @@
-// Package standard is the standard test: what every API charter serves must do (docs/self/standard.md), checked on a
+// Package standard is the standard test: what every API charter serves must do, checked on a
 // running API from outside, as a client sees it. It knows no API: it reads the one it tests (its /api/openapi.json)
 // and checks it against that. charter check runs it on the project's server (natively and under workerd), charter
 // live-test on the deployed Worker, so no project writes or copies it.

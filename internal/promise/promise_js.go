@@ -11,8 +11,8 @@ import (
 
 // Await waits for a JavaScript promise: its value, or its rejection as an error.
 //
-// Under TinyGo every call from JavaScript into Go starts a goroutine, and a settled promise is
-// such a call. So await once per piece of work: one statement, one publish.
+// Every wait hands control back to JavaScript and returns through a call into Go.
+// So await once per piece of work: one statement, one publish.
 func Await(promise js.Value) (js.Value, error) {
 	type result struct {
 		value js.Value

@@ -3,20 +3,15 @@ package dbcode
 import (
 	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
 // TestAsCommitted: for every Go example with queries, what sqlc works out of its schema and queries is written as the
-// api/queries.go it commits. It runs
-// sqlc, as mise loads it (skipped without mise).
+// api/queries.go it commits. It runs sqlc (go run, the first time a download).
 func TestAsCommitted(t *testing.T) {
-	if _, err := exec.LookPath("mise"); err != nil {
-		t.Skip("no mise to load sqlc")
-	}
-	for _, example := range []string{"notes-go", "conformance-go", "start-htmx", "start-datastar"} {
+	for _, example := range []string{"notes", "site"} {
 		t.Run(example, func(t *testing.T) {
 			dir := filepath.Join("..", "..", "examples", example)
 			committed, err := os.ReadFile(filepath.Join(dir, "api", "queries.go"))

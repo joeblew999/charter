@@ -1,0 +1,13 @@
+# gsxseo is a library other modules import: its .x.go (head.gsx's gsxseo.Head) is generated here (go -C gsxseo tool
+# gsx generate -q .) and committed, as the gsx Package renderers guide says for a package outside the consuming module.
+# This file also stops an app's gsx.toml from being inherited.
+
+# gsx's lints (gsx's Configuration guide, "Lints"), as errors: gsx generate, which every build, test and CI run calls,
+# fails on one instead of printing a warning nobody reads. go tool gsx info lists them and their levels.
+[lint]
+duplicate-attribute = "error"
+punctuation-space = "error"
+redundant-space-literal = "error"
+self-reference-leaf = "error"
+url-always-blocked = "error"
+wrapper-cycle = "error"

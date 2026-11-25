@@ -1,0 +1,25 @@
+# The source catalog: every message the app shows, in ICU MessageFormat. Translations are <locale>.toml beside it,
+# with the same tables and keys. A comment above a key tells translators where the text appears.
+
+[site]
+# The page's title, in the browser's tab and in search results.
+title = "Messages, live"
+# The page's description, in search results.
+description = "A small site on Cloudflare Workers in Go: post a message and it shows at once on every open page."
+
+[home]
+# The page's heading.
+heading = "Messages"
+# Under the heading.
+intro = "Post one, and it shows at once on every page open here."
+# The text field's hint and its label for screen readers.
+placeholder = "Say something"
+label = "Message"
+# The button that sends the message.
+post = "Post"
+# Above the list of languages at the foot of the page.
+languages = "Languages"
+
+# Text gsxui's own components write.
+[gsxui]
+close = "Close"

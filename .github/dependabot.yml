@@ -1,0 +1,17 @@
+# The pins, moved by GitHub's own updater: Go modules (the library and each example), npm (one lockfile for all), and
+# the workflow's actions. Each update is a pull request, which the checks run on.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directories: ["/", "/examples/api", "/examples/site", "/examples/notes"]
+    schedule: { interval: weekly }
+    groups:
+      go: { patterns: ["*"] }
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      npm: { patterns: ["*"] }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

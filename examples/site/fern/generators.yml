@@ -1,0 +1,22 @@
+# Written by `charter spec` from fern/openapi.json and charter.toml ([sdks]): don't edit, change
+# those and run charter spec. Fern's generators are charter's, at the versions it pins.
+api:
+  specs:
+    - openapi: openapi.json
+    - asyncapi: asyncapi.json
+
+# The SDKs. Generate one: charter sdk <group>   (into sdk/out/<group>)
+groups:
+  # Go: the module charter sdk -publish commits in sdk/go, in a project that keeps it.
+  go:
+    generators:
+      - name: fernapi/fern-go-sdk
+        version: 1.70.5
+        output:
+          location: local-file-system
+          path: ../sdk/out/go
+        config:
+          module:
+            path: github.com/joeblew999/charter/examples/site/sdk/go
+            version: "1.22"
+          packageName: api
