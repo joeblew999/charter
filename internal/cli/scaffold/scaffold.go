@@ -61,20 +61,36 @@ type file struct {
 func owned() []file {
 	b, err := fs.ReadFile(skills.FS, "charter/SKILL.md")
 	check(err)
-	out := []file{
-		{TasksFile, tasks, 0o644, "charter tasks"},
+	var out []file
+	if wantsTasks() {
+		out = append(out, file{TasksFile, tasks, 0o644, "charter tasks"})
+	}
+	out = append(out, []file{
 		{".mise/tasks/charter-builds", launcher, 0o755, "charter tasks"},
 		{".claude/skills/charter/SKILL.md", b, 0o644, "charter skill"},
 		{".github/workflows/charter.yml", workflow, 0o644, "charter workflow"},
-	}
+	}...)
 	if _, err := os.Stat("go.mod"); err == nil {
 		out = append(out, file{pins.ConfFile, pins.File, 0o644, "charter tasks"})
 	}
 	return out
 }
 
+// wantsTasks is whether the app here has charter's mise tasks: all but one whose charter.toml says tasks = false. Each
+// task is only charter <command> under another name, so an app that calls charter from tasks of its own needs none
+// (go-htmx4: 24 fewer commands in mise tasks). The launcher Workers Builds runs is written either way.
+func wantsTasks() bool {
+	p, err := project.Load(".")
+	return err != nil || p.Tasks == nil || *p.Tasks
+}
+
 // write writes the owned files that how writes.
 func write(how string) {
+	if how == "charter tasks" && !wantsTasks() {
+		if err := os.Remove(TasksFile); err == nil {
+			log.Printf("✓ %s removed: %s says tasks = false", TasksFile, project.File)
+		}
+	}
 	for _, f := range owned() {
 		if f.how != how {
 			continue

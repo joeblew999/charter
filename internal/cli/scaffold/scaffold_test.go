@@ -121,3 +121,39 @@ func mustRead(t *testing.T, path string) string {
 	}
 	return string(b)
 }
+
+// TestNoTasks: an app whose charter.toml says tasks = false gets no .mise/tasks/charter.toml, charter tasks removes
+// one that is there, and the check says so while it is; the launcher Workers Builds runs is written either way.
+func TestNoTasks(t *testing.T) {
+	t.Chdir(t.TempDir())
+	os.WriteFile("go.mod", []byte("module example.com/app\n\ngo 1.27.1\n"), 0o644)
+	toml := "name = \"app\"\ncompatibility_date = \"2026-09-25\"\n"
+	os.WriteFile(project.File, []byte(toml), 0o644)
+	write("charter tasks")
+	if _, err := os.Stat(TasksFile); err != nil {
+		t.Fatalf("an app gets charter's tasks by default: %v", err)
+	}
+	os.WriteFile(project.File, []byte(toml+"tasks = false\n"), 0o644)
+	p, err := project.Load(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if problems := strings.Join(Problems(p), "\n"); !strings.Contains(problems, "tasks = false") {
+		t.Errorf("the check doesn't say the task file should go:\n%s", problems)
+	}
+	write("charter tasks")
+	if _, err := os.Stat(TasksFile); err == nil {
+		t.Errorf("%s is still there", TasksFile)
+	}
+	if _, err := os.Stat(".mise/tasks/charter-builds"); err != nil {
+		t.Errorf("the launcher: %v", err)
+	}
+	for _, f := range owned() {
+		if f.path == TasksFile {
+			t.Error("owned still lists the task file")
+		}
+	}
+	if problems := strings.Join(Problems(p), "\n"); strings.Contains(problems, TasksFile) {
+		t.Errorf("the check still wants the task file:\n%s", problems)
+	}
+}
