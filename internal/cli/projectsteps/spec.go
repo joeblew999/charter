@@ -55,16 +55,17 @@ func spec(p *project.Project, checkOnly bool) error {
 	if checkOnly {
 		command = append(command, "-check")
 	}
+	// The database's code first: it is written from migrations/ alone, and the contract's package, which the specs'
+	// program compiles, calls it (a Go project's api/queries.go builds off Workers too).
+	if p.DB != "" {
+		if err := dbcode.Write(p.Root, p.DB, checkOnly); err != nil {
+			return err
+		}
+	}
 	if err := run.Run(p.Root, nil, command[0], append(command[1:], "fern/openapi.json", "fern/asyncapi.json", server)...); err != nil {
 		return err
 	}
-	if err := fernSettings(p, module+"/sdk/go", checkOnly); err != nil {
-		return err
-	}
-	if p.DB != "" {
-		return dbcode.Write(p.Root, p.DB, checkOnly)
-	}
-	return nil
+	return fernSettings(p, module+"/sdk/go", checkOnly)
 }
 
 // specProgram writes the program that writes a Go project's specs, and returns its package: the contract's API
