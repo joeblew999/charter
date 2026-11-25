@@ -159,6 +159,9 @@ func served() (string, error) {
 	return filepath.Join(dir, "intl-workerd.capnp"), nil
 }
 
+// alive is the keeper's stdin: open for as long as this program runs.
+var alive io.WriteCloser
+
 // keeper is the variable that makes this program workerd's keeper instead of itself: its value is workerd's config.
 const keeper = "CHARTER_INTL_KEEPER"
 
@@ -180,7 +183,9 @@ func serve() (string, error) {
 	cmd := exec.Command(self)
 	cmd.Env = append(os.Environ(), keeper+"="+capnp)
 	cmd.Stderr = os.Stderr
-	if _, err := cmd.StdinPipe(); err != nil { // held open until this program ends
+	// Held open until this program ends, and held here: a pipe nothing refers to is closed by the garbage collector,
+	// which stopped workerd in the middle of a long test run.
+	if alive, err = cmd.StdinPipe(); err != nil {
 		return "", err
 	}
 	out, err := cmd.StdoutPipe()
