@@ -57,7 +57,7 @@ In every repo on charter-ts:
 |---|---|
 | `package.json`: the scripts that run `charter-ts`, and `charter-ts`, `cf`, `vite` in `devDependencies` | Delete them (`charter check` names a script left) |
 | `package.json`: `description`, `keywords`, `homepage` | `charter.toml`'s `[github]`: `description`, `topics`, `homepage` |
-| charter-lib from `releases/download/ts-vX.Y.Z/` | From the release `vX.Y.Z`: `https://github.com/joeblew999/charter/releases/download/v0.21.0/charter-lib-0.21.0.tgz` |
+| charter-lib from `releases/download/ts-vX.Y.Z/` | From the release `vX.Y.Z`: `https://github.com/joeblew999/charter/releases/download/v0.22.0/charter-lib-0.22.0.tgz` |
 | `ci.config.ts` | `charter.toml`'s `[ci.jobs.<name>]`: `run` as commands, `charter <command>` for `charter-ts <command>` |
 | `tsconfig.json` extending `charter-ts/tsconfig.worker.json` | Its own options, `types: ["@cloudflare/workers-types"]` (a `devDependency`), and `.charter/env.d.ts` included: the Worker's `env`, typed from `charter.toml` |
 | `npm run <command>` | `charter <command>`, or `mise run charter:<command>` |
