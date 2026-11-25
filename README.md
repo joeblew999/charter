@@ -58,12 +58,54 @@ go tool charter dev
 my-app/
   main.go          transport.Run(handler): a Worker on Cloudflare, a plain server with go run .
   wrangler.jsonc   the Worker: name, bindings, variables, environments
-  charter.toml     only what wrangler has no place for: the contract, the SDKs, tests (optional)
+  charter.toml     what wrangler has no place for: the contract, SDKs, tests, languages, search engines
   package.json     wrangler (and Vite, for a site)
+  go.mod           charter the library, and charter the command as a tool
   api/             an API's contract and handlers
   pages/           a site's gsx components
+  locales/         a site's text, a file per language
+  ui/              gsxui's components, as gsxui add copies them
   web/             a site's browser files, which Vite builds
+  public/          files served as they are (the icon)
   migrations/      D1's *.sql
+```
+
+`vite.config.ts` is the one file with a TypeScript name: gsx writes it and gsxui edits it by that name. There is no
+TypeScript of your own to write.
+
+## A site in one call
+
+```go
+//go:embed dist/.vite/manifest.json
+var dist embed.FS
+
+func main() {
+	s := &site.Site{Name: "My App", Dist: dist, Pages: []string{"/", "/about"}}
+	transport.Run(s.Handler(mux))
+}
+```
+
+```gsx
+<html { site.HTML(ctx)... }>
+	<head>
+		<site.Head title={ locales.HomeTitle |> text } description={ locales.HomeDescription |> text }/>
+	</head>
+```
+
+That is Vite's files in dev and in production, a URL per language (`/about`, `/de/about`) with every alternate in
+`<head>`, `robots.txt`, a sitemap in every language, and `noindex` on previews. `charter check` then audits the site
+the way a search engine reads it.
+
+Languages and search engines are two tables of `charter.toml`:
+
+```toml
+url = "https://app.example.com"
+
+[intl]                # charter intl init writes it
+locales = ["en", "de"]
+catalogs = "locales"
+
+[seo]                 # the live site is url, above
 ```
 
 ## The library
@@ -74,23 +116,27 @@ Three folders, by what you are building:
 |---|---|
 | [`cf/`](cf) Cloudflare from Go | `transport` (run a handler as a Worker), `bindings` (variables, static assets, rate limits, fetch), `d1`, `hub` (Durable Object fan-out), `ratelimit` |
 | [`api/`](api) APIs from a contract | `serve` (the standard API), `specs`, `asyncapi`, `humaworkers` (Huma on Workers), `mcp`, `auth`, `problem`, `follow` (SSE and WebSocket streams) |
-| [`site/`](site) Sites | `web`, `fragments`, `intl` and `gsxintl` (languages), `seo` and `gsxseo` (search engines) |
+| [`site/`](site) Sites | `site` itself (the one call above), `web`, `fragments`, `intl` and `gsxintl` (languages), `seo` and `gsxseo` (search engines) |
 
 Every binding has a stand-in off Workers: `d1.Open` is SQLite in memory with your migrations applied, a rate limit
-counts in memory, the hub is in the process. So one `main.go` serves both, and `go test` runs the real SQL.
+counts in memory, the hub is in the process, Intl is a local workerd. So one `main.go` serves both, and `go test` runs
+the real SQL.
+
+The rest of the repo: [`cmd/charter`](cmd/charter) is the command, [`internal/`](internal) its code,
+[`examples/`](examples) three apps.
 
 ## Examples
 
 | Example | What it shows |
 |---|---|
 | [`examples/api`](examples/api) | The smallest API: one route from a contract, its specs, MCP |
-| [`examples/site`](examples/site) | An API and its pages in one Worker: gsx, htmx 4, Vite, D1, live over SSE |
-| [`examples/notes`](examples/notes) | A full API: auth, D1, SSE and WebSocket streams, rate limits, SDKs in Go, TypeScript, Python and a CLI |
+| [`examples/site`](examples/site) | An API and its pages in one Worker: gsx, gsxui, htmx 4, Vite, two languages, search engines, D1, live over SSE |
+| [`examples/notes`](examples/notes) | A full API: auth, D1, SSE and WebSocket streams, rate limits, SDKs in Go and Python and a command-line client |
 
 In this repo: `npm install` once at the top (the examples share one `node_modules`), then `go tool charter check` in
 an example.
 
 ## Size
 
-A Worker built with the standard Go compiler is about 4 MB gzipped for the smallest API. Workers Paid takes 10 MB;
+A Worker built with the standard Go compiler is about 4 MB gzipped, for the smallest API and for a site alike. Workers Paid takes 10 MB;
 Workers Free takes 3 MB, so these do not fit the free plan.

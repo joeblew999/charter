@@ -32,7 +32,7 @@ func (r repo) siteOf(c config.Config, flagSite string) string {
 		site, from = flagSite, "--site"
 	}
 	if site == "" {
-		fail(fmt.Errorf("no site: set site in %s (charter seo init --site https://your.site), or pass --site", config.File))
+		fail(fmt.Errorf("no site: set site in %s (or url, above it), or pass --site", config.File))
 	}
 	site = strings.TrimRight(site, "/")
 	fmt.Fprintf(os.Stderr, "charter seo: %s (from %s)\n", site, from)

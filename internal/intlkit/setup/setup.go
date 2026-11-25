@@ -225,7 +225,7 @@ func gsxToml(path string, renderers [][2]string, log io.Writer) error {
 	s, before := string(b), string(b)
 	filters := gsxintlPkg + "/filters"
 	if !strings.Contains(s, `"`+filters+`"`) {
-		line := "# intl's gsx filters: { t |> date(opts) }, { n |> number }, href={ \"/about\" |> localize } (intl/README.md).\n"
+		line := "# intl's gsx filters: { t |> date(opts) }, { n |> number }, href={ \"/about\" |> localize } (go doc github.com/joeblew999/charter/site/gsxintl/filters).\n"
 		if loc := filterLine.FindStringIndex(s); loc != nil {
 			s = s[:loc[1]] + `"` + filters + `", ` + s[loc[1]:]
 		} else if loc := tableLine.FindStringIndex(s); loc != nil {

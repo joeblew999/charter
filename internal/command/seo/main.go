@@ -74,8 +74,6 @@ func Main(args []string) {
 		r.todo(args)
 	case "inspect":
 		r.inspect(args)
-	case "show-version":
-		showVersion(args)
 	case "show-help", "help":
 		showHelp()
 	default:

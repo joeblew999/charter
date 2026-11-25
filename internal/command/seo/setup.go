@@ -16,7 +16,7 @@ import (
 	"github.com/joeblew999/charter/site/seo/config"
 )
 
-// setup is charter seo setup (seo:setup), once per person, not per site: one service account serves every site it is
+// setup is charter seo setup, once per person, not per site: one service account serves every site it is
 // added to, and Lighthouse when there's no PAGESPEED_API_KEY. With the person's gcloud login (gcloud auth login), it
 // makes or checks the Google Cloud project (SEO_PROJECT, else the key's own, else <the site's first label>-search),
 // enables the Search Console and PageSpeed Insights APIs there, and makes the service account and stores its key in

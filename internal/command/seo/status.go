@@ -32,7 +32,7 @@ type (
 	}
 )
 
-// status is charter seo status (seo:status): the submitted sitemap's status in Search Console, and Google's index
+// status is charter seo status: the submitted sitemap's status in Search Console, and Google's index
 // status of every URL the live sitemap lists (its coverage, last crawl and canonical), printed as each is in.
 func (r repo) status(args []string) {
 	f := flags("status")

@@ -1,7 +1,6 @@
 // Package fragments serves a live feed to browsers as server-sent events, each item rendered by the
-// caller: an HTML fragment for htmx 4's SSE extension, a datastar-patch-elements event for Datastar
-// (docs/self/pages.md). The feed is charter/follow's, so no item is lost or sent twice, across
-// reconnects and deploys alike:
+// caller: an HTML fragment for htmx 4's SSE extension, a datastar-patch-elements event for Datastar. The
+// feed is charter/follow's, so no item is lost or sent twice, across reconnects and deploys alike:
 //
 //	feed, options, err := env.Feed(r.URL.Query().Get("after"), r.Header.Get("Last-Event-ID"))
 //	...

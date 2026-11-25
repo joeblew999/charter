@@ -78,8 +78,6 @@ func Main(args []string) {
 		catalogs(args)
 	case "markup":
 		markup(args)
-	case "show-version":
-		showVersion()
 	case "show-help", "help":
 		showHelp()
 	default:

@@ -16,7 +16,9 @@ wrong.
 | An API's route | `api/contract.go` and its handler | `go tool charter spec` writes `fern/` |
 | A page | a `.gsx` file | `go tool charter dev` reloads it |
 | Browser code or CSS | `web/` (Vite) | `go tool charter dev` reloads it |
-| A message a reader sees | the source catalog | `go tool charter intl` |
+| A message a reader sees | the source catalog, `locales/en.toml` | `go tool charter intl translate`, or translate by hand; `go tool charter intl` says what is left |
+| A language | `go tool charter intl add-locale de` | translate its catalog |
+| A page search engines may index | `Pages` of `site.Site` in `main.go` | `go tool charter check` audits it |
 
 ## Rules
 
@@ -28,7 +30,11 @@ wrong.
   start a new one.
 - **D1 has no interactive transactions**: single statements with `RETURNING`, or `d1.Batch`.
 - Never hand-write what a command generates: `fern/`, `api/queries.go`, `*.x.go`, `build/`, `dist/`.
-- `charter.toml` holds only what wrangler has no place for: `health`, `url`, `spec`, `db`, `[sdks]`, `[test]`.
+- `charter.toml` holds only what wrangler has no place for: `health`, `url`, `spec`, `db`, `[sdks]`, `[test]`,
+  `[intl]`, `[seo]`.
+- A site is `site.Site{…}.Handler(mux)` and `<site.Head title=… description=…/>`: never wire Vite, languages or
+  robots.txt by hand.
+- No literal reader-facing text in a `.gsx` file: a message in the source catalog, written `{ locales.Key }`.
 
 ## Commands
 

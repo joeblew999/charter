@@ -2,5 +2,5 @@ package seo
 
 import "fmt"
 
-// showHelp prints every command (seo:show-help).
+// showHelp prints every command.
 func showHelp() { fmt.Print(help) }

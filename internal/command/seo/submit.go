@@ -9,7 +9,7 @@ import (
 	"github.com/joeblew999/charter/site/seo/audit"
 )
 
-// submit is charter seo submit (seo:submit): the site's sitemap.xml submitted (or submitted again) to Search Console,
+// submit is charter seo submit: the site's sitemap.xml submitted (or submitted again) to Search Console,
 // once the account has Full access to the property and the live audit passes: Google crawls what it lists. The task
 // asks first: it writes to Google.
 func (r repo) submit(args []string) {

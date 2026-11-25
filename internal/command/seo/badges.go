@@ -24,7 +24,7 @@ var categories = []struct{ id, name, title string }{
 	{"best-practices", "best practices", "Best practices"}, {"seo", "seo", "SEO"},
 }
 
-// badges is charter seo badges (seo:badges): Lighthouse on every page and the audit, then an SVG badge per Lighthouse
+// badges is charter seo badges: Lighthouse on every page and the audit, then an SVG badge per Lighthouse
 // category into charter.toml's [seo.badges] dir (the lowest page's score: a badge never flatters) and one for the audit, and
 // the README's scores block (charter.toml's [seo.badges] readme) rewritten with every page's scores. Run it after a production
 // release, and commit what it wrote.
