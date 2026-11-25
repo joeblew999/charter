@@ -85,3 +85,30 @@ func TestHTTPClient(t *testing.T) {
 		t.Errorf("a second client shares the first's settings: timeout %v", other.Timeout)
 	}
 }
+
+// TestVarOffWorkers: off Workers a variable is what wrangler dev would give it, .dev.vars over wrangler.jsonc's vars,
+// whatever the process's environment says; a name neither has is the environment's; and an edit to wrangler.jsonc is
+// the next call's.
+func TestVarOffWorkers(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, content string) {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("wrangler.jsonc", `{"name": "t", "vars": {"APP_NAME": "shop", "MAX": 3}}`)
+	write(".dev.vars", "# local only\nTOKEN=local-token\n")
+	t.Chdir(dir)
+	t.Setenv("APP_NAME", "from the shell")
+	t.Setenv("ONLY_ENV", "set by a test")
+	for name, want := range map[string]string{"APP_NAME": "shop", "MAX": "3", "TOKEN": "local-token", "ONLY_ENV": "set by a test", "NOPE": ""} {
+		if got := bindings.Var(name); got != want {
+			t.Errorf("Var(%s) = %q, want %q", name, got, want)
+		}
+	}
+	write("wrangler.jsonc", `{"name": "t", "vars": {"APP_NAME": "shop, renamed"}}`)
+	os.Chtimes(filepath.Join(dir, "wrangler.jsonc"), time.Now().Add(time.Second), time.Now().Add(time.Second))
+	if got := bindings.Var("APP_NAME"); got != "shop, renamed" {
+		t.Errorf("after an edit, Var(APP_NAME) = %q", got)
+	}
+}

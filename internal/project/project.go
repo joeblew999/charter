@@ -34,6 +34,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/tailscale/hujson"
@@ -70,9 +71,37 @@ type Worker struct {
 	Assets struct {
 		Directory string `json:"directory"`
 	} `json:"assets"`
+	// Vars are the Worker's variables, as wrangler dev gives them: the top-level vars.
+	Vars       map[string]any             `json:"vars"`
 	D1         []D1                       `json:"d1_databases"`
 	RateLimits []RateLimit                `json:"ratelimits"`
 	Env        map[string]json.RawMessage `json:"env"`
+}
+
+// DevVars is the file of local values wrangler dev reads beside wrangler.jsonc (KEY=value lines): a secret's
+// throwaway value, or a variable's local one. It wins over vars.
+const DevVars = ".dev.vars"
+
+// Var is the Worker's variable called name as wrangler dev would give it: .dev.vars's, else wrangler.jsonc's
+// top-level vars. ok is false when neither has it.
+func (p *Project) Var(name string) (value string, ok bool) {
+	if b, err := os.ReadFile(filepath.Join(p.Root, DevVars)); err == nil {
+		for _, line := range strings.Split(string(b), "\n") {
+			k, v, found := strings.Cut(strings.TrimSpace(line), "=")
+			if found && !strings.HasPrefix(k, "#") && strings.TrimSpace(k) == name {
+				return strings.Trim(strings.TrimSpace(v), `"'`), true
+			}
+		}
+	}
+	switch v := p.Worker.Vars[name].(type) {
+	case nil:
+		return "", false
+	case string:
+		return v, true
+	default: // a number, a boolean, an object: as JSON, which is how a Worker's code would print it
+		b, _ := json.Marshal(v)
+		return string(b), true
+	}
 }
 
 // D1 is a D1 database binding.

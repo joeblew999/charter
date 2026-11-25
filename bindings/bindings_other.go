@@ -17,8 +17,17 @@ import (
 // OnWorkers reports whether the code runs as a Worker.
 const OnWorkers = false
 
-// Var is the process's environment variable called name, standing in for the Worker's variable.
-func Var(name string) string { return os.Getenv(name) }
+// Var stands in for the Worker's variable called name, with the value wrangler dev would give it: .dev.vars's, else
+// wrangler.jsonc's top-level vars. A name neither has (one only an environment of wrangler.jsonc sets, such as
+// production's) is the process's environment variable, which is how a test gives it a value.
+func Var(name string) string {
+	if p, err := app(); err == nil {
+		if v, ok := p.Var(name); ok {
+			return v
+		}
+	}
+	return os.Getenv(name)
+}
 
 // HTTPClient is a client for the requests the app makes, standing in for the Worker's fetch: net/http's own
 // transport. Each call returns a new client, the caller's to set (its Timeout).
@@ -66,5 +75,32 @@ func StaticAssets(dir string) http.Handler {
 	return web.GetOnly(http.FileServer(http.Dir(dir)))
 }
 
-// app is charter.toml, found from the working directory (a test runs in its package's folder) and read once.
-var app = sync.OnceValues(func() (*project.Project, error) { return project.Load(".") })
+// app is the app's settings (wrangler.jsonc, charter.toml), found from the working directory (a test runs in its
+// package's folder). They are read again when wrangler.jsonc has changed, so a variable or a rate limit edited while
+// the dev loop runs is the next request's, with no restart.
+func app() (*project.Project, error) {
+	settings.mu.Lock()
+	defer settings.mu.Unlock()
+	wd, _ := os.Getwd()
+	if settings.p != nil && wd == settings.wd {
+		if info, err := os.Stat(filepath.Join(settings.p.Root, project.Wrangler)); err == nil && info.ModTime().Equal(settings.at) {
+			return settings.p, nil
+		}
+	}
+	p, err := project.Load(".")
+	if err != nil {
+		return nil, err
+	}
+	settings.p, settings.wd = p, wd
+	if info, err := os.Stat(filepath.Join(p.Root, project.Wrangler)); err == nil {
+		settings.at = info.ModTime()
+	}
+	return p, nil
+}
+
+var settings struct {
+	mu sync.Mutex
+	p  *project.Project
+	wd string // where it was found from: a test in another folder is another app
+	at time.Time
+}
