@@ -1,0 +1,18 @@
+{
+  "name": "charter-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "go tool charter dev",
+    "check": "go tool charter check",
+    "deploy": "go tool charter deploy"
+  },
+  "dependencies": {
+    "htmx.org": "4.0.2"
+  },
+  "devDependencies": {
+    "@gsxhq/vite-plugin-gsx": "^0.11.4",
+    "vite": "^6.0.0",
+    "wrangler": "^4.168.0"
+  }
+}

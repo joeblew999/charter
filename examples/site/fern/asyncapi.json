@@ -11,7 +11,7 @@
   "operations": {},
   "servers": {
     "production": {
-      "host": "charter-start-htmx.gedw99.workers.dev",
+      "host": "charter-site.gedw99.workers.dev",
       "protocol": "wss"
     }
   }

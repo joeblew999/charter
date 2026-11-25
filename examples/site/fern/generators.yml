@@ -17,7 +17,7 @@ groups:
           path: ../sdk/out/go
         config:
           module:
-            path: github.com/joeblew999/charter/examples/start-htmx/sdk/go
+            path: github.com/joeblew999/charter/examples/site/sdk/go
             version: "1.22"
           packageName: api
 

@@ -13,3 +13,7 @@ dist/
 # npm, and the tarballs npm pack writes
 node_modules/
 *.tgz
+
+# What charter build and wrangler write
+build/
+.wrangler/

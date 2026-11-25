@@ -1,0 +1,9 @@
+# What charter adds to wrangler.jsonc (go doc github.com/joeblew999/charter/project).
+health = "/api/openapi.json"
+url = "https://charter-site.gedw99.workers.dev"
+# The API's contract: charter spec writes fern/ from api/contract.go, and api/queries.go from api/queries.sql.
+spec = "fern/openapi.json"
+db = "sqlc"
+
+[sdks]
+name = "Api"

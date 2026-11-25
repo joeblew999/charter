@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/joeblew999/charter/examples/start-htmx/api"
+	"github.com/joeblew999/charter/examples/site/api"
 	"github.com/joeblew999/charter/fragments"
 )
 

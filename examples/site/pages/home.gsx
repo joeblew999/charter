@@ -3,7 +3,7 @@ package pages
 import (
 	"strconv"
 
-	"github.com/joeblew999/charter/examples/start-htmx/api"
+	"github.com/joeblew999/charter/examples/site/api"
 )
 
 // Home is the page at /: the form, and the newest messages, newest first. The list follows the
@@ -43,7 +43,7 @@ component Form(body string, problem string) {
 		/>
 		<button type="submit">Post</button>
 		{ if problem != "" {
-			<p class="problem">{problem}</p>
+			<p class="problem">{ problem }</p>
 		} }
 	</form>
 }
@@ -51,7 +51,7 @@ component Form(body string, problem string) {
 // Item is one message: in the list, and what the stream sends of each new one.
 component Item(message api.Message) {
 	<li id={"message-" + strconv.FormatInt(message.ID, 10)}>
-		<span>{message.Body}</span>
-		<time>{message.CreatedAt}</time>
+		<span>{ message.Body }</span>
+		<time>{ message.CreatedAt }</time>
 	</li>
 }

@@ -294,7 +294,7 @@
   },
   "servers": [
     {
-      "url": "https://charter-start-htmx.gedw99.workers.dev"
+      "url": "https://charter-site.gedw99.workers.dev"
     }
   ]
 }

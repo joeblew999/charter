@@ -11,7 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/joeblew999/charter/examples/start-htmx/api"
+	"github.com/gsxhq/vite"
+
+	"github.com/joeblew999/charter/examples/site/api"
 )
 
 // site is the pages over the API, as `go run .` serves them, on one in-memory store and hub.
@@ -23,7 +25,12 @@ func site(t *testing.T) (*httptest.Server, api.Env) {
 		Store: func() (api.Store, error) { return memory, nil },
 		Hub:   func() (api.Hub, error) { return memory, nil },
 	}
-	srv := httptest.NewServer(Handler(env, api.Handler(env)))
+	// Vite as gsx dev has it, so no build is needed: the page names Vite's dev server for web/main.js.
+	v, err := vite.New(vite.Config{DevURL: "http://vite.test", DevBase: "/__vite/"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(v.Middleware(Handler(env, api.Handler(env))))
 	t.Cleanup(srv.Close)
 	return srv, env
 }
@@ -56,7 +63,7 @@ func TestTheHomePageShowsTheMessagesNewestFirstAndFollowsFromTheNewest(t *testin
 	if status != 200 || header.Get("Content-Type") != "text/html; charset=utf-8" || !strings.HasPrefix(page, "<!DOCTYPE html>") {
 		t.Fatalf("HTTP %d %s\n%s", status, header.Get("Content-Type"), page)
 	}
-	for _, want := range []string{`<script src="/static/htmx-4.0.0.min.js">`, `<script src="/static/hx-sse-4.0.0.min.js">`, `<form id="post" hx-post="/messages"`, `hx-sse:connect="/messages/stream?after=0"`} {
+	for _, want := range []string{`<script type="module" src="/__vite/web/main.js">`, `<form id="post" hx-post="/messages"`, `hx-sse:connect="/messages/stream?after=0"`} {
 		if !strings.Contains(page, want) {
 			t.Errorf("no %s in\n%s", want, page)
 		}
@@ -182,22 +189,8 @@ func TestALineBreakIsADataLine(t *testing.T) {
 	}
 }
 
-func TestStaticFiles(t *testing.T) {
+func TestTheAPIAnswersEveryOtherPath(t *testing.T) {
 	srv, _ := site(t)
-	for path, want := range map[string]string{
-		"/static/htmx-4.0.0.min.js":   "var htmx=",
-		"/static/hx-sse-4.0.0.min.js": "registerExtension(\"sse\"",
-		"/static/site.css":            "main {",
-	} {
-		status, body, header := get(t, srv.URL+path)
-		if status != 200 || !strings.Contains(body, want) || header.Get("Cache-Control") == "" {
-			t.Errorf("%s: HTTP %d, Cache-Control %q", path, status, header.Get("Cache-Control"))
-		}
-	}
-	if status, _, _ := get(t, srv.URL+"/static/nope.js"); status != 404 {
-		t.Errorf("/static/nope.js: HTTP %d", status)
-	}
-	// Every other path is the API's.
 	if status, body, _ := get(t, srv.URL+"/api/hello"); status != 200 || !strings.Contains(body, "Hello from test") {
 		t.Errorf("/api/hello: HTTP %d %s", status, body)
 	}

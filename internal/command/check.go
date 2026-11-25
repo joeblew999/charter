@@ -1,10 +1,12 @@
 package command
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -49,10 +51,8 @@ func Check(args []string) {
 	if hasIntl(p) {
 		part("languages", func() error { intl.Main([]string{"status"}); return nil })
 	}
+	// wrangler dev builds the Worker itself (wrangler.jsonc's build command).
 	part("worker", func() error {
-		if err := run.Run(p.Root, nil, self(), "build"); err != nil {
-			return err
-		}
 		return serving(p, func(base string) error { return try(p, p.Test.Run, base) })
 	})
 	say("✓ check took %s: %s", run.Seconds(time.Since(start)), strings.Join(times, ", "))
@@ -79,9 +79,11 @@ func format(p *project.Project) error {
 	if !hasGSX(p) {
 		return nil
 	}
-	out, err = run.Output(p.Root, nil, "go", "tool", "gsx", "fmt", "-l", ".")
-	if s := strings.TrimSpace(out); err != nil || s != "" {
-		return fmt.Errorf("not formatted (go tool gsx fmt -w . writes them as they should be):\n%s", s)
+	// gsx fmt -l lists what it would change, and fails when there is any.
+	cmd := exec.Command("go", "tool", "gsx", "fmt", "-l", ".")
+	cmd.Dir = p.Root
+	if listed, err := cmd.CombinedOutput(); err != nil || len(bytes.TrimSpace(listed)) > 0 {
+		return fmt.Errorf("not formatted (go tool gsx fmt -w . writes them as they should be):\n%s", bytes.TrimSpace(listed))
 	}
 	return nil
 }
@@ -141,7 +143,6 @@ func Test(args []string) {
 		check(try(&project.Project{Root: p.Root}, commands, strings.TrimRight(*base, "/")))
 		return
 	}
-	check(run.Run(p.Root, nil, self(), "build"))
 	check(serving(p, func(base string) error { return try(&project.Project{Root: p.Root}, commands, base) }))
 }
 

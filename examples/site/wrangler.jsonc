@@ -1,0 +1,18 @@
+// The Worker: wrangler dev runs it, wrangler deploy ships it.
+// https://developers.cloudflare.com/workers/wrangler/configuration/
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "charter-site",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-09-25",
+  // charter build writes dist/ (Vite) and build/ (the Wasm, and the JavaScript that runs it).
+  "build": { "command": "go tool charter build" },
+  // Vite's output, served before the Worker runs.
+  "assets": { "directory": "dist" },
+  "vars": { "APP_NAME": "charter-site" },
+  // The log of messages. charter deploy applies migrations/ first.
+  "d1_databases": [{ "binding": "DB", "database_name": "charter-site", "database_id": "local", "migrations_dir": "migrations" }],
+  // One hub wakes every open page when a message is posted (charter's hub.mjs).
+  "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }]
+}
