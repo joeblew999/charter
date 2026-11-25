@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/joeblew999/charter/site/intl/config"
+	"github.com/joeblew999/charter/intl/config"
 )
 
 // State is where a locale's text for a message comes from.

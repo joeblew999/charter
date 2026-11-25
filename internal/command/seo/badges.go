@@ -12,7 +12,7 @@ import (
 
 	"github.com/joeblew999/charter/internal/badge"
 	"github.com/joeblew999/charter/internal/seokit/pagespeed"
-	"github.com/joeblew999/charter/site/seo/audit"
+	"github.com/joeblew999/charter/seo/audit"
 )
 
 // The README lines between these two are charter seo badges' to write.

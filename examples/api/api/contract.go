@@ -11,7 +11,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/api/humaworkers"
+	"github.com/joeblew999/charter/humaworkers"
 )
 
 // What the specs say about the API as a whole.

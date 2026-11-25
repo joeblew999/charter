@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/joeblew999/charter/examples/site/api"
-	"github.com/joeblew999/charter/site/fragments"
+	"github.com/joeblew999/charter/fragments"
 )
 
 // serveStream sends every message after the request's position as one SSE event (charter/fragments):

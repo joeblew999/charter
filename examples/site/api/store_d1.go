@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 
-	"github.com/joeblew999/charter/cf/d1"
+	"github.com/joeblew999/charter/d1"
 )
 
 // D1Store is the messages table (migrations/) on the D1 binding, through the queries of

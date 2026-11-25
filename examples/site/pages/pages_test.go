@@ -14,8 +14,8 @@ import (
 
 	"github.com/joeblew999/charter/examples/site/api"
 	_ "github.com/joeblew999/charter/examples/site/locales"
-	"github.com/joeblew999/charter/site"
-	"github.com/joeblew999/charter/site/intl/intltest"
+	"github.com/joeblew999/charter/gsxapp"
+	"github.com/joeblew999/charter/intl/intltest"
 )
 
 // site is the pages over the API, as `go run .` serves them, on one in-memory store and hub.
@@ -29,7 +29,7 @@ func serve(t *testing.T) (*httptest.Server, api.Env) {
 	}
 	// Vite as gsx dev has it, so no build is needed: the page names Vite's dev server for web/main.js.
 	t.Setenv("VITE_DEV_URL", "http://vite.test")
-	s := &site.Site{Name: "test", Pages: []string{"/"}}
+	s := &gsxapp.App{Name: "test", Pages: []string{"/"}}
 	srv := httptest.NewServer(s.Handler(Handler(env, api.Handler(env))))
 	t.Cleanup(srv.Close)
 	return srv, env

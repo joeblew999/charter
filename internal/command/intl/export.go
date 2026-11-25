@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/joeblew999/charter/site/intl/intltest"
+	"github.com/joeblew999/charter/intl/intltest"
 )
 
 // export is charter intl export [--all] [--out dir] [locale…]: XLIFF 2.0 for translators, what is left (or

@@ -73,7 +73,7 @@ package main
 
 import (
 	"`+module+`/api"
-	"github.com/joeblew999/charter/api/specs"
+	"github.com/joeblew999/charter/specs"
 )
 
 func main() {

@@ -12,7 +12,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/api/follow"
+	"github.com/joeblew999/charter/follow"
 )
 
 // Env is what the platform supplies: bindings on Cloudflare (platform_js.go), memory elsewhere

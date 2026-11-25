@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/internal/seokit/pagespeed"
-	"github.com/joeblew999/charter/site/seo/audit"
-	"github.com/joeblew999/charter/site/seo/config"
+	"github.com/joeblew999/charter/seo/audit"
+	"github.com/joeblew999/charter/seo/config"
 )
 
 // lighthouse is charter seo lighthouse: Lighthouse on the live site through PageSpeed Insights, on

@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/joeblew999/charter/site/seo/config"
+	"github.com/joeblew999/charter/seo/config"
 )
 
 // conf is the repo's charter.toml's [seo], found up from its folder, its defaults filled in; every default without one.

@@ -9,14 +9,14 @@ package main
 import (
 	"embed"
 
-	"github.com/joeblew999/charter/cf/bindings"
-	"github.com/joeblew999/charter/cf/d1"
-	"github.com/joeblew999/charter/cf/hub"
-	"github.com/joeblew999/charter/cf/transport"
+	"github.com/joeblew999/charter/bindings"
+	"github.com/joeblew999/charter/d1"
 	"github.com/joeblew999/charter/examples/site/api"
 	_ "github.com/joeblew999/charter/examples/site/locales" // the app's languages (charter.toml's [intl])
 	"github.com/joeblew999/charter/examples/site/pages"
-	"github.com/joeblew999/charter/site"
+	"github.com/joeblew999/charter/gsxapp"
+	"github.com/joeblew999/charter/hub"
+	"github.com/joeblew999/charter/transport"
 )
 
 // Vite's manifest (charter build): which hashed file each entry in web/ became.
@@ -39,6 +39,6 @@ func main() {
 		Hub: func() (api.Hub, error) { return hub.DurableObject[api.Message]("HUB", "messages") },
 	}
 	// The site: Vite's files, a URL per language, robots.txt and the sitemap, around the pages and the API.
-	s := &site.Site{Name: "charter-site", Dist: dist, Pages: []string{"/"}}
+	s := &gsxapp.App{Name: "charter-site", Dist: dist, Pages: []string{"/"}}
 	transport.Run(s.Handler(pages.Handler(env, api.Handler(env))))
 }

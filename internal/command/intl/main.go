@@ -1,6 +1,6 @@
 // Package intl is charter intl: an app's languages, from its charter.toml's [intl] (found up from the working directory). Each
 // command is a file of its own, holding the function named for it (gen.go holds gen). The app imports intl's
-// packages from this same module (github.com/joeblew999/charter/site/intl, gsxintl).
+// packages from this same module (github.com/joeblew999/charter/intl, gsxintl).
 package intl
 
 import (
@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joeblew999/charter/site/intl/config"
+	"github.com/joeblew999/charter/intl/config"
 )
 
 const help = `charter intl: the app's languages, through the runtime's own Intl, from its charter.toml's [intl].

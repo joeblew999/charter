@@ -7,11 +7,11 @@
 package main
 
 import (
-	"github.com/joeblew999/charter/cf/bindings"
-	"github.com/joeblew999/charter/cf/d1"
-	"github.com/joeblew999/charter/cf/hub"
-	"github.com/joeblew999/charter/cf/transport"
+	"github.com/joeblew999/charter/bindings"
+	"github.com/joeblew999/charter/d1"
 	"github.com/joeblew999/charter/examples/notes/api"
+	"github.com/joeblew999/charter/hub"
+	"github.com/joeblew999/charter/transport"
 )
 
 func main() {

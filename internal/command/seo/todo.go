@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/internal/seokit/searchconsole"
-	"github.com/joeblew999/charter/site/seo/audit"
+	"github.com/joeblew999/charter/seo/audit"
 )
 
 // todoReport is charter seo todo --json.

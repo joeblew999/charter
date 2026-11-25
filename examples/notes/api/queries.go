@@ -3,7 +3,7 @@
 
 package api
 
-import "github.com/joeblew999/charter/cf/d1"
+import "github.com/joeblew999/charter/d1"
 
 // NotesRow is a row of the table notes.
 type NotesRow struct {

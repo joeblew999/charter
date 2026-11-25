@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/joeblew999/charter/internal/intlkit/catalog"
-	"github.com/joeblew999/charter/site/intl"
-	"github.com/joeblew999/charter/site/intl/config"
-	"github.com/joeblew999/charter/site/intl/intltest"
+	"github.com/joeblew999/charter/intl"
+	"github.com/joeblew999/charter/intl/config"
+	"github.com/joeblew999/charter/intl/intltest"
 )
 
 // check is charter intl check: every problem, for CI: syntax, arguments, plural categories, completeness, unused

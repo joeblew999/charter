@@ -4,17 +4,17 @@ import (
 	"github.com/gsxhq/gsx"
 
 	"github.com/joeblew999/charter/examples/site/locales"
-	"github.com/joeblew999/charter/site"
-	"github.com/joeblew999/charter/site/intl"
+	"github.com/joeblew999/charter/gsxapp"
+	"github.com/joeblew999/charter/intl"
 )
 
-// Layout is the document around every page. site.Head is its whole <head>: the title and description as search
+// Layout is the document around every page. gsxapp.Head is its whole <head>: the title and description as search
 // engines read them, the page in every language, and web/main.js as Vite built it (htmx 4, gsxui, the CSS).
 component Layout(title intl.Msg, description intl.Msg, children gsx.Node) {
 	<!DOCTYPE html>
-	<html { site.HTML(ctx)... }>
+	<html { gsxapp.HTML(ctx)... }>
 		<head>
-			<site.Head title={title |> text} description={description |> text}/>
+			<gsxapp.Head title={title |> text} description={description |> text}/>
 		</head>
 		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
 			<main class="mx-auto flex max-w-xl flex-col gap-6 p-4">{ children }</main>

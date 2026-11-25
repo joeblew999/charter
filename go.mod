@@ -8,6 +8,7 @@ require (
 	github.com/danielgtaylor/huma/v2 v2.41.0
 	github.com/go-jose/go-jose/v4 v4.1.7
 	github.com/gsxhq/gsx v0.5.0
+	github.com/gsxhq/vite v0.3.2
 	github.com/syumai/workers-go v0.36.0
 	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 	golang.org/x/net v0.63.0
@@ -19,7 +20,6 @@ require (
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gsxhq/vite v0.3.2 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect

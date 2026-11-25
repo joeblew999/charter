@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/internal/seokit/searchconsole"
-	"github.com/joeblew999/charter/site/seo/config"
+	"github.com/joeblew999/charter/seo/config"
 )
 
 // setup is charter seo setup, once per person, not per site: one service account serves every site it is

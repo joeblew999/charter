@@ -24,8 +24,8 @@ type Options struct {
 }
 
 const (
-	intlPkg    = "github.com/joeblew999/charter/site/intl"
-	gsxintlPkg = "github.com/joeblew999/charter/site/gsxintl" // intl.Value's renderer, the only gsx of intl
+	intlPkg    = "github.com/joeblew999/charter/intl"
+	gsxintlPkg = "github.com/joeblew999/charter/gsxintl" // intl.Value's renderer, the only gsx of intl
 )
 
 // Init writes charter.toml's [intl], the catalogs, gsx.toml's filters and renderers, and .gitignore's generated files
@@ -50,7 +50,7 @@ func Init(root string, o Options, log io.Writer) error {
 	for i, id := range o.Locales {
 		q[i] = `"` + id + `"`
 	}
-	conf := "\n# The app's languages (charter intl; go doc github.com/joeblew999/charter/site/intl/config): BCP 47 ids, the\n# source first.\n[intl]\n" +
+	conf := "\n# The app's languages (charter intl; go doc github.com/joeblew999/charter/intl/config): BCP 47 ids, the\n# source first.\n[intl]\n" +
 		"locales = [" + strings.Join(q, ", ") + "]\n" +
 		"# <locale>.toml per language, ICU MessageFormat; charter build writes the Go package of messages there.\n" +
 		"catalogs = " + `"` + o.Catalogs + `"` + "\n"
@@ -225,7 +225,7 @@ func gsxToml(path string, renderers [][2]string, log io.Writer) error {
 	s, before := string(b), string(b)
 	filters := gsxintlPkg + "/filters"
 	if !strings.Contains(s, `"`+filters+`"`) {
-		line := "# intl's gsx filters: { t |> date(opts) }, { n |> number }, href={ \"/about\" |> localize } (go doc github.com/joeblew999/charter/site/gsxintl/filters).\n"
+		line := "# intl's gsx filters: { t |> date(opts) }, { n |> number }, href={ \"/about\" |> localize } (go doc github.com/joeblew999/charter/gsxintl/filters).\n"
 		if loc := filterLine.FindStringIndex(s); loc != nil {
 			s = s[:loc[1]] + `"` + filters + `", ` + s[loc[1]:]
 		} else if loc := tableLine.FindStringIndex(s); loc != nil {

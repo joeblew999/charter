@@ -80,15 +80,15 @@ TypeScript of your own to write.
 var dist embed.FS
 
 func main() {
-	s := &site.Site{Name: "My App", Dist: dist, Pages: []string{"/", "/about"}}
-	transport.Run(s.Handler(mux))
+	a := &gsxapp.App{Name: "My App", Dist: dist, Pages: []string{"/", "/about"}}
+	transport.Run(a.Handler(mux))
 }
 ```
 
 ```gsx
-<html { site.HTML(ctx)... }>
+<html { gsxapp.HTML(ctx)... }>
 	<head>
-		<site.Head title={ locales.HomeTitle |> text } description={ locales.HomeDescription |> text }/>
+		<gsxapp.Head title={ locales.HomeTitle |> text } description={ locales.HomeDescription |> text }/>
 	</head>
 ```
 
@@ -110,20 +110,20 @@ catalogs = "locales"
 
 ## The library
 
-Three folders, by what you are building:
+Every package is at the top: `github.com/joeblew999/charter/<name>`.
 
-| Folder | Packages |
+| For | Packages |
 |---|---|
-| [`cf/`](cf) Cloudflare from Go | `transport` (run a handler as a Worker), `bindings` (variables, static assets, rate limits, fetch), `d1`, `hub` (Durable Object fan-out), `ratelimit` |
-| [`api/`](api) APIs from a contract | `serve` (the standard API), `specs`, `asyncapi`, `humaworkers` (Huma on Workers), `mcp`, `auth`, `problem`, `follow` (SSE and WebSocket streams) |
-| [`site/`](site) Sites | `site` itself (the one call above), `web`, `fragments`, `intl` and `gsxintl` (languages), `seo` and `gsxseo` (search engines) |
+| Cloudflare from Go | `transport` (run a handler as a Worker), `bindings` (variables, static assets, rate limits, fetch), `d1`, `hub` (Durable Object fan-out), `ratelimit` |
+| APIs from a contract | `serve` (the standard API), `specs`, `asyncapi`, `humaworkers` (Huma on Workers), `mcp`, `auth`, `problem`, `follow` (SSE and WebSocket streams) |
+| Sites | `gsxapp` (the one call above), `web`, `fragments`, `intl` and `gsxintl` (languages), `seo` and `gsxseo` (search engines) |
 
 Every binding has a stand-in off Workers: `d1.Open` is SQLite in memory with your migrations applied, a rate limit
 counts in memory, the hub is in the process, Intl is a local workerd. So one `main.go` serves both, and `go test` runs
 the real SQL.
 
 The rest of the repo: [`cmd/charter`](cmd/charter) is the command, [`internal/`](internal) its code,
-[`examples/`](examples) three apps.
+[`worker/`](worker) the JavaScript that runs the Go, [`examples/`](examples) three apps.
 
 ## Examples
 

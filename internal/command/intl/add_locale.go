@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/joeblew999/charter/internal/intlkit/catalog"
-	"github.com/joeblew999/charter/site/intl"
-	"github.com/joeblew999/charter/site/intl/config"
+	"github.com/joeblew999/charter/intl"
+	"github.com/joeblew999/charter/intl/config"
 )
 
 // addLocale is charter intl add-locale <locale>…: a language, its id as Intl writes it, added to charter.toml's [intl] with

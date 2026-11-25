@@ -80,9 +80,9 @@ func wasm(p *project.Project, limit int) error {
 	if err != nil {
 		return fmt.Errorf("go.mod must require %s: %w", library, err)
 	}
-	glue, _ := filepath.Glob(filepath.Join(strings.TrimSpace(dir), "cf", "worker", "*.mjs"))
+	glue, _ := filepath.Glob(filepath.Join(strings.TrimSpace(dir), "worker", "*.mjs"))
 	if len(glue) == 0 {
-		return fmt.Errorf("no Worker glue (cf/worker/*.mjs) in %s", dir)
+		return fmt.Errorf("no Worker glue (worker/*.mjs) in %s", dir)
 	}
 	for _, f := range glue {
 		b, err := os.ReadFile(f)
@@ -100,7 +100,7 @@ func wasm(p *project.Project, limit int) error {
 	// its own that imports from ./build/ the same way.
 	entry := "// Written by charter build: the Worker's entry (wrangler.jsonc's main).\nimport { goWorker } from \"./go.mjs\";\n"
 	if hasIntl(p) {
-		entry += "import { goIntl } from \"./intl-worker.mjs\";\n\n// The app's languages, for Go (charter's site/intl).\nglobalThis.goIntl = goIntl;\n"
+		entry += "import { goIntl } from \"./intl-worker.mjs\";\n\n// The app's languages, for Go (charter's intl).\nglobalThis.goIntl = goIntl;\n"
 	}
 	entry += "\nexport { Hub } from \"./hub.mjs\";\n\nconst go = goWorker();\n"
 	if p.Health != "" {

@@ -12,7 +12,7 @@ name = "Api"
 # url, above.
 [seo]
 
-# The app's languages (charter intl; go doc github.com/joeblew999/charter/site/intl/config): BCP 47 ids, the
+# The app's languages (charter intl; go doc github.com/joeblew999/charter/intl/config): BCP 47 ids, the
 # source first.
 [intl]
 locales = ["en", "de"]

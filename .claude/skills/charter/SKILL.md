@@ -18,13 +18,13 @@ wrong.
 | Browser code or CSS | `web/` (Vite) | `go tool charter dev` reloads it |
 | A message a reader sees | the source catalog, `locales/en.toml` | `go tool charter intl translate`, or translate by hand; `go tool charter intl` says what is left |
 | A language | `go tool charter intl add-locale de` | translate its catalog |
-| A page search engines may index | `Pages` of `site.Site` in `main.go` | `go tool charter check` audits it |
+| A page search engines may index | `Pages` of `gsxapp.App` in `main.go` | `go tool charter check` audits it |
 
 ## Rules
 
 - **Bindings through charter, never workers-go directly**: `bindings.Var`, `bindings.Allow`, `bindings.StaticAssets`,
   `bindings.HTTPClient`, `d1.Open`, `hub.DurableObject`, `transport.CFOf(r)` (all under
-  `github.com/joeblew999/charter/cf/`). Each has a stand-in off Workers, so there is no file per platform and
+  `github.com/joeblew999/charter/`). Each has a stand-in off Workers, so there is no file per platform and
   `go test` runs the real SQL.
 - **Memory between requests is a cache, never state**: charter keeps Go runtimes between requests, and any request may
   start a new one.
@@ -32,7 +32,7 @@ wrong.
 - Never hand-write what a command generates: `fern/`, `api/queries.go`, `*.x.go`, `build/`, `dist/`.
 - `charter.toml` holds only what wrangler has no place for: `health`, `url`, `spec`, `db`, `[sdks]`, `[test]`,
   `[intl]`, `[seo]`.
-- A site is `site.Site{…}.Handler(mux)` and `<site.Head title=… description=…/>`: never wire Vite, languages or
+- A site is `gsxapp.App{…}.Handler(mux)` and `<gsxapp.Head title=… description=…/>`: never wire Vite, languages or
   robots.txt by hand.
 - No literal reader-facing text in a `.gsx` file: a message in the source catalog, written `{ locales.Key }`.
 

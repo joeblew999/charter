@@ -14,7 +14,7 @@ import (
 
 	"github.com/joeblew999/charter/internal/seokit/pagespeed"
 	"github.com/joeblew999/charter/internal/seokit/searchconsole"
-	"github.com/joeblew999/charter/site/seo/config"
+	"github.com/joeblew999/charter/seo/config"
 )
 
 // The keys the commands that ask Google read: a service account's JSON key for Search Console (charter seo setup makes

@@ -3,8 +3,8 @@ package api
 import (
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/api/humaworkers"
-	"github.com/joeblew999/charter/api/serve"
+	"github.com/joeblew999/charter/humaworkers"
+	"github.com/joeblew999/charter/serve"
 )
 
 func init() {
