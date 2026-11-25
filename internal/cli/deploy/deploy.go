@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -85,6 +86,7 @@ func Main(args []string) {
 	fs.String("as", "", "with production: deploy as this other Worker of the same code, one of [production] also (charter deploy runs it)")
 	fs.BoolVar(&cfg.AllowExisting, "allow-existing", false, "update the Worker if a script with this name already exists")
 	fs.StringVar(&cfg.MainModule, "main", "", `entry module that imports ./build/worker.mjs, e.g. worker/index.mjs ("" = build/worker.mjs is the entry)`)
+	fs.Float64Var(&cfg.Traces, "traces", 0, "trace this share of requests on Cloudflare, 0 to 1 (0 = none)")
 	fs.BoolVar(&cfg.D1Create, "d1-create", false, "create D1 databases named in -d1 that don't exist yet")
 	fs.StringVar(&cfg.MigrationsDir, "migrations", "", "apply these *.sql files (in name order) to every -d1 database")
 	fs.StringVar(&cfg.MigrationTag, "migration-tag", "", "Durable Object migration tag to reach (sent only if not yet applied)")
@@ -337,6 +339,12 @@ func fromProject(args []string) []string {
 		if o.Migration == "" {
 			out = append(out, "-export-class", o.Class)
 		}
+	}
+	if p.Traces < 0 || p.Traces > 1 {
+		log.Fatalf("deploy: charter.toml: traces = %v: a share of requests, 0 to 1", p.Traces)
+	}
+	if p.Traces > 0 {
+		out = append(out, "-traces", strconv.FormatFloat(p.Traces, 'f', -1, 64))
 	}
 	limits, err := p.Limits()
 	check(err)

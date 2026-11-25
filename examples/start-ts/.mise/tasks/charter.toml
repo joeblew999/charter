@@ -3,7 +3,7 @@
 # CLOUDFLARE_ACCOUNT_ID) come from the environment, else from fnox when it is installed.
 
 ["charter:build"]
-description = "Build the Worker into build/ (charter build): a Go one with TinyGo (WORKER_COMPILER=go: the standard compiler, in seconds, never to deploy), a TypeScript one bundled with esbuild"
+description = "Build the Worker into build/ (charter build): a Go one with TinyGo (WORKER_COMPILER=go: the standard compiler, in seconds, a bigger Wasm), a TypeScript one bundled with esbuild"
 run = 'charter build ${WORKER_COMPILER:+-compiler=$WORKER_COMPILER}'
 
 ["charter:dev"]
@@ -61,17 +61,36 @@ exec fnox exec -- charter deploy "${args[@]}"
 '''
 
 ["charter:tail"]
-description = "Stream the deployed Worker's live logs until Ctrl-C (charter tail)"
+description = "Stream the deployed Worker's live logs until Ctrl-C (charter tail); its flags after --, e.g. -- -status error -search text"
+usage = 'arg "[flags]" var=#true help="flags of charter tail, after --: -status error, -method POST, -search text, -for 30s"'
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
-if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec charter tail; fi
-exec fnox exec -- charter tail
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec charter tail ${usage_flags:-}; fi
+exec fnox exec -- charter tail ${usage_flags:-}
+'''
+
+["charter:logs"]
+description = "What the deployed Worker logged before now, from Workers Logs (charter logs): the last 10 minutes; its flags after --, e.g. -- -since 1h -level error"
+usage = 'arg "[flags]" var=#true help="flags of charter logs, after --: -since 1h, -level error, -status 500, -search text, -limit 200, -json"'
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || ! command -v fnox >/dev/null; then exec charter logs ${usage_flags:-}; fi
+exec fnox exec -- charter logs ${usage_flags:-}
 '''
 
 ["charter:check"]
 description = "Every check that needs no Cloudflare account (charter check): charter's files, and a project's types, specs, tests and Worker; exits 1 on any problem"
 run = "charter check"
+
+["charter:outdated"]
+description = "Every pin with a newer version upstream (charter outdated): Go modules, mise.toml's tools; deps.toml's holds marked; exits 1 when one is behind"
+run = "charter outdated"
+
+["charter:update"]
+description = "Move every pin deps.toml doesn't hold to its latest, tidy every module, then charter check (charter update)"
+run = "charter update"
 
 ["charter:ci"]
 description = "A job of charter.toml's [ci.jobs] here, as GitHub runs it (charter ci <job>); none: every job run on a change, or an app's own [ci] (charter ci run)"

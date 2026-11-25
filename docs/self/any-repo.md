@@ -63,3 +63,29 @@ It changes nothing on GitHub: `charter repo` does that, from `charter.toml`'s `[
 ## Checks on GitHub
 
 Every repo gets charter's job `repo` (`.github/workflows/charter-repo.yml`): `init -check`, `docs`, `repo -check` and `upstream`, on pull requests and pushes to `main`, with a token that may only read. A repo's own jobs go in `charter.toml`, `[ci.jobs.<name>]` (every key: `go doc github.com/joeblew999/charter/project`), and `charter init` writes a workflow for each, `.github/workflows/self-<job>.yml`. Every workflow calls charter's job runner (`charter-ci.yml`): mise installs the tools `mise.toml` pins, charter among them, npm the packages if the repo has any, then charter runs the job as `charter ci <job>` runs it here. `charter ci <job> -remote` starts one on GitHub from here. `charter check` at the repo's top runs the jobs `[ci] check` lists.
+
+## Keep the pins current
+
+```sh
+charter outdated   # every pin with a newer version upstream; exits 1 when one that isn't held is behind
+charter update     # move each to its latest, go mod tidy in every module, then charter check
+```
+
+- **The pins** are the Go modules each `go.mod` in the repo requires directly or for a tool, and `mise.toml`'s tools. charter's own two, its library in `go.mod` and its command in `mise.toml`, move together, and `charter init` then writes charter's files again.
+- **What stays where it is** goes in `deps.toml` at the repo's top, with why; `charter outdated` shows it, held:
+
+  ```toml
+  skip = ["examples/notes-go/sdk/go"]   # folders whose go.mod is generated
+  [hold]
+  "github.com/chromedp/chromedp" = "v0.17 rewrote its API"   # a Go module, or a tool as mise.toml names it
+  "@moq/*" = "…"                                             # ending in *: every name that starts so
+  [copies]
+  workerd = ["intl/workerd/workerd.go"]   # files that write that pin's version too, as a quoted string
+  "*" = ["internal/pins/repo.toml"]       # files written as mise.toml is: every tool they pin moves
+  ```
+
+- **Once a week** GitHub does it. A repo with jobs of its own gives one `on = ["weekly"]` and `run = ["charter ci update"]`, with `permissions = { contents = "write", pull-requests = "write" }`; an app whose CI is `charter.yml` has it already. `charter ci update` runs `[ci] update` (default `charter update`; a repo that pins more than charter can see names its own command), and what that changed becomes the branch `charter/update` and a pull request. An update that fails its check pushes nothing, and the run is red.
+- **The pull request shows no checks of its own:** GitHub starts no workflow for a branch its own token pushed. They are the update's run, which the pull request links.
+- **Not moved:** a `package.json`'s packages (`renovate.json` is for those, where the Renovate app is installed), and anything a repo pins in a file of its own.
+
+The weekly job has not yet run on GitHub: `charter ci update` was run here, on a repository made for the test (2026-11-25).

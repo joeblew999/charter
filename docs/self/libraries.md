@@ -122,7 +122,18 @@ The build, `charter build`: the Worker's Wasm with TinyGo (the runtime patches i
 charter build
 ```
 
-Switches, each turning one part off so what it saves can be measured: `-reuse=false` (a Go runtime per request), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). `-compiler=go` builds with the standard compiler in seconds, for a dev loop; it is never deployed.
+Switches, each turning one part off so what it saves can be measured: `-reuse=false` (a Go runtime per request), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). 
+
+**The compiler** is TinyGo unless `-compiler=go` asks for the standard one (the task `charter:build` passes `WORKER_COMPILER`):
+
+| | TinyGo (default) | Standard Go (`-compiler=go`) |
+|---|---|---|
+| Build | Minutes when nothing is cached; `wasm-opt` rewrites every function | Seconds |
+| Libraries | What TinyGo's runtime has; one may make the build slow or fail | Any, as it is |
+| The Wasm, gzipped | Smallest: under the free plan's 3 MB | About three times that: the paid plan's 10 MB |
+| Go runtimes | Kept between requests, some started while the module loads | Kept between requests; the first starts with the first request |
+
+go-htmx4 with each, on a local workerd on a Mac, 2026-11-25, the median of 60 requests after 5: `/` 1.8 ms with TinyGo and 2.3 ms with standard Go; `/board` (a D1 read) 2.5 ms and 2.4 ms. With a runtime per request, standard Go took 15 ms for each. Not yet measured on Cloudflare.
 
 What a request costs, `charter bench`: the CPU a local workerd spends per request, from the operating system's count, in repeated runs (`-json` for a program). No Cloudflare account is needed, so anyone gets the same comparison:
 
@@ -130,7 +141,7 @@ What a request costs, `charter bench`: the CPU a local workerd spends per reques
 charter bench -base http://localhost:8787 'GET /api/hello' 'POST /api/notes {"body":"x"}'
 ```
 
-Putting it on Cloudflare without Node, `charter deploy`: the build in `build/`, static assets (`-assets`), bindings (`-var`, `-d1`, `-do`, `-ratelimit`), `migrations/*.sql` on every D1 database (each once), a Durable Object migration and custom domains (`-domain`), over the REST API. `-preview <name>` deploys a Worker Preview instead, and `-delete-preview`, `-prune-previews` remove them. So a commit is compiled once, CI publishes its build (`-publish-build <commit>`, with `GITHUB_TOKEN`) and Workers Builds deploys that (`-fetch-build <commit>`); `-configure-builds` sets Workers Builds up. `charter deploy -h` lists every flag. Its live logs, `charter tail`: requests, console output and exceptions, until Ctrl-C deletes the tail.
+Putting it on Cloudflare without Node, `charter deploy`: the build in `build/`, static assets (`-assets`), bindings (`-var`, `-d1`, `-do`, `-ratelimit`), `migrations/*.sql` on every D1 database (each once), a Durable Object migration and custom domains (`-domain`), over the REST API. `-preview <name>` deploys a Worker Preview instead, and `-delete-preview`, `-prune-previews` remove them. So a commit is compiled once, CI publishes its build (`-publish-build <commit>`, with `GITHUB_TOKEN`) and Workers Builds deploys that (`-fetch-build <commit>`); `-configure-builds` sets Workers Builds up. `charter deploy -h` lists every flag. Its live logs, `charter tail`: requests, console output and exceptions, until Ctrl-C deletes the tail. What it logged before, `charter logs` ([Deploy](deploy.md#deploy)).
 
 ```sh
 fnox exec -- charter deploy -name my-api -compat <date> -allow-existing -d1 DB=my-api-db -d1-create -migrations migrations

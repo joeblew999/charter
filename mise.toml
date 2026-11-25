@@ -9,14 +9,14 @@
 # types a Go project's queries (internal/dbcode). goreleaser builds the charter binary a release puts on GitHub (.goreleaser.yaml),
 # which a repo takes from mise. workerd runs a Worker locally (charter dev, check, with), as Cloudflare does.
 [tools]
-go = "1.27.3"
-gh = "2.103.3"
-node = "26.13.0"
+go = "1.27.4"
+gh = "2.105.0"
+node = "26.13.1"
 # github:, not mise's packslip install: packslip fails on fnox's skill (a 404 upstream, mise 2026.10.22).
 # github: still checks the checksum and fnox's GitHub artifact attestations.
-"github:jdx/fnox" = "1.44.0"
+"github:jdx/fnox" = "1.50.0"
 tinygo = "0.44.0"
 "aqua:WebAssembly/binaryen" = "133"
 "aqua:sqlc-dev/sqlc" = "1.31.1"
-goreleaser = "2.18.3"
-workerd = "1.20261019.1"
+goreleaser = "2.20.3"
+workerd = "1.20261124.1"

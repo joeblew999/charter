@@ -69,7 +69,7 @@ An app's test can read charter.toml (`project.Load`) to check a value it copies.
 
 | Command | What |
 |---|---|
-| `charter build` | the Worker into build/: Go with TinyGo (`-compiler=go`: seconds, never deployed), TypeScript bundled |
+| `charter build` | the Worker into build/: Go with TinyGo (`-compiler=go`: the standard compiler, seconds, any library, about 3 times the size), TypeScript bundled |
 | `charter serve` | on local workerd, charter.toml's port (`PORT` overrides), in your time zone |
 | `charter dev` | build, then serve, until Ctrl-C |
 | `charter check` | every check that needs no Cloudflare account: types, specs, tests, the Worker under workerd |

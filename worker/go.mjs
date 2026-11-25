@@ -1,4 +1,5 @@
-// Runs a Go Worker (the TinyGo Wasm in build/), keeping Go runtimes alive between requests.
+// Runs a Go Worker (the Wasm in build/, TinyGo's or the standard compiler's), keeping Go runtimes alive between
+// requests.
 //
 // This file and the others in this folder ship with the Go library and are not copied into a
 // project: charter build writes them into the project's build/ folder, beside the Wasm and
@@ -27,7 +28,7 @@
 //	const go = goWorker();
 //	await go.warm({ paths: ["/api/hello"] });
 //	export default { fetch: go.fetch };
-import "./wasm_exec.js"; // TinyGo's, for its global Go class
+import "./wasm_exec.js"; // the compiler's (workers-go writes TinyGo's or Go's), for its global Go class
 import "./tinygo-clock.mjs"; // before anything creates a Go runtime
 import * as build from "./runtime.mjs";
 import { webSocket } from "./websocket.mjs";
@@ -54,11 +55,12 @@ globalThis.tryCatch = fn => {
 };
 
 // seedOnly says whether a call for random bytes comes from TinyGo's runtime taking its seed as the
-// program starts: the only Wasm functions on the stack are arc4random, runtime.hardwareRand (when
-// it is not inlined) and _start. Package initialisers and main run in a goroutine, further down.
+// program starts: the only Wasm functions on the stack are arc4random (and arc4random_buf, which it calls since
+// TinyGo 0.44), runtime.hardwareRand (when it is not inlined) and _start. Package initialisers and main run in a
+// goroutine, further down.
 function seedOnly(stack) {
 	const frames = stack.split("\n").filter(line => line.includes("wasm://"));
-	return frames.length > 0 && frames.every(line => /\.(arc4random|runtime\.hardwareRand|_start(\.command_export)?) \(/.test(line));
+	return frames.length > 0 && frames.every(line => /\.(arc4random(_buf)?|runtime\.hardwareRand|_start(\.command_export)?) \(/.test(line));
 }
 
 // goWorker is a Worker (its fetch) over the workers-go build beside this file (runtime.mjs).
@@ -74,7 +76,8 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		const context = createRuntimeContext({ env, ctx, binding });
 		const runtime = { go, binding, context, started: false, served: 0, warm: Boolean(warm) };
 		runtime.isReady = new Promise(resolve => {
-			const wasi = go.importObject.wasi_snapshot_preview1;
+			// TinyGo's runtime only: the standard compiler's has no WASI imports, and starts when a request does.
+			const wasi = go.importObject.wasi_snapshot_preview1 ?? {};
 			const random = wasi.random_get;
 			wasi.random_get = (pointer, length) => {
 				if (runtime.started || !warm) return random(pointer, length);
@@ -133,6 +136,12 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 	// If Go's start-up can't finish there, requests start runtimes as before, and a request with
 	// the header x-go-runtime is told why in the answer's x-go-runtime.
 	async function warm({ runtimes = 2, paths = [] } = {}) {
+		// The standard compiler's runtime (no WASI imports) takes random bytes as it starts, more than a seed, and
+		// Cloudflare gives them only in a request: the first request starts the first runtime.
+		if (!new Go().importObject.wasi_snapshot_preview1) {
+			warmFailure = "the standard compiler's runtime starts with a request, not while the module loads";
+			return;
+		}
 		try {
 			const module = await loadModule();
 			for (let i = 0; i < runtimes && waiting.length < MAX_WAITING; i++) {

@@ -3,7 +3,11 @@
 // go.mjs first). Run it in the Worker's module, with tinygo and wasm-opt on the PATH:
 //
 // -patches=false, -reuse=false and -heap=0 each turn one of these off, so what each saves can be
-// measured (charter bench, docs/self/benchmarks.md); -compiler=go is a dev build in seconds.
+// measured (charter bench, docs/self/benchmarks.md).
+//
+// -compiler=go builds with the standard compiler instead (buildGo): no TinyGo, no wasm-opt, seconds to build, and
+// any Go library as it is. Its Wasm is about three times the size, over the free plan's 3 MB gzipped, and under the
+// paid plan's 10. Go runtimes are kept between requests there too.
 //
 //	charter build              (mise use github:joeblew999/charter)
 //
@@ -64,7 +68,7 @@ func Main(args []string) {
 	fresh := fs.Bool("fresh", false, "build again even when the cache has this Wasm")
 	usePatches := fs.Bool("patches", true, "patch TinyGo's runtime (-patches=false: as TinyGo ships, to measure what the patches save)")
 	reuse := fs.Bool("reuse", true, "keep Go runtimes between requests (-reuse=false: one per request, as workers-go's own entry, to measure what reuse saves)")
-	compiler := fs.String("compiler", "tinygo", `"tinygo", or "go": the standard compiler, seconds per build, for a dev loop (a bigger Wasm, a runtime per request; never deploy it)`)
+	compiler := fs.String("compiler", "tinygo", `"tinygo": the smallest Wasm (the free plan's 3 MB), minutes to build; or "go": the standard compiler, seconds to build, any library as it is, a Wasm about 3 times the size`)
 	fs.Parse(args)
 	// A TypeScript Worker (charter.toml's [build] entry): bundled, one module, no Go.
 	if p, err := project.Load("."); err == nil && p.Build.Entry != "" {
@@ -87,7 +91,7 @@ func Main(args []string) {
 	case "tinygo":
 		err = build(*heapMB, *opt, *stack, *limit, *fresh, *reuse)
 	case "go":
-		err = buildGo()
+		err = buildGo(*limit, *reuse)
 	default:
 		err = fmt.Errorf("-compiler %q: tinygo or go", *compiler)
 	}
@@ -200,11 +204,12 @@ func noReuse() error {
 	return os.WriteFile(path, []byte(strings.Replace(string(b), keep, "const MAX_WAITING = 0; // charter build -reuse=false: a runtime per request", 1)), 0o644)
 }
 
-// buildGo builds with the standard compiler (GOOS=js GOARCH=wasm), in seconds: for a dev loop, never
-// for a deploy. The glue is copied as for TinyGo, but go.mjs is TinyGo's, so build/go.mjs becomes a
-// stand-in with its interface (goWorker, warm) over workers-go's own entry, which starts a Go runtime
-// per request. A Worker's entry imports build/go.mjs either way.
-func buildGo() error {
+// buildGo builds with the standard compiler (GOOS=js GOARCH=wasm), in seconds. The glue is the same as TinyGo's:
+// go.mjs keeps Go runtimes between requests (transport's compiler_go.go has what differs in Go: a request gets a
+// goroutine of its own, and a runtime goes when it holds too much memory, not when its collector ran). Without
+// TinyGo's clock workaround, which is for TinyGo's wasm_exec.js. A runtime is not started while the module loads
+// (go.mjs's warm): the standard runtime takes random bytes as it starts, which Cloudflare gives only in a request.
+func buildGo(limit int, reuse bool) error {
 	if err := run(nil, "go", "run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=go"); err != nil {
 		return err
 	}
@@ -215,21 +220,34 @@ func buildGo() error {
 	if err := glue(); err != nil {
 		return err
 	}
-	standIn := `// charter build -compiler=go: a stand-in for go.mjs over workers-go's own entry (a Go runtime per
-// request), for a dev build with the standard compiler. Never deploy it.
-import worker from "./worker.mjs";
-export function goWorker() {
-	return { fetch: (request, env, ctx) => worker.fetch(request, env, ctx), warm: async () => {} };
-}
-`
-	if err := os.WriteFile(filepath.Join("build", "go.mjs"), []byte(standIn), 0o644); err != nil {
+	// go.mjs as for TinyGo (Go runtimes kept between requests), without TinyGo's clock workaround: the standard
+	// compiler's wasm_exec.js rounds its timers itself.
+	path := filepath.Join("build", "go.mjs")
+	b, err := os.ReadFile(path)
+	if err != nil {
 		return err
+	}
+	const clock = `import "./tinygo-clock.mjs"; // before anything creates a Go runtime` + "\n"
+	if !strings.Contains(string(b), clock) {
+		return fmt.Errorf("%s has no import of tinygo-clock.mjs to leave out: worker/go.mjs changed", path)
+	}
+	if err := os.WriteFile(path, []byte(strings.Replace(string(b), clock, "", 1)), 0o644); err != nil {
+		return err
+	}
+	os.Remove(filepath.Join("build", "tinygo-clock.mjs"))
+	if !reuse {
+		if err := noReuse(); err != nil {
+			return err
+		}
 	}
 	raw, gz, err := sizes(wasm)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("made %s (standard Go, for development): %.2f MB, %.2f MB gzipped\n", wasm, float64(raw)/1e6, float64(gz)/1e6)
+	fmt.Printf("made %s (standard Go): %.2f MB, %.2f MB gzipped\n", wasm, float64(raw)/1e6, float64(gz)/1e6)
+	if limit > 0 && gz > limit {
+		return fmt.Errorf("%s is %d bytes gzipped, over the limit of %d", wasm, gz, limit)
+	}
 	return nil
 }
 

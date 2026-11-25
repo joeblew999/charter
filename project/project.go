@@ -15,6 +15,8 @@
 //	repo = "you/my-app"                # its GitHub repository: CI publishes each commit's build there for Workers Builds
 //	subdomain = "you"                  # the account's workers.dev subdomain: a preview is <branch>-my-app.you.workers.dev
 //
+//	traces = 0.01                      # optional: trace this share of requests (0 to 1) on Cloudflare; default none
+//
 //	[[d1]]                             # databases my-app, my-app-staging and my-app-preview
 //	binding = "DB"
 //	migrations = "migrations"          # *.sql, applied in name order, each once
@@ -56,6 +58,7 @@
 //	                                   # checks that may run beside it go here too
 //	test = "mise run e2e"              # the checks after it (default: none)
 //	release_hook = "ci/tag-modules.sh" # run when a release is tagged, before production moves (default: none)
+//	update = "mise run update"         # what the weekly job runs to move the pins and check them (default: charter update)
 //
 // At a repo's top, charter.toml also says how the repo is kept (charter init writes charter's files from it, charter
 // repo the repo on GitHub, charter ci runs its jobs); a repo that is no Worker has these and no name:
@@ -72,7 +75,7 @@
 //	check = ["lint", "test"]           # the jobs charter check runs here (default: every job run on a change)
 //	[ci.jobs.test]                     # charter ci test here; .github/workflows/self-test.yml on GitHub
 //	about = "The tests"
-//	on = ["push", "pull_request"]      # and "tag" (a version tag), "dispatch" (by hand)
+//	on = ["push", "pull_request"]      # and "tag" (a version tag), "weekly" (Monday morning), "dispatch" (by hand)
 //	run = ["go test ./..."]            # commands, one after another; charter is this charter
 //	each = "project"                   # optional: in every project's folder (projects, or each with a charter.toml)
 //	os = ["linux", "macos"]            # default: linux
@@ -109,6 +112,7 @@ type Project struct {
 	Port               int             `toml:"port"`
 	Repo               string          `toml:"repo"`
 	Subdomain          string          `toml:"subdomain"`
+	Traces             float64         `toml:"traces"`
 	D1                 []D1            `toml:"d1"`
 	DurableObjects     []DurableObject `toml:"durable_objects"`
 	RateLimits         []RateLimit     `toml:"rate_limits"`
@@ -153,6 +157,7 @@ type CI struct {
 	Build       string   `toml:"build"`
 	Test        string   `toml:"test"`
 	ReleaseHook string   `toml:"release_hook"`
+	Update      string   `toml:"update"`
 	// The repo's jobs (charter ci <job>), and those charter check runs at the repo's top.
 	Check []string       `toml:"check"`
 	Jobs  map[string]Job `toml:"jobs"`
@@ -161,7 +166,7 @@ type CI struct {
 // Job is a job of the repo's CI: charter ci <name> here, .github/workflows/self-<name>.yml on GitHub.
 type Job struct {
 	About       string            `toml:"about"`
-	On          []string          `toml:"on"`   // push (to main), pull_request, tag (a version tag), dispatch (by hand)
+	On          []string          `toml:"on"`   // push (to main), pull_request, tag (a version tag), weekly, dispatch (by hand)
 	Run         []string          `toml:"run"`  // commands, words split on spaces; charter is this charter
 	Each        string            `toml:"each"` // "project": in every project's folder
 	Projects    []string          `toml:"projects"`
@@ -283,7 +288,7 @@ type Go struct {
 type Test struct {
 	Run    []string          `toml:"run"`    // check: against the Worker on local workerd, after the standard test
 	Native bool              `toml:"native"` // check: the same against the app run natively (go run .), first
-	Live   []string          `toml:"live"`   // live-test: against the deployed Worker (url), after the standard test
+	Live   []string          `toml:"live"`   // live-test: against the deployed Worker (url, BASE in its environment), after the standard test; Workers Builds runs it after it deploys production or staging
 	Env    map[string]string `toml:"env"`    // more environment for the Worker under test and its commands
 	Serve  []Helper          `toml:"serve"`  // what the tests serve beside the Worker for its whole run
 }
@@ -449,7 +454,7 @@ func (g GitHub) DocsFolder() string {
 }
 
 // ReservedJobs are charter ci's own steps, which no job of the repo may be called.
-var ReservedJobs = []string{"run", "publish", "release"}
+var ReservedJobs = []string{"run", "publish", "release", "update"}
 
 // CharterJobs are charter's own jobs, the same in every repo (charter-<job>.yml), which [ci] check may name and no job
 // of the repo may be called.
@@ -475,8 +480,8 @@ func (p *Project) check() error {
 			problems = append(problems, fmt.Sprintf("[ci.jobs.%s]: a job needs on and run", name))
 		}
 		for _, on := range j.On {
-			if !slices.Contains([]string{"push", "pull_request", "tag", "dispatch"}, on) {
-				problems = append(problems, fmt.Sprintf("[ci.jobs.%s]: on %q: push, pull_request, tag or dispatch", name, on))
+			if !slices.Contains([]string{"push", "pull_request", "tag", "weekly", "dispatch"}, on) {
+				problems = append(problems, fmt.Sprintf("[ci.jobs.%s]: on %q: push, pull_request, tag, weekly or dispatch", name, on))
 			}
 		}
 		for _, os := range j.OS {

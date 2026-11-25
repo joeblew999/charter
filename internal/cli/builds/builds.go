@@ -7,7 +7,8 @@
 //	                                  manifest; exit 3 when CI never published one
 //	charter builds build -compile   build it here instead: charter.toml's [ci] tools and [build] command
 //	charter builds deploy     what the branch deploys (production, staging, or its preview, charter.toml's),
-//	                                  then delete the previews of branches that are gone
+//	                                  then delete the previews of branches that are gone; production and staging
+//	                                  are then tested where they run (charter live-test, when [test] has live)
 //	charter builds configure  set Workers Builds up for the Worker: the repository, the launcher as its build
 //	                                  and deploy commands, every branch built (needs Cloudflare credentials)
 //
@@ -100,6 +101,28 @@ func deploy(p *project.Project, branch, sha string) int {
 			log.Printf("· pruning previews failed (%v); the %s is live", err, env)
 		}
 	}
+	return liveTest(p, env, url)
+}
+
+// liveTest runs the project's tests against what was just deployed (charter live-test: [test] live), for production
+// and staging: some faults exist only on Cloudflare, and a deploy nobody tested is found by a visitor. It can't undo
+// the deploy: a failure makes this build red, which is the check on the commit, and says how to go back.
+func liveTest(p *project.Project, env, url string) int {
+	if env == "preview" || len(p.Test.Live) == 0 || !strings.HasPrefix(url, "http") {
+		return 0
+	}
+	bin, err := os.Executable()
+	if err != nil {
+		log.Printf("✗ %v", err)
+		return 1
+	}
+	cmd := exec.Command(bin, "live-test", "-base", url)
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr // the tests' own lines, as they run
+	if err := cmd.Run(); err != nil {
+		log.Printf("✗ %s is deployed at %s, and its live test fails. It stays deployed: release an older commit of main to go back, or fix and release again.", env, url)
+		return self.ExitCode(err)
+	}
+	log.Printf("✓ %s passes its live test at %s", env, url)
 	return 0
 }
 

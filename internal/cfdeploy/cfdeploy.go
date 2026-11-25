@@ -72,6 +72,10 @@ type Config struct {
 
 	RateLimits map[string]RateLimit // binding → Workers Rate Limiting settings
 
+	// Traces is the share of requests Cloudflare traces (0 to 1; 0 is none): its automatic tracing of the handler,
+	// its fetches and its binding calls, with no code in the Worker.
+	Traces float64
+
 	// Domains are Workers Custom Domains to attach (e.g. "app.example.com"): Cloudflare creates the DNS record and
 	// certificate. Each hostname's zone must be in the account, and the hostname must not already have a DNS record or
 	// belong to another Worker. The workers.dev URL stays enabled.
@@ -564,15 +568,24 @@ func (c *Client) uploadAssets(ctx context.Context, name string, plan *Plan) (str
 }
 
 // putScript runs step 3: the multipart script upload with its metadata part.
+// observability is the upload's observability setting. Workers Logs: every request's logs and CPU time, in the
+// dashboard and the observability API (charter logs). An upload without it turns logging off, so every deploy says so.
+// Traces only when the config asks for them, at its rate.
+func observability(cfg Config) map[string]any {
+	o := map[string]any{"enabled": true, "head_sampling_rate": 1}
+	if cfg.Traces > 0 {
+		o["traces"] = map[string]any{"enabled": true, "head_sampling_rate": cfg.Traces}
+	}
+	return o
+}
+
 func (c *Client) putScript(ctx context.Context, cfg Config, modules []Module, d1IDs map[string]string, doMigration map[string]any, assetsJWT string) error {
 	meta := map[string]any{
 		"main_module":         modules[0].Name,
 		"compatibility_date":  cfg.CompatibilityDate,
 		"compatibility_flags": append([]string{}, cfg.CompatibilityFlags...),
 		"bindings":            bindings(cfg, d1IDs),
-		// Workers Logs: every request's logs and CPU time, in the dashboard and the observability
-		// API. An upload without it turns logging off, so every deploy says so.
-		"observability": map[string]any{"enabled": true, "head_sampling_rate": 1},
+		"observability":       observability(cfg),
 		// A secret this deploy doesn't set (set before, or by hand) stays, as cf deploy keeps it.
 		"keep_bindings": []string{"secret_text", "secret_key"},
 	}

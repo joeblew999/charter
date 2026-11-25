@@ -56,6 +56,72 @@ type Log struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
+// Filter narrows a tail to the events wanted, on Cloudflare's side: a busy Worker's tail is sampled, and messages are
+// dropped, unless it is narrowed. An event must pass every field that is set. The API's form is what wrangler's tail
+// sends (workers-sdk, packages/wrangler/src/tail/filters.ts).
+type Filter struct {
+	Status   []string // "ok", "error" (an exception, or over the CPU or memory limit), "canceled"
+	Methods  []string // HTTP methods
+	Header   string   // "Name" (the header is there) or "Name: text" (and its value has the text)
+	Search   string   // text in a console message
+	IPs      []string // the client's address; "self" is the address the tail was started from
+	Sampling float64  // the share of events to send, above 0 and below 1; 0 is all
+	Version  string   // a version id of the Worker
+}
+
+// Check reports what in f the tail would not take.
+func (f Filter) Check() error {
+	for _, s := range f.Status {
+		if s != "ok" && s != "error" && s != "canceled" {
+			return fmt.Errorf("status %q: ok, error or canceled", s)
+		}
+	}
+	if f.Sampling < 0 || f.Sampling >= 1 {
+		return fmt.Errorf("sampling %v: above 0 and below 1 (0.25 sends a quarter of the events)", f.Sampling)
+	}
+	return nil
+}
+
+// api is f as the API takes it: a list of filters, each an object with one key.
+func (f Filter) api() []map[string]any {
+	filters := []map[string]any{}
+	if f.Sampling > 0 {
+		filters = append(filters, map[string]any{"sampling_rate": f.Sampling})
+	}
+	if len(f.Status) > 0 {
+		var outcomes []string
+		for _, s := range f.Status {
+			switch s {
+			case "error":
+				outcomes = append(outcomes, "exception", "exceededCpu", "exceededMemory", "unknown")
+			default:
+				outcomes = append(outcomes, s)
+			}
+		}
+		filters = append(filters, map[string]any{"outcome": outcomes})
+	}
+	if len(f.Methods) > 0 {
+		filters = append(filters, map[string]any{"method": f.Methods})
+	}
+	if f.Header != "" {
+		header := map[string]any{"key": strings.TrimSpace(f.Header)}
+		if key, text, ok := strings.Cut(f.Header, ":"); ok {
+			header = map[string]any{"key": strings.TrimSpace(key), "query": strings.TrimSpace(text)}
+		}
+		filters = append(filters, map[string]any{"header": header})
+	}
+	if len(f.IPs) > 0 {
+		filters = append(filters, map[string]any{"client_ip": f.IPs})
+	}
+	if f.Search != "" {
+		filters = append(filters, map[string]any{"query": f.Search})
+	}
+	if f.Version != "" {
+		filters = append(filters, map[string]any{"scriptVersion": f.Version})
+	}
+	return filters
+}
+
 // Session is a started tail.
 type Session struct {
 	ID        string `json:"id"`
@@ -68,6 +134,7 @@ type Client struct {
 	Token     string
 	AccountID string
 	BaseURL   string // default https://api.cloudflare.com/client/v4
+	Filter    Filter // which events the tail sends; the zero Filter is all of them
 	Ready     func() // called once the tail WebSocket is connected; Cloudflare starts streaming a second or two later
 }
 
@@ -78,7 +145,7 @@ func (c *Client) api() *cfapi.Client {
 // Start creates a tail on script.
 func (c *Client) Start(ctx context.Context, script string) (Session, error) {
 	var s Session
-	err := c.api().Do(ctx, "POST", c.api().AccountPath("/workers/scripts/"+script+"/tails"), "", cfapi.JSON(map[string]any{}), &s)
+	err := c.api().Do(ctx, "POST", c.api().AccountPath("/workers/scripts/"+script+"/tails"), "", cfapi.JSON(map[string]any{"filters": c.Filter.api()}), &s)
 	if err == nil && (s.ID == "" || s.URL == "") {
 		err = errors.New("cftail: start returned no id or url")
 	}
