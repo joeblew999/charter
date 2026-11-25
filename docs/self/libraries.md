@@ -131,7 +131,7 @@ Switches, each turning one part off so what it saves can be measured: `-reuse=fa
 | Build | Minutes when nothing is cached; `wasm-opt` rewrites every function | Seconds |
 | Libraries | What TinyGo's runtime has; one may make the build slow or fail | Any, as it is |
 | The Wasm, gzipped | Smallest: under the free plan's 3 MB | About three times that: the paid plan's 10 MB |
-| Go runtimes | Kept between requests, some started while the module loads | Kept between requests; the first starts with the first request |
+| Go runtimes | Kept between requests; two started while the module loads | Kept between requests; one started while the module loads (its start takes about 150 ms of CPU) |
 
 go-htmx4 with each, on a local workerd on a Mac, 2026-11-25, the median of 60 requests after 5: `/` 1.8 ms with TinyGo and 2.3 ms with standard Go; `/board` (a D1 read) 2.5 ms and 2.4 ms. With a runtime per request, standard Go took 15 ms for each. Not yet measured on Cloudflare.
 

@@ -88,6 +88,34 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 				new Uint8Array(go._inst.exports.memory.buffer, pointer >>> 0, length >>> 0).forEach((_, i, bytes) => (bytes[i] = Math.random() * 256));
 				return 0;
 			};
+			// The standard compiler's runtime: its seed is the first random bytes it takes, before any of the program's
+			// code runs (the scheduler starts before package initialisers), and it takes them through the same import
+			// as crypto/rand does. While the module loads, that first call gets Math.random's, as TinyGo's seed does
+			// above; a second call there is the program wanting real random bytes, which fails the warm start.
+			const gojs = go.importObject.gojs;
+			if (gojs && warm) {
+				const random = gojs["runtime.getRandomData"];
+				let seeded = false;
+				gojs["runtime.getRandomData"] = sp => {
+					if (runtime.started) return random(sp);
+					if (seeded) throw new Error("random bytes wanted during start-up, other than the runtime's seed");
+					seeded = true;
+					sp >>>= 0;
+					const view = new DataView(go._inst.exports.mem.buffer);
+					const int64 = at => view.getUint32(at, true) + view.getInt32(at + 4, true) * 4294967296;
+					new Uint8Array(go._inst.exports.mem.buffer, int64(sp + 8), int64(sp + 16)).forEach((_, i, bytes) => (bytes[i] = Math.random() * 256));
+				};
+				// Its clock: while the module loads Cloudflare's reads zero, and the runtime stops at a clock that does
+				// ("nanotime returning zero"). It gets one nanosecond there; the real time comes with the first request.
+				const nanotime = gojs["runtime.nanotime1"];
+				gojs["runtime.nanotime1"] = sp => {
+					nanotime(sp);
+					if (runtime.started) return;
+					sp >>>= 0;
+					const view = new DataView(go._inst.exports.mem.buffer);
+					if (view.getUint32(sp + 8, true) === 0 && view.getUint32(sp + 12, true) === 0) view.setUint32(sp + 8, 1, true);
+				};
+			}
 			const instance = new WebAssembly.Instance(module, {
 				...go.importObject,
 				workers: {
@@ -127,21 +155,19 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 	// of the entry. A request that starts its own runtime in a new isolate costs about 100 ms of
 	// CPU; one that finds a warm runtime costs 4 to 19 (docs/self/benchmarks.md).
 	//
-	//   - runtimes: how many. Each is start-up time for the isolate (Cloudflare allows about a
-	//     second) and 8 MB held. Requests that arrive together beyond that number start their own.
+	//   - runtimes: how many (default 2 for TinyGo's, 1 for the standard compiler's). Each is start-up time for
+	//     the isolate (Cloudflare allows about a second) and its heap held. Requests that arrive together beyond
+	//     that number start their own.
 	//   - paths: each runtime answers a GET of these during start-up, into nothing (transport.Run),
 	//     so the code is compiled and the operations registered. Only paths whose handlers touch
 	//     no binding: a runtime has none until a request gives it its own.
 	//
 	// If Go's start-up can't finish there, requests start runtimes as before, and a request with
 	// the header x-go-runtime is told why in the answer's x-go-runtime.
-	async function warm({ runtimes = 2, paths = [] } = {}) {
-		// The standard compiler's runtime (no WASI imports) takes random bytes as it starts, more than a seed, and
-		// Cloudflare gives them only in a request: the first request starts the first runtime.
-		if (!new Go().importObject.wasi_snapshot_preview1) {
-			warmFailure = "the standard compiler's runtime starts with a request, not while the module loads";
-			return;
-		}
+	async function warm({ runtimes, paths = [] } = {}) {
+		// The standard compiler's runtime (no WASI imports) takes about 150 ms of CPU to start, of the second
+		// Cloudflare allows a module to load in: one, where TinyGo's start two.
+		runtimes ??= new Go().importObject.wasi_snapshot_preview1 ? 2 : 1;
 		try {
 			const module = await loadModule();
 			for (let i = 0; i < runtimes && waiting.length < MAX_WAITING; i++) {

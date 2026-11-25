@@ -207,8 +207,9 @@ func noReuse() error {
 // buildGo builds with the standard compiler (GOOS=js GOARCH=wasm), in seconds. The glue is the same as TinyGo's:
 // go.mjs keeps Go runtimes between requests (transport's compiler_go.go has what differs in Go: a request gets a
 // goroutine of its own, and a runtime goes when it holds too much memory, not when its collector ran). Without
-// TinyGo's clock workaround, which is for TinyGo's wasm_exec.js. A runtime is not started while the module loads
-// (go.mjs's warm): the standard runtime takes random bytes as it starts, which Cloudflare gives only in a request.
+// TinyGo's clock workaround, which is for TinyGo's wasm_exec.js. One runtime starts while the module loads (go.mjs's
+// warm), given what the standard runtime wants as it starts and Cloudflare gives only in a request: its seed, and a
+// clock that isn't zero.
 func buildGo(limit int, reuse bool) error {
 	if err := run(nil, "go", "run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=go"); err != nil {
 		return err
