@@ -1,4 +1,5 @@
-// Upstream: tinygo-org/tinygo#5798 (when fixed: delete this file and its import in go.mjs)
+// Upstream: syumai/workers-go#263 (when fixed: delete this file and its import in go.mjs)
+// TinyGo fixed it in 0.44 (tinygo-org/tinygo#5798); a Worker runs workers-go's own copy of wasm_exec.js, which has not.
 // Makes Go timers fire on Cloudflare. Import it before anything creates a Go runtime (go.mjs does).
 //
 // On Cloudflare (not under local workerd) the clock only moves on I/O, and after a setTimeout(d)
