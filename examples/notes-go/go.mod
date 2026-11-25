@@ -13,7 +13,7 @@ require (
 	github.com/coder/websocket v1.8.15 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/evanw/esbuild v0.28.2 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.9 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect

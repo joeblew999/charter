@@ -7,7 +7,7 @@ require (
 	github.com/coder/websocket v1.8.15
 	github.com/danielgtaylor/huma/v2 v2.41.0
 	github.com/evanw/esbuild v0.28.2
-	github.com/go-jose/go-jose/v4 v4.1.9
+	github.com/go-jose/go-jose/v4 v4.1.7
 	github.com/syumai/workers-go v0.36.0
 	golang.org/x/mod v0.43.0
 	modernc.org/sqlite v1.63.0
