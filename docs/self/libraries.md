@@ -122,7 +122,18 @@ The build, `charter build`: the Worker's Wasm with TinyGo (the runtime patches i
 charter build
 ```
 
-Switches, each turning one part off so what it saves can be measured: `-reuse=false` (a Go runtime per request), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). `-compiler=go` builds with the standard compiler in seconds, for a dev loop; it is never deployed.
+Switches, each turning one part off so what it saves can be measured: `-reuse=false` (a Go runtime per request), `-patches=false` (TinyGo as it ships), `-heap=0` (TinyGo's default heap). 
+
+**The compiler** is TinyGo unless `-compiler=go` asks for the standard one (the task `charter:build` passes `WORKER_COMPILER`):
+
+| | TinyGo (default) | Standard Go (`-compiler=go`) |
+|---|---|---|
+| Build | Minutes when nothing is cached; `wasm-opt` rewrites every function | Seconds |
+| Libraries | What TinyGo's runtime has; one may make the build slow or fail | Any, as it is |
+| The Wasm, gzipped | Smallest: under the free plan's 3 MB | About three times that: the paid plan's 10 MB |
+| Go runtimes | Kept between requests, some started while the module loads | Kept between requests; the first starts with the first request |
+
+go-htmx4 with each, on a local workerd on a Mac, 2026-11-25, the median of 60 requests after 5: `/` 1.8 ms with TinyGo and 2.3 ms with standard Go; `/board` (a D1 read) 2.5 ms and 2.4 ms. With a runtime per request, standard Go took 15 ms for each. Not yet measured on Cloudflare.
 
 What a request costs, `charter bench`: the CPU a local workerd spends per request, from the operating system's count, in repeated runs (`-json` for a program). No Cloudflare account is needed, so anyone gets the same comparison:
 

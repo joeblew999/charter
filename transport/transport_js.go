@@ -54,7 +54,8 @@ func Run(h http.Handler) {
 	allocated = stats.TotalAlloc // start-up is not a request's allocation
 	handler := Serve(h)
 	binding.Set("serve", js.FuncOf(func(_ js.Value, args []js.Value) any {
-		answer(handler, args[0].String(), args[1])
+		head, body := args[0].String(), args[1]
+		fromJS(func() { answer(handler, head, body) })
 		return nil
 	}))
 	workers.ServeNonBlock(handler)
@@ -240,8 +241,7 @@ func Serve(h http.Handler) http.Handler {
 			mostRequest = since
 		}
 		allocated = stats.TotalAlloc
-		// Twice what was allocated since the last look, or by the first request alone.
-		if stats.NumGC > 0 || stats.HeapIdle < 2*mostRequest {
+		if full(&stats, mostRequest) {
 			binding.Set("full", true)
 		}
 	})
