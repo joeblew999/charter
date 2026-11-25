@@ -20,8 +20,8 @@ import (
 
 // Check runs charter check: everything before a push, needing no Cloudflare account. Each part says how long it took.
 //
+//	generate   the messages, the components' Go and the browser's files (charter build -only generate)
 //	tidy       go.mod and go.sum as go mod tidy writes them
-//	generate   the messages and the components' Go (charter build -only generate)
 //	format     gofmt, and gsx fmt for .gsx files
 //	vet        go vet, for the host and as the Worker is built (GOOS=js GOARCH=wasm); structpages-lint when go.mod has it
 //	specs      the committed specs are what the contract gives (charter.toml's spec)
@@ -42,8 +42,9 @@ func Check(args []string) {
 		}
 		times = append(times, name+" "+run.Seconds(time.Since(t)))
 	}
-	part("tidy", func() error { return run.Run(p.Root, nil, "go", "mod", "tidy", "-diff") })
+	// Generated first: a clean checkout has no messages package or components' Go yet, and everything after reads them.
 	part("generate", func() error { return generate(p) })
+	part("tidy", func() error { return run.Run(p.Root, nil, "go", "mod", "tidy", "-diff") })
 	part("format", func() error { return format(p) })
 	part("vet", func() error { return vet(p) })
 	if p.Spec != "" {
