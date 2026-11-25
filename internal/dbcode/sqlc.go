@@ -69,7 +69,7 @@ type Request struct {
 const sqlcVersion = "v1.30.0"
 
 // Analyze runs sqlc on dir's schema (migrations/) and queries (api/queries.sql), and returns what it worked out. sqlc
-// is the one the repo's mise.toml pins (aqua:sqlc-dev/sqlc), loaded by mise.
+// is run with go run, at sqlcVersion.
 func Analyze(dir string) (*Request, error) {
 	tmp, err := os.MkdirTemp("", "charter-sqlc-")
 	if err != nil {

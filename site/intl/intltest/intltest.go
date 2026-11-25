@@ -4,7 +4,7 @@
 //
 //	func TestMain(m *testing.M) { os.Exit(intltest.Main(m)) }
 //
-// It is the repo's intl daemon (workerd.Start: pitchfork runs it, with the catalogs charter intl gen wrote).
+// It is workerd.Start: npm's workerd, with the catalogs charter intl gen wrote.
 package intltest
 
 import (

@@ -35,7 +35,7 @@ type durableObject[T any] struct {
 // Publish calls the hub's publish method (Workers RPC) with the item as JSON, and waits for it once.
 // A fetch through net/http cost about 1.5 ms of CPU more on Cloudflare: an http.Request made into a
 // JavaScript one and the answer into an http.Response cross between Go and JavaScript many times.
-// A json.RawMessage item goes as it is: JSON the caller wrote itself, with no reflection under TinyGo.
+// A json.RawMessage item goes as it is: JSON the caller wrote itself, with no reflection.
 func (h durableObject[T]) Publish(_ context.Context, item T) error {
 	message, ok := any(item).(json.RawMessage)
 	if !ok {

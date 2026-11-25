@@ -1,4 +1,4 @@
-// Runs a Go Worker (the Wasm in build/, TinyGo's or the standard compiler's), keeping Go runtimes alive between
+// Runs a Go Worker (the Wasm in build/), keeping Go runtimes alive between
 // requests.
 //
 // This file and the others in this folder ship with the Go library and are not copied into a
@@ -28,7 +28,7 @@
 //	const go = goWorker();
 //	await go.warm({ paths: ["/api/hello"] });
 //	export default { fetch: go.fetch };
-import "./wasm_exec.js"; // the compiler's (workers-go writes TinyGo's or Go's), for its global Go class
+import "./wasm_exec.js"; // the compiler's (workers-go writes it), for its global Go class
 import * as build from "./runtime.mjs";
 import { webSocket } from "./websocket.mjs";
 

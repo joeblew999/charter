@@ -27,7 +27,7 @@ const PseudoCatalog = "en-XA"
 //	                          without arguments, a constructor for one with; the shipped locales, and their
 //	                          registration with intl
 //	intl-workerd/             Intl outside a Worker: intl's modules and intl-messages.mjs, which workerd serves (the
-//	                          repo's pitchfork daemon, charter intl workerd; a Worker imports intl-messages.mjs itself)
+//	                          package workerd; a Worker imports intl-messages.mjs itself)
 //	<gsxui>/i18n/intl_gen.go  with intl.toml's gsxui: the renderer for the text gsxui components write themselves
 //	<badge>                   with intl.toml's badge: the languages badge (badge.go)
 //
@@ -212,7 +212,7 @@ func writeJS(path, dir string, ids []string, catalogs map[string][]any) error {
 }
 
 // writeWorkerd writes intl-workerd/ beside the catalogs in dir: what workerd serves outside a Worker, intl's modules
-// and the catalogs. The repo's pitchfork daemon restarts when they change.
+// and the catalogs.
 func writeWorkerd(dir string) error {
 	to := filepath.Join(dir, "intl-workerd")
 	if err := os.MkdirAll(to, 0o755); err != nil {

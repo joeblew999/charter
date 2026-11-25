@@ -1,11 +1,9 @@
-// Package web is net/http helpers for a Go Worker's pages that work the same under TinyGo on Cloudflare Workers and
-// standard Go:
+// Package web is net/http helpers for a Go Worker's pages:
 //
-//   - TinyGo's net/http has the ServeMux from before Go 1.22: no "GET /path" patterns and no {$}. NewServeMux has
-//     them under both compilers; on TinyGo's own mux, register plain paths and check the method with Allow.
-//   - A response workers-go streams arrives chunked, which broke htmx's history restore under workerd: Render
-//     buffers a page and sends it with a Content-Length.
+//   - A response workers-go streams arrives chunked, which broke htmx's history restore on Workers: Render buffers a
+//     page and sends it with a Content-Length.
 //   - A Worker's request URL is absolute, a Go server's isn't: Origin is the scheme and host either way.
+//   - NewServeMux is http.NewServeMux, kept for the apps that call it.
 package web
 
 import (

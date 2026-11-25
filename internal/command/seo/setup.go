@@ -33,7 +33,7 @@ func (r repo) setup(args []string) {
 	}
 	account := strings.TrimSpace(gcloudOut("auth", "list", "--filter=status:ACTIVE", "--format=value(account)"))
 	if account == "" {
-		fail(fmt.Errorf("no gcloud login: run gcloud auth login first (mise exec -- gcloud auth login, here)"))
+		fail(fmt.Errorf("no gcloud login: run gcloud auth login first"))
 	}
 	raw := secret(consoleKey)
 	var sa, project string

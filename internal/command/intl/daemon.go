@@ -12,9 +12,8 @@ import (
 	"github.com/joeblew999/charter/site/intl/workerd"
 )
 
-// daemon is charter intl daemon (intl:daemon), what the repo's intl daemon runs (pitchfork.toml): workerd serving Intl
-// on the files gen wrote beside the catalogs (intl-workerd/), in the foreground, at 127.0.0.1 on the port pitchfork
-// gives it ($PORT). It says when workerd answers: the daemon is ready (its ready_output).
+// daemon is charter intl daemon: workerd serving Intl on the files gen wrote beside the catalogs (intl-workerd/), in
+// the foreground, at 127.0.0.1 on $PORT. It says when workerd answers.
 func daemon(args []string) {
 	c := app()
 	bin, err := workerd.Path()

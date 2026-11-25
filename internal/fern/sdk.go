@@ -20,7 +20,7 @@ import (
 	"github.com/joeblew999/charter/internal/run"
 )
 
-// The toolchains a proof needs, as mise loads them: the Rust a CLI is built with; the uv and Python a Python
+// The toolchains a proof needs, the developer's own (cargo, uv): the Rust a CLI is built with; the uv and Python a Python
 // client is proven with, and the packages: the client's own (httpx, pydantic, typing-extensions, anyio) and the
 // checkers.
 const (
