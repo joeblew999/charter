@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// locales is mise-intl locales: the shipped locales, comma-separated.
+// locales is charter intl locales: the shipped locales, comma-separated.
 func locales(args []string) {
 	c := app()
 	fmt.Println(strings.Join(c.Locales, ","))

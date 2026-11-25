@@ -12,7 +12,7 @@ import (
 	"github.com/joeblew999/charter/intl/workerd"
 )
 
-// daemon is mise-intl daemon (intl:daemon), what the repo's intl daemon runs (pitchfork.toml): workerd serving Intl
+// daemon is charter intl daemon (intl:daemon), what the repo's intl daemon runs (pitchfork.toml): workerd serving Intl
 // on the files gen wrote beside the catalogs (intl-workerd/), in the foreground, at 127.0.0.1 on the port pitchfork
 // gives it ($PORT). It says when workerd answers: the daemon is ready (its ready_output).
 func daemon(args []string) {

@@ -1,4 +1,4 @@
-// Package setup is mise-intl init: it sets a gsx app up for intl, from its go.mod's directory. Every step leaves
+// Package setup is charter intl init: it sets a gsx app up for intl, from its go.mod's directory. Every step leaves
 // alone what is already there, so it can run again (after gsxui init, say).
 package setup
 
@@ -54,15 +54,15 @@ func Init(root string, o Options, log io.Writer) error {
 	}
 	conf := "# The app's languages (github.com/joeblew999/charter/intl): BCP 47 ids, the source first.\n" +
 		"locales = [" + strings.Join(q, ", ") + "]\n" +
-		"# <locale>.toml per language, ICU MessageFormat; mise-intl gen writes the Go package of messages there.\n" +
+		"# <locale>.toml per language, ICU MessageFormat; charter intl gen writes the Go package of messages there.\n" +
 		"catalogs = " + `"` + o.Catalogs + `"` + "\n"
 	if o.Gsxui != "" {
 		conf += "# Where gsxui add vendors components: gen translates the text they write themselves from [gsxui].\n" +
 			"gsxui = " + `"` + o.Gsxui + `"` + "\n"
 	}
-	conf += "# Optional: a README badge mise-intl gen keeps current, \"languages | 2, all translated\".\n" +
+	conf += "# Optional: a README badge charter intl gen keeps current, \"languages | 2, all translated\".\n" +
 		"# badge = \"docs/badges/intl.svg\"\n"
-	conf += "\n# Guidance for whoever translates, people or Claude (mise-intl todo shows it); \"*\" is for every language.\n" +
+	conf += "\n# Guidance for whoever translates, people or Claude (charter intl todo shows it); \"*\" is for every language.\n" +
 		"[notes]\n\"*\" = \"\"\n"
 	if err := write("intl.toml", conf); err != nil {
 		return err
@@ -81,7 +81,7 @@ func Init(root string, o Options, log io.Writer) error {
 	}
 	for _, id := range o.Locales[1:] {
 		if err := write(filepath.Join(o.Catalogs, id+".toml"),
-			"# "+id+": the translations of "+source+".toml, same tables and keys. mise-intl todo lists what is left.\n"); err != nil {
+			"# "+id+": the translations of "+source+".toml, same tables and keys. charter intl todo lists what is left.\n"); err != nil {
 			return err
 		}
 	}
@@ -105,7 +105,7 @@ func Init(root string, o Options, log io.Writer) error {
 
 // UsesGsx reports whether the app at root is a gsx app: it has gsxui (gsxui), a gsx.toml, or .gsx files of its own.
 // Its go.mod isn't the sign: the module an app is a folder of may require gsx for packages of its own (the template,
-// where it is, is a folder of mise-intl's, which gsxintl needs gsx for).
+// where it is, is a folder of charter intl's, which gsxintl needs gsx for).
 func UsesGsx(root, gsxui string) bool {
 	if gsxui != "" {
 		return true
@@ -135,7 +135,7 @@ func UsesGsx(root, gsxui string) bool {
 }
 
 // GoMod is the go.mod of the module root is in, the nearest up from it: the app's own, or for the template where it is,
-// mise-intl's. "" when root is in none. It reads the files, so it needs no Go.
+// charter intl's. "" when root is in none. It reads the files, so it needs no Go.
 func GoMod(root string) string {
 	for dir := root; ; dir = filepath.Dir(dir) {
 		if p := filepath.Join(dir, "go.mod"); fileExists(p) {
@@ -166,10 +166,10 @@ func addGsxui(path, dir string, log io.Writer) error {
 	return addKey(path, "gsxui", dir, "Where gsxui add vendors components: gen translates the text they write themselves from [gsxui].", log)
 }
 
-// UI writes ui = dir into the app's intl.toml when it has no ui: where mise-intl add put intl's screens.
+// UI writes ui = dir into the app's intl.toml when it has no ui: where charter intl add put intl's screens.
 func UI(root, dir string, log io.Writer) error {
 	return addKey(filepath.Join(root, "intl.toml"), "ui", dir,
-		"Where mise-intl add copies intl's screens (package intlui): the language list, the language offer, the time zone\n# and clock dialog.", log)
+		"Where charter intl add copies intl's screens (package intlui): the language list, the language offer, the time zone\n# and clock dialog.", log)
 }
 
 // addKey writes key = value, below its comment, after intl.toml's catalogs line, unless the file sets key already.
@@ -234,7 +234,7 @@ func TaskIncludes(root, rel string, log io.Writer) error {
 
 // GsxuiRenderer registers the renderer for the text gsxui components write themselves (i18n.T) in gsx.toml, once
 // the app has gsxui's i18n package: gsxui add vendors it with the first component that writes text, and until then
-// gsx would fail on a renderer for a package that isn't there. mise-intl gen calls it every time, so the renderer
+// gsx would fail on a renderer for a package that isn't there. charter intl gen calls it every time, so the renderer
 // arrives with the package.
 func GsxuiRenderer(root, gsxui string, log io.Writer) error {
 	if gsxui == "" {
@@ -318,7 +318,7 @@ func addToTable(s, name, lines string) string {
 	return s + "[" + name + "]\n" + lines
 }
 
-// gitignore keeps mise-intl gen's output out of git (intl.sum stays in).
+// gitignore keeps charter intl gen's output out of git (intl.sum stays in).
 func gitignore(path string, log io.Writer) error {
 	b, err := os.ReadFile(path)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -337,7 +337,7 @@ func gitignore(path string, log io.Writer) error {
 	if s != "" && !strings.HasSuffix(s, "\n") {
 		s += "\n"
 	}
-	s += "# mise-intl gen output (mise run intl)\n" + strings.Join(add, "\n") + "\n"
+	s += "# charter intl gen output (charter intl)\n" + strings.Join(add, "\n") + "\n"
 	fmt.Fprintln(log, "updated .gitignore:", strings.Join(add, ", "))
 	return os.WriteFile(path, []byte(s), 0o644)
 }

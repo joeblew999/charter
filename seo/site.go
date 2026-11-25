@@ -2,7 +2,7 @@
 // llms.txt, marks what isn't a page noindex and gives every page one address; Sitemap and LLMsTxt, what it serves; and
 // SnippetWidth, how wide Google shows a title. It imports no gsx and is small enough for a Worker. Beside it:
 // seo/audit (the site as Googlebot reads it, for an app's tests), seo/config (an app's seo.toml), gsxseo (the page's
-// <head>, for a gsx app) and the mise-seo binary, which a repo gets through mise (docs/seo/README.md, which mise-seo
+// <head>, for a gsx app) and the charter seo binary, which a repo gets through mise (docs/seo/README.md, which charter seo
 // init writes).
 package seo
 

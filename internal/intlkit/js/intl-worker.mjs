@@ -1,4 +1,4 @@
-// What Go calls (package intl): intl.mjs with the app's message catalogs (intl-messages.mjs, from mise-intl gen),
+// What Go calls (package intl): intl.mjs with the app's message catalogs (intl-messages.mjs, from charter intl gen),
 // every argument a string ("" for none), so Go in a Worker's wasm and go test (intltest, the same module on workerd)
 // call it the same way. The Worker entry puts it on globalThis: globalThis.goIntl = goIntl.
 import * as intl from "./intl.mjs";

@@ -32,10 +32,10 @@ func (r repo) siteOf(c config.Config, flagSite string) string {
 		site, from = flagSite, "--site"
 	}
 	if site == "" {
-		fail(fmt.Errorf("no site: set site in %s (mise run seo:init --site https://your.site), or pass --site", config.File))
+		fail(fmt.Errorf("no site: set site in %s (charter seo init --site https://your.site), or pass --site", config.File))
 	}
 	site = strings.TrimRight(site, "/")
-	fmt.Fprintf(os.Stderr, "mise-seo: %s (from %s)\n", site, from)
+	fmt.Fprintf(os.Stderr, "charter seo: %s (from %s)\n", site, from)
 	return site
 }
 
@@ -100,7 +100,7 @@ func must(err error) {
 }
 
 func fail(err error) {
-	fmt.Fprintln(os.Stderr, "mise-seo:", err)
+	fmt.Fprintln(os.Stderr, "charter seo:", err)
 	os.Exit(1)
 }
 

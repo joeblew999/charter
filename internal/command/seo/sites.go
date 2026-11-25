@@ -8,14 +8,14 @@ import (
 	"github.com/joeblew999/charter/internal/seokit/searchconsole"
 )
 
-// sitesReport is mise-seo sites --json.
+// sitesReport is charter seo sites --json.
 type sitesReport struct {
 	Property string               `json:"property"`
 	Access   bool                 `json:"access"` // Full or Owner on Property
 	Sites    []searchconsole.Site `json:"sites"`
 }
 
-// sites is mise-seo sites (seo:sites): the Search Console properties the service account can use, and whether it
+// sites is charter seo sites (seo:sites): the Search Console properties the service account can use, and whether it
 // has Full access to seo.toml's property (its property, else its site's Domain property); exit 1 without it, saying
 // how to add the account there.
 func (r repo) sites(args []string) {

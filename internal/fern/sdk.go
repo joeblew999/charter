@@ -24,8 +24,6 @@ import (
 // client is proven with, and the packages: the client's own (httpx, pydantic, typing-extensions, anyio) and the
 // checkers.
 const (
-	rustVersion   = "1.98.1"
-	uvVersion     = "0.13.0"
 	pythonVersion = "3.13"
 )
 
@@ -222,12 +220,13 @@ func ProveGroup(dir, group string) error {
 		if err != nil {
 			return err
 		}
-		args := []string{"exec", "rust@" + rustVersion, "--", "cargo", "build"}
+		// The developer's own Rust (https://rustup.rs): only an app with a Rust CLI among its SDKs needs it.
+		args := []string{"build"}
 		if bin != "" {
 			args = append(args, "--bin", bin)
 		}
 		args = append(args, "--no-default-features", "--features", "rustls")
-		_, err = run.Quietly(out, map[string]string{"CARGO_TARGET_DIR": target}, "mise", args...)
+		_, err = run.Quietly(out, map[string]string{"CARGO_TARGET_DIR": target}, "cargo", args...)
 		return err
 	}
 	fmt.Printf("%s: generated; charter proves Go, TypeScript, Python and the Rust CLI, not this language\n", out)
@@ -267,11 +266,12 @@ func python(dir, out, group string) error {
 		return err
 	}
 	uv := func(args ...string) error {
-		full := []string{"exec", "uv@" + uvVersion, "--", "uv", "run", "--no-project", "--python", pythonVersion}
+		// The developer's own uv (https://docs.astral.sh/uv/), which gets the Python: only an app with a Python SDK needs it.
+		full := []string{"run", "--no-project", "--python", pythonVersion}
 		for _, p := range pythonPackages {
 			full = append(full, "--with", p)
 		}
-		_, err := run.Quietly(site, nil, "mise", append(append(full, "--"), args...)...)
+		_, err := run.Quietly(site, nil, "uv", append(append(full, "--"), args...)...)
 		return err
 	}
 	if err := uv("mypy", "-p", name); err != nil {

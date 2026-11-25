@@ -9,7 +9,7 @@ import (
 	intljs "github.com/joeblew999/charter/internal/intlkit/js"
 )
 
-// assets is mise-intl assets [--worker dir] [--browser dir]: the JavaScript a Worker and a page import.
+// assets is charter intl assets [--worker dir] [--browser dir]: the JavaScript a Worker and a page import.
 func assets(args []string) {
 	c := app()
 	f := flag.NewFlagSet("assets", flag.ExitOnError)
@@ -17,7 +17,7 @@ func assets(args []string) {
 	browser := f.String("browser", "", "directory for the page's modules")
 	f.Parse(args)
 	if *worker == "" && *browser == "" {
-		fail(errors.New("mise-intl assets: --worker <dir>, --browser <dir>, or both"))
+		fail(errors.New("charter intl assets: --worker <dir>, --browser <dir>, or both"))
 	}
 	if *worker != "" {
 		must(copyJS(*worker, "intl.mjs", "intl-worker.mjs"))

@@ -12,7 +12,7 @@ import (
 	"github.com/joeblew999/charter/seo/audit"
 )
 
-// JSON of mise-seo status --json.
+// JSON of charter seo status --json.
 type (
 	urlStatus struct {
 		URL             string `json:"url"`
@@ -32,7 +32,7 @@ type (
 	}
 )
 
-// status is mise-seo status (seo:status): the submitted sitemap's status in Search Console, and Google's index
+// status is charter seo status (seo:status): the submitted sitemap's status in Search Console, and Google's index
 // status of every URL the live sitemap lists (its coverage, last crawl and canonical), printed as each is in.
 func (r repo) status(args []string) {
 	f := flags("status")

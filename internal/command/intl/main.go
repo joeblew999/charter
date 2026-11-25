@@ -1,11 +1,6 @@
-// Command mise-intl is an app's languages, from its intl.toml (found up from the working directory). A repo gets it as
-// mise-cloudflare's repos get mise-cloudflare: a binary on mise-intl's GitHub releases (goreleaser, .goreleaser.yaml),
-// which mise installs at the release the repo's .mise/config.toml pins (github:joeblew999/mise-intl). The app imports
-// intl's packages from the same release's Go module. Each command is a task too, named for it
-// (.mise/tasks/mise-intl.toml, which mise-intl init writes): mise run intl:<command> runs mise-intl <command>.
-//
-// Each command is a file of its own, holding the function named for it (gen.go holds gen), so misecheck holds every
-// task of the template to the Go it runs, both ways. mise-intl show-help lists them.
+// Package intl is charter intl: an app's languages, from its intl.toml (found up from the working directory). Each
+// command is a file of its own, holding the function named for it (gen.go holds gen). The app imports intl's
+// packages from this same module (github.com/joeblew999/charter/intl, gsxintl).
 package intl
 
 import (
@@ -16,35 +11,27 @@ import (
 	"github.com/joeblew999/charter/intl/config"
 )
 
-const help = `mise-intl: the app's languages, through the runtime's own Intl. Each command is a task too, with mise,
-named for it: mise run intl:<command> runs mise-intl <command>.
+const help = `charter intl: the app's languages, through the runtime's own Intl, from its intl.toml.
 
-The steps, in order (mise-intl, or mise run intl, says which is next):
-  mise-intl init            intl's files: intl.toml, the catalogs, the tasks, the skill, the docs, the workflow
-                               (--locales en,de --catalogs locales --gsxui ui)
-  mise-intl check           every problem, for CI (--missing warn; or only the locales named)
-  mise-intl show            what's done, and what to run next (mise-intl, too; --json)
-  mise-intl gen             the catalogs compiled into the app's messages package
-  mise-intl status          per language: translated, inherited, stale, missing
-  mise-intl add-locale      a language added: de, pt-BR
-  mise-intl todo            what's left to translate (--json, for agents)
-  mise-intl translate       Claude Code translates what's left, a worker per language
-  mise-intl export          XLIFF for translators (--all, --out dir)
-  mise-intl import          translators' XLIFF read back
-  mise-intl confirm         stale translations that are still right, kept (<locale>[:<key>]…)
-  mise-intl prune           keys the source no longer has, removed
+  charter intl                 per language: translated, inherited, stale, missing (status)
+  charter intl check           every problem, for CI (--missing warn; or only the locales named)
+  charter intl gen             the catalogs compiled into the app's messages package (charter build runs it)
+  charter intl add-locale      a language added: de, pt-BR
+  charter intl todo            what's left to translate (--json, for agents)
+  charter intl translate       Claude Code translates what's left, a worker per language
+  charter intl export          XLIFF for translators (--all, --out dir)
+  charter intl import          translators' XLIFF read back
+  charter intl confirm         stale translations that are still right, kept (<locale>[:<key>]…)
+  charter intl prune           keys the source no longer has, removed
 
 And:
-  mise-intl verify          what the repo's GitHub workflow runs: its setup and test tasks, then check
-  mise-intl template        the template's little app, in a repo with no app yet: it never writes over a file
-  mise-intl add             intl's screens, in a gsx app (--diff, --overwrite): language-list, language-offer, preferences
-  mise-intl assets          the JavaScript a Worker and a page import (--worker dir, --browser dir)
-  mise-intl daemon          workerd serving Intl outside a Worker, in the foreground: what pitchfork.toml's intl daemon runs
-  mise-intl locales         the shipped locales, comma-separated
-  mise-intl catalogs        the catalogs' Go package name
-  mise-intl markup          the app's own markup files, for gsx's checks
-  mise-intl show-version    this build's version
-  mise-intl show-help       this
+  charter intl add             intl's screens, in a gsx app (--diff, --overwrite): language-list, language-offer, preferences
+  charter intl assets          the JavaScript a Worker and a page import (--worker dir, --browser dir)
+  charter intl daemon          workerd serving Intl outside a Worker, in the foreground, on $PORT
+  charter intl locales         the shipped locales, comma-separated
+  charter intl catalogs        the catalogs' Go package name
+  charter intl markup          the app's own markup files, for gsx's checks
+  charter intl help            this
 `
 
 // Main runs charter intl with args, the arguments after "intl".
@@ -90,7 +77,7 @@ func Main(args []string) {
 		markup(args)
 	case "show-version":
 		showVersion()
-	case "show-help":
+	case "show-help", "help":
 		showHelp()
 	default:
 		fmt.Fprint(os.Stderr, help)
@@ -102,7 +89,7 @@ func Main(args []string) {
 func app() config.Config {
 	c, err := config.Find(".")
 	if err != nil {
-		fail(fmt.Errorf("%w: run mise-intl init where the app's go.mod is", err))
+		fail(fmt.Errorf("%w: run charter intl init where the app's go.mod is", err))
 	}
 	return c
 }

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// showVersion prints this build's version (mise run intl:show-version): the release mise installed, from the repo's
+// showVersion prints this build's version (charter intl show-version): the release mise installed, from the repo's
 // pin in .mise/config.toml.
 func showVersion() { fmt.Println(buildVersion()) }
 

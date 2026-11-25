@@ -1,6 +1,6 @@
-// Package config reads an app's seo.toml: the live site, and how Lighthouse scores it. mise-seo finds it by walking up
+// Package config reads an app's seo.toml: the live site, and how Lighthouse scores it. charter seo finds it by walking up
 // from the working directory, so every seo task runs with no arguments; a flag still overrides the site for one run.
-// The site has no default (mise-seo init --site writes it): a default taken from the environment once audited the
+// The site has no default (charter seo init --site writes it): a default taken from the environment once audited the
 // wrong site. Every other setting has one, so the file only says what differs:
 //
 //	# seo.toml
@@ -8,12 +8,12 @@
 //	property = "sc-domain:example.com"   # its Search Console property; default the site's Domain property
 //
 //	[lighthouse]
-//	pages = ["/", "/de/board"]           # what mise-seo lighthouse scores; default one URL per page of the live sitemap
+//	pages = ["/", "/de/board"]           # what charter seo lighthouse scores; default one URL per page of the live sitemap
 //	strategy = "mobile"                  # mobile (what Google indexes) or desktop
 //	min = 90                             # a category scoring under it fails
 //
 //	[badges]
-//	dir = "docs/badges"                  # where mise-seo badges writes its SVG badges
+//	dir = "docs/badges"                  # where charter seo badges writes its SVG badges
 //	readme = "README.md"                 # the file whose <!-- seo scores --> … <!-- /seo scores --> it rewrites
 package config
 
@@ -82,19 +82,19 @@ func Find(dir string) (Config, error) {
 	return c, nil
 }
 
-// Template is the seo.toml mise-seo init writes: every setting, commented out at its default.
-const Template = `# seo.toml: this app and search engines, for mise-seo and its tasks (github.com/joeblew999/mise-seo:
+// Template is the seo.toml charter seo init writes: every setting, commented out at its default.
+const Template = `# seo.toml: this app and search engines, for charter seo and its tasks (github.com/joeblew999/mise-seo:
 # docs/seo/README.md). The tasks read it, so none needs an argument. Every line is optional: uncomment what differs
 # from its default.
 
-# The live site, which every task works on. No default: mise run seo:init --site https://app.example.com writes it.
+# The live site, which every task works on. No default: charter seo init --site https://app.example.com writes it.
 # site = "https://app.example.com"
 
 # Its Search Console property. Default: the site's Domain property (app.example.com → sc-domain:example.com).
 # property = "sc-domain:example.com"
 
 [lighthouse]
-# The pages mise run seo:lighthouse scores. Default: one URL per page of the live sitemap.
+# The pages charter seo lighthouse scores. Default: one URL per page of the live sitemap.
 # pages = ["/", "/about"]
 # mobile (what Google indexes) or desktop.
 # strategy = "mobile"
@@ -102,9 +102,9 @@ const Template = `# seo.toml: this app and search engines, for mise-seo and its 
 # min = 90
 
 [badges]
-# Where mise run seo:badges writes its badges (Lighthouse's four categories, the audit), for the README to show.
+# Where charter seo badges writes its badges (Lighthouse's four categories, the audit), for the README to show.
 # dir = "docs/badges"
-# The file whose <!-- seo scores --> … <!-- /seo scores --> lines mise run seo:badges rewrites with every page's
+# The file whose <!-- seo scores --> … <!-- /seo scores --> lines charter seo badges rewrites with every page's
 # scores.
 # readme = "README.md"
 `

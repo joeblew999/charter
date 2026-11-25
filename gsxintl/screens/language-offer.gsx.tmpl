@@ -14,7 +14,7 @@ import (
 // thanks" (intl.Decline) keeps the page's language as their choice. Nothing renders when there is nothing to offer.
 // Extra attributes fall through to the alert.
 //
-// From mise-intl add language-offer: the app's own now, to change as it likes.
+// From charter intl add language-offer: the app's own now, to change as it likes.
 component LanguageOffer(attrs gsx.Attrs) {
 	{ if s, ok := intl.Suggested(ctx); ok {
 		<ui.Alert lang={s.Lang} dir="auto" { attrs... }>

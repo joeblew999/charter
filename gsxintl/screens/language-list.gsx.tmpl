@@ -13,7 +13,7 @@ import (
 // not be machine-translated). Keep it out of boosted navigation: switching language is a full page load, since a
 // boosted swap keeps the old <html lang dir>. Extra attributes fall through to the <nav>.
 //
-// From mise-intl add language-list: the app's own now, to change as it likes.
+// From charter intl add language-list: the app's own now, to change as it likes.
 component LanguageList(attrs gsx.Attrs) {
 	<nav aria-label={locales.IntlLanguages} class={ "flex flex-wrap items-center gap-1" } { attrs... }>
 		<icon.Languages class="me-1 size-4 text-muted-foreground"/>

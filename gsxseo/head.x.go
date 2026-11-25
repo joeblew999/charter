@@ -12,11 +12,11 @@ import (
 
 //line head.gsx:7:1
 // Head is what a page's <head> tells search engines and link previews, beside the page's language versions and
-// canonical URL (with mise-intl, gsxintl.Head): its title and description, the same for Open Graph and a summary card,
+// canonical URL (with charter intl, gsxintl.Head): its title and description, the same for Open Graph and a summary card,
 // the site's icon, and on the home page the site's name as WebSite structured data, which Google shows beside the
 // site's results. title and description are the page's own text in its language (with intl: { locales.Title |> text });
 // home is the home page's absolute URL on the home page itself, "" on every other page; lang is the page's language,
-// for the structured data. mise-seo audit checks every one of them.
+// for the structured data. charter seo audit checks every one of them.
 
 //line head.gsx:13:1
 func Head(title string, description string, siteName string, icon string, home string, lang string) _gsxrt.Node {

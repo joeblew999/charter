@@ -11,13 +11,13 @@ import (
 	"github.com/joeblew999/charter/intl/config"
 )
 
-// addLocale is mise-intl add-locale <locale>…: a language, its id as Intl writes it, added to intl.toml with
+// addLocale is charter intl add-locale <locale>…: a language, its id as Intl writes it, added to intl.toml with
 // its catalog.
 func addLocale(args []string) {
 	c := app()
 	var err error
 	if len(args) == 0 {
-		fail(errors.New("mise-intl add-locale <locale>…: the BCP 47 ids of the languages to add, fr or pt-BR"))
+		fail(errors.New("charter intl add-locale <locale>…: the BCP 47 ids of the languages to add, fr or pt-BR"))
 	}
 	startIntl()
 	for _, id := range args {
@@ -28,7 +28,7 @@ func addLocale(args []string) {
 		}
 		l := intl.NewLocale(ids[0])
 		must(catalog.AddLocale(c, ids[0], l.Name()))
-		fmt.Printf("added %s, %s: translate it (mise-intl todo %s)\n", ids[0], l.Name(), ids[0])
+		fmt.Printf("added %s, %s: translate it (charter intl todo %s)\n", ids[0], l.Name(), ids[0])
 		c, err = config.Find(".")
 		must(err)
 	}

@@ -1,4 +1,4 @@
-# intl's Intl outside a Worker: workerd serving intl-workerd.mjs, with the catalogs (mise-intl workerd runs it on the
+# intl's Intl outside a Worker: workerd serving intl-workerd.mjs, with the catalogs (charter intl workerd runs it on the
 # port pitchfork gives it, --socket-addr http=127.0.0.1:$PORT).
 using Workerd = import "/workerd/workerd.capnp";
 const config :Workerd.Config = (

@@ -7,14 +7,14 @@ import (
 	"github.com/joeblew999/charter/internal/seokit/searchconsole"
 )
 
-// inspectReport is mise-seo inspect --json.
+// inspectReport is charter seo inspect --json.
 type inspectReport struct {
 	URL string `json:"url"`
 	searchconsole.Inspection
 	Link string `json:"link"`
 }
 
-// inspect is mise-seo inspect (seo:inspect): one URL, the home page or the one named (a path, /de/, or a full URL),
+// inspect is charter seo inspect (seo:inspect): one URL, the home page or the one named (a path, /de/, or a full URL),
 // as Google's index has it: its verdict, coverage, last crawl, Google's canonical and the app's, and its Search
 // Console page (--open opens it), where Test live URL and Request indexing are.
 func (r repo) inspect(args []string) {

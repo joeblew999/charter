@@ -1,4 +1,4 @@
-// Package catalog is an app's message catalogs as mise-intl sees them (intl.toml's catalogs directory:
+// Package catalog is an app's message catalogs as charter intl sees them (intl.toml's catalogs directory:
 // <locale>.toml per shipped locale, ICU MessageFormat, the source locale first): read and checked against the source
 // (Read), compiled for package intl (Generate), and what is left to translate (Locale.Todo).
 //
@@ -6,7 +6,7 @@
 // regional catalog holds only what differs; inheriting from the source locale counts as translated. A key with
 // nowhere to come from is missing, and shows the source text. intl.sum, beside the catalogs, records the source text
 // each translation was made from: when the source changes, the translation is stale until it is updated or
-// confirmed. A key the source no longer has is obsolete until mise-intl prune removes it.
+// confirmed. A key the source no longer has is obsolete until charter intl prune removes it.
 package catalog
 
 import (
@@ -39,7 +39,7 @@ type Project struct {
 	Messages []*Message        // the source's messages in key order: their index in intl-messages.mjs
 	Locales  []*Locale         // the shipped locales, the source first
 	sum      sum               // intl.sum as it is now
-	files    map[string]string // intl.sum's files mise-intl add wrote: path → hash
+	files    map[string]string // intl.sum's files charter intl add wrote: path → hash
 }
 
 // Message is one message of the source catalog.
@@ -63,7 +63,7 @@ type Locale struct {
 	ID       string
 	File     string   // its catalog
 	Entries  []Entry  // one per Project.Messages
-	Obsolete []string // keys its catalog has that the source no longer does (mise-intl prune)
+	Obsolete []string // keys its catalog has that the source no longer does (charter intl prune)
 }
 
 // Entry is a locale's text for one message.

@@ -4,7 +4,7 @@
 //
 //	func TestMain(m *testing.M) { os.Exit(intltest.Main(m)) }
 //
-// It is the repo's intl daemon (workerd.Start: pitchfork runs it, with the catalogs mise-intl gen wrote).
+// It is the repo's intl daemon (workerd.Start: pitchfork runs it, with the catalogs charter intl gen wrote).
 package intltest
 
 import (
@@ -102,7 +102,7 @@ func PluralProblems(p *catalog.Project) ([]string, error) {
 	return out, nil
 }
 
-// Tree formats a message tree as mise-intl gen writes it (js/intl.mjs message) in lang with args.
+// Tree formats a message tree as charter intl gen writes it (js/intl.mjs message) in lang with args.
 func Tree(lang string, tree json.RawMessage, args ...string) (string, error) {
 	return workerd.Tree(lang, tree, args...)
 }

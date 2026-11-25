@@ -63,7 +63,7 @@ func TestInitFresh(t *testing.T) {
 		g.Renderers["example.com/shop/ui/i18n.T"] != "" {
 		t.Errorf("gsx.toml before gsxui's i18n: %+v", g)
 	}
-	// gsxui add vendors ui/i18n with the first component that writes text; the next mise-intl gen registers it.
+	// gsxui add vendors ui/i18n with the first component that writes text; the next charter intl gen registers it.
 	if err := os.MkdirAll(filepath.Join(root, "ui", "i18n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestInitFresh(t *testing.T) {
 	if s := read(t, root, ".gitignore"); !strings.Contains(s, "\nintl_gen.go\nintl-messages.mjs\nintl-workerd/\n") {
 		t.Errorf(".gitignore:\n%s", s)
 	}
-	// No mise.toml: Go's version for mise is the app's own (the template's app has it, mise-intl template), and
+	// No mise.toml: Go's version for mise is the app's own (the template's app has it, charter intl template), and
 	// intl fetches the workerd it pins itself (intl/workerd.Path), so an app needs only its module.
 	if _, err := os.Stat(filepath.Join(root, "mise.toml")); err == nil {
 		t.Errorf("init wrote mise.toml:\n%s", read(t, root, "mise.toml"))
@@ -197,7 +197,7 @@ func TestTaskIncludes(t *testing.T) {
 
 	// intl's tasks already listed from another file (this repo lists intl/mise/tasks.toml): no second copy.
 	listed := app(t, map[string]string{"mise.toml": "[task_config]\nincludes = [\"intl/mise/tasks.toml\"]\n",
-		"intl/mise/tasks.toml": "[\"intl:check\"]\nrun = \"mise-intl check\"\n"})
+		"intl/mise/tasks.toml": "[\"intl:check\"]\nrun = \"charter intl check\"\n"})
 	if err := setup.TaskIncludes(listed, ".mise/tasks/mise-intl.toml", io.Discard); err != nil {
 		t.Fatal(err)
 	}

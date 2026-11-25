@@ -12,7 +12,7 @@ import (
 // opens, from GET /fragments/preferences (PreferencesForm), swapped in with innerHTML: inside a boosted nav, an
 // inherited outerMorph would replace the target itself.
 //
-// From mise-intl add preferences: the app's own now, to change as it likes.
+// From charter intl add preferences: the app's own now, to change as it likes.
 component PreferencesDialog() {
 	<ui.Dialog>
 		<ui.Button

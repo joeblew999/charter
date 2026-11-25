@@ -1,6 +1,6 @@
 // Package registry is a registry of gsx components that an app copies in and then owns, the way gsxui add copies
 // gsxui's (https://ui.gsxhq.dev): each component a gsx template made of gsxui components, with its text already
-// translated and, for one that runs in the browser, the files it loads there. mise-intl add copies intl's (its
+// translated and, for one that runs in the browser, the files it loads there. charter intl add copies intl's (its
 // screens, intl/ui); go tool gsxkit add copies gsxkit's (github.com/joeblew999/go-htmx4/gsxkit/ui). [Registry.Add] is
 // that command, for any registry (#77, #164).
 package registry
@@ -23,7 +23,7 @@ import (
 
 // Registry is a set of components and everything add copies with them.
 type Registry struct {
-	// Command is what adds them, for messages: "mise-intl add".
+	// Command is what adds them, for messages: "charter intl add".
 	Command string
 	// Table is the catalogs' table the components' messages are under: "intl" ([intl]), "gsxkit" ([gsxkit.map], …).
 	Table string

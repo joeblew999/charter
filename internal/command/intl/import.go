@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-// importXLIFF is mise-intl import [file.xlf…]: translators' XLIFF read back into the catalogs, all of
+// importXLIFF is charter intl import [file.xlf…]: translators' XLIFF read back into the catalogs, all of
 // xliff/in by default. import is Go's keyword, so the function isn't named for its command.
 func importXLIFF(args []string) {
 	c := app()

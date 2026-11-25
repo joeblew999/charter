@@ -16,12 +16,12 @@ import (
 )
 
 // intl.sum is, for every translated message, the source text it was translated from and the translation, as short
-// hashes: one line per locale and key, sorted, so it reads as a diff. mise-intl gen writes it; it is committed, like
+// hashes: one line per locale and key, sorted, so it reads as a diff. charter intl gen writes it; it is committed, like
 // go.sum, and never edited by hand.
 //
 //	de board.notes 3f2a9c1b7e04 9d81c0aa5f13
 //
-// It also records each file mise-intl add copied into the app (one of intl's screens) with the hash of what it
+// It also records each file charter intl add copied into the app (one of intl's screens) with the hash of what it
 // wrote, so add can tell a file the app changed from one it may update:
 //
 //	file views/intl/preferences.gsx 5be0c2d9a7f1
@@ -29,7 +29,7 @@ type sum map[string]map[string]sumEntry // locale → key → entry
 
 type sumEntry struct{ source, translation string }
 
-const sumHeader = "# intl.sum: the source text each translation was made from (mise-intl gen writes it: commit it, don't edit it).\n"
+const sumHeader = "# intl.sum: the source text each translation was made from (charter intl gen writes it: commit it, don't edit it).\n"
 
 // SumFile is intl.sum's path.
 func (p *Project) SumFile() string { return filepath.Join(p.Config.CatalogDir(), "intl.sum") }
@@ -51,14 +51,14 @@ func hash(s string) string {
 	return hex.EncodeToString(h[:6])
 }
 
-// FileHash is what intl.sum records of a file mise-intl add wrote.
+// FileHash is what intl.sum records of a file charter intl add wrote.
 func FileHash(b []byte) string { return hash(string(b)) }
 
-// Copied is the hash intl.sum records for the file mise-intl add wrote at path (relative to the app's root), "" when
+// Copied is the hash intl.sum records for the file charter intl add wrote at path (relative to the app's root), "" when
 // it didn't write it.
 func (p *Project) Copied(path string) string { return p.files[path] }
 
-// SetCopied records that mise-intl add wrote path, hash its FileHash; WriteSum saves it.
+// SetCopied records that charter intl add wrote path, hash its FileHash; WriteSum saves it.
 func (p *Project) SetCopied(path, hash string) { p.files[path] = hash }
 
 func readSum(path string) (sum, map[string]string, error) {

@@ -10,7 +10,7 @@ import (
 	"github.com/joeblew999/charter/intl/config"
 )
 
-// markup is mise-intl markup: the app's own markup files, the .gsx and .go files beside its .gsx (not gsxui's, not
+// markup is charter intl markup: the app's own markup files, the .gsx and .go files beside its .gsx (not gsxui's, not
 // nested modules), for gsx's checks.
 func markup(args []string) {
 	c := app()

@@ -156,7 +156,7 @@ func TestGenerate(t *testing.T) {
 		t.Errorf("fr.toml: %q", got)
 	}
 
-	// A key the source no longer has is obsolete, for mise-intl prune.
+	// A key the source no longer has is obsolete, for charter intl prune.
 	a.write("cat/de.toml", "hello = \"Hallo, {name}\"\nbye = \"Tschüss\"\n")
 	if de := a.project("en", "de").Locale("de"); !slices.Equal(de.Obsolete, []string{"bye"}) {
 		t.Errorf("obsolete = %v", de.Obsolete)
@@ -274,7 +274,7 @@ func TestAddMessages(t *testing.T) {
 	}
 }
 
-// TestCopiedFiles: intl.sum keeps the files mise-intl add wrote through gen.
+// TestCopiedFiles: intl.sum keeps the files charter intl add wrote through gen.
 func TestCopiedFiles(t *testing.T) {
 	a := newApp(t)
 	a.write("cat/en.toml", "hi = \"Hi\"\n")

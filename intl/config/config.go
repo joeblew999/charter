@@ -1,22 +1,22 @@
-// Package config reads an app's intl.toml: the languages it ships and where their catalogs are. mise-intl and
+// Package config reads an app's intl.toml: the languages it ships and where their catalogs are. charter intl and
 // intltest find it by walking up from the working directory.
 //
 //	# intl.toml
 //	locales = ["en", "de", "ar"]   # BCP 47 ids, the source (default) first
 //	catalogs = "locales"           # <locale>.toml (ICU MessageFormat), and the generated package
 //	gsxui = "ui"                   # optional: where gsxui add vendors components; gen translates their i18n.T
-//	ui = "views/intl"              # optional: where mise-intl add copies intl's screens (default views/intl)
-//	xliff = "xliff"                # optional: where mise-intl export writes and import reads (default xliff)
+//	ui = "views/intl"              # optional: where charter intl add copies intl's screens (default views/intl)
+//	xliff = "xliff"                # optional: where charter intl export writes and import reads (default xliff)
 //	badge = "docs/badges/intl.svg" # optional: an SVG badge gen keeps current, "languages | 14, all translated"
 //
 //	[inherit]                      # optional: a locale that takes what it doesn't translate from another
-//	en-IN = "en"                   # (mise-intl check confirms with Intl that both write the same script)
+//	en-IN = "en"                   # (charter intl check confirms with Intl that both write the same script)
 //
-//	[translate]                    # optional: mise-intl translate (Claude Code)
+//	[translate]                    # optional: charter intl translate (Claude Code)
 //	model = "sonnet"               # the model it runs on (claude --model); default: Claude Code's
 //	workers = 6                    # languages translated at once (default 6)
 //
-//	[notes]                        # optional: guidance for whoever translates (people, and Claude: mise-intl todo)
+//	[notes]                        # optional: guidance for whoever translates (people, and Claude: charter intl todo)
 //	"*" = "A developer tool. Keep product names in English."
 //	de = "Address the reader as du."
 package config
@@ -63,7 +63,7 @@ func (c Config) XLIFFDir() string {
 	return filepath.Join(c.Root, c.XLIFF)
 }
 
-// UIDir is where mise-intl add copies intl's screens, relative to the app's root: intl.toml's ui, else views/intl.
+// UIDir is where charter intl add copies intl's screens, relative to the app's root: intl.toml's ui, else views/intl.
 func (c Config) UIDir() string {
 	if c.UI == "" {
 		return filepath.Join("views", "intl")

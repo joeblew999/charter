@@ -1,4 +1,4 @@
-# The text of intl's screens (mise-intl add language-list | language-offer | preferences), the source: mise-intl
+# The text of intl's screens (charter intl add language-list | language-offer | preferences), the source: charter intl
 # add writes it, and its translations beside it, into an app's catalogs. ICU MessageFormat, as in any catalog.
 
 # intl's screens: the language list, the offer of the page in the reader's language, the time zone and clock dialog.
@@ -29,7 +29,7 @@ hour_cycle_auto = "Language default ({example})"
 save = "Save"
 close = "Close"
 
-# The text gsxui's components write themselves (i18n.T): mise-intl add writes what the app's components use.
+# The text gsxui's components write themselves (i18n.T): charter intl add writes what the app's components use.
 [gsxui]
 close = "Close"
 notifications = "Notifications"

@@ -1,4 +1,4 @@
-// Package ui is intl's own screens, which mise-intl add copies into an app the way gsxui add copies components: the
+// Package ui is intl's own screens, which charter intl add copies into an app the way gsxui add copies components: the
 // language list, the offer of the page in the reader's language, and the time zone and clock dialog. Each is a gsx
 // template made of gsxui components (*.gsx.tmpl: gsx generate leaves them alone here), and their text is already
 // translated, in locales/: add writes it into the app's catalogs under [intl], with the text the gsxui components
@@ -16,7 +16,7 @@ var files embed.FS
 
 // Screens are intl's screens.
 var Screens = &registry.Registry{
-	Command: "mise-intl add",
+	Command: "charter intl add",
 	Table:   "intl",
 	Files:   files,
 	Locales: "github.com/joeblew999/charter/gsxintl/screens/locales",

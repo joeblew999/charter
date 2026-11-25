@@ -1,6 +1,6 @@
 // Package workerd is intl's Intl outside a Cloudflare Worker: workerd, the Workers runtime, serving intl's
 // js/intl-worker.mjs with the app's catalogs, set as intl.Runtime. On a Worker, Intl is the Worker's own; anywhere
-// else (an ordinary Go server, go test, mise-intl) it is this one, so every place formats with the same engine.
+// else (an ordinary Go server, go test, charter intl) it is this one, so every place formats with the same engine.
 //
 // An app on an ordinary Go server starts it before serving:
 //
@@ -249,7 +249,7 @@ func keep(capnp string) int {
 	return 0
 }
 
-// Tree formats a message tree as mise-intl gen writes it (js/intl.mjs message) in lang with args: for tests of
+// Tree formats a message tree as charter intl gen writes it (js/intl.mjs message) in lang with args: for tests of
 // the catalogs' compiler.
 func Tree(lang string, tree json.RawMessage, args ...string) (string, error) {
 	return post(map[string]any{"method": "tree", "args": append([]string{lang}, args...), "tree": tree})

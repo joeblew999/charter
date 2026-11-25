@@ -10,7 +10,7 @@ import (
 	"github.com/joeblew999/charter/intl/intltest"
 )
 
-// export is mise-intl export [--all] [--out dir] [locale…]: XLIFF 2.0 for translators, what is left (or
+// export is charter intl export [--all] [--out dir] [locale…]: XLIFF 2.0 for translators, what is left (or
 // everything), into xliff/out (intl.toml's xliff).
 func export(args []string) {
 	c := app()
