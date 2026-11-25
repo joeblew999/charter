@@ -126,12 +126,17 @@ func (s *Site) Handler(next http.Handler) http.Handler {
 	})
 }
 
-// assets is Vite, made once: in dev (VITE_DEV_URL, which gsx dev sets) the dev server's URLs, else the manifest's.
+// assets is what the site needs before its first request, made once: off Workers the languages' Intl, and Vite: in dev (VITE_DEV_URL, which gsx dev sets) the dev server's URLs, else the manifest's.
 func (s *Site) assets() (*vite.Vite, error) {
 	s.once.Do(func() {
 		dist := s.Dist
 		if dist == nil {
 			dist = os.DirFS(".")
+		}
+		if len(intl.Shipped()) > 0 {
+			if s.err = startIntl(); s.err != nil {
+				return
+			}
 		}
 		s.vite, s.err = vite.New(vite.Config{DevURL: os.Getenv("VITE_DEV_URL"), DevBase: "/__vite/", Dist: dist, DistDir: "dist", StaticURL: "/"})
 	})

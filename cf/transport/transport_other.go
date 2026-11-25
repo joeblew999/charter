@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
@@ -16,8 +17,12 @@ import (
 	"github.com/syumai/workers-go"
 )
 
-// Run serves h as a plain HTTP server on :9900 (or $PORT): workers-go's native build.
+// Run serves h as a plain HTTP server on :9900 (workers-go's native build), or on $PORT, or on $GO_PORT, the port gsx
+// dev gives the server it runs (charter dev).
 func Run(h http.Handler) {
+	if os.Getenv("PORT") == "" && os.Getenv("GO_PORT") != "" {
+		os.Setenv("PORT", os.Getenv("GO_PORT"))
+	}
 	workers.Serve(Serve(h))
 }
 
