@@ -34,6 +34,7 @@ var commands = []cmd{
 	{"sdk", "an SDK from the specs with Fern, in Docker (-prove, -publish)", command.SDK},
 	{"intl", "the app's languages: charter intl help", intl.Main},
 	{"seo", "what search engines read: charter seo help", seo.Main},
+	{"new", "a new app from an example: charter new my-app [-from api|site|notes]", command.New},
 	{"version", "this charter's version", func([]string) { fmt.Println("charter", version.String()) }},
 }
 

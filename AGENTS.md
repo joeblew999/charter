@@ -1,19 +1,21 @@
-<!-- Written by `charter init` (github.com/joeblew999/charter, AGENTS.md): don't edit it in another repo, change it in charter. The same in every repo charter keeps; what is this repo's own is in docs/self/. -->
+# Rules for agents
 
-# For agents
+How the repo works: [README.md](README.md). Plans and open work are GitHub issues here, never files.
 
-Everything about this repo is in `docs/`, the same pages developers read: `docs/charter/` says what to do and when, the same in every repo charter keeps, and `docs/self/` is this repo's own. Each `@` line below is a page, loaded with this file (Claude reads them; any other agent: read them, in this order). The rules are binding.
-
-@docs/charter/README.md
-What to do, and when.
-
-@docs/charter/rules.md
-The rules every repo charter keeps shares.
-
-@docs/self/README.md
-What this repo is, and every page.
-
-@docs/self/rules.md
-This repo's own rules.
-
-Before you change a page in `docs/`, read [docs/charter/writing.md](docs/charter/writing.md). Write what you learn in the page of `docs/self/` it belongs to; don't add README files elsewhere. `docs/charter/` is charter's: change what is yours, not that.
+- **Go only.** No TypeScript library, no TypeScript examples.
+- **Drive the upstream tool, never copy it.** wrangler runs and deploys the Worker (`wrangler.jsonc`), Vite builds
+  the browser's files, gsx generates and runs the dev loop, workers-go carries Go. Read the upstream guide and build
+  its demo before designing anything.
+- **Go and Node are all a machine needs.** No mise, no tool downloads of our own. `go.mod`'s toolchain line and
+  `package-lock.json` pin everything; a Go tool is a `tool` line in `go.mod`, an npm tool a `devDependency`.
+- **`charter.toml` holds only what wrangler has no place for** (the contract, SDKs, tests). A Worker's facts are
+  wrangler's.
+- **Every binding has a stand-in off Workers**, so there is no file per platform in an app and `go test` runs the
+  real SQL.
+- **The layout is `cf/`, `api/`, `site/`** for the library, `internal/` for the command, `examples/` for apps. A new
+  top-level folder needs a reason a developer would recognise.
+- **Checks:** `go test ./...` at the top (with `GOWORK=off`), and `go tool charter check` in each example. Changes
+  land by branch and pull request once both pass.
+- **Needs the owner's OK:** a release, a deploy, anything on another owner's repository.
+- JavaScript only in `cf/worker/` (the glue that runs Go and the hub's Durable Object) and
+  `internal/intlkit/js`. Keep it logic-free.
