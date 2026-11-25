@@ -6,22 +6,70 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
+	intlconfig "github.com/joeblew999/charter/intl/config"
 )
 
 // Dev runs charter dev: the loop a developer works in. With gsx (a gsx.toml) it is gsx's own, go tool gsx dev: a save
 // regenerates, rebuilds and reloads the browser, through Vite. Without, wrangler dev.
+//
+// Everything else a developer runs meanwhile, in another terminal, reaches the open page by itself: gsx dev watches
+// the Go and gsx files (charter add, gsxui add), Vite the browser's files, and charter the languages: a change to a
+// catalog or to charter.toml (charter intl add-locale, charter intl translate, an edit by hand) compiles the
+// messages again, which gsx dev then picks up.
 func Dev(args []string) {
 	p := load()
 	if hasGSX(p) {
+		if hasIntl(p) {
+			check(generate(p)) // the first build needs the messages and Vite's manifest
+			go watchLanguages(p)
+		}
 		check(passthrough(p, "go", append([]string{"tool", "gsx", "dev"}, args...)...))
 		return
 	}
 	Preview(args)
+}
+
+// watchLanguages compiles the messages again whenever a catalog or charter.toml changes, for as long as dev runs. It
+// looks twice a second: a handful of files, on every system, with no watcher to set up.
+func watchLanguages(p *project.Project) {
+	c, err := intlconfig.Find(p.Root)
+	if err != nil {
+		return
+	}
+	stamp := func() string {
+		files, _ := filepath.Glob(filepath.Join(c.CatalogDir(), "*.toml"))
+		files = append(files, filepath.Join(p.Root, project.File))
+		var b strings.Builder
+		for _, f := range files {
+			if info, err := os.Stat(f); err == nil {
+				fmt.Fprintf(&b, "%s %d %d\n", f, info.Size(), info.ModTime().UnixNano())
+			}
+		}
+		return b.String()
+	}
+	last := stamp()
+	for range time.Tick(500 * time.Millisecond) {
+		now := stamp()
+		if now == last {
+			continue
+		}
+		last = now
+		// As its own program: a catalog half-written by an editor or a translator fails this run, not dev.
+		cmd := exec.Command(self(), "intl", "gen")
+		cmd.Dir = p.Root
+		if out, err := cmd.CombinedOutput(); err != nil {
+			fmt.Printf("charter dev: the languages did not compile (fix the catalog and save again):\n%s", out)
+			continue
+		}
+		fmt.Println("charter dev: languages compiled")
+	}
 }
 
 // Preview runs charter preview: the Worker as Cloudflare runs it, on wrangler dev, with the local D1's migrations
