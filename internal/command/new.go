@@ -25,11 +25,15 @@ func New(args []string) {
 	flags := flag.NewFlagSet("charter new", flag.ExitOnError)
 	from := flags.String("from", "api", "the example to start from: api, site or notes")
 	module := flags.String("module", "", "the Go module's path (default: the folder's name)")
-	flags.Parse(flagsFirst(args))
-	if flags.NArg() != 1 {
-		check(errors.New("usage: charter new <dir> [-from api|site|notes] [-module example.com/my-app]"))
+	usage := errors.New("usage: charter new <dir> [-from api|site|notes] [-module example.com/my-app]")
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
+		check(usage)
 	}
-	dir := flags.Arg(0)
+	dir := args[0]
+	flags.Parse(args[1:])
+	if flags.NArg() != 0 {
+		check(usage)
+	}
 	name := workerName(filepath.Base(dir))
 	if *module == "" {
 		*module = name
