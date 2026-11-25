@@ -26,7 +26,8 @@ import (
 //	vet        go vet, for the host and as the Worker is built (GOOS=js GOARCH=wasm); structpages-lint when go.mod has it
 //	specs      the committed specs are what the contract gives (charter.toml's spec)
 //	test       go test ./...
-//	languages  every language complete (an charter.toml's [intl])
+//	languages  charter intl check: every language complete, plural forms, unused messages, gsxui's own text, and
+//	           right-to-left set up as gsxui documents it
 //	worker     the build, then on wrangler dev: the standard test of an API with a contract, [test] run, and for a
 //	           site ([seo]) the audit a search engine would pass or fail it on
 func Check(args []string) {
@@ -52,7 +53,12 @@ func Check(args []string) {
 	}
 	part("test", func() error { return run.Run(p.Root, nil, "go", "test", "./...") })
 	if hasIntl(p) {
-		part("languages", func() error { intl.Main([]string{"status"}); return nil })
+		part("languages", func() error {
+			if !intl.Check() {
+				return errors.New("charter intl check found problems (above)")
+			}
+			return nil
+		})
 	}
 	// wrangler dev builds the Worker itself (wrangler.jsonc's build command).
 	part("worker", func() error {

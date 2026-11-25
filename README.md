@@ -130,7 +130,7 @@ The rest of the repo: [`cmd/charter`](cmd/charter) is the command, [`internal/`]
 | Example | What it shows |
 |---|---|
 | [`examples/api`](examples/api) | The smallest API: one route from a contract, its specs, MCP |
-| [`examples/site`](examples/site) | An API and its pages in one Worker: gsx, gsxui, htmx 4, Vite, two languages, search engines, D1, live over SSE |
+| [`examples/site`](examples/site) | An API and its pages in one Worker: gsx, gsxui, htmx 4, Vite, three languages (one right-to-left), search engines, D1, live over SSE |
 | [`examples/notes`](examples/notes) | A full API: auth, D1, SSE and WebSocket streams, rate limits, SDKs in Go and Python and a command-line client |
 
 In this repo: `npm install` once at the top (the examples share one `node_modules`), then `go tool charter check` in

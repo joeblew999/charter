@@ -15,7 +15,7 @@ name = "Api"
 # The app's languages (charter intl; go doc github.com/joeblew999/charter/intl/config): BCP 47 ids, the
 # source first.
 [intl]
-locales = ["en", "de"]
+locales = ["en", "de", "ar"]
 # <locale>.toml per language, ICU MessageFormat; charter build writes the Go package of messages there.
 catalogs = "locales"
 # Where gsxui add vendors components: their own text is translated from the catalogs' [gsxui].

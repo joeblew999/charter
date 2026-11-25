@@ -1,6 +1,7 @@
 package intl
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -35,6 +36,10 @@ func check(args []string) {
 	}
 	os.Exit(checkAll(c, *missing == "warn"))
 }
+
+// Check is the whole check for the app here, as charter check runs it among its own parts: it reports whether every
+// rule holds, and prints each problem.
+func Check() bool { return checkAll(app(), missingDefault() == "warn") == 0 }
 
 // checkLocales checks only the named locales' own catalogs (and what they inherit from): syntax, arguments,
 // completeness, staleness and plural categories. It reads and writes nothing else, so a translator working on one
@@ -153,6 +158,24 @@ func checkAll(c config.Config, warnMissing bool) int {
 		canon, ok := intl.NewLocale("en").Intl(intl.Call{API: "Intl", Method: "getCanonicalLocales", Args: []string{intl.JSON(id)}}, "", "")
 		if want := `["` + id + `"]`; !ok || canon != want {
 			add(fmt.Sprintf("%s: %q isn't a locale id as Intl writes it (%s)", config.File, id, canon))
+		}
+	}
+	// A right-to-left language needs gsxui's components vendored with logical direction classes (gsxui's RTL guide,
+	// https://ui.gsxhq.dev/docs/rtl): "rtl": true in gsxui.json, which gsxui init --rtl sets.
+	if c.Gsxui != "" {
+		var rtl []string
+		for _, id := range c.Locales {
+			if intl.NewLocale(id).Dir() == "rtl" {
+				rtl = append(rtl, id)
+			}
+		}
+		var gsxui struct {
+			RTL bool `json:"rtl"`
+		}
+		b, _ := os.ReadFile(filepath.Join(c.Root, "gsxui.json"))
+		json.Unmarshal(b, &gsxui)
+		if len(rtl) > 0 && !gsxui.RTL {
+			add(fmt.Sprintf("%s is written right to left, and gsxui.json has no \"rtl\": true: gsxui init --rtl sets it (in a project it has set up already: add the line, then gsxui migrate rtl), and the vendored components get logical direction classes (https://ui.gsxhq.dev/docs/rtl)", strings.Join(rtl, ", ")))
 		}
 	}
 	for _, s := range warnings {

@@ -1,0 +1,16 @@
+# العربية (ar): the translations of en.toml, same tables and keys. charter intl todo lists what is left.
+
+[site]
+title = "رسائل مباشرة"
+description = "موقع صغير على Cloudflare Workers مكتوب بلغة Go: انشر رسالة فتظهر فورًا في كل صفحة مفتوحة."
+
+[home]
+heading = "الرسائل"
+intro = "انشر رسالة، فتظهر فورًا في كل صفحة مفتوحة هنا."
+placeholder = "اكتب شيئًا"
+label = "الرسالة"
+post = "نشر"
+languages = "اللغات"
+
+[gsxui]
+close = "إغلاق"

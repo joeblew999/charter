@@ -51,8 +51,8 @@ component Form(body string, problem string) {
 			autofocus
 			autocomplete="off"
 			dir="auto"
-			placeholder={locales.HomePlaceholder |> text}
-			aria-label={locales.HomeLabel |> text}
+			placeholder={locales.HomePlaceholder}
+			aria-label={locales.HomeLabel}
 		/>
 		<ui.Button type="submit">{ locales.HomePost }</ui.Button>
 		{ if problem != "" {
