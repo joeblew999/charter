@@ -8,6 +8,8 @@ db = "sqlc"
 # Asked of the Worker on wrangler dev (go tool charter test): the Cloudflare page, card by card.
 [test]
 run = ["go test -count=1 ./test"]
+# The same against a deployed Worker: go tool charter test --base https://…
+live = ["go test -count=1 -v ./test"]
 
 [sdks]
 name = "Api"

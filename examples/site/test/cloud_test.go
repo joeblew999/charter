@@ -16,6 +16,10 @@ import (
 
 var base = strings.TrimRight(os.Getenv("BASE"), "/")
 
+// local says the Worker is wrangler dev on this machine, which has two things a deployed one has not: a Cron Trigger
+// can be fired by hand, and an email can be handed to the Worker.
+var local = strings.Contains(base, "://127.0.0.1") || strings.Contains(base, "://localhost")
+
 func TestMain(m *testing.M) {
 	if base == "" {
 		fmt.Println("no BASE, the Worker's URL: go tool charter test")
@@ -57,7 +61,12 @@ func post(t *testing.T, path string, form url.Values) {
 // soon waits for the page to show what happens after an answer: a queue's consumer, a Cron Trigger.
 func soon(t *testing.T, what, want string) {
 	t.Helper()
-	for start := time.Now(); time.Since(start) < 30*time.Second; time.Sleep(300 * time.Millisecond) {
+	// On Cloudflare, KV answers a read from its cache for up to a minute, so what a consumer wrote shows that much later.
+	patience := 30 * time.Second
+	if !local {
+		patience = 3 * time.Minute
+	}
+	for start := time.Now(); time.Since(start) < patience; time.Sleep(time.Second) {
 		if strings.Contains(page(t, "/cloud"), want) {
 			return
 		}
@@ -86,18 +95,29 @@ func TestQueueReachesItsConsumer(t *testing.T) {
 }
 
 func TestCronTrigger(t *testing.T) {
+	want := `<p id="cron" class="text-sm" translate="no">*/5 * * * *`
+	if !local {
+		// Deployed, Cloudflare fires it every five minutes; a schedule just deployed can take a quarter of an hour to
+		// start. Once it has run, the page keeps showing it.
+		for start := time.Now(); time.Since(start) < 16*time.Minute; time.Sleep(10 * time.Second) {
+			if strings.Contains(page(t, "/cloud"), want) {
+				return
+			}
+		}
+		t.Fatal("the Cron Trigger did not run in sixteen minutes")
+	}
 	// wrangler dev --test-scheduled fires one by hand.
 	res, err := http.Get(base + "/__scheduled?cron=*/5+*+*+*+*")
 	if err != nil || res.StatusCode != 200 {
 		t.Fatalf("GET /__scheduled: %v %v", res, err)
 	}
 	res.Body.Close()
-	soon(t, "the Cron Trigger", `<p id="cron" class="text-sm" translate="no">*/5 * * * *`)
+	soon(t, "the Cron Trigger", want)
 }
 
 func TestVariableAndFetch(t *testing.T) {
 	p := page(t, "/cloud")
-	for _, want := range []string{`translate="no">charter-site</p>`, "GET /healthz → 200 ok"} {
+	for _, want := range []string{`translate="no">charter-site`, "GET https://example.com/ → 200"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("the page has no %q", want)
 		}
@@ -111,6 +131,16 @@ func TestTheGermanPage(t *testing.T) {
 }
 
 func TestEmail(t *testing.T) {
+	if !local {
+		// Deployed, Cloudflare sends only to an address verified in Email Routing, and only Email Routing hands the
+		// Worker a message: EMAIL_TO names such an address to send to; receiving is tried on wrangler dev alone.
+		to := os.Getenv("EMAIL_TO")
+		if to == "" {
+			t.Skip("deployed: no EMAIL_TO, an address verified in Email Routing, to send to")
+		}
+		post(t, "/cloud/email", url.Values{"to": {to}})
+		return
+	}
 	post(t, "/cloud/email", url.Values{"to": {"you@example.com"}})
 	if !strings.Contains(page(t, "/cloud"), "→ you@example.com") {
 		t.Error("the page does not say whom the message was sent to")

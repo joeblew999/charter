@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -76,6 +77,35 @@ func Background() {
 	})
 }
 
+// elsewhere is a site that is not this one, for the two cards that reach out: IANA's example domain.
+const elsewhere = "example.com"
+
+// socketHost is where the TCP socket card connects: a site that is not on Cloudflare's own network, which a Worker's
+// sockets may not reach (nor may they reach the Worker's own address).
+const socketHost = "www.google.com"
+
+// firstLine opens a TCP socket to host's port 80, asks for its front page by hand, and gives the first line of the
+// answer, or what went wrong. workers-go's socket panics when a connection Cloudflare refused is closed, which would
+// end this Go runtime: that is caught here and shown instead.
+func firstLine(ctx context.Context, host string) (line string) {
+	defer func() {
+		if p := recover(); p != nil {
+			line = fmt.Sprint(host, ":80: ", p)
+		}
+	}()
+	conn, err := sockets.Connect(ctx, host+":80", nil)
+	if err != nil {
+		return err.Error()
+	}
+	defer conn.Close()
+	fmt.Fprintf(conn, "HEAD / HTTP/1.0\r\nHost: %s\r\n\r\n", host)
+	first, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil {
+		return host + ":80: " + err.Error()
+	}
+	return host + ":80 → " + strings.TrimSpace(first)
+}
+
 // cloud serves /cloud and its forms.
 func cloud(w http.ResponseWriter, r *http.Request) {
 	ns, err := kv.NewNamespace("KV")
@@ -126,9 +156,10 @@ func cloud(w http.ResponseWriter, r *http.Request) {
 		n := value(ns, "visits")
 		s.Visits, _ = strconv.Atoi(n)
 		s.Visits++
+		// Cloudflare takes one write a second to a key (429 beyond it): a visit within the same second as another
+		// is shown and not counted, and the page still answers.
 		if err := ns.PutString("visits", strconv.Itoa(s.Visits), nil); err != nil {
-			fail(w, err)
-			return
+			log.Printf("pages: visits not counted: %v", err)
 		}
 		if object, err := bucket.Get("note.txt"); err == nil && object != nil {
 			b, _ := io.ReadAll(object.Body)
@@ -160,7 +191,10 @@ func cloud(w http.ResponseWriter, r *http.Request) {
 			s.Cached = "hit: stored " + string(b)
 		} else {
 			now := time.Now().UTC().Format(time.RFC3339)
-			err := c.Put(at, &http.Response{StatusCode: 200, Header: http.Header{"Cache-Control": {"max-age=60"}, "Content-Type": {"text/plain"}}, Body: io.NopCloser(strings.NewReader(now))})
+			// The length is given: workers-go then writes the body to a fixed-length stream. Without it the body is a
+			// stream Cloudflare pulls once more after its end; workers-go v0.36.0 closes it a second time, and that
+			// error ends the Go program.
+			err := c.Put(at, &http.Response{StatusCode: 200, ContentLength: int64(len(now)), Header: http.Header{"Cache-Control": {"max-age=60"}, "Content-Type": {"text/plain"}}, Body: io.NopCloser(strings.NewReader(now))})
 			if err != nil {
 				s.Cached = err.Error()
 			} else {
@@ -179,25 +213,8 @@ func cloud(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		// A TCP socket: HTTP written by hand to this site's own address, and the first line of the answer.
-		if addr := strings.TrimPrefix(strings.TrimPrefix(origin, "http://"), "https://"); addr != "" {
-			if !strings.Contains(addr, ":") {
-				addr += ":80"
-			}
-			if conn, err := sockets.Connect(r.Context(), addr, nil); err == nil {
-				host, _, _ := strings.Cut(addr, ":")
-				fmt.Fprintf(conn, "GET /healthz HTTP/1.0\r\nHost: %s\r\n\r\n", host)
-				line, err := bufio.NewReader(conn).ReadString('\n')
-				conn.Close()
-				if err != nil {
-					s.Socket = err.Error()
-				} else {
-					s.Socket = addr + " → " + strings.TrimSpace(line)
-				}
-			} else {
-				s.Socket = err.Error()
-			}
-		}
+		// A TCP socket: HTTP written by hand to another site, and the first line of the answer.
+		s.Socket = firstLine(r.Context(), socketHost)
 		// waitUntil: work that goes on after this answer has left. The page shows when the last such work finished.
 		s.After = value(ns, "after")
 		cloudflare.WaitUntil(func() {
@@ -209,11 +226,11 @@ func cloud(w http.ResponseWriter, r *http.Request) {
 		} else {
 			s.Request = err.Error()
 		}
-		// fetch: a request the Worker makes, here to its own health check.
-		if res, err := fetch.NewClient().HTTPClient(fetch.RedirectModeFollow).Get(web.Origin(r) + "/healthz"); err == nil {
-			b, _ := io.ReadAll(res.Body)
+		// fetch: a request the Worker makes, to another site (Cloudflare refuses one to the Worker's own address).
+		if res, err := fetch.NewClient().HTTPClient(fetch.RedirectModeFollow).Get("https://" + elsewhere + "/"); err == nil {
+			io.Copy(io.Discard, res.Body)
 			res.Body.Close()
-			s.Fetched = "GET /healthz → " + strconv.Itoa(res.StatusCode) + " " + string(b)
+			s.Fetched = "GET https://" + elsewhere + "/ → " + strconv.Itoa(res.StatusCode)
 		} else {
 			s.Fetched = err.Error()
 		}

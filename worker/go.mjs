@@ -43,6 +43,29 @@ function cfFields(cf) {
 	return picked;
 }
 
+// workers-go v0.36.0 answers with a ReadableStream that Go fills (internal/jsutil/stream.go). When the reader goes
+// away while Go waits for the next bytes (every closed event stream), the stream is cancelled, Go's read ends, and
+// workers-go closes the stream's controller, which throws "This ReadableStream is closed": in Go that is a panic,
+// and the whole Go program exits. Closing or filling a stream that is already closed is nothing to end a program
+// over, so here it does nothing. Upstream: syumai/workers-go, readerToReadableStream.Pull.
+new ReadableStream({
+	start(controller) {
+		const proto = Object.getPrototypeOf(controller);
+		for (const name of ["close", "enqueue"]) {
+			const original = proto[name];
+			proto[name] = function (...args) {
+				try {
+					return original.apply(this, args);
+				} catch (error) {
+					if (error instanceof TypeError && this.desiredSize === null) return undefined; // errored, or closed and read to its end
+					if (error instanceof TypeError && /closed/i.test(error.message)) return undefined;
+					throw error;
+				}
+			};
+		}
+	},
+});
+
 const MAX_WAITING = 4; // runtimes kept for the next request; each holds its Go heap (8 MB)
 
 // workers-go's Go code calls this.
