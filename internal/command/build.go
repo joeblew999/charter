@@ -31,7 +31,7 @@ const devBuilt = "CHARTER_DEV_BUILT"
 // main.go embeds).
 func Build(args []string) {
 	fs := flag.NewFlagSet("charter build", flag.ExitOnError)
-	only := fs.String("only", "", `"generate": stop once the Go that go test and go vet need is written`)
+	only := fs.String("only", "", `"generate": stop once the Go that go test and go vet need is written; "messages": the languages alone, as charter dev compiles them on a change to a catalog`)
 	dev := fs.Bool("dev", false, "the Wasm only: what charter dev runs on each save, after gsx has regenerated")
 	limit := fs.Int("limit", 0, "fail when build/app.wasm is more than this many bytes gzipped (default: charter.toml's [build] limit)")
 	fs.Parse(args)
@@ -46,6 +46,12 @@ func Build(args []string) {
 	}
 	if *dev {
 		check(wasm(p, 0))
+		return
+	}
+	if *only == "messages" {
+		if hasIntl(p) {
+			intl.Main([]string{"gen"})
+		}
 		return
 	}
 	check(generate(p))

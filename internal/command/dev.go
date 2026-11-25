@@ -93,7 +93,7 @@ func watchLanguages(p *project.Project) {
 		}
 		last = now
 		// As its own program: a catalog half-written by an editor or a translator fails this run, not dev.
-		cmd := exec.Command(self(), "intl", "gen")
+		cmd := exec.Command(self(), "build", "-only", "messages")
 		cmd.Dir = p.Root
 		if out, err := cmd.CombinedOutput(); err != nil {
 			fmt.Printf("charter dev: the languages did not compile (fix the catalog and save again):\n%s", out)
