@@ -58,6 +58,7 @@
 //	                                   # checks that may run beside it go here too
 //	test = "mise run e2e"              # the checks after it (default: none)
 //	release_hook = "ci/tag-modules.sh" # run when a release is tagged, before production moves (default: none)
+//	update = "mise run update"         # what the weekly job runs to move the pins and check them (default: charter update)
 //
 // At a repo's top, charter.toml also says how the repo is kept (charter init writes charter's files from it, charter
 // repo the repo on GitHub, charter ci runs its jobs); a repo that is no Worker has these and no name:
@@ -74,7 +75,7 @@
 //	check = ["lint", "test"]           # the jobs charter check runs here (default: every job run on a change)
 //	[ci.jobs.test]                     # charter ci test here; .github/workflows/self-test.yml on GitHub
 //	about = "The tests"
-//	on = ["push", "pull_request"]      # and "tag" (a version tag), "dispatch" (by hand)
+//	on = ["push", "pull_request"]      # and "tag" (a version tag), "weekly" (Monday morning), "dispatch" (by hand)
 //	run = ["go test ./..."]            # commands, one after another; charter is this charter
 //	each = "project"                   # optional: in every project's folder (projects, or each with a charter.toml)
 //	os = ["linux", "macos"]            # default: linux
@@ -156,6 +157,7 @@ type CI struct {
 	Build       string   `toml:"build"`
 	Test        string   `toml:"test"`
 	ReleaseHook string   `toml:"release_hook"`
+	Update      string   `toml:"update"`
 	// The repo's jobs (charter ci <job>), and those charter check runs at the repo's top.
 	Check []string       `toml:"check"`
 	Jobs  map[string]Job `toml:"jobs"`
@@ -164,7 +166,7 @@ type CI struct {
 // Job is a job of the repo's CI: charter ci <name> here, .github/workflows/self-<name>.yml on GitHub.
 type Job struct {
 	About       string            `toml:"about"`
-	On          []string          `toml:"on"`   // push (to main), pull_request, tag (a version tag), dispatch (by hand)
+	On          []string          `toml:"on"`   // push (to main), pull_request, tag (a version tag), weekly, dispatch (by hand)
 	Run         []string          `toml:"run"`  // commands, words split on spaces; charter is this charter
 	Each        string            `toml:"each"` // "project": in every project's folder
 	Projects    []string          `toml:"projects"`
@@ -452,7 +454,7 @@ func (g GitHub) DocsFolder() string {
 }
 
 // ReservedJobs are charter ci's own steps, which no job of the repo may be called.
-var ReservedJobs = []string{"run", "publish", "release"}
+var ReservedJobs = []string{"run", "publish", "release", "update"}
 
 // CharterJobs are charter's own jobs, the same in every repo (charter-<job>.yml), which [ci] check may name and no job
 // of the repo may be called.
@@ -478,8 +480,8 @@ func (p *Project) check() error {
 			problems = append(problems, fmt.Sprintf("[ci.jobs.%s]: a job needs on and run", name))
 		}
 		for _, on := range j.On {
-			if !slices.Contains([]string{"push", "pull_request", "tag", "dispatch"}, on) {
-				problems = append(problems, fmt.Sprintf("[ci.jobs.%s]: on %q: push, pull_request, tag or dispatch", name, on))
+			if !slices.Contains([]string{"push", "pull_request", "tag", "weekly", "dispatch"}, on) {
+				problems = append(problems, fmt.Sprintf("[ci.jobs.%s]: on %q: push, pull_request, tag, weekly or dispatch", name, on))
 			}
 		}
 		for _, os := range j.OS {

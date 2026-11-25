@@ -42,6 +42,9 @@ func Jobs(root string) (map[string]project.Job, error) {
 }
 
 // workflowOf is a job's workflow: charter-<job>.yml for charter's, self-<job>.yml for the repo's own.
+// WeeklyCron is when a weekly job runs: Monday at 05:17 UTC, off the hour, when GitHub's runners are busiest.
+const WeeklyCron = "17 5 * * 1"
+
 func workflowOf(name string) string {
 	if _, ok := charterJobs[name]; ok {
 		return "charter-" + name + ".yml"
@@ -122,6 +125,9 @@ func workflow(root, name string, j project.Job) string {
 	}
 	if slices.Contains(j.On, "pull_request") {
 		lines = append(lines, "  pull_request:")
+	}
+	if slices.Contains(j.On, "weekly") {
+		lines = append(lines, "  schedule:", `    - cron: "`+WeeklyCron+`"`)
 	}
 	lines = append(lines, "  workflow_dispatch:")
 	switch {

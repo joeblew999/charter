@@ -47,6 +47,7 @@ import (
 	"github.com/joeblew999/charter/internal/cli/builds"
 	"github.com/joeblew999/charter/internal/cli/ci"
 	"github.com/joeblew999/charter/internal/cli/deploy"
+	"github.com/joeblew999/charter/internal/cli/deps"
 	"github.com/joeblew999/charter/internal/cli/local"
 	"github.com/joeblew999/charter/internal/cli/logs"
 	"github.com/joeblew999/charter/internal/cli/projectsteps"
@@ -63,6 +64,8 @@ var steps = map[string]func(args []string){
 	"deploy":    deploy.Main,
 	"tail":      tail.Main,
 	"logs":      logs.Main,
+	"outdated":  deps.Outdated,
+	"update":    deps.Update,
 	"bench":     bench.Main,
 	"local":     local.Local,
 	"serve":     local.Serve,

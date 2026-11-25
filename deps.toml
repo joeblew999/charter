@@ -1,0 +1,12 @@
+# What charter update (and the weekly job) leaves where it is, and why; charter outdated shows them, held. A name is a
+# Go module or a mise tool as mise.toml names it; one ending in * holds every name that starts so.
+
+# Folders whose go.mod isn't ours to move: the Go SDK Fern generates (charter sdk -publish writes it again).
+skip = ["examples/notes-go/sdk/go"]
+
+[hold]
+
+# Files written as mise.toml is, whose pins move with it: what charter init starts a new repo's mise.toml from, and
+# what an app gets TinyGo and wasm-opt from (tests hold both equal to mise.toml).
+[copies]
+"*" = ["internal/pins/repo.toml", "internal/pins/mise.toml"]

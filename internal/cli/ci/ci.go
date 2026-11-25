@@ -1,10 +1,13 @@
-// Package ci is charter ci run|publish|release: an app's CI, and the GitHub side of its previews and releases,
+// Package ci is charter ci run|update|publish|release: an app's CI, and the GitHub side of its previews and releases,
 // so a commit is compiled once, on CI, and Cloudflare deploys that build (charter builds).
 //
 //	charter ci run                what .github/workflows/charter.yml runs, from charter.toml's [ci]: the tools,
 //	                                      the build, on a push its publishing (as ci publish), the checks, and for a
 //	                                      v* tag or a release/v* branch the release (as ci release), then a table of
 //	                                      where the time went; anywhere else (this machine), the build and the checks
+//	charter ci update             the weekly job: [ci] update (default charter update) moves the repo's pins and
+//	                                      checks them; when that changed a file, the branch charter/update and a pull
+//	                                      request for it (on GitHub; here, only the update)
 //	charter ci publish            this commit's build (build/, the Static Assets) and this binary to the
 //	                                      repository's preview-builds pre-release; on a branch with a preview, its
 //	                                      URL on the branch's pull request
@@ -58,6 +61,14 @@ func Main(args []string) {
 	if step == "run" {
 		os.Exit(run(p))
 	}
+	if step == "update" {
+		// The token as charter.yml gives it (GITHUB_TOKEN), or as charter's job runner does (GH_TOKEN).
+		token := os.Getenv("GITHUB_TOKEN")
+		if token == "" {
+			token = os.Getenv("GH_TOKEN")
+		}
+		os.Exit(update(p, github{repo: os.Getenv("GITHUB_REPOSITORY"), token: token}))
+	}
 	gh := github{repo: os.Getenv("GITHUB_REPOSITORY"), token: os.Getenv("GITHUB_TOKEN")}
 	sha, ref, refType := os.Getenv("GITHUB_SHA"), os.Getenv("GITHUB_REF_NAME"), os.Getenv("GITHUB_REF_TYPE")
 	if gh.repo == "" || gh.token == "" || sha == "" {
@@ -74,7 +85,7 @@ func Main(args []string) {
 			log.Fatal("✗ ", err)
 		}
 	default:
-		log.Fatal("usage: charter ci run | publish | release [-hook command] <version>")
+		log.Fatal("usage: charter ci run | update | publish | release [-hook command] <version>")
 	}
 }
 

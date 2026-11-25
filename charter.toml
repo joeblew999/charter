@@ -53,6 +53,15 @@ on = ["push", "pull_request", "tag"]
 timeout = 20
 run = ["bash examples/new-projects.sh"]
 
+# The pins, once a week: charter update moves every one deps.toml doesn't hold and runs charter check; what it changed
+# becomes a pull request (the branch charter/update), whose checks are this job's run.
+[ci.jobs.pins]
+about = "The weekly update: every pin moved to its latest (charter update), checked, and what changed opened as a pull request"
+on = ["weekly", "dispatch"]
+timeout = 90
+permissions = { contents = "write", pull-requests = "write" }
+run = ["charter ci update"]
+
 # What an outside Go app gets: one made by charter init on this charter, with no TinyGo of its own, gets the TinyGo its
 # patch is for from charter, every way an app builds, and builds; its own TinyGo line is refused.
 [ci.jobs.go-app]

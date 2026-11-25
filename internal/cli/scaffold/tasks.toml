@@ -84,6 +84,14 @@ exec fnox exec -- charter logs ${usage_flags:-}
 description = "Every check that needs no Cloudflare account (charter check): charter's files, and a project's types, specs, tests and Worker; exits 1 on any problem"
 run = "charter check"
 
+["charter:outdated"]
+description = "Every pin with a newer version upstream (charter outdated): Go modules, mise.toml's tools; deps.toml's holds marked; exits 1 when one is behind"
+run = "charter outdated"
+
+["charter:update"]
+description = "Move every pin deps.toml doesn't hold to its latest, tidy every module, then charter check (charter update)"
+run = "charter update"
+
 ["charter:ci"]
 description = "A job of charter.toml's [ci.jobs] here, as GitHub runs it (charter ci <job>); none: every job run on a change, or an app's own [ci] (charter ci run)"
 usage = '''
