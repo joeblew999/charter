@@ -20,14 +20,10 @@ type Env struct {
 
 // Notes is the feed of notes, declared once: the table is the log, the Durable Object HUB wakes whoever follows.
 // The page's live list, the API's stream and its WebSocket channel are all this.
-var Notes = live.Feed[Note]{Binding: "HUB", Name: "notes", Log: func() (live.Log[Note], error) { return Open() }}
+var Notes = live.Feed[Note]{Binding: "HUB", Name: "notes", Log: func() (live.Log[Note], error) { return open() }}
 
-// Post writes a note and wakes every follower: what the API's createNote and the page's form both do.
-func Post(ctx context.Context, body string) (Note, error) {
-	store, err := Open()
-	if err != nil {
-		return Note{}, err
-	}
+// Post writes a note to the store and wakes every follower: what the API's createNote and the page's form both do.
+func Post(ctx context.Context, store Store, body string) (Note, error) {
 	note, err := store.Create(ctx, body)
 	if err != nil {
 		return Note{}, err
@@ -73,7 +69,7 @@ func (env Env) list(ctx context.Context, in *ListInput) (*ListOutput, error) {
 		}
 		before = id
 	}
-	store, err := Open()
+	store, err := open()
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +96,11 @@ func (in *CreateInput) Resolve(huma.Context) []error {
 }
 
 func (env Env) create(ctx context.Context, in *CreateInput) (*NoteOutput, error) {
-	note, err := Post(ctx, in.Body.Body)
+	store, err := open()
+	if err != nil {
+		return nil, err
+	}
+	note, err := Post(ctx, store, in.Body.Body)
 	if err != nil {
 		return nil, err
 	}

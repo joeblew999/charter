@@ -38,14 +38,13 @@ func doc(slug string) (app.Doc, error) {
 
 // LLMs is /llms.txt, for a language model (https://llmstxt.org): what the app is, its pages, and its docs, each with
 // what it is about. It is app.App's LLMs.
-func LLMs(origin string) string {
+func LLMs(origin string, url func(page any) string) string {
 	read := make([]seo.LLMsLink, 0, len(docs.Pages))
 	for _, d := range docs.Pages {
 		read = append(read, seo.LLMsLink{Title: d.Title, URL: origin + d.Path(), Note: d.Description})
 	}
 	// The pages' addresses come from the tree, as every link does.
-	home, _ := mounted.URLFor(Home{})
-	bindings, _ := mounted.URLFor(Bindings{})
+	home, bindings := url(Home{}), url(Bindings{})
 	return seo.LLMsTxt("charter", "Go apps on Cloudflare Workers, one way: pages, an API from a contract, a live feed behind both, languages and search engines, in one Worker.",
 		"This site is a charter app, and its source is https://github.com/joeblew999/charter/tree/main/example. A coding agent gets charter's skill, with gsx's, gsxui's and structpages', from the plugin marketplace joeblew999/charter.",
 		seo.LLMsSection{Name: "Docs", Links: read},

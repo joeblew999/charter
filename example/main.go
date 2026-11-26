@@ -30,6 +30,8 @@ func main() {
 		Dist:  dist,
 		Pages: pages.Mount,
 		LLMs:  pages.LLMs,
-		API:   api.Handler(api.Env{Var: charter.Var}),
+		// What a page asks for by type, made from the request: the notes' store (D1), and the bindings' state.
+		RequestArgs: []any{api.OpenStore, bindings.Read},
+		API:         api.Handler(api.Env{Var: charter.Var}),
 	}).Run()
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/app/apptest"
+	"github.com/joeblew999/charter/example/pages"
 	notes "github.com/joeblew999/charter/example/sdk/go"
 	"github.com/joeblew999/charter/example/sdk/go/option"
 )
@@ -22,11 +23,11 @@ func TestANoteShowsOnEveryOpenPage(t *testing.T) {
 	writer.Open("/")
 	reader.Open("/")
 	body := "typed at " + time.Now().Format(time.RFC3339Nano)
-	writer.Type(`#post input[name=body]`, body)
-	writer.Click(`#post button[type=submit]`)
-	reader.WaitText("#notes", body)
-	writer.WaitText("#notes", body)
-	if left := writer.Attr(`#post input[name=body]`, "value"); left != "" {
+	writer.Type(el(pages.Home.Form)+` input[name=body]`, body)
+	writer.Click(el(pages.Home.Form) + ` button[type=submit]`)
+	reader.WaitText(el(pages.Home.List), body)
+	writer.WaitText(el(pages.Home.List), body)
+	if left := writer.Attr(el(pages.Home.Form)+` input[name=body]`, "value"); left != "" {
 		t.Errorf("the form still holds %q after posting", left)
 	}
 }
@@ -40,7 +41,7 @@ func TestAnAPINoteShowsOnTheOpenPage(t *testing.T) {
 	if _, err := writer.Notes.Create(t.Context(), &notes.CreateNotesRequest{Body: body}); err != nil {
 		t.Fatal(err)
 	}
-	home.WaitText("#notes", body)
+	home.WaitText(el(pages.Home.List), body)
 }
 
 // Each language has its own address, and Arabic is laid out right to left.
@@ -65,7 +66,7 @@ func TestTheLanguages(t *testing.T) {
 
 // What the form refuses comes back marked, as a 422 htmx swaps in.
 func TestTheFormRefusesAnEmptyNote(t *testing.T) {
-	res, err := http.PostForm(apptest.Base(t)+"/notes", url.Values{"body": {"  "}})
+	res, err := http.PostForm(apptest.Base(t)+at(pages.PostNote{}), url.Values{"body": {"  "}})
 	if err != nil {
 		t.Fatal(err)
 	}

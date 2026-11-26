@@ -5,6 +5,7 @@ package test
 import (
 	"fmt"
 	"github.com/joeblew999/charter/app/apptest"
+	"github.com/joeblew999/charter/example/pages"
 	"net/http"
 	"net/url"
 	"os"
@@ -35,13 +36,13 @@ func post(t *testing.T, path string, form url.Values) {
 	t.Helper()
 	req, _ := http.NewRequest("POST", base+path, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Referer", base+"/bindings")
+	req.Header.Set("Referer", base+at(pages.Bindings{}))
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer res.Body.Close()
-	if res.StatusCode != 200 || !strings.HasSuffix(res.Request.URL.Path, "/bindings") {
+	if res.StatusCode != 200 || !strings.HasSuffix(res.Request.URL.Path, at(pages.Bindings{})) {
 		t.Fatalf("POST %s: HTTP %d at %s, want the page again", path, res.StatusCode, res.Request.URL)
 	}
 }
@@ -55,7 +56,7 @@ func soon(t *testing.T, what, want string) {
 		patience = 3 * time.Minute
 	}
 	for start := time.Now(); time.Since(start) < patience; time.Sleep(time.Second) {
-		if strings.Contains(page(t, "/bindings"), want) {
+		if strings.Contains(page(t, at(pages.Bindings{})), want) {
 			return
 		}
 	}
@@ -64,21 +65,21 @@ func soon(t *testing.T, what, want string) {
 
 func TestKVCountsVisits(t *testing.T) {
 	visits := regexp.MustCompile(`<p id="visits" data-value="(\d+)"`)
-	a, b := visits.FindStringSubmatch(page(t, "/bindings")), visits.FindStringSubmatch(page(t, "/bindings"))
+	a, b := visits.FindStringSubmatch(page(t, at(pages.Bindings{}))), visits.FindStringSubmatch(page(t, at(pages.Bindings{})))
 	if a == nil || b == nil || a[1] == b[1] {
 		t.Errorf("visits: %v then %v, want a count that goes up", a, b)
 	}
 }
 
 func TestR2KeepsTheNote(t *testing.T) {
-	post(t, "/bindings/note", url.Values{"note": {"kept in a bucket"}})
-	if !strings.Contains(page(t, "/bindings"), `value="kept in a bucket"`) {
+	post(t, at(pages.BindingsAction{}, "action", "note"), url.Values{"note": {"kept in a bucket"}})
+	if !strings.Contains(page(t, at(pages.Bindings{})), `value="kept in a bucket"`) {
 		t.Error("the note is not on the page")
 	}
 }
 
 func TestQueueReachesItsConsumer(t *testing.T) {
-	post(t, "/bindings/queue", url.Values{"message": {"through the queue"}})
+	post(t, at(pages.BindingsAction{}, "action", "queue"), url.Values{"message": {"through the queue"}})
 	soon(t, "the queue's consumer", ">through the queue</li>")
 }
 
@@ -88,7 +89,7 @@ func TestCronTrigger(t *testing.T) {
 		// Deployed, Cloudflare fires it every five minutes, and the page keeps showing the last run. Only a schedule
 		// deployed for the first time has not run yet (Cloudflare takes up to a quarter of an hour to start one):
 		// that is said, not waited for.
-		if !strings.Contains(page(t, "/bindings"), want) {
+		if !strings.Contains(page(t, at(pages.Bindings{})), want) {
 			t.Skip("the Cron Trigger has not run yet: a new schedule starts within fifteen minutes of its first deploy")
 		}
 		return
@@ -103,7 +104,7 @@ func TestCronTrigger(t *testing.T) {
 }
 
 func TestVariableAndFetch(t *testing.T) {
-	p := page(t, "/bindings")
+	p := page(t, at(pages.Bindings{}))
 	for _, want := range []string{`translate="no">charter-example`, "GET https://example.com/ → 200"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("the page has no %q", want)
@@ -121,14 +122,14 @@ func TestEmail(t *testing.T) {
 	if !apptest.Local() {
 		// Deployed, the message goes from MAIL_FROM to MAIL_TO (the Worker's secret: an address verified in Email
 		// Routing), at most one an hour whoever asks. The card then says when the last one went.
-		post(t, "/bindings/email", url.Values{})
-		if !regexp.MustCompile(`<p id="sent" data-value="\d{4}-\d\d-\d\dT`).MatchString(page(t, "/bindings")) {
+		post(t, at(pages.BindingsAction{}, "action", "email"), url.Values{})
+		if !regexp.MustCompile(`<p id="sent" data-value="\d{4}-\d\d-\d\dT`).MatchString(page(t, at(pages.Bindings{}))) {
 			t.Error("the page does not say when a message was last sent")
 		}
 		return
 	}
-	post(t, "/bindings/email", url.Values{"to": {"you@example.com"}})
-	if !strings.Contains(page(t, "/bindings"), "→ y…@example.com") {
+	post(t, at(pages.BindingsAction{}, "action", "email"), url.Values{"to": {"you@example.com"}})
+	if !strings.Contains(page(t, at(pages.Bindings{})), "→ y…@example.com") {
 		t.Error("the page does not say whom the message was sent to")
 	}
 	// wrangler dev hands the Worker a message posted here, as Email Routing would.
@@ -144,7 +145,7 @@ func TestEmail(t *testing.T) {
 // card is what the card called id shows.
 func card(t *testing.T, id string) string {
 	t.Helper()
-	html := page(t, "/bindings")
+	html := page(t, at(pages.Bindings{}))
 	// A card that shows a count or a time through Intl keeps the plain value beside it.
 	m := regexp.MustCompile(`<p id="` + id + `" data-value="([^"]*)"`).FindStringSubmatch(html)
 	if m == nil {
@@ -159,7 +160,7 @@ func card(t *testing.T, id string) string {
 func TestD1ThroughWorkersGo(t *testing.T) {
 	before := card(t, "rows")
 	// A note posted on the home page is a row more.
-	res, err := http.PostForm(base+"/notes", url.Values{"body": {"counted by D1"}})
+	res, err := http.PostForm(base+at(pages.PostNote{}), url.Values{"body": {"counted by D1"}})
 	if err != nil || res.StatusCode != 200 {
 		t.Fatalf("POST /notes: %v %v", res, err)
 	}

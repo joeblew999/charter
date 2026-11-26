@@ -1,19 +1,22 @@
 // Package pages is the site's pages, as a tree structpages reads: every route is a field of Pages, with its route in
-// the field's tag. A page is a type with a Page component (and Props for its data); what a page calls is a type with
-// ServeHTTP. Links and form targets come from the tree ({ Bindings{} |> url }, { PostNote{} |> action }), never a path
-// written as a string, and the pages search engines may index are the tree's GET pages.
+// the field's tag.
+//
+//   - A page is a type with a Page component, and Props for its data. Props declares what it needs (the store, the
+//     bindings' state) and structpages hands it over: nothing here opens a database or reads a binding.
+//   - A region of a page that changes by itself is a component of that page (Home's Form), with an id and a target
+//     from the tree ({ Home.Form |> id }, { Home.Form |> target }), never a string.
+//   - What a page calls is a type with ServeHTTP that returns an error: it never writes an error or a redirect
+//     itself (app.Status, app.Redirect), and answers with a component (structpages.RenderComponent).
+//   - Links come from the tree too ({ Bindings{} |> url }, { PostNote{} |> action }).
 package pages
 
 import (
 	"bytes"
 	"context"
-	"log"
 	"math"
 	"net/http"
-	"strconv"
 	"strings"
 
-	"github.com/gsxhq/gsx"
 	"github.com/jackielii/structpages"
 
 	"github.com/joeblew999/charter/app"
@@ -35,14 +38,9 @@ type Pages struct {
 
 // Mount mounts the tree: what app.App's Pages is. The call is here so that structpages-lint finds the tree and can
 // check every link against it.
-func Mount(mux structpages.Mux, options ...structpages.Option) (tree *structpages.StructPages, err error) {
-	tree, err = structpages.Mount(mux, Pages{}, "/", "charter-example", options...)
-	mounted = tree
-	return tree, err
+func Mount(mux structpages.Mux, options ...structpages.Option) (*structpages.StructPages, error) {
+	return structpages.Mount(mux, Pages{}, "/", "charter-example", options...)
 }
-
-// mounted is the tree once mounted, for an address that is needed outside a request (/llms.txt).
-var mounted *structpages.StructPages
 
 // The newest notes the home page shows.
 const shown = 50
@@ -57,11 +55,7 @@ type HomeProps struct {
 	After int64
 }
 
-func (Home) Props(r *http.Request) (HomeProps, error) {
-	store, err := api.Open()
-	if err != nil {
-		return HomeProps{}, err
-	}
+func (Home) Props(r *http.Request, store api.Store) (HomeProps, error) {
 	notes, err := store.Before(r.Context(), math.MaxInt64, shown)
 	if err != nil {
 		return HomeProps{}, err
@@ -74,77 +68,57 @@ func (Home) Props(r *http.Request) (HomeProps, error) {
 }
 
 // PostNote is the form's target: it writes the note as the API's createNote does (api.Post), and answers with the
-// form again, empty, or with what was typed and why it was refused. The note itself reaches this page as it reaches
-// every other: by the stream.
+// page's Form again, empty, or with what was typed, refused. The note itself reaches this page as it reaches every
+// other: by the stream.
 type PostNote struct{}
 
 // The longest note the form takes.
 const maxBody = 500
 
-func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Store) error {
 	body := strings.TrimSpace(r.PostFormValue("body"))
-	switch {
-	case body == "" || len(body) > maxBody || strings.Contains(body, api.END):
-		// htmx 4 swaps a 422 too.
-		render(w, r, http.StatusUnprocessableEntity, Form(body, true))
-	default:
-		if _, err := api.Post(r.Context(), body); err != nil {
-			fail(w, err)
-			return
-		}
-		render(w, r, http.StatusOK, Form("", false))
+	if body == "" || len(body) > maxBody || strings.Contains(body, api.END) {
+		// htmx 4 swaps a 422 too: the form comes back with what was typed.
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return structpages.RenderComponent(Home{}.Form(body, true))
 	}
+	if _, err := api.Post(r.Context(), store, body); err != nil {
+		return err
+	}
+	return structpages.RenderComponent(Home{}.Form("", false))
 }
 
-// NotesStream is the page's side of the feed (api.Notes): every new note as the Item fragment, over server-sent
-// events, which htmx 4's SSE extension puts at the top of the list.
+// NotesStream is the page's side of the feed (api.Notes): every new note as Home's Item, over server-sent events,
+// which htmx 4's SSE extension puts at the top of the list. A stream writes as it goes, so this is the one handler
+// that returns no error.
 type NotesStream struct{}
 
 func (NotesStream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	api.Notes.Fragments(w, r, func(ctx context.Context, note api.Note) (string, error) {
 		var html bytes.Buffer
-		err := Item(note).Render(ctx, &html)
+		err := Home{}.Item(note).Render(ctx, &html)
 		return strings.TrimSpace(html.String()), err
 	})
 }
 
-// Cloud is the page of what Cloudflare gives the Worker, one card each (package bindings).
+// Bindings is the page of what Cloudflare gives the Worker, one card each (package bindings). Their state is the
+// app's request arg: reading it uses every binding once.
 type Bindings struct{}
 
-func (Bindings) Props(r *http.Request) (bindings.State, error) { return bindings.Read(r) }
+func (Bindings) Props(state bindings.State) (bindings.State, error) { return state, nil }
 
-// BindingsAction is the Cloudflare page's forms (/bindings/note, /bindings/queue, /bindings/email): plain posts, answered with
-// a redirect back to the page.
+// BindingsAction is the bindings page's forms (/bindings/note, /bindings/queue, /bindings/email): it does what the
+// form asks, then sends the reader back to the page, in their language.
 type BindingsAction struct{}
 
-func (BindingsAction) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (BindingsAction) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	if err := bindings.Post(r); err != nil {
-		fail(w, err)
-		return
+		return err
 	}
-	// Back to the page, in the reader's language.
 	back, err := app.URL(r.Context(), Bindings{})
 	if err != nil {
-		fail(w, err)
-		return
+		return err
 	}
-	http.Redirect(w, r, back, http.StatusSeeOther)
-}
-
-// render writes a component as the answer: whole, with its length, or a 500 if it fails half-way.
-func render(w http.ResponseWriter, r *http.Request, status int, node gsx.Node) {
-	var html bytes.Buffer
-	if err := node.Render(r.Context(), &html); err != nil {
-		fail(w, err)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Content-Length", strconv.Itoa(html.Len()))
-	w.WriteHeader(status)
-	w.Write(html.Bytes())
-}
-
-func fail(w http.ResponseWriter, err error) {
-	log.Printf("pages: %v", err)
-	http.Error(w, "Something went wrong.", http.StatusInternalServerError)
+	return app.Redirect{To: back}
 }

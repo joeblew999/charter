@@ -22,26 +22,30 @@ component (p Home) Page(props HomeProps) {
 				<a href={Bindings{} |> url} class="text-sm underline underline-offset-4">{ locales.BindingsLink }</a>
 			</ui.CardHeader>
 			<ui.CardContent class="flex flex-col gap-4">
-				<Form body="" refused={false}/>
+				<p.Form body="" refused={false}/>
 				<ul
-					id="notes"
+					id={Home.List |> id}
 					class="flex flex-col gap-2"
 					hx-sse:connect=f`@{NotesStream{} |> action}?after=@{strconv.FormatInt(props.After, 10)}`
 					hx-swap="afterbegin"
 				>
-					{ for _, note := range props.Notes {
-						<Item note={note}/>
-					} }
+					<p.List notes={props.Notes}/>
 				</ul>
 			</ui.CardContent>
 		</ui.Card>
 	</Layout>
 }
 
-// Form is the form, and what PostNote answers: htmx puts it in place of the one sent (outerHTML), empty, or with
-// what was typed, marked as refused.
-component Form(body string, refused bool) {
-	<form id="post" class="flex flex-wrap gap-2" hx-post={PostNote{} |> action} hx-swap="outerHTML">
+// Form is the form, a region of the page that changes by itself: PostNote answers with it, and htmx puts it in place
+// of the one sent (its target is this component, by the tree), empty, or with what was typed, marked as refused.
+component (p Home) Form(body string, refused bool) {
+	<form
+		id={Home.Form |> id}
+		class="flex flex-wrap gap-2"
+		hx-post={PostNote{} |> action}
+		hx-target={Home.Form |> target}
+		hx-swap="outerHTML"
+	>
 		<ui.Input
 			name="body"
 			class="flex-1"
@@ -61,9 +65,17 @@ component Form(body string, refused bool) {
 	</form>
 }
 
-// Item is one note: in the list, and what the stream sends of each new one.
-component Item(note api.Note) {
-	<li id={"note-" + strconv.FormatInt(note.ID, 10)} class="rounded-md border px-3 py-2">
+// List is the notes of the list.
+component (p Home) List(notes []api.Note) {
+	{ for _, note := range notes {
+		<p.Item note={note}/>
+	} }
+}
+
+// Item is one note: in the list, and what the stream sends of each new one. Its id is the component's, keyed by the
+// note.
+component (p Home) Item(note api.Note) {
+	<li id={Home.Item |> key(strconv.FormatInt(note.ID, 10))} class="rounded-md border px-3 py-2">
 		<span dir="auto">{ note.Body }</span>
 		// How long ago, in the reader's language; the browser's half of intl keeps it current.
 		<span class="ms-2 text-xs text-muted-foreground">{ note.Created() |> since }</span>

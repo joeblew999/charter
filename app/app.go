@@ -39,9 +39,7 @@ package app
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io/fs"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -74,21 +72,27 @@ type App struct {
 	//
 	// nil: an app without pages.
 	Pages func(mux structpages.Mux, options ...structpages.Option) (*structpages.StructPages, error)
-	// Args are what the pages' Props and handlers ask for by type (structpages.WithArgs): the app's stores.
+	// Args are what the pages' Props and handlers ask for by type, the same for every request (structpages.WithArgs).
 	Args []any
+	// RequestArgs make what they ask for by type from the request, once for each request and only when asked
+	// (structpages.WithRequestArgs): func(*http.Request) (T, error). A binding belongs to the request, so a store
+	// on D1 is one of these, and a page's Props declares the store instead of opening it.
+	RequestArgs []any
 	// API answers everything that is not a page. nil: 404.
 	API http.Handler
 	// Entry is the Vite entry every page loads. Empty: web/main.js.
 	Entry string
 	// Icon is the site's icon. Empty: /favicon.svg (public/favicon.svg).
 	Icon string
-	// LLMs writes /llms.txt for the site's origin (seo.LLMsTxt writes the layout). nil: none.
-	LLMs func(origin string) string
+	// LLMs writes /llms.txt for the site's origin (seo.LLMsTxt writes the layout); url is a page's address, from
+	// the tree. nil: none.
+	LLMs func(origin string, url func(page any) string) string
 
 	once  sync.Once
 	vite  *vite.Vite
 	err   error
 	pages []string // the pages search engines may index, each a path without a language
+	tree  *structpages.StructPages
 }
 
 // Run serves the app as a Worker and never returns.
@@ -126,10 +130,12 @@ func (a *App) Handler() http.Handler {
 			}
 			return next
 		}
-		if _, err := a.Pages(mux, structpages.WithArgs(a.Args...), structpages.WithErrorHandler(failed),
-			structpages.WithMiddlewares(each), structpages.WithTargetSelector(structpages.HTMXv4RenderTarget)); err != nil {
+		tree, err := a.Pages(mux, structpages.WithArgs(a.Args...), structpages.WithRequestArgs(a.RequestArgs...),
+			structpages.WithErrorHandler(failed), structpages.WithMiddlewares(each), structpages.WithTargetSelector(structpages.HTMXv4RenderTarget))
+		if err != nil {
 			panic(err) // the page tree is code: the first run shows a mistake in it
 		}
+		a.tree = tree
 	}
 	isPage := func(path string) bool { return slices.Contains(a.pages, path) }
 	// A page's path as search engines ask for it has its language and its query: /de/about?x=1.
@@ -167,7 +173,7 @@ func (a *App) Handler() http.Handler {
 		seo.Site{
 			Host:    cloud.Var("APP_DOMAIN"),
 			Sitemap: func(origin string) string { return intl.Sitemap(origin, a.pages) },
-			LLMs:    a.LLMs,
+			LLMs:    a.llms(),
 			IsPage:  indexable,
 			Preview: cloud.Var("APP_PREVIEW") != "",
 			Origin:  Origin,
@@ -291,26 +297,4 @@ func local(r *http.Request) bool {
 		host, _, _ = strings.Cut(r.Host, ":")
 	}
 	return host == "localhost" || net.ParseIP(strings.Trim(host, "[]")).IsLoopback()
-}
-
-// NotFound is an error for a page's Props to return when what was asked for is not there: the answer is a 404.
-func NotFound(what string) error { return statusError{http.StatusNotFound, what} }
-
-type statusError struct {
-	status int
-	what   string
-}
-
-func (e statusError) Error() string { return e.what }
-
-// failed answers for a page whose Props or handler returned an error: its status when it has one (NotFound), else
-// 500, logged, with nothing of the error shown.
-func failed(w http.ResponseWriter, r *http.Request, err error) {
-	var known statusError
-	if errors.As(err, &known) {
-		http.Error(w, http.StatusText(known.status), known.status)
-		return
-	}
-	log.Printf("app: %s %s: %v", r.Method, r.URL.Path, err)
-	http.Error(w, "Something went wrong.", http.StatusInternalServerError)
 }
