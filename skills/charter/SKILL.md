@@ -40,8 +40,9 @@ tree rendered with gsx, and charter finds every part by where it is. Change the 
 - **D1 has no interactive transactions**: single statements with `RETURNING`, or `cloud.Batch`.
 - Never hand-write what a command generates: `db/migrations/`, `*.gen.go`, `*.x.go`, `fern/`, `sdk/`, `build/`, `dist/`. Never run
   gsx, gsxui's migrations, sqlc or structpages-lint by hand either: `dev`, `check --fix` and `test` run them.
-- `.claude/skills/` is written by `go tool charter install` from the modules `go.mod` pins: commit it, don't edit it.
-- Generated Go (`*.x.go`, `*.gen.go`) is committed with the change that caused it.
+- Not in git: `.dev.vars` (made from `.dev.vars.example`), `.claude/skills/`, and what is built each time (`*.x.go`,
+  `*.built.go`, `.charter/`, `build/`, `dist/`). In git, and held to its source by `check`: `*.gen.go`,
+  `db/migrations/`, `fern/`, `sdk/go/`.
 - The app is `(&app.App{Name, Dist, Pages, API}).Run()` and `<app.Head title=… description=…/>`: never wire Vite,
   languages, robots.txt or the sitemap by hand.
 - No literal reader-facing text in a `.gsx` file: a message in the source catalog.

@@ -1,19 +1,8 @@
-# Each project ignores what its commands write (examples/*/.gitignore). Here: the repo's.
+# What is on one machine only, and what a command builds. An app's own list is example/.gitignore.
 .DS_Store
 *.log
-go.work.sum
-mise.local.toml
-
-# Agent worktrees (Claude Code)
-.claude/worktrees/
-
-# What builds write: charter-lib's (npm run build -w ts) and a release's (charter release)
-dist/
-
-# npm, and the tarballs npm pack writes
-node_modules/
 *.tgz
-
-# What charter build and wrangler write
-build/
-.wrangler/
+node_modules/
+go.work.sum
+.claude/worktrees/
+.playwright-mcp/

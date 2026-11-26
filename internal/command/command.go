@@ -146,6 +146,7 @@ func load() *project.Project {
 	p, err := project.Load(".")
 	check(err)
 	check(os.Chdir(p.Root))
+	localVars(p)
 	return p
 }
 
@@ -211,4 +212,16 @@ func hasIntl(p *project.Project) bool { return p.Intl != nil }
 func hasVite(p *project.Project) bool {
 	m, _ := filepath.Glob(filepath.Join(p.Root, "vite.config.*"))
 	return len(m) > 0
+}
+
+// localVars gives a checkout its .dev.vars, the file of local secrets and values wrangler dev reads, which is no one
+// else's and so not in git: made from .dev.vars.example, the throwaway values the app's tests are written against.
+func localVars(p *project.Project) {
+	vars, example := filepath.Join(p.Root, project.DevVars), filepath.Join(p.Root, project.DevVars+".example")
+	if exists(vars) {
+		return
+	}
+	if b, err := os.ReadFile(example); err == nil && os.WriteFile(vars, b, 0o600) == nil {
+		say("%s: made from %s.example (local values for wrangler dev; not in git)", project.DevVars, project.DevVars)
+	}
 }

@@ -70,7 +70,7 @@ func (p *Project) GsxuiProblems() ([]string, error) {
 	return out, nil
 }
 
-// writeGsxui writes <gsxui>/i18n/messages.gen.go, T's renderer. A text without its message stops gen, naming the key to
+// writeGsxui writes <gsxui>/i18n/messages.built.go, T's renderer. A text without its message stops gen, naming the key to
 // add: after gsxui add, charter intl says what to translate.
 func (p *Project) writeGsxui() error {
 	texts, err := p.Gsxui()
@@ -103,7 +103,7 @@ func (p *Project) writeGsxui() error {
 		fmt.Fprintf(&b, "case %q:\nreturn intl.Translate(ctx, %s.%s)\n", t.Text, name, GoName(t.Key))
 	}
 	b.WriteString("}\nreturn string(m)\n}\n")
-	return writeGo(filepath.Join(dir, "i18n", "messages.gen.go"), b.String())
+	return writeGo(filepath.Join(dir, "i18n", "messages.built.go"), b.String())
 }
 
 // snake is a key for English text: "Displays the mobile sidebar." → "displays_the_mobile_sidebar".

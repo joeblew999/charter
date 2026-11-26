@@ -131,14 +131,14 @@ func TestGenerate(t *testing.T) {
 			t.Errorf("log lacks %q:\n%s", want, log.String())
 		}
 	}
-	goSrc := a.read("cat/messages.gen.go")
+	goSrc := a.read("cat/messages.built.go")
 	for _, want := range []string{"package cat", `var Shipped = intl.Locales{intl.NewLocale("en"), intl.NewLocale("en-IN"), intl.NewLocale("de")}`,
 		"func init() { intl.Use(Shipped, []bool{true, true, false}) }",
 		"func Hello[T0 intl.TextArg](name T0) intl.Msg { return intl.M(1, intl.Str(name)) }",
 		"func FilesCount[T0 intl.NumberArg](n T0) intl.Msg { return intl.M(0, intl.Num(n)) }",
 		"var Title = intl.M(2)"} {
 		if !strings.Contains(goSrc, want) {
-			t.Errorf("messages.gen.go lacks %q:\n%s", want, goSrc)
+			t.Errorf("messages.built.go lacks %q:\n%s", want, goSrc)
 		}
 	}
 	js := a.read(".charter/intl/intl-messages.mjs")
@@ -391,11 +391,11 @@ func TestGsxui(t *testing.T) {
 	if err := a.project("en").Generate(nil); err != nil {
 		t.Fatal(err)
 	}
-	b := a.read("ui/i18n/messages.gen.go")
+	b := a.read("ui/i18n/messages.built.go")
 	for _, want := range []string{"package i18n", `"example.com/app/cat"`, "func Translate(ctx context.Context, m T) string {",
 		"case \"Close\":\n\t\treturn intl.Translate(ctx, cat.GsxuiClose)", "case \"Next slide\":\n\t\treturn intl.Translate(ctx, cat.GsxuiNextSlide)"} {
 		if !strings.Contains(b, want) {
-			t.Errorf("ui/i18n/messages.gen.go lacks %q:\n%s", want, b)
+			t.Errorf("ui/i18n/messages.built.go lacks %q:\n%s", want, b)
 		}
 	}
 

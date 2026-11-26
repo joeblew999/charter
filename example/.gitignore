@@ -1,10 +1,25 @@
-# Only what a build writes that is not source for anyone: Vite's and the Worker's output, wrangler's local state,
-# charter's own (.charter: the languages' runtime files, scratch), the SDKs before one is published, translators'
-# files. Generated Go (*.x.go, *.gen.go) and the agent skills (.claude/skills) are committed: a clone compiles, an
-# editor and an agent work in it at once, and a change to what is generated shows in review.
+# What is on one machine only, what is secret, and what a command builds from the sources each time.
+
+# Secrets and local values: wrangler dev reads .dev.vars, which charter makes from .dev.vars.example.
+.dev.vars
+.env
+.env.*
+
+# Built from the sources by charter dev, build and check: gsx's components as Go (as gsx's own scaffold has it), the
+# messages as Go, Vite's and the Worker's output, wrangler's local state, charter's own files.
+*.x.go
+*.built.go
 /dist/
 /build/
 /.wrangler/
 /.charter/
+
+# The SDKs before one is published (sdk/go is committed), and translators' files.
 /sdk/out/
 /xliff/
+
+# The agent skills charter install copies from the modules in go.mod: the machine's, like node_modules.
+/.claude/skills/
+
+.DS_Store
+.playwright-mcp/

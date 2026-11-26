@@ -33,7 +33,7 @@ func (p *Project) Unused() ([]string, error) {
 			}
 			return nil
 		}
-		if !strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, ".gsx") || strings.HasSuffix(name, ".x.go") || name == "messages.gen.go" {
+		if !strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, ".gsx") || strings.HasSuffix(name, ".x.go") || name == "messages.built.go" {
 			return nil
 		}
 		b, err := os.ReadFile(path)

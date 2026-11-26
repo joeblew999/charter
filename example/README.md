@@ -21,7 +21,6 @@ go tool charter deploy                           # then: go tool charter test --
 | `test/` | `page_*_test.go`: the pages in a real browser (a note typed in one tab shows in another; Arabic is right to left; a card per Cloudflare binding). `api_test.go`: the API through `sdk/go`. `test/devloop` works on the app under `charter dev` |
 | `sdk/go/` | The Go client, generated from the contract |
 
-Generated, never edited: `*.x.go` and `*.gen.go` (written by `dev`, `build` and `check`, committed), `.charter/`
-(not committed);
-`db/migrations/`, `db/queries.gen.go`, `fern/` and `sdk/go/` (written by `check --fix` and `pack -publish`, committed and checked).
+Generated, never edited. Built each time and not in git: `*.x.go`, `*.built.go`, `.charter/`. Committed and checked:
+`db/migrations/`, `db/queries.gen.go`, `fern/` and `sdk/go/` (written by `check --fix` and `pack -publish`).
 `ui/` and `web/gsxui/` are gsxui's components, vendored by `charter add ui:<name>`.

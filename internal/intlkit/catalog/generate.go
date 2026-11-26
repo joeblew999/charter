@@ -23,15 +23,15 @@ const ImportPath = "github.com/joeblew999/charter/intl"
 // PseudoCatalog is the en-XA catalog: the source, pseudo-localized (accented, bracketed, ~40% longer).
 const PseudoCatalog = "en-XA"
 
-// Generate is charter build: it writes what package intl needs (messages.gen.go and intl.sum beside the catalogs, the runtime's files in .charter/intl):
+// Generate is charter build: it writes what package intl needs (messages.built.go and intl.sum beside the catalogs, the runtime's files in .charter/intl):
 //
 //	.charter/intl/intl-messages.mjs  every catalog as data for js/intl.mjs's message, which formats it with Intl
-//	messages.gen.go               an intl.Msg per key (so a missing key is a compile error): a value for a message
+//	messages.built.go               an intl.Msg per key (so a missing key is a compile error): a value for a message
 //	                          without arguments, a constructor for one with; the shipped locales, and their
 //	                          registration with intl
 //	.charter/intl/workerd/    Intl outside a Worker: intl's modules and intl-messages.mjs, which workerd serves (the
 //	                          package workerd; a Worker imports intl-messages.mjs itself)
-//	<gsxui>/i18n/messages.gen.go  with [intl] gsxui: the renderer for the text gsxui components write themselves
+//	<gsxui>/i18n/messages.built.go  with [intl] gsxui: the renderer for the text gsxui components write themselves
 //	<badge>                   with [intl] badge: the languages badge (badge.go)
 //
 // A file that would not change is left alone. log gets a line per locale.
@@ -131,7 +131,7 @@ func (p *Project) Generate(log io.Writer) error {
 		}
 		fmt.Fprintf(&b, "%sfunc %s[%s](%s) intl.Msg { return intl.M(%d%s) }\n\n", doc, fn, strings.Join(tparams, ", "), strings.Join(params, ", "), i, prefixComma(args))
 	}
-	if err := writeGo(filepath.Join(dir, "messages.gen.go"), b.String()); err != nil {
+	if err := writeGo(filepath.Join(dir, "messages.built.go"), b.String()); err != nil {
 		return err
 	}
 	if err := writeWorkerd(built); err != nil {

@@ -69,12 +69,13 @@ func main() {
 ## What you never have to remember
 
 - **Skills for your coding agent.** gsx, gsxui, structpages and charter each ship their skill inside their Go module.
-  `charter install` copies them into `.claude/skills/` (committed, so an agent has them in a fresh clone) from the
+  `charter install` copies them into `.claude/skills/` (the machine's, like `node_modules`: not in git) from the
   versions `go.mod` pins, and `dev` and `check` do it
   again whenever `go.sum` has moved. Updating a module updates its skill.
-- **Generation.** `dev`, `build` and `check` write what is built from your sources. Generated Go (gsx's `*.x.go`,
-  `*.gen.go`) is committed, so a clone compiles and a change shows in review; everything else a build writes is in
-  `.charter/`, `build/` and `dist/`, and is not. `check --fix` writes what is committed and held to its source: `db/queries.gen.go`,
+- **Generation.** Two kinds, told apart by name. What is built from your sources each time is not in git: gsx's
+  `*.x.go` (as gsx's own scaffold has it), charter's `*.built.go`, and `.charter/`, `build/`, `dist/`. `dev`, `build`
+  and `check` write it, so a fresh clone needs only `go tool charter check`. What something reads from the repository
+  is committed, and `check` holds it to its source: `*.gen.go`, `db/migrations/`, `fern/`, `sdk/go/`. `check --fix` writes what is committed and held to its source: `db/queries.gen.go`,
   `db/migrations/`, `fern/`, `sdk/go/`. Everything generated is named for it (`*.gen.go`, `*.x.go`) or in a folder of its own, and
   `.gitattributes` marks it.
 - **The database.** `db/schema.sql` is the one place a table is written down. `dev` keeps the local database in step

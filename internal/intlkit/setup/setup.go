@@ -295,7 +295,7 @@ func gitignore(path string, log io.Writer) error {
 	}
 	s := string(b)
 	var add []string
-	for _, p := range []string{"/xliff/"} {
+	for _, p := range []string{"*.built.go", "/xliff/"} {
 		if !regexp.MustCompile(`(?m)^/?` + regexp.QuoteMeta(p) + `$`).MatchString(s) {
 			add = append(add, p)
 		}

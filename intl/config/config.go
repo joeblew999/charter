@@ -76,7 +76,7 @@ func (c Config) UIDir() string {
 func (c Config) CatalogDir() string { return filepath.Join(c.Root, c.Catalogs) }
 
 // BuiltDir is where what charter builds from the catalogs for the runtime goes: .charter/intl in the app's folder,
-// with everything else a build writes and nobody edits or commits. (The Go package of messages, messages.gen.go,
+// with everything else a build writes and nobody edits or commits. (The Go package of messages, messages.built.go,
 // stays with the catalogs: it is their package.)
 func (c Config) BuiltDir() string { return filepath.Join(c.Root, ".charter", "intl") }
 

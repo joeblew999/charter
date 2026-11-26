@@ -29,7 +29,7 @@ func Cache(args []string) {
 			return filepath.SkipDir
 		}
 		name := d.Name()
-		if !d.IsDir() && (strings.HasSuffix(name, ".x.go") || name == "messages.gen.go") {
+		if !d.IsDir() && (strings.HasSuffix(name, ".x.go") || name == "messages.built.go") {
 			if os.Remove(path) == nil {
 				n++
 			}

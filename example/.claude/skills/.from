@@ -1,6 +1,0 @@
-# Written by charter install: each skill here, and the module and version it came from.
-charter github.com/joeblew999/charter 
-gsx github.com/gsxhq/gsx v0.5.0
-templ-to-gsx-migration github.com/gsxhq/gsx v0.5.0
-gsxui github.com/gsxhq/gsxui v0.0.0-20261124142639-b9ffdfaa8826
-structpages github.com/jackielii/structpages v0.12.0
