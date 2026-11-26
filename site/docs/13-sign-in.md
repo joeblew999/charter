@@ -106,12 +106,21 @@ func MayRemove(who charter.Caller, note Note) bool {
 
 In the example a note says who wrote it. Its writer may take it away, and so may a moderator: the page shows the button to exactly those, and the page's route and the API's `deleteNote` ask the same function before they act.
 
-Who is what is an admin's to say: on the people page (from their account), and through the API (`listPeople`, `setRole`), so the generated clients and the command-line client can do it too. The first admin is made with the operator's own token, a secret of the Worker (`ADMIN_TOKEN`):
+Who is what is an admin's to say: on the people page (from their account), and through the API (`listPeople`, `setRole`), so the generated clients and the command-line client can do it too.
+
+### The first admin, and inviting people
+
+Nobody is an admin until someone is invited to be. An invitation is a link: whoever signs up through it, once, within the hour, is what it says.
 
 ```sh
-notes people list
-notes people setRole --id <id> --role admin
+go tool charter run people:invite admin              # under charter dev
+go tool charter run people:invite admin --deployed   # on the deployed Worker
+go tool charter run people                           # who signed up, and what each is
 ```
+
+Open the link, give a name, and your device makes the passkey: you are signed in as an admin. From then on you invite others on the people page ("Invite someone"), to any role, or change the role of someone who signed up already.
+
+An invitation is kept as a started sign-in is, by the SHA-256 of its code, so the database has nothing that invites anyone. A program does the same with `auth.Invite(r, role)`.
 
 ## Signing in
 

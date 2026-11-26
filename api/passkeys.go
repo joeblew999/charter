@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -42,6 +43,46 @@ func (u passkeyUser) WebAuthnCredentials() []webauthn.Credential { return u.cred
 type started struct {
 	Person  Person
 	Session webauthn.SessionData
+	// Invite is the invitation the account is made with, as it is kept: taken for good when the account is.
+	Invite string `json:",omitempty"`
+}
+
+// An invitation is a link that makes whoever signs up through it what it says: how an app gets its first admin, and
+// how one person brings in another as more than a newcomer. It works once, for an hour. It is kept as a started
+// sign-in is, by the SHA-256 of its code, so what is kept invites no one.
+
+// InviteLasts is how long an invitation can be taken up.
+const InviteLasts = time.Hour
+
+// InviteID is where an invitation with that code is kept (Accounts' Begin and Take; the ceremonies table).
+func InviteID(code string) string { return "invite:" + hashOf(code) }
+
+// Invite makes an invitation to be role, for whoever may manage people, and gives its code: app.InvitePath with
+// ?code= is its link. charter run people:invite makes one from the command line.
+func (a *Auth) Invite(r *http.Request, role string) (string, error) {
+	accounts, err := a.managing(r)
+	if err != nil {
+		return "", err
+	}
+	if _, ok := a.people.Roles[role]; !ok {
+		return "", app.Status(http.StatusUnprocessableEntity, "no such role: "+role)
+	}
+	code, _ := newToken()
+	return code, accounts.Begin(r.Context(), InviteID(code), role, time.Now().Add(InviteLasts))
+}
+
+// invited is the role an invitation gives. It is kept a little longer, for the moments the device takes, and
+// taken for good when the account is made: one invitation, one person.
+func (a *Auth) invited(ctx context.Context, accounts Accounts, code string) (role string, err error) {
+	gone := app.Status(http.StatusUnprocessableEntity, "this invitation was used already, or is more than an hour old: ask for a new one")
+	role, err = accounts.Take(ctx, InviteID(code))
+	if err != nil {
+		return "", gone
+	}
+	if _, ok := a.people.Roles[role]; !ok {
+		return "", app.Status(http.StatusUnprocessableEntity, "the invitation is to be "+role+", which the app has no such role for")
+	}
+	return role, accounts.Begin(ctx, InviteID(code), role, time.Now().Add(ceremonyLasts))
 }
 
 func (a *Auth) ceremony(r *http.Request) (*webauthn.WebAuthn, Accounts, error) {
@@ -110,13 +151,18 @@ func (a *Auth) SignUpBegin(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	var in struct{ Name string }
+	var in struct{ Name, Invite string }
 	json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<10)).Decode(&in)
 	in.Name = strings.TrimSpace(in.Name)
 	if in.Name == "" || len([]rune(in.Name)) > 60 {
 		return app.Status(http.StatusUnprocessableEntity, "a name is needed, of at most 60 characters")
 	}
 	who := Person{ID: randomID(), Name: in.Name, Role: a.people.Role}
+	if in.Invite != "" {
+		if who.Role, err = a.invited(r.Context(), accounts, in.Invite); err != nil {
+			return err
+		}
+	}
 	// A passkey the device itself lists (a "discoverable" one), so signing in asks for no name.
 	options, session, err := wa.BeginRegistration(passkeyUser{Person: who},
 		webauthn.WithResidentKeyRequirement(protocol.ResidentKeyRequirementRequired),
@@ -124,7 +170,7 @@ func (a *Auth) SignUpBegin(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.begin(w, r, accounts, started{who, *session}, options)
+	return a.begin(w, r, accounts, started{Person: who, Session: *session, Invite: in.Invite}, options)
 }
 
 // SignUpFinish takes what the device made: the account and its passkey are kept, and the caller is signed in.
@@ -140,6 +186,12 @@ func (a *Auth) SignUpFinish(w http.ResponseWriter, r *http.Request) error {
 	credential, err := wa.FinishRegistration(passkeyUser{Person: s.Person}, s.Session, r)
 	if err != nil {
 		return refused(err)
+	}
+	// The invitation goes as the account comes: someone else who started with the same link is too late.
+	if s.Invite != "" {
+		if _, err := accounts.Take(r.Context(), InviteID(s.Invite)); err != nil {
+			return app.Status(http.StatusUnprocessableEntity, "this invitation was used already: ask for a new one")
+		}
 	}
 	if err := accounts.Create(r.Context(), s.Person); err != nil {
 		return err

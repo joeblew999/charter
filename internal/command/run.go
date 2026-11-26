@@ -68,6 +68,8 @@ var tasks = []task{
 	{"logs", "the deployed Worker's live logs, until Ctrl-C (wrangler tail; an environment first: charter run logs staging)", func(p *project.Project, a []string) {
 		check(cloudflare(p, append([]string{"tail"}, envArgs(p, &a)...), a))
 	}},
+	{"people", "the app's own people (the sign-in screen): who signed up, and what each is (--deployed for the deployed Worker)", people},
+	{"people:invite", "a link that makes whoever signs up through it, once, within the hour, a role: charter run people:invite admin (--deployed for the deployed Worker). How an app gets its first admin", peopleInvite},
 	{"secrets", "the secrets the app names (.dev.vars.example), and which fnox has for the deployed Worker", secrets},
 	{"secrets:put", "a secret put on the deployed Worker and kept in fnox: charter run secrets:put ADMIN_TOKEN --random (a new random value), or the value fnox has, or one piped in", secretsPut},
 	{"bench", "how long the Worker takes to answer, on wrangler dev: charter run bench /  /api/hello  (-n requests each)", bench},

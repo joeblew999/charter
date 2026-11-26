@@ -41,6 +41,10 @@ account_leave_confirm = "Sí, eliminarla"
 people = "Personas"
 role = "Rol"
 people_intro = "Todas las personas registradas y lo que puede hacer cada una."
+invite = "Invitar a alguien"
+invite_intro = "Un enlace que da a quien se registre con él el rol que elijas. Funciona una vez, durante una hora."
+invite_new = "Crear enlace"
+invite_once = "Envíalo ahora: no se volverá a mostrar."
 
 [gsxui]
 close = "Cerrar"

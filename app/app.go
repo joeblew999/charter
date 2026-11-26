@@ -132,6 +132,9 @@ type seed struct {
 
 var seeds []seed
 
+// InvitePath is the address of an invitation's link, with its code: ?code=…
+const InvitePath = "/__charter/invite"
+
 // SeedPath is where charter asks a Worker built with its seed to run it.
 const SeedPath = "/__charter/seed"
 
@@ -283,6 +286,14 @@ func (a *App) Handler() http.Handler {
 		if r.URL.Path == SeedPath && len(seeds) > 0 {
 			seeded(w, r)
 			return
+		}
+		// An invitation's link (charter run people:invite) leads to the sign-in page, which signs its holder up
+		// as what it says.
+		if r.URL.Path == InvitePath && a.SignIn != nil && a.tree != nil {
+			if to, err := a.tree.URLFor(a.SignIn); err == nil {
+				http.Redirect(w, r, to+"?invite="+url.QueryEscape(r.URL.Query().Get("code")), http.StatusSeeOther)
+				return
+			}
 		}
 		// One address per page: a deployed site asked over http answers with the https one. (A zone can do this
 		// itself; workers.dev does not.)

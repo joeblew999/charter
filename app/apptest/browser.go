@@ -63,12 +63,15 @@ func (p *Page) authenticator() {
 	}
 }
 
-// SignUp makes an account on the app's sign-in screen (charter add screen:sign-in), at its path, under a name, and
+// SignUp makes an account on the app's sign-in screen (charter add screen:sign-in), at its path (with ?invite= and a
+// code, as an invitation's link leads there), under a name, and
 // waits until the tab is signed in: the passkey is made by the tab's virtual authenticator. It is how a test of a
 // page for someone signed in gets there, as a reader would.
 func (p *Page) SignUp(signIn, name string) {
 	p.t.Helper()
 	p.Open(signIn)
+	// The page's own path: an invitation's link has its code after it.
+	signIn, _, _ = strings.Cut(signIn, "?")
 	p.Type("#sign-up-name", name)
 	// A real click: the browser makes a passkey only for something its user did.
 	ctx, cancel := context.WithTimeout(p.ctx, wait)

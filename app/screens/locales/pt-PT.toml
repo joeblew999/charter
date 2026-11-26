@@ -41,6 +41,10 @@ account_leave_confirm = "Sim, eliminar"
 people = "Pessoas"
 role = "Função"
 people_intro = "Todas as pessoas registadas e o que cada uma pode fazer."
+invite = "Convidar alguém"
+invite_intro = "Uma ligação que dá a quem se registar por ela a função que escolher. Funciona uma vez, no prazo de uma hora."
+invite_new = "Criar ligação"
+invite_once = "Envie-a agora: não volta a ser mostrada."
 
 [gsxui]
 close = "Fechar"

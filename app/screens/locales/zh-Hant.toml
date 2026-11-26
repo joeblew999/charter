@@ -41,6 +41,10 @@ account_leave_confirm = "是的，刪除"
 people = "人員"
 role = "角色"
 people_intro = "所有已註冊的人，以及每個人可以做什麼。"
+invite = "邀請他人"
+invite_intro = "透過此連結註冊的人將獲得你選擇的角色。連結只能使用一次，一小時內有效。"
+invite_new = "產生連結"
+invite_once = "請現在傳送：它不會再次顯示。"
 
 [gsxui]
 close = "關閉"

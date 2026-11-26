@@ -40,13 +40,19 @@ type SignInPage struct{}
 type SignInView struct {
 	Caller api.Caller
 	Return string
+	// Invite is an invitation's code, from its link: whoever signs up here is what it says.
+	Invite string
 }
 
 // Noindex keeps the page out of the sitemap and of search engines: it is a door, not something to find.
 func (SignInPage) Noindex() bool { return true }
 
 func (SignInPage) Props(r *http.Request, caller api.Caller) (SignInView, error) {
-	return SignInView{Caller: caller, Return: intl.SafeReturn(r.URL.Query().Get("return"))}, nil
+	return SignInView{
+		Caller: caller,
+		Return: intl.SafeReturn(r.URL.Query().Get("return")),
+		Invite: r.URL.Query().Get("invite"),
+	}, nil
 }
 
 // The ceremonies' steps: what the browser asks the device, and what the device answered. They speak JSON to the
@@ -112,6 +118,7 @@ component (p SignInPage) Page(v SignInView) {
 								id="sign-in"
 								class="flex flex-col gap-4"
 								data-return={v.Return}
+								data-invite={v.Invite}
 								data-in-begin={SignInBegin{} |> url}
 								data-in-finish={SignInFinish{} |> url}
 								data-up-begin={SignUpBegin{} |> url}
@@ -181,7 +188,7 @@ component signInScript() {
 				event.preventDefault();
 				run(box.dataset.upBegin, box.dataset.upFinish, function (options) {
 					return navigator.credentials.create({ publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(options) });
-				}, { name: event.target.elements.name.value });
+				}, { name: event.target.elements.name.value, invite: box.dataset.invite });
 			});
 		})();
 	</script>
@@ -396,8 +403,9 @@ component (p AccountPage) Tokens(v AccountView) {
 // People is everyone who signed up, and what each is: for whoever may manage people. What a role may do is the
 // app's to say (api.People's Roles); here a person is given one.
 type People struct {
-	page PeoplePage `route:"GET /{$} People"`
-	set  RoleSet    `route:"POST /{person}/role RoleSet"`
+	page   PeoplePage   `route:"GET /{$} People"`
+	set    RoleSet      `route:"POST /{person}/role RoleSet"`
+	invite PeopleInvite `route:"POST /invite PeopleInvite"`
 }
 
 // Needs is what every route here needs: the scope that manages people. Someone signed in without it gets a 403.
@@ -435,6 +443,19 @@ func (RoleSet) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth)
 	}, auth.Roles()))
 }
 
+// PeopleInvite makes an invitation to a role and answers with its link, shown this once: whoever signs up through
+// it is that. The same thing charter run people:invite makes for the first admin.
+type PeopleInvite struct{}
+
+func (PeopleInvite) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) error {
+	code, err := auth.Invite(r, r.PostFormValue("role"))
+	if err != nil {
+		return err
+	}
+	link := api.Origin(r) + app.InvitePath + "?code=" + code
+	return structpages.RenderComponent(PeoplePage{}.Invite(auth.Roles(), link))
+}
+
 component (p PeoplePage) Page(v PeopleView) {
 	<!DOCTYPE html>
 	<html { app.HTML(ctx)... }>
@@ -462,9 +483,44 @@ component (p PeoplePage) Page(v PeopleView) {
 						</ul>
 					</ui.CardContent>
 				</ui.Card>
+				<p.Invite roles={v.Roles} link=""/>
 			</main>
 		</body>
 	</html>
+}
+
+// Invite is the form that makes an invitation, and the link of one made a moment ago: a region of the page that
+// changes by itself.
+component (p PeoplePage) Invite(roles []string, link string) {
+	<ui.Card id={PeoplePage.Invite |> id}>
+		<ui.CardHeader>
+			<ui.CardTitle>
+				<h2>{ locales.ScreensInvite }</h2>
+			</ui.CardTitle>
+			<ui.CardDescription>{ locales.ScreensInviteIntro }</ui.CardDescription>
+		</ui.CardHeader>
+		<ui.CardContent class="flex flex-col gap-4">
+			{ if link != "" {
+				<div class="flex flex-col gap-1">
+					<p class="text-sm font-medium">{ locales.ScreensInviteOnce }</p>
+					<code id="invite-link" class="rounded-md bg-muted px-2 py-1 font-mono text-sm break-all" translate="no">{ link }</code>
+				</div>
+			} }
+			<form
+				class="flex flex-wrap gap-2"
+				hx-post={PeopleInvite{} |> url}
+				hx-target={PeoplePage.Invite |> target}
+				hx-swap="outerHTML"
+			>
+				<ui.NativeSelect name="role" aria-label={locales.ScreensRole}>
+					{ for _, role := range roles {
+						<ui.NativeSelectOption value={role}>{ role }</ui.NativeSelectOption>
+					} }
+				</ui.NativeSelect>
+				<ui.Button type="submit">{ locales.ScreensInviteNew }</ui.Button>
+			</form>
+		</ui.CardContent>
+	</ui.Card>
 }
 
 // Person is one person and their role, which changes as it is chosen: the row asks for itself again (its id is

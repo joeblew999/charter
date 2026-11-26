@@ -209,13 +209,18 @@ func remote(p *project.Project, binding, sql string, into any) error {
 	if err != nil {
 		return fmt.Errorf("%w\n%s", err, strings.TrimSpace(out))
 	}
+	return results(out, into)
+}
+
+// results reads the rows of wrangler d1 execute --json's last statement into into (nil: none are wanted).
+func results(out string, into any) error {
 	if into == nil {
 		return nil
 	}
 	var answer []struct{ Results json.RawMessage }
 	start := strings.Index(out, "[")
 	if start < 0 || json.Unmarshal([]byte(out[start:]), &answer) != nil || len(answer) == 0 {
-		return fmt.Errorf("the deployed database did not answer as rows:\n%s", strings.TrimSpace(out))
+		return fmt.Errorf("the database did not answer as rows:\n%s", strings.TrimSpace(out))
 	}
 	return json.Unmarshal(answer[len(answer)-1].Results, into)
 }

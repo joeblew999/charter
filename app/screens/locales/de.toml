@@ -41,6 +41,10 @@ account_leave_confirm = "Ja, löschen"
 people = "Personen"
 role = "Rolle"
 people_intro = "Alle, die sich registriert haben, und was sie dürfen."
+invite = "Jemanden einladen"
+invite_intro = "Ein Link: Wer sich darüber registriert, erhält die gewählte Rolle. Er funktioniert einmal, innerhalb einer Stunde."
+invite_new = "Link erstellen"
+invite_once = "Jetzt weitergeben: Er wird nicht noch einmal angezeigt."
 
 [gsxui]
 close = "Schließen"

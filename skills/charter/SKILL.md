@@ -45,6 +45,7 @@ changing that part.
 | A test of a page as a reader uses it | `test/page_*_test.go`: `apptest.Browser(t)` (Chrome): `Open`, `Type`, `Click`, `WaitText`, `Tab`; addresses and selectors from the tree (`at`, `el` in `test/tree_test.go`) | `go tool charter test`, and `--deployed` |
 | A test of the API | `test/api_test.go`, through `sdk/go` | the same |
 | A client in another language | `charter.toml`'s `[pack] more`; its proof against the Worker is `test/sdk/<language>/prove.*` | `go tool charter pack -prove` (containers; minutes) |
+| The first admin, and who is what | `go tool charter run people:invite admin` (`--deployed` for the deployed Worker) prints a link that makes whoever signs up through it an admin, once, within the hour; after that roles are set and people invited on the people page. `go tool charter run people` lists them. Never SQL on the users table | the example's `TestAnInvitationMakesAnAdmin` |
 | A secret of the deployed Worker | Named in `.dev.vars.example` with a throwaway value; `go tool charter run secrets` lists them, `go tool charter run secrets:put NAME --random` (or the value fnox has, or one piped in) keeps it in fnox and puts it on the Worker. Never `fnox` or `wrangler secret` by hand | `go tool charter test --deployed` hands the tests the ones fnox has |
 | The database by hand | `go tool charter run db:status`, `db:reset`, `db:seed`, `db:execute "…"` (`--deployed` for the deployed one) | |
 

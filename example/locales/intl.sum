@@ -79,6 +79,10 @@ ar screens.docs_on_this_page b5658fc8edda ece4e1c238c9
 ar screens.docs_search 3c1004b71f0f c67f2d87acd9
 ar screens.hour_cycle 93ff9273de4b 7989015170ab
 ar screens.hour_cycle_auto de6bb7c954a5 5848f38365b7
+ar screens.invite 9b7639e8de28 da1d2a3340dc
+ar screens.invite_intro 708747c44ec1 b7fc003e485d
+ar screens.invite_new 90050a056d87 07a003ab4f74
+ar screens.invite_once ff42eca3739e cfc75e59fc40
 ar screens.languages 318655cea4bd 93a9465a5006
 ar screens.loading ba3bbbe10d8b aa5ebc30e485
 ar screens.name dcd1d5223f73 52ab09847cf8
@@ -187,6 +191,10 @@ de screens.docs_on_this_page b5658fc8edda c6ea3ff48113
 de screens.docs_search 3c1004b71f0f d3d7a21872c3
 de screens.hour_cycle 93ff9273de4b e1ac32556c5e
 de screens.hour_cycle_auto de6bb7c954a5 a8f9e14ad5dc
+de screens.invite 9b7639e8de28 d15caec1cab7
+de screens.invite_intro 708747c44ec1 142b4e1b8b83
+de screens.invite_new 90050a056d87 e425ede0ef14
+de screens.invite_once ff42eca3739e 40e4b1f28315
 de screens.languages 318655cea4bd 17d630275f43
 de screens.loading ba3bbbe10d8b 976723893920
 de screens.name dcd1d5223f73 dcd1d5223f73
@@ -219,5 +227,5 @@ file pages/screens/docs.gsx 27186bc52060
 file pages/screens/language-list.gsx a362660dc34d
 file pages/screens/language-offer.gsx 99b5c5b72cd3
 file pages/screens/preferences.gsx 724682d890df
-file pages/screens/sign-in.gsx e42976bebb96
+file pages/screens/sign-in.gsx c86c2af1a76d
 file pages/screens/theme-toggle.gsx 3d8bf9b79d18

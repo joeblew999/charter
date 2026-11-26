@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -285,5 +286,42 @@ func TestAnAccountIsDeletedWithWhatItWrote(t *testing.T) {
 	page.WaitText("#sign-in-link", "Sign in")
 	if strings.Contains(apptest.Get(t, at(pages.Home{})), body) {
 		t.Error("the note is still on the page after its writer deleted their account")
+	}
+}
+
+// An invitation makes whoever signs up through it what it says, once: how an app gets its first admin (go tool
+// charter run people:invite admin makes the same thing), and how an admin brings in another on the people page.
+// Whoever may not manage people makes none.
+func TestAnInvitationMakesAnAdmin(t *testing.T) {
+	form := "application/x-www-form-urlencoded"
+	if res := as(t, "WRITE_TOKEN", "POST", at(screens.PeopleInvite{}), form, strings.NewReader("role=admin")); res.StatusCode != http.StatusForbidden {
+		t.Errorf("a writer making an invitation: HTTP %d, want 403", res.StatusCode)
+	}
+	res := as(t, "ADMIN_TOKEN", "POST", at(screens.PeopleInvite{}), form, strings.NewReader("role=admin"))
+	html, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	link := regexp.MustCompile(`/__charter/invite\?code=([A-Za-z0-9_-]+)`).FindStringSubmatch(string(html))
+	if res.StatusCode != http.StatusOK || link == nil {
+		t.Fatalf("making an invitation: HTTP %d\n%s", res.StatusCode, html)
+	}
+	// The link leads to the sign-in page, with its code.
+	door := as(t, "", "GET", link[0], "", nil)
+	door.Body.Close()
+	signIn := at(screens.SignInPage{}) + "?invite=" + link[1]
+	if to := door.Header.Get("Location"); door.StatusCode != http.StatusSeeOther || to != signIn {
+		t.Fatalf("the invitation's link: HTTP %d to %q, want %q", door.StatusCode, to, signIn)
+	}
+	page := apptest.Browser(t)
+	page.SignUp(signIn, "Invited")
+	page.Open(at(screens.AccountPage{}))
+	page.WaitText("#role", "admin")
+	if !page.Has("#people-link") {
+		t.Error("someone invited as an admin has no way to the people page")
+	}
+	// Once: the same link makes nobody else anything.
+	again := as(t, "", "POST", at(screens.SignUpBegin{}), "application/json", strings.NewReader(`{"name":"Second","invite":"`+link[1]+`"}`))
+	again.Body.Close()
+	if again.StatusCode != http.StatusUnprocessableEntity {
+		t.Errorf("signing up with an invitation that was used: HTTP %d, want 422", again.StatusCode)
 	}
 }

@@ -41,6 +41,10 @@ account_leave_confirm = "はい、削除します"
 people = "ユーザー"
 role = "ロール"
 people_intro = "登録したすべての人と、それぞれができること。"
+invite = "招待する"
+invite_intro = "このリンクから登録した人に、選んだロールが付きます。1 回だけ、1 時間以内に使えます。"
+invite_new = "リンクを作成"
+invite_once = "今すぐ送ってください。再表示はされません。"
 
 [gsxui]
 close = "閉じる"

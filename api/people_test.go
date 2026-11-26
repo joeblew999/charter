@@ -16,7 +16,8 @@ type fakeAccounts struct {
 		scopes           []string
 		id               int64
 	}
-	next int64
+	next    int64
+	started map[string]string
 }
 
 func newFakeAccounts() *fakeAccounts {
@@ -95,8 +96,21 @@ func (m *fakeAccounts) Remove(_ context.Context, id string) error {
 	}
 	return nil
 }
-func (m *fakeAccounts) Begin(context.Context, string, string, time.Time) error { return nil }
-func (m *fakeAccounts) Take(context.Context, string) (string, error)           { return "", ErrNoAccount }
+func (m *fakeAccounts) Begin(_ context.Context, id, data string, _ time.Time) error {
+	if m.started == nil {
+		m.started = map[string]string{}
+	}
+	m.started[id] = data
+	return nil
+}
+func (m *fakeAccounts) Take(_ context.Context, id string) (string, error) {
+	data, ok := m.started[id]
+	if !ok {
+		return "", ErrNoAccount
+	}
+	delete(m.started, id)
+	return data, nil
+}
 
 // A person's session and the token they make for a program are the same caller: by the cookie, by Authorization:
 // Bearer. A token may do less than the person, never more; revoked, it is nobody's; a session that has ended is
@@ -219,5 +233,40 @@ func TestLeavingTakesTheAccountAndWhatIsTheirs(t *testing.T) {
 	}
 	if cookie := w.Result().Cookies(); len(cookie) != 1 || cookie[0].MaxAge >= 0 {
 		t.Errorf("the session's cookie was not taken back: %v", cookie)
+	}
+}
+
+// An invitation is made by whoever may manage people, to a role the app has; it gives that role once.
+func TestAnInvitationGivesItsRoleOnce(t *testing.T) {
+	accounts := newFakeAccounts()
+	auth := NewAuth(func(name string) string { return map[string]string{"ADMIN_TOKEN": "operator"}[name] },
+		People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil },
+			Roles: map[string][]string{"member": {"read"}, "admin": {"read", "admin"}}, Role: "member"},
+		Token{Secret: "ADMIN_TOKEN", Scopes: []string{"admin"}})
+	operator := httptest.NewRequest("POST", "/", nil)
+	operator.Header.Set("Authorization", "Bearer operator")
+	if _, err := auth.Invite(httptest.NewRequest("POST", "/", nil), "admin"); err == nil {
+		t.Error("nobody made an invitation")
+	}
+	if _, err := auth.Invite(operator, "owner"); err == nil {
+		t.Error("an invitation was made to a role the app does not have")
+	}
+	code, err := auth.Invite(operator, "admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, kept := accounts.started[code]; kept {
+		t.Error("the invitation is kept by its code, which whoever reads the table could use")
+	}
+	if role, err := auth.invited(t.Context(), accounts, code); err != nil || role != "admin" {
+		t.Fatalf("the invitation gives %q, %v", role, err)
+	}
+	// Taken for good, as the account is made.
+	accounts.Take(t.Context(), InviteID(code))
+	if _, err := auth.invited(t.Context(), accounts, code); err == nil {
+		t.Error("an invitation worked twice")
+	}
+	if _, err := auth.invited(t.Context(), accounts, "ch_made_up"); err == nil {
+		t.Error("a code nobody made is an invitation")
 	}
 }
