@@ -179,11 +179,17 @@ component (p SignInPage) Page(v SignInView) {
 										id="sign-up-name"
 										required
 										maxlength="60"
-										autocomplete="username webauthn"
+										// What they are called here, for everyone to see: not what a browser fills in as a
+										// user name, and never an address.
+										autocomplete="nickname"
+										pattern="[^@]*"
+										title={locales.ScreensNameHint}
+										aria-describedby="sign-up-name-hint"
 										dir="auto"
 										placeholder={locales.ScreensName}
 										aria-label={locales.ScreensName}
 									/>
+									<p id="sign-up-name-hint" class="text-xs text-muted-foreground">{ locales.ScreensNameHint }</p>
 									<ui.Button type="submit" variant="outline">{ locales.ScreensSignUp }</ui.Button>
 								</form>
 								<p id="sign-in-error" role="alert" class="text-sm text-destructive" hidden></p>

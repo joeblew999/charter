@@ -187,6 +187,10 @@ func (a *Auth) SignUpBegin(w http.ResponseWriter, r *http.Request) error {
 	if in.Name == "" || len([]rune(in.Name)) > 60 {
 		return app.Status(http.StatusUnprocessableEntity, "a name is needed, of at most 60 characters")
 	}
+	// The name is shown to everyone, beside what its person writes: an address typed into it would be published.
+	if strings.Contains(in.Name, "@") {
+		return app.Status(http.StatusUnprocessableEntity, "the name is shown to everyone: choose one that is not an email address")
+	}
 	who := Person{ID: randomID(), Name: in.Name, Role: a.people.Role}
 	if in.Invite != "" {
 		if who.Role, err = a.invited(r.Context(), accounts, in.Invite); err != nil {

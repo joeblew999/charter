@@ -371,3 +371,17 @@ func TestAnInvitationSurvivesSigningIn(t *testing.T) {
 		t.Error("a spent invitation's page does not say so")
 	}
 }
+
+// The name someone gives is shown to everyone beside what they write, so an email address is refused as one: the
+// field says what it is for, and the Worker does not take an address whoever typed it.
+func TestANameIsNotAnEmailAddress(t *testing.T) {
+	res := as(t, "", "POST", at(screens.SignUpBegin{}), "application/json", strings.NewReader(`{"name":"someone@example.com"}`))
+	res.Body.Close()
+	if res.StatusCode != http.StatusUnprocessableEntity {
+		t.Errorf("signing up with an email address as the name: HTTP %d, want 422", res.StatusCode)
+	}
+	html := apptest.Get(t, at(screens.SignInPage{}))
+	if !strings.Contains(html, `id="sign-up-name-hint"`) || !strings.Contains(html, `autocomplete="nickname"`) {
+		t.Error("the sign-up field does not say what the name is for")
+	}
+}
