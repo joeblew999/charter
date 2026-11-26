@@ -16,7 +16,9 @@ import (
 	"slices"
 	"strings"
 
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -57,13 +59,18 @@ func Write(dir string) (int, error) {
 		}
 		return strings.Compare(a, b)
 	})
-	md := goldmark.New(goldmark.WithExtensions(extension.GFM), goldmark.WithParserOptions(parser.WithAutoHeadingID()), goldmark.WithRendererOptions(html.WithUnsafe()))
+	// Code is marked up by what each word is (chroma's classes, no colours): the docs screen gives them the app's
+	// theme's colours, in light and in dark.
+	md := goldmark.New(goldmark.WithExtensions(extension.GFM, highlighting.NewHighlighting(highlighting.WithFormatOptions(chromahtml.WithClasses(true)))),
+		goldmark.WithParserOptions(parser.WithAutoHeadingID()), goldmark.WithRendererOptions(html.WithUnsafe()))
 	var pages []page
 	for _, file := range files {
-		source, err := os.ReadFile(file)
+		written, err := os.ReadFile(file)
 		if err != nil {
 			return 0, err
 		}
+		// gsx is read as Go, which it mostly is; a sample taken from a file says which.
+		source := []byte(strings.ReplaceAll(captioned(string(written)), "```gsx\n", "```go\n"))
 		p := page{Slug: slug(file), Source: filepath.ToSlash(filepath.Join("docs", filepath.Base(file)))}
 		doc := md.Parser().Parse(text.NewReader(source))
 		ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -106,7 +113,7 @@ func Write(dir string) (int, error) {
 		if err := md.Renderer().Render(&out, source, doc); err != nil {
 			return 0, fmt.Errorf("%s: %w", p.Source, err)
 		}
-		p.HTML, p.Markdown = out.String(), string(source)
+		p.HTML, p.Markdown = out.String(), string(written)
 		pages = append(pages, p)
 	}
 	var b strings.Builder

@@ -31,6 +31,8 @@ tests = "Pages in a real browser, the API through its own SDK, on wrangler dev a
 
 [gsxui]
 close = "Close"
+# The command list's name, as screen readers hear it.
+suggestions = "Suggestions"
 
 # charter's screens: the language list, the offer of the page in the reader's language, the time zone and clock dialog.
 [screens]
@@ -44,3 +46,7 @@ docs_on_this_page = "On this page"
 docs_edit = "Edit this page on GitHub"
 # The button that switches between the light and the dark theme, as screen readers name it.
 theme = "Switch between light and dark"
+# The button that switches between the light and the dark theme, as screen readers name it.
+# The docs' search: its button and field, and what it says when no page or section matches.
+docs_search = "Search the docs"
+docs_none = "Nothing found."

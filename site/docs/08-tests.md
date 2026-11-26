@@ -6,13 +6,16 @@ Tests are of the pages and of the API. Two kinds: a page as plain Go, in a fract
 
 A page declares what it needs, so a test hands it its own. No Worker, no database, no browser.
 
-```go
+```go file=../example/pages/pages_test.go#TestHomeProps
+// The home page's data is the newest notes first, and where its stream starts: after the newest.
 func TestHomeProps(t *testing.T) {
-	store := &notes{} // a store in memory
-	store.Create(ctx, "first")
-	store.Create(ctx, "second")
-	props, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store)
-	…
+	store := &notes{}
+	store.Create(context.Background(), "first")
+	store.Create(context.Background(), "second")
+	props, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, page{})
+	if err != nil || len(props.Notes) != 2 || props.Notes[0].Body != "second" || props.After != 2 {
+		t.Fatalf("%+v %v", props, err)
+	}
 }
 ```
 
@@ -27,15 +30,21 @@ go tool charter test --deployed  # the deployed one: the same tests, and the aud
 
 ## A page, in a real browser
 
-```go
+```go file=../example/test/page_home_test.go#TestANoteShowsOnEveryOpenPage
+// A note typed into one open page shows at once in another: the form, the feed, htmx's SSE swap.
 func TestANoteShowsOnEveryOpenPage(t *testing.T) {
 	writer := apptest.Browser(t)
 	reader := writer.Tab()
 	writer.Open("/")
 	reader.Open("/")
-	writer.Type(el(pages.Home.Form)+` input[name=body]`, "hello")
+	body := "typed at " + time.Now().Format(time.RFC3339Nano)
+	writer.Type(el(pages.Home.Form)+` input[name=body]`, body)
 	writer.Click(el(pages.Home.Form) + ` button[type=submit]`)
-	reader.WaitText(el(pages.Home.List), "hello")
+	reader.WaitText(el(pages.Home.List), body)
+	writer.WaitText(el(pages.Home.List), body)
+	if left := writer.Attr(el(pages.Home.Form)+` input[name=body]`, "value"); left != "" {
+		t.Errorf("the form still holds %q after posting", left)
+	}
 }
 ```
 

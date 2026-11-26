@@ -35,7 +35,7 @@ var Screens = &registry.Registry{
 				"    preferences screens.Preferences `route:\"/preferences Preferences\"`"},
 		{Name: "theme-toggle", Gsxui: []string{"button", "icon"},
 			Use: "  <screens.ThemeToggle/>        in the header: light and dark, of the app's gsxui theme (charter run ui:theme)"},
-		{Name: "docs", Gsxui: []string{"badge", "button", "separator"}, Needs: []string{"theme-toggle"},
+		{Name: "docs", Gsxui: []string{"badge", "button", "separator", "command", "kbd", "popover", "icon"}, Needs: []string{"theme-toggle"},
 			Use: "  the docs' pages (docs/*.md), in the page tree, with the docs named in the App:\n" +
 				"    docs screens.Docs `route:\"/docs Docs\"`\n" +
 				"    Docs: &app.Docs{Name: \"My App\", Pages: docs.Pages}"},

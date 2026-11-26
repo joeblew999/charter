@@ -4,6 +4,7 @@ go 1.27.1
 
 require (
 	github.com/BurntSushi/toml v1.6.0
+	github.com/alecthomas/chroma/v2 v2.27.0
 	github.com/chromedp/chromedp v0.24.0
 	github.com/danielgtaylor/huma/v2 v2.41.0
 	github.com/go-jose/go-jose/v4 v4.1.7
@@ -13,12 +14,14 @@ require (
 	github.com/syumai/workers-go v0.36.0
 	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 	github.com/yuin/goldmark v1.8.7
+	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
 	golang.org/x/net v0.63.0
 	modernc.org/sqlite v1.63.0
 )
 
 require (
 	github.com/chromedp/cdproto v0.160.1 // indirect
+	github.com/dlclark/regexp2/v2 v2.2.1 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect

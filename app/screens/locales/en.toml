@@ -38,11 +38,16 @@ docs_on_github = "{repository} on GitHub"
 docs_on_this_page = "On this page"
 docs_edit = "Edit this page on GitHub"
 # The button that switches between the light and the dark theme, as screen readers name it.
+# The docs' search: its button and field, and what it says when no page or section matches.
+docs_search = "Search the docs"
+docs_none = "Nothing found."
 theme = "Switch between light and dark"
 
 [gsxui]
 close = "Close"
 notifications = "Notifications"
+# The command list's name, as screen readers hear it.
+suggestions = "Suggestions"
 # Pagination's own links, and its "…" for pages left out.
 previous = "Previous"
 next = "Next"

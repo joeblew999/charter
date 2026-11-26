@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/joeblew999/charter/internal/command/intl"
 	"github.com/joeblew999/charter/internal/dbcode"
+	"github.com/joeblew999/charter/internal/docsgen"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
 	"os"
@@ -40,6 +41,16 @@ func Check(args []string) {
 	t := newTimes("check")
 	if p.Spec != "" && p.DB != "" && *fix {
 		t.part("queries", func() error { return dbcode.Write(p.Root, p.DB, false, *drop) })
+	}
+	if exists(filepath.Join(p.Root, "docs")) {
+		// A sample of the docs that is taken from a file (its fence says file=…) is what the file says.
+		t.part("docs", func() error {
+			differ, err := docsgen.Samples(p.Root, *fix)
+			if err != nil || len(differ) == 0 || *fix {
+				return err
+			}
+			return fmt.Errorf("these samples of the docs are not what their files say (charter check --fix writes them again):\n  %s", strings.Join(differ, "\n  "))
+		})
 	}
 	t.part("generate", func() error { return generate(p) })
 	t.part("fmt", func() error { return format(p, *fix) })

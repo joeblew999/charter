@@ -6,14 +6,20 @@ Pages are a [structpages](https://jackielii.github.io/structpages/) tree, render
 
 Every route is a field, with its route in the field's tag.
 
-```go
+```go file=../example/pages/pages.go#Pages
+// Pages is the tree.
 type Pages struct {
-	home     Home       `route:"GET /{$} Home"`
-	bindings Bindings   `route:"GET /bindings Bindings"`
+	home     Home         `route:"GET /{$} Home"`
+	bindings Bindings     `route:"GET /bindings Bindings"`
 	docs     screens.Docs `route:"/docs Docs"`
 
-	post   PostNote    `route:"POST /notes PostNote"`
-	stream NotesStream `route:"GET /notes/stream NotesStream"`
+	// The time zone and clock dialog's form, and where it is sent.
+	preferences screens.Preferences `route:"/preferences Preferences"`
+
+	// What the pages call: routes, not pages.
+	post   PostNote       `route:"POST /notes PostNote"`
+	stream NotesStream    `route:"GET /notes/stream NotesStream"`
+	act    BindingsAction `route:"POST /bindings/{action} BindingsAction"`
 }
 ```
 
@@ -21,43 +27,94 @@ type Pages struct {
 
 A page is a type with a `Page` component, and `Props` for its data. `Props` names what it needs as parameters, and structpages hands each over by its type.
 
-```go
-type Home struct{}
-
-func (Home) Props(r *http.Request, store api.Store) (HomeProps, error) {
+```go file=../example/pages/pages.go#Home.Props
+// Props loads what the request wants, as structpages has it. A row's button asks for that row alone (its target is
+// Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. Anything
+// else is the page, with the newest notes. Each component takes its share of the results by their types.
+func (p Home) Props(r *http.Request, store api.Store, target structpages.RenderTarget) (HomeProps, api.Note, Open, error) {
+	if target.Is(p.Item) {
+		id, err := strconv.ParseInt(structpages.KeyOf(target), 10, 64)
+		if err != nil {
+			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
+		}
+		note, err := store.Get(r.Context(), id)
+		if err != nil {
+			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
+		}
+		return HomeProps{}, note, r.URL.Query().Get("open") != "", nil
+	}
 	notes, err := store.Before(r.Context(), math.MaxInt64, shown)
-	…
+	if err != nil {
+		return HomeProps{}, api.Note{}, false, err
+	}
+	props := HomeProps{Notes: notes}
+	if len(notes) > 0 {
+		props.After = notes[0].ID
+	}
+	return props, api.Note{}, false, nil
 }
 ```
 
-The store comes from `main.go`: `RequestArgs: []any{api.OpenStore}`, a function from the request to the value. No page opens a database or reads a binding itself, so a test hands a page a store of its own.
+The store comes from `main.go`: `RequestArgs: []any{api.OpenStore}`, a function from the request to the value. No page opens a database or reads a binding itself, so a test hands a page a store of its own. The target is what the request wants: the whole page, or one part of it.
 
 ## A region that changes by itself
 
 A part of a page that htmx replaces is a component of that page. Its id and its target come from the tree, so the three places that must agree cannot drift apart.
 
-```gsx
+```gsx file=../example/pages/home.gsx#Home.Form
+// Form is the form, a region of the page that changes by itself: PostNote answers with it, and htmx puts it in place
+// of the one sent (its target is this component, by the tree), empty, or with what was typed, marked as refused.
 component (p Home) Form(body string, refused bool) {
 	<form
 		id={Home.Form |> id}
+		class="flex flex-wrap gap-2"
 		hx-post={PostNote{} |> url}
 		hx-target={Home.Form |> target}
 		hx-swap="outerHTML"
 	>
-		…
+		<ui.Input
+			name="body"
+			class="flex-1"
+			value={body}
+			maxlength={strconv.Itoa(maxBody)}
+			required
+			autofocus
+			autocomplete="off"
+			dir="auto"
+			placeholder={locales.HomePlaceholder}
+			aria-label={locales.HomeLabel}
+			{ if refused {
+				aria-invalid="true"
+			} }
+		/>
+		<ui.Button type="submit">{ locales.HomePost }</ui.Button>
 	</form>
 }
 ```
 
-One of many (a row, a card) has a key: `id={Home.Item |> key(note.ID)}`.
+One of many (a row, a card) has a key: `id={Home.Item |> key(id)}`, and its own button targets `{Home.Item |> keytarget(id)}`. `Props` then asks whether that row is what is wanted, reads which from `structpages.KeyOf`, and loads that note alone, as above.
+
+## The page being shown
+
+`structpages.Within(ctx, Bindings{})` says whether the page being shown is that page or one under it: how the example's header marks its links.
+
+## A fragment opened as a page
+
+A route with `Props` and no `Page` is a fragment: markup for part of a page, such as a dialog's form. Its address opened in a browser would be that markup alone, so charter sends such a request to the page the fragment is part of (structpages' own convention), before its `Props` runs. Only an htmx request for part of a page gets the fragment.
 
 ## What a page calls
 
 A type with `ServeHTTP` that returns an error. It answers with a component, and never writes an error or a redirect itself.
 
-```go
+```go file=../example/pages/pages.go#PostNote.ServeHTTP
 func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Store) error {
-	…
+	body := strings.TrimSpace(r.PostFormValue("body"))
+	if body == "" || len(body) > maxBody || strings.Contains(body, api.END) {
+		// htmx 4 swaps a 422 too: the form comes back with what was typed.
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return structpages.RenderComponent(Home{}.Form(body, true))
+	}
 	if _, err := api.Post(r.Context(), store, body); err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/joeblew999/charter/app/apptest"
 	"github.com/joeblew999/charter/example/pages"
+	"github.com/joeblew999/charter/example/pages/screens"
 )
 
 // The docs: Markdown files of docs/, each a page.
@@ -76,5 +77,28 @@ func TestTheDocsForAgentsAndSearchEngines(t *testing.T) {
 		if !strings.Contains(sitemap, want) {
 			t.Errorf("the sitemap has no %s", want)
 		}
+	}
+}
+
+// The docs are searched by the titles of their pages and sections: the search opens, a few letters leave what
+// matches, and choosing a section goes to it.
+func TestTheDocsAreSearched(t *testing.T) {
+	page := apptest.Browser(t)
+	page.Open(at(screens.DocsIndex{}))
+	page.Click(`#docs-search`)
+	page.Type(`[data-gsxui-slot-command-input]`, "declares")
+	page.WaitText(`[data-gsxui-slot-command-list]`, "A page declares what it needs")
+	page.Click(`[data-gsxui-slot-command-item]:not([hidden])`)
+	page.WaitText("#doc h1", "How it is built")
+	if path := page.Path(); path != at(screens.DocsPage{}, "slug", "how-it-is-built") {
+		t.Errorf("the search went to %s", path)
+	}
+}
+
+// Code in the docs is marked up by what each word is, for the theme to colour.
+func TestTheDocsCodeIsMarkedUp(t *testing.T) {
+	html := apptest.Get(t, at(screens.DocsPage{}, "slug", "how-it-is-built"))
+	if !strings.Contains(html, `<pre class="chroma">`) || !strings.Contains(html, `<span class="kd">func</span>`) {
+		t.Errorf("the code is plain:\n%s", html)
 	}
 }

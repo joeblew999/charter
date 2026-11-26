@@ -2,20 +2,26 @@
 
 A feed is declared once and serves everything that shows it.
 
-```go
-var Notes = live.Feed[Note]{
-	Binding: "HUB", Name: "notes",
-	Log: func() (live.Log[Note], error) { return Open() },
-}
+```go file=../example/api/handlers.go#Notes
+// Notes is the feed of notes, declared once: the table is the log, the Durable Object HUB wakes whoever follows.
+// The page's live list, the API's stream and its WebSocket channel are all this.
+var Notes = live.Feed[Note]{Binding: "HUB", Name: "notes", Log: func() (live.Log[Note], error) { return open() }}
 ```
 
 The log, a D1 table, is the truth. The hub, a Durable Object, only wakes whoever follows. So no item is lost or sent twice, across reconnects and deploys alike.
 
 ## Writing
 
-```go
-note, err := store.Create(ctx, body) // the write goes to the log
-Notes.Publish(ctx, note)             // then every follower is woken
+```go file=../example/api/handlers.go#Post
+// Post writes a note to the store and wakes every follower: what the API's createNote and the page's form both do.
+func Post(ctx context.Context, store Store, body string) (Note, error) {
+	note, err := store.Create(ctx, body)
+	if err != nil {
+		return Note{}, err
+	}
+	Notes.Publish(ctx, note)
+	return note, nil
+}
 ```
 
 ## Three ways out, one feed

@@ -44,6 +44,7 @@ nav = "Dokumentation"
 
 [gsxui]
 close = "Schließen"
+suggestions = "Vorschläge"
 
 [screens]
 languages = "Sprachen"
@@ -63,3 +64,5 @@ docs = "Doku"
 docs_on_github = "{repository} auf GitHub"
 docs_on_this_page = "Auf dieser Seite"
 docs_edit = "Diese Seite auf GitHub bearbeiten"
+docs_search = "Doku durchsuchen"
+docs_none = "Nichts gefunden."

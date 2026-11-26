@@ -20,16 +20,26 @@ main.go
 
 ## main.go
 
-```go
+```go file=../example/main.go#main
 func main() {
+	// What the Worker does that is no request: a Cron Trigger, a queue's consumer, email (package bindings).
+	bindings.Background()
 	(&app.App{
-		Name:  "My App",
+		Name:  "charter-example",
 		Dist:  dist,
 		Pages: pages.Mount,
-		API:   api.Handler(api.Env{Var: cloud.Var}),
-		Docs:  &app.Docs{Name: "My App", Pages: docs.Pages}, // docs/*.md, built
-		// What a page's Props may ask for, made from the request.
-		RequestArgs: []any{api.OpenStore},
+		// The app's own docs (docs/*.md), shown by charter's docs pages, which the tree mounts at /docs.
+		Docs: &app.Docs{
+			Name:    "charter-example",
+			Summary: "charter's example: notes that are live on every open page, an API from a contract, and a card for everything Cloudflare gives a Worker.",
+			Pages:   docs.Pages,
+			Repo:    "https://github.com/joeblew999/charter",
+			Dir:     "example",
+			Agents:  "A coding agent working on this app uses the Claude Code plugins of the marketplace joeblew999/charter: charter, gsx, gsxui and structpages. The app's .claude/settings.json enables them.",
+		},
+		// What a page asks for by type, made from the request: the notes' store (D1), and the bindings' state.
+		RequestArgs: []any{api.OpenStore, bindings.Read},
+		API:         api.Handler(api.Env{Var: charter.Var}),
 	}).Run()
 }
 ```

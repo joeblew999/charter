@@ -1,0 +1,281 @@
+// Command palette behavior — the cmdk primitive's contract without React:
+// score-ranked filtering, DOM reordering by score, group/separator hiding,
+// empty state, and a roving selection that keeps FOCUS in the input the
+// whole time (data-selected + aria-activedescendant, cmdk's own model —
+// items are never tab stops). Activation: Enter or click emits gsxui:select
+// on the item; an item carrying data-href then navigates. ⌘K/Ctrl-K toggles
+// the first dialog marked data-gsxui-command-dialog (see command.gsx),
+// riding dialog.js's machinery for open state and animated close.
+import { on, emit, init, uid } from "./gsxui.js";
+
+// ---------------------------------------------------------------------------
+// commandScore — verbatim port of command-score 0.1.2 (MIT, (c) Superhuman
+// Labs; the exact ranking cmdk uses), reformatted for this module. See
+// https://github.com/superhuman/command-score. Kept byte-faithful in
+// constants and control flow so filtering feels identical to shadcn's.
+const SCORE_CONTINUE_MATCH = 1,
+  SCORE_WORD_JUMP = 0.9,
+  SCORE_CHARACTER_JUMP = 0.3,
+  SCORE_TRANSPOSITION = 0.1,
+  SCORE_LONG_JUMP = 0,
+  PENALTY_SKIPPED = 0.999,
+  PENALTY_CASE_MISMATCH = 0.9999,
+  PENALTY_NOT_COMPLETE = 0.99;
+
+const IS_GAP_REGEXP = /[\\/\-_+.# \t"@[({&]/,
+  COUNT_GAPS_REGEXP = /[\\/\-_+.# \t"@[({&]/g;
+
+function commandScoreInner(string, abbreviation, lowerString, lowerAbbreviation, stringIndex, abbreviationIndex) {
+  if (abbreviationIndex === abbreviation.length) {
+    if (stringIndex === string.length) return SCORE_CONTINUE_MATCH;
+    return PENALTY_NOT_COMPLETE;
+  }
+
+  const abbreviationChar = lowerAbbreviation.charAt(abbreviationIndex);
+  let index = lowerString.indexOf(abbreviationChar, stringIndex);
+  let highScore = 0;
+  let score, transposedScore, wordBreaks;
+
+  while (index >= 0) {
+    score = commandScoreInner(string, abbreviation, lowerString, lowerAbbreviation, index + 1, abbreviationIndex + 1);
+    if (score > highScore) {
+      if (index === stringIndex) {
+        score *= SCORE_CONTINUE_MATCH;
+      } else if (IS_GAP_REGEXP.test(string.charAt(index - 1))) {
+        score *= SCORE_WORD_JUMP;
+        wordBreaks = string.slice(stringIndex, index - 1).match(COUNT_GAPS_REGEXP);
+        if (wordBreaks && stringIndex > 0) {
+          score *= Math.pow(PENALTY_SKIPPED, wordBreaks.length);
+        }
+      } else if (IS_GAP_REGEXP.test(string.slice(stringIndex, index - 1))) {
+        score *= SCORE_LONG_JUMP;
+        if (stringIndex > 0) {
+          score *= Math.pow(PENALTY_SKIPPED, index - stringIndex);
+        }
+      } else {
+        score *= SCORE_CHARACTER_JUMP;
+        if (stringIndex > 0) {
+          score *= Math.pow(PENALTY_SKIPPED, index - stringIndex);
+        }
+      }
+      if (string.charAt(index) !== abbreviation.charAt(abbreviationIndex)) {
+        score *= PENALTY_CASE_MISMATCH;
+      }
+    }
+
+    if (
+      score < SCORE_TRANSPOSITION &&
+      lowerString.charAt(index - 1) === lowerAbbreviation.charAt(abbreviationIndex + 1) &&
+      lowerString.charAt(index - 1) !== lowerAbbreviation.charAt(abbreviationIndex)
+    ) {
+      transposedScore = commandScoreInner(string, abbreviation, lowerString, lowerAbbreviation, index + 1, abbreviationIndex + 2);
+      if (transposedScore * SCORE_TRANSPOSITION > score) {
+        score = transposedScore * SCORE_TRANSPOSITION;
+      }
+    }
+
+    if (score > highScore) highScore = score;
+    index = lowerString.indexOf(abbreviationChar, index + 1);
+  }
+
+  return highScore;
+}
+
+function commandScore(string, abbreviation) {
+  return commandScoreInner(string, abbreviation, string.toLowerCase(), abbreviation.toLowerCase(), 0, 0);
+}
+// ---------------------------------------------------------------------------
+
+const rootOf = (el) => el.closest("[data-gsxui-slot-command]");
+const itemsOf = (root) => [...root.querySelectorAll("[data-gsxui-slot-command-item]")];
+const valueOf = (item) => item.dataset.value || item.textContent.trim();
+const disabled = (item) =>
+  item.getAttribute("aria-disabled") === "true" || "disabled" in item.dataset;
+
+// Initial selection is state synchronisation, not navigation: only
+// user-driven changes opt into scrolling the selected item into view.
+function select(root, item, { scroll = false } = {}) {
+  const input = root.querySelector("[data-gsxui-slot-command-input]");
+  for (const other of itemsOf(root)) {
+    if (other === item) continue;
+    delete other.dataset.selected;
+    other.setAttribute("aria-selected", "false");
+  }
+  if (!item) {
+    input?.removeAttribute("aria-activedescendant");
+    return;
+  }
+  item.dataset.selected = "true";
+  item.setAttribute("aria-selected", "true");
+  if (!item.id) item.id = uid("gsxui-command-item");
+  input?.setAttribute("aria-activedescendant", item.id);
+  if (scroll) item.scrollIntoView({ block: "nearest" });
+}
+
+const visibleItems = (root) => itemsOf(root).filter((i) => !i.hidden && !disabled(i));
+const selectedOf = (root) => root.querySelector('[data-gsxui-slot-command-item][data-selected="true"]');
+
+// Filter + rank: score every item, hide zero-scores, reorder items within
+// their group by score (cmdk reorders the DOM too — element identity is
+// preserved, so listeners and state survive appendChild moves), reorder
+// groups by their best item, hide empty groups, hide separators while a
+// query is active (cmdk's behavior), and toggle the empty state. Ties keep
+// source order via the one-time data-gsxui-index stamp.
+function filter(root, { scrollSelection = false } = {}) {
+  const input = root.querySelector("[data-gsxui-slot-command-input]");
+  const query = (input?.value ?? "").trim();
+  const list = root.querySelector("[data-gsxui-slot-command-list]") ?? root;
+
+  // One-time source-order stamps (items AND the list's top-level children:
+  // groups, separators, the empty element, ungrouped items). Ranking ties
+  // resolve to this order; with no query the top-level sort restores it
+  // outright (see below), undoing every prior reorder.
+  const items = itemsOf(root);
+  items.forEach((item, i) => {
+    if (!("gsxuiIndex" in item.dataset)) item.dataset.gsxuiIndex = String(i);
+  });
+  [...list.children].forEach((child, i) => {
+    if (!("gsxuiIndex" in child.dataset)) child.dataset.gsxuiIndex = String(i);
+  });
+
+  const scores = new Map();
+  let any = false;
+  for (const item of items) {
+    const score = query ? commandScore(valueOf(item), query) : 1;
+    scores.set(item, score);
+    item.hidden = score === 0;
+    if (!item.hidden) any = true;
+  }
+
+  const sourceOrder = (a, b) => Number(a.dataset.gsxuiIndex) - Number(b.dataset.gsxuiIndex);
+
+  // Items reorder within their group every pass (appendChild preserves
+  // element identity, so listeners/state survive the moves).
+  for (const group of root.querySelectorAll("[data-gsxui-slot-command-group]")) {
+    const inGroup = items.filter((i) => group.contains(i));
+    const ranked = [...inGroup].sort((a, b) => scores.get(b) - scores.get(a) || sourceOrder(a, b));
+    for (const item of ranked) group.appendChild(item);
+    group.hidden = !inGroup.some((i) => !i.hidden);
+  }
+
+  // The list's top level: while a query is active, float groups/bare items up
+  // by best contained score (a bare item is its own score; a group is its best
+  // item). With NO query, restore source order outright — separators (and the
+  // empty element) contain no items, so they score 0 and a rank sort would sink
+  // every one of them below the rank-1 groups to the very bottom of the list,
+  // stranding a between-groups divider at the end. sourceOrder keeps each
+  // separator between the groups it divides. Separators are hidden whenever a
+  // query is set (below), so their rank never actually matters during filtering.
+  const rank = (el) =>
+    scores.get(el) ?? Math.max(0, ...items.filter((i) => el.contains(i)).map((i) => scores.get(i)));
+  const kids = [...list.children].sort((a, b) =>
+    query ? rank(b) - rank(a) || sourceOrder(a, b) : sourceOrder(a, b),
+  );
+  for (const kid of kids) list.appendChild(kid);
+
+  for (const sep of root.querySelectorAll("[data-gsxui-slot-command-separator]")) {
+    sep.hidden = query !== "";
+  }
+  const empty = root.querySelector("[data-gsxui-slot-command-empty]");
+  if (empty) empty.hidden = any;
+
+  // Selection follows the ranking: top visible item after every keystroke.
+  select(root, visibleItems(root)[0] ?? null, { scroll: scrollSelection });
+}
+
+function activate(item) {
+  if (!item || disabled(item)) return;
+  emit(item, "gsxui:select");
+  if (item.dataset.href) {
+    const dialog = item.closest("dialog[data-gsxui-slot-dialog-content]");
+    if (dialog) emit(dialog, "gsxui:request-close", { reason: "select" });
+    window.location.assign(item.dataset.href);
+  }
+}
+
+on("input", "[data-gsxui-slot-command-input]", (_e, input) => {
+  const root = rootOf(input);
+  if (root) filter(root, { scrollSelection: true });
+});
+
+on("keydown", "[data-gsxui-slot-command-input]", (e, input) => {
+  const root = rootOf(input);
+  if (!root) return;
+  if (e.key === "Enter") {
+    e.preventDefault();
+    activate(selectedOf(root));
+    return;
+  }
+  const dir = { ArrowDown: 1, ArrowUp: -1 }[e.key];
+  if (!dir) return;
+  e.preventDefault();
+  const items = visibleItems(root);
+  if (!items.length) return;
+  const i = items.indexOf(selectedOf(root));
+  select(root, items[(i + dir + items.length) % items.length], { scroll: true });
+});
+
+on("click", "[data-gsxui-slot-command-item]", (_e, item) => activate(item));
+
+// Selection follows the pointer (cmdk hover model — hover IS selection, no
+// separate hover style), same rationale as dropdown.js's pointerover focus.
+on("pointerover", "[data-gsxui-slot-command-item]", (_e, item) => {
+  if (disabled(item) || item.dataset.selected === "true") return;
+  const root = rootOf(item);
+  if (root) select(root, item);
+});
+
+// ⌘K / Ctrl-K requests a transition on the first command dialog. dialog.js
+// owns the default action, including state stamping and animated close.
+addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() !== "k" || !(e.metaKey || e.ctrlKey)) return;
+  const dialog = document.querySelector("dialog[data-gsxui-command-dialog]");
+  if (!dialog) return;
+  e.preventDefault();
+  emit(dialog, dialog.open ? "gsxui:request-close" : "gsxui:request-open", {
+    reason: "shortcut",
+  });
+});
+
+// A fresh open starts a fresh search: clear the query and re-rank when the
+// dialog machinery announces the open (dialog.js emits gsxui:open on the
+// <dialog> for every open path — trigger click, hotkey, programmatic).
+on(
+  "gsxui:open",
+  "dialog[data-gsxui-command-dialog]",
+  (_e, dialog) => {
+    const input = dialog.querySelector("[data-gsxui-slot-command-input]");
+    if (input) input.value = "";
+    const root = rootOf(input ?? dialog) ?? dialog.querySelector("[data-gsxui-slot-command]");
+    if (root) filter(root);
+    input?.focus();
+  },
+  { capture: true },
+);
+
+// --- init ---
+
+// initRoot exists to carry the shared init-registration convention; filter
+// stays the domain name for the rank/hide/reorder pass it runs.
+//
+// Wires the input's aria-controls to the list (cmdk's own; the server can't,
+// since CommandInput and CommandList are separate components). A caller's
+// own list id is kept.
+//
+// Initial state: rank/selection for palettes rendered without a query
+// (server renders every item visible; this stamps the first selection).
+// Self-healing via init(): current matches, later-added matches, and any
+// match morphed back to server state all get initRoot() re-run. filter() is
+// pure reflection off the input's current value and each item's own DOM
+// state (score/hide/reorder), so re-running it is safe/idempotent.
+function initRoot(root) {
+  const input = root.querySelector("[data-gsxui-slot-command-input]");
+  const list = root.querySelector("[data-gsxui-slot-command-list]");
+  if (input && list) {
+    if (!list.id) list.id = uid("gsxui-command-list");
+    input.setAttribute("aria-controls", list.id);
+  }
+  filter(root);
+}
+
+init("[data-gsxui-slot-command]", initRoot);

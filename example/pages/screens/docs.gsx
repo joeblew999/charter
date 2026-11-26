@@ -10,6 +10,7 @@ import (
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/example/locales"
 	"github.com/joeblew999/charter/example/ui"
+	"github.com/joeblew999/charter/example/ui/icon"
 	"github.com/joeblew999/charter/intl"
 )
 
@@ -72,7 +73,53 @@ component DocsDocument(v DocsView) {
 			<header class="mx-auto flex max-w-6xl flex-wrap items-center gap-3 p-4">
 				<a href={intl.URL(ctx, "/")} class="font-semibold" translate="no">{ v.Docs.Name }</a>
 				<ui.Badge variant="secondary">{ locales.ScreensDocs }</ui.Badge>
+				// The list of pages, where there is no room for it at the side.
+				<ui.Popover class="md:hidden">
+					<ui.PopoverTrigger
+						aria-label={locales.ScreensDocs}
+						class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+					>
+						<icon.Menu class="size-4"/>
+					</ui.PopoverTrigger>
+					<ui.PopoverContent class="max-h-[calc(100svh-5rem)] w-64 overflow-y-auto p-2">
+						<nav aria-label={locales.ScreensDocs} class="flex flex-col gap-1">
+							<DocsList v={v}/>
+						</nav>
+					</ui.PopoverContent>
+				</ui.Popover>
 				<span class="flex-1"></span>
+				// Search, as gsxui's own docs have it: every page and every section of one, by its title. Cmd-K
+				// (Ctrl-K) opens it.
+				<ui.CommandDialog
+					title={locales.ScreensDocsSearch |> text}
+					description={locales.ScreensDocsSearch |> text}
+					trigger={
+						<ui.DialogTrigger
+							id="docs-search"
+							aria-label={locales.ScreensDocsSearch}
+							class="inline-flex h-8 items-center gap-2 rounded-lg border bg-muted/50 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted sm:w-56"
+						>
+							<icon.Search class="size-4"/>
+							<span class="hidden flex-1 text-start sm:inline">{ locales.ScreensDocsSearch }</span>
+							<ui.Kbd class="hidden sm:inline-flex">⌘K</ui.Kbd>
+						</ui.DialogTrigger>
+					}
+				>
+					<ui.CommandInput placeholder={locales.ScreensDocsSearch |> text}/>
+					<ui.CommandList>
+						<ui.CommandEmpty>{ locales.ScreensDocsNone }</ui.CommandEmpty>
+						{ for _, page := range v.Docs.Pages {
+							<ui.CommandGroup heading={page.Title} lang="en" dir="ltr">
+								<ui.CommandItem data-href={docsURL(ctx, page)}>{ page.Title }</ui.CommandItem>
+								{ for _, h := range page.Headings {
+									<ui.CommandItem data-href=f`@{docsURL(ctx, page)}#@{h.ID}` value={page.Title + " " + h.Title}>
+										{ h.Title }
+									</ui.CommandItem>
+								} }
+							</ui.CommandGroup>
+						} }
+					</ui.CommandList>
+				</ui.CommandDialog>
 				{ if v.Docs.Repo != "" {
 					<ui.Button variant="ghost" size="sm" href={v.Docs.Repo} rel="noopener" id="docs-repo">
 						{ locales.ScreensDocsOnGithub(docsRepo(v.Docs.Repo)) }
@@ -82,20 +129,8 @@ component DocsDocument(v DocsView) {
 			</header>
 			<ui.Separator/>
 			<div class="mx-auto flex max-w-6xl flex-col gap-8 p-4 md:flex-row">
-				<nav id="docs-nav" aria-label={locales.ScreensDocs} class="flex shrink-0 flex-col gap-1 md:w-52">
-					{ for _, other := range v.Docs.Pages {
-						<ui.Button
-							variant={docsVariant(other.Slug == v.Doc.Slug)}
-							size="sm"
-							class="h-auto justify-start py-1.5 text-start whitespace-normal"
-							href={docsURL(ctx, other)}
-							{ if other.Slug == v.Doc.Slug {
-								aria-current="page"
-							} }
-						>
-							<span lang="en" dir="ltr">{ other.Title }</span>
-						</ui.Button>
-					} }
+				<nav id="docs-nav" aria-label={locales.ScreensDocs} class="hidden shrink-0 flex-col gap-1 md:flex md:w-52">
+					<DocsList v={v}/>
 				</nav>
 				<main class="min-w-0 flex-1">
 					// The page: HTML that charter build wrote from docs/*.md, the app's own files.
@@ -129,6 +164,23 @@ component DocsDocument(v DocsView) {
 			</div>
 		</body>
 	</html>
+}
+
+// DocsList is the docs' pages, the one being read marked: at the side, and in the menu where there is no side.
+component DocsList(v DocsView) {
+	{ for _, other := range v.Docs.Pages {
+		<ui.Button
+			variant={docsVariant(other.Slug == v.Doc.Slug)}
+			size="sm"
+			class="h-auto justify-start py-1.5 text-start whitespace-normal"
+			href={docsURL(ctx, other)}
+			{ if other.Slug == v.Doc.Slug {
+				aria-current="page"
+			} }
+		>
+			<span lang="en" dir="ltr">{ other.Title }</span>
+		</ui.Button>
+	} }
 }
 
 // docsURL is a docs page's address, from the tree, in the reader's language.
@@ -171,4 +223,14 @@ const docsProse = "flex max-w-3xl flex-col gap-4 leading-7 " +
 	"[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm " +
 	"[&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:bg-muted [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0 " +
 	"[&_table]:w-full [&_table]:text-sm [&_th]:border-b [&_th]:px-3 [&_th]:py-2 [&_th]:text-start [&_th]:font-medium " +
-	"[&_td]:border-b [&_td]:px-3 [&_td]:py-2 [&_td]:align-top"
+	"[&_td]:border-b [&_td]:px-3 [&_td]:py-2 [&_td]:align-top " +
+	// A sample taken from a file says which, above the code.
+	"[&_figure]:flex [&_figure]:flex-col [&_figure]:gap-1 [&_figcaption]:font-mono [&_figcaption]:text-xs [&_figcaption]:text-muted-foreground " +
+	// Code, by what each word is (the classes charter build gives it), in the theme's own colours: so it follows
+	// the app's theme, light and dark.
+	"[&_pre_.k]:font-medium [&_pre_.kd]:font-medium [&_pre_.kn]:font-medium [&_pre_.kr]:font-medium [&_pre_.kc]:font-medium " +
+	"[&_pre_.k]:text-chart-1 [&_pre_.kd]:text-chart-1 [&_pre_.kn]:text-chart-1 [&_pre_.kr]:text-chart-1 [&_pre_.kc]:text-chart-1 [&_pre_.kt]:text-chart-1 " +
+	"[&_pre_.s]:text-chart-2 [&_pre_.s1]:text-chart-2 [&_pre_.s2]:text-chart-2 [&_pre_.sb]:text-chart-2 [&_pre_.se]:text-chart-2 " +
+	"[&_pre_.m]:text-chart-4 [&_pre_.mi]:text-chart-4 [&_pre_.mf]:text-chart-4 " +
+	"[&_pre_.nf]:text-chart-3 [&_pre_.nb]:text-chart-3 [&_pre_.nt]:text-chart-3 [&_pre_.na]:text-chart-3 " +
+	"[&_pre_.c]:text-muted-foreground [&_pre_.c1]:text-muted-foreground [&_pre_.cm]:text-muted-foreground [&_pre_.c]:italic [&_pre_.c1]:italic [&_pre_.cm]:italic"

@@ -2,7 +2,11 @@
 
 `db/schema.sql` is the one place a table is written down.
 
-```sql
+```sql file=../example/db/schema.sql
+-- The database, as it is now: the one place a table is written down. charter writes everything else from it: the
+-- migrations (db/migrations, for whatever changes here), and with the queries of queries.sql the typed Go
+-- (queries.gen.go). A column's comment says what the API shows of it: its row is also what the contract serves.
+
 CREATE TABLE notes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,                 -- example: 42
   body TEXT NOT NULL,                                   -- example: Buy milk
@@ -44,7 +48,9 @@ Select whole rows, and a new column needs no change here.
 
 A column's comment becomes its tag in Go, so the row is also what the API serves.
 
-```go
+```go file=../example/api/contract.go#Note
+// Note is a note as the API shows it: the table's row, as db/schema.sql has it (db.NotesRow, whose examples are the
+// schema's comments). A note is written down once, in the schema.
 type Note struct{ db.NotesRow }
 ```
 
