@@ -10,7 +10,6 @@ intro = "اكتب ملاحظة، فتظهر فورًا في كل صفحة مفت
 placeholder = "اكتب ملاحظة"
 label = "الملاحظة"
 post = "نشر"
-languages = "اللغات"
 
 [bindings]
 link = "ما تقدّمه Cloudflare لهذا الـ Worker"
@@ -44,3 +43,22 @@ nav = "التوثيق"
 
 [gsxui]
 close = "إغلاق"
+
+[screens]
+languages = "اللغات"
+also_in = "هذه الصفحة متوفرة أيضًا باللغة {language}."
+no_thanks = "لا، شكرًا"
+preferences = "المنطقة الزمنية والساعة"
+preferences_description = "تُطبَّق هذه الإعدادات على التواريخ والأوقات في كل الصفحات. يستخدم الخيار «تلقائي» المنطقة الزمنية لمتصفحك."
+loading = "جارٍ التحميل…"
+time_zone = "المنطقة الزمنية"
+time_zone_auto = "تلقائي ({zone})"
+hour_cycle = "نظام الساعة"
+hour_cycle_auto = "الافتراضي للغة ({example})"
+save = "حفظ"
+close = "إغلاق"
+theme = "التبديل بين الوضع الفاتح والداكن"
+docs = "المستندات"
+docs_on_github = "{repository} على GitHub"
+docs_on_this_page = "في هذه الصفحة"
+docs_edit = "تعديل هذه الصفحة على GitHub"

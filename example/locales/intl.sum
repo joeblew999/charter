@@ -29,9 +29,25 @@ ar gsxui.close 7d9eb7acb13e ca90c297b099
 ar home.heading 8a7525b1492f cee9f2b0adc8
 ar home.intro 66000b571077 63c017805507
 ar home.label d8da2c49df39 a2bc8b7eea3a
-ar home.languages 318655cea4bd 93a9465a5006
 ar home.placeholder ab0f84062e48 9126b0952229
 ar home.post a5554622c655 b19234315bac
+ar screens.also_in 5d73b6d757bd 61d515b16a6b
+ar screens.close 7d9eb7acb13e ca90c297b099
+ar screens.docs 7af023c43013 9d66d0084b75
+ar screens.docs_edit 073fd1036ab1 635bfc3b2cdc
+ar screens.docs_on_github 3b16422e27b3 855669af4317
+ar screens.docs_on_this_page b5658fc8edda ece4e1c238c9
+ar screens.hour_cycle 93ff9273de4b 7989015170ab
+ar screens.hour_cycle_auto de6bb7c954a5 5848f38365b7
+ar screens.languages 318655cea4bd 93a9465a5006
+ar screens.loading ba3bbbe10d8b aa5ebc30e485
+ar screens.no_thanks 49780701dc2d 1724c2e89ea0
+ar screens.preferences 1490d0caef75 031ba60613fa
+ar screens.preferences_description 09123771ebf4 3e5a7bbd9310
+ar screens.save 1509f561f241 ddfcaf9d0144
+ar screens.theme 19d8d295e681 38e265ee4d4c
+ar screens.time_zone b9fe1464783e 2d25557e7c23
+ar screens.time_zone_auto 2cc61310db9b cea94ac984e6
 ar site.description 4678adbf73e2 a2d6a92e0dc9
 ar site.title a53f68bc82b2 7fda41ea6c0d
 de bindings.after 59903b2028fa 498ca101ab5e
@@ -64,8 +80,29 @@ de gsxui.close 7d9eb7acb13e b808f6e97075
 de home.heading 8a7525b1492f 7800bd538c37
 de home.intro 66000b571077 e41641a84cd0
 de home.label d8da2c49df39 74b487d9d223
-de home.languages 318655cea4bd 17d630275f43
 de home.placeholder ab0f84062e48 dc7a409c4c32
 de home.post a5554622c655 079bef4e232f
+de screens.also_in 5d73b6d757bd fc700d9aa96c
+de screens.close 7d9eb7acb13e b808f6e97075
+de screens.docs 7af023c43013 2a9d508bdc77
+de screens.docs_edit 073fd1036ab1 ecf1c6aaf9d5
+de screens.docs_on_github 3b16422e27b3 1e8007a07709
+de screens.docs_on_this_page b5658fc8edda c6ea3ff48113
+de screens.hour_cycle 93ff9273de4b e1ac32556c5e
+de screens.hour_cycle_auto de6bb7c954a5 a8f9e14ad5dc
+de screens.languages 318655cea4bd 17d630275f43
+de screens.loading ba3bbbe10d8b 976723893920
+de screens.no_thanks 49780701dc2d 98fb8c35dc94
+de screens.preferences 1490d0caef75 9e1bfd75573a
+de screens.preferences_description 09123771ebf4 1049fb0c8ae6
+de screens.save 1509f561f241 f6b2ff39f540
+de screens.theme 19d8d295e681 c2880a59df92
+de screens.time_zone b9fe1464783e 00507b23a11b
+de screens.time_zone_auto 2cc61310db9b 8063a5755752
 de site.description 4678adbf73e2 770309db6d44
 de site.title a53f68bc82b2 b6d1b994b50b
+file pages/screens/docs.gsx 6026f49d1d07
+file pages/screens/language-list.gsx a362660dc34d
+file pages/screens/language-offer.gsx 99b5c5b72cd3
+file pages/screens/preferences.gsx 724682d890df
+file pages/screens/theme-toggle.gsx 3d8bf9b79d18

@@ -26,7 +26,7 @@ component (p Home) Page(props HomeProps) {
 				<ul
 					id={Home.List |> id}
 					class="flex flex-col gap-2"
-					hx-sse:connect=f`@{NotesStream{} |> action}?after=@{strconv.FormatInt(props.After, 10)}`
+					hx-sse:connect=f`@{NotesStream{} |> url}?after=@{strconv.FormatInt(props.After, 10)}`
 					hx-swap="afterbegin"
 				>
 					<p.List notes={props.Notes}/>
@@ -42,7 +42,7 @@ component (p Home) Form(body string, refused bool) {
 	<form
 		id={Home.Form |> id}
 		class="flex flex-wrap gap-2"
-		hx-post={PostNote{} |> action}
+		hx-post={PostNote{} |> url}
 		hx-target={Home.Form |> target}
 		hx-swap="outerHTML"
 	>

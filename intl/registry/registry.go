@@ -1,8 +1,7 @@
 // Package registry is a registry of gsx components that an app copies in and then owns, the way gsxui add copies
 // gsxui's (https://ui.gsxhq.dev): each component a gsx template made of gsxui components, with its text already
-// translated and, for one that runs in the browser, the files it loads there. charter add screen:<name> copies intl's (its
-// screens, intl/ui); go tool gsxkit add copies gsxkit's (github.com/joeblew999/go-htmx4/gsxkit/ui). [Registry.Add] is
-// that command, for any registry (#77, #164).
+// translated and, for one that runs in the browser, the files it loads there. charter add screen:<name> copies
+// charter's (app/screens). [Registry.Add] is that command.
 package registry
 
 import (
@@ -41,6 +40,7 @@ type Registry struct {
 type Component struct {
 	Name   string   // what add takes, and the file's name in the app: language-list.gsx
 	Gsxui  []string // the gsxui components it is made of, as gsxui add names them
+	Needs  []string // the registry's other components it writes: add copies them with it
 	Assets []string // the files under assets/ it loads in the browser: add copies them into the app's assets folder
 	Use    string   // where it goes in a page, once added: add prints it
 }
@@ -132,7 +132,7 @@ func importPath(spec string) string {
 	return p
 }
 
-// Package is the Go package the components' files declare: "intlui", "gsxkit".
+// Package is the Go package the components' files declare: "screens".
 func (r *Registry) Package() (string, error) {
 	if len(r.Components) == 0 {
 		return "", fmt.Errorf("%s: no components", r.Command)

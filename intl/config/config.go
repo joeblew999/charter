@@ -6,7 +6,6 @@
 //	locales = ["en", "de", "ar"]   # BCP 47 ids, the source (default) first
 //	catalogs = "locales"           # <locale>.toml (ICU MessageFormat), and the generated package
 //	gsxui = "ui"                   # optional: where gsxui add vendors components; gen translates their i18n.T
-//	ui = "pages/intl"              # optional: where charter add screen:<name> copies intl's screens (default pages/intl)
 //	xliff = "xliff"                # optional: where charter run intl:export writes and import reads (default xliff)
 //	badge = "docs/badges/intl.svg" # optional: an SVG badge gen keeps current, "languages | 14, all translated"
 //
@@ -39,7 +38,6 @@ type Config struct {
 	Locales   []string          `toml:"locales"`
 	Catalogs  string            `toml:"catalogs"`
 	Gsxui     string            `toml:"gsxui"`
-	UI        string            `toml:"ui"`
 	XLIFF     string            `toml:"xliff"`
 	Badge     string            `toml:"badge"`
 	Notes     map[string]string `toml:"notes"`
@@ -62,14 +60,6 @@ func (c Config) XLIFFDir() string {
 		return filepath.Join(c.Root, "xliff")
 	}
 	return filepath.Join(c.Root, c.XLIFF)
-}
-
-// UIDir is where charter add screen:<name> copies intl's screens, relative to the app's root: [intl] ui, else pages/intl.
-func (c Config) UIDir() string {
-	if c.UI == "" {
-		return filepath.Join("pages", "intl")
-	}
-	return filepath.FromSlash(c.UI)
 }
 
 // CatalogDir is the catalogs' directory.

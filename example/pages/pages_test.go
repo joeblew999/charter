@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackielii/structpages"
 
+	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/bindings"
 	"github.com/joeblew999/charter/example/db"
@@ -59,9 +60,10 @@ func TestHomeProps(t *testing.T) {
 func serve(t *testing.T, store api.Store) http.Handler {
 	t.Helper()
 	mux := http.NewServeMux()
-	_, err := Mount(mux,
-		structpages.WithRequestArgs(func(*http.Request) (api.Store, error) { return store, nil }, func(*http.Request) (bindings.State, error) { return bindings.State{}, nil }),
-		structpages.WithTargetSelector(structpages.HTMXv4RenderTarget))
+	// The app's own options (its error handler, htmx 4's target selector), with the test's store after them.
+	options := append((&app.App{Docs: &app.Docs{}}).Options(false),
+		structpages.WithRequestArgs(func(*http.Request) (api.Store, error) { return store, nil }, func(*http.Request) (bindings.State, error) { return bindings.State{}, nil }))
+	_, err := Mount(mux, options...)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,9 +4,9 @@ import (
 	"github.com/gsxhq/gsx"
 
 	"github.com/joeblew999/charter/app"
-	"github.com/joeblew999/charter/app/docs"
 	"github.com/joeblew999/charter/intl"
 	"github.com/joeblew999/charter/site/locales"
+	"github.com/joeblew999/charter/site/pages/screens"
 	"github.com/joeblew999/charter/site/ui"
 )
 
@@ -18,11 +18,12 @@ component (p Home) Page() {
 			<app.Head title={locales.SiteTitle |> text} description={locales.SiteDescription |> text}/>
 		</head>
 		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
-			<header class="mx-auto flex max-w-4xl items-center gap-3 p-4">
+			<header class="mx-auto flex max-w-4xl items-center gap-1 p-4">
 				<span class="font-semibold" translate="no">charter</span>
 				<span class="flex-1"></span>
-				<ui.Button variant="ghost" size="sm" href={docs.Index{} |> url}>{ locales.HomeDocs }</ui.Button>
+				<ui.Button variant="ghost" size="sm" href={screens.DocsIndex{} |> url}>{ locales.HomeDocs }</ui.Button>
 				<ui.Button variant="ghost" size="sm" href={Repo} rel="noopener" id="github">{ locales.HomeGithub }</ui.Button>
+				<screens.ThemeToggle/>
 			</header>
 			<ui.Separator/>
 			<main class="mx-auto flex max-w-4xl flex-col gap-10 p-4 py-12">
@@ -30,7 +31,7 @@ component (p Home) Page() {
 					<h1 class="text-4xl font-semibold tracking-tight">{ locales.HomeHeading }</h1>
 					<p class="text-lg text-muted-foreground">{ locales.HomeIntro }</p>
 					<div class="flex flex-wrap gap-3">
-						<ui.Button href={docs.Index{} |> url}>{ locales.HomeDocs }</ui.Button>
+						<ui.Button href={screens.DocsIndex{} |> url}>{ locales.HomeDocs }</ui.Button>
 						<ui.Button variant="outline" href={Example} rel="noopener">{ locales.HomeExample }</ui.Button>
 					</div>
 				</section>

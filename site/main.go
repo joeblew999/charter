@@ -1,5 +1,5 @@
 // charter's own site: its docs, as a charter app. The docs are the Markdown of docs/; the pages that show them are
-// charter's (package app/docs), the same every app's docs get.
+// charter's docs screen (pages/screens), the same every app's docs get.
 //
 //	go tool charter dev       work on it: a save rebuilds and reloads
 //	go tool charter check && go tool charter test

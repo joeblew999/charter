@@ -7,7 +7,10 @@
 //     from the tree ({ Home.Form |> id }, { Home.Form |> target }), never a string.
 //   - What a page calls is a type with ServeHTTP that returns an error: it never writes an error or a redirect
 //     itself (app.Status, app.Redirect), and answers with a component (structpages.RenderComponent).
-//   - Links come from the tree too ({ Bindings{} |> url }, { PostNote{} |> action }).
+//   - Links and forms' targets come from the tree too ({ Bindings{} |> url }, { PostNote{} |> url }), in the
+//     reader's language.
+//   - What every app has (the language list, the docs' pages, the theme switch) is charter's screens, copied into
+//     pages/screens (charter add screen:<name>) and built from this app's own gsxui components.
 package pages
 
 import (
@@ -20,16 +23,19 @@ import (
 	"github.com/jackielii/structpages"
 
 	"github.com/joeblew999/charter/app"
-	"github.com/joeblew999/charter/app/docs"
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/bindings"
+	"github.com/joeblew999/charter/example/pages/screens"
 )
 
 // Pages is the tree.
 type Pages struct {
-	home     Home       `route:"GET /{$} Home"`
-	bindings Bindings   `route:"GET /bindings Bindings"`
-	docs     docs.Pages `route:"/docs Docs"`
+	home     Home         `route:"GET /{$} Home"`
+	bindings Bindings     `route:"GET /bindings Bindings"`
+	docs     screens.Docs `route:"/docs Docs"`
+
+	// The time zone and clock dialog's form, and where it is sent.
+	preferences screens.Preferences `route:"/preferences Preferences"`
 
 	// What the pages call: routes, not pages.
 	post   PostNote       `route:"POST /notes PostNote"`
@@ -117,7 +123,7 @@ func (BindingsAction) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	if err := bindings.Post(r); err != nil {
 		return err
 	}
-	back, err := app.URL(r.Context(), Bindings{})
+	back, err := structpages.URLFor(r.Context(), Bindings{})
 	if err != nil {
 		return err
 	}

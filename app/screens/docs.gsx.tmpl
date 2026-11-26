@@ -1,0 +1,166 @@
+package screens
+
+import (
+	"context"
+	"github.com/gsxhq/gsx"
+	"github.com/gsxhq/gsxui/ui"
+	"github.com/jackielii/structpages"
+	"github.com/joeblew999/charter/app"
+	"github.com/joeblew999/charter/app/screens/locales"
+	"github.com/joeblew999/charter/intl"
+	"net/http"
+	"strings"
+)
+
+// Docs is the app's docs as a group of pages: /docs/ is docs/index.md, /docs/<name> every other Markdown file of
+// docs/. Mount it in the tree at /docs, and name the docs in the App:
+//
+//	docs screens.Docs `route:"/docs Docs"`
+//
+//	Docs: &app.Docs{Name: "My App", Pages: docs.Pages}
+//
+// From charter add screen:docs: the app's own now, to change as it likes.
+type Docs struct {
+	index DocsIndex `route:"GET /{$} Docs"`
+	page  DocsPage  `route:"GET /{slug} Doc"`
+}
+
+// DocsIndex is docs/index.md.
+type DocsIndex struct{}
+
+// DocsPage is every other page of the docs.
+type DocsPage struct{}
+
+// DocsView is what a page of the docs shows: the page, and the docs it is one of.
+type DocsView struct {
+	Docs *app.Docs
+	Doc  app.Doc
+}
+
+func (DocsIndex) Props(docs *app.Docs) (DocsView, error) { return docsView(docs, "") }
+
+func (DocsPage) Props(r *http.Request, docs *app.Docs) (DocsView, error) {
+	return docsView(docs, r.PathValue("slug"))
+}
+
+func docsView(docs *app.Docs, slug string) (DocsView, error) {
+	doc, ok := docs.Find(slug)
+	if !ok {
+		return DocsView{}, app.NotFound("no such page of the docs")
+	}
+	return DocsView{docs, doc}, nil
+}
+
+component (p DocsIndex) Page(v DocsView) {
+	<DocsDocument v={v}/>
+}
+
+component (p DocsPage) Page(v DocsView) {
+	<DocsDocument v={v}/>
+}
+
+// DocsDocument is the page: the docs' pages at the side, the page itself, its sections, and where it comes from.
+// The docs are written in one language (English), which the article says; what is around them is in the reader's.
+component DocsDocument(v DocsView) {
+	<!DOCTYPE html>
+	<html { app.HTML(ctx)... }>
+		<head>
+			<app.Head title={v.Doc.Title + " · " + v.Docs.Name} description={v.Doc.Description}/>
+		</head>
+		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
+			<header class="mx-auto flex max-w-6xl flex-wrap items-center gap-3 p-4">
+				<a href={intl.URL(ctx, "/")} class="font-semibold" translate="no">{ v.Docs.Name }</a>
+				<ui.Badge variant="secondary">{ locales.ScreensDocs }</ui.Badge>
+				<span class="flex-1"></span>
+				{ if v.Docs.Repo != "" {
+					<ui.Button variant="ghost" size="sm" href={v.Docs.Repo} rel="noopener" id="docs-repo">
+						{ locales.ScreensDocsOnGithub(docsRepo(v.Docs.Repo)) }
+					</ui.Button>
+				} }
+				<ThemeToggle/>
+			</header>
+			<ui.Separator/>
+			<div class="mx-auto flex max-w-6xl flex-col gap-8 p-4 md:flex-row">
+				<nav id="docs-nav" aria-label={locales.ScreensDocs} class="flex shrink-0 flex-col gap-1 md:w-52">
+					{ for _, other := range v.Docs.Pages {
+						<ui.Button
+							variant={docsVariant(other.Slug == v.Doc.Slug)}
+							size="sm"
+							class="h-auto justify-start py-1.5 text-start whitespace-normal"
+							href={docsURL(ctx, other)}
+							{ if other.Slug == v.Doc.Slug {
+								aria-current="page"
+							} }
+						>
+							<span lang="en" dir="ltr">{ other.Title }</span>
+						</ui.Button>
+					} }
+				</nav>
+				<main class="min-w-0 flex-1">
+					// The page: HTML that charter build wrote from docs/*.md, the app's own files.
+					<article id="doc" lang="en" dir="ltr" class={docsProse}>{ gsx.Raw(v.Doc.HTML) }</article>
+					{ if v.Docs.Edit(v.Doc) != "" {
+						<ui.Separator class="mt-10 mb-2"/>
+						<ui.Button variant="link" size="sm" class="px-0 text-muted-foreground" href={v.Docs.Edit(v.Doc)} rel="noopener" id="docs-edit">
+							{ locales.ScreensDocsEdit }
+						</ui.Button>
+					} }
+				</main>
+				{ if len(v.Doc.Headings) > 0 {
+					<aside class="hidden shrink-0 lg:block lg:w-48">
+						<p class="mb-2 text-sm font-medium">{ locales.ScreensDocsOnThisPage }</p>
+						<ul id="docs-toc" lang="en" dir="ltr" class="flex flex-col gap-1 text-sm text-muted-foreground">
+							{ for _, h := range v.Doc.Headings {
+								<li class={docsDepth(h.Depth)}>
+									<a href={"#" + h.ID} class="hover:text-foreground">{ h.Title }</a>
+								</li>
+							} }
+						</ul>
+					</aside>
+				} }
+			</div>
+		</body>
+	</html>
+}
+
+// docsURL is a docs page's address, from the tree, in the reader's language.
+func docsURL(ctx context.Context, d app.Doc) (string, error) {
+	if d.Slug == "" {
+		return structpages.URLFor(ctx, DocsIndex{})
+	}
+	return structpages.URLFor(ctx, DocsPage{}, "slug", d.Slug)
+}
+
+// docsVariant marks the page being read in the list of pages.
+func docsVariant(current bool) string {
+	if current {
+		return "secondary"
+	}
+	return "ghost"
+}
+
+// docsDepth indents a section under a section.
+func docsDepth(depth int) string {
+	if depth > 2 {
+		return "ps-3"
+	}
+	return ""
+}
+
+// docsRepo is the repository's name as a reader knows it: owner/name.
+func docsRepo(url string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(strings.TrimRight(url, "/"), "https://"), "github.com/")
+}
+
+// docsProse styles the HTML the Markdown became: Tailwind classes on the elements inside the article, in the app's
+// gsxui tokens, since the HTML itself carries none.
+const docsProse = "flex max-w-3xl flex-col gap-4 leading-7 " +
+	"[&_h1]:text-3xl [&_h1]:font-semibold [&_h1]:tracking-tight " +
+	"[&_h2]:mt-6 [&_h2]:scroll-mt-4 [&_h2]:border-b [&_h2]:pb-2 [&_h2]:text-xl [&_h2]:font-semibold " +
+	"[&_h3]:mt-2 [&_h3]:scroll-mt-4 [&_h3]:text-lg [&_h3]:font-medium " +
+	"[&_a]:underline [&_a]:underline-offset-4 " +
+	"[&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:ps-6 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:ps-6 " +
+	"[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm " +
+	"[&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:bg-muted [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0 " +
+	"[&_table]:w-full [&_table]:text-sm [&_th]:border-b [&_th]:px-3 [&_th]:py-2 [&_th]:text-start [&_th]:font-medium " +
+	"[&_td]:border-b [&_td]:px-3 [&_td]:py-2 [&_td]:align-top"

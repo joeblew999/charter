@@ -18,7 +18,8 @@
 // What that gives:
 //
 //   - Pages (github.com/jackielii/structpages): Pages is the tree of them, each page a type with its route in the
-//     field's tag and a Page component. The tree is the one source of routes: links are { About{} |> url } (URL), and
+//     field's tag and a Page component. The tree is the one source of routes: links are { About{} |> url }
+//     (structpages.URLFor, in the reader's language), and
 //     the pages search engines may index are the tree's GET routes without parameters, and the docs.
 //   - Everything that is no page goes to API.
 //   - Vite (github.com/gsxhq/vite): with charter dev a page loads web/main.js from Vite's dev server and reloads on a
@@ -39,6 +40,7 @@ import (
 	"bytes"
 	"context"
 	"io/fs"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -93,6 +95,7 @@ type App struct {
 	vite  *vite.Vite
 	err   error
 	pages []string // the pages search engines may index, each a path without a language
+	site  intl.Site
 	tree  *structpages.StructPages
 }
 
@@ -109,34 +112,35 @@ type page struct {
 
 // Handler is the app as one handler.
 func (a *App) Handler() http.Handler {
-	mux := http.NewServeMux()
-	if a.API != nil {
-		mux.Handle("/", a.API)
+	// The tree is mounted once for each language, each told its language's prefix (structpages.WithURLPrefix): a link
+	// from the tree ({ About{} |> url }, structpages.URLFor) is then in the reader's language by itself, a form's
+	// target and a stream too, and structpages' own linter sees every one of them.
+	byLanguage := map[*intl.Locale]http.Handler{}
+	languages := intl.Shipped()
+	if len(languages) == 0 {
+		languages = intl.Locales{intl.Default()}
 	}
-	if a.Pages != nil {
-		// Every route of the tree passes here once, as it is mounted: that is where the list of pages comes from.
-		each := func(next http.Handler, pn *structpages.PageNode) http.Handler {
-			if path, ok := indexed(pn); ok {
-				a.pages = append(a.pages, path)
+	for i, language := range languages {
+		mux := http.NewServeMux()
+		if a.API != nil {
+			mux.Handle("/", a.API)
+		}
+		if a.Pages != nil {
+			tree, err := a.Pages(mux, append(a.Options(i == 0), structpages.WithURLPrefix(intl.Prefix(language)))...)
+			if err != nil {
+				panic(err) // the page tree is code: the first run shows a mistake in it
 			}
-			// A page goes out whole; an action or a stream writes as it goes.
-			if _, isPage := pn.Components["Page"]; isPage {
-				return whole(next)
+			if language == intl.Default() || a.tree == nil {
+				a.tree = tree
 			}
-			return next
 		}
-		args := a.Args
-		if a.Docs != nil {
-			// The docs' pages ask for them by type, and each is a page of the sitemap.
-			args = append(slices.Clone(args), a.Docs)
-			a.pages = append(a.pages, a.Docs.paths()...)
+		byLanguage[language] = mux
+	}
+	if a.Docs != nil {
+		if !slices.Contains(a.pages, "/docs/") {
+			panic("app: the app has Docs and its tree no page at /docs/: mount the docs screen there (charter add screen:docs)")
 		}
-		tree, err := a.Pages(mux, structpages.WithArgs(args...), structpages.WithRequestArgs(a.RequestArgs...),
-			structpages.WithErrorHandler(failed), structpages.WithMiddlewares(each), structpages.WithTargetSelector(structpages.HTMXv4RenderTarget))
-		if err != nil {
-			panic(err) // the page tree is code: the first run shows a mistake in it
-		}
-		a.tree = tree
+		a.pages = append(a.pages, a.Docs.paths()...)
 	}
 	isPage := func(path string) bool { return slices.Contains(a.pages, path) }
 	// A page's path as search engines ask for it has its language and its query: /de/about?x=1.
@@ -145,13 +149,14 @@ func (a *App) Handler() http.Handler {
 		return isPage(intl.Unprefixed(path))
 	}
 	var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mux, ok := byLanguage[intl.Current(r.Context())]
+		if !ok {
+			mux = byLanguage[intl.Default()]
+		}
 		mux.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), key{}, page{a, r})))
 	})
-	h = intl.Site{
-		IsPage:             isPage,
-		ConnectionTimeZone: func(r *http.Request) string { return CFOf(r).Timezone },
-		Origin:             Origin,
-	}.Handler(h)
+	a.site.IsPage = isPage
+	h = a.site.Handler(h)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// A path that touches no binding: what gsx dev probes after each rebuild, what a Go runtime answers as it
 		// starts warm, what a health check asks.
@@ -226,17 +231,40 @@ type buffered struct {
 func (b *buffered) WriteHeader(status int)      { b.status = status }
 func (b *buffered) Write(p []byte) (int, error) { return b.body.Write(p) }
 
-// URL is a page's address, from its route in the tree, in the request's language: gsx.toml's url filter, written
-// href={ About{} |> url }. A page with a Query method ("?topic=x") has it added.
-func URL(ctx context.Context, page any) (string, error) {
-	u, err := structpages.URLFor(ctx, page)
-	if err != nil {
-		return "", err
+// Options are the tree's options as the app mounts it: what a test that mounts the tree itself passes, with its
+// own RequestArgs after them, so that it is the same tree. collect: also note which routes are pages search engines
+// may index (the app does, once).
+//
+//	pages.Mount(mux, append((&app.App{}).Options(false), structpages.WithRequestArgs(fake))...)
+func (a *App) Options(collect bool) []structpages.Option {
+	// Every route of the tree passes here once, as it is mounted: that is where the list of pages comes from.
+	each := func(next http.Handler, pn *structpages.PageNode) http.Handler {
+		if path, ok := indexed(pn); ok && collect {
+			a.pages = append(a.pages, path)
+		}
+		// A page goes out whole; an action or a stream writes as it goes.
+		if _, isPage := pn.Components["Page"]; isPage {
+			return whole(next)
+		}
+		return next
 	}
-	if q, ok := page.(interface{ Query() string }); ok {
-		u += q.Query()
+	// What the screens' routes ask for (the time zone and clock dialog): the site's languages, as it is served.
+	a.site.ConnectionTimeZone = func(r *http.Request) string { return CFOf(r).Timezone }
+	a.site.Origin = Origin
+	args := append(slices.Clone(a.Args), a.site)
+	if a.Docs != nil {
+		// The docs' pages ask for them by type.
+		args = append(args, a.Docs)
 	}
-	return intl.URL(ctx, u), nil
+	return []structpages.Option{
+		structpages.WithArgs(args...), structpages.WithRequestArgs(a.RequestArgs...),
+		structpages.WithErrorHandler(failed), structpages.WithMiddlewares(each),
+		structpages.WithTargetSelector(structpages.HTMXv4RenderTarget),
+		// A field of the tree that is no route is a mistake, said when the app starts.
+		structpages.WithWarnEmptyRoute(func(pn *structpages.PageNode) {
+			log.Printf("app: %s is in the page tree and has no Page, Props or ServeHTTP: it answers nothing", pn.Name)
+		}),
+	}
 }
 
 // assets is Vite, made once: under charter dev (VITE_DEV_URL, a variable of the Worker there) the dev server's

@@ -22,6 +22,7 @@ component Head(title string, description string) {
 		lang={h.Lang}
 	/>
 	<intl.Head page={h.Page}/>
+	<theme/>
 	<assets bundle={h.Assets}/>
 }
 
@@ -41,4 +42,25 @@ component assets(bundle vite.Bundle) {
 	{ for _, src := range bundle.JS {
 		<script type="module" src={src}></script>
 	} }
+}
+
+// theme is the light or dark theme of the app's gsxui preset (web/gsxui/theme.css: the class dark on <html>), as
+// gsxui's own site does it. It runs before the first paint, so a page never shows in the wrong one: what the reader
+// chose (kept by the browser), else what their system asks for. Any element with data-theme-toggle switches it:
+// the theme-toggle screen is one.
+component theme() {
+	<script>
+		(function () {
+			var root = document.documentElement;
+			try {
+				var chosen = localStorage.getItem("theme");
+				if (chosen === "dark" || (!chosen && matchMedia("(prefers-color-scheme: dark)").matches)) root.classList.add("dark");
+			} catch (e) {}
+			document.addEventListener("click", function (event) {
+				if (!event.target.closest || !event.target.closest("[data-theme-toggle]")) return;
+				var dark = root.classList.toggle("dark");
+				try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch (e) {}
+			});
+		})();
+	</script>
 }

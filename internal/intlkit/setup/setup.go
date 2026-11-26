@@ -175,12 +175,6 @@ func DetectGsxui(root string) string {
 var catalogsKey = regexp.MustCompile(`(?m)^catalogs\s*=.*\n`)
 
 // addGsxui writes gsxui = dir into an charter.toml's [intl] set up before gsxui was: init run again after gsxui init.
-// UI writes ui = dir into the app's charter.toml's [intl] when it has no ui: where charter add screen:<name> put intl's screens.
-func UI(root, dir string, log io.Writer) error {
-	return addKey(filepath.Join(root, "charter.toml"), "ui", dir,
-		"Where charter add screen:<name> copies intl's screens (package intlui): the language list, the language offer, the time zone\n# and clock dialog.", log)
-}
-
 // addKey writes key = value, below its comment, after [intl] catalogs line, unless the file sets key already.
 func addKey(path, key, value, comment string, log io.Writer) error {
 	b, err := os.ReadFile(path)

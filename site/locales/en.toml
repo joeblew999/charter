@@ -31,3 +31,16 @@ tests = "Pages in a real browser, the API through its own SDK, on wrangler dev a
 
 [gsxui]
 close = "Close"
+
+# charter's screens: the language list, the offer of the page in the reader's language, the time zone and clock dialog.
+[screens]
+# The text gsxui's components write themselves (i18n.T): charter add screen:<name> writes what the app's components use.
+# The docs screen: its name (a badge beside the app's name, and the name of the list of its pages),
+# the link to the repository ({repository} is its name, "owner/name"), the heading above a page's sections, and the
+# link to the page's own file.
+docs = "Docs"
+docs_on_github = "{repository} on GitHub"
+docs_on_this_page = "On this page"
+docs_edit = "Edit this page on GitHub"
+# The button that switches between the light and the dark theme, as screen readers name it.
+theme = "Switch between light and dark"

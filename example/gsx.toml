@@ -8,11 +8,10 @@ url_presets = ["htmx"]
 # intl's gsx filters: { t |> date(opts) }, { n |> number }, href={ "/about" |> localize } (intl/README.md).
 filter_packages = ["github.com/joeblew999/charter/intl/filters"]
 
-# Links and targets come from the page tree (pages.Pages). url is a page's address in the reader's language; action
-# is a route that is no page (a form's target, a stream), which has one address.
+# Links, ids and targets come from the page tree (pages.Pages), as structpages has them: url is a route's address, in
+# the reader's language.
 [filters]
-url = "github.com/joeblew999/charter/app.URL"
-action = "github.com/jackielii/structpages.URLFor"
+url = "github.com/jackielii/structpages.URLFor"
 id = "github.com/jackielii/structpages.ID"
 target = "github.com/jackielii/structpages.IDTarget"
 key = "github.com/jackielii/structpages.Key"

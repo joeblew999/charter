@@ -10,7 +10,6 @@ intro = "Schreiben Sie eine, und sie erscheint sofort auf jeder hier geöffneten
 placeholder = "Schreiben Sie eine Notiz"
 label = "Notiz"
 post = "Senden"
-languages = "Sprachen"
 
 [bindings]
 link = "Was Cloudflare diesem Worker bereitstellt"
@@ -44,3 +43,22 @@ nav = "Dokumentation"
 
 [gsxui]
 close = "Schließen"
+
+[screens]
+languages = "Sprachen"
+also_in = "Diese Seite gibt es auch auf {language}."
+no_thanks = "Nein danke"
+preferences = "Zeitzone und Uhrzeitformat"
+preferences_description = "Datums- und Zeitangaben auf allen Seiten verwenden diese Einstellungen. „Automatisch“ verwendet die Zeitzone Ihres Browsers."
+loading = "Wird geladen…"
+time_zone = "Zeitzone"
+time_zone_auto = "Automatisch ({zone})"
+hour_cycle = "Uhrzeitformat"
+hour_cycle_auto = "Standard der Sprache ({example})"
+save = "Speichern"
+close = "Schließen"
+theme = "Zwischen hell und dunkel wechseln"
+docs = "Doku"
+docs_on_github = "{repository} auf GitHub"
+docs_on_this_page = "Auf dieser Seite"
+docs_edit = "Diese Seite auf GitHub bearbeiten"

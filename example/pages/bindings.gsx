@@ -29,7 +29,7 @@ component (p Bindings) Page(s bindings.State) {
 		<BindingsCard name="R2" about={locales.BindingsR2}>
 			<form
 				method="post"
-				action={BindingsAction{} |> action(map[string]any{"action": "note"})}
+				action={BindingsAction{} |> url(map[string]any{"action": "note"})}
 				class="flex flex-wrap gap-2"
 			>
 				<ui.Input
@@ -46,7 +46,7 @@ component (p Bindings) Page(s bindings.State) {
 		<BindingsCard name="Queues" about={locales.BindingsQueues}>
 			<form
 				method="post"
-				action={BindingsAction{} |> action(map[string]any{"action": "queue"})}
+				action={BindingsAction{} |> url(map[string]any{"action": "queue"})}
 				class="flex flex-wrap gap-2"
 			>
 				<ui.Input
@@ -98,7 +98,7 @@ component (p Bindings) Page(s bindings.State) {
 		<BindingsCard name="Email" about={locales.BindingsEmail}>
 			<form
 				method="post"
-				action={BindingsAction{} |> action(map[string]any{"action": "email"})}
+				action={BindingsAction{} |> url(map[string]any{"action": "email"})}
 				class="flex flex-wrap gap-2"
 			>
 				<ui.Input

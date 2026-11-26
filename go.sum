@@ -28,8 +28,6 @@ github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/gsxhq/gsx v0.5.0 h1:PiWCnbubv1OmFFDkx8kgKczqVPpv+S1fh8Bve9CkENM=
 github.com/gsxhq/gsx v0.5.0/go.mod h1:njmUTpbJik9Q9AQh8CNhxwEZCFDpfmpqdZ4fDKaVaEM=
-github.com/gsxhq/gsxui v0.0.0-20261124142639-b9ffdfaa8826 h1:3wkxsIYKNV9zfc0qZlp6H7Q1w3bfZLE40Pb5KR5Gghc=
-github.com/gsxhq/gsxui v0.0.0-20261124142639-b9ffdfaa8826/go.mod h1:pNVtvfQwTSsmRJefk+/iCDnV+cLDI4Nj/eZA9ruYt8A=
 github.com/gsxhq/vite v0.3.2 h1:7gcoJHDow/xlrHG11UKc/bGg9zYtSuWaDCMKpaI0JnI=
 github.com/gsxhq/vite v0.3.2/go.mod h1:tDUvkK2CbjwYex6b5+kHL0tK2vIwS0h3kJQLroxs2PY=
 github.com/hashicorp/golang-lru/v2 v2.0.7 h1:a+bsQ5rvGLjzHuww6tVxozPZFVghXaHOwFs4luLUK2k=
@@ -38,8 +36,6 @@ github.com/jackielii/ctxkey v1.0.1 h1:CcgbR+fQbrzZJWxI/7Ec4EhzUbmTU1sfI1gV7MAgjI
 github.com/jackielii/ctxkey v1.0.1/go.mod h1:fo4HOwrvSnc3n8o5qZ5L+FVcSyQn+d67CCnlEbH24uc=
 github.com/jackielii/structpages v0.12.0 h1:CCymBIL4yusgWRPV0L+0lpywGWYoUN0b8ORoOPnz9Zw=
 github.com/jackielii/structpages v0.12.0/go.mod h1:B8zJ4yFOGnesO+2PjKpzD/V58KktDNCKDmvNFN+DBiA=
-github.com/jackielii/tailwind-merge-go v0.0.0-20260726184505-8a911ed0cf9a h1:sQ0IKLvvmncbGl+iajFA01/M6bLcrJLYAXHwhHOTh+s=
-github.com/jackielii/tailwind-merge-go v0.0.0-20260726184505-8a911ed0cf9a/go.mod h1:voVtdB9w9rAqShh8L7IMzv5ipGAeDCP9G3O0PqrKwnc=
 github.com/mattn/go-isatty v0.0.24 h1:tGZZoVgT/KiqK1c8ocVLeDS8BSWMRd47J3Lbz7vsReI=
 github.com/mattn/go-isatty v0.0.24/go.mod h1:nMCL3Zebbrt45jsMDgnfIwz6ydEQApk5oEI3HqDio6A=
 github.com/ncruces/go-strftime v1.1.0 h1:vtPmPWMkb539RGV9WpWT9EwJGvrOCKvMNI4obWL47Hk=

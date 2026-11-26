@@ -24,7 +24,7 @@ import (
 // It also records each file charter add screen:<name> copied into the app (one of intl's screens) with the hash of what it
 // wrote, so add can tell a file the app changed from one it may update:
 //
-//	file views/intl/preferences.gsx 5be0c2d9a7f1
+//	file pages/screens/preferences.gsx 5be0c2d9a7f1
 type sum map[string]map[string]sumEntry // locale → key → entry
 
 type sumEntry struct{ source, translation string }

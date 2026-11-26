@@ -1,17 +1,17 @@
 // Package pages is charter's site: a front page, and the docs, which are the Markdown of docs/ shown by charter's
-// own docs pages (package app/docs), the same pages every app's docs get.
+// docs screen (pages/screens, from charter add screen:docs), the same every app's docs get.
 package pages
 
 import (
 	"github.com/jackielii/structpages"
 
-	"github.com/joeblew999/charter/app/docs"
+	"github.com/joeblew999/charter/site/pages/screens"
 )
 
 // Pages is the tree.
 type Pages struct {
-	home Home       `route:"GET /{$} Home"`
-	docs docs.Pages `route:"/docs Docs"`
+	home Home         `route:"GET /{$} Home"`
+	docs screens.Docs `route:"/docs Docs"`
 }
 
 // Mount mounts the tree: what app.App's Pages is.

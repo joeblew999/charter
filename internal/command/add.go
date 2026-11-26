@@ -31,6 +31,13 @@ func Add(args []string) {
 		}
 		return false
 	})
+	// The screens named are added together, last: one screen may be made of another.
+	var screens []string
+	defer func() {
+		if len(screens) > 0 {
+			intl.Main(append(append([]string{"add"}, flags...), screens...))
+		}
+	}()
 	for _, what := range args {
 		kind, name, typed := strings.Cut(what, ":")
 		switch {
@@ -41,9 +48,10 @@ func Add(args []string) {
 				intl.Main([]string{"add-locale", name})
 			}
 		case typed && kind == "ui":
-			check(run.Run(p.Root, nil, "go", "tool", "gsxui", "add", name))
+			// gsxui add's own flags pass through: -diff, -overwrite.
+			check(run.Run(p.Root, nil, "go", append(append([]string{"tool", "gsxui", "add"}, flags...), name)...))
 		case typed && kind == "screen":
-			intl.Main(append(append([]string{"add"}, flags...), name))
+			screens = append(screens, name)
 		case typed && kind == "d1":
 			check(cloudflare(p, []string{"d1", "create", p.Worker.Name + "-" + strings.ToLower(name), "--binding", name, "--update-config"}, nil))
 		case typed:

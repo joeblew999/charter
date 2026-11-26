@@ -9,9 +9,9 @@ import (
 
 // Docs are an app's docs: the Markdown files of its docs/ folder, which charter build turns into Go once
 // (docs/docs.built.go), so that no Markdown code runs on a Worker. An app has them by naming them in its App and
-// mounting charter's pages for them (package app/docs) in its tree:
+// mounting the docs screen (charter add screen:docs) in its tree, at /docs:
 //
-//	docs docs.Pages `route:"/docs Docs"`
+//	docs screens.Docs `route:"/docs Docs"`
 //
 // From that one value come the pages, their place in the sitemap, each page as Markdown (/docs/<page>.md), and what
 // a language model reads: /llms.txt and /llms-full.txt.
@@ -71,11 +71,14 @@ func (d *Docs) Edit(page Doc) string {
 	return strings.TrimRight(d.Repo, "/") + "/edit/main/" + strings.Trim(strings.Trim(d.Dir, "/")+"/"+page.Source, "/")
 }
 
-// paths are the pages' addresses, each a page search engines may index.
+// paths are the addresses of the pages but the first (/docs/, which the tree lists itself): each a page search
+// engines may index.
 func (d *Docs) paths() []string {
-	paths := make([]string, len(d.Pages))
-	for i, page := range d.Pages {
-		paths[i] = page.Path()
+	var paths []string
+	for _, page := range d.Pages {
+		if page.Slug != "" {
+			paths = append(paths, page.Path())
+		}
 	}
 	return paths
 }

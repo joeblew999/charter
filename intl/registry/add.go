@@ -18,7 +18,7 @@ import (
 
 // Options are where add writes and how.
 type Options struct {
-	Dir       string // where the components' gsx goes, from the app's root: "views/intl"
+	Dir       string // where the components' gsx goes, from the app's root: "pages/screens"
 	Assets    string // where their browser files go, from the app's root: "web/gsxkit"
 	Diff      bool   // show how the registry's components differ from the app's copies, writing nothing
 	Overwrite bool   // replace copies the app changed
@@ -32,13 +32,16 @@ type Options struct {
 // o.Diff found a difference or a changed copy was kept.
 func (r *Registry) Add(c config.Config, names []string, o Options) (int, error) {
 	var picked []Component
-	for _, name := range names {
+	names = slices.Clone(names)
+	for i := 0; i < len(names); i++ {
+		name := names[i]
 		comp, ok := r.Find(name)
 		if !ok {
 			return 1, fmt.Errorf("%s: no component %q; there are %s", r.Command, name, strings.Join(r.Names(), ", "))
 		}
 		if !slices.ContainsFunc(picked, func(o Component) bool { return o.Name == name }) {
 			picked = append(picked, comp)
+			names = append(names, comp.Needs...) // what it writes of the registry's own comes with it
 		}
 	}
 	gsxui := cmp.Or(c.Gsxui, setup.DetectGsxui(c.Root))
@@ -184,12 +187,8 @@ func gsxuiAdd(root, dir string, comps []Component) error {
 	if len(missing) == 0 {
 		return nil
 	}
-	bin, err := exec.LookPath("gsxui")
-	if err != nil {
-		return fmt.Errorf("these components need gsxui's %s, and gsxui isn't installed: run gsxui add %[1]s, then this again",
-			strings.Join(missing, " "))
-	}
-	cmd := exec.Command(bin, append([]string{"add"}, missing...)...)
+	// gsxui is the app's own tool (go.mod), at the version the app pins.
+	cmd := exec.Command("go", append([]string{"tool", "gsxui", "add"}, missing...)...)
 	cmd.Dir, cmd.Stdout, cmd.Stderr = root, os.Stdout, os.Stderr
 	return cmd.Run()
 }

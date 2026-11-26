@@ -31,26 +31,28 @@ func Head(title string, description string) _gsxrt.Node {
 //line head.gsx:24:2
 		_gsxgw.Node(ctx, intl.Head( /*line head.gsx:24:19*/ h.Page))
 //line head.gsx:25:2
-		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:25:18*/, h.Assets))
+		_gsxgw.NodeResult(_gsxrendertheme(ctx, _gsxgw))
+//line head.gsx:26:2
+		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:26:18*/, h.Assets))
 		return _gsxgw.Err()
 	})
 }
 
-//line head.gsx:28:1
+//line head.gsx:29:1
 // Entry loads another of Vite's entries (vite.config.ts's input), for the one page that needs it: its stylesheets,
 // the chunks it imports, and its module.
 
-//line head.gsx:30:1
+//line head.gsx:31:1
 func Entry(name string) _gsxrt.Node {
 	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
 		_gsxgw := _gsxrt.W(_gsxw)
-//line head.gsx:31:2
-		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:31:18*/, headOf(ctx, name).Assets))
+//line head.gsx:32:2
+		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:32:18*/, headOf(ctx, name).Assets))
 		return _gsxgw.Err()
 	})
 }
 
-//line head.gsx:34:1
+//line head.gsx:35:1
 func assets(bundle vite.Bundle) _gsxrt.Node {
 	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
 		_gsxgw := _gsxrt.W(_gsxw)
@@ -62,32 +64,57 @@ func _gsxrenderassets(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, bundle vite.Bu
 	if _gsxerr := _gsxgw.Err(); _gsxerr != nil {
 		return _gsxerr
 	}
-//line head.gsx:35:2
-	for /*line head.gsx:35:8*/ _, href := range bundle.CSS {
-//line head.gsx:36:3
+//line head.gsx:36:2
+	for /*line head.gsx:36:8*/ _, href := range bundle.CSS {
+//line head.gsx:37:3
 		_gsxgw.S("<link rel=\"stylesheet\" href=\"")
-		_gsxgw.URL(string( /*line head.gsx:36:32*/ href))
+		_gsxgw.URL(string( /*line head.gsx:37:32*/ href))
 		_gsxgw.S("\"")
 		_gsxgw.Nonce(ctx)
 		_gsxgw.S(">")
 	}
-//line head.gsx:38:2
-	for /*line head.gsx:38:8*/ _, href := range bundle.Preloads {
-//line head.gsx:39:3
+//line head.gsx:39:2
+	for /*line head.gsx:39:8*/ _, href := range bundle.Preloads {
+//line head.gsx:40:3
 		_gsxgw.S("<link rel=\"modulepreload\" href=\"")
-		_gsxgw.URL(string( /*line head.gsx:39:35*/ href))
+		_gsxgw.URL(string( /*line head.gsx:40:35*/ href))
 		_gsxgw.S("\"")
 		_gsxgw.Nonce(ctx)
 		_gsxgw.S(">")
 	}
-//line head.gsx:41:2
-	for /*line head.gsx:41:8*/ _, src := range bundle.JS {
-//line head.gsx:42:3
+//line head.gsx:42:2
+	for /*line head.gsx:42:8*/ _, src := range bundle.JS {
+//line head.gsx:43:3
 		_gsxgw.S("<script type=\"module\" src=\"")
-		_gsxgw.URL(string( /*line head.gsx:42:30*/ src))
+		_gsxgw.URL(string( /*line head.gsx:43:30*/ src))
 		_gsxgw.S("\"")
 		_gsxgw.Nonce(ctx)
 		_gsxgw.S("></script>")
 	}
+	return _gsxgw.Err()
+}
+
+//line head.gsx:47:1
+// theme is the light or dark theme of the app's gsxui preset (web/gsxui/theme.css: the class dark on <html>), as
+// gsxui's own site does it. It runs before the first paint, so a page never shows in the wrong one: what the reader
+// chose (kept by the browser), else what their system asks for. Any element with data-theme-toggle switches it:
+// the theme-toggle screen is one.
+
+//line head.gsx:51:1
+func theme() _gsxrt.Node {
+	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
+		_gsxgw := _gsxrt.W(_gsxw)
+		return _gsxrendertheme(ctx, _gsxgw)
+	})
+}
+
+func _gsxrendertheme(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer) error {
+	if _gsxerr := _gsxgw.Err(); _gsxerr != nil {
+		return _gsxerr
+	}
+//line head.gsx:52:2
+	_gsxgw.S("<script")
+	_gsxgw.Nonce(ctx)
+	_gsxgw.S(">\n(function () {\n\tvar root = document.documentElement;\n\ttry {\n\t\tvar chosen = localStorage.getItem(\"theme\");\n\t\tif (chosen === \"dark\" || (!chosen && matchMedia(\"(prefers-color-scheme: dark)\").matches)) root.classList.add(\"dark\");\n\t} catch (e) {}\n\tdocument.addEventListener(\"click\", function (event) {\n\t\tif (!event.target.closest || !event.target.closest(\"[data-theme-toggle]\")) return;\n\t\tvar dark = root.classList.toggle(\"dark\");\n\t\ttry { localStorage.setItem(\"theme\", dark ? \"dark\" : \"light\"); } catch (e) {}\n\t});\n})();\n</script>")
 	return _gsxgw.Err()
 }
