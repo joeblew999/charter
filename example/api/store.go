@@ -29,6 +29,9 @@ type Store interface {
 // app's request arg (app.App's RequestArgs), so a page declares a Store and never opens one.
 func OpenStore(*http.Request) (Store, error) { return open() }
 
+// StoreOn is the store on a D1 database that is open already: for the seed, which is handed one.
+func StoreOn(conn cloud.DB) Store { return d1{conn} }
+
 func open() (Store, error) {
 	conn, err := cloud.Open("DB")
 	return d1{conn}, err

@@ -291,3 +291,39 @@ func TestWhoMayRemoveANote(t *testing.T) {
 		t.Errorf("the writer removing their own: HTTP %d, %d left", rec.Code, len(store.all))
 	}
 }
+
+// The seed and the tests are one thing: what fills a developer's database (api.Seed, with api.Seeded) fills this
+// test's store by the same call, through the app's own Post. So the page is tested with the people and notes a
+// developer sees on theirs: Lin, a member, may take away Lin's notes; Grace, a moderator, anyone's; nobody, none.
+func TestThePageWithTheSeed(t *testing.T) {
+	store := &notes{}
+	if err := api.Seed(context.Background(), store, nil); err != nil {
+		t.Fatal(err)
+	}
+	buttons := func(who charter.Caller) int {
+		rec := httptest.NewRecorder()
+		serve(t, store, who).ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+		html := rec.Body.String()
+		for _, n := range api.Seeded.Notes {
+			if !strings.Contains(html, n.By.Name) {
+				t.Errorf("the page does not say %s wrote a note", n.By.Name)
+			}
+		}
+		return strings.Count(html, "data-remove")
+	}
+	lins := 0
+	for _, n := range api.Seeded.Notes {
+		if n.By.ID == api.Seeded.Lin.ID {
+			lins++
+		}
+	}
+	if got := buttons(api.Seeded.Lin.Caller()); got != lins {
+		t.Errorf("Lin, a member, has %d remove buttons, want %d: their own notes'", got, lins)
+	}
+	if got := buttons(api.Seeded.Grace.Caller()); got != len(api.Seeded.Notes) {
+		t.Errorf("Grace, a moderator, has %d remove buttons, want %d: every note's", got, len(api.Seeded.Notes))
+	}
+	if got := buttons(nobody); got != 0 {
+		t.Errorf("nobody has %d remove buttons", got)
+	}
+}

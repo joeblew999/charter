@@ -195,6 +195,25 @@ func TestDev(t *testing.T) {
 		t.Errorf("✗ no log of the Worker and the builds at .charter/dev/dev.log: %v", err)
 	}
 
+	// The database made again and seeded, beside the loop, whose Worker has it open: a note that was there is gone,
+	// the seed's are back, and the page shows so with no restart.
+	if out, err := exec.Command("go", "tool", "charter", "run", "db:execute", "INSERT INTO notes (body, author) VALUES ('a note the seed does not have', 'Nobody')").CombinedOutput(); err != nil {
+		t.Fatalf("✗ db:execute beside charter dev: %v\n%s", err, out)
+	}
+	until("a row written beside it", "/", "a note the seed does not have")
+	if out, err := exec.Command("go", "tool", "charter", "run", "db:seed").CombinedOutput(); err != nil {
+		t.Fatalf("✗ charter run db:seed beside charter dev: %v\n%s", err, out)
+	}
+	for start := time.Now(); ; time.Sleep(200 * time.Millisecond) {
+		if html := page("/"); strings.Contains(html, "Grace, moderating") && !strings.Contains(html, "a note the seed does not have") {
+			t.Logf("✓ db:seed beside charter dev: the database is the seed's again, on the page after %.1f s", time.Since(start).Seconds())
+			break
+		}
+		if time.Since(start) > time.Minute {
+			t.Fatalf("✗ after db:seed beside charter dev the page is not the seed's\n%s", log.String())
+		}
+	}
+
 	// Another command beside it: charter check passes, and dev is not disturbed.
 	check := exec.Command("go", "tool", "charter", "check")
 	if b, err := check.CombinedOutput(); err != nil {

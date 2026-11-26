@@ -16,6 +16,7 @@ go tool charter deploy                           # then: go tool charter test --
 | `pages/` | The page tree (structpages): the home page with its live list, the Cloudflare page, and the routes they call |
 | `api/` | The notes API's contract and handlers; `api.Notes` is the one feed behind the page's list and the API's stream; `api.Auth`, `api.Roles` and `api.MayRemove` are who may do what, for the pages and the API alike |
 | `db/` | `schema.sql`, the tables as they are now, and `queries.sql`; charter writes `migrations/` and `queries.gen.go` from them |
+| `seed.go`, `api/fixtures.go` | What the local database starts with, and what the tests know is there: three people, one of each role, with a token each (`ch_seed_ada`, `ch_seed_grace`, `ch_seed_lin`), and their notes |
 | `bindings/` | One file per thing Cloudflare gives a Worker, through workers-go's own packages |
 | `locales/` | English, German, Arabic |
 | `docs/` | The app's own docs, as Markdown |

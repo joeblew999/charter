@@ -55,7 +55,11 @@ func Dev(args []string) {
 	check(migrate(p, map[string]string{"WRANGLER_SEND_METRICS": "false"}, "--local"))
 	if fresh && hasSeed(p) {
 		say("a new local database: seeding it (go tool charter run db:seed makes it again any time)")
-		check(seedLocal(p))
+		if err := seedLocal(p); err != nil {
+			// Not left half made: the next charter dev starts from nothing again, and seeds.
+			os.RemoveAll(filepath.Join(p.Root, ".wrangler", "state", "v3", "d1"))
+			check(err)
+		}
 	}
 	if c, err := intlconfig.Find(p.Root); err == nil && hasIntl(p) {
 		go watch(p, "languages", "messages", func() []string {

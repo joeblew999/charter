@@ -136,7 +136,10 @@ const SeedPath = "/__charter/seed"
 
 // seeded runs the seeds, for a request from this machine.
 func seeded(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost || !local(r) {
+	// From this machine itself, by its name: the address charter asks at. An address of the network around it is
+	// local for a page, and not for this.
+	host, _, _ := strings.Cut(r.Host, ":")
+	if r.Method != http.MethodPost || host != "localhost" {
 		http.Error(w, "a seed runs for charter, on this machine", http.StatusForbidden)
 		return
 	}

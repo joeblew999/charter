@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/joeblew999/charter/internal/project"
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -13,6 +14,8 @@ import (
 // wrangler.jsonc's env (production, staging). More arguments are wrangler deploy's. Credentials are wrangler's
 // (cloudflare, in verbs.go, says where they come from).
 func Deploy(args []string) {
+	// A deployed Worker never has the app's seed in it, whatever the environment this was started in says.
+	os.Unsetenv(seedBuild)
 	p := load()
 	var env []string
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {

@@ -91,32 +91,44 @@ type Note struct{ db.NotesRow }
 
 ## Seeding
 
-A seed is what a new checkout's database starts with. It is Go, with the app's own queries, so a column that changes breaks it when it is compiled, not when someone needs it.
+A seed is what a new checkout's database starts with. In charter it is also what the tests know is there: one set of values, written once, in the app's own types.
 
-```go file=../example/db/seed.go#seed
-func seed(_ context.Context, conn cloud.DB) error {
-	people := []struct{ id, name, role string }{
-		{"seed-ada", "Ada", "admin"},
-		{"seed-grace", "Grace", "moderator"},
-		{"seed-lin", "Lin", "member"},
-	}
-	for _, p := range people {
-		// The people's table is the sign-in screen's, with no query of the app's own.
-		if err := cloud.Exec(conn, "INSERT INTO users (id, name, role) VALUES (?, ?, ?)", p.id, p.name, p.role); err != nil {
-			return err
+```go file=../example/api/fixtures.go#Seeded
+// Seeded is what a new checkout's database starts with, and what a test knows is there: a few people, one of each
+// role, and notes they wrote. It is written down once, as values of the app's own types. The seed fills the local
+// database with it (go tool charter run db:seed; charter dev, on a database it has just made; charter test, on the
+// one it makes), and a test of a page fills its own store with the same call, so both show the same notes by the
+// same people.
+//
+// Each person has a token, so that a developer, a test or an agent can be the admin, the moderator or the member
+// at once: Authorization: Bearer ch_seed_grace. The seed is built only for seeding and runs only on this machine;
+// a deployed Worker has neither these people nor their tokens.
+var Seeded = struct {
+	Ada, Grace, Lin SeededPerson
+	Notes           []SeededNote
+}{
+	Ada:   SeededPerson{charter.Person{ID: "seed-ada", Name: "Ada", Role: "admin"}, "ch_seed_ada"},
+	Grace: SeededPerson{charter.Person{ID: "seed-grace", Name: "Grace", Role: "moderator"}, "ch_seed_grace"},
+	Lin:   SeededPerson{charter.Person{ID: "seed-lin", Name: "Lin", Role: "member"}, "ch_seed_lin"},
+}
+```
+
+It fills a store the way the app itself writes, through the app's own functions, so a seeded note is a note the app would have made: with its writer, and announced to whoever follows.
+
+```go file=../example/api/fixtures.go#Seed
+// Seed fills a store with Seeded, the way the app itself writes: each note through Post, by its writer, as the
+// page's form and the API's createNote write one. accounts is where the people are kept (the Worker's database);
+// a test of a page, which is handed its caller, passes nil.
+func Seed(ctx context.Context, store Store, accounts charter.Accounts) error {
+	if accounts != nil {
+		for _, p := range []SeededPerson{Seeded.Ada, Seeded.Grace, Seeded.Lin} {
+			if err := charter.SeedPerson(ctx, accounts, p.Person, p.Token); err != nil {
+				return err
+			}
 		}
 	}
-	notes := []struct {
-		by   int
-		body string
-	}{
-		{2, "Lin here. A member writes notes, and takes away their own."},
-		{1, "Grace, moderating: I can take away anyone's note."},
-		{0, "Ada, the admin: I say who is what, on the people page."},
-		{2, "Sign up with a passkey and write one yourself."},
-	}
-	for _, n := range notes {
-		if _, err := CreateNote(conn, n.body, people[n.by].id, people[n.by].name); err != nil {
+	for _, n := range Seeded.Notes {
+		if _, err := Post(ctx, store, n.By.Caller(), n.Body); err != nil {
 			return err
 		}
 	}
@@ -124,19 +136,47 @@ func seed(_ context.Context, conn cloud.DB) error {
 }
 ```
 
-```go
-//go:build seed
+`seed.go`, at the app's top, tells charter about it. It is built only for seeding:
 
-func init() { app.Seed("DB", seed) }
+```go file=../example/seed.go#init
+// The seed: what fills the local database (go tool charter run db:seed; charter dev and charter test, on a database
+// they have just made). What it fills it with is api.Seeded, written with the app's own types and through its own
+// functions; this file only says so to charter. It is built only for seeding (the build tag), in a Worker started
+// on this machine: a Worker that is deployed has none of it.
+func init() {
+	app.Seed("DB", func(ctx context.Context, conn cloud.DB) error {
+		return api.Seed(ctx, api.StoreOn(conn), charter.AccountsOn(conn))
+	})
+}
 ```
 
 ```sh
 go tool charter run db:seed
 ```
 
-That makes the local database again (its rows gone, the migrations run) and fills it. `charter dev` does the same for a database it has just made, so the first page has something on it; a database that is there is yours, and is left alone.
+| When | What happens |
+|---|---|
+| `charter run db:seed` | The local database is made again (its tables gone, the migrations run) and filled |
+| `charter dev`, the first time | The database it has just made is filled; one that is there is yours, and is left alone |
+| `charter test` | The Worker under test starts on a database of its own, filled the same way |
+| A test of a page, as plain Go | Calls `api.Seed` on its own store: the same people and notes, in memory |
 
-The seed runs where the app's database code always runs, in a Worker: charter starts one here, built with the seed in it, asks it to run, and stops it. A Worker that is deployed has none of it, and `db:seed` refuses a deployed database. `db/seed.sql` works too, for plain SQL.
+So a page test, a browser test and your own screen show the same notes by the same people.
+
+Each seeded person has a token (`ch_seed_ada`, `ch_seed_grace`, `ch_seed_lin`), so you, a test or a coding agent can be the admin, the moderator or the member at once, with no one to sign up first:
+
+```sh
+curl -H "Authorization: Bearer ch_seed_grace" -X DELETE http://localhost:5173/api/notes/1
+```
+
+What keeps this safe:
+
+- **The seed never ships.** It is built only when charter seeds, and `charter deploy` builds without it whatever the environment says. A deployed Worker has neither the people nor their tokens.
+- **Nothing is dropped for a seed that does not build.** It is compiled first, and `check` compiles it on every push.
+- **Only the local database.** `db:seed` takes no flag, and refuses one it does not know.
+- **It runs where the app's database code always runs:** in a Worker charter starts here, on the real binding. Beside a running `charter dev` it works in place, with no restart.
+
+`db/seed.sql` works too, for plain SQL, in place of `seed.go`.
 
 ## By hand
 

@@ -294,6 +294,26 @@ func D1Accounts(binding string) func() (Accounts, error) {
 	}
 }
 
+// AccountsOn keeps People in a D1 database that is open already: for an app's seed, which is handed one.
+func AccountsOn(db cloud.DB) Accounts { return d1Accounts{db} }
+
+// SeedPerson keeps a person for an app's seed, and, when token is not empty, a token that is them: a value the seed
+// names, so that a developer, a test and an agent can be that person on a database they have just seeded. A token
+// starts with "ch_", as every token the app issues does. This is for a seed, which no deployed Worker has: a token
+// whose value is written down is no secret.
+func SeedPerson(ctx context.Context, accounts Accounts, who Person, token string) error {
+	if err := accounts.Create(ctx, who); err != nil {
+		return err
+	}
+	if token == "" {
+		return nil
+	}
+	if !strings.HasPrefix(token, tokenPrefix) {
+		return errors.New("api: a seeded token starts with " + tokenPrefix)
+	}
+	return accounts.Issue(ctx, who.ID, TokenScheme, "seed", hashOf(token), nil, time.Time{})
+}
+
 type d1Accounts struct{ db cloud.DB }
 
 type personRow struct {

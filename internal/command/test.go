@@ -4,13 +4,17 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/internal/command/seo"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
 	"github.com/joeblew999/charter/internal/standard"
+	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -196,6 +200,24 @@ func servingWith(p *project.Project, how served, body func(base string, port int
 			return err
 		}
 		command = append(command, "--persist-to", state)
+		// And filled by the app's seed, so what is asked can count on what the seed names: the same people and
+		// notes a developer's own database starts with.
+		if exists(filepath.Join(p.Root, "seed.go")) {
+			quiet[seedBuild] = "1"
+			ask := body
+			body = func(base string, port int) error {
+				res, err := http.Post(base+app.SeedPath, "text/plain", nil)
+				if err != nil {
+					return err
+				}
+				said, _ := io.ReadAll(res.Body)
+				res.Body.Close()
+				if res.StatusCode != http.StatusOK {
+					return fmt.Errorf("seed.go: %s", strings.TrimSpace(string(said)))
+				}
+				return ask(base, port)
+			}
+		}
 	}
 	if how.ip != "" {
 		command = append(command, "--ip", how.ip)

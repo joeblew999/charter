@@ -1,7 +1,9 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/joeblew999/charter/internal/run"
 	"io"
 	"net/http"
 	"strings"
@@ -62,24 +64,74 @@ func dbExecute(p *project.Project, args []string) {
 	d1(p, flag, "execute", binding, "--command", args[0])
 }
 
-// dbSeed is charter run db:seed, as Void's db seed is: the local database made again (its state gone, the
-// migrations run), then filled by the app's seed. The seed is db/seed.go, Go with the app's own typed queries, or
-// db/seed.sql. Local only: a seed starts from nothing, which a deployed database must never be made to.
+// dbSeed is charter run db:seed, as Void's db seed is: the local database made again (its tables gone, the
+// migrations run), then filled by the app's seed. The seed is seed.go, which names what fills it (written with the
+// app's own types and functions), or db/seed.sql. Local only: a seed starts from nothing, which a deployed database
+// must never be made to.
+//
+// Before anything is dropped the seed is compiled: one that does not build stops here, with the database as it was.
+// And it works beside a running charter dev, whose Worker has the database open: the tables are then dropped and
+// made again in place, where otherwise the database's files are removed.
 func dbSeed(p *project.Project, args []string) {
-	if slices.Contains(args, "--deployed") {
-		check(errors.New("db:seed makes the database again before it fills it: it is for the local database only (a deployed one keeps its rows; charter run db:execute --deployed runs a statement there)"))
+	// Nothing but the local database, and no flag that might be read as another: one that is not understood is
+	// refused, so that --deployed, --remote or a slip of the keys cannot be taken for a yes.
+	if len(args) > 0 {
+		check(fmt.Errorf("db:seed takes no arguments (%s): it makes the local database again and fills it, and only that one. A deployed database keeps its rows; charter run db:execute --deployed runs a statement there", strings.Join(args, " ")))
+	}
+	if exists(filepath.Join(p.Root, "seed.go")) && exists(filepath.Join(p.Root, "db", "seed.sql")) {
+		check(errors.New("the app has two seeds, seed.go and db/seed.sql: keep one"))
 	}
 	if !hasSeed(p) {
-		check(errors.New("the app has no seed: db/seed.go (Go, with the app's queries; //go:build seed, and app.Seed in its init) or db/seed.sql"))
+		check(errors.New("the app has no seed: seed.go (//go:build seed, with app.Seed in its init, naming what fills the database) or db/seed.sql"))
 	}
-	check(os.RemoveAll(filepath.Join(p.Root, ".wrangler", "state", "v3", "d1")))
-	check(migrate(p, map[string]string{"WRANGLER_SEND_METRICS": "false"}, "--local"))
+	if exists(filepath.Join(p.Root, "seed.go")) {
+		check(generate(p))
+		check(run.Run(p.Root, map[string]string{"GOOS": "js", "GOARCH": "wasm"}, "go", "vet", "-tags", "seed", "."))
+	}
+	check(resetLocal(p))
 	check(seedLocal(p))
 }
 
 // hasSeed reports whether the app has a seed.
 func hasSeed(p *project.Project) bool {
-	return exists(filepath.Join(p.Root, "db", "seed.go")) || exists(filepath.Join(p.Root, "db", "seed.sql"))
+	return exists(filepath.Join(p.Root, "seed.go")) || exists(filepath.Join(p.Root, "db", "seed.sql"))
+}
+
+// resetLocal makes the local database again from the migrations. With no charter dev running here, its files go.
+// Beside one, which has them open, every table is dropped where it stands.
+func resetLocal(p *project.Project) error {
+	quiet := map[string]string{"WRANGLER_SEND_METRICS": "false", "CI": "1"}
+	if _, running := devState(p); !running {
+		if err := os.RemoveAll(filepath.Join(p.Root, ".wrangler", "state", "v3", "d1")); err != nil {
+			return err
+		}
+		return migrate(p, quiet, "--local")
+	}
+	for _, db := range p.Worker.D1 {
+		bin, err := npm(p, "wrangler")
+		if err != nil {
+			return err
+		}
+		out, err := run.Output(p.Root, quiet, bin, "d1", "execute", db.Binding, "--local", "--json", "--command",
+			"SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'")
+		if err != nil {
+			return err
+		}
+		var answer []struct {
+			Results []struct{ Name string }
+		}
+		if err := json.Unmarshal([]byte(out[strings.Index(out, "["):]), &answer); err != nil || len(answer) == 0 {
+			return fmt.Errorf("the local database did not say which tables it has: %v", err)
+		}
+		drop := "PRAGMA defer_foreign_keys = true;"
+		for _, t := range answer[0].Results {
+			drop += " DROP TABLE IF EXISTS " + t.Name + ";"
+		}
+		if err := wrangler(p, quiet, "d1", "execute", db.Binding, "--local", "--command", drop); err != nil {
+			return err
+		}
+	}
+	return migrate(p, quiet, "--local")
 }
 
 // seedLocal fills the local database, as it is, with the app's seed. SQL is run as it is written. Go runs where
@@ -92,8 +144,10 @@ func seedLocal(p *project.Project) error {
 				return err
 			}
 		}
+		say("✓ the local database is seeded (db/seed.sql)")
+		return nil
 	}
-	if !exists(filepath.Join(p.Root, "db", "seed.go")) {
+	if !exists(filepath.Join(p.Root, "seed.go")) {
 		return nil
 	}
 	return servingWith(p, served{env: map[string]string{seedBuild: "1"}, local: true}, func(base string, _ int) error {
@@ -104,9 +158,9 @@ func seedLocal(p *project.Project) error {
 		defer res.Body.Close()
 		said, _ := io.ReadAll(res.Body)
 		if res.StatusCode != http.StatusOK {
-			return fmt.Errorf("db/seed.go: %s", strings.TrimSpace(string(said)))
+			return fmt.Errorf("seed.go: %s", strings.TrimSpace(string(said)))
 		}
-		say("✓ the local database is seeded (db/seed.go)")
+		say("✓ the local database is seeded (seed.go)")
 		return nil
 	})
 }
@@ -114,11 +168,10 @@ func seedLocal(p *project.Project) error {
 // dbReset is db:seed for an app that may have no seed: the local database made again from the migrations, and
 // filled when there is a seed.
 func dbReset(p *project.Project, args []string) {
-	if slices.Contains(args, "--deployed") {
-		check(errors.New("db:reset is for the local database only"))
+	if len(args) > 0 {
+		check(fmt.Errorf("db:reset takes no arguments (%s): it makes the local database again, and only that one", strings.Join(args, " ")))
 	}
-	check(os.RemoveAll(filepath.Join(p.Root, ".wrangler", "state", "v3", "d1")))
-	check(migrate(p, map[string]string{"WRANGLER_SEND_METRICS": "false"}, "--local"))
+	check(resetLocal(p))
 	if hasSeed(p) {
 		check(seedLocal(p))
 	}

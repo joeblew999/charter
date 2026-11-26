@@ -48,6 +48,9 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   `Needs` and an operation's scopes are the same words, checked by the same code. People sign in with passkeys
   (the sign-in screen); a session and a personal token are the same kind of thing. A client in any language is
   proven by calling the Worker (`example/test/sdk`), never only by compiling.
+- **The seed and the tests are one thing.** What fills a developer's database is typed values and a function that
+  writes them through the app's own functions; tests call the same function and name the same values. A seed never
+  ships, is compiled before anything is dropped, and is for the local database only.
 - **A table is written down once**, in `db/schema.sql`. Migrations, the queries' Go and the API's row types come
   from it; none is hand-written.
 - **A feed is declared once** (`live.Feed`) and serves pages, API and SDK alike.
