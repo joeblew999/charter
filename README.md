@@ -67,8 +67,9 @@ func main() {
   `fern/`, `sdk/go/`. Everything generated is named for it (`*.gen.go`, `*.x.go`) or in a folder of its own, and
   `.gitattributes` marks it.
 - **The database.** `db/schema.sql` is the one place a table is written down. `dev` keeps the local database in step
-  with it as you edit; `check --fix` writes the migration for what changed (one for everything not yet committed) and
-  the typed Go for `db/queries.sql`; `deploy` applies it. A column's comment (`-- example: 42`) becomes its tag, so
+  with it as you edit, keeping its rows; `check --fix` writes the migration for what changed (one for everything not yet committed) and
+  the typed Go for `db/queries.sql`; `deploy` applies it. A change that would lose data is refused until you ask for it (`check --fix --drop`); a renamed
+  column says `-- was: old_name`. A column's comment (`-- example: 42`) becomes its tag, so
   the row is also what the API's contract serves: a note is written down once.
 - **The upstream tools.** `gsx generate`, `gsx fmt`, `gsx dev`, `gsxui migrate rtl`, `structpages-lint`, `sqlc`,
   `vite build`, `wrangler d1 migrations apply` all run inside `dev`, `check`, `test` and `deploy`, at the moment

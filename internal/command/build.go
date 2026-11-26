@@ -3,6 +3,7 @@ package command
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/joeblew999/charter/internal/command/intl"
@@ -11,7 +12,6 @@ import (
 	"github.com/joeblew999/charter/internal/run"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 )
 
@@ -154,28 +154,72 @@ func wasm(p *project.Project, limit int) error {
 	return nil
 }
 
-// pushSchema is what Void calls db push: the local database follows db/schema.sql as it is edited. The migration for
-// what is not committed yet is written again from the schema, the queries' Go with it, and the local database gets
-// it. When that migration replaces one the local database already had, the local database is made again from the
-// migrations (and db/seed.sql): a database for developing on is one that can be made again.
+// pushSchema is what Void calls db push: the local database follows db/schema.sql as it is edited, and keeps its
+// rows. The migration for what is not committed yet is written again from the schema, the queries' Go with it; then
+// the local database is asked what it has, and gets exactly the difference to the schema, whatever migrations it had
+// run before. Its record of migrations is set to the files there are, so that charter dev's next start has nothing to
+// apply twice.
 func pushSchema(p *project.Project) error {
 	if len(p.Worker.D1) == 0 || p.DB == "" {
 		return nil
 	}
-	dir := filepath.Join(p.Root, p.Worker.D1[0].MigrationsDir())
-	before, _ := filepath.Glob(filepath.Join(dir, "*.sql"))
-	if err := dbcode.Write(p.Root, p.DB, false); err != nil {
+	// Locally a column may go with its data: charter check --fix asks before that is committed.
+	if err := dbcode.Write(p.Root, p.DB, false, true); err != nil {
 		return err
 	}
-	after, _ := filepath.Glob(filepath.Join(dir, "*.sql"))
-	replaced := false
-	for _, f := range before {
-		replaced = replaced || !slices.Contains(after, f)
-	}
-	if replaced {
-		say("the local database is made again: the migration being worked on changed")
-		dbReset(p, nil)
+	schema, err := os.ReadFile(filepath.Join(p.Root, "db", "schema.sql"))
+	if err != nil {
 		return nil
 	}
-	return migrate(p, nil, "--local")
+	bin, err := npm(p, "wrangler")
+	if err != nil {
+		return err
+	}
+	binding := p.Worker.D1[0].Binding
+	env := map[string]string{"CI": "1", "WRANGLER_SEND_METRICS": "false"}
+	out, err := run.Output(p.Root, env, bin, "d1", "execute", binding, "--local", "--json", "--command",
+		"SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 ELSE 2 END")
+	if err != nil {
+		return err
+	}
+	var answer []struct {
+		Results []struct {
+			SQL string `json:"sql"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal([]byte(out[max(strings.Index(out, "["), 0):]), &answer); err != nil || len(answer) == 0 {
+		return fmt.Errorf("the local database did not say what it has: %v", err)
+	}
+	var has strings.Builder
+	for _, r := range answer[0].Results {
+		has.WriteString(r.SQL + ";\n")
+	}
+	statements, _, notes, err := dbcode.Diff(has.String(), string(schema))
+	if err != nil {
+		return err
+	}
+	for _, n := range notes {
+		say("· local database: %s", n)
+	}
+	// The migrations there are, as the ones that ran: wrangler's own record (d1_migrations).
+	files, _ := filepath.Glob(filepath.Join(p.Root, p.Worker.D1[0].MigrationsDir(), "*.sql"))
+	names := make([]string, len(files))
+	for i, f := range files {
+		names[i] = "'" + filepath.Base(f) + "'"
+	}
+	statements = append(statements,
+		"CREATE TABLE IF NOT EXISTS d1_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL);",
+		"DELETE FROM d1_migrations WHERE name NOT IN ("+strings.Join(append(names, "''"), ", ")+");")
+	for _, n := range names {
+		statements = append(statements, "INSERT OR IGNORE INTO d1_migrations (name) VALUES ("+n+");")
+	}
+	file := filepath.Join(p.Root, ".charter", "push.sql")
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(file, []byte(strings.Join(statements, "\n")+"\n"), 0o644); err != nil {
+		return err
+	}
+	_, err = run.Output(p.Root, env, bin, "d1", "execute", binding, "--local", "--file", file)
+	return err
 }

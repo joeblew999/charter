@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,10 +27,14 @@ import (
 //     under the new definition, the rows copied over, the old one dropped, as SQLite's own guide has it.
 //
 // A column that was renamed says so in the schema, on its line: `title TEXT NOT NULL, -- was: name`. Without it a
-// rename is a column dropped and another added, and the migration says which data goes.
+// rename is a column dropped and another added: a change that loses data is refused, until it is asked for
+// (charter check --fix --drop). Views and triggers are dropped and made again when their text changes.
 
 // header marks a migration charter wrote.
 const header = "-- Written by charter check --fix from db/schema.sql: don't edit. Change the schema, then charter check --fix.\n"
+
+// other is a view or a trigger: something with no rows of its own, dropped and made again when its text changes.
+type other struct{ kind, sql string }
 
 type table struct {
 	name    string
@@ -41,25 +46,30 @@ type table struct {
 
 // state is the tables a list of statements makes.
 func state(statements string) (map[string]*table, error) {
+	tables, _, err := stateAll(statements)
+	return tables, err
+}
+
+func stateAll(statements string) (map[string]*table, map[string]other, error) {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer db.Close()
 	db.SetMaxOpenConns(1)
 	if _, err := db.Exec(statements); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	tables := map[string]*table{}
+	tables, others := map[string]*table{}, map[string]other{}
 	rows, err := db.Query(`SELECT type, name, tbl_name, COALESCE(sql, '') FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' ORDER BY type DESC, name`)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var kind, name, on, text string
 		if err := rows.Scan(&kind, &name, &on, &text); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		switch kind {
 		case "table":
@@ -68,12 +78,14 @@ func state(statements string) (map[string]*table, error) {
 			if t := tables[on]; t != nil && text != "" {
 				t.indexes[name] = text
 			}
+		case "view", "trigger":
+			others[name] = other{kind, text}
 		}
 	}
 	for _, t := range tables {
 		cols, err := db.Query(`SELECT name FROM pragma_table_info(?) ORDER BY cid`, t.name)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for cols.Next() {
 			var name string
@@ -82,7 +94,7 @@ func state(statements string) (map[string]*table, error) {
 		}
 		cols.Close()
 	}
-	return tables, rows.Err()
+	return tables, others, rows.Err()
 }
 
 var (
@@ -159,14 +171,52 @@ func renames(schema string) map[string]map[string]string {
 // Diff is the statements that take a database from what `from` makes to what `to` makes, what they are called
 // together (for the migration's name), and what a person should know of them.
 func Diff(from, to string) (statements []string, name string, notes []string, err error) {
-	before, err := state(from)
+	before, beforeOthers, err := stateAll(from)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("db/migrations: %w", err)
 	}
-	after, err := state(to)
+	after, afterOthers, err := stateAll(to)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("db/schema.sql: %w", err)
 	}
+	// Views and triggers that are gone or changed go first: a table they read may be made again below.
+	same := func(a, b string) bool {
+		return spaces.ReplaceAllString(comment.ReplaceAllString(a, ""), " ") == spaces.ReplaceAllString(comment.ReplaceAllString(b, ""), " ")
+	}
+	var again []string
+	for _, n := range slices.Sorted(maps.Keys(beforeOthers)) {
+		if now, ok := afterOthers[n]; !ok || !same(now.sql, beforeOthers[n].sql) {
+			statements = append(statements, "DROP "+strings.ToUpper(beforeOthers[n].kind)+" "+n+";")
+		}
+	}
+	for _, n := range slices.Sorted(maps.Keys(afterOthers)) {
+		if was, ok := beforeOthers[n]; !ok || !same(was.sql, afterOthers[n].sql) {
+			again = append(again, afterOthers[n].sql+";")
+		}
+	}
+	defer func() {
+		// A table made again takes every view and trigger down with it for a moment: they all go first and come back
+		// after, whether their own text changed or not.
+		if err == nil && slices.ContainsFunc(statements, func(st string) bool {
+			return strings.HasPrefix(st, "ALTER TABLE ") && strings.Contains(st, " RENAME TO ")
+		}) {
+			var drops []string
+			again = again[:0]
+			for _, n := range slices.Sorted(maps.Keys(beforeOthers)) {
+				drops = append(drops, "DROP "+strings.ToUpper(beforeOthers[n].kind)+" "+n+";")
+			}
+			for _, n := range slices.Sorted(maps.Keys(afterOthers)) {
+				again = append(again, afterOthers[n].sql+";")
+			}
+			statements = append(drops, slices.DeleteFunc(statements, func(st string) bool { return slices.Contains(drops, st) })...)
+		}
+		if err == nil && len(again) > 0 {
+			statements = append(statements, again...)
+			if name == "" {
+				name = "views_and_triggers"
+			}
+		}
+	}()
 	was := renames(to)
 	var words []string
 	names := func(m map[string]*table) []string {
@@ -282,7 +332,7 @@ func Diff(from, to string) (statements []string, name string, notes []string, er
 // schema has a change no migration makes. Otherwise it writes the migration for the change: one file for everything
 // not yet committed, written again as the schema moves on, so that a change worked on in several steps is one
 // migration when it is committed.
-func Migrate(dir string, check bool) (written string, err error) {
+func Migrate(dir string, check, loss bool) (written string, err error) {
 	schema, err := os.ReadFile(filepath.Join(dir, "db", "schema.sql"))
 	if err != nil {
 		return "", nil // an app whose migrations are its own
@@ -313,6 +363,9 @@ func Migrate(dir string, check bool) (written string, err error) {
 			return "", errors.New("db/schema.sql has changes no migration in db/migrations makes: charter check --fix writes it")
 		}
 		return "", nil
+	}
+	if len(notes) > 0 && !loss {
+		return "", fmt.Errorf("db/schema.sql would lose data:\n  · %s\nA column that was renamed says so on its line (-- was: old_name). To drop it for good: charter check --fix --drop", strings.Join(notes, "\n  · "))
 	}
 	if len(statements) == 0 {
 		if pending != "" {

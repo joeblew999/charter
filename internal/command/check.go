@@ -25,13 +25,14 @@ import (
 //	languages  every language complete, plural forms, unused messages, gsxui's own text, right-to-left set up
 func Check(args []string) {
 	fs := flag.NewFlagSet("charter check", flag.ExitOnError)
-	fix := fs.Bool("fix", false, "write what can be written: formatting, go.mod, the specs and the queries' Go")
+	fix := fs.Bool("fix", false, "write what can be written: formatting, go.mod, the specs, the migration for db/schema.sql and the queries' Go")
+	drop := fs.Bool("drop", false, "with --fix: write a migration that drops a column or a table with its rows, which is otherwise refused")
 	fs.Parse(args)
 	p := load()
 	check(skills(p, false)) // the agent skills of what the app is built with, when go.sum has moved
 	t := newTimes("check")
 	if p.Spec != "" && p.DB != "" && *fix {
-		t.part("queries", func() error { return dbcode.Write(p.Root, p.DB, false) })
+		t.part("queries", func() error { return dbcode.Write(p.Root, p.DB, false, *drop) })
 	}
 	t.part("generate", func() error { return generate(p) })
 	t.part("fmt", func() error { return format(p, *fix) })

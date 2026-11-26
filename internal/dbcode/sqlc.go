@@ -348,12 +348,12 @@ func GoQueries(r *Request, pkg string, tags map[string]map[string]string) (strin
 
 // Write writes dir's database code (db = "sqlc") from its schema; with check it writes nothing, and fails if what is
 // there is not what the schema gives.
-func Write(dir, db string, check bool) error {
+func Write(dir, db string, check bool, loss ...bool) error {
 	if db != "sqlc" {
 		return fmt.Errorf(`charter.toml: db = %q: "sqlc"`, db)
 	}
 	// The schema first: the migration for what changed in db/schema.sql, then the queries typed against it.
-	if _, err := Migrate(dir, check); err != nil {
+	if _, err := Migrate(dir, check, len(loss) > 0 && loss[0]); err != nil {
 		return err
 	}
 	return writeQueries(dir, check)

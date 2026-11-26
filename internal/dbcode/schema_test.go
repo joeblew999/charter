@@ -75,3 +75,24 @@ func TestTagsFromTheSchemasComments(t *testing.T) {
 		t.Fatalf("%v", tags)
 	}
 }
+
+// A view is dropped and made again when its text changes, and around a table that is made again.
+func TestAViewFollowsItsText(t *testing.T) {
+	from := notesV1 + "CREATE VIEW recent AS SELECT id FROM notes;"
+	sql, _, _ := diff(t, from, notesV1+"CREATE VIEW recent AS SELECT id, body FROM notes;")
+	if !strings.HasPrefix(sql, "DROP VIEW recent;") || !strings.HasSuffix(sql, "CREATE VIEW recent AS SELECT id, body FROM notes;") {
+		t.Fatalf("%s", sql)
+	}
+	if sql, _, _ := diff(t, from, from); sql != "" {
+		t.Fatalf("no change, but:\n%s", sql)
+	}
+}
+
+// A table that is made again has its views taken down first and put back after.
+func TestATableMadeAgainUnderAView(t *testing.T) {
+	view := "CREATE VIEW recent AS SELECT id FROM notes;"
+	sql, _, _ := diff(t, notesV1+view, "CREATE TABLE notes (id INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"+view)
+	if !strings.HasPrefix(sql, "DROP VIEW recent;") || !strings.HasSuffix(sql, view) || !strings.Contains(sql, "ALTER TABLE notes_new RENAME TO notes;") {
+		t.Fatalf("%s", sql)
+	}
+}

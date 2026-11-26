@@ -17,7 +17,7 @@ tree rendered with gsx, and charter finds every part by where it is. Change the 
 | An API operation | `api/contract.go` and its handler | `go tool charter check --fix` writes `fern/`; `go tool charter pack -publish` the Go SDK |
 | What is followed live | one `live.Feed` (`api.Notes` in the example): `Publish` after the write, `Fragments` for a page, `Events` and `Lines` for the API | |
 | The database's schema | `db/schema.sql`: the tables as they are now. A renamed column says `-- was: old_name` on its line | the running `charter dev` brings the local database to it; `go tool charter check --fix` writes the migration (never write one by hand); `go tool charter deploy` applies it |
-| A query | `db/queries.sql` | `go tool charter check --fix` writes `db/queries.gen.go` |
+| A query | `db/queries.sql`; select whole rows (`SELECT *`, `RETURNING *`) so a new column needs no change here | `go tool charter check --fix` writes `db/queries.gen.go` |
 | A binding, a variable | `wrangler.jsonc`, without ids: the first deploy makes the resource | the running `charter dev` reloads |
 | Browser code or CSS | `web/` (Vite); `go tool charter add <npm package>` | |
 | A message a reader sees | `locales/en.toml`, written `{ locales.Key }` in gsx | `go tool charter run intl:translate`; `go tool charter run intl:status` says what is left |
