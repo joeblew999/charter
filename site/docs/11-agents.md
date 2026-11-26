@@ -49,7 +49,7 @@ Their tools are the app's own Go tools too (`go tool gsx info`), at the versions
 ## What an agent can ask
 
 - `go tool charter env`: is `charter dev` running here, at which address, and where is its log.
-- `go tool charter check`: everything wrong with the code, with file and line. No command asks a question.
+- `go tool charter check --json`: whether the code is right, as one JSON document: each part (formatting, lint, the contract, the languages) with what it said. No command asks a question.
 - The page itself, at the address `env` gives: a save is on it in about two seconds.
 
 ## What a language model reads

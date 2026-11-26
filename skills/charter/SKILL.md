@@ -18,6 +18,9 @@ changing that part.
 |---|---|---|
 | A page or its route | `pages/`: a type in the tree (`pages.Pages`) with a `Page` component, and `Props` that names what it needs as parameters (the store, from `app.App`'s `RequestArgs`) | the running `charter dev` reloads it |
 | A region htmx replaces | a component of its page (`component (p Home) Form(…)`), with `id={Home.Form \|> id}` and `hx-target={Home.Form \|> target}` | |
+| One of many that updates by itself (a row) | `id={Home.Item \|> key(id)}`, its control `hx-get={Home{} \|> url}` with `hx-target={Home.Item \|> keytarget(id)}`; `Props` takes a `structpages.RenderTarget`, asks `target.Is(p.Item)`, reads the row from `structpages.KeyOf(target)` and loads that alone | |
+| The link of the page being shown | `structpages.Within(ctx, Page{})` | |
+| Markup for part of a page with its own address (a dialog's form) | a fragment: a type with `Props(…) error` returning `structpages.RenderComponent(…)` and no `Page`. charter sends a browser that opens it to the page it is part of | |
 | What a page calls | a type with `ServeHTTP(w, r, …) error` that returns `structpages.RenderComponent(…)`, or `app.NotFound`, `app.Status`, `app.Redirect{To}`; it never writes an error or a redirect itself | |
 | A link, a form's target, a stream | `{ Page{} \|> url }`, `{ PostNote{} \|> url }`, with parameters `\|> url(map[string]any{"id": id})`: structpages' own `URLFor`, in the reader's language by itself. Never a path as a string | |
 | A type the API serves that is a table's row | embed the row (`type Note struct{ db.NotesRow }`); its examples are the schema's comments (`-- example: 42; doc: …`) | |
@@ -29,7 +32,7 @@ changing that part.
 | Browser code or CSS | `web/` (Vite); `go tool charter add <npm package>` | |
 | A message a reader sees | `locales/en.toml`, written `{ locales.Key }` in gsx | `go tool charter run intl:translate`; `go tool charter run intl:status` says what is left |
 | A language | `go tool charter add locale:de` | translate its catalog |
-| A page of the docs | `docs/NN-name.md`: Markdown, its first heading the title; link to another page by its file. The pages that show them are the docs screen (`go tool charter add screen:docs`, mounted in the tree at `/docs`; `app.App`'s `Docs`) | the running `charter dev` shows it at `/docs/name`; it is in the sitemap, `/docs/name.md`, `/llms.txt` and `/llms-full.txt` |
+| A page of the docs | `docs/NN-name.md`: Markdown, its first heading the title; link to another page by its file. A code sample comes from a real file: open its fence with ```` ```go file=pages/pages.go#Home.Props ```` (a declaration by name; no `#` for a whole file) and `check --fix` writes the code. The pages that show them are the docs screen (`go tool charter add screen:docs`, mounted in the tree at `/docs`; `app.App`'s `Docs`) | the running `charter dev` shows it at `/docs/name`; it is in the sitemap, `/docs/name.md`, `/llms.txt` and `/llms-full.txt` |
 | A UI component | `go tool charter add ui:dialog` (gsxui add; `-diff`, `-overwrite` pass through); `go tool charter run ui:list` | |
 | What every app has: the language list, the offer of the reader's language, the time zone dialog, the light and dark switch, the docs' pages | `go tool charter add screen:<name>`: charter's screens, copied into `pages/screens` and built from the app's own gsxui components. Never write one of these by hand | an unchanged copy follows charter through `check --fix`; a changed one is the app's |
 | The look: colours, radius, fonts, the component style | `go tool charter run ui:theme` shows it; `go tool charter run ui:theme '<share code from https://ui.gsxhq.dev/theme>'` or a preset file switches it (gsxui apply). Light and dark are the theme's own; `<screens.ThemeToggle/>` switches | |
@@ -85,7 +88,8 @@ is what it is in a charter app:
   (`.charter/dev/dev.log`: the builds and the Worker). When it is running, do not start another: edit, and read
   the page at that address. A save reaches the page in about two seconds, and a mistake is in the log.
 - No command asks a question. `go tool charter check` is the truth about the code: run it after a change, and
-  `--fix` for what it can write.
+  `--fix` for what it can write. `go tool charter check --json` is the same as one document: `ok`, and each part
+  with its output; the part that failed is the last.
 - When no `charter dev` is running, `go tool charter test` starts a Worker of its own.
 
 ## Commands

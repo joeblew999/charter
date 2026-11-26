@@ -19,8 +19,8 @@ go tool charter dev
 | You save | What happens | On the page after about |
 |---|---|---|
 | A `.gsx` or `.go` file | gsx regenerates, the Wasm is built, the running Worker takes it | 1.5 s |
-| A catalog (`locales/*.toml`) | the messages are compiled, then the same | 1.6 s |
-| A page of the docs (`docs/*.md`) | it is written as Go, then the same | 2 s |
+| A catalog (`locales/*.toml`) | the messages are compiled and handed to the running Worker: no Wasm is built | 1.3 s |
+| A page of the docs (`docs/*.md`) | the same: the pages are data beside the Wasm | 1.3 s |
 | `db/schema.sql` | the local database follows, its migration and the queries' Go are written | 2 s |
 | `wrangler.jsonc` | wrangler reloads the Worker | 0.6 s |
 | A file of `web/`, CSS | Vite replaces it in the open page | at once |
@@ -38,7 +38,7 @@ go tool charter check
 go tool charter test
 ```
 
-`check` says everything that can be said without running the app: formatting, go vet and structpages' linter (for the machine and for the Worker's build), the API's contract, the database's schema, the languages, and charter's screens. `check --fix` writes what it can. `test` runs the Worker on wrangler dev and asks it: the pages in a real browser, the API through its own SDK, and the search-engine audit.
+`check` says everything that can be said without running the app: formatting, go vet and structpages' linter (for the machine and for the Worker's build), the API's contract, the database's schema, the languages, and charter's screens. `check --fix` writes what it can. `check --json` is the same as one JSON document, each part with what it said, for a script or a coding agent. `test` runs the Worker on wrangler dev and asks it: the pages in a real browser, the API through its own SDK, and the search-engine audit.
 
 ## Shipping it
 
@@ -57,7 +57,7 @@ The first deploy makes the database, the KV namespace, the bucket and the queue 
 | Containers | Kiri | the first time `charter pack` generates SDKs |
 | Skills for your coding agent | Claude Code plugins for charter, gsx, gsxui and structpages | `charter install` |
 
-Put your Cloudflare token into fnox once: `fnox set CLOUDFLARE_API_TOKEN` and `fnox set CLOUDFLARE_ACCOUNT_ID`.
+The first command that talks to Cloudflare says, in three steps, how to put your token and account id into fnox, once. `go tool charter env` says whether they are there.
 
 ## Every command
 
