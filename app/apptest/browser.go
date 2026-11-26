@@ -159,6 +159,7 @@ func (p *Page) leave(signIn, name string) {
 func (p *Page) SignIn(signIn string) {
 	p.t.Helper()
 	p.Open(signIn)
+	signIn, _, _ = strings.Cut(signIn, "?")
 	p.until("#sign-in-passkey")
 	ctx, cancel := context.WithTimeout(p.ctx, wait)
 	defer cancel()

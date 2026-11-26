@@ -128,6 +128,8 @@ type Accounts interface {
 	// Begin keeps what a sign-in that was started needs to be finished; Take gives it back, once.
 	Begin(ctx context.Context, id, data string, expires time.Time) error
 	Take(ctx context.Context, id string) (string, error)
+	// Look is what Take would give, left where it is.
+	Look(ctx context.Context, id string) (string, error)
 }
 
 // newToken is a token and its hash.
@@ -427,6 +429,13 @@ func (a d1Accounts) Begin(_ context.Context, id, data string, expires time.Time)
 	return cloud.Batch(a.db,
 		cloud.Stmt("DELETE FROM ceremonies WHERE expires_at < CURRENT_TIMESTAMP"),
 		cloud.Stmt("INSERT INTO ceremonies (id, data, expires_at) VALUES (?, ?, ?)", id, data, stamp(expires)))
+}
+
+func (a d1Accounts) Look(_ context.Context, id string) (string, error) {
+	row, err := cloud.One[struct {
+		Data string `json:"data"`
+	}](a.db, "SELECT data FROM ceremonies WHERE id = ? AND expires_at > CURRENT_TIMESTAMP", id)
+	return row.Data, none(err)
 }
 
 func (a d1Accounts) Take(_ context.Context, id string) (string, error) {

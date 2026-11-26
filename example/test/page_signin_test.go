@@ -341,3 +341,33 @@ func TestAnInvitationIsAcceptedBySomeoneSignedIn(t *testing.T) {
 	page.Click("#accept button")
 	page.WaitText("#role", "moderator")
 }
+
+// The same link for someone who has an account and is signed out: the page says what the invitation is to, they
+// sign in with their passkey, and they are that, on their account page. A link that is spent says so.
+func TestAnInvitationSurvivesSigningIn(t *testing.T) {
+	page := apptest.Browser(t)
+	page.SignUp(at(screens.SignInPage{}), "Back again")
+	page.Open(at(screens.AccountPage{}))
+	page.Click("#sign-out")
+	page.WaitText("#sign-in-link", "Sign in")
+
+	res := as(t, "ADMIN_TOKEN", "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=admin"))
+	html, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	code := regexp.MustCompile(`/__charter/invite\?code=([A-Za-z0-9_-]+)`).FindStringSubmatch(string(html))
+	if code == nil {
+		t.Fatalf("making an invitation: HTTP %d\n%s", res.StatusCode, html)
+	}
+	link := at(screens.SignInPage{}) + "?invite=" + code[1]
+	page.Open(link)
+	page.WaitText("#invited", "admin")
+	page.SignIn(link)
+	page.WaitText("#role", "admin")
+	if path := page.Path(); path != at(screens.AccountPage{}) {
+		t.Errorf("after signing in by an invitation, at %s", path)
+	}
+	// Spent: whoever opens it now is told, before they do anything.
+	if !strings.Contains(apptest.Get(t, link), `id="invite-gone"`) {
+		t.Error("a spent invitation's page does not say so")
+	}
+}

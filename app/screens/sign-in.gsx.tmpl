@@ -40,15 +40,26 @@ type SignInPage struct{}
 type SignInView struct {
 	Caller api.Caller
 	Return string
-	// Invite is an invitation's code, from its link: whoever signs up here is what it says.
-	Invite string
+	// Invite is an invitation's code, from its link: whoever signs up here, or signs in and accepts, is what it
+	// says (InviteRole). InviteGone: the link was used already, or is too old.
+	Invite     string
+	InviteRole string
+	InviteGone bool
 }
 
 // Noindex keeps the page out of the sitemap and of search engines: it is a door, not something to find.
 func (SignInPage) Noindex() bool { return true }
 
-func (SignInPage) Props(r *http.Request, caller api.Caller) (SignInView, error) {
-	return SignInView{Caller: caller, Return: intl.SafeReturn(r.URL.Query().Get("return")), Invite: r.URL.Query().Get("invite")}, nil
+func (SignInPage) Props(r *http.Request, caller api.Caller, auth *api.Auth) (SignInView, error) {
+	v := SignInView{Caller: caller, Return: intl.SafeReturn(r.URL.Query().Get("return"))}
+	if code := r.URL.Query().Get("invite"); code != "" {
+		if role, ok := auth.Invited(r, code); ok {
+			v.Invite, v.InviteRole = code, role
+		} else {
+			v.InviteGone = true
+		}
+	}
+	return v, nil
 }
 
 // The ceremonies' steps: what the browser asks the device, and what the device answered. They speak JSON to the
@@ -111,10 +122,21 @@ component (p SignInPage) Page(v SignInView) {
 				<ui.Card>
 					<ui.CardHeader>
 						<ui.CardTitle>
-							<h1>{ locales.ScreensSignIn }</h1>
+							// Here by an invitation's link: the page says so first, and what it is to.
+							{ if v.Invite != "" {
+								<h1 id="invited">{ locales.ScreensInvited(v.InviteRole) }</h1>
+							} else {
+								<h1>{ locales.ScreensSignIn }</h1>
+							} }
 						</ui.CardTitle>
+						{ if v.Invite != "" && !v.Caller.SignedIn() {
+							<ui.CardDescription>{ locales.ScreensInvitedIntro }</ui.CardDescription>
+						} }
 					</ui.CardHeader>
 					<ui.CardContent class="flex flex-col gap-4">
+						{ if v.InviteGone {
+							<p id="invite-gone" role="alert" class="text-sm text-destructive">{ locales.ScreensInviteGone }</p>
+						} }
 						{ if v.Caller.SignedIn() {
 							<p id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</p>
 							// Here by an invitation's link, with an account already: it is theirs to accept.
@@ -134,6 +156,8 @@ component (p SignInPage) Page(v SignInView) {
 								class="flex flex-col gap-4"
 								data-return={v.Return}
 								data-invite={v.Invite}
+								data-accept={InviteAccept{} |> url}
+								data-account={AccountPage{} |> url}
 								data-in-begin={SignInBegin{} |> url}
 								data-in-finish={SignInFinish{} |> url}
 								data-up-begin={SignUpBegin{} |> url}
@@ -183,12 +207,20 @@ component signInScript() {
 					return response.ok ? response.json() : response.text().then(function (text) { throw new Error(text); });
 				});
 			};
+			var invite = box.dataset.invite;
 			var run = function (begin, finish, ask, body) {
 				error.hidden = true;
 				return post(begin, body).then(function (options) { return ask(options.publicKey); }).then(function (credential) {
 					return post(finish, credential.toJSON());
 				}).then(function () {
-					location.assign(box.dataset.return || "/");
+					// Signed in by an invitation's link, with an account they had: the invitation is theirs. (An
+					// account made by the link was made with it.)
+					if (invite && !body) {
+						return fetch(box.dataset.accept, { method: "POST", body: new URLSearchParams({ invite: invite }) });
+					}
+				}).then(function () {
+					// Invited, they land where it says what they are now.
+					location.assign(invite ? box.dataset.account : box.dataset.return || "/");
 				}).catch(function (e) {
 					error.textContent = e && e.message && e.name !== "NotAllowedError" ? e.message : box.dataset.failed;
 					error.hidden = false;

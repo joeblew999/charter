@@ -124,3 +124,6 @@ invite_intro = "Ein Link: Wer sich darüber registriert, erhält die gewählte R
 invite_new = "Link erstellen"
 invite_once = "Jetzt weitergeben: Er wird nicht noch einmal angezeigt."
 invite_accept = "Einladung annehmen"
+invited = "Sie sind eingeladen als {role}"
+invited_intro = "Erstellen Sie unten ein Konto oder melden Sie sich mit Ihrem Passkey an, falls Sie einen haben. Die Einladung gilt in beiden Fällen."
+invite_gone = "Diese Einladung wurde bereits verwendet oder ist älter als eine Stunde. Bitten Sie um eine neue."

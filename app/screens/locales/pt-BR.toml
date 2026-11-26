@@ -46,6 +46,9 @@ invite_intro = "Um link que dá a quem se cadastrar por ele o papel que você es
 invite_new = "Criar link"
 invite_once = "Envie agora: ele não será mostrado de novo."
 invite_accept = "Aceitar o convite"
+invited = "Você foi convidado como {role}"
+invited_intro = "Crie uma conta abaixo ou entre com sua chave de acesso, se já tiver uma. O convite é seu nos dois casos."
+invite_gone = "Este convite já foi usado ou tem mais de uma hora. Peça um novo."
 
 [gsxui]
 close = "Fechar"

@@ -88,18 +88,31 @@ func (a *Auth) Accept(r *http.Request, code string) error {
 	return accounts.SetRole(r.Context(), who.Subject, role)
 }
 
-// invited is the role an invitation gives. It is kept a little longer, for the moments the device takes, and
-// taken for good when the account is made: one invitation, one person.
-func (a *Auth) invited(ctx context.Context, accounts Accounts, code string) (role string, err error) {
-	gone := app.Status(http.StatusUnprocessableEntity, "this invitation was used already, or is more than an hour old: ask for a new one")
-	role, err = accounts.Take(ctx, InviteID(code))
+// Invited is the role an invitation with that code gives, ok false when there is none any more: what a page says
+// to whoever opened its link.
+func (a *Auth) Invited(r *http.Request, code string) (role string, ok bool) {
+	if a.people == nil || code == "" {
+		return "", false
+	}
+	accounts, err := a.people.Accounts()
 	if err != nil {
-		return "", gone
+		return "", false
+	}
+	role, err = a.invited(r.Context(), accounts, code)
+	return role, err == nil
+}
+
+// invited is the role an invitation gives. It stays where it is until the account is made, or it is accepted:
+// one invitation, one person.
+func (a *Auth) invited(ctx context.Context, accounts Accounts, code string) (role string, err error) {
+	role, err = accounts.Look(ctx, InviteID(code))
+	if err != nil {
+		return "", app.Status(http.StatusUnprocessableEntity, "this invitation was used already, or is more than an hour old: ask for a new one")
 	}
 	if _, ok := a.people.Roles[role]; !ok {
 		return "", app.Status(http.StatusUnprocessableEntity, "the invitation is to be "+role+", which the app has no such role for")
 	}
-	return role, accounts.Begin(ctx, InviteID(code), role, time.Now().Add(ceremonyLasts))
+	return role, nil
 }
 
 func (a *Auth) ceremony(r *http.Request) (*webauthn.WebAuthn, Accounts, error) {

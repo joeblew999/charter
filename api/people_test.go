@@ -103,6 +103,13 @@ func (m *fakeAccounts) Begin(_ context.Context, id, data string, _ time.Time) er
 	m.started[id] = data
 	return nil
 }
+func (m *fakeAccounts) Look(_ context.Context, id string) (string, error) {
+	data, ok := m.started[id]
+	if !ok {
+		return "", ErrNoAccount
+	}
+	return data, nil
+}
 func (m *fakeAccounts) Take(_ context.Context, id string) (string, error) {
 	data, ok := m.started[id]
 	if !ok {
@@ -260,6 +267,10 @@ func TestAnInvitationGivesItsRoleOnce(t *testing.T) {
 	}
 	if role, err := auth.invited(t.Context(), accounts, code); err != nil || role != "admin" {
 		t.Fatalf("the invitation gives %q, %v", role, err)
+	}
+	// Looked at, it is still there: a page says what it is before anyone takes it up.
+	if role, ok := auth.Invited(operator, code); !ok || role != "admin" {
+		t.Fatalf("the invitation says %q, %v", role, ok)
 	}
 	// Taken for good, as the account is made.
 	accounts.Take(t.Context(), InviteID(code))

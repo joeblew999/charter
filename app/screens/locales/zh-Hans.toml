@@ -46,6 +46,9 @@ invite_intro = "通过此链接注册的人将获得你选择的角色。链接�
 invite_new = "生成链接"
 invite_once = "请现在发送：它不会再次显示。"
 invite_accept = "接受邀请"
+invited = "你受邀成为 {role}"
+invited_intro = "在下方创建账号；如果已有通行密钥，请直接登录。两种方式邀请都有效。"
+invite_gone = "此邀请已被使用，或已超过一小时。请索取新的邀请。"
 
 [gsxui]
 close = "关闭"

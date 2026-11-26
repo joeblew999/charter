@@ -46,6 +46,9 @@ invite_intro = "Un lien qui donne à la personne qui s’inscrit par lui le rôl
 invite_new = "Créer un lien"
 invite_once = "Envoyez-le maintenant : il ne sera plus affiché."
 invite_accept = "Accepter l’invitation"
+invited = "Vous êtes invité en tant que {role}"
+invited_intro = "Créez un compte ci-dessous, ou connectez-vous avec votre clé d’accès si vous en avez une. L’invitation vous revient dans les deux cas."
+invite_gone = "Cette invitation a déjà été utilisée ou date de plus d’une heure. Demandez-en une nouvelle."
 
 [gsxui]
 close = "Fermer"
