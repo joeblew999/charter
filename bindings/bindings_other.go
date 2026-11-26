@@ -3,6 +3,7 @@
 package bindings
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -19,8 +20,16 @@ const OnWorkers = false
 
 // Var stands in for the Worker's variable called name, with the value wrangler dev would give it: .dev.vars's, else
 // wrangler.jsonc's top-level vars. A name neither has (one only an environment of wrangler.jsonc sets, such as
-// production's) is the process's environment variable, which is how a test gives it a value.
+// production's) is the process's environment variable.
+//
+// Under go test the environment comes first: a test gives a variable its own value with t.Setenv. Outside a test it
+// does not, so a variable of the same name in a developer's shell never changes what the app shows.
 func Var(name string) string {
+	if underTest() {
+		if v, ok := os.LookupEnv(name); ok {
+			return v
+		}
+	}
 	if p, err := app(); err == nil {
 		if v, ok := p.Var(name); ok {
 			return v
@@ -28,6 +37,9 @@ func Var(name string) string {
 	}
 	return os.Getenv(name)
 }
+
+// underTest says the process is a go test. A test of this package turns it off to see what a developer's shell gets.
+var underTest = func() bool { return flag.Lookup("test.v") != nil }
 
 // HTTPClient is a client for the requests the app makes, standing in for the Worker's fetch: net/http's own
 // transport. Each call returns a new client, the caller's to set (its Timeout).

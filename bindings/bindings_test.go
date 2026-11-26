@@ -101,6 +101,12 @@ func TestVarOffWorkers(t *testing.T) {
 	t.Chdir(dir)
 	t.Setenv("APP_NAME", "from the shell")
 	t.Setenv("ONLY_ENV", "set by a test")
+	// A test's own value comes first: that is how it gives a variable one.
+	if got := bindings.Var("APP_NAME"); got != "from the shell" {
+		t.Errorf("under go test, Var(APP_NAME) = %q, want the test's own value", got)
+	}
+	// Outside a test, a developer's shell never changes what the app shows.
+	defer bindings.NotUnderTest()()
 	for name, want := range map[string]string{"APP_NAME": "shop", "MAX": "3", "TOKEN": "local-token", "ONLY_ENV": "set by a test", "NOPE": ""} {
 		if got := bindings.Var(name); got != want {
 			t.Errorf("Var(%s) = %q, want %q", name, got, want)

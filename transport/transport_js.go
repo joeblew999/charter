@@ -74,6 +74,12 @@ func Serve(h http.Handler) http.Handler {
 		ctx, cancel := context.WithCancel(r.Context())
 		gone = cancel
 		defer cancel()
+		// The last thing: go.mjs is told the handler has returned, and may give this runtime its next request.
+		defer func() {
+			if ended := binding.Get("ended"); ended.Type() == js.TypeFunction {
+				ended.Invoke()
+			}
+		}()
 		h.ServeHTTP(w, incoming(r.WithContext(ctx)))
 
 		// Reading the heap's state is not free: for the first request, then for one in eight.

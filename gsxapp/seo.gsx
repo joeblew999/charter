@@ -4,13 +4,13 @@ import (
 	"path"
 )
 
-// Head is what a page's <head> tells search engines and link previews, beside the page's language versions and
+// SearchHead is what a page's <head> tells search engines and link previews, beside the page's language versions and
 // canonical URL (with charter run languages, gsxintl.Head): its title and description, the same for Open Graph and a summary card,
 // the site's icon, and on the home page the site's name as WebSite structured data, which Google shows beside the
 // site's results. title and description are the page's own text in its language (with intl: { locales.Title |> text });
 // home is the home page's absolute URL on the home page itself, "" on every other page; lang is the page's language,
 // for the structured data. charter run audit checks every one of them.
-component seoHead(title string, description string, siteName string, icon string, home string, lang string) {
+component SearchHead(title string, description string, siteName string, icon string, home string, lang string) {
 	<title>{ title }</title>
 	<meta name="description" content={description}/>
 	<meta property="og:type" content="website"/>

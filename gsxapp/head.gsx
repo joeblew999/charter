@@ -12,7 +12,7 @@ component Head(title string, description string) {
 	{{ h := headOf(ctx, "") }}
 	<meta charset="utf-8"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
-	<seoHead
+	<SearchHead
 		title={title}
 		description={description}
 		siteName={h.Name}

@@ -15,6 +15,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gsxhq/gsx"
@@ -84,6 +85,8 @@ func render(w http.ResponseWriter, r *http.Request, status int, node gsx.Node) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// With its length a page goes out whole, not in chunks (htmx's history restore wants that on Workers).
+	w.Header().Set("Content-Length", strconv.Itoa(html.Len()))
 	w.WriteHeader(status)
 	w.Write(html.Bytes())
 }

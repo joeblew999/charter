@@ -212,3 +212,14 @@ func TestRequestProperties(t *testing.T) {
 		t.Errorf("request: %q, want what Cloudflare knows of the request", got)
 	}
 }
+
+// A page is sent with its length, and arrives whole: an answer with a Content-Length goes through workers-go's
+// fixed-length stream, another path than a streamed one. (What is in front of the Worker may still send it in
+// chunks, so the length is not asked for here.)
+func TestAPageArrivesWhole(t *testing.T) {
+	for range 3 {
+		if html := page(t, "/"); !strings.Contains(html, "</html>") {
+			t.Fatalf("GET /: %d bytes, no </html>", len(html))
+		}
+	}
+}

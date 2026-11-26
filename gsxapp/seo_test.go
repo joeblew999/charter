@@ -11,7 +11,7 @@ import (
 func TestHead(t *testing.T) {
 	render := func(home string) string {
 		var b strings.Builder
-		if err := seoHead("Shop & more", "What it sells.", "Shop", "/static/favicon.svg", home, "en").Render(context.Background(), &b); err != nil {
+		if err := SearchHead("Shop & more", "What it sells.", "Shop", "/static/favicon.svg", home, "en").Render(context.Background(), &b); err != nil {
 			t.Fatal(err)
 		}
 		return b.String()

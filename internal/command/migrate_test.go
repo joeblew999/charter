@@ -73,3 +73,27 @@ name = "Notes"
 		t.Fatalf("a second time:\n%s", again)
 	}
 }
+
+// The app has a package called live of its own: charter's is imported under another name.
+func TestMoveImportsBesideTheAppsOwn(t *testing.T) {
+	before := `import (
+	"github.com/joeblew999/charter/follow"
+	"github.com/joeblew999/charter/hub"
+	"example.com/app/internal/live"
+)
+
+var _ = hub.Memory[live.Message]{}
+var _ = follow.Options{}
+`
+	after := `import (
+	charterlive "github.com/joeblew999/charter/live"
+	"example.com/app/internal/live"
+)
+
+var _ = charterlive.Memory[live.Message]{}
+var _ = charterlive.Options{}
+`
+	if got := moveImports(before); got != after {
+		t.Fatalf("got:\n%s", got)
+	}
+}

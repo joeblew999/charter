@@ -61,10 +61,8 @@ func Migrate(args []string) {
 			say("· %s is still here: its settings are charter.toml's now ([intl], [seo]); mise is not needed", old)
 		}
 	}
-	for _, gone := range []string{"charter/gsxseo", "charter/mcp"} {
-		if n := uses(p.Root, gone); n != "" {
-			say("· %s imports %s, which an app no longer imports: gsxapp.Head writes the search engines' head, serve.Handler serves the MCP tools", n, gone)
-		}
+	if n := uses(p.Root, "charter/mcp"); n != "" {
+		say("· %s imports charter/mcp, which an app no longer imports: serve.Handler serves the MCP tools", n)
 	}
 	if changed > 0 {
 		say("\nNext: charter check --fix && charter test")
@@ -88,6 +86,7 @@ var merged = []struct {
 	{"hub", "live", map[string]string{"Hub": "", "DurableObject": "", "Memory": ""}},
 	{"follow", "live", map[string]string{"Follow": "", "Newest": "", "Item": "", "Options": "", "Source": ""}},
 	{"fragments", "live", map[string]string{"Data": "", "Stream": ""}},
+	{"gsxseo", "gsxapp", map[string]string{"Head": "SearchHead"}},
 }
 
 // moveImports is a Go or gsx file's text with charter's packages imported from where they are now, and their names
@@ -100,12 +99,19 @@ func moveImports(text string) string {
 		if !strings.Contains(text, old) {
 			continue
 		}
+		// A file that imports a package of the same name from elsewhere (the app's own live) gets charter's under
+		// another: charterlive.
+		qualifier := m.now
+		if regexp.MustCompile(`"[^"\n]*/` + m.now + `"`).MatchString(strings.ReplaceAll(text, now, "")) {
+			qualifier = "charter" + m.now
+			now = qualifier + " " + now
+		}
 		text = strings.ReplaceAll(text, old, now)
 		for name, renamed := range m.names {
 			if renamed == "" {
 				renamed = name
 			}
-			text = regexp.MustCompile(`\b`+m.old+`\.`+name+`\b`).ReplaceAllString(text, m.now+"."+renamed)
+			text = regexp.MustCompile(`\b`+m.old+`\.`+name+`\b`).ReplaceAllString(text, qualifier+"."+renamed)
 		}
 	}
 	// Two packages that are one now leave the same import twice: the second goes.
@@ -113,7 +119,7 @@ func moveImports(text string) string {
 	lines := strings.Split(text, "\n")
 	kept := lines[:0]
 	for _, line := range lines {
-		if t := strings.TrimSpace(line); strings.HasPrefix(t, `"`+charter) && strings.HasSuffix(t, `"`) {
+		if t := strings.TrimSpace(line); strings.Contains(t, `"`+charter) && strings.HasSuffix(t, `"`) && !strings.Contains(t, "//") {
 			if seen[t] {
 				continue
 			}

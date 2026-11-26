@@ -11,7 +11,7 @@ import (
 )
 
 //line seo.gsx:7:1
-// Head is what a page's <head> tells search engines and link previews, beside the page's language versions and
+// SearchHead is what a page's <head> tells search engines and link previews, beside the page's language versions and
 // canonical URL (with charter run languages, gsxintl.Head): its title and description, the same for Open Graph and a summary card,
 // the site's icon, and on the home page the site's name as WebSite structured data, which Google shows beside the
 // site's results. title and description are the page's own text in its language (with intl: { locales.Title |> text });
@@ -19,14 +19,14 @@ import (
 // for the structured data. charter run audit checks every one of them.
 
 //line seo.gsx:13:1
-func seoHead(title string, description string, siteName string, icon string, home string, lang string) _gsxrt.Node {
+func SearchHead(title string, description string, siteName string, icon string, home string, lang string) _gsxrt.Node {
 	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
 		_gsxgw := _gsxrt.W(_gsxw)
-		return _gsxrenderseoHead(ctx, _gsxgw, title, description, siteName, icon, home, lang)
+		return _gsxrenderSearchHead(ctx, _gsxgw, title, description, siteName, icon, home, lang)
 	})
 }
 
-func _gsxrenderseoHead(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, title string, description string, siteName string, icon string, home string, lang string) error {
+func _gsxrenderSearchHead(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, title string, description string, siteName string, icon string, home string, lang string) error {
 	if _gsxerr := _gsxgw.Err(); _gsxerr != nil {
 		return _gsxerr
 	}

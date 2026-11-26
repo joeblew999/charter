@@ -26,7 +26,7 @@ func Head(title string, description string) _gsxrt.Node {
 //line head.gsx:14:2
 		_gsxgw.S("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
 //line head.gsx:15:2
-		_gsxgw.NodeResult(_gsxrenderseoHead(ctx, _gsxgw /*line head.gsx:16:10*/, title /*line head.gsx:17:16*/, description /*line head.gsx:18:13*/, h.Name /*line head.gsx:19:9*/, h.Icon /*line head.gsx:20:9*/, h.Home /*line head.gsx:21:9*/, h.Lang))
+		_gsxgw.NodeResult(_gsxrenderSearchHead(ctx, _gsxgw /*line head.gsx:16:10*/, title /*line head.gsx:17:16*/, description /*line head.gsx:18:13*/, h.Name /*line head.gsx:19:9*/, h.Icon /*line head.gsx:20:9*/, h.Home /*line head.gsx:21:9*/, h.Lang))
 //line head.gsx:23:2
 		if /*line head.gsx:23:7*/ h.Languages {
 //line head.gsx:24:3
