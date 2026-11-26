@@ -43,6 +43,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"slices"
 	"strconv"
@@ -94,7 +95,8 @@ type App struct {
 	once  sync.Once
 	vite  *vite.Vite
 	err   error
-	pages []string // the pages search engines may index, each a path without a language
+	pages  []string        // the sitemap: the pages without parameters search engines may index, each a path without a language
+	routes map[string]bool // the tree's pages, by the pattern the mux has them under: whether search engines may index them
 	site  intl.Site
 	tree  *structpages.StructPages
 }
@@ -146,11 +148,20 @@ func (a *App) Handler() http.Handler {
 		}
 		a.pages = append(a.pages, a.Docs.paths()...)
 	}
-	isPage := func(path string) bool { return slices.Contains(a.pages, path) }
+	// What a page is, is asked of the tree: the route a path matches, as the mux matches it, is a page when its type
+	// has a Page component. So a page with a parameter (/notes/{id}) is one too, with nothing listed anywhere.
+	routes := byLanguage[languages[0]].(*http.ServeMux)
+	matched := func(path string) (indexable, isPage bool) {
+		_, pattern := routes.Handler(&http.Request{Method: http.MethodGet, URL: &url.URL{Path: path}, Host: "page"})
+		indexable, isPage = a.routes[pattern]
+		return indexable, isPage
+	}
+	isPage := func(path string) bool { _, is := matched(path); return is }
 	// A page's path as search engines ask for it has its language and its query: /de/about?x=1.
 	indexable := func(pathAndQuery string) bool {
 		path, _, _ := strings.Cut(pathAndQuery, "?")
-		return isPage(intl.Unprefixed(path))
+		may, _ := matched(intl.Unprefixed(path))
+		return may
 	}
 	var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mux, ok := byLanguage[intl.Current(r.Context())]
@@ -246,11 +257,28 @@ func (b *buffered) Write(p []byte) (int, error) { return b.body.Write(p) }
 func (a *App) Options(collect bool) []structpages.Option {
 	// Every route of the tree passes here once, as it is mounted: that is where the list of pages comes from.
 	each := func(next http.Handler, pn *structpages.PageNode) http.Handler {
-		if path, ok := indexed(pn); ok && collect {
-			a.pages = append(a.pages, path)
+		_, isPage := pn.Components["Page"]
+		if collect {
+			if path, ok := indexed(pn); ok {
+				a.pages = append(a.pages, path)
+			}
+			if isPage && (pn.Method == "" || pn.Method == http.MethodGet) {
+				// The route as the mux knows it, and whether search engines may index what it serves.
+				pattern := pn.FullRoute()
+				if pn.Method != "" {
+					pattern = pn.Method + " " + pattern
+				}
+				if a.routes == nil {
+					a.routes = map[string]bool{}
+				}
+				n, says := pn.Value.Interface().(interface{ Noindex() bool })
+				a.routes[pattern] = !says || !n.Noindex()
+			}
 		}
+		// A fragment's address opened as a document goes to the page it is part of (guard.go).
+		next = guard(next, pn)
 		// A page goes out whole; an action or a stream writes as it goes.
-		if _, isPage := pn.Components["Page"]; isPage {
+		if isPage {
 			return whole(next)
 		}
 		return next

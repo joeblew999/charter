@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -29,7 +30,12 @@ func Check(args []string) {
 	fs := flag.NewFlagSet("charter check", flag.ExitOnError)
 	fix := fs.Bool("fix", false, "write what can be written: formatting, go.mod, the specs, the migration for db/schema.sql and the queries' Go")
 	drop := fs.Bool("drop", false, "with --fix: write a migration that drops a column or a table with its rows, which is otherwise refused")
+	asJSONFlag := fs.Bool("json", false, "one JSON document on stdout: whether it passed, and each part with what it said (for an agent or a script)")
 	fs.Parse(args)
+	if *asJSONFlag {
+		asJSON("check", slices.DeleteFunc(slices.Clone(args), func(a string) bool { return a == "--json" || a == "-json" }))
+		return
+	}
 	p := load()
 	t := newTimes("check")
 	if p.Spec != "" && p.DB != "" && *fix {

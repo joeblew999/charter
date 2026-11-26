@@ -24,6 +24,13 @@ func CreateNote(db cloud.DB, body string) (NotesRow, error) {
 	return cloud.One[NotesRow](db, qCreateNote, body)
 }
 
+const qNote = "SELECT id, body, created_at FROM notes WHERE id = ?"
+
+// Note is one note, by its id.
+func Note(db cloud.DB, id int64) (NotesRow, error) {
+	return cloud.One[NotesRow](db, qNote, id)
+}
+
 const qNotesBefore = "SELECT id, body, created_at FROM notes WHERE id < ? ORDER BY id DESC LIMIT ?"
 
 // NotesBefore is a page of notes, newest first, before a note id.

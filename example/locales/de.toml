@@ -10,6 +10,7 @@ intro = "Schreiben Sie eine, und sie erscheint sofort auf jeder hier geöffneten
 placeholder = "Schreiben Sie eine Notiz"
 label = "Notiz"
 post = "Senden"
+when = "Wann sie geschrieben wurde"
 
 [bindings]
 link = "Was Cloudflare diesem Worker bereitstellt"

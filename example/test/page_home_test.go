@@ -76,3 +76,29 @@ func TestTheFormRefusesAnEmptyNote(t *testing.T) {
 		t.Fatalf("HTTP %d\n%s", res.StatusCode, b)
 	}
 }
+
+// A note's own button opens its row, and only its row: the row asks for itself (its id carries the note's), and the
+// answer says when the note was written. The header marks the page being shown.
+func TestANotesRowOpensByItself(t *testing.T) {
+	home := apptest.Browser(t)
+	home.Open(at(pages.Home{}))
+	body := "opened at " + time.Now().Format(time.RFC3339Nano)
+	home.Type(el(pages.Home.Form)+` input[name=body]`, body)
+	home.Click(el(pages.Home.Form) + ` button[type=submit]`)
+	home.WaitText(el(pages.Home.List), body)
+	first := el(pages.Home.List) + ` li:first-child`
+	if open := home.Attr(first+` button`, "aria-expanded"); open != "false" {
+		t.Fatalf("the newest row starts %q", open)
+	}
+	home.Click(first + ` button`)
+	home.WaitText(first+` p`, "20") // the year, in the full date
+	if open := home.Attr(first+` button`, "aria-expanded"); open != "true" {
+		t.Errorf("the row did not open: %q", open)
+	}
+	if !strings.Contains(home.Text(first), body) {
+		t.Errorf("the opened row is another note: %q", home.Text(first))
+	}
+	if here := home.Attr(`header nav a[href="`+at(pages.Home{})+`"]`, "data-variant"); here != "secondary" {
+		t.Errorf("the header does not mark the page being shown: %q", here)
+	}
+}

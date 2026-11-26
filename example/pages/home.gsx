@@ -6,6 +6,7 @@ import (
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/locales"
 	"github.com/joeblew999/charter/example/ui"
+	"github.com/joeblew999/charter/example/ui/icon"
 )
 
 // Page is the home page: the form, and the newest notes, newest first. The list follows the feed from the newest
@@ -68,16 +69,46 @@ component (p Home) Form(body string, refused bool) {
 // List is the notes of the list.
 component (p Home) List(notes []api.Note) {
 	{ for _, note := range notes {
-		<p.Item note={note}/>
+		<p.Item note={note} open={false}/>
 	} }
 }
 
-// Item is one note: in the list, and what the stream sends of each new one. Its id is the component's, keyed by the
-// note.
-component (p Home) Item(note api.Note) {
-	<li id={Home.Item |> key(strconv.FormatInt(note.ID, 10))} class="rounded-md border px-3 py-2">
-		<span dir="auto">{ note.Body }</span>
+// Item is one note: in the list, what the stream sends of each new one, and what its own button asks for again. Its
+// id is the component's, keyed by the note, so the button's target is this row and no other, and Home's Props knows
+// which note is wanted (structpages.KeyOf). Open, it says when the note was written in full.
+component (p Home) Item(note api.Note, open Open) {
+	<li
+		id={Home.Item |> key(strconv.FormatInt(note.ID, 10))}
+		class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2"
+	>
+		<span dir="auto" class="flex-1">{ note.Body }</span>
 		// How long ago, in the reader's language; the browser's half of intl keeps it current.
-		<span class="ms-2 text-xs text-muted-foreground">{ note.Created() |> since }</span>
+		<span class="text-xs text-muted-foreground">{ note.Created() |> since }</span>
+		<ui.Button
+			variant="ghost"
+			size="icon-sm"
+			type="button"
+			hx-get=f`@{Home{} |> url}@{itemQuery(open)}`
+			hx-target={Home.Item |> keytarget(strconv.FormatInt(note.ID, 10))}
+			hx-swap="outerHTML"
+			aria-expanded={strconv.FormatBool(bool(open))}
+			aria-label={locales.HomeWhen}
+			title={locales.HomeWhen}
+		>
+			<icon.Clock/>
+		</ui.Button>
+		{ if open {
+			<p class="w-full text-sm text-muted-foreground">
+				{ note.Created() |> date("dateStyle", "full", "timeStyle", "long") }
+			</p>
+		} }
 	</li>
+}
+
+// itemQuery is what a row's button asks for: the row open when it is closed, closed when it is open.
+func itemQuery(open Open) string {
+	if open {
+		return ""
+	}
+	return "?open=1"
 }

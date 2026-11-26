@@ -7,6 +7,7 @@ import (
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -23,10 +24,43 @@ func Lint(args []string) {
 // lint is go.mod as go mod tidy writes it, go vet for the host and for the Worker, and structpages' linter for an app
 // that has it as a tool.
 func lint(p *project.Project) error {
-	if err := run.Run(p.Root, nil, "go", "mod", "tidy", "-diff"); err != nil {
-		return fmt.Errorf("go.mod is not tidy (charter check --fix): %w", err)
+	// go.mod as go mod tidy writes it, but for one thing: whether a module is marked // indirect. The components' Go
+	// (*.x.go) is not in git, so on a clone that has not been built nothing imports gsx yet and tidy there marks it
+	// indirect; that is how Dependabot's pull requests arrive, and they are right in everything else.
+	diff := exec.Command("go", "mod", "tidy", "-diff")
+	diff.Dir = p.Root
+	out, _ := diff.CombinedOutput()
+	if changed := tidyChanges(string(out)); len(changed) > 0 {
+		return fmt.Errorf("go.mod is not tidy (charter check --fix):\n%s", strings.Join(changed, "\n"))
 	}
 	return vet(p)
+}
+
+// tidyChanges are the lines of go mod tidy -diff that change more than a module's // indirect mark.
+func tidyChanges(diff string) []string {
+	bare := func(line string) string {
+		return strings.Join(strings.Fields(strings.TrimSuffix(strings.TrimSpace(line[1:]), "// indirect")), " ")
+	}
+	removed, added := map[string]int{}, map[string]int{}
+	var lines []string
+	for _, line := range strings.Split(diff, "\n") {
+		switch {
+		case strings.HasPrefix(line, "---"), strings.HasPrefix(line, "+++"):
+		case strings.HasPrefix(line, "-"):
+			removed[bare(line)]++
+			lines = append(lines, line)
+		case strings.HasPrefix(line, "+"):
+			added[bare(line)]++
+			lines = append(lines, line)
+		}
+	}
+	var changed []string
+	for _, line := range lines {
+		if key := bare(line); removed[key] != added[key] {
+			changed = append(changed, line)
+		}
+	}
+	return changed
 }
 
 // vet is go vet for the host and for the Worker, and structpages' own linter for both: every link, id and target

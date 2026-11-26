@@ -3,6 +3,7 @@ package pages
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -33,6 +34,15 @@ func (n *notes) Create(_ context.Context, body string) (api.Note, error) {
 	return note, nil
 }
 
+func (n *notes) Get(_ context.Context, id int64) (api.Note, error) {
+	for _, note := range n.all {
+		if note.ID == id {
+			return note, nil
+		}
+	}
+	return api.Note{}, errors.New("no such note")
+}
+
 func (n *notes) Before(_ context.Context, before int64, limit int) (out []api.Note, err error) {
 	for i := len(n.all) - 1; i >= 0 && len(out) < limit; i-- {
 		if n.all[i].ID < before {
@@ -50,7 +60,7 @@ func TestHomeProps(t *testing.T) {
 	store := &notes{}
 	store.Create(context.Background(), "first")
 	store.Create(context.Background(), "second")
-	props, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store)
+	props, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, page{})
 	if err != nil || len(props.Notes) != 2 || props.Notes[0].Body != "second" || props.After != 2 {
 		t.Fatalf("%+v %v", props, err)
 	}
@@ -113,10 +123,59 @@ func TestItemAlone(t *testing.T) {
 	}
 	var html bytes.Buffer
 	note := api.Note{NotesRow: db.NotesRow{ID: 7, Body: "seven", CreatedAt: "2026-10-01 12:00:00"}}
-	if err := (Home{}).Item(note).Render(sp.PageContext(context.Background()), &html); err != nil {
+	if err := (Home{}).Item(note, false).Render(sp.PageContext(context.Background()), &html); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(html.String(), `<li id="home-item--7"`) || !strings.Contains(html.String(), "seven") {
 		t.Errorf("%s", html.String())
 	}
 }
+
+// A row's button asks for that row alone: the answer is the one note, open, and nothing of the page around it.
+func TestOneRowAlone(t *testing.T) {
+	store := &notes{}
+	store.Create(context.Background(), "first")
+	store.Create(context.Background(), "second")
+	r := httptest.NewRequest("GET", "/?open=1", nil)
+	r.Header.Set("HX-Request", "true")
+	r.Header.Set("HX-Target", "li#home-item--1")
+	rec := httptest.NewRecorder()
+	serve(t, store).ServeHTTP(rec, r)
+	html := rec.Body.String()
+	if rec.Code != 200 || !strings.Contains(html, `<li id="home-item--1"`) || !strings.Contains(html, "first") || !strings.Contains(html, `aria-expanded="true"`) {
+		t.Errorf("HTTP %d\n%s", rec.Code, html)
+	}
+	if strings.Contains(html, "second") || strings.Contains(html, "<html") {
+		t.Errorf("more than the row came back:\n%s", html)
+	}
+}
+
+// Every route of the tree has an address: a page that the tree cannot resolve (mounted twice, a parameter the test
+// does not know) fails here, before a link to it fails in a browser. Parameters are filled with a sample.
+func TestEveryRouteHasAnAddress(t *testing.T) {
+	// Every route passes a middleware once as the tree is mounted: that is the list.
+	var routes []*structpages.PageNode
+	sp, err := Mount(http.NewServeMux(), append((&app.App{Docs: &app.Docs{}}).Options(false),
+		structpages.WithRequestArgs(func(*http.Request) (api.Store, error) { return &notes{}, nil }, func(*http.Request) (bindings.State, error) { return bindings.State{}, nil }),
+		structpages.WithMiddlewares(func(next http.Handler, pn *structpages.PageNode) http.Handler {
+			routes = append(routes, pn)
+			return next
+		}))...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sample := map[string]any{"slug": "how-it-is-built", "action": "note"}
+	for _, node := range routes {
+		if _, err := sp.URLFor(node.Value.Interface(), sample); err != nil {
+			t.Errorf("%s (%s): %v", node.Name, node.FullRoute(), err)
+		}
+	}
+	if len(routes) < 8 {
+		t.Errorf("only %d routes found in the tree", len(routes))
+	}
+}
+
+// page is a request for the whole page: a target that is none of its components.
+type page struct{}
+
+func (page) Is(any) bool { return false }

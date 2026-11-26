@@ -4,6 +4,10 @@
 -- name: CreateNote :one
 INSERT INTO notes (body) VALUES (?) RETURNING *;
 
+-- name: Note :one
+-- Note is one note, by its id.
+SELECT * FROM notes WHERE id = ?;
+
 -- name: NotesBefore :many
 -- NotesBefore is a page of notes, newest first, before a note id.
 SELECT * FROM notes WHERE id < ? ORDER BY id DESC LIMIT ?;

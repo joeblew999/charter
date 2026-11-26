@@ -1,6 +1,7 @@
 package test
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 
@@ -52,5 +53,19 @@ func TestThePageIsOfferedInTheReadersLanguage(t *testing.T) {
 	html := apptest.Get(t, at(pages.Home{}), "Accept-Language", "de")
 	if !strings.Contains(html, `<html lang="en"`) || !strings.Contains(html, "Diese Seite gibt es auch auf") || !strings.Contains(html, "Nein danke") || !strings.Contains(html, `href="/de/"`) {
 		t.Errorf("no offer of the German page on the English one:\n%s", html)
+	}
+}
+
+// The dialog's form has an address of its own. Opened as a page (a new tab, a reload) it would be a form with no
+// page around it: the app sends the reader to the page it is part of.
+func TestAFragmentOpenedAsAPageGoesToItsPage(t *testing.T) {
+	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	res, err := client.Get(apptest.Base(t) + at(screens.PreferencesFields{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if to := res.Header.Get("Location"); res.StatusCode != http.StatusSeeOther || to != at(pages.Home{}) {
+		t.Errorf("HTTP %d to %q", res.StatusCode, to)
 	}
 }

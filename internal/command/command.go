@@ -12,6 +12,7 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
@@ -37,6 +38,11 @@ func newTimes(name string) *times { return &times{name: name, start: time.Now()}
 
 func (t *times) part(name string, f func() error) {
 	start := time.Now()
+	// For a command run with --json (asJSON): where each part's output starts.
+	if os.Getenv("CHARTER_PARTS") != "" {
+		fmt.Printf("%s%s\n", partsMark, name)
+		os.Stderr.Sync()
+	}
 	if err := f(); err != nil {
 		check(fmt.Errorf("%s: %w", name, err))
 	}
@@ -223,5 +229,53 @@ func localVars(p *project.Project) {
 	}
 	if b, err := os.ReadFile(example); err == nil && os.WriteFile(vars, b, 0o600) == nil {
 		say("%s: made from %s.example (local values for wrangler dev; not in git)", project.DevVars, project.DevVars)
+	}
+}
+
+// partsMark starts a line that says which part of a command what follows is from, when the command runs for asJSON.
+const partsMark = "CHARTER_PART="
+
+// Report is a command's result for a program to read (charter check --json): whether it passed, and each part it
+// ran, in order, with what the part said. The part that failed is the last, and its output says why.
+type Report struct {
+	Command string       `json:"command"`
+	OK      bool         `json:"ok"`
+	Seconds float64      `json:"seconds"`
+	Parts   []ReportPart `json:"parts"`
+}
+
+// ReportPart is one part of a command: generate, fmt, lint, …
+type ReportPart struct {
+	Name   string `json:"name"`
+	OK     bool   `json:"ok"`
+	Output string `json:"output"`
+}
+
+// asJSON runs this command again without --json, as its own program, and prints its result as one JSON document:
+// whatever the command does (a part that ends the program, a tool that prints as it likes), the document is whole.
+// It exits as the command did.
+func asJSON(command string, args []string) {
+	start := time.Now()
+	cmd := exec.Command(self(), append([]string{command}, args...)...)
+	cmd.Env = append(os.Environ(), "CHARTER_PARTS=1", "NO_COLOR=1")
+	out, err := cmd.CombinedOutput()
+	report := Report{Command: command, OK: err == nil, Seconds: time.Since(start).Seconds()}
+	for _, line := range strings.SplitAfter(string(out), "\n") {
+		if name, ok := strings.CutPrefix(strings.TrimSpace(line), partsMark); ok && strings.HasPrefix(line, partsMark) {
+			report.Parts = append(report.Parts, ReportPart{Name: name, OK: true})
+			continue
+		}
+		if len(report.Parts) == 0 {
+			report.Parts = append(report.Parts, ReportPart{Name: "start", OK: true})
+		}
+		report.Parts[len(report.Parts)-1].Output += line
+	}
+	if err != nil && len(report.Parts) > 0 {
+		report.Parts[len(report.Parts)-1].OK = false
+	}
+	b, _ := json.MarshalIndent(report, "", "  ")
+	fmt.Println(string(b))
+	if err != nil {
+		os.Exit(1)
 	}
 }

@@ -12,6 +12,8 @@ import (
 // db/schema.sql, through the queries of db/queries.sql); a test gives one of its own.
 type Store interface {
 	Create(ctx context.Context, body string) (Note, error)
+	// Get is the note with that id.
+	Get(ctx context.Context, id int64) (Note, error)
 	// Before is the notes with an id below before, newest first, at most limit.
 	Before(ctx context.Context, before int64, limit int) ([]Note, error)
 	// Since is the notes with an id above after, oldest first, at most limit: the log the feed follows.
@@ -33,6 +35,11 @@ type d1 struct{ db cloud.DB }
 
 func (s d1) Create(_ context.Context, body string) (Note, error) {
 	row, err := db.CreateNote(s.db, body)
+	return Note{row}, err
+}
+
+func (s d1) Get(_ context.Context, id int64) (Note, error) {
+	row, err := db.Note(s.db, id)
 	return Note{row}, err
 }
 

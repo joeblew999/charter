@@ -18,6 +18,7 @@ import (
 	"context"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/jackielii/structpages"
@@ -62,16 +63,43 @@ type HomeProps struct {
 	After int64
 }
 
-func (Home) Props(r *http.Request, store api.Store) (HomeProps, error) {
+// Open says whether a note's row shows when it was written in full: what the row's own button asks for.
+type Open bool
+
+// Props loads what the request wants, as structpages has it. A row's button asks for that row alone (its target is
+// Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. Anything
+// else is the page, with the newest notes. Each component takes its share of the results by their types.
+func (p Home) Props(r *http.Request, store api.Store, target structpages.RenderTarget) (HomeProps, api.Note, Open, error) {
+	if target.Is(p.Item) {
+		id, err := strconv.ParseInt(structpages.KeyOf(target), 10, 64)
+		if err != nil {
+			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
+		}
+		note, err := store.Get(r.Context(), id)
+		if err != nil {
+			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
+		}
+		return HomeProps{}, note, r.URL.Query().Get("open") != "", nil
+	}
 	notes, err := store.Before(r.Context(), math.MaxInt64, shown)
 	if err != nil {
-		return HomeProps{}, err
+		return HomeProps{}, api.Note{}, false, err
 	}
 	props := HomeProps{Notes: notes}
 	if len(notes) > 0 {
 		props.After = notes[0].ID
 	}
-	return props, nil
+	return props, api.Note{}, false, nil
+}
+
+// current is how a link in the header looks: marked when the page being shown is that page, or under it
+// (structpages.Within). A page that is renamed fails the render here, instead of never being marked.
+func current(ctx context.Context, page any) (string, error) {
+	within, err := structpages.Within(ctx, page)
+	if within {
+		return "secondary", err
+	}
+	return "ghost", err
 }
 
 // PostNote is the form's target: it writes the note as the API's createNote does (api.Post), and answers with the
@@ -104,7 +132,7 @@ type NotesStream struct{}
 func (NotesStream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	api.Notes.Fragments(w, r, func(ctx context.Context, note api.Note) (string, error) {
 		var html bytes.Buffer
-		err := Home{}.Item(note).Render(ctx, &html)
+		err := Home{}.Item(note, false).Render(ctx, &html)
 		return strings.TrimSpace(html.String()), err
 	})
 }

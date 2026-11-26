@@ -17,6 +17,8 @@ placeholder = "Write a note"
 label = "Note"
 # The button that posts the note.
 post = "Post"
+# The button on a note that shows when it was written, in full.
+when = "When it was written"
 
 [docs]
 # The link to the docs in every page's header.

@@ -22,9 +22,15 @@ component Layout(title intl.Msg, description intl.Msg, children gsx.Node) {
 		</head>
 		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
 			<header class="mx-auto flex max-w-xl items-center gap-1 px-4 pt-4">
-				<ui.Button variant="link" class="px-0 font-semibold" href={Home{} |> url} translate="no">charter</ui.Button>
+				// The pages, the one being shown marked (current, by the tree).
+				<nav class="flex items-center gap-1">
+					<ui.Button variant={current(ctx, Home{})} size="sm" href={Home{} |> url}>{ locales.HomeHeading }</ui.Button>
+					<ui.Button variant={current(ctx, Bindings{})} size="sm" href={Bindings{} |> url} translate="no">
+						Cloudflare
+					</ui.Button>
+					<ui.Button variant="ghost" size="sm" href={screens.DocsIndex{} |> url}>{ locales.DocsNav }</ui.Button>
+				</nav>
 				<span class="flex-1"></span>
-				<ui.Button variant="ghost" size="sm" href={screens.DocsIndex{} |> url}>{ locales.DocsNav }</ui.Button>
 				<screens.PreferencesDialog/>
 				<screens.ThemeToggle/>
 			</header>

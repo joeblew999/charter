@@ -10,6 +10,7 @@ intro = "اكتب ملاحظة، فتظهر فورًا في كل صفحة مفت
 placeholder = "اكتب ملاحظة"
 label = "الملاحظة"
 post = "نشر"
+when = "متى كُتبت"
 
 [bindings]
 link = "ما تقدّمه Cloudflare لهذا الـ Worker"
