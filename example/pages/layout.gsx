@@ -4,6 +4,7 @@ import (
 	"github.com/gsxhq/gsx"
 
 	"github.com/joeblew999/charter/app"
+	"github.com/joeblew999/charter/app/docs"
 	"github.com/joeblew999/charter/example/locales"
 	"github.com/joeblew999/charter/intl"
 )
@@ -20,7 +21,7 @@ component Layout(title intl.Msg, description intl.Msg, children gsx.Node) {
 			<header class="mx-auto flex max-w-xl items-center gap-3 px-4 pt-4">
 				<a href={Home{} |> url} class="font-semibold" translate="no">charter</a>
 				<span class="flex-1"></span>
-				<a href={DocsIndex{} |> url} class="text-sm underline underline-offset-4">{ locales.DocsNav }</a>
+				<a href={docs.Index{} |> url} class="text-sm underline underline-offset-4">{ locales.DocsNav }</a>
 			</header>
 			<main class="mx-auto flex max-w-xl flex-col gap-6 p-4">{ children }</main>
 			<footer class="mx-auto flex max-w-xl flex-wrap items-center gap-3 p-4 text-sm text-muted-foreground">

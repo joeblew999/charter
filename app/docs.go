@@ -1,17 +1,43 @@
 package app
 
-import "strings"
+import (
+	"net/http"
+	"strings"
 
-// Doc is a page of an app's docs: a Markdown file of its docs/ folder, which charter build turns into HTML once, so
-// that no Markdown is read on a Worker (docs/docs.built.go has them all, in the files' order). An app shows them with
-// pages of its own, in its own components; charter gives it the content, the links and the list.
+	"github.com/joeblew999/charter/seo"
+)
+
+// Docs are an app's docs: the Markdown files of its docs/ folder, which charter build turns into Go once
+// (docs/docs.built.go), so that no Markdown code runs on a Worker. An app has them by naming them in its App and
+// mounting charter's pages for them (package app/docs) in its tree:
+//
+//	docs docs.Pages `route:"/docs Docs"`
+//
+// From that one value come the pages, their place in the sitemap, each page as Markdown (/docs/<page>.md), and what
+// a language model reads: /llms.txt and /llms-full.txt.
+type Docs struct {
+	// Name is what the docs are of, and Summary one line about it: the heading of the pages, and of /llms.txt.
+	Name, Summary string
+	// Pages are the docs, as charter build wrote them: index.md first.
+	Pages []Doc
+	// Repo is the repository on GitHub (https://github.com/owner/name), and Dir the app's folder in it ("" at its
+	// top): where the pages link to, and where "edit this page" goes.
+	Repo, Dir string
+	// Agents is what /llms.txt says to a coding agent, in Markdown: which plugin or skill to work with. It may be
+	// empty.
+	Agents string
+	// More are sections of /llms.txt after the docs: the app's own pages, its API.
+	More []seo.LLMsSection
+}
+
+// Doc is a page of the docs.
 type Doc struct {
 	// Slug is the page's place under /docs: "" for docs/index.md, "pages" for docs/03-pages.md.
 	Slug string
 	// Title is the page's first heading, and Description its first paragraph, as a search result shows them.
 	Title, Description string
-	// HTML is the page: trusted, written by charter build from the app's own Markdown.
-	HTML string
+	// HTML is the page: trusted, written by charter build from the app's own Markdown, which Markdown is.
+	HTML, Markdown string
 	// Headings are the page's sections, for a table of contents.
 	Headings []DocHeading
 	// Source is the file, from the app's folder: docs/03-pages.md.
@@ -27,24 +53,88 @@ type DocHeading struct {
 // Path is the page's address, without a language: /docs/ or /docs/pages.
 func (d Doc) Path() string { return "/docs/" + d.Slug }
 
-// FindDoc is the page with that slug.
-func FindDoc(docs []Doc, slug string) (Doc, bool) {
-	for _, d := range docs {
-		if d.Slug == strings.Trim(slug, "/") {
-			return d, true
+// Find is the page with that slug.
+func (d *Docs) Find(slug string) (Doc, bool) {
+	for _, page := range d.Pages {
+		if page.Slug == strings.Trim(slug, "/") {
+			return page, true
 		}
 	}
 	return Doc{}, false
 }
 
-// DocPaths are the pages' addresses, for a page type's Paths method: what makes each a page search engines may
-// index, in the sitemap.
-func DocPaths(docs []Doc) []string {
-	paths := make([]string, 0, len(docs))
-	for _, d := range docs {
-		if d.Slug != "" {
-			paths = append(paths, d.Path())
-		}
+// Edit is where a page is edited on GitHub, "" when the docs name no repository.
+func (d *Docs) Edit(page Doc) string {
+	if d.Repo == "" {
+		return ""
+	}
+	return strings.TrimRight(d.Repo, "/") + "/edit/main/" + strings.Trim(strings.Trim(d.Dir, "/")+"/"+page.Source, "/")
+}
+
+// paths are the pages' addresses, each a page search engines may index.
+func (d *Docs) paths() []string {
+	paths := make([]string, len(d.Pages))
+	for i, page := range d.Pages {
+		paths[i] = page.Path()
 	}
 	return paths
+}
+
+// llms is /llms.txt (https://llmstxt.org): what the app is, what a coding agent should work with, and every page of
+// the docs as Markdown, with what it is about.
+func (d *Docs) llms(origin string) string {
+	read := make([]seo.LLMsLink, len(d.Pages))
+	for i, page := range d.Pages {
+		read[i] = seo.LLMsLink{Title: page.Title, URL: origin + markdownPath(page), Note: page.Description}
+	}
+	details := d.Agents
+	if details != "" {
+		details += "\n\n"
+	}
+	details += "Every page of the docs is Markdown at its address with .md, and all of them are one file at " + origin + "/llms-full.txt."
+	return seo.LLMsTxt(d.Name, d.Summary, details, append([]seo.LLMsSection{{Name: "Docs", Links: read}}, d.More...)...)
+}
+
+// full is /llms-full.txt: every page of the docs, one after the other, as it was written.
+func (d *Docs) full(origin string) string {
+	var b strings.Builder
+	for _, page := range d.Pages {
+		b.WriteString("<!-- " + origin + page.Path() + " -->\n\n" + strings.TrimSpace(page.Markdown) + "\n\n")
+	}
+	return b.String()
+}
+
+func markdownPath(page Doc) string {
+	if page.Slug == "" {
+		return "/docs/index.md"
+	}
+	return "/docs/" + page.Slug + ".md"
+}
+
+// text answers what a model reads of the docs: a page as Markdown, or all of them. ok is false for any other path.
+func (d *Docs) text(w http.ResponseWriter, r *http.Request) (ok bool) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return false
+	}
+	var body string
+	switch path := r.URL.Path; {
+	case path == "/llms-full.txt":
+		body = d.full(Origin(r))
+	case strings.HasPrefix(path, "/docs/") && strings.HasSuffix(path, ".md"):
+		slug := strings.TrimSuffix(strings.TrimPrefix(path, "/docs/"), ".md")
+		if slug == "index" {
+			slug = ""
+		}
+		page, found := d.Find(slug)
+		if !found {
+			return false
+		}
+		body = page.Markdown
+	default:
+		return false
+	}
+	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+	w.Header().Set("X-Robots-Tag", "noindex") // the page itself is what a search engine lists
+	w.Write([]byte(body))
+	return true
 }

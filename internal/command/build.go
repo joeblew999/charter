@@ -13,6 +13,7 @@ import (
 	"github.com/joeblew999/charter/internal/run"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -91,6 +92,9 @@ func generate(p *project.Project) error {
 		if err := run.Run(p.Root, nil, "go", "tool", "gsx", "generate"); err != nil {
 			return err
 		}
+	}
+	if err := librarySources(p); err != nil {
+		return err
 	}
 	// The browser's files, with the manifest the Go embeds: before anything compiles the Go.
 	if hasVite(p) {
@@ -233,4 +237,88 @@ func pushSchema(p *project.Project) error {
 	}
 	_, err = run.Output(p.Root, env, bin, "d1", "execute", binding, "--local", "--file", file)
 	return err
+}
+
+// librarySources lets the app's Tailwind see the classes of components that are not in the app's folder: charter's
+// docs pages (app/docs), and the gsxui components they are built from, which are imported as packages and not
+// vendored. Tailwind reads only the app's own files, so their sources are copied into .charter/tailwind, and the
+// app's stylesheet is told to read there (one @source line, added once).
+func librarySources(p *project.Project) error {
+	css := filepath.Join(p.Root, "web", "gsxui", "index.css")
+	if !exists(css) || !uses(p.Root, library+"/app/docs") {
+		return nil
+	}
+	to := filepath.Join(p.Root, ".charter", "tailwind")
+	if err := os.RemoveAll(to); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(to, 0o755); err != nil {
+		return err
+	}
+	var used []string // the gsxui components charter's pages use
+	for module, pick := range map[string]func(name string, text []byte) bool{
+		library: func(name string, text []byte) bool {
+			for _, m := range regexp.MustCompile(`<ui\.([A-Z]\w*)`).FindAllSubmatch(text, -1) {
+				used = append(used, string(m[1]))
+			}
+			return true
+		},
+	} {
+		dir, err := run.Output(p.Root, nil, "go", "list", "-m", "-f", "{{.Dir}}", module)
+		if err != nil {
+			return err
+		}
+		files, _ := filepath.Glob(filepath.Join(strings.TrimSpace(dir), "app", "docs", "*"))
+		for _, f := range files {
+			if b, err := os.ReadFile(f); err == nil && (strings.HasSuffix(f, ".gsx") || strings.HasSuffix(f, "pages.go")) && pick(f, b) {
+				if err := os.WriteFile(filepath.Join(to, "charter-"+filepath.Base(f)+".txt"), b, 0o644); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if dir, err := run.Output(p.Root, nil, "go", "list", "-m", "-f", "{{.Dir}}", "github.com/gsxhq/gsxui"); err == nil {
+		files, _ := filepath.Glob(filepath.Join(strings.TrimSpace(dir), "ui", "*.gsx"))
+		for _, f := range files {
+			b, err := os.ReadFile(f)
+			if err != nil {
+				continue
+			}
+			for _, name := range used {
+				if bytes.Contains(b, []byte("component "+name+"(")) {
+					if err := os.WriteFile(filepath.Join(to, "gsxui-"+filepath.Base(f)+".txt"), b, 0o644); err != nil {
+						return err
+					}
+					break
+				}
+			}
+		}
+	}
+	const line = `@source "../../.charter/tailwind";`
+	b, err := os.ReadFile(css)
+	if err != nil || bytes.Contains(b, []byte(line)) {
+		return err
+	}
+	say("web/gsxui/index.css: reads the classes of charter's docs pages (%s)", line)
+	return os.WriteFile(css, append(bytes.TrimRight(b, "\n"), []byte("\n\n/* The classes of components imported as packages (charter's docs pages): charter build copies their sources there. */\n"+line+"\n")...), 0o644)
+}
+
+// uses says whether a Go or gsx file of the app imports the package.
+func uses(root, pkg string) bool {
+	found := false
+	filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || found {
+			return filepath.SkipAll
+		}
+		if d.IsDir() && (d.Name() == "node_modules" || strings.HasPrefix(d.Name(), ".") && path != root || d.Name() == "build" || d.Name() == "dist") {
+			return filepath.SkipDir
+		}
+		if ext := filepath.Ext(path); (ext == ".go" || ext == ".gsx") && !strings.HasSuffix(path, ".x.go") {
+			if b, err := os.ReadFile(path); err == nil && bytes.Contains(b, []byte(`"`+pkg+`"`)) {
+				found = true
+			}
+		}
+		return nil
+	})
+	return found
 }

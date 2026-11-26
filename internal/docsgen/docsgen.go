@@ -36,8 +36,8 @@ func slug(file string) string {
 }
 
 type page struct {
-	Slug, Title, Description, HTML, Source string
-	Headings                               [][3]string // id, title, depth
+	Slug, Title, Description, HTML, Markdown, Source string
+	Headings                                         [][3]string // id, title, depth
 }
 
 // Write writes dir's docs/docs.built.go from its docs/*.md, and reports how many pages; none when there is no docs
@@ -106,7 +106,7 @@ func Write(dir string) (int, error) {
 		if err := md.Renderer().Render(&out, source, doc); err != nil {
 			return 0, fmt.Errorf("%s: %w", p.Source, err)
 		}
-		p.HTML = out.String()
+		p.HTML, p.Markdown = out.String(), string(source)
 		pages = append(pages, p)
 	}
 	var b strings.Builder
@@ -116,7 +116,7 @@ func Write(dir string) (int, error) {
 		for _, h := range p.Headings {
 			fmt.Fprintf(&b, "{ID: %q, Title: %q, Depth: %s}, ", h[0], h[1], h[2])
 		}
-		fmt.Fprintf(&b, "},\n\t\tHTML: %q,\n\t},\n", p.HTML)
+		fmt.Fprintf(&b, "},\n\t\tHTML:     %q,\n\t\tMarkdown: %q,\n\t},\n", p.HTML, p.Markdown)
 	}
 	b.WriteString("}\n")
 	code, err := format.Source([]byte(b.String()))

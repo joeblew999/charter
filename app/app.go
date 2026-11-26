@@ -19,8 +19,7 @@
 //
 //   - Pages (github.com/jackielii/structpages): Pages is the tree of them, each page a type with its route in the
 //     field's tag and a Page component. The tree is the one source of routes: links are { About{} |> url } (URL), and
-//     the pages search engines may index are the tree's GET routes without parameters, and those a page with a
-//     parameter lists (Paths).
+//     the pages search engines may index are the tree's GET routes without parameters, and the docs.
 //   - Everything that is no page goes to API.
 //   - Vite (github.com/gsxhq/vite): with charter dev a page loads web/main.js from Vite's dev server and reloads on a
 //     save; built, it loads the hashed files of dist/, which Workers Static Assets serve.
@@ -80,6 +79,8 @@ type App struct {
 	RequestArgs []any
 	// API answers everything that is not a page. nil: 404.
 	API http.Handler
+	// Docs are the app's docs (docs/*.md, as charter build wrote them), for an app that has them: see Docs.
+	Docs *Docs
 	// Entry is the Vite entry every page loads. Empty: web/main.js.
 	Entry string
 	// Icon is the site's icon. Empty: /favicon.svg (public/favicon.svg).
@@ -118,19 +119,19 @@ func (a *App) Handler() http.Handler {
 			if path, ok := indexed(pn); ok {
 				a.pages = append(a.pages, path)
 			}
-			// A page whose route has a parameter says which addresses it has (the docs: one for each page of them).
-			if many, ok := pn.Value.Interface().(interface{ Paths() []string }); ok {
-				if _, isPage := pn.Components["Page"]; isPage {
-					a.pages = append(a.pages, many.Paths()...)
-				}
-			}
 			// A page goes out whole; an action or a stream writes as it goes.
 			if _, isPage := pn.Components["Page"]; isPage {
 				return whole(next)
 			}
 			return next
 		}
-		tree, err := a.Pages(mux, structpages.WithArgs(a.Args...), structpages.WithRequestArgs(a.RequestArgs...),
+		args := a.Args
+		if a.Docs != nil {
+			// The docs' pages ask for them by type, and each is a page of the sitemap.
+			args = append(slices.Clone(args), a.Docs)
+			a.pages = append(a.pages, a.Docs.paths()...)
+		}
+		tree, err := a.Pages(mux, structpages.WithArgs(args...), structpages.WithRequestArgs(a.RequestArgs...),
 			structpages.WithErrorHandler(failed), structpages.WithMiddlewares(each), structpages.WithTargetSelector(structpages.HTMXv4RenderTarget))
 		if err != nil {
 			panic(err) // the page tree is code: the first run shows a mistake in it
@@ -162,6 +163,10 @@ func (a *App) Handler() http.Handler {
 		// itself; workers.dev does not.)
 		if origin := Origin(r); strings.HasPrefix(origin, "http://") && !local(r) {
 			http.Redirect(w, r, "https://"+strings.TrimPrefix(origin, "http://")+r.URL.RequestURI(), http.StatusMovedPermanently)
+			return
+		}
+		// What a language model reads of the docs: a page as Markdown, all of them as one file.
+		if a.Docs != nil && a.Docs.text(w, r) {
 			return
 		}
 		v, err := a.assets()

@@ -56,9 +56,12 @@ func failed(w http.ResponseWriter, r *http.Request, err error) {
 	http.Error(w, "Something went wrong.", http.StatusInternalServerError)
 }
 
-// llms is the app's LLMs with the tree's addresses, as seo.Site takes it.
+// llms is /llms.txt as seo.Site takes it: the app's own LLMs, with the tree's addresses; else the docs'.
 func (a *App) llms() func(origin string) string {
 	if a.LLMs == nil {
+		if a.Docs != nil {
+			return a.Docs.llms
+		}
 		return nil
 	}
 	return func(origin string) string {

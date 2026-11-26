@@ -14,6 +14,7 @@ import (
 	charter "github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/bindings"
+	"github.com/joeblew999/charter/example/docs"
 	"github.com/joeblew999/charter/example/pages"
 )
 
@@ -29,7 +30,15 @@ func main() {
 		Name:  "charter-example",
 		Dist:  dist,
 		Pages: pages.Mount,
-		LLMs:  pages.LLMs,
+		// The app's own docs (docs/*.md), shown by charter's docs pages, which the tree mounts at /docs.
+		Docs: &app.Docs{
+			Name:    "charter-example",
+			Summary: "charter's example: notes that are live on every open page, an API from a contract, and a card for everything Cloudflare gives a Worker.",
+			Pages:   docs.Pages,
+			Repo:    "https://github.com/joeblew999/charter",
+			Dir:     "example",
+			Agents:  "A coding agent working on this app uses the Claude Code plugins of the marketplace joeblew999/charter: charter, gsx, gsxui and structpages. The app's .claude/settings.json enables them.",
+		},
 		// What a page asks for by type, made from the request: the notes' store (D1), and the bindings' state.
 		RequestArgs: []any{api.OpenStore, bindings.Read},
 		API:         api.Handler(api.Env{Var: charter.Var}),

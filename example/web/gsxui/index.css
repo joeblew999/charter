@@ -4,3 +4,6 @@
 @import "./theme.css";
 @import "./style.css";
 @import "./fonts/fonts.css";
+
+/* The classes of components imported as packages (charter's docs pages): charter build copies their sources there. */
+@source "../../.charter/tailwind";

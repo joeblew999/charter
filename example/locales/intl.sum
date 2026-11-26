@@ -24,10 +24,7 @@ ar bindings.send f6f4688ff23d 8b1e3b105d1e
 ar bindings.socket a619c551e790 54b8d373ddda
 ar bindings.title f613ab3a6154 348889e104e9
 ar bindings.vars 22cb6076e460 9d53e171a458
-ar docs.english 1249b0ad5800 c1aa7f3f91c5
 ar docs.nav 7af023c43013 e3b066ec52ba
-ar docs.notes 8a7525b1492f cee9f2b0adc8
-ar docs.on_this_page b5658fc8edda ece4e1c238c9
 ar gsxui.close 7d9eb7acb13e ca90c297b099
 ar home.heading 8a7525b1492f cee9f2b0adc8
 ar home.intro 66000b571077 63c017805507
@@ -62,10 +59,7 @@ de bindings.send f6f4688ff23d 079bef4e232f
 de bindings.socket a619c551e790 600a1cdc1970
 de bindings.title f613ab3a6154 fad5286db0b5
 de bindings.vars 22cb6076e460 7bd38bd1a64d
-de docs.english 1249b0ad5800 5c8862dace9b
 de docs.nav 7af023c43013 c2ec0b49f5bf
-de docs.notes 8a7525b1492f 7800bd538c37
-de docs.on_this_page b5658fc8edda c6ea3ff48113
 de gsxui.close 7d9eb7acb13e b808f6e97075
 de home.heading 8a7525b1492f 7800bd538c37
 de home.intro 66000b571077 e41641a84cd0

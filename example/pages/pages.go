@@ -20,15 +20,16 @@ import (
 	"github.com/jackielii/structpages"
 
 	"github.com/joeblew999/charter/app"
+	"github.com/joeblew999/charter/app/docs"
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/bindings"
 )
 
 // Pages is the tree.
 type Pages struct {
-	home     Home     `route:"GET /{$} Home"`
-	bindings Bindings `route:"GET /bindings Bindings"`
-	docs     Docs     `route:"/docs Docs"`
+	home     Home       `route:"GET /{$} Home"`
+	bindings Bindings   `route:"GET /bindings Bindings"`
+	docs     docs.Pages `route:"/docs Docs"`
 
 	// What the pages call: routes, not pages.
 	post   PostNote       `route:"POST /notes PostNote"`

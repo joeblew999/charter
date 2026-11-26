@@ -21,15 +21,8 @@ post = "Post"
 languages = "Languages"
 
 [docs]
-# The docs: the link to them in every page's header, and the link back to the notes.
+# The link to the docs in every page's header.
 nav = "Docs"
-notes = "Notes"
-# Above the list of a docs page's sections.
-on_this_page = "On this page"
-# Shown above a docs page in a language other than English.
-english = "The docs are written in English."
-
-# Text gsxui's own components write.
 
 [bindings]
 # The link from the home page to the page of what Cloudflare gives the Worker.

@@ -41,9 +41,6 @@ vars = "Eine Variable des Workers, aus wrangler.jsonc."
 
 [docs]
 nav = "Dokumentation"
-notes = "Notizen"
-on_this_page = "Auf dieser Seite"
-english = "Die Dokumentation ist auf Englisch verfasst."
 
 [gsxui]
 close = "Schließen"

@@ -41,9 +41,6 @@ vars = "متغير من متغيرات الـ Worker، من wrangler.jsonc."
 
 [docs]
 nav = "التوثيق"
-notes = "الملاحظات"
-on_this_page = "في هذه الصفحة"
-english = "التوثيق مكتوب بالإنجليزية."
 
 [gsxui]
 close = "إغلاق"
