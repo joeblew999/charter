@@ -53,34 +53,6 @@ While `charter dev` runs, saving a Markdown file reloads the page.
 
 A sample that names a file is that file's code, and `check` keeps it so:
 
-````markdown
-```go file=../example/pages/pages.go#Home.Props
-// Props loads what the request wants, as structpages has it. A row's button asks for that row alone (its target is
-// Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. Anything
-// else is the page, with the newest notes. Each component takes its share of the results by their types.
-func (p Home) Props(r *http.Request, store api.Store, target structpages.RenderTarget) (HomeProps, api.Note, Open, error) {
-	if target.Is(p.Item) {
-		id, err := strconv.ParseInt(structpages.KeyOf(target), 10, 64)
-		if err != nil {
-			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
-		}
-		note, err := store.Get(r.Context(), id)
-		if err != nil {
-			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
-		}
-		return HomeProps{}, note, r.URL.Query().Get("open") != "", nil
-	}
-	notes, err := store.Before(r.Context(), math.MaxInt64, shown)
-	if err != nil {
-		return HomeProps{}, api.Note{}, false, err
-	}
-	props := HomeProps{Notes: notes}
-	if len(notes) > 0 {
-		props.After = notes[0].ID
-	}
-	return props, api.Note{}, false, nil
-}
-```
-````
+> Open the sample's fence with the language and the file: three backticks, then `go file=../example/pages/pages.go#Home.Props`.
 
 `file` is a path from the app's folder. After `#` is one declaration by its name: a type, a function, a method as `Type.Method`, a gsx component. Without `#` it is the whole file. `go tool charter check --fix` writes the code into the Markdown, so it reads on GitHub too; `check` fails when the two differ. Most samples of these docs are the example's own code, taken this way.
