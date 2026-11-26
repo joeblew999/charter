@@ -9,7 +9,7 @@
       "name": "charter",
       "source": "./skills",
       "description": "Go apps on Cloudflare Workers with charter",
-      "homepage": "https://charter-example.gedw99.workers.dev",
+      "homepage": "https://charter.gedw99.workers.dev",
       "repository": "https://github.com/joeblew999/charter",
       "license": "MIT"
     },

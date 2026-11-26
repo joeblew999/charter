@@ -9,9 +9,16 @@ One way: the app runs on Cloudflare only (`wrangler dev` locally, Cloudflare rem
 tree rendered with gsx, and charter finds every part by where it is. Change the file, then let
 `go tool charter check` say what is wrong.
 
+This skill is the rules. How each part works is the docs, as Markdown: https://charter.gedw99.workers.dev/llms.txt
+lists every page (`/docs/pages.md`, `/docs/api.md`, `/docs/live.md`, `/docs/database.md`, `/docs/languages.md`,
+`/docs/tests.md`, `/docs/deploy.md`, `/docs/docs.md`), and `/llms-full.txt` is all of them. Read the page before
+changing that part.
+
 | To change | Edit | Then |
 |---|---|---|
-| A page or its route | `pages/`: a type in the tree (`pages.Pages`) with a `Page` component | the running `charter dev` reloads it |
+| A page or its route | `pages/`: a type in the tree (`pages.Pages`) with a `Page` component, and `Props` that names what it needs as parameters (the store, from `app.App`'s `RequestArgs`) | the running `charter dev` reloads it |
+| A region htmx replaces | a component of its page (`component (p Home) Form(…)`), with `id={Home.Form \|> id}` and `hx-target={Home.Form \|> target}` | |
+| What a page calls | a type with `ServeHTTP(w, r, …) error` that returns `structpages.RenderComponent(…)`, or `app.NotFound`, `app.Status`, `app.Redirect{To}`; it never writes an error or a redirect itself | |
 | A link or a form's target | `{ Page{} \|> url }`, `{ Action{} \|> action }`: never a path as a string | |
 | A type the API serves that is a table's row | embed the row (`type Note struct{ db.NotesRow }`); its examples are the schema's comments (`-- example: 42; doc: …`) | |
 | An API operation | `api/contract.go` and its handler | `go tool charter check --fix` writes `fern/`; `go tool charter pack -publish` the Go SDK |
@@ -22,9 +29,10 @@ tree rendered with gsx, and charter finds every part by where it is. Change the 
 | Browser code or CSS | `web/` (Vite); `go tool charter add <npm package>` | |
 | A message a reader sees | `locales/en.toml`, written `{ locales.Key }` in gsx | `go tool charter run intl:translate`; `go tool charter run intl:status` says what is left |
 | A language | `go tool charter add locale:de` | translate its catalog |
-| A page of the docs | `docs/NN-name.md`: Markdown, its first heading the title; link to another page by its file | the running `charter dev` shows it at `/docs/name`; it is in the sitemap and `/llms.txt` |
+| A page of the docs | `docs/NN-name.md`: Markdown, its first heading the title; link to another page by its file. The pages that show them are charter's (`charter/app/docs`, mounted in the tree; `app.App`'s `Docs`): never write your own | the running `charter dev` shows it at `/docs/name`; it is in the sitemap, `/docs/name.md`, `/llms.txt` and `/llms-full.txt` |
 | A UI component | `go tool charter add ui:dialog` | |
-| A test of a page | `test/page_*_test.go`: `apptest.Browser(t)` (Chrome): `Open`, `Type`, `Click`, `WaitText`, `Tab` | `go tool charter test`, and `--deployed` |
+| A test of a page's logic | `pages/pages_test.go`: plain Go, the page handed a store of the test's own | `go test ./pages` |
+| A test of a page as a reader uses it | `test/page_*_test.go`: `apptest.Browser(t)` (Chrome): `Open`, `Type`, `Click`, `WaitText`, `Tab`; addresses and selectors from the tree (`at`, `el` in `test/tree_test.go`) | `go tool charter test`, and `--deployed` |
 | A test of the API | `test/api_test.go`, through `sdk/go` | the same |
 | The database by hand | `go tool charter run db:status`, `db:reset`, `db:seed`, `db:execute "…"` (`--deployed` for the deployed one) | |
 

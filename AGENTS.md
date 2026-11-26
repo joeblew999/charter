@@ -1,6 +1,6 @@
 # Rules for agents
 
-How the repo works: the docs, which are `example/docs/*.md` and are served by the example itself. Plans and open work are GitHub issues here, never files.
+How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at https://charter.gedw99.workers.dev/docs/. Plans and open work are GitHub issues here, never files.
 
 - **One way.** Cloudflare only (wrangler dev locally, Cloudflare remotely), gsx and structpages only, one example.
   Before adding an option, a setting or a second way to do something, don't: make the one way better.
@@ -22,11 +22,17 @@ How the repo works: the docs, which are `example/docs/*.md` and are served by th
 - **We pick winners.** One tool per job, brought and driven by charter, so the hard parts are easy. Don't add a
   second choice or a way around one.
 - **Six library folders at the top** (`app`, `api`, `cloud`, `live`, `intl`, `seo`), with `cmd`, `internal`,
-  `example` and `skills` (the skill charter ships, as gsx and structpages ship theirs). Don't add another.
-- **`example/` uses all of charter**, is charter's docs site (its `docs/` folder; never write docs anywhere else),
-  and is what `charter create` copies. A change to how charter works changes the page of the docs that says so, in
-  the same commit. A feature of charter that the example does
-  not use is not done; a bug the example cannot show is a missing part of the example.
+  `example`, `site` and `skills` (the skill charter ships, as gsx and structpages ship theirs). Don't add another.
+- **`example/` uses all of charter** and is what `charter create` copies. A feature of charter that the example
+  does not use is not done; a bug the example cannot show is a missing part of the example.
+- **`site/` is charter's own site**, a charter app: a front page, and the docs (`site/docs/*.md`; never write docs
+  anywhere else). A change to how charter works changes the page of the docs that says so, in the same commit. The
+  pages that show docs are the library's (`app/docs`), the same for the site, the example and every app: change them
+  there, never in one app.
+- **structpages is used the structpages way.** A page's `Props` and a handler's `ServeHTTP` declare what they need
+  (`app.App`'s `Args` and `RequestArgs`) and return errors (`app.NotFound`, `app.Status`, `app.Redirect`); a region
+  that changes by itself is a component of its page, with its id and target from the tree. Never a path, an id or a
+  selector as a string, in pages or in tests.
 - **A developer never has to remember to run something.** What an upstream tool generates or checks runs inside
   `dev`, `check`, `test` or `deploy`. What is left is a namespaced task of `charter run` (`intl:`, `seo:`, `db:`,
   `ui:`).
@@ -40,8 +46,8 @@ How the repo works: the docs, which are `example/docs/*.md` and are served by th
   `charter run`.
 - **`charter dev` stays running.** A command is not done until it has been run beside a live `charter dev`
   (`example/test/devloop`).
-- **Checks:** `go test ./...` at the top, then in `example/`: `go tool charter check && go tool charter test`, and
+- **Checks:** `go test ./...` at the top, then in `example/` and in `site/`: `go tool charter check && go tool charter test`, and
   `go tool charter test --deployed` after a deploy. Work is on `main`. CI is one Linux job per push.
 - **Needs the owner's OK:** anything on another owner's repository.
 - JavaScript only in `app/worker/` (the glue that runs Go, the hub's Durable Object), `internal/intlkit/js` and the
-  example's `web/`. Keep it logic-free.
+  apps' `web/`. Keep it logic-free.

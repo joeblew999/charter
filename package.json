@@ -2,5 +2,8 @@
   "name": "charter",
   "private": true,
   "description": "npm install here installs wrangler and Vite for the example.",
-  "workspaces": ["example"]
+  "workspaces": [
+    "example",
+    "site"
+  ]
 }

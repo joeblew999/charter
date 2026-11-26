@@ -3,11 +3,13 @@
 Go apps on Cloudflare Workers, one way: pages, an API from a contract, a live feed behind both, languages and search
 engines, in one Worker.
 
-**The docs are a charter app:** https://charter-example.gedw99.workers.dev/docs/
+**The docs:** https://charter.gedw99.workers.dev/docs/
 
-That site is [`example/`](example) in this repository: its notes are the live feed, its bindings page uses everything
-Cloudflare gives a Worker, and its docs are the Markdown in [`example/docs/`](example/docs), which is where to read
-them on GitHub. It is also what `charter create` copies.
+**The example, running:** https://charter-example.gedw99.workers.dev
+
+Both are charter apps in this repository. [`site/`](site) is the docs: the Markdown in [`site/docs/`](site/docs),
+which is where to read them on GitHub. [`example/`](example) is the one app that uses all of charter: its notes are
+the live feed, its bindings page uses everything Cloudflare gives a Worker, and it is what `charter create` copies.
 
 ## Start
 
@@ -27,11 +29,13 @@ This repository is a Claude Code plugin and a marketplace, as gsx's, gsxui's and
 own skill and theirs, each from its owner's repository:
 
 ```
-/plugin install charter --marketplace joeblew999/charter
+/plugin marketplace add joeblew999/charter
+/plugin install charter@charter
 ```
 
-An app made with charter enables all four in its `.claude/settings.json`, and `go tool charter install` installs them.
-A language model reads the site at [`/llms.txt`](https://charter-example.gedw99.workers.dev/llms.txt).
+An app made with charter enables all four in its `.claude/settings.json`, and `go tool charter install` installs them:
+[For your coding agent](https://charter.gedw99.workers.dev/docs/agents). A language model reads the docs at
+[`/llms.txt`](https://charter.gedw99.workers.dev/llms.txt).
 
 ## The repository
 
@@ -39,7 +43,8 @@ A language model reads the site at [`/llms.txt`](https://charter-example.gedw99.
 |---|---|
 | `app`, `api`, `live`, `cloud`, `intl`, `seo` | The library: `github.com/joeblew999/charter/<name>` |
 | `cmd`, `internal` | The command, `go tool charter` |
-| `example` | The one app that uses all of charter: the docs site, and the template |
+| `example` | The one app that uses all of charter, and the template `charter create` copies |
+| `site` | charter's own site: a front page and the docs, as a charter app |
 | `skills` | The skill the plugin ships |
 
 Rules for working on charter itself: [AGENTS.md](AGENTS.md).

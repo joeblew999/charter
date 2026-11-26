@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: gomod
-    directories: ["/", "/example"]
+    directories: ["/", "/example", "/site"]
     schedule: { interval: weekly }
     groups:
       go: { patterns: ["*"] }

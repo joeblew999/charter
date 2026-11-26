@@ -1,6 +1,24 @@
 # Tests
 
-Tests are of the pages and of the API, and they ask a real Worker.
+Tests are of the pages and of the API. Two kinds: a page as plain Go, in a fraction of a second, and the whole app on a real Worker.
+
+## A page, as plain Go
+
+A page declares what it needs, so a test hands it its own. No Worker, no database, no browser.
+
+```go
+func TestHomeProps(t *testing.T) {
+	store := &notes{} // a store in memory
+	store.Create(ctx, "first")
+	store.Create(ctx, "second")
+	props, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store)
+	…
+}
+```
+
+These live beside the pages (`pages/pages_test.go`) and run with `go test`, which `charter test` does first.
+
+## The whole app, on a real Worker
 
 ```sh
 go tool charter test             # the Worker on wrangler dev
@@ -15,13 +33,13 @@ func TestANoteShowsOnEveryOpenPage(t *testing.T) {
 	reader := writer.Tab()
 	writer.Open("/")
 	reader.Open("/")
-	writer.Type(`#post input[name=body]`, "hello")
-	writer.Click(`#post button[type=submit]`)
-	reader.WaitText("#notes", "hello")
+	writer.Type(el(pages.Home.Form)+` input[name=body]`, "hello")
+	writer.Click(el(pages.Home.Form) + ` button[type=submit]`)
+	reader.WaitText(el(pages.Home.List), "hello")
 }
 ```
 
-`apptest.Browser` is Chrome on the Worker under test, so htmx, the feed and the scripts Vite built are part of what is tested.
+`apptest.Browser` is Chrome on the Worker under test, so htmx, the feed and the scripts Vite built are part of what is tested. `el` asks the app's own tree for a component's selector (`test/tree_test.go`): a renamed component breaks the test when it is compiled, not when a selector quietly matches nothing.
 
 ## The API, through its own SDK
 

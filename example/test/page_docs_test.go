@@ -29,7 +29,7 @@ func TestTheDocsAreReadPageByPage(t *testing.T) {
 	page.Click(`#doc a[href="./"]`)
 	page.WaitText("#doc h1", "The example")
 	// Where it comes from: the repository, and the page's own file to edit.
-	if repo, edit := page.Attr("#docs-repo", "href"), page.Attr("#docs-edit", "href"); repo != "https://github.com/joeblew999/charter" || edit != "https://github.com/joeblew999/charter/edit/main/example/docs/index.md" {
+	if repo, edit := page.Attr("#docs-repo", "href"), page.Attr("#docs-edit", "href"); !strings.HasPrefix(repo, "https://") || !strings.HasPrefix(edit, repo+"/edit/main/") || !strings.HasSuffix(edit, "/docs/index.md") {
 		t.Errorf("repository %q, edit %q", repo, edit)
 	}
 }

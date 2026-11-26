@@ -79,6 +79,11 @@ func Create(args []string) {
 			if version.Released() {
 				text = regexp.MustCompile(`(github\.com/joeblew999/charter) v\S+`).ReplaceAllString(text, "$1 "+version.String())
 			}
+		case "main.go":
+			// The docs' links to the repository and to each page's file: the app's own repository, which a Go module's
+			// path names, with the app at its top.
+			text = strings.ReplaceAll(text, `"https://github.com/joeblew999/charter"`, `"https://`+*module+`"`)
+			text = regexp.MustCompile(`(?m)^\s*Dir:\s*"example",\n`).ReplaceAllString(text, "")
 		case "wrangler.jsonc":
 			text = strings.ReplaceAll(text, `"../../node_modules/wrangler/config-schema.json"`, `"node_modules/wrangler/config-schema.json"`)
 		}

@@ -1,6 +1,6 @@
 # Go and Node are all a machine needs: go.mod's toolchain line and package-lock.json pin the rest.
-# One job per push: the library's tests, then the one example checked, tested on wrangler dev, and worked on under
-# charter dev.
+# One job per push: the library's tests, then the example checked, tested on wrangler dev, and worked on under
+# charter dev, and charter's own site checked and tested.
 name: ci
 
 on:
@@ -40,3 +40,5 @@ jobs:
         working-directory: example
         env:
           CHARTER_DEV_TEST: "1"
+      - run: go tool charter check && go tool charter test
+        working-directory: site

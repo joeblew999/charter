@@ -1,0 +1,33 @@
+{
+  "ui": "ui",
+  "js": "web/gsxui",
+  "css": "web/gsxui/index.css",
+  "rtl": true,
+  "managed": {
+    "gsxui.preset.json": "591a4ec7a1047635544e03e128de02b7e4c617523afd19bf8d5d6e37022cf095",
+    "ui/NOTICE.md": "3e5ae687ead64090db25c7a84d4ad85d3c99304cb5a03cb0509a129010f1536a",
+    "ui/badge.gsx": "55cd01e881376b31e8b688b25850953fc83c51a4c8153df3a3f4073ef0b41111",
+    "ui/button.gsx": "e92692ccf3742ca74b0ec7c918e38a8e618c70fd514aa4f61dcb2a4b2b942423",
+    "ui/card.gsx": "5e064e91149782f955167cc84c6887a03ec3352441dcb52f8edec3f5cf1b0c50",
+    "ui/dialog.gsx": "ae249dff8a337072bcc6ecc8f49337d21903acab3686b0dbd89f16de6740a309",
+    "ui/i18n/i18n.go": "de659451485c023f420622775972853e8dd89c46269d1fbccaa937c8f3d906f4",
+    "ui/input.gsx": "5db18ce16d65a4a921a546818e0dda72a48f9739b35e6f819fc549a60245c5be",
+    "ui/merge/merge.go": "d9502a04993ccadcba0bfeca0137a1f8948a6045aeef6838f28c2596445b24d4",
+    "ui/separator.gsx": "ed17da94c06b28bbdcd8f30d5b05059d13da4fb2fc84e87e43903ba3fc4e93fc",
+    "web/gsxui/dialog.js": "43860dddef85d0fe0cf5105b5a05bf334221e59655746f264dfeee361e7a2e69",
+    "web/gsxui/fonts/NOTICE.md": "5eb34652439872f68249cc67323cf589d5ed40a84b30e309e864c26ce207fd76",
+    "web/gsxui/fonts/figtree-latin-wght-normal.woff2": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd",
+    "web/gsxui/fonts/fonts.css": "9e083d1d860aa1eb8639f4d1a9cfc310a4d041bf3ed8195c9a1e0236d15a8a90",
+    "web/gsxui/fonts/geist-latin-wght-normal.woff2": "19f9c92546aa300c312235e3125af1b81394d8db9a4bc4a425cd5b641d2d54e1",
+    "web/gsxui/fonts/inter-latin-wght-normal.woff2": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+    "web/gsxui/fonts/jetbrains-mono-latin-wght-normal.woff2": "18be452724bfdc236c074ca94a249a7f41a86752c7d04ab258ce9ed5651f6a7e",
+    "web/gsxui/fonts/noto-sans-latin-wght-normal.woff2": "51ca196f49a33e79e7870ff88ebd2829a3f627a51e7d690986618f0e7ad2b52d",
+    "web/gsxui/fonts/playfair-display-latin-wght-normal.woff2": "e0c764a8e9e1cce92163c55bac4b2ad6cd4cf8c696ce2289ab5c41565e65b7e2",
+    "web/gsxui/foundation.css": "d26427f215d398f1d9f42f230fe5abf928a920df402ee81a40eb6197a1f34e65",
+    "web/gsxui/gsxui.js": "143da470c72062b3290006c7f6a0185e1643ba820f82fb7e7fd1befc3d00e6f1",
+    "web/gsxui/index.css": "24e78b564f94d66150e95c123f14a35c4818606dcca795a5e33430f35e8c9cd9",
+    "web/gsxui/index.js": "79c28a6621ff8750f95e21d523f55d78e03f6346f29537889b539f5afa0c928c",
+    "web/gsxui/style.css": "86911debb3029a71b01bcad9c078504284223d9719618b909123825414a61b60",
+    "web/gsxui/theme.css": "a52a3ab202ee3babfec386281cc4b6af67e15390fab32a4c03d49ee3664b169f"
+  }
+}

@@ -2,8 +2,6 @@
 
 Go apps on Cloudflare Workers, one way: pages, an API from a contract, a live feed behind both, languages and search engines, in one Worker.
 
-This site is a charter app. Its [notes](../) are the live feed, its [bindings page](../bindings) uses everything Cloudflare gives a Worker, and these docs are Markdown files in its `docs/` folder. Its source is [`example/`](https://github.com/joeblew999/charter/tree/main/example) in charter's repository, and it is what `charter create` copies.
-
 ## What charter is
 
 A Go library and one command. It drives the tools that own each job and adds what they lack:
@@ -19,6 +17,12 @@ A Go library and one command. It drives the tools that own each job and adds wha
 
 A charter app runs on Cloudflare and nowhere else. Locally that is `wrangler dev`, the same runtime; remotely it is Cloudflare.
 
+## See it running
+
+[The example](https://charter-example.gedw99.workers.dev) is one app that uses all of charter: its notes are the live feed, and its bindings page uses everything Cloudflare gives a Worker. Its source is [`example/`](https://github.com/joeblew999/charter/tree/main/example) in charter's repository, and it is what `charter create` copies.
+
+This site is a charter app too: [`site/`](https://github.com/joeblew999/charter/tree/main/site), a front page and these docs, which are Markdown files in its `docs/` folder. The pages that show them are charter's own, the same ones [your app's docs](10-docs.md) get.
+
 ## Where to go
 
 - [Getting started](01-getting-started.md): a new app in three commands.
@@ -26,3 +30,5 @@ A charter app runs on Cloudflare and nowhere else. Locally that is `wrangler dev
 - [Pages](03-pages.md), [the API](04-api.md), [the live feed](05-live.md), [the database](06-database.md).
 - [Languages and search engines](07-languages.md).
 - [Tests](08-tests.md) and [deploying](09-deploy.md).
+- [Docs](10-docs.md): your app's own, from Markdown.
+- [For your coding agent](11-agents.md): the Claude Code plugins, and what a language model reads.

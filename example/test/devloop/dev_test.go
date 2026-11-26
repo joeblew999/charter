@@ -123,8 +123,8 @@ func TestDev(t *testing.T) {
 	until("a variable in wrangler.jsonc", "/api/hello", "Greetings from charter-example, renamed")
 
 	// The docs: a page of docs/ is Markdown, and a save shows.
-	edit("docs/index.md", "# charter\n", "# charter, edited\n")
-	until("an edit to the docs", "/docs/", "charter, edited</h1>")
+	edit("docs/index.md", "# The example\n", "# The example, edited\n")
+	until("an edit to the docs", "/docs/", "The example, edited</h1>")
 
 	// The schema: a table added to db/schema.sql is in the local database a moment later (its migration written,
 	// and applied), with nothing run by hand.

@@ -6,7 +6,7 @@ charter finds everything by where it is. There is nothing to configure for any o
 pages/         the page tree and its components
 api/           contract.go: the API
 db/            schema.sql, queries.sql, seed.sql
-docs/          these docs, as Markdown
+docs/          the app's docs, as Markdown
 locales/       <language>.toml: the languages are the files here
 web/  public/  what the browser loads
 ui/            gsxui's components
@@ -26,11 +26,14 @@ func main() {
 		Dist:  dist,
 		Pages: pages.Mount,
 		API:   api.Handler(api.Env{Var: cloud.Var}),
+		Docs:  &app.Docs{Name: "My App", Pages: docs.Pages},
+		// What a page's Props may ask for, made from the request.
+		RequestArgs: []any{api.OpenStore},
 	}).Run()
 }
 ```
 
-That one value is the pages, the API, Vite's files, a URL per language, `robots.txt`, the sitemap and `/llms.txt`.
+That one value is the pages, the API, the docs, Vite's files, a URL per language, `robots.txt`, the sitemap and `/llms.txt`.
 
 ## What is generated
 

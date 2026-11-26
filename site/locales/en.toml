@@ -1,0 +1,33 @@
+# The source catalog: every message the site's own pages show, in ICU MessageFormat. The docs are Markdown (docs/).
+
+[site]
+# The home page's title and description, in the browser's tab and in search results.
+title = "charter: Go apps on Cloudflare Workers"
+description = "Pages, an API from a contract, a live feed behind both, languages and search engines, in one Worker. One way, by convention."
+
+[home]
+# The home page: its heading and the lines under it.
+heading = "Go apps on Cloudflare Workers, one way"
+intro = "Pages, an API from a contract, a live feed behind both, languages and search engines, in one Worker."
+# The three links under the heading.
+docs = "Read the docs"
+example = "See it running"
+github = "The code on GitHub"
+# The command that makes a new app, and the line above it.
+start = "A new app, in three commands:"
+# The cards: what charter gives an app.
+pages_title = "Pages"
+pages = "A structpages tree rendered with gsx and gsxui: one source of routes, links and the sitemap."
+api_title = "An API from a contract"
+api = "OpenAPI, AsyncAPI, MCP tools and SDKs in Go, Python and as a CLI, all from one Go contract."
+live_title = "One live feed"
+live = "Declared once: the page's live list, the API's stream and its WebSocket channel all come from it."
+database_title = "A schema, not migrations"
+database = "Tables are written down once. The migrations, the typed queries and the API's rows come from that."
+world_title = "Languages and search engines"
+world = "A URL per language, the runtime's own Intl, a sitemap, llms.txt and an audit on every push."
+tests_title = "Tests that ask the real thing"
+tests = "Pages in a real browser, the API through its own SDK, on wrangler dev and against the deployed Worker."
+
+[gsxui]
+close = "Close"

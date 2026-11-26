@@ -1,0 +1,14 @@
+// charter's own site: its docs, as a charter app. wrangler dev runs it, wrangler deploy ships it.
+// https://developers.cloudflare.com/workers/wrangler/configuration/
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "charter",
+  "main": "build/worker.mjs",
+  "compatibility_date": "2026-09-25",
+  "compatibility_flags": ["enable_request_signal"],
+  // charter build writes dist/ (Vite) and build/ (the Wasm, and the JavaScript that runs it).
+  "build": { "command": "go tool charter build" },
+  // Vite's output, served before the Worker runs.
+  "assets": { "directory": "dist" },
+  "vars": { "APP_NAME": "charter" }
+}

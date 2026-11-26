@@ -1,0 +1,10 @@
+# Generated and committed, because something reads it from the repository: GitHub folds it in a diff and leaves it out
+# of the language count. (What is built each time is not committed at all: .gitignore.)
+*.gen.go          linguist-generated
+db/migrations/**  linguist-generated
+fern/**           linguist-generated
+sdk/**            linguist-generated
+locales/intl.sum  linguist-generated
+# gsxui's components, vendored by charter add ui:<name>: read them, restyle them, but they are gsxui's.
+ui/**             linguist-vendored
+web/gsxui/**      linguist-vendored
