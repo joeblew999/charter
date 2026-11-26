@@ -139,7 +139,8 @@ func TestEmail(t *testing.T) {
 		t.Fatalf("POST /cdn-cgi/handler/email: %v %v", res, err)
 	}
 	res.Body.Close()
-	soon(t, "the received email", "ada@example.com: A note for the site")
+	// Of the sender, the page shows the first letter and the domain: it is public.
+	soon(t, "the received email", "a…@example.com: A note for the site")
 }
 
 // card is what the card called id shows.

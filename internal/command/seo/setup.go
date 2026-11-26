@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"github.com/joeblew999/charter/internal/tools"
 	"net/http"
 	"os"
 	"os/exec"
@@ -63,7 +64,9 @@ func (r repo) setup(args []string) {
 		defer os.RemoveAll(dir)
 		file := filepath.Join(dir, "key.json")
 		mustGcloud("iam", "service-accounts", "keys", "create", file, "--iam-account", sa, "--project", project, "--quiet")
-		store := exec.Command("fnox", "set", "-g", consoleKey, "--from-file", file, "-p", "keychain", "-d", "Search Console API key ("+sa+")")
+		fnox, err := tools.Fnox()
+		must(err)
+		store := exec.Command(fnox, "set", "-g", consoleKey, "--from-file", file, "-p", "keychain", "-d", "Search Console API key ("+sa+")")
 		store.Stderr = os.Stderr
 		if err := store.Run(); err != nil {
 			os.RemoveAll(dir)

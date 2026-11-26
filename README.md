@@ -3,6 +3,8 @@
 Go apps on Cloudflare Workers, one way: pages, an API from a contract, a live feed behind both, languages and search
 engines, in one Worker.
 
+![Lighthouse performance](site/docs/badges/lighthouse-performance.svg) ![Lighthouse accessibility](site/docs/badges/lighthouse-accessibility.svg) ![Lighthouse best practices](site/docs/badges/lighthouse-best-practices.svg) ![Lighthouse SEO](site/docs/badges/lighthouse-seo.svg) ![Search-engine audit](site/docs/badges/seo-audit.svg)
+
 **The docs:** https://charter.gedw99.workers.dev/docs/
 
 **The example, running:** https://charter-example.gedw99.workers.dev

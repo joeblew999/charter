@@ -41,13 +41,18 @@ func send(to string) error {
 	return ns.PutString("sent", time.Now().UTC().Format(time.RFC3339)+" → "+name[:1]+"…@"+domain, nil)
 }
 
-// onEmail keeps who wrote, and the subject.
+// onEmail keeps who wrote, and the subject. The page is public, so of the sender it keeps what it shows of whom it
+// sends to: the first letter and the domain.
 func onEmail() {
 	charter.ConsumeEmail(func(_ context.Context, m *charter.EmailMessage) error {
 		ns, err := namespace()
 		if err != nil {
 			return err
 		}
-		return ns.PutString("received", m.From+": "+m.Header("subject"), nil)
+		name, domain, _ := strings.Cut(m.From, "@")
+		if name != "" {
+			name = name[:1] + "…"
+		}
+		return ns.PutString("received", name+"@"+domain+": "+m.Header("subject"), nil)
 	})
 }

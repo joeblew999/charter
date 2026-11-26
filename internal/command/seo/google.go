@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/joeblew999/charter/internal/tools"
 	"net"
 	"net/http"
 	"os"
@@ -30,10 +31,12 @@ func secret(name string) string {
 	if v, ok := os.LookupEnv(name); ok {
 		return v
 	}
-	if _, err := exec.LookPath("fnox"); err != nil {
+	// charter's own fnox (package tools), which it brings: never one a developer may or may not have installed.
+	fnox, err := tools.Fnox()
+	if err != nil {
 		return ""
 	}
-	out, err := exec.Command("fnox", "get", name).Output()
+	out, err := exec.Command(fnox, "get", name).Output()
 	if err != nil {
 		return ""
 	}
