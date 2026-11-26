@@ -10,6 +10,10 @@ updates:
     schedule: { interval: weekly }
     groups:
       npm: { patterns: ["*"] }
+    # gsx's Vite plugin says which Vite it works with (its peer dependency): a new major waits for it.
+    ignore:
+      - dependency-name: vite
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
