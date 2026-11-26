@@ -68,10 +68,11 @@ func main() {
 
 ## What you never have to remember
 
-- **Skills for your coding agent.** gsx, gsxui, structpages and charter each ship their skill inside their Go module.
-  `charter install` copies them into `.claude/skills/` (the machine's, like `node_modules`: not in git) from the
-  versions `go.mod` pins, and `dev` and `check` do it
-  again whenever `go.sum` has moved. Updating a module updates its skill.
+- **Skills for your coding agent.** This repository is a Claude Code plugin and a marketplace, as gsx's, gsxui's and
+  structpages' are: it lists charter's own skill and theirs, each from its owner's repository, where it is kept up to
+  date. An app's `.claude/settings.json` (committed) names the marketplace with auto-update and enables the four
+  plugins; `charter install` installs them for your checkout. By hand:
+  `/plugin install charter --marketplace joeblew999/charter`.
 - **Generation.** Two kinds, told apart by name. What is built from your sources each time is not in git: gsx's
   `*.x.go` (as gsx's own scaffold has it), charter's `*.built.go`, and `.charter/`, `build/`, `dist/`. `dev`, `build`
   and `check` write it, so a fresh clone needs only `go tool charter check`. What something reads from the repository

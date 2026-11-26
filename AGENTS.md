@@ -29,7 +29,8 @@ How the repo works: [README.md](README.md). Plans and open work are GitHub issue
   `dev`, `check`, `test` or `deploy`. What is left is a namespaced task of `charter run` (`intl:`, `seo:`, `db:`,
   `ui:`).
 - **Tests are of the pages and of the API**: pages in a real browser (`apptest.Browser`), the API through its own
-  SDK. Skills come from the modules in `go.mod` (`skills/charter` is ours), never copied by hand.
+  SDK. Skills are Claude Code plugins: this repo is one and a marketplace (`.claude-plugin`, `skills/charter`) that also
+  lists gsx, gsxui and structpages from their owners' repos. Never copy a skill's files.
 - **A table is written down once**, in `db/schema.sql`. Migrations, the queries' Go and the API's row types come
   from it; none is hand-written.
 - **A feed is declared once** (`live.Feed`) and serves pages, API and SDK alike.

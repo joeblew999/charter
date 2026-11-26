@@ -18,8 +18,5 @@
 /sdk/out/
 /xliff/
 
-# The agent skills charter install copies from the modules in go.mod: the machine's, like node_modules.
-/.claude/skills/
-
 .DS_Store
 .playwright-mcp/

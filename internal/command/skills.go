@@ -3,6 +3,7 @@ package command
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -10,66 +11,75 @@ import (
 	"github.com/joeblew999/charter/internal/run"
 )
 
-// skills copies the agent skills of everything the app is built with into .claude/skills, where Claude Code and
-// other agents read them: each module of go.mod that ships skills (skills/<name>/SKILL.md, as gsx, gsxui, structpages
-// and charter do) gives its own, at the version go.mod pins. So a skill is always the one for the code in use, and
-// moving a module moves its skill: nothing to remember, nothing to commit (.claude/skills is the machine's).
-//
-// It runs with charter install, and by itself before dev, check and build whenever go.sum has changed since.
-func skills(p *project.Project, force bool) error {
-	dest := filepath.Join(p.Root, ".claude", "skills")
-	stamp := filepath.Join(dest, ".from")
-	sum, _ := os.Stat(filepath.Join(p.Root, "go.sum"))
-	if at, err := os.Stat(stamp); !force && err == nil && sum != nil && !sum.ModTime().After(at.ModTime()) {
-		return nil
-	}
-	out, err := run.Output(p.Root, nil, "go", "list", "-m", "-json", "all")
-	if err != nil {
-		return err
-	}
-	var from []string
-	for dec := json.NewDecoder(strings.NewReader(out)); dec.More(); {
-		var m struct{ Path, Version, Dir string }
-		if err := dec.Decode(&m); err != nil {
+// The agent skills of everything a charter app is built with come as Claude Code plugins, the way their owners ship
+// them: charter's repository is a plugin and a marketplace (.claude-plugin) that lists charter's own skill and those
+// of gsx, gsxui and structpages, each from its owner's repository, where it is kept up to date. An app says so in
+// its .claude/settings.json, which is committed: the marketplace, with auto-update, and the four plugins enabled.
+
+// marketplace is charter's, and plugins what it lists.
+const marketplace = "charter"
+
+var plugins = []string{"charter", "gsx", "gsxui", "structpages"}
+
+// agentPlugins makes sure the app's .claude/settings.json names the marketplace and enables its plugins (an app made
+// with charter create has it already), and, on a machine with Claude Code, installs them for this checkout: the one
+// step Claude Code leaves to each developer. charter install runs it.
+func agentPlugins(p *project.Project) error {
+	path := filepath.Join(p.Root, ".claude", "settings.json")
+	settings := map[string]any{}
+	if b, err := os.ReadFile(path); err == nil {
+		if err := json.Unmarshal(b, &settings); err != nil {
 			return err
 		}
-		if m.Dir == "" {
-			continue
-		}
-		found, _ := filepath.Glob(filepath.Join(m.Dir, "skills", "*", "SKILL.md"))
-		for _, file := range found {
-			src := filepath.Dir(file)
-			name := filepath.Base(src)
-			if err := os.RemoveAll(filepath.Join(dest, name)); err != nil {
-				return err
-			}
-			if err := os.CopyFS(filepath.Join(dest, name), os.DirFS(src)); err != nil {
-				return err
-			}
-			// The module cache is read-only, and so are its copies: the next sync must be able to replace them.
-			filepath.WalkDir(filepath.Join(dest, name), func(path string, d os.DirEntry, err error) error {
-				if err == nil {
-					os.Chmod(path, map[bool]os.FileMode{true: 0o755, false: 0o644}[d.IsDir()])
-				}
-				return nil
-			})
-			from = append(from, name+" "+m.Path+" "+m.Version)
+	}
+	changed := false
+	known, _ := settings["extraKnownMarketplaces"].(map[string]any)
+	if known == nil {
+		known = map[string]any{}
+	}
+	if known[marketplace] == nil {
+		known[marketplace] = map[string]any{"source": map[string]any{"source": "github", "repo": "joeblew999/charter"}, "autoUpdate": true}
+		settings["extraKnownMarketplaces"], changed = known, true
+	}
+	enabled, _ := settings["enabledPlugins"].(map[string]any)
+	if enabled == nil {
+		enabled = map[string]any{}
+	}
+	for _, name := range plugins {
+		if _, ok := enabled[name+"@"+marketplace]; !ok {
+			enabled[name+"@"+marketplace] = true
+			settings["enabledPlugins"], changed = enabled, true
 		}
 	}
-	if len(from) == 0 {
+	if changed {
+		b, err := json.MarshalIndent(settings, "", "  ")
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(path, append(b, '\n'), 0o644); err != nil {
+			return err
+		}
+		say(".claude/settings.json: charter's marketplace, and its plugins enabled (charter, gsx, gsxui, structpages)")
+	}
+	claude, err := exec.LookPath("claude")
+	if err != nil {
+		return nil // no Claude Code here: the settings are for whoever opens the app with it
+	}
+	have, _ := run.Output(p.Root, nil, claude, "plugin", "list")
+	if _, err := run.Output(p.Root, nil, claude, "plugin", "marketplace", "add", "joeblew999/charter"); err != nil && !strings.Contains(err.Error(), "already") {
+		say("· Claude Code's plugins were not installed: %v", err)
 		return nil
 	}
-	if err := os.MkdirAll(dest, 0o755); err != nil {
-		return err
+	for _, name := range plugins {
+		if strings.Contains(have, name+"@"+marketplace) {
+			continue
+		}
+		if err := run.Run(p.Root, nil, claude, "plugin", "install", name+"@"+marketplace, "--scope", "project"); err != nil {
+			say("· %v", err)
+		}
 	}
-	say("skills: %s", strings.Join(names(from), ", "))
-	return os.WriteFile(stamp, []byte("# Written by charter install: each skill here, and the module and version it came from.\n"+strings.Join(from, "\n")+"\n"), 0o644)
-}
-
-func names(from []string) []string {
-	out := make([]string, len(from))
-	for i, line := range from {
-		out[i], _, _ = strings.Cut(line, " ")
-	}
-	return out
+	return nil
 }

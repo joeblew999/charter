@@ -32,7 +32,6 @@ func Dev(args []string) {
 		return
 	}
 	p := load()
-	check(skills(p, false)) // the agent skills of what the app is built with, when go.sum has moved
 	if !hasGSX(p) {
 		Preview(args)
 		return

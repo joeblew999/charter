@@ -84,12 +84,6 @@ func Create(args []string) {
 		}
 		return os.WriteFile(to, []byte(text), 0o644)
 	}))
-	// The agent skill, for Claude Code and others that read .claude/skills.
-	if b, err := os.ReadFile(filepath.Join(tmp, ".claude", "skills", "charter", "SKILL.md")); err == nil {
-		skill := filepath.Join(dir, ".claude", "skills", "charter", "SKILL.md")
-		check(os.MkdirAll(filepath.Dir(skill), 0o755))
-		check(os.WriteFile(skill, b, 0o644))
-	}
 	// The example's README points into charter's repo: the app gets its own.
 	readme := fmt.Sprintf("# %s\n\nA Go app on Cloudflare Workers, made with [charter](%s) from its example.\n\n```sh\nnpm install\ngo tool charter dev                              # work on it; leave it running\ngo tool charter check && go tool charter test    # before a push\ngo tool charter deploy                           # ship it\n```\n\n`go tool charter` lists every command.\n", name, repository)
 	check(os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0o644))

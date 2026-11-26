@@ -1,0 +1,35 @@
+{
+  "name": "charter",
+  "owner": {
+    "name": "joeblew999"
+  },
+  "description": "Everything an agent needs for a charter app: charter's own skill, and the skills of what a charter app is built with, each from its owner's repository",
+  "plugins": [
+    {
+      "name": "charter",
+      "source": "./",
+      "description": "Go apps on Cloudflare Workers with charter",
+      "homepage": "https://charter-example.gedw99.workers.dev",
+      "repository": "https://github.com/joeblew999/charter",
+      "license": "MIT"
+    },
+    {
+      "name": "gsx",
+      "source": { "source": "github", "repo": "gsxhq/gsx" },
+      "description": "Writing gsx, the components a charter app's pages are made of",
+      "homepage": "https://gsxhq.github.io"
+    },
+    {
+      "name": "gsxui",
+      "source": { "source": "github", "repo": "gsxhq/gsxui" },
+      "description": "Designing with gsxui, the components a charter app's interface is built from",
+      "homepage": "https://ui.gsxhq.dev"
+    },
+    {
+      "name": "structpages",
+      "source": { "source": "github", "repo": "jackielii/structpages" },
+      "description": "structpages, the page tree a charter app's routes come from",
+      "homepage": "https://jackielii.github.io/structpages/"
+    }
+  ]
+}

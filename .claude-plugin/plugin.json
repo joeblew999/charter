@@ -1,0 +1,11 @@
+{
+  "name": "charter",
+  "description": "Skill for Go apps on Cloudflare Workers with charter: pages (structpages, gsx), an API from a contract with its SDKs, a live feed, the database from db/schema.sql, languages, search engines, tests in a real browser, and the charter commands",
+  "author": {
+    "name": "joeblew999"
+  },
+  "homepage": "https://charter-example.gedw99.workers.dev",
+  "repository": "https://github.com/joeblew999/charter",
+  "license": "MIT",
+  "keywords": ["charter", "go", "cloudflare", "workers", "gsx", "structpages", "htmx"]
+}

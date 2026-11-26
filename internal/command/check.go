@@ -29,7 +29,6 @@ func Check(args []string) {
 	drop := fs.Bool("drop", false, "with --fix: write a migration that drops a column or a table with its rows, which is otherwise refused")
 	fs.Parse(args)
 	p := load()
-	check(skills(p, false)) // the agent skills of what the app is built with, when go.sum has moved
 	t := newTimes("check")
 	if p.Spec != "" && p.DB != "" && *fix {
 		t.part("queries", func() error { return dbcode.Write(p.Root, p.DB, false, *drop) })
