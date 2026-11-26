@@ -75,35 +75,58 @@ func (c Config) UIDir() string {
 // CatalogDir is the catalogs' directory.
 func (c Config) CatalogDir() string { return filepath.Join(c.Root, c.Catalogs) }
 
-// Find reads [intl] of the nearest charter.toml at or above dir.
+// Find is the languages of the app at or above dir (the folder with wrangler.jsonc or charter.toml), by convention:
+// the catalogs are locales/<locale>.toml, the languages are the catalogs there (en first, the source), and gsxui's
+// components are in ui/. charter.toml's [intl] says anything else, and what the folders cannot: notes for
+// translators, a language that inherits another's.
 func Find(dir string) (Config, error) {
 	dir, err := filepath.Abs(dir)
 	if err != nil {
 		return Config{}, err
 	}
 	for {
-		path := filepath.Join(dir, File)
-		if _, err := os.Stat(path); err == nil {
-			var file struct {
-				Intl *Config `toml:"intl"`
-			}
-			if _, err := toml.DecodeFile(path, &file); err != nil {
-				return Config{}, err
-			}
-			if file.Intl == nil {
-				return Config{}, errors.New(path + " has no [intl]: the app's languages")
-			}
-			c := *file.Intl
-			if len(c.Locales) == 0 || c.Catalogs == "" {
-				return Config{}, errors.New(path + ": [intl] locales and catalogs are required")
-			}
-			c.Root = dir
-			return c, nil
+		_, errW := os.Stat(filepath.Join(dir, "wrangler.jsonc"))
+		_, errC := os.Stat(filepath.Join(dir, File))
+		if errW == nil || errC == nil {
+			break
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return Config{}, errors.New("no " + File + " with an [intl] at or above the working directory")
+			return Config{}, errors.New("no app (wrangler.jsonc) at or above the working directory")
 		}
 		dir = parent
 	}
+	var file struct {
+		Intl *Config `toml:"intl"`
+	}
+	if _, err := toml.DecodeFile(filepath.Join(dir, File), &file); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return Config{}, err
+	}
+	c := Config{}
+	if file.Intl != nil {
+		c = *file.Intl
+	}
+	c.Root = dir
+	if c.Catalogs == "" {
+		c.Catalogs = "locales"
+	}
+	if len(c.Locales) == 0 {
+		catalogs, _ := filepath.Glob(filepath.Join(c.CatalogDir(), "*.toml"))
+		for _, f := range catalogs {
+			if id := strings.TrimSuffix(filepath.Base(f), ".toml"); id == "en" {
+				c.Locales = append([]string{id}, c.Locales...)
+			} else {
+				c.Locales = append(c.Locales, id)
+			}
+		}
+	}
+	if len(c.Locales) == 0 {
+		return Config{}, errors.New(c.CatalogDir() + " has no catalogs (<locale>.toml): the app's languages")
+	}
+	if c.Gsxui == "" {
+		if _, err := os.Stat(filepath.Join(dir, "ui", "i18n")); err == nil {
+			c.Gsxui = "ui"
+		}
+	}
+	return c, nil
 }

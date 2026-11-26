@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/joeblew999/charter/gsxintl/registry"
-	intlui "github.com/joeblew999/charter/gsxintl/screens"
 	"github.com/joeblew999/charter/internal/intlkit/setup"
+	"github.com/joeblew999/charter/intl/registry"
+	intlui "github.com/joeblew999/charter/intl/screens"
 )
 
 // add is charter add screen:<name>: intl's screens, copied into the app the way gsxui add copies components (#77), into

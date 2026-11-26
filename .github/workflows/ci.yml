@@ -1,4 +1,6 @@
 # Go and Node are all a machine needs: go.mod's toolchain line and package-lock.json pin the rest.
+# One job per push: the library's tests, then the one example checked, tested on wrangler dev, and worked on under
+# charter dev.
 name: ci
 
 on:
@@ -11,35 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  library:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    env:
-      GOWORK: "off"
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: go vet ./...
-      - run: go test ./...
-
-  examples:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        example: [api, site, notes]
-    runs-on: ${{ matrix.os }}
+  check:
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -51,33 +26,17 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: go build ./... && go vet ./...
+        env:
+          GOWORK: "off"
       - run: go tool charter check
-        working-directory: examples/${{ matrix.example }}
+        working-directory: example
+      - run: go test ./...
+        env:
+          GOWORK: "off"
       - run: go tool charter test
-        working-directory: examples/${{ matrix.example }}
-
-  # charter dev stays running, and everything a developer does meanwhile reaches the open page (examples/site's TestDev).
-  dev:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    env:
-      CHARTER_DEV_TEST: "1"
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      # The test is in the app's own package, which compiles only once its messages, components and Vite's manifest are written.
-      - run: go tool charter build -only generate
-        working-directory: examples/site
-      - run: go test -count=1 -run TestDev -v -timeout 15m .
-        working-directory: examples/site
+        working-directory: example
+      - run: go test -count=1 -run TestDev -v -timeout 15m ./test/devloop
+        working-directory: example
+        env:
+          CHARTER_DEV_TEST: "1"

@@ -53,7 +53,7 @@ func WithRequest(ctx context.Context, r Request) context.Context {
 	return context.WithValue(ctx, ctxKey{}, r)
 }
 
-// Current is the request's locale: <html lang={ intl.Current(ctx).ID() } dir={ intl.Current(ctx).Dir() }>. A render
+// Current is the request's locale: <html lang={ Current(ctx).ID() } dir={ Current(ctx).Dir() }>. A render
 // without a request is in the source locale.
 func Current(ctx context.Context) *Locale {
 	if r, ok := FromContext(ctx); ok {

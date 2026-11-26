@@ -1,7 +1,7 @@
 // Package intl is the languages' commands, which charter's verbs and tasks call (add locale:, check, build, run
 // translate, …): an app's languages, from its charter.toml's [intl] (found up from the working directory). Each
 // command is a file of its own, holding the function named for it (gen.go holds gen). The app imports intl's
-// packages from this same module (github.com/joeblew999/charter/intl, gsxintl).
+// packages from this same module (github.com/joeblew999/charter/intl).
 package intl
 
 import (

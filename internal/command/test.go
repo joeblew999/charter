@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -76,6 +77,9 @@ func Test(args []string) {
 		commands := p.Test.Live
 		if len(commands) == 0 {
 			commands = p.Test.Run
+			if p.Test.Deployed {
+				commands = append(slices.Clone(commands), "go test -count=1 -timeout 20m ./test/deployed/...")
+			}
 		}
 		t := newTimes("test of " + *base)
 		t.part("worker", func() error { return try(p, commands, *base) })
@@ -92,7 +96,11 @@ func Test(args []string) {
 	// wrangler dev builds the Worker itself (wrangler.jsonc's build command).
 	t.part("worker", func() error {
 		return serving(p, func(base string) error {
-			if err := try(p, p.Test.Run, base); err != nil {
+			commands := p.Test.Run
+			if p.Test.Local {
+				commands = append(slices.Clone(commands), "go test -count=1 ./test/dev/...")
+			}
+			if err := try(p, commands, base); err != nil {
 				return err
 			}
 			if p.SEO != nil {

@@ -23,7 +23,7 @@ func Segments(ctx context.Context, text, granularity string) []string {
 // Order is the order Intl.Collator sorts items in, in the request's language, with opts (a JSON object of its
 // options, "" for none): the indexes of items, first to last. Rows sort by a key through it:
 //
-//	for _, i := range intl.Order(ctx, names, "") { rows[i]… }
+//	for _, i := range Order(ctx, names, "") { rows[i]… }
 func Order(ctx context.Context, items []string, opts string) []int {
 	q := make([]string, len(items))
 	for i, s := range items {

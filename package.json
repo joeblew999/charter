@@ -1,6 +1,6 @@
 {
   "name": "charter",
   "private": true,
-  "description": "The examples share one node_modules: npm install here installs wrangler (and Vite) for all of them.",
-  "workspaces": ["examples/*"]
+  "description": "npm install here installs wrangler and Vite for the example.",
+  "workspaces": ["example"]
 }

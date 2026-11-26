@@ -47,7 +47,7 @@ func Dev(args []string) {
 }
 
 // devWorker is charter dev -worker, the server gsx dev starts after each build and stops before the next: wrangler
-// dev on the port gsx chose (GO_PORT), told where Vite's dev server is (VITE_DEV_URL, which gsxapp reads as a
+// dev on the port gsx chose (GO_PORT), told where Vite's dev server is (VITE_DEV_URL, which app.App reads as a
 // variable of the Worker) and that the build is done.
 func devWorker() {
 	p := load()

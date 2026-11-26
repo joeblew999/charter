@@ -8,7 +8,7 @@ import (
 )
 
 // Calendar is what a month calendar writes in a language, from Intl: gsxui's ui.CalendarLocale, field for field, so
-// <ui.Calendar locale={ ui.CalendarLocale(intl.CalendarOf(ctx)) } weekStartsOn={ intl.WeekStart(ctx) }/> is in the
+// <ui.Calendar locale={ ui.CalendarLocale(CalendarOf(ctx)) } weekStartsOn={ WeekStart(ctx) }/> is in the
 // request's language. Months are the standalone names a caption uses ("январь 2026"), MonthsFormat the names inside a
 // date, which day labels use ("15 января 2026 г.").
 type Calendar struct {

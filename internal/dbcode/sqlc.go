@@ -1,7 +1,7 @@
-// Package dbcode is a project's database code, typed, from its schema (migrations/*.sql, the one place the tables are
+// Package dbcode is a project's database code, typed, from its schema (db/migrations/*.sql, the one place the tables are
 // said). charter check --fix writes it beside the specs (charter.toml's db), and charter check fails when it is stale.
 //
-//   - Go (db = "sqlc"): the queries of api/queries.sql as functions over charter's d1 package, in api/queries.go. sqlc
+//   - Go (db = "sqlc"): the queries of db/queries.sql as functions over charter's cloud package, in db/queries.go. sqlc
 //     works out each one's parameters and columns against the schema; charter writes the Go, with no database/sql
 //     (charter/d1 says why).
 //   - TypeScript (db = "drizzle"): the tables as Drizzle has them, api/tables.ts, read from the schema as SQLite itself
@@ -37,7 +37,7 @@ type Column struct {
 	} `json:"table"`
 }
 
-// Query is a query of api/queries.sql as sqlc worked it out.
+// Query is a query of db/queries.sql as sqlc worked it out.
 type Query struct {
 	Name     string   `json:"name"`
 	Cmd      string   `json:"cmd"`
@@ -68,7 +68,7 @@ type Request struct {
 // sqlcVersion is the sqlc charter analyzes queries with: a Go program, run with go run, so every system gets it.
 const sqlcVersion = "v1.30.0"
 
-// Analyze runs sqlc on dir's schema (migrations/) and queries (api/queries.sql), and returns what it worked out. sqlc
+// Analyze runs sqlc on dir's schema (db/migrations/) and queries (db/queries.sql), and returns what it worked out. sqlc
 // is run with go run, at sqlcVersion.
 func Analyze(dir string) (*Request, error) {
 	// In the app's own scratch folder (.charter), not the system's: sqlc reads its paths relative to its config, and on
@@ -94,11 +94,11 @@ func Analyze(dir string) (*Request, error) {
 		// sqlc reads both relative to its config, even a path that is absolute.
 		return filepath.Rel(tmp, abs)
 	}
-	schema, err := rel("migrations")
+	schema, err := rel("db", "migrations")
 	if err != nil {
 		return nil, err
 	}
-	queries, err := rel("api", "queries.sql")
+	queries, err := rel("db", "queries.sql")
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func local(name string) string {
 // be NULL is a pointer.
 func goType(c Column) (string, error) {
 	if c.IsSqlcSlice || c.IsArray {
-		return "", fmt.Errorf("api/queries.sql: %s is a list (sqlc.slice): charter writes queries of single values", c.Name)
+		return "", fmt.Errorf("db/queries.sql: %s is a list (sqlc.slice): charter writes queries of single values", c.Name)
 	}
 	name := strings.ToLower(c.Type.Name)
 	base := "any"
@@ -196,7 +196,7 @@ func jsonString(s string) string {
 	return strings.TrimSuffix(b.String(), "\n")
 }
 
-// GoQueries is api/queries.go for what sqlc worked out: a function for each query, over charter's d1 package.
+// GoQueries is db/queries.go for what sqlc worked out: a function for each query, over charter's cloud package.
 func GoQueries(r *Request, pkg string) (string, error) {
 	tables := map[string][]Column{}
 	for _, s := range r.Catalog.Schemas {
@@ -242,7 +242,7 @@ func GoQueries(r *Request, pkg string) (string, error) {
 	var functions []string
 	for _, q := range r.Queries {
 		if !slices.Contains([]string{":one", ":many", ":exec", ":execrows"}, q.Cmd) {
-			return "", fmt.Errorf("api/queries.sql: %s is %s: charter writes :one, :many, :exec and :execrows (the rows a statement changed; for the row itself, RETURNING with :one, where no row is d1.ErrNoRows)", q.Name, q.Cmd)
+			return "", fmt.Errorf("db/queries.sql: %s is %s: charter writes :one, :many, :exec and :execrows (the rows a statement changed; for the row itself, RETURNING with :one, where no row is cloud.ErrNoRows)", q.Name, q.Cmd)
 		}
 		params := slices.Clone(q.Params)
 		slices.SortFunc(params, func(a, b struct {
@@ -252,7 +252,7 @@ func GoQueries(r *Request, pkg string) (string, error) {
 			return a.Number - b.Number
 		})
 		taken := map[string]bool{"db": true}
-		signature, args := []string{"db d1.DB"}, []string{"db", "q" + q.Name}
+		signature, args := []string{"db cloud.DB"}, []string{"db", "q" + q.Name}
 		for _, p := range params {
 			name := local(p.Column.Name)
 			for n := 2; taken[name]; n++ {
@@ -265,7 +265,7 @@ func GoQueries(r *Request, pkg string) (string, error) {
 			}
 			signature = append(signature, name+" "+t)
 			if strings.HasPrefix(t, "*") {
-				args = append(args, "d1.OrNull("+name+")")
+				args = append(args, "cloud.OrNull("+name+")")
 			} else {
 				args = append(args, name)
 			}
@@ -277,7 +277,7 @@ func GoQueries(r *Request, pkg string) (string, error) {
 		for _, line := range q.Comments {
 			own = append(own, strings.TrimSpace(line))
 		}
-		about := []string{"// " + q.Name + " runs the query " + q.Name + " of api/queries.sql."}
+		about := []string{"// " + q.Name + " runs the query " + q.Name + " of db/queries.sql."}
 		if len(own) > 0 && strings.HasPrefix(own[0], q.Name+" ") {
 			about = nil
 			for _, line := range own {
@@ -287,9 +287,9 @@ func GoQueries(r *Request, pkg string) (string, error) {
 		lines := append([]string{"const q" + q.Name + " = " + jsonString(strings.TrimSpace(q.Text)), ""}, about...)
 		switch {
 		case q.Cmd == ":exec":
-			functions = append(functions, strings.Join(append(lines, "func "+q.Name+"("+sig+") error {", "\treturn d1.Exec("+call+")", "}"), "\n"))
+			functions = append(functions, strings.Join(append(lines, "func "+q.Name+"("+sig+") error {", "\treturn cloud.Exec("+call+")", "}"), "\n"))
 		case q.Cmd == ":execrows":
-			functions = append(functions, strings.Join(append(lines, "func "+q.Name+"("+sig+") (int64, error) {", "\treturn d1.ExecRows("+call+")", "}"), "\n"))
+			functions = append(functions, strings.Join(append(lines, "func "+q.Name+"("+sig+") (int64, error) {", "\treturn cloud.ExecRows("+call+")", "}"), "\n"))
 		case len(q.Columns) == 1:
 			// One column: its values, not rows of one field.
 			c := q.Columns[0]
@@ -302,14 +302,14 @@ func GoQueries(r *Request, pkg string) (string, error) {
 				return "", err
 			}
 			if q.Cmd == ":many" {
-				lines = append(lines, "func "+q.Name+"("+sig+") ([]"+t+", error) {", "\trows, err := d1.Query["+row+"]("+call+")",
+				lines = append(lines, "func "+q.Name+"("+sig+") ([]"+t+", error) {", "\trows, err := cloud.Query["+row+"]("+call+")",
 					"\tvalues := make([]"+t+", len(rows))", "\tfor i, row := range rows {", "\t\tvalues[i] = row."+exported(c.Name), "\t}", "\treturn values, err", "}")
 			} else {
-				lines = append(lines, "func "+q.Name+"("+sig+") ("+t+", error) {", "\trow, err := d1.One["+row+"]("+call+")", "\treturn row."+exported(c.Name)+", err", "}")
+				lines = append(lines, "func "+q.Name+"("+sig+") ("+t+", error) {", "\trow, err := cloud.One["+row+"]("+call+")", "\treturn row."+exported(c.Name)+", err", "}")
 			}
 			functions = append(functions, strings.Join(lines, "\n"))
 		case len(q.Columns) == 0:
-			return "", fmt.Errorf("api/queries.sql: %s is %s but returns no columns: make it :exec, or add RETURNING", q.Name, q.Cmd)
+			return "", fmt.Errorf("db/queries.sql: %s is %s but returns no columns: make it :exec, or add RETURNING", q.Name, q.Cmd)
 		default:
 			row, err := rowOf(q)
 			if err != nil {
@@ -319,21 +319,21 @@ func GoQueries(r *Request, pkg string) (string, error) {
 			if q.Cmd == ":many" {
 				result, fn = "[]"+row, "Query"
 			}
-			functions = append(functions, strings.Join(append(lines, "func "+q.Name+"("+sig+") ("+result+", error) {", "\treturn d1."+fn+"["+row+"]("+call+")", "}"), "\n"))
+			functions = append(functions, strings.Join(append(lines, "func "+q.Name+"("+sig+") ("+result+", error) {", "\treturn cloud."+fn+"["+row+"]("+call+")", "}"), "\n"))
 		}
 	}
 	source := strings.Join(append(append([]string{
-		"// Code generated by charter check --fix from migrations/*.sql and api/queries.sql, with sqlc. DO NOT EDIT.",
+		"// Code generated by charter check --fix from db/migrations/*.sql and db/queries.sql, with sqlc. DO NOT EDIT.",
 		"// Change those, then charter check --fix.",
 		"",
 		"package " + pkg,
 		"",
-		`import "github.com/joeblew999/charter/d1"`,
+		`import "github.com/joeblew999/charter/cloud"`,
 		"",
 	}, types...), strings.Join(functions, "\n\n"), ""), "\n")
 	out, err := format.Source([]byte(source))
 	if err != nil {
-		return "", fmt.Errorf("the Go written for api/queries.sql does not format: %w\n%s", err, source)
+		return "", fmt.Errorf("the Go written for db/queries.sql does not format: %w\n%s", err, source)
 	}
 	return string(out), nil
 }
@@ -347,26 +347,13 @@ func Write(dir, db string, check bool) error {
 	return writeQueries(dir, check)
 }
 
-// writeQueries writes dir's api/queries.go from its schema and queries; with check it writes nothing, and fails if the
-// one there is not what they give.
+// writeQueries writes dir's db/queries.go (package db) from its schema and queries; with check it writes nothing, and
+// fails if the one there is not what they give.
 func writeQueries(dir string, check bool) error {
 	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
-		return errors.New(`db = "sqlc" writes Go: there is no go.mod here`)
+		return errors.New("db/queries.sql is written as Go: there is no go.mod here")
 	}
-	if _, err := os.Stat(filepath.Join(dir, "api", "queries.sql")); err != nil {
-		return errors.New(`db = "sqlc" writes the queries of api/queries.sql, and there is none`)
-	}
-	pkg := "api"
-	entries, _ := os.ReadDir(filepath.Join(dir, "api"))
-	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".go") {
-			b, _ := os.ReadFile(filepath.Join(dir, "api", e.Name()))
-			if m := regexp.MustCompile(`(?m)^package (\w+)`).FindSubmatch(b); m != nil {
-				pkg = string(m[1])
-				break
-			}
-		}
-	}
+	pkg := "db"
 	r, err := Analyze(dir)
 	if err != nil {
 		return err
@@ -375,17 +362,17 @@ func writeQueries(dir string, check bool) error {
 	if err != nil {
 		return err
 	}
-	file := filepath.Join(dir, "api", "queries.go")
+	file := filepath.Join(dir, "db", "queries.go")
 	if !check {
 		if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
 			return err
 		}
-		fmt.Println("api/queries.go: from migrations/ and api/queries.sql (sqlc)")
+		fmt.Println("db/queries.go: from db/migrations/ and db/queries.sql (sqlc)")
 		return nil
 	}
 	if b, err := os.ReadFile(file); err != nil || string(b) != text {
-		return errors.New("api/queries.go is not what migrations/ and api/queries.sql give: charter check --fix")
+		return errors.New("db/queries.go is not what db/migrations/ and db/queries.sql give: charter check --fix")
 	}
-	fmt.Println("api/queries.go is what migrations/ gives")
+	fmt.Println("db/queries.go is what db/migrations/ gives")
 	return nil
 }

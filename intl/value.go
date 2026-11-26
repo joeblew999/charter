@@ -11,8 +11,8 @@ import (
 // [renderers]) with the request's language, time zone and clock, inside an element js/intl-browser.mjs redoes in
 // the viewer's own zone:
 //
-//	<p>{ intl.Date(note.CreatedAt, intl.Options("dateStyle", "full")) }</p>
-//	<p>{ intl.Of("NumberFormat", "", intl.Options("style", "percent"), intl.JSON("0.256")) }</p>
+//	<p>{ Date(note.CreatedAt, Options("dateStyle", "full")) }</p>
+//	<p>{ Of("NumberFormat", "", Options("style", "percent"), JSON("0.256")) }</p>
 type Value struct {
 	Call
 	kind     string // "" for the Call, "since" or "zone"
@@ -24,7 +24,7 @@ type Value struct {
 }
 
 // Args are an Intl call's arguments when it takes several (or none), for the intl filter:
-// { intl.Args{"ä", "z"} |> intl("Collator", "compare") }. Each is a string, a number or a time.Time.
+// { Args{"ä", "z"} |> intl("Collator", "compare") }. Each is a string, a number or a time.Time.
 type Args []any
 
 // Of is any Intl call: new Intl[api](lang, opts)[method](...args), method "" for "format", opts a JSON object, args
@@ -87,7 +87,7 @@ func List(items []string, opts string) Value {
 func Zone(id string) Value { return Value{kind: "zone", tag: "span", fallback: id, zone: id} }
 
 // Clock is 13:05 written in a clock, to label the choices of HourCycle: "h12", "h23", or "" for the language's own,
-// whichever clock the viewer chose. In an <option>: { gsxintl.Attrs(intl.Clock("h12"))... } and { intl.Clock("h12") |> plain }.
+// whichever clock the viewer chose. In an <option>: { intl.Attrs(Clock("h12"))... } and { Clock("h12") |> plain }.
 func Clock(hourCycle string) Value {
 	clock := []string{"viewerClock", "false"} // js/intl.mjs: the language's own clock, not the viewer's
 	if hourCycle != "" {
@@ -129,7 +129,7 @@ func (v Value) text(ctx context.Context) string {
 // Slot marks where js/intl-browser.mjs puts a value in an element's data-template: a translated message rendered with
 // Slot as its argument, so the browser's value lands inside the translator's wording:
 //
-//	<option data-intl="browser-zone" data-template={ locales.Automatic(intl.Slot) }>…</option>
+//	<option data-intl="browser-zone" data-template={ locales.Automatic(Slot) }>…</option>
 const Slot = "\ue000"
 
 // Plain is a Value as plain text (PlainText, registered in gsx.toml [renderers]): for attributes, which take no

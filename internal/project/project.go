@@ -208,6 +208,9 @@ type Test struct {
 	Run    []string            `toml:"run"`
 	Live   []string            `toml:"live"`
 	Suites map[string][]string `toml:"suites"`
+	// By convention (no [test] run): test/ asks either Worker, test/dev only a local one, test/deployed only a
+	// deployed one.
+	Local, Deployed bool `toml:"-"`
 }
 
 // HealthPath is the path that answers once the Worker is up.
@@ -257,6 +260,31 @@ func read(root string) (*Project, error) {
 	}
 	if p.Pack.Name != "" {
 		p.SDKs = p.Pack
+	}
+	// Conventions: what the app's folders say needs no setting.
+	has := func(parts ...string) bool {
+		_, err := os.Stat(filepath.Join(append([]string{root}, parts...)...))
+		return err == nil
+	}
+	if p.Health == "" && has("pages") {
+		p.Health = "/healthz" // app.App answers it
+	}
+	if p.Spec == "" && has("api", "contract.go") {
+		p.Spec = "fern/openapi.json"
+	}
+	if p.DB == "" && has("db", "queries.sql") {
+		p.DB = "sqlc"
+	}
+	if p.Intl == nil && has("locales") {
+		p.Intl = map[string]any{}
+	}
+	if p.SEO == nil && has("pages") {
+		p.SEO = map[string]any{}
+	}
+	if len(p.Test.Run) == 0 && has("test") {
+		p.Test.Run = []string{"go test -count=1 -timeout 20m ./test"}
+		// test/dev asks only a local Worker, test/deployed only a deployed one.
+		p.Test.Local, p.Test.Deployed = has("test", "dev"), has("test", "deployed")
 	}
 	path = filepath.Join(root, Wrangler)
 	b, err := os.ReadFile(path)

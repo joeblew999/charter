@@ -84,7 +84,7 @@ func generate(p *project.Project) error {
 	return nil
 }
 
-// wasm builds the Worker into build/: workers-go's JavaScript, the Wasm, charter's glue (worker/*.mjs of the charter
+// wasm builds the Worker into build/: workers-go's JavaScript, the Wasm, charter's glue (app/worker/*.mjs of the charter
 // go.mod requires, so the JavaScript is the one written for the Go it runs), and intl's Worker modules.
 func wasm(p *project.Project, limit int) error {
 	if err := run.Run(p.Root, nil, "go", "run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=go"); err != nil {
@@ -98,9 +98,9 @@ func wasm(p *project.Project, limit int) error {
 	if err != nil {
 		return fmt.Errorf("go.mod must require %s: %w", library, err)
 	}
-	glue, _ := filepath.Glob(filepath.Join(strings.TrimSpace(dir), "worker", "*.mjs"))
+	glue, _ := filepath.Glob(filepath.Join(strings.TrimSpace(dir), "app", "worker", "*.mjs"))
 	if len(glue) == 0 {
-		return fmt.Errorf("no Worker glue (worker/*.mjs) in %s", dir)
+		return fmt.Errorf("no Worker glue (app/worker/*.mjs) in %s", dir)
 	}
 	for _, f := range glue {
 		b, err := os.ReadFile(f)

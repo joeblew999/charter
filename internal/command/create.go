@@ -17,15 +17,14 @@ import (
 
 const repository = "https://github.com/joeblew999/charter"
 
-// Create runs charter create <dir> [-from example]: a new app, copied from one of charter's examples (api, site, notes) at
+// Create runs charter create <dir>: a new app, copied from charter's example (the one app that uses all of charter) at
 // this charter's release, under the folder's name: its Go module, its Worker, its npm package, installed, tidied and
 // formatted, its specs written. Then go tool charter dev.
 func Create(args []string) {
 	log.SetFlags(0)
 	flags := flag.NewFlagSet("charter create", flag.ExitOnError)
-	from := flags.String("from", "api", "the example to start from: api, site or notes")
 	module := flags.String("module", "", "the Go module's path (default: the folder's name)")
-	usage := errors.New("usage: charter create <dir> [-from api|site|notes] [-module example.com/my-app]")
+	usage := errors.New("usage: charter create <dir> [-module example.com/my-app]")
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		check(usage)
 	}
@@ -51,11 +50,11 @@ func Create(args []string) {
 	if out, err := exec.Command("git", append(clone, repository, tmp)...).CombinedOutput(); err != nil {
 		check(fmt.Errorf("git clone %s: %v\n%s", repository, err, out))
 	}
-	src := filepath.Join(tmp, "examples", *from)
+	src := filepath.Join(tmp, "example")
 	if _, err := os.Stat(filepath.Join(src, "wrangler.jsonc")); err != nil {
-		check(fmt.Errorf("charter has no example %q: api, site or notes", *from))
+		check(errors.New("this charter has no example/ to start from"))
 	}
-	oldModule, oldName := "github.com/joeblew999/charter/examples/"+*from, "charter-"+*from
+	oldModule, oldName := "github.com/joeblew999/charter/example", "charter-example"
 	check(filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -92,7 +91,7 @@ func Create(args []string) {
 		check(os.WriteFile(skill, b, 0o644))
 	}
 	// The example's README points into charter's repo: the app gets its own.
-	readme := fmt.Sprintf("# %s\n\nA Go app on Cloudflare Workers, made with [charter](%s) from its `%s` template.\n\n```sh\nnpm install\ngo tool charter dev                              # work on it; leave it running\ngo tool charter check && go tool charter test    # before a push\ngo tool charter deploy                           # ship it\n```\n\n`go tool charter` lists every command.\n", name, repository, *from)
+	readme := fmt.Sprintf("# %s\n\nA Go app on Cloudflare Workers, made with [charter](%s) from its example.\n\n```sh\nnpm install\ngo tool charter dev                              # work on it; leave it running\ngo tool charter check && go tool charter test    # before a push\ngo tool charter deploy                           # ship it\n```\n\n`go tool charter` lists every command.\n", name, repository)
 	check(os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0o644))
 	// The new module path sorts differently among the imports: written as gofmt and gsx fmt have them.
 	check(run.Run(dir, nil, "go", "mod", "tidy"))
@@ -106,7 +105,7 @@ func Create(args []string) {
 		check(run.Run(dir, nil, "npm", "install"))
 	}
 	check(run.Run(dir, nil, "go", "tool", "charter", "check", "--fix"))
-	say("✓ %s: the %s template as %s (module %s)\n\nNext:\n  cd %s\n  go tool charter dev", dir, *from, name, *module, dir)
+	say("✓ %s: charter's example as %s (module %s)\n\nNext:\n  cd %s\n  go tool charter dev", dir, name, *module, dir)
 }
 
 // templateURL is where a template is deployed, under its owner's workers.dev subdomain.

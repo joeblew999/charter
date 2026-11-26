@@ -1,0 +1,10 @@
+# Only what the folders do not say (go doc github.com/joeblew999/charter/internal/project): charter finds the pages,
+# the API's contract, the queries, the languages and the tests by where they are.
+url = "https://charter-example.gedw99.workers.dev"
+
+# The SDKs Fern makes from the specs (charter pack). The Go one is committed in sdk/go (charter pack -publish), and
+# the tests use it as a real client.
+[pack]
+name = "Notes"
+more = ["python", "cli"]
+go = true

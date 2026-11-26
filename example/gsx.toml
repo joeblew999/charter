@@ -1,0 +1,27 @@
+class_merger = "github.com/joeblew999/charter/example/ui/merge.Merge"
+
+# gsx's settings for the pages (https://gsxhq.github.io, Configuration). The htmx preset makes
+# hx-get, hx-post and the like URL attributes, which gsx checks as it does href; hx-sse:connect,
+# from htmx 4's SSE extension, is one too.
+url_presets = ["htmx"]
+
+# intl's gsx filters: { t |> date(opts) }, { n |> number }, href={ "/about" |> localize } (intl/README.md).
+filter_packages = ["github.com/joeblew999/charter/intl/filters"]
+
+# Links and targets come from the page tree (pages.Pages). url is a page's address in the reader's language; action
+# is a route that is no page (a form's target, a stream), which has one address.
+[filters]
+url = "github.com/joeblew999/charter/app.URL"
+action = "github.com/jackielii/structpages.URLFor"
+id = "github.com/jackielii/structpages.ID"
+target = "github.com/jackielii/structpages.IDTarget"
+
+[url_attrs]
+names = ["hx-sse:connect"]
+
+# intl: a message or an Intl call written in markup renders in the request's language.
+[renderers]
+"github.com/joeblew999/charter/example/ui/i18n.T" = "github.com/joeblew999/charter/example/ui/i18n.Translate"
+"github.com/joeblew999/charter/intl.Msg" = "github.com/joeblew999/charter/intl.Translate"
+"github.com/joeblew999/charter/intl.Value" = "github.com/joeblew999/charter/intl.Render"
+"github.com/joeblew999/charter/intl.Plain" = "github.com/joeblew999/charter/intl.PlainText"

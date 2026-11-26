@@ -1,0 +1,33 @@
+# The loop a developer works in, on the other two systems, once a week: charter dev started, files edited beside it,
+# the page seen to change (example/test/devloop). Linux runs it on every push (ci.yml).
+name: systems
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  dev:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: go tool charter build -only generate
+        working-directory: example
+      - run: go test -count=1 -run TestDev -v -timeout 15m ./test/devloop
+        working-directory: example
+        env:
+          CHARTER_DEV_TEST: "1"

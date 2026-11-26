@@ -25,7 +25,7 @@ type Options struct {
 
 const (
 	intlPkg    = "github.com/joeblew999/charter/intl"
-	gsxintlPkg = "github.com/joeblew999/charter/gsxintl" // intl.Value's renderer, the only gsx of intl
+	gsxintlPkg = "github.com/joeblew999/charter/intl" // intl.Value's renderer, the only gsx of intl
 )
 
 // Init writes charter.toml's [intl], the catalogs, gsx.toml's filters and renderers, and .gitignore's generated files
@@ -84,7 +84,7 @@ func Init(root string, o Options, log io.Writer) error {
 		}
 	}
 
-	// A gsx app gets gsx.toml's filters and renderers (gsxintl); an app without gsx gets nothing of gsx's.
+	// A gsx app gets gsx.toml's filters and renderers (intl); an app without gsx gets nothing of gsx's.
 	if UsesGsx(root, o.Gsxui) {
 		renderers := [][2]string{
 			{intlPkg + ".Msg", intlPkg + ".Translate"},
@@ -103,7 +103,7 @@ func Init(root string, o Options, log io.Writer) error {
 
 // UsesGsx reports whether the app at root is a gsx app: it has gsxui (gsxui), a gsx.toml, or .gsx files of its own.
 // Its go.mod isn't the sign: the module an app is a folder of may require gsx for packages of its own (the template,
-// where it is, is a folder of charter run languages's, which gsxintl needs gsx for).
+// where it is, is a folder of charter run languages's, which needs gsx).
 func UsesGsx(root, gsxui string) bool {
 	if gsxui != "" {
 		return true

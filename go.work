@@ -2,9 +2,6 @@ go 1.27.1
 
 use (
 	.
-	./examples/api
-	./examples/notes
-	./examples/notes/sdk/go
-	./examples/notes/test/soak-go
-	./examples/site
+	./example
+	./example/sdk/go
 )

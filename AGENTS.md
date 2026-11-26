@@ -2,33 +2,32 @@
 
 How the repo works: [README.md](README.md). Plans and open work are GitHub issues here, never files.
 
-- **Go only.** No TypeScript library, no TypeScript examples. `vite.config.ts` is gsx's file, kept under the name
-  gsx and gsxui look for; a TypeScript SDK is something an app may generate for its users, never code here.
-- **Drive the upstream tool, never copy it.** wrangler runs and deploys the Worker (`wrangler.jsonc`), Vite builds
-  the browser's files, gsx generates and runs the dev loop, workers-go carries Go. Read the upstream guide and build
-  its demo before designing anything.
-- **Go and Node are all a machine needs.** No mise, no tool downloads of our own. `go.mod`'s toolchain line and
-  `package-lock.json` pin everything; a Go tool is a `tool` line in `go.mod`, an npm tool a `devDependency`.
-- **`charter.toml` holds only what wrangler has no place for** (the contract, SDKs, tests, `[intl]`, `[seo]`). A
-  Worker's facts are wrangler's. No other settings file: languages and search engines are tables of it.
-- **workers-go is used the workers-go way.** Everything it has (KV, R2, Queues, D1, Cron, Cache, Durable Objects,
-  fetch, sockets) is imported and called directly, and must work under charter's build: `examples/site`'s `/cloud`
-  page has a card for each, and a test for each card. charter adds only what workers-go lacks, in its style, and says so where it is defined (`email`).
-- **charter's own bindings have a stand-in off Workers** (`d1`, `bindings`, `hub`), for code that should run under
-  `go test`.
-- **Every library package is at the top** (`charter/intl`, `charter/d1`, …): no grouping folders in import paths.
-  `internal/` is the command, `worker/` the JavaScript that runs the Go, `examples/` the apps.
-- **The commands are Vite+'s verbs** (https://viteplus.dev/guide/): create, install, dev, check, fmt, lint, test,
-  build, preview, pack, run, exec, add, remove, update, outdated, upgrade, migrate, staged, cache, env, and deploy.
-  Anything else is a task of `charter run`. Never add a top-level command of our own.
-- **`charter dev` stays running.** A command is not done until it has been run in a second terminal against a live
-  `charter dev` and the open page was seen to change (or, for a static command, dev was seen undisturbed).
-- **One runtime.** What a developer looks at is workers-go on wrangler, in dev as in production. Stand-ins for
-  bindings are for `go test` only.
-- **Checks:** `go test ./...` at the top (with `GOWORK=off`), and `go tool charter check && go tool charter test` in
-  each example. Work is on `main`.
-- **Needs the owner's OK:** a release, a deploy, anything on another owner's repository.
-- JavaScript only in `worker/` (the glue that runs Go and the hub's Durable Object), `internal/intlkit/js`
-  (Intl's bridge) and an example's `web/`. Keep it logic-free.
-- **A site is `gsxapp.App`**: one handler and one `<gsxapp.Head>`. An example that wires Vite, languages or search
-  engines by hand is a bug in package `gsxapp`.
+- **One way.** Cloudflare only (wrangler dev locally, Cloudflare remotely), gsx and structpages only, one example.
+  Before adding an option, a setting or a second way to do something, don't: make the one way better.
+- **Conventions, not settings.** charter finds an app's parts by where they are (`pages/`, `api/`, `db/`,
+  `locales/`, `test/`). `charter.toml` holds only what a folder cannot say.
+- **Nothing runs off Cloudflare.** No native server, no stand-in for a binding. Library packages still compile for
+  the machine they are written on (an `other.go` whose calls answer `cloud.ErrNotCloudflare`), so editors, `go vet`
+  and the program that writes an API's specs need no setup. Plain logic is tested with `go test`; anything that
+  touches a binding is tested through the example, on a Worker.
+- **Drive the upstream tool, never copy it.** wrangler runs and deploys the Worker, Vite builds the browser's files,
+  gsx generates and runs the dev loop, structpages routes the pages, workers-go carries Go. Read the upstream guide
+  before designing anything.
+- **workers-go is used the workers-go way:** everything it has is imported and called directly. charter adds only
+  what it lacks (`cloud`), and says so where it is defined.
+- **Go and Node are all a machine needs.** `go.mod` and `package-lock.json` pin everything. No TypeScript of ours:
+  `vite.config.ts` is gsx's file.
+- **Six library folders at the top** (`app`, `api`, `cloud`, `live`, `intl`, `seo`), with `cmd`, `internal` and
+  `example`. Don't add another.
+- **`example/` uses all of charter** and is what `charter create` copies. A feature of charter that the example does
+  not use is not done; a bug the example cannot show is a missing part of the example.
+- **A feed is declared once** (`live.Feed`) and serves pages, API and SDK alike.
+- **The commands are Vite+'s verbs** (https://viteplus.dev/guide/), plus `deploy`. Anything else is a task of
+  `charter run`.
+- **`charter dev` stays running.** A command is not done until it has been run beside a live `charter dev`
+  (`example/test/devloop`).
+- **Checks:** `go test ./...` at the top, then in `example/`: `go tool charter check && go tool charter test`, and
+  `go tool charter test --deployed` after a deploy. Work is on `main`. CI is one Linux job per push.
+- **Needs the owner's OK:** anything on another owner's repository.
+- JavaScript only in `app/worker/` (the glue that runs Go, the hub's Durable Object), `internal/intlkit/js` and the
+  example's `web/`. Keep it logic-free.

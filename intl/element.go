@@ -5,7 +5,7 @@ import "context"
 // Attr is one HTML attribute: its name and value.
 type Attr struct{ Key, Value string }
 
-// Element is how v is written in HTML, for whatever renders it (gsxintl.Render in a gsx app, or an app's own
+// Element is how v is written in HTML, for whatever renders it (intl.Render in a gsx app, or an app's own
 // templates): its tag, its attributes, and its text in the request's language, time zone and clock. The attributes are
 // the call js/intl-browser.mjs redoes in the viewer's own zone: <time datetime> for instants, <data value> for numbers
 // and durations, else <span>.
@@ -41,9 +41,9 @@ func (v Value) Attrs() []Attr {
 	return append(a, Attr{"data-args", v.ArgsJSON()})
 }
 
-// HTML is the <html> element's language attributes for the request: lang and dir from its locale, and the viewer's
+// htmlAttrs is the <html> element's language attributes for the request: lang and dir from its locale, and the viewer's
 // chosen time zone and clock (data-tz, data-hc) for js/intl-browser.mjs.
-func HTML(ctx context.Context) []Attr {
+func htmlAttrs(ctx context.Context) []Attr {
 	l := Current(ctx)
 	return []Attr{{"lang", l.ID()}, {"dir", l.Dir()}, {"data-tz", ChosenTimeZone(ctx)}, {"data-hc", HourCycle(ctx)}}
 }

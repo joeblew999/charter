@@ -58,7 +58,7 @@ func spec(p *project.Project, checkOnly bool) error {
 
 // specProgram writes the program that writes a Go project's specs, and returns its package: the contract's API
 // (api.API in the project's module) given to charter's specs package, which first stops on what the specs don't show
-// (specs.Problems), then writes both specs or, with -check, compares them. It is the same in every project, so charter
+// (api.Problems), then writes both specs or, with -check, compares them. It is the same in every project, so charter
 // writes it, into .charter/ (charter's scratch folder, which no build empties); go vet and go test leave out a
 // folder whose name starts with a dot.
 func specProgram(root, module string) (string, error) {
@@ -72,13 +72,13 @@ package main
 
 import (
 	"`+module+`/api"
-	"github.com/joeblew999/charter/specs"
+	charter "github.com/joeblew999/charter/api"
 )
 
 func main() {
 	spec := api.API(api.Env{})
-	specs.Must(specs.Problems(spec))
-	specs.Main(spec.OpenAPI, spec.AsyncAPI)
+	charter.Must(charter.Problems(spec))
+	charter.SpecsMain(spec.OpenAPI, spec.AsyncAPI)
 }
 
 `), 0o644)

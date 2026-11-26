@@ -9,12 +9,12 @@ import (
 )
 
 // TestAsCommitted: for every Go example with queries, what sqlc works out of its schema and queries is written as the
-// api/queries.go it commits. It runs sqlc (go run, the first time a download).
+// db/queries.go it commits. It runs sqlc (go run, the first time a download).
 func TestAsCommitted(t *testing.T) {
-	for _, example := range []string{"notes", "site"} {
+	for _, example := range []string{"example"} {
 		t.Run(example, func(t *testing.T) {
-			dir := filepath.Join("..", "..", "examples", example)
-			committed, err := os.ReadFile(filepath.Join(dir, "api", "queries.go"))
+			dir := filepath.Join("..", "..", example)
+			committed, err := os.ReadFile(filepath.Join(dir, "db", "queries.go"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -22,12 +22,12 @@ func TestAsCommitted(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			got, err := GoQueries(r, "api")
+			got, err := GoQueries(r, "db")
 			if err != nil {
 				t.Fatal(err)
 			}
 			if want := string(committed); got != want {
-				t.Errorf("api/queries.go differs from the committed one\ngot:\n%s\nwant:\n%s", got, want)
+				t.Errorf("db/queries.go differs from the committed one\ngot:\n%s\nwant:\n%s", got, want)
 			}
 		})
 	}
@@ -65,8 +65,8 @@ func TestCommands(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"func Trim(db d1.DB, id int64) (int64, error) {\n\treturn d1.ExecRows(db, qTrim, id)\n}",
-		"func Clear(db d1.DB, id int64) error {\n\treturn d1.Exec(db, qClear, id)\n}",
+		"func Trim(db cloud.DB, id int64) (int64, error) {\n\treturn cloud.ExecRows(db, qTrim, id)\n}",
+		"func Clear(db cloud.DB, id int64) error {\n\treturn cloud.Exec(db, qClear, id)\n}",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("the code lacks:\n%s\ngot:\n%s", want, got)
