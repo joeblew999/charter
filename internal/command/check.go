@@ -1,6 +1,7 @@
 package command
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -10,6 +11,7 @@ import (
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -51,6 +53,9 @@ func Check(args []string) {
 			say("screens brought up to date: %s", strings.Join(behind, ", "))
 			return intl.UpdateScreens(behind)
 		})
+	}
+	if *fix && exists(filepath.Join(p.Root, "gsxui.json")) {
+		t.part("components", func() error { return componentsRecorded(p) })
 	}
 	if *fix && exists(filepath.Join(p.Root, "pages")) {
 		if b, _ := os.ReadFile(filepath.Join(p.Root, "go.mod")); !strings.Contains(string(b), linter) {
@@ -121,6 +126,51 @@ func limitsDeclared(p *project.Project) error {
 			case have.Simple.Limit != op.Limit.Limit || have.Simple.Period != op.Limit.Period:
 				return fmt.Errorf("the rate limit %s is %d per %d s in the contract and %d per %d s in %s: make them the same", op.Limit.Binding, op.Limit.Limit, op.Limit.Period, have.Simple.Limit, have.Simple.Period, project.Wrangler)
 			}
+		}
+	}
+	return nil
+}
+
+// componentsRecorded has gsxui.json say again what gsxui wrote, for a component that is exactly gsxui's and whose
+// record is not: an app made from another (charter create) has its components under a new module path, and gsxui
+// would take them for changed by hand and refuse to restyle them (charter run ui:theme). A component the app did
+// change is left as it is, and stays the app's.
+func componentsRecorded(p *project.Project) error {
+	b, err := os.ReadFile(filepath.Join(p.Root, "gsxui.json"))
+	if err != nil {
+		return err
+	}
+	var conf struct {
+		UI      string            `json:"ui"`
+		Managed map[string]string `json:"managed"`
+	}
+	if err := json.Unmarshal(b, &conf); err != nil {
+		return err
+	}
+	var stale []string
+	for rel, want := range conf.Managed {
+		name, isComponent := strings.CutSuffix(strings.TrimPrefix(rel, conf.UI+"/"), ".gsx")
+		if !isComponent || strings.Contains(name, "/") {
+			continue
+		}
+		file, err := os.ReadFile(filepath.Join(p.Root, rel))
+		if err != nil {
+			continue
+		}
+		if fmt.Sprintf("%x", sha256.Sum256(file)) != want {
+			stale = append(stale, name)
+		}
+	}
+	for _, name := range stale {
+		// gsxui's own word on whether the file is what it writes.
+		diff := exec.Command("go", "tool", "gsxui", "add", "-diff", name)
+		diff.Dir = p.Root
+		out, err := diff.CombinedOutput()
+		if err != nil || !strings.Contains(string(out), "(no changes)") {
+			continue
+		}
+		if err := run.Run(p.Root, nil, "go", "tool", "gsxui", "add", "-overwrite", name); err != nil {
+			return err
 		}
 	}
 	return nil

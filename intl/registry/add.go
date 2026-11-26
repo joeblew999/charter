@@ -363,7 +363,9 @@ func lines(b []byte) []string {
 
 // Behind are the registry's components the app has in dir, has not changed since add wrote them, and that the
 // registry now writes differently: what a newer charter improved. Add, for those names, brings them up to date; a
-// copy the app changed is its own and is never listed.
+// copy the app changed is its own and is never listed. A copy that is exactly what the registry writes is recorded
+// as written by it, whatever the record said: an app made from another (charter create) has every copy under a new
+// module path, and they are still charter's.
 func (r *Registry) Behind(c config.Config, dir string) ([]string, error) {
 	gsxui := cmp.Or(c.Gsxui, setup.DetectGsxui(c.Root))
 	if gsxui == "" {
@@ -384,31 +386,44 @@ func (r *Registry) Behind(c config.Config, dir string) ([]string, error) {
 	// Each copy is compared with what add would write now, formatted by the app's own gsx fmt: at once, since each
 	// is a program started.
 	paths := Paths{Catalogs: catalogs, Gsxui: components}
-	differs := make([]bool, len(r.Components))
-	errs := make([]error, len(r.Components))
+	n := len(r.Components)
+	had, same, errs, rels, olds := make([]bool, n), make([]bool, n), make([]error, n), make([]string, n), make([][]byte, n)
 	var wg sync.WaitGroup
 	for i, comp := range r.Components {
-		rel := filepath.ToSlash(filepath.Join(dir, comp.Name+".gsx"))
-		old, err := os.ReadFile(filepath.Join(c.Root, rel))
-		if err != nil || catalog.FileHash(old) != p.Copied(rel) {
+		rels[i] = filepath.ToSlash(filepath.Join(dir, comp.Name+".gsx"))
+		old, err := os.ReadFile(filepath.Join(c.Root, rels[i]))
+		if err != nil {
 			continue
 		}
+		had[i], olds[i] = true, old
 		wg.Go(func() {
 			src, err := r.Source(comp, paths)
 			if err == nil {
-				src, err = Format(c.Root, rel, src)
+				src, err = Format(c.Root, rels[i], src)
 			}
-			differs[i], errs[i] = err == nil && !bytes.Equal(old, src), err
+			same[i], errs[i] = err == nil && bytes.Equal(old, src), err
 		})
 	}
 	wg.Wait()
 	var behind []string
+	recorded := false
 	for i, comp := range r.Components {
-		if errs[i] != nil {
+		switch {
+		case errs[i] != nil:
 			return nil, errs[i]
-		}
-		if differs[i] {
+		case !had[i]:
+		case same[i]:
+			if h := catalog.FileHash(olds[i]); p.Copied(rels[i]) != h {
+				p.SetCopied(rels[i], h)
+				recorded = true
+			}
+		case catalog.FileHash(olds[i]) == p.Copied(rels[i]):
 			behind = append(behind, comp.Name)
+		}
+	}
+	if recorded {
+		if err := p.WriteSum(); err != nil {
+			return nil, err
 		}
 	}
 	return behind, nil
