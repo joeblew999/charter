@@ -2,14 +2,11 @@ package fern
 
 import (
 	_ "embed"
-	"errors"
-	"fmt"
+	"github.com/joeblew999/charter/internal/tools"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
-	"time"
 
 	"github.com/joeblew999/charter/internal/run"
 )
@@ -61,34 +58,7 @@ func ContainerEnv() (map[string]string, error) {
 	return map[string]string{"PATH": dir + string(os.PathListSeparator) + os.Getenv("PATH"), "CHARTER_PROXY_CA": ca}, nil
 }
 
-func dockerUp() bool { return exec.Command("docker", "info").Run() == nil }
-
-// Ready makes sure Docker answers before a container is run. Where it is installed and not running and this user may
-// start it (a cloud session, as root), it starts the daemon and waits; on a desktop it says to start Docker, rather
-// than let a generator fail halfway.
-func Ready() error {
-	if dockerUp() {
-		return nil
-	}
-	if dockerd, err := exec.LookPath("dockerd"); err == nil && os.Geteuid() == 0 {
-		fmt.Printf("Docker is not running: starting %s (log: /tmp/charter-dockerd.log)\n", dockerd)
-		log, err := os.OpenFile("/tmp/charter-dockerd.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
-		if err != nil {
-			return err
-		}
-		cmd := exec.Command(dockerd)
-		cmd.Stdout, cmd.Stderr = log, log
-		if err := cmd.Start(); err != nil {
-			return err
-		}
-		cmd.Process.Release()
-		for range 60 {
-			if dockerUp() {
-				return nil
-			}
-			time.Sleep(time.Second)
-		}
-		return errors.New("Docker did not start within 60 s: /tmp/charter-dockerd.log says why")
-	}
-	return errors.New("Docker is not running, and Fern's generators run in it: start Docker (Docker Desktop or OrbStack on a Mac), then run this again")
-}
+// Ready makes sure containers can run before a generator is started, and gives what its environment needs: an
+// engine that already answers is used (CI's own Docker), otherwise Kiri is started, and installed where it is missing
+// (package tools).
+func Ready() (map[string]string, error) { return tools.Containers() }

@@ -31,6 +31,8 @@ jobs:
           GOWORK: "off"
       - run: go tool charter check
         working-directory: example
+      # Generated Go and the skills are committed: what a clone has is what the sources give.
+      - run: git diff --exit-code
       - run: go test ./...
         env:
           GOWORK: "off"

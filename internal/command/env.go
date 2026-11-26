@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
+	"github.com/joeblew999/charter/internal/tools"
 	"log"
 	"os"
 	"os/exec"
@@ -32,9 +33,11 @@ func Env(args []string) {
 	show("node", "https://nodejs.org", true, "node", "--version")
 	show("npm", "it comes with Node", true, "npm", "--version")
 	show("git", "charter create copies a template with it", false, "git", "--version")
-	show("docker", "only charter pack needs it (Fern generates SDKs in containers)", false, "docker", "--version")
 	show("claude", "only charter run intl:translate needs it (Claude Code)", false, "claude", "--version")
-	show("fnox", "optional: Cloudflare credentials from the keychain for charter deploy", false, "fnox", "--version")
+	// The two charter brings itself (package tools).
+	fnox, containers := tools.State()
+	fmt.Printf("%s fnox       %s: Cloudflare's credentials, from the keychain, for deploy\n", mark(fnox), fnox)
+	fmt.Printf("%s containers %s: for charter pack, which generates the SDKs\n", mark(containers), containers)
 	if p, err := project.Load("."); err == nil {
 		for _, tool := range []string{"wrangler", "vite"} {
 			if tool == "vite" && !hasVite(p) {
@@ -50,10 +53,18 @@ func Env(args []string) {
 		if os.Getenv("CLOUDFLARE_API_TOKEN") != "" {
 			fmt.Println("✓ cloudflare  CLOUDFLARE_API_TOKEN is set")
 		} else {
-			fmt.Println("· cloudflare  no CLOUDFLARE_API_TOKEN in the environment: charter deploy uses fnox when it is installed, else wrangler login")
+			fmt.Println("· cloudflare  no CLOUDFLARE_API_TOKEN in the environment: charter deploy takes it from fnox (fnox set CLOUDFLARE_API_TOKEN, once)")
 		}
 	}
 	if missing {
 		os.Exit(1)
 	}
+}
+
+// mark is ✓ for a tool that is there, · for one charter install has yet to bring.
+func mark(state string) string {
+	if strings.HasPrefix(state, "not yet") {
+		return "·"
+	}
+	return "✓"
 }

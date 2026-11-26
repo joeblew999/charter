@@ -15,8 +15,12 @@ How the repo works: [README.md](README.md). Plans and open work are GitHub issue
   before designing anything.
 - **workers-go is used the workers-go way:** everything it has is imported and called directly. charter adds only
   what it lacks (`cloud`), and says so where it is defined.
-- **Go and Node are all a machine needs.** `go.mod` and `package-lock.json` pin everything. No TypeScript of ours:
-  `vite.config.ts` is gsx's file.
+- **Go and Node are all a developer installs.** `go.mod` and `package-lock.json` pin everything. charter brings
+  the two other programs it picks, itself, on every system (`internal/tools`): fnox for secrets (a pinned release,
+  checked against its SHA-256) and Kiri for containers. Never call either through mise or another manager, and
+  never ask a developer to install one. No TypeScript of ours: `vite.config.ts` is gsx's file.
+- **We pick winners.** One tool per job, brought and driven by charter, so the hard parts are easy. Don't add a
+  second choice or a way around one.
 - **Six library folders at the top** (`app`, `api`, `cloud`, `live`, `intl`, `seo`), with `cmd`, `internal`,
   `example` and `skills` (the skill charter ships, as gsx and structpages ship theirs). Don't add another.
 - **`example/` uses all of charter** and is what `charter create` copies. A feature of charter that the example does

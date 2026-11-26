@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
+	"github.com/joeblew999/charter/internal/tools"
 	"io"
 	"log"
 	"os"
@@ -95,9 +96,10 @@ func envArgs(p *project.Project, args *[]string) []string {
 }
 
 // cloudflare runs wrangler with words then rest, for what talks to Cloudflare. Its credentials are wrangler's:
-// CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, or wrangler login. When the environment has no token and fnox is
-// installed (https://fnox.jdx.dev: secrets from the keychain, never a file), wrangler runs under fnox exec, so a
-// developer who keeps them there types nothing more.
+// CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. In the environment already (CI's secrets), they are used as they
+// are. Otherwise wrangler runs under fnox exec (https://fnox.jdx.dev: secrets from the keychain or a password
+// manager, never a file), with the fnox charter brings (package tools): a developer keeps the two in fnox once
+// (fnox set CLOUDFLARE_API_TOKEN) and types nothing more.
 func cloudflare(p *project.Project, words, rest []string) error {
 	return cloudflareTo(nil, p, words, rest)
 }
@@ -109,10 +111,12 @@ func cloudflareQuietly(p *project.Project, words ...string) error {
 		return err
 	}
 	if os.Getenv("CLOUDFLARE_API_TOKEN") == "" {
-		if fnox, err := exec.LookPath("fnox"); err == nil && exec.Command(fnox, "--version").Run() == nil {
-			_, err := run.Output(p.Root, nil, fnox, append([]string{"exec", "--", bin}, words...)...)
+		fnox, err := tools.Fnox()
+		if err != nil {
 			return err
 		}
+		_, err = run.Output(p.Root, nil, fnox, append([]string{"exec", "--", bin}, words...)...)
+		return err
 	}
 	_, err = run.Output(p.Root, nil, bin, words...)
 	return err
@@ -126,10 +130,12 @@ func cloudflareTo(copy io.Writer, p *project.Project, words, rest []string) erro
 	}
 	args := append(words, rest...)
 	if os.Getenv("CLOUDFLARE_API_TOKEN") == "" {
-		// A fnox that answers: a version manager's shim can be on the PATH with no fnox behind it.
-		if fnox, err := exec.LookPath("fnox"); err == nil && exec.Command(fnox, "--version").Run() == nil {
-			return run.Tee(copy, p.Root, nil, fnox, append([]string{"exec", "--", bin}, args...)...)
+		// charter's own fnox (package tools), brought the first time: the token comes from where fnox keeps it.
+		fnox, err := tools.Fnox()
+		if err != nil {
+			return err
 		}
+		return run.Tee(copy, p.Root, nil, fnox, append([]string{"exec", "--", bin}, args...)...)
 	}
 	return run.Tee(copy, p.Root, nil, bin, args...)
 }

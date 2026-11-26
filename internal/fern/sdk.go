@@ -20,12 +20,36 @@ import (
 	"github.com/joeblew999/charter/internal/run"
 )
 
-// The toolchains a proof needs, the developer's own (cargo, uv): the Rust a CLI is built with; the uv and Python a Python
-// client is proven with, and the packages: the client's own (httpx, pydantic, typing-extensions, anyio) and the
+// The toolchains a proof needs run in containers, as Fern's generators do (Kiri locally, the runner's Docker in CI):
+// nothing of Rust or Python is on the developer's machine. The images: the Rust a CLI is built with; uv with the
+// Python a client is proven with. The packages: the client's own (httpx, pydantic, typing-extensions, anyio) and the
 // checkers.
 const (
 	pythonVersion = "3.13"
+	pythonImage   = "ghcr.io/astral-sh/uv:python3.13-bookworm-slim"
+	rustImage     = "rust:1-bookworm"
 )
+
+// inContainer runs a command in a container of image, with dir mounted at at and the working directory there (for a
+// mount below /work, in /work), the named volumes, and env.
+func inContainer(image, dir, at string, volumes []string, env map[string]string, args ...string) error {
+	if _, err := Ready(); err != nil {
+		return err
+	}
+	work := at
+	if strings.HasPrefix(at, "/work/") {
+		work = "/work"
+	}
+	full := []string{"run", "--rm", "-v", dir + ":" + at, "-w", work}
+	for _, v := range volumes {
+		full = append(full, "-v", v)
+	}
+	for k, v := range env {
+		full = append(full, "-e", k+"="+v)
+	}
+	_, err := run.Quietly("", nil, "docker", append(append(full, image), args...)...)
+	return err
+}
 
 var pythonPackages = []string{"httpx==0.28.1", "pydantic==2.14.1", "typing-extensions==4.16.0", "anyio==4.15.1", "pytest==9.1.1", "mypy==2.4.0"}
 
@@ -111,7 +135,8 @@ func Generate(dir, group string, ifStale, quiet bool) (time.Duration, error) {
 		fmt.Printf("sdk %s: up to date (made from fern/ as it is), not generated again\n", group)
 		return 0, nil
 	}
-	if err := Ready(); err != nil {
+	engine, err := Ready()
+	if err != nil {
 		return 0, err
 	}
 	if err := os.MkdirAll(filepath.Join(dir, "sdk", "out"), 0o755); err != nil {
@@ -120,6 +145,10 @@ func Generate(dir, group string, ifStale, quiet bool) (time.Duration, error) {
 	env, err := ContainerEnv()
 	if err != nil {
 		return 0, err
+	}
+	// The engine's docker on the PATH, unless a proxy's own docker is already put first.
+	if env == nil {
+		env = engine
 	}
 	args := []string{"generate", "--local", "--group", group, "--force", "--log-level", "warn"}
 	start := time.Now()
@@ -161,14 +190,15 @@ func ProveGroup(dir, group string) error {
 			_, err := run.Quietly(out, off, "go", "test", "./...")
 			return err
 		}
-		if err := Ready(); err != nil {
+		engine, err := Ready()
+		if err != nil {
 			return err
 		}
-		if _, err := run.Quietly("", nil, "docker", "compose", "-f", compose, "up", "-d", "--wait"); err != nil {
+		if _, err := run.Quietly("", engine, "docker", "compose", "-f", compose, "up", "-d", "--wait"); err != nil {
 			return err
 		}
-		defer run.Quietly("", nil, "docker", "compose", "-f", compose, "down")
-		port, err := run.Output("", nil, "docker", "compose", "-f", compose, "port", "wiremock", "8080")
+		defer run.Quietly("", engine, "docker", "compose", "-f", compose, "down")
+		port, err := run.Output("", engine, "docker", "compose", "-f", compose, "port", "wiremock", "8080")
 		if err != nil {
 			return err
 		}
@@ -186,20 +216,16 @@ func ProveGroup(dir, group string) error {
 			bin = string(m[1])
 		}
 		// A debug build: it proves the CLI compiles and links, in a tenth of a release build's time (shipping one is
-		// a release's job). Fern writes the CLI's folder anew each time, its build folder with it: Cargo builds into
-		// charter's cache instead (CARGO_TARGET_DIR), so the crates it depends on are built once.
-		target, err := run.Cache("cargo")
-		if err != nil {
-			return err
-		}
-		// The developer's own Rust (https://rustup.rs): only an app with a Rust CLI among its SDKs needs it.
-		args := []string{"build"}
+		// a release's job). In a container, as the generators run: no Rust on the developer's machine. Fern writes the
+		// CLI's folder anew each time, so Cargo builds into a volume that stays, and the crates it depends on are
+		// built once.
+		args := []string{"cargo", "build"}
 		if bin != "" {
 			args = append(args, "--bin", bin)
 		}
 		args = append(args, "--no-default-features", "--features", "rustls")
-		_, err = run.Quietly(out, map[string]string{"CARGO_TARGET_DIR": target}, "cargo", args...)
-		return err
+		return inContainer(rustImage, out, "/sdk", []string{"charter-cargo-target:/target", "charter-cargo-registry:/usr/local/cargo/registry"},
+			map[string]string{"CARGO_TARGET_DIR": "/target"}, args...)
 	}
 	fmt.Printf("%s: generated; charter proves Go, Python and the Rust CLI, not this language\n", out)
 	return nil
@@ -221,36 +247,25 @@ func python(dir, out, group string) error {
 	if m := regexp.MustCompile(`(?m)^\s*from ([a-z_][a-z0-9_]*)\.client import`).FindStringSubmatch(tests); m != nil {
 		name = m[1]
 	}
-	site := filepath.Join(dir, "sdk", "out", ".work", group+"-import")
-	os.RemoveAll(site)
-	if err := os.MkdirAll(site, 0o755); err != nil {
-		return err
-	}
-	defer func() {
-		os.RemoveAll(site)
-		os.Remove(filepath.Join(dir, "sdk", "out", ".work")) // only if no other proof is using it
-	}()
 	abs, err := filepath.Abs(out)
 	if err != nil {
 		return err
 	}
-	if err := os.Symlink(abs, filepath.Join(site, name)); err != nil {
-		return err
-	}
+	// In a container, as the generators run: no Python and no uv on the developer's machine. The package is mounted
+	// under the name its tests import it by; uv's downloads stay in a volume.
 	uv := func(args ...string) error {
-		// The developer's own uv (https://docs.astral.sh/uv/), which gets the Python: only an app with a Python SDK needs it.
-		full := []string{"run", "--no-project", "--python", pythonVersion}
+		full := []string{"uv", "run", "--no-project", "--python", pythonVersion}
 		for _, p := range pythonPackages {
 			full = append(full, "--with", p)
 		}
-		_, err := run.Quietly(site, nil, "uv", append(append(full, "--"), args...)...)
-		return err
+		return inContainer(pythonImage, abs, "/work/"+name, []string{"charter-uv:/root/.cache/uv"}, map[string]string{"UV_LINK_MODE": "copy"},
+			append(append(full, "--"), args...)...)
 	}
 	if err := uv("mypy", "-p", name); err != nil {
 		return err
 	}
 	if tests != "" {
-		return uv("python", "-m", "pytest", "-q", filepath.Join(name, "tests"))
+		return uv("python", "-m", "pytest", "-q", "-p", "no:cacheprovider", name+"/tests")
 	}
 	return uv("python", "-c", "import "+name)
 }

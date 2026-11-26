@@ -18,8 +18,17 @@ Cloudflare. There is no other server, and nothing that stands in for a binding.
 
 ## You need
 
-Go and Node. `go.mod`'s toolchain line and `package-lock.json` pin every tool, on macOS, Linux and Windows. (Docker
-only to generate SDKs.)
+Go and Node. `go.mod`'s toolchain line and `package-lock.json` pin every tool, on macOS, Linux and Windows.
+
+charter picks two more programs for every developer and brings them itself, with `charter install` or the first
+time a command needs one:
+
+| For | charter brings | Used by |
+|---|---|---|
+| Secrets | [fnox](https://fnox.jdx.dev), a pinned release checked against its SHA-256, kept in your cache folder | `deploy` and everything else that talks to Cloudflare: wrangler runs under `fnox exec`, so the token comes from your keychain or password manager, never a file. Once: `fnox set CLOUDFLARE_API_TOKEN` |
+| Containers | [Kiri](https://runkiri.com), installed the way its guide says for your system and started when needed | `pack`: Fern's SDK generators run in containers. Where a Docker engine already answers (CI's own), that one is used |
+
+`go tool charter env` says what this machine has.
 
 ## Start
 
@@ -60,11 +69,13 @@ func main() {
 ## What you never have to remember
 
 - **Skills for your coding agent.** gsx, gsxui, structpages and charter each ship their skill inside their Go module.
-  `charter install` copies them into `.claude/skills/` from the versions `go.mod` pins, and `dev` and `check` do it
+  `charter install` copies them into `.claude/skills/` (committed, so an agent has them in a fresh clone) from the
+  versions `go.mod` pins, and `dev` and `check` do it
   again whenever `go.sum` has moved. Updating a module updates its skill.
-- **Generation.** `dev` and `build` write what is built from your sources (gsx's `*.x.go`, the messages, the browser's
-  files): none of it is committed, and all of it that is not a Go file of one of your packages is in `.charter/`. `check --fix` writes what is committed and held to its source: `db/queries.gen.go`,
-  `fern/`, `sdk/go/`. Everything generated is named for it (`*.gen.go`, `*.x.go`) or in a folder of its own, and
+- **Generation.** `dev`, `build` and `check` write what is built from your sources. Generated Go (gsx's `*.x.go`,
+  `*.gen.go`) is committed, so a clone compiles and a change shows in review; everything else a build writes is in
+  `.charter/`, `build/` and `dist/`, and is not. `check --fix` writes what is committed and held to its source: `db/queries.gen.go`,
+  `db/migrations/`, `fern/`, `sdk/go/`. Everything generated is named for it (`*.gen.go`, `*.x.go`) or in a folder of its own, and
   `.gitattributes` marks it.
 - **The database.** `db/schema.sql` is the one place a table is written down. `dev` keeps the local database in step
   with it as you edit, keeping its rows; `check --fix` writes the migration for what changed (one for everything not yet committed) and
@@ -87,7 +98,7 @@ folder.
 | `check` | What can be said without running the app: format, lint, the contract, the languages. `--fix` writes what it can |
 | `test` | The Worker on wrangler dev: the standard API test, `test/` (pages in a real browser, the API through its own SDK), the search-engine audit. `--deployed` asks the deployed one the same |
 | `deploy` | `wrangler deploy` and the D1 migrations. The first deploy makes the database, KV namespace, bucket and queue `wrangler.jsonc` names |
-| `pack` | The SDKs, from the contract |
+| `pack` | The SDKs, from the contract, in containers (Kiri). `pack -prove` generates every language and proves each |
 | `run <task>` | Everything that is no verb, by what it is about: `intl:translate`, `intl:status`, `seo:audit`, `seo:lighthouse`, `db:status`, `db:reset`, `db:seed`, `db:execute`, `db:export`, `ui:list`, `ui:theme`, `logs`, `bench`, and the app's own. Alone, it lists them |
 | `add`, `remove` | `add locale:de`, `add ui:dialog`, a Go module, an npm package |
 | `build`, `preview`, `fmt`, `lint`, `install`, `exec`, `update`, `outdated`, `upgrade`, `staged`, `cache`, `env` | As in Vite+ |

@@ -1,12 +1,10 @@
-*.x.go
+# Only what a build writes that is not source for anyone: Vite's and the Worker's output, wrangler's local state,
+# charter's own (.charter: the languages' runtime files, scratch), the SDKs before one is published, translators'
+# files. Generated Go (*.x.go, *.gen.go) and the agent skills (.claude/skills) are committed: a clone compiles, an
+# editor and an agent work in it at once, and a change to what is generated shows in review.
 /dist/
 /build/
 /.wrangler/
-/sdk/out/
-# charter intl gen output (charter intl)
-messages.gen.go
-/xliff/
-# charter's scratch files
 /.charter/
-# The agent skills charter install copies from the modules in go.mod (.claude/skills/.from says which)
-/.claude/skills/
+/sdk/out/
+/xliff/

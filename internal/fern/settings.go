@@ -2,7 +2,7 @@
 // written from the spec and charter.toml's [pack]; a group generated (Docker) into sdk/out/<group> when fern/ is newer
 // than what made it; proven in its language (Go: build, vet, and Fern's tests against WireMock; TypeScript:
 // typechecked with the TypeScript its SDKs are written for; Python: mypy and its own tests; the CLI, in Rust: built);
-// and the Go SDK a project commits, in sdk/go. The toolchains a proof needs (cargo, uv) are the developer's own.
+// and the Go SDK a project commits, in sdk/go. The toolchains a proof needs (Rust, uv and Python) run in containers.
 package fern
 
 import (

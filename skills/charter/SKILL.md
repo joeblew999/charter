@@ -40,7 +40,8 @@ tree rendered with gsx, and charter finds every part by where it is. Change the 
 - **D1 has no interactive transactions**: single statements with `RETURNING`, or `cloud.Batch`.
 - Never hand-write what a command generates: `db/migrations/`, `*.gen.go`, `*.x.go`, `fern/`, `sdk/`, `build/`, `dist/`. Never run
   gsx, gsxui's migrations, sqlc or structpages-lint by hand either: `dev`, `check --fix` and `test` run them.
-- `.claude/skills/` is written by `go tool charter install` from the modules `go.mod` pins: don't edit or commit it.
+- `.claude/skills/` is written by `go tool charter install` from the modules `go.mod` pins: commit it, don't edit it.
+- Generated Go (`*.x.go`, `*.gen.go`) is committed with the change that caused it.
 - The app is `(&app.App{Name, Dist, Pages, API}).Run()` and `<app.Head title=… description=…/>`: never wire Vite,
   languages, robots.txt or the sitemap by hand.
 - No literal reader-facing text in a `.gsx` file: a message in the source catalog.
@@ -50,5 +51,6 @@ tree rendered with gsx, and charter finds every part by where it is. Change the 
 
 `go tool charter` lists them: Vite+'s verbs. Keep `go tool charter dev` running and run everything else beside it.
 Before a push: `go tool charter check && go tool charter test`. To ship: `go tool charter deploy`, then
-`go tool charter test --deployed`. Credentials: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the
-environment, or fnox, or `wrangler login`.
+`go tool charter test --deployed`. Credentials come from fnox, which charter brings itself: once, `fnox set CLOUDFLARE_API_TOKEN` and
+`fnox set CLOUDFLARE_ACCOUNT_ID`; in CI they are the environment's. Containers for `go tool charter pack` are Kiri,
+which charter installs and starts.
