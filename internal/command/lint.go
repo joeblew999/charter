@@ -33,6 +33,15 @@ func lint(p *project.Project) error {
 	if changed := tidyChanges(string(out)); len(changed) > 0 {
 		return fmt.Errorf("go.mod is not tidy (charter check --fix):\n%s", strings.Join(changed, "\n"))
 	}
+	// What is installed is what package.json asks for: a lock file that carries another version (a merge, an update
+	// that half applied) builds the browser's files with a tool nobody chose.
+	if exists(filepath.Join(p.Root, "package.json")) {
+		ls := exec.Command("npm", "ls", "--depth=0")
+		ls.Dir = p.Root
+		if out, err := ls.CombinedOutput(); err != nil {
+			return fmt.Errorf("the npm packages installed are not what package.json asks for (npm install, then commit package-lock.json):\n%s", out)
+		}
+	}
 	return vet(p)
 }
 

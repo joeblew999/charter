@@ -13,6 +13,7 @@ package command
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
@@ -117,7 +118,7 @@ func cloudflareQuietly(p *project.Project, words ...string) error {
 		return err
 	}
 	if os.Getenv("CLOUDFLARE_API_TOKEN") == "" {
-		fnox, err := tools.Fnox()
+		fnox, err := credentials(p)
 		if err != nil {
 			return err
 		}
@@ -137,7 +138,7 @@ func cloudflareTo(copy io.Writer, p *project.Project, words, rest []string) erro
 	args := append(words, rest...)
 	if os.Getenv("CLOUDFLARE_API_TOKEN") == "" {
 		// charter's own fnox (package tools), brought the first time: the token comes from where fnox keeps it.
-		fnox, err := tools.Fnox()
+		fnox, err := credentials(p)
 		if err != nil {
 			return err
 		}
@@ -278,4 +279,30 @@ func asJSON(command string, args []string) {
 	if err != nil {
 		os.Exit(1)
 	}
+}
+
+// credentials is charter's fnox, once it is known to hold Cloudflare's two: the token and the account's id. When one
+// is not there it says what to do, in the three steps a developer new to this takes once; the values go to fnox's
+// store (the keychain), typed at its own prompt, and are never shown.
+func credentials(p *project.Project) (fnox string, err error) {
+	fnox, err = tools.Fnox()
+	if err != nil {
+		return "", err
+	}
+	var missing []string
+	for _, name := range []string{"CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"} {
+		// Asked for, not shown: what matters is whether fnox has it.
+		if exec.Command(fnox, "get", name).Run() != nil {
+			missing = append(missing, name)
+		}
+	}
+	if len(missing) == 0 {
+		return fnox, nil
+	}
+	steps := "Cloudflare's credentials are not in fnox yet (" + strings.Join(missing, ", ") + "). Once, on this machine:\n" +
+		"  1. Make a token at https://dash.cloudflare.com/profile/api-tokens: the template \"Edit Cloudflare Workers\", with D1: Edit added.\n" +
+		"  2. " + fnox + " set --global CLOUDFLARE_API_TOKEN     it asks for the token, and keeps it\n" +
+		"  3. " + fnox + " set --global CLOUDFLARE_ACCOUNT_ID    the Account ID, on the right of https://dash.cloudflare.com → Workers & Pages\n" +
+		"Then run this again. (In CI, the two are the environment's, and fnox is not asked.)"
+	return "", errors.New(steps)
 }

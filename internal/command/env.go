@@ -58,7 +58,11 @@ func Env(args []string) {
 		if os.Getenv("CLOUDFLARE_API_TOKEN") != "" {
 			fmt.Println("✓ cloudflare  CLOUDFLARE_API_TOKEN is set")
 		} else {
-			fmt.Println("· cloudflare  no CLOUDFLARE_API_TOKEN in the environment: charter deploy takes it from fnox (fnox set CLOUDFLARE_API_TOKEN, once)")
+			if _, err := credentials(p); err == nil {
+				fmt.Println("✓ cloudflare  the token and the account's id are in fnox")
+			} else {
+				fmt.Println("· cloudflare  " + strings.ReplaceAll(err.Error(), "\n", "\n              "))
+			}
 		}
 	}
 	if missing {
