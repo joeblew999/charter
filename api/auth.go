@@ -102,6 +102,7 @@ func (Issued) trusted() {}
 // Caller is who a request comes from, once its credentials are verified, and what it may do.
 type Caller struct {
 	Scheme  string   // what vouched for it: Name (a token), "access", oIDCName, or an Issued's Scheme
+	Person  string   // one of the app's own users (People): what they called themselves
 	Email   string   // a person: from Access, or from an OIDC token that has it
 	Machine string   // an Access service token's Client ID (the JWT's common_name)
 	Subject string   // the token's sub: a user's id at the issuer
@@ -112,6 +113,8 @@ type Caller struct {
 // Name is the caller as a log line or an error message would name it.
 func (c Caller) Name() string {
 	switch {
+	case c.Person != "":
+		return c.Person
 	case c.Email != "":
 		return c.Email
 	case c.Machine != "":
@@ -268,22 +271,7 @@ func AuthMiddleware(api huma.API, setting func(name string) string, trusted ...T
 	if lazy, ok := api.(interface{ Spec() *huma.OpenAPI }); ok {
 		spec = lazy.Spec
 	}
-	if setting == nil {
-		setting = func(string) string { return "" }
-	}
-	g := gate{setting: setting, keys: &keyCache{}}
-	for _, t := range trusted {
-		switch t := t.(type) {
-		case Token:
-			g.tokens = append(g.tokens, t)
-		case Access:
-			g.access = &t
-		case OIDC:
-			g.oidc = &t
-		case Issued:
-			g.issued = append(g.issued, t)
-		}
-	}
+	g := newGate(setting, trusted)
 	return func(ctx huma.Context, next func(huma.Context)) {
 		security := ctx.Operation().Security
 		if security == nil {
@@ -322,6 +310,29 @@ func AuthMiddleware(api huma.API, setting func(name string) string, trusted ...T
 	}
 }
 
+// newGate is what an API (and an app's pages: Auth) trusts.
+func newGate(setting func(name string) string, trusted []Trusted) gate {
+	if setting == nil {
+		setting = func(string) string { return "" }
+	}
+	g := gate{setting: setting, keys: &keyCache{}}
+	for _, t := range trusted {
+		switch t := t.(type) {
+		case Token:
+			g.tokens = append(g.tokens, t)
+		case Access:
+			g.access = &t
+		case OIDC:
+			g.oidc = &t
+		case Issued:
+			g.issued = append(g.issued, t)
+		case People:
+			g.people = &t
+		}
+	}
+	return g
+}
+
 // gate is what the middleware trusts.
 type gate struct {
 	setting func(string) string
@@ -329,6 +340,7 @@ type gate struct {
 	access  *Access
 	oidc    *OIDC
 	issued  []Issued
+	people  *People
 	keys    *keyCache
 }
 
@@ -338,7 +350,7 @@ func (g gate) ways() string {
 	if g.access != nil && g.setting(AccessTeam) != "" {
 		ways = append(ways, "a Cloudflare Access login or service token (CF-Access-Client-Id, CF-Access-Client-Secret)")
 	}
-	if len(g.tokens) > 0 || g.oidc != nil || len(g.issued) > 0 {
+	if len(g.tokens) > 0 || g.oidc != nil || len(g.issued) > 0 || g.people != nil {
 		ways = append(ways, "Authorization: Bearer <token>")
 	}
 	return strings.Join(ways, ", or ")
@@ -365,6 +377,16 @@ func (g gate) identify(ctx context.Context, header func(string) string) ([]Calle
 		}
 	}
 	token := bearer(header("Authorization"))
+	// One of the app's own users: their session's cookie, or a token they made for a program.
+	if g.people != nil {
+		c, known, err := g.person(ctx, token, header("Cookie"))
+		if err != nil {
+			return nil, err
+		}
+		if known {
+			return append(callers, c), nil
+		}
+	}
 	if token == "" {
 		return callers, nil
 	}

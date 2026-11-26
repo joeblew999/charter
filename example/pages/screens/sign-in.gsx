@@ -1,0 +1,355 @@
+package screens
+
+import (
+	"net/http"
+	"strconv"
+
+	"github.com/gsxhq/gsx"
+	"github.com/jackielii/structpages"
+	"github.com/joeblew999/charter/api"
+	"github.com/joeblew999/charter/app"
+	"github.com/joeblew999/charter/example/locales"
+	"github.com/joeblew999/charter/example/ui"
+	"github.com/joeblew999/charter/example/ui/icon"
+	"github.com/joeblew999/charter/intl"
+)
+
+// SignIn is how the app's own people sign in: with a passkey, and no password (api.People). Its routes are the
+// page, the four steps of the two ceremonies (api.Auth runs them), and signing out. Mount it in the tree, and
+// name its page as where someone who must sign in is sent:
+//
+//	signIn  screens.SignIn  `route:"/sign-in SignIn"`
+//	account screens.Account `route:"/account Account"`
+//
+//	(&app.App{Auth: auth, SignIn: screens.SignInPage{}, Args: []any{auth}, RequestArgs: []any{auth.Caller}, …})
+//
+// From charter add screen:sign-in: the app's own now, to change as it likes.
+type SignIn struct {
+	page     SignInPage   `route:"GET /{$} SignIn"`
+	upBegin  SignUpBegin  `route:"POST /up/begin SignUpBegin"`
+	upFinish SignUpFinish `route:"POST /up/finish SignUpFinish"`
+	inBegin  SignInBegin  `route:"POST /begin SignInBegin"`
+	inFinish SignInFinish `route:"POST /finish SignInFinish"`
+	out      SignOut      `route:"POST /out SignOut"`
+}
+
+// SignInPage is the page: sign in, or make an account.
+type SignInPage struct{}
+
+// SignInView is what the page shows: who is signed in already, and where to go once someone is.
+type SignInView struct {
+	Caller api.Caller
+	Return string
+}
+
+// Noindex keeps the page out of the sitemap and of search engines: it is a door, not something to find.
+func (SignInPage) Noindex() bool { return true }
+
+func (SignInPage) Props(r *http.Request, caller api.Caller) (SignInView, error) {
+	return SignInView{Caller: caller, Return: intl.SafeReturn(r.URL.Query().Get("return"))}, nil
+}
+
+// The ceremonies' steps: what the browser asks the device, and what the device answered. They speak JSON to the
+// page's script, so each is a route that writes its own answer.
+type (
+	SignUpBegin  struct{}
+	SignUpFinish struct{}
+	SignInBegin  struct{}
+	SignInFinish struct{}
+	SignOut      struct{}
+)
+
+func (SignUpBegin) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) error {
+	return auth.SignUpBegin(w, r)
+}
+
+func (SignUpFinish) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) error {
+	return auth.SignUpFinish(w, r)
+}
+
+func (SignInBegin) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) error {
+	return auth.SignInBegin(w, r)
+}
+
+func (SignInFinish) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) error {
+	return auth.SignInFinish(w, r)
+}
+
+// SignOut ends the session and goes to the front page: a plain form's target.
+func (SignOut) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) {
+	if err := auth.SignOut(w, r); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, intl.URL(r.Context(), "/"), http.StatusSeeOther)
+}
+
+component (p SignInPage) Page(v SignInView) {
+	<!DOCTYPE html>
+	<html { app.HTML(ctx)... }>
+		<head>
+			<app.Head title={locales.ScreensSignIn |> text} description={locales.ScreensSignUpIntro |> text}/>
+		</head>
+		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
+			<main class="mx-auto flex max-w-sm flex-col gap-6 p-4 pt-16">
+				<ui.Card>
+					<ui.CardHeader>
+						<ui.CardTitle>
+							<h1>{ locales.ScreensSignIn }</h1>
+						</ui.CardTitle>
+					</ui.CardHeader>
+					<ui.CardContent class="flex flex-col gap-4">
+						{ if v.Caller.SignedIn() {
+							<p id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</p>
+							<SignOutForm/>
+						} else {
+							<div
+								id="sign-in"
+								class="flex flex-col gap-4"
+								data-return={v.Return}
+								data-in-begin={SignInBegin{} |> url}
+								data-in-finish={SignInFinish{} |> url}
+								data-up-begin={SignUpBegin{} |> url}
+								data-up-finish={SignUpFinish{} |> url}
+								data-failed={locales.ScreensSignInFailed |> text}
+							>
+								<ui.Button type="button" id="sign-in-passkey">
+									<icon.KeyRound/>
+									{ locales.ScreensSignInPasskey }
+								</ui.Button>
+								<ui.Separator/>
+								<p class="text-sm text-muted-foreground">{ locales.ScreensSignUpIntro }</p>
+								<form id="sign-up" class="flex flex-col gap-2">
+									<ui.Input
+										name="name"
+										id="sign-up-name"
+										required
+										maxlength="60"
+										autocomplete="username webauthn"
+										dir="auto"
+										placeholder={locales.ScreensName}
+										aria-label={locales.ScreensName}
+									/>
+									<ui.Button type="submit" variant="outline">{ locales.ScreensSignUp }</ui.Button>
+								</form>
+								<p id="sign-in-error" role="alert" class="text-sm text-destructive" hidden></p>
+							</div>
+							<signInScript/>
+						} }
+					</ui.CardContent>
+				</ui.Card>
+			</main>
+		</body>
+	</html>
+}
+
+// signInScript asks the device, as the two ceremonies have it: what the app says to ask (begin), the browser's own
+// navigator.credentials, and what the device answered sent back (finish). Nothing here decides anything: the
+// Worker checks every answer.
+component signInScript() {
+	<script>
+		(function () {
+			var box = document.getElementById("sign-in");
+			var error = document.getElementById("sign-in-error");
+			var post = function (path, body) {
+				return fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined }).then(function (response) {
+					return response.ok ? response.json() : response.text().then(function (text) { throw new Error(text); });
+				});
+			};
+			var run = function (begin, finish, ask, body) {
+				error.hidden = true;
+				return post(begin, body).then(function (options) { return ask(options.publicKey); }).then(function (credential) {
+					return post(finish, credential.toJSON());
+				}).then(function () {
+					location.assign(box.dataset.return || "/");
+				}).catch(function (e) {
+					error.textContent = e && e.message && e.name !== "NotAllowedError" ? e.message : box.dataset.failed;
+					error.hidden = false;
+				});
+			};
+			document.getElementById("sign-in-passkey").addEventListener("click", function () {
+				run(box.dataset.inBegin, box.dataset.inFinish, function (options) {
+					return navigator.credentials.get({ publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options) });
+				});
+			});
+			document.getElementById("sign-up").addEventListener("submit", function (event) {
+				event.preventDefault();
+				run(box.dataset.upBegin, box.dataset.upFinish, function (options) {
+					return navigator.credentials.create({ publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(options) });
+				}, { name: event.target.elements.name.value });
+			});
+		})();
+	</script>
+}
+
+// SignOutForm is the button that signs out: a form of its own, since it changes who is asking.
+component SignOutForm() {
+	<form method="post" action={SignOut{} |> url}>
+		<ui.Button type="submit" variant="outline" size="sm" id="sign-out">{ locales.ScreensSignOut }</ui.Button>
+	</form>
+}
+
+// AccountLink is who is signed in, for a header: their name, which leads to their account, or the way to sign in.
+component AccountLink(attrs gsx.Attrs) {
+	{{ who := api.Current(ctx) }}
+	{ if who.SignedIn() {
+		<ui.Button variant="ghost" size="sm" href={AccountPage{} |> url} id="account-link" { attrs... }>
+			<icon.CircleUser/>
+			<span dir="auto" translate="no">{ who.Name() }</span>
+		</ui.Button>
+	} else {
+		<ui.Button variant="ghost" size="sm" href={SignInPage{} |> url} id="sign-in-link" { attrs... }>
+			{ locales.ScreensSignIn }
+		</ui.Button>
+	} }
+}
+
+// Account is what is someone's own: who they are, signing out, and the tokens they make for their programs. Its
+// Needs is why no one else gets here: whoever is not signed in is sent to sign in first.
+type Account struct {
+	page   AccountPage `route:"GET /{$} Account"`
+	create TokenCreate `route:"POST /tokens TokenCreate"`
+	revoke TokenRevoke `route:"POST /tokens/{token}/revoke TokenRevoke"`
+}
+
+// Needs is what every route here needs: someone signed in.
+func (Account) Needs() []string { return nil }
+
+// AccountPage is the page.
+type AccountPage struct{}
+
+// AccountView is what it shows; Made is a token made a moment ago, shown this once.
+type AccountView struct {
+	Caller api.Caller
+	Tokens []api.IssuedToken
+	Made   string
+}
+
+// Noindex keeps the page out of the sitemap and of search engines: it is one person's.
+func (AccountPage) Noindex() bool { return true }
+
+func (AccountPage) Props(r *http.Request, caller api.Caller, auth *api.Auth) (AccountView, error) {
+	tokens, err := auth.Tokens(r)
+	return AccountView{Caller: caller, Tokens: tokens}, err
+}
+
+// TokenCreate makes a token and answers with the list again, the new token shown once.
+type TokenCreate struct{}
+
+func (TokenCreate) ServeHTTP(w http.ResponseWriter, r *http.Request, caller api.Caller, auth *api.Auth) error {
+	made, err := auth.NewToken(r, r.PostFormValue("name"))
+	if err != nil {
+		return err
+	}
+	tokens, err := auth.Tokens(r)
+	if err != nil {
+		return err
+	}
+	return structpages.RenderComponent(AccountPage{}.Tokens(AccountView{Caller: caller, Tokens: tokens, Made: made}))
+}
+
+// TokenRevoke takes a token away and answers with the list again.
+type TokenRevoke struct{}
+
+func (TokenRevoke) ServeHTTP(w http.ResponseWriter, r *http.Request, caller api.Caller, auth *api.Auth) error {
+	id, err := strconv.ParseInt(r.PathValue("token"), 10, 64)
+	if err != nil {
+		return app.NotFound("no such token")
+	}
+	if err := auth.RevokeToken(r, id); err != nil {
+		return err
+	}
+	tokens, err := auth.Tokens(r)
+	if err != nil {
+		return err
+	}
+	return structpages.RenderComponent(AccountPage{}.Tokens(AccountView{Caller: caller, Tokens: tokens}))
+}
+
+component (p AccountPage) Page(v AccountView) {
+	<!DOCTYPE html>
+	<html { app.HTML(ctx)... }>
+		<head>
+			<app.Head title={locales.ScreensAccount |> text} description={locales.ScreensTokensIntro |> text}/>
+		</head>
+		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
+			<main class="mx-auto flex max-w-xl flex-col gap-6 p-4 pt-10">
+				<ui.Button variant="link" class="self-start px-0" href={intl.URL(ctx, "/")}>
+					<icon.ArrowLeft class="rtl:rotate-180"/>
+					<span translate="no">{ app.Name(ctx) }</span>
+				</ui.Button>
+				<ui.Card>
+					<ui.CardHeader>
+						<ui.CardTitle>
+							<h1>{ locales.ScreensAccount }</h1>
+						</ui.CardTitle>
+						<ui.CardDescription id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</ui.CardDescription>
+					</ui.CardHeader>
+					<ui.CardContent>
+						<SignOutForm/>
+					</ui.CardContent>
+				</ui.Card>
+				<p.Tokens v={v}/>
+			</main>
+		</body>
+	</html>
+}
+
+// Tokens is the tokens someone made for their programs, with the form that makes one: a region of the page that
+// changes by itself. A token is shown once, when it is made; the app keeps only what lets it know the token again.
+component (p AccountPage) Tokens(v AccountView) {
+	<ui.Card id={AccountPage.Tokens |> id}>
+		<ui.CardHeader>
+			<ui.CardTitle>
+				<h2>{ locales.ScreensTokens }</h2>
+			</ui.CardTitle>
+			<ui.CardDescription>{ locales.ScreensTokensIntro }</ui.CardDescription>
+		</ui.CardHeader>
+		<ui.CardContent class="flex flex-col gap-4">
+			{ if v.Made != "" {
+				<div class="flex flex-col gap-1">
+					<p class="text-sm font-medium">{ locales.ScreensTokenOnce }</p>
+					<code id="token-made" class="rounded-md bg-muted px-2 py-1 font-mono text-sm break-all" translate="no">{ v.Made }</code>
+				</div>
+			} }
+			<form
+				class="flex flex-wrap gap-2"
+				hx-post={TokenCreate{} |> url}
+				hx-target={AccountPage.Tokens |> target}
+				hx-swap="outerHTML"
+			>
+				<ui.Input
+					name="name"
+					class="flex-1"
+					required
+					maxlength="60"
+					autocomplete="off"
+					dir="auto"
+					placeholder={locales.ScreensTokenName}
+					aria-label={locales.ScreensTokenName}
+				/>
+				<ui.Button type="submit">{ locales.ScreensTokenNew }</ui.Button>
+			</form>
+			<ul class="flex flex-col gap-2">
+				{ for _, token := range v.Tokens {
+					<li class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2">
+						<span dir="auto" class="flex-1">{ token.Name }</span>
+						{ for _, scope := range token.Scopes {
+							<ui.Badge variant="secondary" translate="no">{ scope }</ui.Badge>
+						} }
+						<ui.Button
+							variant="ghost"
+							size="sm"
+							type="button"
+							hx-post={TokenRevoke{} |> url(map[string]any{"token": token.ID})}
+							hx-target={AccountPage.Tokens |> target}
+							hx-swap="outerHTML"
+						>
+							{ locales.ScreensTokenRevoke }
+						</ui.Button>
+					</li>
+				} }
+			</ul>
+		</ui.CardContent>
+	</ui.Card>
+}

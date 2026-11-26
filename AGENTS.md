@@ -44,6 +44,10 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
 - **Tests are of the pages and of the API**: pages in a real browser (`apptest.Browser`), the API through its own
   SDK. Skills are Claude Code plugins: this repo is one and a marketplace (`.claude-plugin`, `skills/charter`) that also
   lists gsx, gsxui and structpages from their owners' repos. Never copy a skill's files.
+- **Who may do what is said once, for pages and API alike.** One `api.Auth` and one `api.Caller`; a page's
+  `Needs` and an operation's scopes are the same words, checked by the same code. People sign in with passkeys
+  (the sign-in screen); a session and a personal token are the same kind of thing. A client in any language is
+  proven by calling the Worker (`example/test/sdk`), never only by compiling.
 - **A table is written down once**, in `db/schema.sql`. Migrations, the queries' Go and the API's row types come
   from it; none is hand-written.
 - **A feed is declared once** (`live.Feed`) and serves pages, API and SDK alike.

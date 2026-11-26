@@ -10,6 +10,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	charter "github.com/joeblew999/charter/api"
+	"github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/live"
 )
 
@@ -33,6 +34,8 @@ func Post(ctx context.Context, store Store, body string) (Note, error) {
 }
 
 // Trusted is who may do what (reads are public, writing needs write):
+//   - the app's own people, who sign in on its pages with a passkey: someone who signs up may read and write, on
+//     the page and, with a token they make on their account page, through the API;
 //   - the Worker's secrets (wrangler secret put; .dev.vars locally), each with its scopes: READ_TOKEN may not write;
 //   - Cloudflare Access, once it is in front of the Worker: a person who
 //     logged in writes, a machine's service token reads (and writes with the write token beside it);
@@ -40,11 +43,17 @@ func Post(ctx context.Context, store Store, body string) (Note, error) {
 //
 // An unset secret or setting trusts no one.
 var Trusted = []charter.Trusted{
+	charter.People{Name: "Notes", Accounts: charter.D1Accounts("DB"), Scopes: []string{"read", "write"}},
 	charter.Token{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}},
 	charter.Token{Secret: "READ_TOKEN", Scopes: []string{"read"}},
 	charter.Access{People: []string{"read", "write"}, Machines: []string{"read"}},
 	charter.OIDC{},
 }
+
+// Auth is that, for the whole app: the API's operations are checked by it (API), and so are the pages (main.go
+// gives it to app.App). So a page that needs "write" and the operation that needs "write" ask the same thing of
+// the same caller.
+var Auth = charter.NewAuth(cloud.Var, Trusted...)
 
 // Handler serves the contract on env the standard way (charter/serve): each call allowed (auth) and
 // limited (ratelimit) as its operation says, the specs at /api/openapi.json and /api/asyncapi.json,

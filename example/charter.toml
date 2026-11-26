@@ -6,5 +6,5 @@ url = "https://charter-example.gedw99.workers.dev"
 # the tests use it as a real client.
 [pack]
 name = "Notes"
-more = ["python", "cli"]
+more = ["python", "cli", "typescript"]
 go = true

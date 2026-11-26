@@ -13,6 +13,10 @@ type Pages struct {
 	bindings Bindings     `route:"GET /bindings Bindings"`
 	docs     screens.Docs `route:"/docs Docs"`
 
+	// The app's own people: signing in with a passkey, and what is someone's own (charter's sign-in screen).
+	signIn  screens.SignIn  `route:"/sign-in SignIn"`
+	account screens.Account `route:"/account Account"`
+
 	// The time zone and clock dialog's form, and where it is sent.
 	preferences screens.Preferences `route:"/preferences Preferences"`
 
@@ -31,7 +35,7 @@ A page is a type with a `Page` component, and `Props` for its data. `Props` name
 // Props loads what the request wants, as structpages has it. A row's button asks for that row alone (its target is
 // Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. Anything
 // else is the page, with the newest notes. Each component takes its share of the results by their types.
-func (p Home) Props(r *http.Request, store api.Store, target structpages.RenderTarget) (HomeProps, api.Note, Open, error) {
+func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, api.Note, Open, error) {
 	if target.Is(p.Item) {
 		id, err := strconv.ParseInt(structpages.KeyOf(target), 10, 64)
 		if err != nil {
@@ -47,7 +51,7 @@ func (p Home) Props(r *http.Request, store api.Store, target structpages.RenderT
 	if err != nil {
 		return HomeProps{}, api.Note{}, false, err
 	}
-	props := HomeProps{Notes: notes}
+	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...)}
 	if len(notes) > 0 {
 		props.After = notes[0].ID
 	}

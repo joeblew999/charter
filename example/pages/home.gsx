@@ -5,6 +5,7 @@ import (
 
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/locales"
+	"github.com/joeblew999/charter/example/pages/screens"
 	"github.com/joeblew999/charter/example/ui"
 	"github.com/joeblew999/charter/example/ui/icon"
 )
@@ -23,7 +24,16 @@ component (p Home) Page(props HomeProps) {
 				<a href={Bindings{} |> url} class="text-sm underline underline-offset-4">{ locales.BindingsLink }</a>
 			</ui.CardHeader>
 			<ui.CardContent class="flex flex-col gap-4">
-				<p.Form body="" refused={false}/>
+				// Anyone reads; writing is for whoever is signed in.
+				{ if props.MayWrite {
+					<p.Form body="" refused={false}/>
+				} else {
+					<p id="sign-in-to-write" class="text-sm text-muted-foreground">
+						<ui.Button variant="link" class="px-0" href={screens.SignInPage{} |> url}>
+							{ locales.HomeSignInToWrite }
+						</ui.Button>
+					</p>
+				} }
 				<ul
 					id={Home.List |> id}
 					class="flex flex-col gap-2"

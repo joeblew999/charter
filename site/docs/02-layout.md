@@ -37,8 +37,14 @@ func main() {
 			Dir:     "example",
 			Agents:  "A coding agent working on this app uses the Claude Code plugins of the marketplace joeblew999/charter: charter, gsx, gsxui and structpages. The app's .claude/settings.json enables them.",
 		},
-		// What a page asks for by type, made from the request: the notes' store (D1), and the bindings' state.
-		RequestArgs: []any{api.OpenStore, bindings.Read},
+		// Who may do what, for the pages as for the API (api.Auth): a page or a group says what it needs with a Needs
+		// method, and whoever is not signed in is sent to the sign-in screen.
+		Auth:   api.Auth,
+		SignIn: screens.SignInPage{},
+		Args:   []any{api.Auth},
+		// What a page asks for by type, made from the request: the notes' store (D1), the bindings' state, and who
+		// is asking.
+		RequestArgs: []any{api.OpenStore, bindings.Read, api.Auth.Caller},
 		API:         api.Handler(api.Env{Var: charter.Var}),
 	}).Run()
 }

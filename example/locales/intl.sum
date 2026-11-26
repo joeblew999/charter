@@ -32,7 +32,9 @@ ar home.intro 66000b571077 63c017805507
 ar home.label d8da2c49df39 a2bc8b7eea3a
 ar home.placeholder ab0f84062e48 9126b0952229
 ar home.post a5554622c655 b19234315bac
+ar home.sign_in_to_write 9db14094636b 066774c8fd4c
 ar home.when 56c3507708fc 4746e732aa75
+ar screens.account 7e1b0d5641f2 66dcee1f4616
 ar screens.also_in 5d73b6d757bd 61d515b16a6b
 ar screens.close 7d9eb7acb13e ca90c297b099
 ar screens.docs 7af023c43013 9d66d0084b75
@@ -45,13 +47,27 @@ ar screens.hour_cycle 93ff9273de4b 7989015170ab
 ar screens.hour_cycle_auto de6bb7c954a5 5848f38365b7
 ar screens.languages 318655cea4bd 93a9465a5006
 ar screens.loading ba3bbbe10d8b aa5ebc30e485
+ar screens.name dcd1d5223f73 52ab09847cf8
 ar screens.no_thanks 49780701dc2d 1724c2e89ea0
 ar screens.preferences 1490d0caef75 031ba60613fa
 ar screens.preferences_description 09123771ebf4 3e5a7bbd9310
 ar screens.save 1509f561f241 ddfcaf9d0144
+ar screens.sign_in bfd402b2f6f3 beb869eecc12
+ar screens.sign_in_failed d38eba7d0144 c9ab12ab9600
+ar screens.sign_in_passkey b09700bcd532 87a74a84ef3f
+ar screens.sign_out 48f0d3d397d4 21f474427638
+ar screens.sign_up 86033f75a4c0 af21ddc4ae9d
+ar screens.sign_up_intro aeadee6ba7b2 08881eaf6071
+ar screens.signed_in_as 599a82d98089 e46b81447099
 ar screens.theme 19d8d295e681 38e265ee4d4c
 ar screens.time_zone b9fe1464783e 2d25557e7c23
 ar screens.time_zone_auto 2cc61310db9b cea94ac984e6
+ar screens.token_name 1ad944c4c5dd 9e4e437694cf
+ar screens.token_new 97f90edd337b ce041c120157
+ar screens.token_once 6f57e2cf60f5 82ffd7780e14
+ar screens.token_revoke 87e6d00bbf53 9a30dc2a96b8
+ar screens.tokens 71ef74d05e87 8f5592714dea
+ar screens.tokens_intro 1c6d96696955 7a964411b834
 ar site.description 4678adbf73e2 a2d6a92e0dc9
 ar site.title a53f68bc82b2 7fda41ea6c0d
 de bindings.after 59903b2028fa 498ca101ab5e
@@ -87,7 +103,9 @@ de home.intro 66000b571077 e41641a84cd0
 de home.label d8da2c49df39 74b487d9d223
 de home.placeholder ab0f84062e48 dc7a409c4c32
 de home.post a5554622c655 079bef4e232f
+de home.sign_in_to_write 9db14094636b ff1a3eb990f7
 de home.when 56c3507708fc 3883c5faf5e7
+de screens.account 7e1b0d5641f2 df8525011f61
 de screens.also_in 5d73b6d757bd fc700d9aa96c
 de screens.close 7d9eb7acb13e b808f6e97075
 de screens.docs 7af023c43013 2a9d508bdc77
@@ -100,17 +118,32 @@ de screens.hour_cycle 93ff9273de4b e1ac32556c5e
 de screens.hour_cycle_auto de6bb7c954a5 a8f9e14ad5dc
 de screens.languages 318655cea4bd 17d630275f43
 de screens.loading ba3bbbe10d8b 976723893920
+de screens.name dcd1d5223f73 dcd1d5223f73
 de screens.no_thanks 49780701dc2d 98fb8c35dc94
 de screens.preferences 1490d0caef75 9e1bfd75573a
 de screens.preferences_description 09123771ebf4 1049fb0c8ae6
 de screens.save 1509f561f241 f6b2ff39f540
+de screens.sign_in bfd402b2f6f3 a329a32263a4
+de screens.sign_in_failed d38eba7d0144 6632d80bc657
+de screens.sign_in_passkey b09700bcd532 957b9ec91761
+de screens.sign_out 48f0d3d397d4 545f8be33bf0
+de screens.sign_up 86033f75a4c0 d7e7f57a7cd4
+de screens.sign_up_intro aeadee6ba7b2 7fafa3126bd1
+de screens.signed_in_as 599a82d98089 ffeaa9674508
 de screens.theme 19d8d295e681 c2880a59df92
 de screens.time_zone b9fe1464783e 00507b23a11b
 de screens.time_zone_auto 2cc61310db9b 8063a5755752
+de screens.token_name 1ad944c4c5dd fc479e9b08d9
+de screens.token_new 97f90edd337b c37e2ff58cd8
+de screens.token_once 6f57e2cf60f5 a38a19e388f9
+de screens.token_revoke 87e6d00bbf53 d1a9bdb8adc5
+de screens.tokens 71ef74d05e87 ff0df073477b
+de screens.tokens_intro 1c6d96696955 a918f0304511
 de site.description 4678adbf73e2 770309db6d44
 de site.title a53f68bc82b2 b6d1b994b50b
 file pages/screens/docs.gsx 27186bc52060
 file pages/screens/language-list.gsx a362660dc34d
 file pages/screens/language-offer.gsx 99b5c5b72cd3
 file pages/screens/preferences.gsx 724682d890df
+file pages/screens/sign-in.gsx 04e3e3d94354
 file pages/screens/theme-toggle.gsx 3d8bf9b79d18

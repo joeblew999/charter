@@ -118,15 +118,15 @@ func WithTokenFunc(fn func() (string, error)) *core.TokenFuncOption {
 	}
 }
 
-// WithAccessClientID sets the accessClientID auth request header.
-func WithAccessClientID(accessClientID string) *core.AccessClientIDOption {
+// WithAccessClientID sets the accessClientID request header.
+func WithAccessClientID(accessClientID *string) *core.AccessClientIDOption {
 	return &core.AccessClientIDOption{
 		AccessClientID: accessClientID,
 	}
 }
 
-// WithAccessClientSecret sets the accessClientSecret auth request header.
-func WithAccessClientSecret(accessClientSecret string) *core.AccessClientSecretOption {
+// WithAccessClientSecret sets the accessClientSecret request header.
+func WithAccessClientSecret(accessClientSecret *string) *core.AccessClientSecretOption {
 	return &core.AccessClientSecretOption{
 		AccessClientSecret: accessClientSecret,
 	}

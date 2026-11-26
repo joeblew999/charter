@@ -40,7 +40,8 @@ func inContainer(image, dir, at string, volumes []string, env map[string]string,
 	if strings.HasPrefix(at, "/work/") {
 		work = "/work"
 	}
-	full := []string{"run", "--rm", "-v", dir + ":" + at, "-w", work}
+	// host.docker.internal is the machine the container runs on, on every engine: a proof asks a Worker there.
+	full := []string{"run", "--rm", "--add-host=host.docker.internal:host-gateway", "-v", dir + ":" + at, "-w", work}
 	for _, v := range volumes {
 		full = append(full, "-v", v)
 	}
@@ -231,9 +232,74 @@ func ProveGroup(dir, group string) error {
 	return nil
 }
 
-// python proves a Python client: Fern writes the package's source alone, so it goes on an import path under the
-// name its tests import it by; then mypy over it, and its own tests.
-func python(dir, out, group string) error {
+// Live runs each generated client against a Worker that is running: for a group with a program of its own in
+// test/sdk/<language>/ (prove.py, prove.mjs, prove.sh), that program, in the language's container (TypeScript: Node,
+// which the machine has). port is the Worker's on this machine; vars are what each program gets beside BASE, the
+// Worker's own tokens. A client is proven when it was refused and let through as the contract says, by the server
+// it was generated for.
+func Live(dir string, port int, vars map[string]string) error {
+	tests := filepath.Join(dir, "test", "sdk")
+	out := filepath.Join(dir, "sdk", "out")
+	env := func(base string) map[string]string {
+		e := map[string]string{"BASE": base}
+		for k, v := range vars {
+			e[k] = v
+		}
+		return e
+	}
+	inside := env(fmt.Sprintf("http://host.docker.internal:%d", port))
+	here := env(fmt.Sprintf("http://localhost:%d", port))
+	type proof struct {
+		name string
+		run  func() error
+	}
+	var proofs []proof
+	exists := func(parts ...string) bool { _, err := os.Stat(filepath.Join(parts...)); return err == nil }
+	if exists(tests, "python", "prove.py") && exists(out, "python", "client.py") {
+		proofs = append(proofs, proof{"python", func() error {
+			name := pythonName(filepath.Join(out, "python"))
+			abs, _ := filepath.Abs(filepath.Join(out, "python"))
+			script, err := os.ReadFile(filepath.Join(tests, "python", "prove.py"))
+			if err != nil {
+				return err
+			}
+			// The program names the package PACKAGE: Fern writes its source alone, under no name of its own.
+			code := strings.ReplaceAll(string(script), "PACKAGE", name)
+			full := []string{"uv", "run", "--no-project", "--python", pythonVersion}
+			for _, p := range pythonPackages {
+				full = append(full, "--with", p)
+			}
+			inside["UV_LINK_MODE"] = "copy"
+			return inContainer(pythonImage, abs, "/work/"+name, []string{"charter-uv:/root/.cache/uv"}, inside, append(full, "--", "python", "-c", code)...)
+		}})
+	}
+	if exists(tests, "typescript", "prove.mjs") && exists(out, "typescript-dist", "esm", "index.mjs") {
+		proofs = append(proofs, proof{"typescript", func() error {
+			sdk, _ := filepath.Abs(filepath.Join(out, "typescript-dist", "esm", "index.mjs"))
+			here["SDK"] = sdk
+			_, err := run.Quietly(dir, here, "node", filepath.Join("test", "sdk", "typescript", "prove.mjs"))
+			return err
+		}})
+	}
+	if exists(tests, "cli", "prove.sh") && exists(out, "cli", "Cargo.toml") {
+		proofs = append(proofs, proof{"cli", func() error {
+			abs, _ := filepath.Abs(filepath.Join(tests, "cli"))
+			inside["PATH"] = "/target/debug:/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+			return inContainer(rustImage, abs, "/prove", []string{"charter-cargo-target:/target"}, inside, "sh", "/prove/prove.sh")
+		}})
+	}
+	for _, p := range proofs {
+		t0 := time.Now()
+		if err := p.run(); err != nil {
+			return fmt.Errorf("the %s client against the running Worker: %w", p.name, err)
+		}
+		fmt.Printf("client %s: refused and let through as the contract says, by the running Worker, in %s\n", p.name, run.Seconds(time.Since(t0)))
+	}
+	return nil
+}
+
+// pythonName is the name a Python client's own tests import it by.
+func pythonName(out string) string {
 	var tests string
 	if entries, err := os.ReadDir(filepath.Join(out, "tests")); err == nil {
 		for _, e := range entries {
@@ -243,9 +309,19 @@ func python(dir, out, group string) error {
 			}
 		}
 	}
-	name := "client"
 	if m := regexp.MustCompile(`(?m)^\s*from ([a-z_][a-z0-9_]*)\.client import`).FindStringSubmatch(tests); m != nil {
-		name = m[1]
+		return m[1]
+	}
+	return "client"
+}
+
+// python proves a Python client: Fern writes the package's source alone, so it goes on an import path under the
+// name its tests import it by; then mypy over it, and its own tests.
+func python(dir, out, group string) error {
+	name := pythonName(out)
+	tests := ""
+	if entries, _ := os.ReadDir(filepath.Join(out, "tests")); len(entries) > 0 {
+		tests = "yes"
 	}
 	abs, err := filepath.Abs(out)
 	if err != nil {

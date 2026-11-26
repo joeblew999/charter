@@ -32,4 +32,5 @@ This site is a charter app too: [`site/`](https://github.com/joeblew999/charter/
 - [Tests](08-tests.md) and [deploying](09-deploy.md).
 - [Docs](10-docs.md): your app's own, from Markdown.
 - [Screens and themes](12-screens-and-themes.md): what charter gives every app's interface, in the app's own look.
+- [Signing in, and who may do what](13-sign-in.md): one caller and one rule for pages and API; passkeys.
 - [For your coding agent](11-agents.md): the Claude Code plugins, and what a language model reads.

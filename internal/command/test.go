@@ -153,6 +153,12 @@ func target(base string) string {
 // serving runs body with the Worker on wrangler dev at base: a free port, and state in a folder of its own that goes
 // when it ends, so a run starts from nothing and two runs never share a database.
 func serving(p *project.Project, body func(base string) error) error {
+	return servingOn(p, "", func(base string, _ int) error { return body(base) })
+}
+
+// servingOn is serving on an address of the machine other than its own name: "0.0.0.0", for what asks from a
+// container. body gets the port too.
+func servingOn(p *project.Project, ip string, body func(base string, port int) error) error {
 	bin, err := npm(p, "wrangler")
 	if err != nil {
 		return err
@@ -170,10 +176,14 @@ func serving(p *project.Project, body func(base string) error) error {
 	if err := migrate(p, quiet, "--local", "--persist-to", state); err != nil {
 		return err
 	}
-	base := "http://127.0.0.1:" + strconv.Itoa(ports[0])
+	// By name, not by number: a passkey belongs to a host name, and a page with sign-in is tested at one.
+	base := "http://localhost:" + strconv.Itoa(ports[0])
 	server := run.Server{
 		Command: []string{bin, "dev", "--port", strconv.Itoa(ports[0]), "--inspector-port", strconv.Itoa(ports[1]), "--persist-to", state, "--show-interactive-dev-session=false", "--test-scheduled"},
 		Dir:     p.Root, Env: quiet, Ready: base + p.HealthPath(),
 	}
-	return run.With(server, func() error { return body(base) })
+	if ip != "" {
+		server.Command = append(server.Command, "--ip", ip)
+	}
+	return run.With(server, func() error { return body(base, ports[0]) })
 }

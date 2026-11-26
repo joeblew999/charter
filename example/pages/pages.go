@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackielii/structpages"
 
+	charter "github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/bindings"
@@ -34,6 +35,10 @@ type Pages struct {
 	home     Home         `route:"GET /{$} Home"`
 	bindings Bindings     `route:"GET /bindings Bindings"`
 	docs     screens.Docs `route:"/docs Docs"`
+
+	// The app's own people: signing in with a passkey, and what is someone's own (charter's sign-in screen).
+	signIn  screens.SignIn  `route:"/sign-in SignIn"`
+	account screens.Account `route:"/account Account"`
 
 	// The time zone and clock dialog's form, and where it is sent.
 	preferences screens.Preferences `route:"/preferences Preferences"`
@@ -61,6 +66,9 @@ type Home struct{}
 type HomeProps struct {
 	Notes []api.Note
 	After int64
+	// MayWrite is whether the reader may write a note: the form, or the way to sign in. It is what PostNote
+	// needs, asked of the same caller.
+	MayWrite bool
 }
 
 // Open says whether a note's row shows when it was written in full: what the row's own button asks for.
@@ -69,7 +77,7 @@ type Open bool
 // Props loads what the request wants, as structpages has it. A row's button asks for that row alone (its target is
 // Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. Anything
 // else is the page, with the newest notes. Each component takes its share of the results by their types.
-func (p Home) Props(r *http.Request, store api.Store, target structpages.RenderTarget) (HomeProps, api.Note, Open, error) {
+func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, api.Note, Open, error) {
 	if target.Is(p.Item) {
 		id, err := strconv.ParseInt(structpages.KeyOf(target), 10, 64)
 		if err != nil {
@@ -85,7 +93,7 @@ func (p Home) Props(r *http.Request, store api.Store, target structpages.RenderT
 	if err != nil {
 		return HomeProps{}, api.Note{}, false, err
 	}
-	props := HomeProps{Notes: notes}
+	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...)}
 	if len(notes) > 0 {
 		props.After = notes[0].ID
 	}
@@ -106,6 +114,10 @@ func current(ctx context.Context, page any) (string, error) {
 // page's Form again, empty, or with what was typed, refused. The note itself reaches this page as it reaches every
 // other: by the stream.
 type PostNote struct{}
+
+// Needs is what writing a note needs, on the page as through the API: the contract's createNote says the same
+// (charter.Needs("write")). Whoever is not signed in is sent to sign in.
+func (PostNote) Needs() []string { return []string{"write"} }
 
 // The longest note the form takes.
 const maxBody = 500

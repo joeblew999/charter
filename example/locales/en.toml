@@ -19,6 +19,8 @@ label = "Note"
 post = "Post"
 # The button on a note that shows when it was written, in full.
 when = "When it was written"
+# In place of the form, for a reader who is not signed in: the link to sign in.
+sign_in_to_write = "Sign in to write a note"
 
 [docs]
 # The link to the docs in every page's header.
@@ -104,3 +106,21 @@ docs_edit = "Edit this page on GitHub"
 # The docs' search: its button and field, and what it says when no page or section matches.
 docs_search = "Search the docs"
 docs_none = "Nothing found."
+# The sign-in screen: signing in with a passkey, making an account, signing out, who is signed in ({name}), and what
+# the page says when the device or the browser did not go through with it.
+sign_in = "Sign in"
+sign_in_passkey = "Sign in with a passkey"
+sign_up = "Create an account"
+sign_up_intro = "New here? Choose a name. Your device keeps the key: there is no password."
+name = "Name"
+sign_out = "Sign out"
+signed_in_as = "Signed in as {name}"
+sign_in_failed = "That did not work. Try again."
+# The account page: its title, and the tokens someone makes for their programs.
+account = "Account"
+tokens = "Tokens for your programs"
+tokens_intro = "A program sends its token as Authorization: Bearer, and may do what you may."
+token_name = "What it is for"
+token_new = "Make a token"
+token_once = "Copy it now: it is not shown again."
+token_revoke = "Revoke"

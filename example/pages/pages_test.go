@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackielii/structpages"
 
+	charter "github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/bindings"
@@ -60,19 +61,46 @@ func TestHomeProps(t *testing.T) {
 	store := &notes{}
 	store.Create(context.Background(), "first")
 	store.Create(context.Background(), "second")
-	props, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, page{})
+	props, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
 	if err != nil || len(props.Notes) != 2 || props.Notes[0].Body != "second" || props.After != 2 {
 		t.Fatalf("%+v %v", props, err)
 	}
 }
 
-// The tree as a server, with the test's own store where the Worker has D1.
-func serve(t *testing.T, store api.Store) http.Handler {
+// Who a test's request comes from: someone signed in who may write, or nobody.
+var (
+	writer = charter.Caller{Scheme: charter.SessionScheme, Subject: "u1", Person: "Ada", Scopes: []string{"read", "write"}}
+	nobody = charter.Caller{}
+)
+
+// as is the app's Auth for a test: every request is this caller's. What a route needs is checked by the same
+// rule the Worker's Auth has (Caller.May), so a test of who may do what is a test of the pages' own Needs.
+type as charter.Caller
+
+func (c as) Allow(_ *http.Request, needs ...string) error {
+	switch who := charter.Caller(c); {
+	case !who.SignedIn():
+		return app.Status(http.StatusUnauthorized, "sign in to do this")
+	case !who.May(needs...):
+		return app.Status(http.StatusForbidden, "not allowed")
+	}
+	return nil
+}
+
+// The tree as a server, with the test's own store where the Worker has D1, and the test's own caller where it has
+// sessions.
+func serve(t *testing.T, store api.Store, who ...charter.Caller) http.Handler {
 	t.Helper()
+	caller := writer
+	if len(who) > 0 {
+		caller = who[0]
+	}
 	mux := http.NewServeMux()
-	// The app's own options (its error handler, htmx 4's target selector), with the test's store after them.
-	options := append((&app.App{Docs: &app.Docs{}}).Options(false),
-		structpages.WithRequestArgs(func(*http.Request) (api.Store, error) { return store, nil }, func(*http.Request) (bindings.State, error) { return bindings.State{}, nil }))
+	// The app's own options (its error handler, htmx 4's target selector, its check of what a route needs), with
+	// the test's store and caller after them.
+	options := append((&app.App{Docs: &app.Docs{}, Auth: as(caller)}).Options(false),
+		structpages.WithRequestArgs(func(*http.Request) (api.Store, error) { return store, nil }, func(*http.Request) (bindings.State, error) { return bindings.State{}, nil },
+			func(*http.Request) (charter.Caller, error) { return caller, nil }))
 	_, err := Mount(mux, options...)
 	if err != nil {
 		t.Fatal(err)
@@ -156,7 +184,9 @@ func TestEveryRouteHasAnAddress(t *testing.T) {
 	// Every route passes a middleware once as the tree is mounted: that is the list.
 	var routes []*structpages.PageNode
 	sp, err := Mount(http.NewServeMux(), append((&app.App{Docs: &app.Docs{}}).Options(false),
-		structpages.WithRequestArgs(func(*http.Request) (api.Store, error) { return &notes{}, nil }, func(*http.Request) (bindings.State, error) { return bindings.State{}, nil }),
+		structpages.WithRequestArgs(func(*http.Request) (api.Store, error) { return &notes{}, nil }, func(*http.Request) (bindings.State, error) { return bindings.State{}, nil },
+			func(*http.Request) (charter.Caller, error) { return writer, nil }),
+		structpages.WithArgs(charter.NewAuth(nil)),
 		structpages.WithMiddlewares(func(next http.Handler, pn *structpages.PageNode) http.Handler {
 			routes = append(routes, pn)
 			return next
@@ -164,7 +194,7 @@ func TestEveryRouteHasAnAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sample := map[string]any{"slug": "how-it-is-built", "action": "note"}
+	sample := map[string]any{"slug": "how-it-is-built", "action": "note", "token": 1}
 	for _, node := range routes {
 		if _, err := sp.URLFor(node.Value.Interface(), sample); err != nil {
 			t.Errorf("%s (%s): %v", node.Name, node.FullRoute(), err)
@@ -179,3 +209,37 @@ func TestEveryRouteHasAnAddress(t *testing.T) {
 type page struct{}
 
 func (page) Is(any) bool { return false }
+
+// Who may write is one rule, said once (PostNote's Needs): nobody gets the way to sign in where the form would be,
+// and is refused when they post anyway; someone signed in gets the form, and their note is kept.
+func TestWritingNeedsSomeoneSignedIn(t *testing.T) {
+	store := &notes{}
+	get := func(who charter.Caller) string {
+		rec := httptest.NewRecorder()
+		serve(t, store, who).ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+		return rec.Body.String()
+	}
+	post := func(who charter.Caller) int {
+		r := httptest.NewRequest("POST", "/notes", strings.NewReader(url.Values{"body": {"a note"}}.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+		serve(t, store, who).ServeHTTP(rec, r)
+		return rec.Code
+	}
+	if html := get(nobody); strings.Contains(html, `id="home-form"`) || !strings.Contains(html, `id="sign-in-to-write"`) {
+		t.Errorf("nobody is offered the form, or not the way to sign in:\n%s", html)
+	}
+	if code := post(nobody); code != http.StatusUnauthorized || len(store.all) != 0 {
+		t.Errorf("nobody posting: HTTP %d, %d kept", code, len(store.all))
+	}
+	reader := charter.Caller{Scheme: charter.SessionScheme, Subject: "u2", Person: "Bo", Scopes: []string{"read"}}
+	if code := post(reader); code != http.StatusForbidden || len(store.all) != 0 {
+		t.Errorf("someone who may only read, posting: HTTP %d, %d kept", code, len(store.all))
+	}
+	if html := get(writer); !strings.Contains(html, `id="home-form"`) {
+		t.Errorf("someone who may write is not offered the form:\n%s", html)
+	}
+	if code := post(writer); code != http.StatusOK || len(store.all) != 1 {
+		t.Errorf("someone who may write, posting: HTTP %d, %d kept", code, len(store.all))
+	}
+}

@@ -135,6 +135,26 @@ func (r *Registry) Add(c config.Config, names []string, o Options) (int, error) 
 		fmt.Printf("%s's components and the app's copies are the same\n", r.Command)
 		return 0, nil
 	}
+	// The tables a component keeps what it knows in go where every table is written down: db/schema.sql. charter
+	// writes the migration from there.
+	for _, comp := range picked {
+		if comp.Schema == "" {
+			continue
+		}
+		schema := filepath.Join(c.Root, "db", "schema.sql")
+		old, err := os.ReadFile(schema)
+		if err != nil {
+			return 1, fmt.Errorf("%s keeps what it knows in a database: the app needs db/schema.sql first", comp.Name)
+		}
+		first, _, _ := strings.Cut(comp.Schema[strings.Index(comp.Schema, "CREATE TABLE"):], "(")
+		if bytes.Contains(old, []byte(strings.TrimSpace(first))) {
+			continue
+		}
+		if err := os.WriteFile(schema, append(append(bytes.TrimRight(old, "\n"), "\n\n"...), comp.Schema...), 0o644); err != nil {
+			return 1, err
+		}
+		fmt.Println("added its tables to db/schema.sql (charter check --fix writes the migration)")
+	}
 	if err := r.addText(c, p, picked); err != nil {
 		return 1, err
 	}

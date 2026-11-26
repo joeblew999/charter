@@ -24,6 +24,7 @@ go tool charter add screen:docs screen:theme-toggle
 | `language-list` | `<screens.LanguageList/>`: the page in every language | |
 | `language-offer` | `<screens.LanguageOffer/>`: the page offered in the reader's own language | |
 | `preferences` | `<screens.PreferencesDialog/>`: time zone and clock | `preferences screens.Preferences` at `/preferences` |
+| `sign-in` | [Signing in](13-sign-in.md) with a passkey, the account page, `<screens.AccountLink/>` | `screens.SignIn` at `/sign-in`, `screens.Account` at `/account` |
 
 A copy you have not changed follows charter: `check` says when charter writes it differently, and `check --fix` brings it up to date. A copy you changed is yours, and is left alone (`go tool charter add screen:docs -diff` shows the difference, `-overwrite` takes charter's).
 

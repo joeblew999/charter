@@ -1,6 +1,6 @@
 // Package screens is charter's own screens, which charter add screen:<name> copies into an app the way gsxui add
 // copies components: the language list, the offer of the page in the reader's language, the time zone and clock
-// dialog, the switch between the light and the dark theme, and the docs' pages. Each is a gsx template made of gsxui
+// dialog, the switch between the light and the dark theme, signing in with a passkey, and the docs' pages. Each is a gsx template made of gsxui
 // components (*.gsx.tmpl: gsx generate leaves them alone here), so in an app it is built from the app's own
 // components, in the app's own style and theme. Their text is already translated, in locales/: add writes it into
 // the app's catalogs under [screens], with the text the gsxui components write themselves under [gsxui]. A screen
@@ -10,6 +10,7 @@ package screens
 import (
 	"embed"
 
+	"github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/intl/registry"
 )
 
@@ -35,6 +36,12 @@ var Screens = &registry.Registry{
 				"    preferences screens.Preferences `route:\"/preferences Preferences\"`"},
 		{Name: "theme-toggle", Gsxui: []string{"button", "icon"},
 			Use: "  <screens.ThemeToggle/>        in the header: light and dark, of the app's gsxui theme (charter run ui:theme)"},
+		{Name: "sign-in", Gsxui: []string{"badge", "button", "card", "input", "separator", "icon"}, Schema: api.AccountsSchema,
+			Use: "  the app's own people, signing in with a passkey; its routes in the page tree, and the app's Auth (api.NewAuth with api.People):\n" +
+				"    signIn  screens.SignIn  `route:\"/sign-in SignIn\"`\n" +
+				"    account screens.Account `route:\"/account Account\"`\n" +
+				"    (&app.App{Auth: auth, SignIn: screens.SignInPage{}, Args: []any{auth}, RequestArgs: []any{auth.Caller}, …})\n" +
+				"  <screens.AccountLink/>        in the header: who is signed in, or the way to sign in"},
 		{Name: "docs", Gsxui: []string{"badge", "button", "separator", "command", "kbd", "popover", "icon"}, Needs: []string{"theme-toggle"},
 			Use: "  the docs' pages (docs/*.md), in the page tree, with the docs named in the App:\n" +
 				"    docs screens.Docs `route:\"/docs Docs\"`\n" +

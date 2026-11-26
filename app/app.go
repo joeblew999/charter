@@ -84,6 +84,17 @@ type App struct {
 	API http.Handler
 	// Docs are the app's docs (docs/*.md, as charter build wrote them), for an app that has them: see Docs.
 	Docs *Docs
+	// Auth is who may do what, for an app with people or programs to tell apart: the same one the API's operations
+	// are checked by (api.Auth). A page, or a group of the tree, says what it needs as an operation of the contract
+	// does, with a method on its type:
+	//
+	//	func (Account) Needs() []string { return []string{"write"} }   // nil: anyone who is signed in
+	//
+	// and every route at or under it is checked before it runs. nil: an app where every page is everyone's.
+	Auth Auth
+	// SignIn is the page someone who is not signed in is sent to when a page needs them to be (the sign-in
+	// screen: screens.SignIn{}), with where they were going in ?return=. nil: such a request is a 401.
+	SignIn any
 	// Entry is the Vite entry every page loads. Empty: web/main.js.
 	Entry string
 	// Icon is the site's icon. Empty: /favicon.svg (public/favicon.svg).
@@ -92,13 +103,13 @@ type App struct {
 	// the tree. nil: none.
 	LLMs func(origin string, url func(page any) string) string
 
-	once  sync.Once
-	vite  *vite.Vite
-	err   error
+	once   sync.Once
+	vite   *vite.Vite
+	err    error
 	pages  []string        // the sitemap: the pages without parameters search engines may index, each a path without a language
 	routes map[string]bool // the tree's pages, by the pattern the mux has them under: whether search engines may index them
-	site  intl.Site
-	tree  *structpages.StructPages
+	site   intl.Site
+	tree   *structpages.StructPages
 }
 
 // Run serves the app as a Worker and never returns.
@@ -110,6 +121,37 @@ type key struct{}
 type page struct {
 	site *App
 	r    *http.Request
+	memo *sync.Map
+}
+
+// Request is the request being answered, for a component that is no page's own (a header that says who is signed
+// in): nil outside one.
+func Request(ctx context.Context) *http.Request {
+	p, _ := ctx.Value(key{}).(page)
+	return p.r
+}
+
+// Name is the app's name (App.Name), for the same.
+func Name(ctx context.Context) string {
+	if p, ok := ctx.Value(key{}).(page); ok && p.site != nil {
+		return p.site.Name
+	}
+	return ""
+}
+
+// AuthOf is the app's Auth, for the same: nil for an app without one.
+func AuthOf(ctx context.Context) Auth {
+	if p, ok := ctx.Value(key{}).(page); ok && p.site != nil {
+		return p.site.Auth
+	}
+	return nil
+}
+
+// Memo is where what is worked out once for a request is kept until it is answered (who its caller is): nil
+// outside one.
+func Memo(ctx context.Context) *sync.Map {
+	p, _ := ctx.Value(key{}).(page)
+	return p.memo
 }
 
 // Handler is the app as one handler.
@@ -164,7 +206,7 @@ func (a *App) Handler() http.Handler {
 		if !ok {
 			mux = byLanguage[intl.Default()]
 		}
-		mux.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), key{}, page{a, r})))
+		mux.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), key{}, page{a, r, &sync.Map{}})))
 	})
 	a.site.IsPage = isPage
 	h = a.site.Handler(h)
@@ -270,6 +312,8 @@ func (a *App) Options(collect bool) []structpages.Option {
 		}
 		// A fragment's address opened as a document goes to the page it is part of (guard.go).
 		next = guard(next, pn)
+		// What the route needs of its caller, said on its type or on a group above it, is checked before it runs.
+		next = a.allowed(next, pn)
 		// A page goes out whole; an action or a stream writes as it goes.
 		if isPage {
 			return whole(next)
@@ -286,7 +330,7 @@ func (a *App) Options(collect bool) []structpages.Option {
 	}
 	return []structpages.Option{
 		structpages.WithArgs(args...), structpages.WithRequestArgs(a.RequestArgs...),
-		structpages.WithErrorHandler(failed), structpages.WithMiddlewares(each),
+		structpages.WithErrorHandler(a.failed), structpages.WithMiddlewares(each),
 		structpages.WithTargetSelector(structpages.HTMXv4RenderTarget),
 		// A field of the tree that is no route is a mistake, said when the app starts.
 		structpages.WithWarnEmptyRoute(func(pn *structpages.PageNode) {
@@ -351,11 +395,17 @@ func headOf(ctx context.Context, entry string) head {
 	return h
 }
 
-// local says the request was made to this machine (wrangler dev), where there is no https to move to.
+// local says the request was made to this machine or its own network (wrangler dev), where there is no https to
+// move to: by the machine's name, a name no one outside can have (.internal, which a container calls its host by;
+// .localhost), or an address of a private network (a phone on the same Wi-Fi).
 func local(r *http.Request) bool {
 	host := r.URL.Hostname()
 	if host == "" {
 		host, _, _ = strings.Cut(r.Host, ":")
 	}
-	return host == "localhost" || net.ParseIP(strings.Trim(host, "[]")).IsLoopback()
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") || strings.HasSuffix(host, ".internal") {
+		return true
+	}
+	ip := net.ParseIP(strings.Trim(host, "[]"))
+	return ip.IsLoopback() || ip.IsPrivate()
 }

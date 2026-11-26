@@ -23,11 +23,15 @@ type Client struct {
 
 func NewClient(opts ...option.RequestOption) *Client {
 	options := core.NewRequestOptions(opts...)
-	if options.AccessClientID == "" {
-		options.AccessClientID = os.Getenv("CHARTER_EXAMPLE_ACCESS_CLIENT_ID")
+	if options.AccessClientID == nil {
+		if value := os.Getenv("CHARTER_EXAMPLE_ACCESS_CLIENT_ID"); value != "" {
+			options.AccessClientID = &value
+		}
 	}
-	if options.AccessClientSecret == "" {
-		options.AccessClientSecret = os.Getenv("CHARTER_EXAMPLE_ACCESS_CLIENT_SECRET")
+	if options.AccessClientSecret == nil {
+		if value := os.Getenv("CHARTER_EXAMPLE_ACCESS_CLIENT_SECRET"); value != "" {
+			options.AccessClientSecret = &value
+		}
 	}
 	return &Client{
 		Meta:    meta.NewClient(options),

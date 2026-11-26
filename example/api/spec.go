@@ -14,10 +14,11 @@ func init() {
 func config() huma.Config {
 	config := charter.HumaConfig(Title, Version)
 	config.Info.Description = Description
-	// Who may call: bearer tokens, Cloudflare Access (a person's login or a machine's service token)
+	// Who may call: the app's own people (a token they made; on the pages, their session), bearer tokens, Cloudflare Access (a person's login or a machine's service token)
 	// and an OpenID Connect issuer's tokens. An operation that needs a scope says which, by any of
 	// them (reads are public).
 	charter.Scheme(config.OpenAPI)
+	charter.PeopleScheme(config.OpenAPI)
 	charter.AccessScheme(config.OpenAPI, Title)
 	charter.OIDCScheme(config.OpenAPI)
 	// How often a caller may call: each limited operation says so, with its 429.

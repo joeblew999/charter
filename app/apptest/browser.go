@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/webauthn"
 	"github.com/chromedp/chromedp"
 )
 
@@ -38,7 +39,68 @@ func Browser(t testing.TB) *Page {
 	if _, err := chromedp.Run(ctx, chromedp.Evaluate[string](`""`)); err != nil {
 		t.Fatalf("no browser: %v (Chrome or Chromium must be installed)", err)
 	}
-	return &Page{t, ctx}
+	p := &Page{t, ctx}
+	p.authenticator()
+	return p
+}
+
+// authenticator gives the tab a device that holds passkeys and answers for its owner at once: Chrome's own virtual
+// authenticator. A page that asks for a passkey (the sign-in screen) then gets one with no person and no device.
+func (p *Page) authenticator() {
+	p.t.Helper()
+	err := chromedp.Do(p.ctx, chromedp.Func(func(ctx context.Context, _ *chromedp.Target) error {
+		if _, err := chromedp.Call(ctx, webauthn.Enable, webauthn.EnableParams{}); err != nil {
+			return err
+		}
+		_, err := chromedp.Call(ctx, webauthn.AddVirtualAuthenticator, webauthn.AddVirtualAuthenticatorParams{Options: &webauthn.VirtualAuthenticatorOptions{
+			Protocol: "ctap2", Transport: "internal",
+			HasResidentKey: true, HasUserVerification: true, IsUserVerified: true, AutomaticPresenceSimulation: true,
+		}})
+		return err
+	}))
+	if err != nil {
+		p.t.Fatalf("no virtual authenticator: %v", err)
+	}
+}
+
+// SignUp makes an account on the app's sign-in screen (charter add screen:sign-in), at its path, under a name, and
+// waits until the tab is signed in: the passkey is made by the tab's virtual authenticator. It is how a test of a
+// page for someone signed in gets there, as a reader would.
+func (p *Page) SignUp(signIn, name string) {
+	p.t.Helper()
+	p.Open(signIn)
+	p.Type("#sign-up-name", name)
+	// A real click: the browser makes a passkey only for something its user did.
+	ctx, cancel := context.WithTimeout(p.ctx, wait)
+	defer cancel()
+	if err := chromedp.Do(ctx, chromedp.Click(`#sign-up button[type=submit]`)); err != nil {
+		p.t.Fatalf("sign up: %v", err)
+	}
+	for start := time.Now(); time.Since(start) < wait; time.Sleep(50 * time.Millisecond) {
+		if at, ok := p.try(`location.pathname`); ok && !strings.HasSuffix(strings.TrimSuffix(at, "/"), strings.TrimSuffix(signIn, "/")) {
+			return
+		}
+	}
+	p.t.Fatalf("signing up as %s never left the sign-in page; it says: %s", name, p.Text("#sign-in-error"))
+}
+
+// SignIn signs in on the sign-in screen with the passkey the tab's authenticator has (after SignUp and signing
+// out), and waits until the tab is signed in.
+func (p *Page) SignIn(signIn string) {
+	p.t.Helper()
+	p.Open(signIn)
+	p.until("#sign-in-passkey")
+	ctx, cancel := context.WithTimeout(p.ctx, wait)
+	defer cancel()
+	if err := chromedp.Do(ctx, chromedp.Click(`#sign-in-passkey`)); err != nil {
+		p.t.Fatalf("sign in: %v", err)
+	}
+	for start := time.Now(); time.Since(start) < wait; time.Sleep(50 * time.Millisecond) {
+		if at, ok := p.try(`location.pathname`); ok && !strings.HasSuffix(strings.TrimSuffix(at, "/"), strings.TrimSuffix(signIn, "/")) {
+			return
+		}
+	}
+	p.t.Fatalf("signing in never left the sign-in page; it says: %s", p.Text("#sign-in-error"))
 }
 
 // Tab is another tab of the same browser: a second reader.

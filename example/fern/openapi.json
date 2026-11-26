@@ -123,6 +123,7 @@
         }
       },
       "bearer": {
+        "description": "A token of the Worker's own, or one a person who signed in to the app made for a program on their account page: it may do what they may, or less",
         "scheme": "bearer",
         "type": "http"
       },

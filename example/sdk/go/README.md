@@ -167,8 +167,6 @@ specified on the client so that they're applied on every request, or for an indi
 // Specify default options applied on every request.
 client := client.NewClient(
     option.WithToken("<YOUR_API_KEY>"),
-    option.WithAccessClientID("<YOUR_API_KEY>"),
-    option.WithAccessClientSecret("<YOUR_API_KEY>"),
     option.WithHTTPClient(
         &http.Client{
             Timeout: 5 * time.Second,
@@ -182,12 +180,6 @@ response, err := client.Notes.Create(
     option.WithToken("<YOUR_API_KEY>"),
 )
 ```
-
-When credentials are not explicitly provided, the client reads them from the
-following environment variables:
-
-- `CHARTER_EXAMPLE_ACCESS_CLIENT_ID`
-- `CHARTER_EXAMPLE_ACCESS_CLIENT_SECRET`
 
 ## Advanced
 

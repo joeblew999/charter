@@ -15,7 +15,7 @@ import (
 // line for line.
 func TestSettingsAsCommitted(t *testing.T) {
 	for example, sdks := range map[string]project.SDKs{
-		"example": {Name: "Notes", More: []string{"python", "cli"}},
+		"example": {Name: "Notes", More: []string{"python", "cli", "typescript"}},
 	} {
 		t.Run(example, func(t *testing.T) {
 			dir := filepath.Join("..", "..", example)
@@ -58,7 +58,7 @@ func TestSpecsHashAsCommitted(t *testing.T) {
 		t.Error(err)
 	}
 	groups, err := Groups(dir)
-	if want := []string{"go", "python", "cli"}; err != nil || !slices.Equal(groups, want) {
+	if want := []string{"go", "typescript", "typescript-dist", "python", "cli"}; err != nil || !slices.Equal(groups, want) {
 		t.Errorf("Groups = %v, %v; want %v", groups, err, want)
 	}
 }

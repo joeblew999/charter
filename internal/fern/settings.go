@@ -81,10 +81,30 @@ func Settings(specJSON []byte, sdks project.SDKs, goModule string, overlays bool
 		declared = append(declared, named{kv.key, s})
 	}
 	kind := func(s scheme) int { return slices.Index([]string{"oauth2", "http", "apiKey"}, s.Type) }
-	var schemes []named
+	// A key in a header is not a way in of its own for a client: it goes beside whatever is (Cloudflare Access's
+	// service token, on every request, with or without the bearer token). As one of Fern's auth schemes a client
+	// could not be made without it (Fern's Python client requires every header scheme), so such keys are headers
+	// of the API a client may be given, and its auth is the token.
+	var schemes, headers []named
 	for _, d := range declared {
-		if kind(d.scheme) >= 0 {
+		switch {
+		case d.Type == "apiKey":
+			headers = append(headers, d)
+		case kind(d.scheme) >= 0:
 			schemes = append(schemes, d)
+		}
+	}
+	if len(headers) > 0 {
+		lines = append(lines, "  headers:")
+		for _, d := range headers {
+			name := d.name
+			if d.Header != nil && d.Header.Name != "" {
+				name = d.Header.Name
+			}
+			lines = append(lines, "    "+d.Name+":", "      name: "+name, "      type: optional<string>")
+			if d.Header != nil && d.Header.Env != "" {
+				lines = append(lines, "      env: "+d.Header.Env)
+			}
 		}
 	}
 	slices.SortStableFunc(schemes, func(a, b named) int { return kind(a.scheme) - kind(b.scheme) })
@@ -134,9 +154,14 @@ func Settings(specJSON []byte, sdks project.SDKs, goModule string, overlays bool
 				return "", fmt.Errorf("the spec's scheme %s is %s %s: the SDKs take bearer tokens, header keys and OAuth client credentials", d.name, d.Type, d.Scheme)
 			}
 		}
-		lines = append(lines, "  auth:", "    any:")
-		for _, d := range schemes {
-			lines = append(lines, "      - "+d.name)
+		// One way in is named as it is, so every client takes it plainly (token: …); several are any of them.
+		if len(schemes) == 1 {
+			lines = append(lines, "  auth: "+schemes[0].name)
+		} else {
+			lines = append(lines, "  auth:", "    any:")
+			for _, d := range schemes {
+				lines = append(lines, "      - "+d.name)
+			}
 		}
 	}
 

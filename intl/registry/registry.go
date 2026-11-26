@@ -41,6 +41,7 @@ type Component struct {
 	Name   string   // what add takes, and the file's name in the app: language-list.gsx
 	Gsxui  []string // the gsxui components it is made of, as gsxui add names them
 	Needs  []string // the registry's other components it writes: add copies them with it
+	Schema string   // tables it keeps what it knows in: add writes them into db/schema.sql, where they are not yet
 	Assets []string // the files under assets/ it loads in the browser: add copies them into the app's assets folder
 	Use    string   // where it goes in a page, once added: add prints it
 }

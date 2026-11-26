@@ -5,6 +5,11 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
+
+	"github.com/jackielii/structpages"
+
+	"github.com/joeblew999/charter/intl"
 )
 
 // How a page or a handler of the tree says something went another way than a page, as structpages has it: it returns
@@ -30,6 +35,60 @@ func (e statusError) Error() string { return e.message }
 type Redirect struct{ To string }
 
 func (Redirect) Error() string { return "redirect" }
+
+// Auth is who may do what: api.Auth, which is what checks the API's operations too. Allow is nil when the request's
+// caller has the scopes; else an error with the status 401 (nobody is signed in) or 403 (someone who may not).
+type Auth interface {
+	Allow(r *http.Request, needs ...string) error
+}
+
+// allowed checks what a route needs of its caller before it runs: the scopes its type's Needs method lists, and
+// those of every group above it in the tree. A route with no Needs, under none, is everyone's.
+func (a *App) allowed(next http.Handler, pn *structpages.PageNode) http.Handler {
+	var needs []string
+	found := false
+	for node := pn; node != nil; node = node.Parent {
+		if n, ok := node.Value.Interface().(interface{ Needs() []string }); ok {
+			found = true
+			needs = append(needs, n.Needs()...)
+		}
+	}
+	if !found {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if a.Auth == nil {
+			a.failed(w, r, Status(http.StatusInternalServerError, "a page says what it needs of its caller, and the app has no Auth to ask"))
+			return
+		}
+		if err := a.Auth.Allow(r, needs...); err != nil {
+			a.failed(w, r, err)
+			return
+		}
+		// What a signed-in reader sees is theirs: no cache keeps it for another.
+		w.Header().Set("Cache-Control", "private, no-store")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// failed answers for a page or handler that returned an error. Someone who must sign in first is sent to the
+// app's sign-in page, and comes back to where they were going.
+func (a *App) failed(w http.ResponseWriter, r *http.Request, err error) {
+	var known statusError
+	if errors.As(err, &known) && known.status == http.StatusUnauthorized && a.SignIn != nil && a.tree != nil {
+		if to, urlErr := structpages.URLFor(r.Context(), a.SignIn); urlErr == nil {
+			back := intl.URL(r.Context(), r.URL.RequestURI())
+			if r.Method != http.MethodGet {
+				back = r.Header.Get("HX-Current-URL") // a form: back to the page it is on
+			}
+			if back != "" {
+				to += "?return=" + url.QueryEscape(intl.SafeReturn(back))
+			}
+			err = Redirect{To: to}
+		}
+	}
+	failed(w, r, err)
+}
 
 // failed answers for a page or handler that returned an error.
 func failed(w http.ResponseWriter, r *http.Request, err error) {

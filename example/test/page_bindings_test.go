@@ -160,8 +160,12 @@ func card(t *testing.T, id string) string {
 
 func TestD1ThroughWorkersGo(t *testing.T) {
 	before := card(t, "rows")
-	// A note posted on the home page is a row more.
-	res, err := http.PostForm(base+at(pages.PostNote{}), url.Values{"body": {"counted by D1"}})
+	// A note posted to the home page's form is a row more. The form needs someone who may write, as the API's
+	// createNote does, and takes the same proof: here the Worker's write token, as a program would send it.
+	req, _ := http.NewRequest("POST", base+at(pages.PostNote{}), strings.NewReader(url.Values{"body": {"counted by D1"}}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+apptest.Secret(t, "WRITE_TOKEN"))
+	res, err := http.DefaultClient.Do(req)
 	if err != nil || res.StatusCode != 200 {
 		t.Fatalf("POST /notes: %v %v", res, err)
 	}

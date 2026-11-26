@@ -12,7 +12,7 @@ func TestHomeProps(t *testing.T) {
 	store := &notes{}
 	store.Create(context.Background(), "first")
 	store.Create(context.Background(), "second")
-	props, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, page{})
+	props, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
 	if err != nil || len(props.Notes) != 2 || props.Notes[0].Body != "second" || props.After != 2 {
 		t.Fatalf("%+v %v", props, err)
 	}
@@ -35,6 +35,8 @@ go tool charter test --deployed  # the deployed one: the same tests, and the aud
 func TestANoteShowsOnEveryOpenPage(t *testing.T) {
 	writer := apptest.Browser(t)
 	reader := writer.Tab()
+	// Writing is for whoever is signed in; reading is anyone's.
+	writer.SignUp(at(screens.SignInPage{}), "Writer")
 	writer.Open("/")
 	reader.Open("/")
 	body := "typed at " + time.Now().Format(time.RFC3339Nano)

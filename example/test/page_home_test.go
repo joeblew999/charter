@@ -1,15 +1,13 @@
 package test
 
 import (
-	"io"
-	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/joeblew999/charter/app/apptest"
 	"github.com/joeblew999/charter/example/pages"
+	"github.com/joeblew999/charter/example/pages/screens"
 	notes "github.com/joeblew999/charter/example/sdk/go"
 	"github.com/joeblew999/charter/example/sdk/go/option"
 )
@@ -20,6 +18,8 @@ import (
 func TestANoteShowsOnEveryOpenPage(t *testing.T) {
 	writer := apptest.Browser(t)
 	reader := writer.Tab()
+	// Writing is for whoever is signed in; reading is anyone's.
+	writer.SignUp(at(screens.SignInPage{}), "Writer")
 	writer.Open("/")
 	reader.Open("/")
 	body := "typed at " + time.Now().Format(time.RFC3339Nano)
@@ -64,16 +64,20 @@ func TestTheLanguages(t *testing.T) {
 	}
 }
 
-// What the form refuses comes back marked, as a 422 htmx swaps in.
+// What the form refuses comes back marked, in place: a 422, which htmx 4 swaps in.
 func TestTheFormRefusesAnEmptyNote(t *testing.T) {
-	res, err := http.PostForm(apptest.Base(t)+at(pages.PostNote{}), url.Values{"body": {"  "}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	b, _ := io.ReadAll(res.Body)
-	if res.StatusCode != http.StatusUnprocessableEntity || !strings.Contains(string(b), `aria-invalid="true"`) {
-		t.Fatalf("HTTP %d\n%s", res.StatusCode, b)
+	home := apptest.Browser(t)
+	home.SignUp(at(screens.SignInPage{}), "Blank")
+	home.Open(at(pages.Home{}))
+	home.Type(el(pages.Home.Form)+` input[name=body]`, "   ")
+	home.Click(el(pages.Home.Form) + ` button[type=submit]`)
+	for start := time.Now(); ; time.Sleep(100 * time.Millisecond) {
+		if home.Attr(el(pages.Home.Form)+` input[name=body]`, "aria-invalid") == "true" {
+			return
+		}
+		if time.Since(start) > 10*time.Second {
+			t.Fatal("an empty note did not come back marked")
+		}
 	}
 }
 
@@ -81,6 +85,7 @@ func TestTheFormRefusesAnEmptyNote(t *testing.T) {
 // answer says when the note was written. The header marks the page being shown.
 func TestANotesRowOpensByItself(t *testing.T) {
 	home := apptest.Browser(t)
+	home.SignUp(at(screens.SignInPage{}), "Opener")
 	home.Open(at(pages.Home{}))
 	body := "opened at " + time.Now().Format(time.RFC3339Nano)
 	home.Type(el(pages.Home.Form)+` input[name=body]`, body)
