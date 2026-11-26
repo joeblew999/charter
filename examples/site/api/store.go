@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joeblew999/charter/hub"
+	"github.com/joeblew999/charter/live"
 )
 
 // Store is the log: D1 on Cloudflare (D1Store, store_d1.go), memory for `go run .` and the tests
@@ -20,13 +20,13 @@ type Store interface {
 	Latest(ctx context.Context) (int64, error)
 }
 
-// Hub is the live fan-out of messages: only a wake-up for followers (charter/hub). On Cloudflare it is
+// Hub is the live fan-out of messages: only a wake-up for followers (charter/live). On Cloudflare it is
 // the library's Durable Object (platform_js.go).
-type Hub = hub.Hub[Message]
+type Hub = live.Hub[Message]
 
 // MemStore is a Store and a Hub in one process: for `go run .` and the tests.
 type MemStore struct {
-	hub.Memory[Message]
+	live.Memory[Message]
 	mu       sync.Mutex
 	messages []Message
 }

@@ -15,7 +15,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/joeblew999/charter/auth"
-	"github.com/joeblew999/charter/follow"
+	"github.com/joeblew999/charter/live"
 	"github.com/joeblew999/charter/transport"
 )
 
@@ -125,8 +125,8 @@ func (f feed) Latest(ctx context.Context) (int64, error) { return f.store.Latest
 
 // feed opens the feed and reads the resume position: the newest of the positions given (a
 // reconnecting SDK resends its original `after` plus a newer Last-Event-ID). None: from now on.
-func (env Env) feed(positions ...string) (feed, follow.Options, error) {
-	options := follow.Options{After: follow.Newest(positions...), OnBroken: func(err error) { log.Printf("follow: hub subscription broken, resubscribing: %v", err) }}
+func (env Env) feed(positions ...string) (feed, live.Options, error) {
+	options := live.Options{After: live.Newest(positions...), OnBroken: func(err error) { log.Printf("follow: hub subscription broken, resubscribing: %v", err) }}
 	store, err := env.Store()
 	if err != nil {
 		return feed{}, options, err
@@ -157,7 +157,7 @@ func (env Env) watch(_ context.Context, in *WatchInput) (*huma.StreamResponse, e
 		}
 		until, cancel := context.WithTimeout(hc.Context(), time.Duration(in.Seconds)*time.Second)
 		defer cancel()
-		err := follow.Follow(until, notes, options, func(note Note) error {
+		err := live.Follow(until, notes, options, func(note Note) error {
 			data, err := json.Marshal(note)
 			if err != nil {
 				return err
@@ -194,7 +194,7 @@ func (env Env) live(_ context.Context, in *LiveInput) (*huma.StreamResponse, err
 		if _, err := io.WriteString(w, "\n"); err != nil {
 			return
 		}
-		err := follow.Follow(hc.Context(), notes, options, func(note Note) error {
+		err := live.Follow(hc.Context(), notes, options, func(note Note) error {
 			data, err := json.Marshal(note)
 			if err != nil {
 				return err

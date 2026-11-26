@@ -1,4 +1,4 @@
-package follow
+package live
 
 import (
 	"context"

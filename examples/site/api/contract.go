@@ -36,7 +36,7 @@ type Message struct {
 	CreatedAt string `json:"created_at" example:"2026-10-03 12:00:00"`
 }
 
-// Position is the message's place in the log: what a stream resumes after (charter/follow).
+// Position is the message's place in the log: what a stream resumes after (charter/live).
 func (m Message) Position() int64 { return m.ID }
 
 type HelloOutput struct {

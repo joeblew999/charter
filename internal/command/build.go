@@ -125,7 +125,7 @@ func wasm(p *project.Project, limit int) error {
 	if p.Health != "" {
 		entry += fmt.Sprintf("await go.warm({ paths: [%q] });\n", p.Health)
 	}
-	entry += "\n// Requests, Cron Triggers and queues, as workers-go's own entry has them, and email (charter/email).\nexport default { fetch: go.fetch, scheduled: go.scheduled, queue: go.queue, email: go.email };\n"
+	entry += "\n// Requests, Cron Triggers and queues, as workers-go's own entry has them, and email (charter/bindings).\nexport default { fetch: go.fetch, scheduled: go.scheduled, queue: go.queue, email: go.email };\n"
 	if err := os.WriteFile(filepath.Join(p.Root, "build", "worker.mjs"), []byte(entry), 0o644); err != nil {
 		return err
 	}

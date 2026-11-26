@@ -37,7 +37,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/problem"
+	"github.com/joeblew999/charter/humaworkers"
 )
 
 // The security schemes' names in the specs.
@@ -432,7 +432,7 @@ func discoveryHandler(setting func(name string) string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		issuer := setting(OIDCIssuer)
 		if issuer == "" {
-			problem.Write(w, http.StatusNotFound, "this API trusts no OpenID Connect issuer")
+			humaworkers.WriteProblem(w, http.StatusNotFound, "this API trusts no OpenID Connect issuer")
 			return
 		}
 		http.Redirect(w, r, strings.TrimSuffix(issuer, "/")+openIDPath, http.StatusFound)

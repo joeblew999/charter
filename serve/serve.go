@@ -4,11 +4,11 @@
 //   - its operations under /api, each call checked by the contract's security (auth) and limited by
 //     its rate limits (ratelimit);
 //   - its specs at /api/openapi.json and /api/asyncapi.json, with the request's origin as their server;
-//   - its operations as MCP tools at /api/mcp (charter/mcp);
+//   - its operations as MCP tools at /api/mcp (internal/mcp);
 //   - how to get in, at /.well-known/ (auth.WellKnown);
 //   - a WebSocket channel's token as ?access_token=, on the channel only, for a client that cannot send
 //     headers (a browser, a Worker);
-//   - every refusal as RFC 9457 problem details (Huma's, and charter/problem's), as charter-lib answers.
+//   - every refusal as RFC 9457 problem details (Huma's, and humaworkers.WriteProblem), as charter-lib answers.
 //
 // The same API gives the specs charter check --fix writes (OpenAPI, AsyncAPI) and the MCP check it runs (Tools).
 // The platform carries the WebSocket (transport) and runs the handler (transport.Run).
@@ -26,7 +26,7 @@ import (
 	"github.com/joeblew999/charter/asyncapi"
 	"github.com/joeblew999/charter/auth"
 	"github.com/joeblew999/charter/humaworkers"
-	"github.com/joeblew999/charter/mcp"
+	"github.com/joeblew999/charter/internal/mcp"
 	"github.com/joeblew999/charter/ratelimit"
 	"github.com/joeblew999/charter/transport"
 )

@@ -1,26 +1,25 @@
-// Package fragments serves a live feed to browsers as server-sent events, each item rendered by the
+// serves a live feed to browsers as server-sent events, each item rendered by the
 // caller: an HTML fragment for htmx 4's SSE extension, a datastar-patch-elements event for Datastar. The
-// feed is charter/follow's, so no item is lost or sent twice, across reconnects and deploys alike:
+// feed is charter/live's, so no item is lost or sent twice, across reconnects and deploys alike:
 //
 //	feed, options, err := env.Feed(r.URL.Query().Get("after"), r.Header.Get("Last-Event-ID"))
 //	...
-//	fragments.Stream[Message]{Feed: feed, Options: options, Event: htmxEvent}.ServeHTTP(w, r)
+//	Stream[Message]{Feed: feed, Options: options, Event: htmxEvent}.ServeHTTP(w, r)
 //
 // Every event's id is its item's position, which the browser sends back as Last-Event-ID when it
 // connects again; Options.After is where the stream starts.
-package fragments
+
+package live
 
 import (
 	"context"
 	"fmt"
+	"github.com/joeblew999/charter/transport"
 	"io"
 	"log"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/joeblew999/charter/follow"
-	"github.com/joeblew999/charter/transport"
 )
 
 // streamLife is how long a stream stays open unless Stream.For says otherwise. Then it ends, and the
@@ -29,10 +28,10 @@ import (
 const streamLife = 5 * time.Minute
 
 // Stream is one SSE response over a feed.
-type Stream[T follow.Item] struct {
+type Stream[T Item] struct {
 	// Feed is the log and its wake-up; Options.After the position to start after (nil: from now on).
-	Feed    follow.Source[T]
-	Options follow.Options
+	Feed    Source[T]
+	Options Options
 	// Event writes an item as the fields of its event, after its id: the only part that knows the
 	// client. Data builds the data lines.
 	Event func(ctx context.Context, item T) (string, error)
@@ -56,7 +55,7 @@ func (s Stream[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), lifetime)
 	defer cancel()
-	err := follow.Follow(ctx, s.Feed, s.Options, func(item T) error {
+	err := Follow(ctx, s.Feed, s.Options, func(item T) error {
 		event, err := s.Event(ctx, item)
 		if err != nil {
 			return err

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joeblew999/charter/hub"
+	"github.com/joeblew999/charter/live"
 )
 
 // Store is the log: D1 on Cloudflare (D1Store, store_d1.go), memory for `go run .` and the tests (MemStore).
@@ -20,12 +20,12 @@ type Store interface {
 }
 
 // Hub is the live fan-out of notes: only a wake-up signal for followers (docs/self/streaming.md, rule 2).
-// A feed of another type has its own: hub.Hub[T].
-type Hub = hub.Hub[Note]
+// A feed of another type has its own: live.Hub[T].
+type Hub = live.Hub[Note]
 
 // MemStore is a Store and a Hub in one process: for `go run .` and the tests.
 type MemStore struct {
-	hub.Memory[Note]
+	live.Memory[Note]
 	mu    sync.Mutex
 	notes []Note
 }

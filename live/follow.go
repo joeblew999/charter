@@ -1,4 +1,4 @@
-// Package follow is the one way a client receives a live, ordered, gap-free feed
+// is the one way a client receives a live, ordered, gap-free feed
 // (docs/self/streaming.md, rule 3): the Go port of ts/src/follow.ts, with the same tests. Both transports
 // (SSE and the WebSocket) are thin adapters over Follow.
 //
@@ -14,7 +14,8 @@
 // Follow returns an error only after MaxFailures consecutive failed subscribes, when the log fails,
 // or when emit does, so the adapter can end the stream explicitly (rule 5); a cancelled context ends
 // it quietly.
-package follow
+
+package live
 
 import (
 	"context"

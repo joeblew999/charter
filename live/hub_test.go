@@ -1,4 +1,4 @@
-package hub
+package live
 
 import (
 	"context"

@@ -1,11 +1,9 @@
-package gsxseo_test
+package gsxapp
 
 import (
 	"context"
 	"strings"
 	"testing"
-
-	"github.com/joeblew999/charter/gsxseo"
 )
 
 // TestHead: what the audit reads of a page's head, the WebSite structured data only on the home page, and the icon's
@@ -13,7 +11,7 @@ import (
 func TestHead(t *testing.T) {
 	render := func(home string) string {
 		var b strings.Builder
-		if err := gsxseo.Head("Shop & more", "What it sells.", "Shop", "/static/favicon.svg", home, "en").Render(context.Background(), &b); err != nil {
+		if err := seoHead("Shop & more", "What it sells.", "Shop", "/static/favicon.svg", home, "en").Render(context.Background(), &b); err != nil {
 			t.Fatal(err)
 		}
 		return b.String()

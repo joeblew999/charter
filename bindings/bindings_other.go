@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/internal/project"
-	"github.com/joeblew999/charter/web"
+	"github.com/joeblew999/charter/transport"
 )
 
 // OnWorkers reports whether the code runs as a Worker.
@@ -72,7 +72,7 @@ func StaticAssets(dir string) http.Handler {
 	if p, err := app(); err == nil && !filepath.IsAbs(dir) {
 		dir = filepath.Join(p.Root, dir)
 	}
-	return web.GetOnly(http.FileServer(http.Dir(dir)))
+	return transport.GetOnly(http.FileServer(http.Dir(dir)))
 }
 
 // app is the app's settings (wrangler.jsonc, charter.toml), found from the working directory (a test runs in its

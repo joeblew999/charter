@@ -1,7 +1,7 @@
 // Package seo is charter seo: how a Go web app answers search engines, from its charter.toml's [seo] (found up from the working
 // directory): the live site audited as Googlebot reads it, Lighthouse on Google's servers, the README's badges, and
 // Google Search Console. Each command is a file of its own, holding the method named for it (audit.go holds audit).
-// The app imports seo's packages from this same module (github.com/joeblew999/charter/seo, gsxseo).
+// The app imports seo's packages from this same module (github.com/joeblew999/charter/seo, gsxapp).
 //
 // Exit codes: 0 ok, 1 problems (or no access), 2 usage. --json prints one JSON document on stdout instead of text (the
 // same data, for agents, CI and jq) and never opens a browser.

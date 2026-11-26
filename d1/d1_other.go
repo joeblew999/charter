@@ -40,7 +40,7 @@ func Open(name string) (DB, error) {
 	if i < 0 {
 		return DB{}, fmt.Errorf("d1: wrangler.jsonc's d1_databases has no binding %s", name)
 	}
-	db, err := sql.Open("sqlite", "file:charter-d1-"+name+"?mode=memory&cache=shared&_pragma=foreign_keys(1)") // D1 enforces foreign keys
+	db, err := sql.Open("sqlite", dsn(name)) // D1 enforces foreign keys
 	if err != nil {
 		return DB{}, err
 	}
@@ -151,4 +151,19 @@ func Batch(db DB, statements ...Statement) error {
 		return fmt.Errorf("d1: %w", err)
 	}
 	return nil
+}
+
+// dsn names the stand-in's database: in memory, shared by every handle opened on it in the process.
+func dsn(name string) string {
+	return "file:charter-d1-" + name + "?mode=memory&cache=shared&_pragma=foreign_keys(1)" // D1 enforces foreign keys
+}
+
+// SQL is the database standing in for the D1 binding called name, for database/sql: the same SQLite Open gives
+// (made and migrated on the first use), through a handle of its own, which the caller closes. On Workers it is
+// workers-go's own driver, so code written the workers-go way runs under go test too.
+func SQL(name string) (*sql.DB, error) {
+	if _, err := Open(name); err != nil {
+		return nil, err
+	}
+	return sql.Open("sqlite", dsn(name))
 }

@@ -4,7 +4,7 @@
 //	GET  /                  the home page: the form and the newest messages (Home)
 //	POST /messages          the form: stores the message as POST /api/messages does, answers the form again (Form)
 //	GET  /messages/stream   every new message as an Item fragment, over SSE (stream.go)
-//	GET  /cloud             what Cloudflare gives the Worker, one card each (cloud.gsx, cloud_js.go)
+//	GET  /cloud             what Cloudflare gives the Worker, one card each (cloud.gsx, package cloud)
 //
 // and hands everything else to the API. The pages call the API's handlers in the process (api.Env),
 // not over HTTP.
@@ -37,7 +37,7 @@ func Handler(env api.Env, next http.Handler) http.Handler {
 		case path == "/messages/stream" && method == http.MethodGet:
 			serveStream(w, r, env, htmxEvent)
 		case path == "/cloud" || strings.HasPrefix(path, "/cloud/"):
-			cloud(w, r)
+			serveCloud(w, r)
 		case path == "/" || strings.HasPrefix(path, "/messages"):
 			w.Header().Set("Allow", "GET, POST")
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)

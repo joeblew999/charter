@@ -1,14 +1,16 @@
-// Package hub is the live signal of a feed: publish an item, and every subscriber gets it.
+// Package live is a feed that browsers and API clients follow as it grows, with no item lost or sent twice:
 //
-// It is only a wake-up signal. The log (D1) is the source of truth, and follow.Follow fills any
-// gap from it, so a hub may drop, restart or deliver out of order (docs/self/streaming.md, rule 2).
+//   - a Hub is the wake-up signal: publish an item and every subscriber gets it. On Cloudflare it is a Durable
+//     Object (DurableObject), natively and in tests it is Memory. It may drop, restart or deliver out of order.
+//   - Follow reads the feed: the log (D1) is the source of truth, the hub only says "look again".
+//   - Stream serves it to a browser as server-sent events, each item rendered by the caller.
 //
 // One hub carries one type of item. A second feed is a second hub, with its own name:
 //
-//	notes, err := hub.DurableObject[Note]("HUB", "notes")       // on Cloudflare (hub_js.go)
-//	devices, err := hub.DurableObject[Device]("HUB", "devices") // the same class, another object
-//	var local hub.Memory[Device]                                // natively and in tests
-package hub
+//	notes, err := DurableObject[Note]("HUB", "notes")       // on Cloudflare (hub_js.go)
+//	devices, err := DurableObject[Device]("HUB", "devices") // the same class, another object
+//	var local Memory[Device]                                // natively and in tests
+package live
 
 import (
 	"context"

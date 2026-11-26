@@ -7,7 +7,7 @@
 //	bindings.StaticAssets("dist/site")      Static Assets; off Workers, the folder, from disk
 //	bindings.HTTPClient()                   requests the Worker makes (its fetch); off Workers, net/http's own
 //	d1.Open("DB")                           a D1 database (package d1); off Workers, SQLite in memory, migrated
-//	hub.DurableObject[T]("ROOM", topic)     publishing to a Durable Object (package hub); off Workers, in memory
+//	live.DurableObject[T]("ROOM", topic)     publishing to a Durable Object (package live); off Workers, in memory
 //	transport.CFOf(r)                       request.cf; off Workers, the zero CF (transport.WithCF in a test)
 package bindings
 

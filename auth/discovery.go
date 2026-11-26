@@ -7,7 +7,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/problem"
+	"github.com/joeblew999/charter/humaworkers"
 
 	"github.com/joeblew999/charter/internal/reply"
 )
@@ -60,7 +60,7 @@ func WellKnown(api huma.API, setting func(name string) string, trusted ...Truste
 				"scopes_supported":                      apiScopes(api.OpenAPI()),
 			})
 		default:
-			problem.Write(w, http.StatusNotFound, "not found")
+			humaworkers.WriteProblem(w, http.StatusNotFound, "not found")
 		}
 	})
 }

@@ -30,7 +30,7 @@
 //	export default { fetch: go.fetch, scheduled: go.scheduled, queue: go.queue, email: go.email };
 import "./wasm_exec.js"; // the compiler's (workers-go writes it), for its global Go class
 import * as build from "./runtime.mjs";
-import { EmailMessage } from "cloudflare:email"; // for charter/email's Send: what a send_email binding takes
+import { EmailMessage } from "cloudflare:email"; // for bindings.SendEmail: what a send_email binding takes
 import { webSocket } from "./websocket.mjs";
 
 // request.cf's fields transport.CF has (cf.go), under the header name it reads for a WebSocket's messages (lower
@@ -184,9 +184,9 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		return run(env, ctx, "runScheduler", event, "a Cron Trigger (cron.ScheduleTaskNonBlock, before transport.Run)");
 	}
 
-	// email is the Worker's handler for a message Email Routing hands it: charter/email's ConsumeNonBlock gets it.
+	// email is the Worker's handler for a message Email Routing hands it: bindings.ConsumeEmail gets it.
 	function email(message, env, ctx) {
-		return run(env, ctx, "handleEmail", message, "an email (email.ConsumeNonBlock, before the program serves)");
+		return run(env, ctx, "handleEmail", message, "an email (bindings.ConsumeEmail, before the program serves)");
 	}
 
 	// queue is the Worker's handler for a batch from a queue: workers-go's queues.ConsumeNonBlock gets it.

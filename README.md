@@ -131,13 +131,34 @@ catalogs = "locales"
 
 ## The library
 
-Every package is at the top: `github.com/joeblew999/charter/<name>`.
+Every package is at the top: `github.com/joeblew999/charter/<name>`. Fourteen of them, for three jobs.
 
-| For | Packages |
+**Cloudflare from Go, beside workers-go**
+
+| Package | For |
 |---|---|
-| Cloudflare from Go, beside workers-go | `transport` (run a handler as a Worker), `bindings` (variables, static assets, rate limits, fetch), `d1`, `hub` (Durable Object fan-out), `ratelimit`, `email` |
-| APIs from a contract | `serve` (the standard API), `specs`, `asyncapi`, `humaworkers` (Huma on Workers), `mcp`, `auth`, `problem`, `follow` (SSE and WebSocket streams) |
-| Sites | `gsxapp` (the one call above), `web`, `fragments`, `intl` and `gsxintl` (languages), `seo` and `gsxseo` (search engines) |
+| `transport` | Run a handler as a Worker (`transport.Run`), where a request came from, and net/http helpers for pages |
+| `bindings` | What workers-go lacks, and stand-ins for `go test`: variables, static assets, rate limits, fetch, email |
+| `d1` | D1 as typed rows and batches; under `go test` it is SQLite with the app's migrations |
+| `live` | A feed that is followed live: a Durable Object as the wake-up, D1 as the log, server-sent events out |
+| `ratelimit` | Limits per caller |
+
+**An API from a contract**
+
+| Package | For |
+|---|---|
+| `serve` | The standard API: specs, MCP tools, problem details, streams |
+| `humaworkers` | Huma on Workers |
+| `specs`, `asyncapi` | The OpenAPI and AsyncAPI documents |
+| `auth` | OpenID Connect tokens |
+
+**A site**
+
+| Package | For |
+|---|---|
+| `gsxapp` | The one call above: Vite, static files, languages, search engines |
+| `intl`, `gsxintl` | Languages |
+| `seo` | Search engines |
 
 ## All of workers-go
 
@@ -157,12 +178,12 @@ works too, and the Worker entry handles requests, Cron Triggers, queues and emai
 | fetch, service bindings | `fetch.NewClient()` | workers-go |
 | TCP sockets | `sockets.Connect(ctx, addr, nil)` | workers-go |
 | Variables, waitUntil, request.cf | `cloudflare.Getenv`, `cloudflare.WaitUntil`, `fetch.NewIncomingProperties` | workers-go |
-| Email, out and in | `email.Send("MAIL", from, to, raw)`, `email.ConsumeNonBlock(f)` | charter (`charter/email`), until workers-go has it |
-| Rate limits, a fan-out hub | `bindings.Allow`, `hub.DurableObject` | charter |
+| Email, out and in | `bindings.SendEmail("MAIL", from, to, raw)`, `bindings.ConsumeEmail(f)` | charter, until workers-go has it |
+| Rate limits, a fan-out hub | `bindings.Allow`, `live.DurableObject` | charter |
 | Any other binding | `cloudflare.GetBinding("NAME")`, a `js.Value` | workers-go |
 
 [`examples/site`](examples/site)'s `/cloud` page uses every one of them, a card each, in a page you can click
-through (`pages/cloud_js.go`), with a test per card that runs on wrangler dev (`test/cloud_test.go`).
+through (package `cloud`, a file per binding), with a test per card that runs on wrangler dev (`test/cloud_test.go`).
 
 A file that imports workers-go's packages builds only for a Worker (`//go:build js && wasm`): they are `syscall/js`.
 That is fine now that `charter dev` and `charter test` run the Worker itself. For code that should also run under

@@ -187,3 +187,26 @@ func TestSync(t *testing.T) {
 		}
 	}
 }
+
+// Code written for database/sql, the workers-go way, sees the same database as charter's own calls.
+func TestSQLIsTheSameDatabase(t *testing.T) {
+	db, err := d1.Open("DB")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := d1.Exec(db, "CREATE TABLE IF NOT EXISTS seen (n INTEGER)"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d1.Exec(db, "INSERT INTO seen (n) VALUES (?)", 7); err != nil {
+		t.Fatal(err)
+	}
+	std, err := d1.SQL("DB")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer std.Close()
+	var n int
+	if err := std.QueryRow("SELECT n FROM seen WHERE n = 7").Scan(&n); err != nil || n != 7 {
+		t.Fatalf("n = %d, %v", n, err)
+	}
+}

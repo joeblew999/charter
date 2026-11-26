@@ -1,4 +1,4 @@
-package fragments
+package live
 
 import (
 	"bufio"
@@ -11,18 +11,11 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/joeblew999/charter/follow"
-	"github.com/joeblew999/charter/hub"
 )
-
-type item int64
-
-func (i item) Position() int64 { return int64(i) }
 
 // feed is a log in memory with a hub: add appends to the log and publishes.
 type feed struct {
-	hub.Memory[item]
+	Memory[item]
 	mu  sync.Mutex
 	log []item
 }
@@ -108,7 +101,7 @@ func TestEveryItemAfterThePositionIsAnEventWithItsID(t *testing.T) {
 	f.add(t)
 	f.add(t)
 	after := int64(1)
-	next := open(t, Stream[item]{Feed: f, Options: follow.Options{After: &after}, Event: event})
+	next := open(t, Stream[item]{Feed: f, Options: Options{After: &after}, Event: event})
 	if got := next(); got == nil || *got != "id: 2\nevent: test\ndata: n 2\ndata: n line two\n" {
 		t.Fatalf("caught up: %v", got)
 	}
@@ -129,7 +122,7 @@ func TestAStreamEnds(t *testing.T) {
 	f.log = append(f.log, 98)
 	f.mu.Unlock()
 	after := int64(97)
-	next = open(t, Stream[item]{Feed: f, Options: follow.Options{After: &after}, Event: event})
+	next = open(t, Stream[item]{Feed: f, Options: Options{After: &after}, Event: event})
 	f.mu.Lock()
 	f.log = append(f.log, 99)
 	f.mu.Unlock()

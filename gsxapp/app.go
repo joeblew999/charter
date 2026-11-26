@@ -5,15 +5,15 @@
 //	var dist embed.FS
 //
 //	func main() {
-//		a := &gsxapp.App{Name: "My App", Dist: dist, Pages: []string{"/", "/about"}}
+//		a := &App{Name: "My App", Dist: dist, Pages: []string{"/", "/about"}}
 //		transport.Run(a.Handler(mux))
 //	}
 //
 // and in the layout:
 //
-//	<html { gsxapp.HTML(ctx)... }>
+//	<html { HTML(ctx)... }>
 //		<head>
-//			<gsxapp.Head title={title} description={description}/>
+//			<Head title={title} description={description}/>
 //		</head>
 //
 // What that gives:
@@ -46,7 +46,6 @@ import (
 	"github.com/joeblew999/charter/intl"
 	"github.com/joeblew999/charter/seo"
 	"github.com/joeblew999/charter/transport"
-	"github.com/joeblew999/charter/web"
 )
 
 // App is a gsx app's site: what it is called, the pages people read, and Vite's manifest.
@@ -105,7 +104,7 @@ func (s *App) Handler(next http.Handler) http.Handler {
 		h = intl.Site{
 			IsPage:             isPage,
 			ConnectionTimeZone: func(r *http.Request) string { return transport.CFOf(r).Timezone },
-			Origin:             web.Origin,
+			Origin:             transport.Origin,
 		}.Handler(h)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -127,7 +126,7 @@ func (s *App) Handler(next http.Handler) http.Handler {
 			LLMs:    s.LLMs,
 			IsPage:  indexable,
 			Preview: bindings.Var("APP_PREVIEW") != "",
-			Origin:  web.Origin,
+			Origin:  transport.Origin,
 		}.Handler(v.Middleware(h)).ServeHTTP(w, r)
 	})
 }
@@ -180,7 +179,7 @@ func unprefixed(path string) string {
 	return intl.Unprefixed(path)
 }
 
-// HTML is <html>'s attributes: the page's language and direction (<html { gsxapp.HTML(ctx)... }>).
+// HTML is <html>'s attributes: the page's language and direction (<html { HTML(ctx)... }>).
 func HTML(ctx context.Context) gsx.Attrs {
 	if len(intl.Shipped()) == 0 {
 		return gsx.Attrs{{Key: "lang", Value: "en"}}
@@ -212,7 +211,7 @@ func headOf(ctx context.Context, entry string) head {
 		h.Lang = intl.Current(ctx).ID()
 	}
 	if h.Page == "/" {
-		h.Home = web.Origin(p.r) + p.r.URL.Path
+		h.Home = transport.Origin(p.r) + p.r.URL.Path
 	}
 	return h
 }

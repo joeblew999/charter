@@ -1,4 +1,4 @@
-package problem
+package humaworkers
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 // A refusal is problem details: its media type, its status in the body as in the answer, and why.
 func TestWriteIsProblemDetails(t *testing.T) {
 	rec := httptest.NewRecorder()
-	Write(rec, 404, "not found")
+	WriteProblem(rec, 404, "not found")
 	var body struct {
 		Title  string
 		Status int

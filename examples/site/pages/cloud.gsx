@@ -5,34 +5,15 @@ import (
 
 	"github.com/gsxhq/gsx"
 
+	"github.com/joeblew999/charter/examples/site/cloud"
 	"github.com/joeblew999/charter/examples/site/locales"
 	"github.com/joeblew999/charter/examples/site/ui"
 	"github.com/joeblew999/charter/intl"
 )
 
-// CloudState is what the Cloudflare page shows: everything workers-go gives a Worker, read through its own packages
-// (cloud_js.go), and email (charter/email).
-type CloudState struct {
-	OnWorkers bool     // false off Workers (go test): the bindings are workers-go's, which a Worker has
-	Visits    int      // KV: how often the page was opened
-	Note      string   // R2: the note kept in the bucket
-	Queued    []string // Queues: the messages the consumer has taken, newest first
-	Cron      string   // Cron Triggers: the schedule that last ran, and when
-	Name      string   // a variable of the Worker
-	Fetched   string   // fetch: what this Worker's own /healthz answered
-	Rows      string   // D1: how many messages the database has, through workers-go's database/sql driver
-	Cached    string   // the Cache API: whether the value came from the cache, and when it was stored
-	Object    string   // a Durable Object: what its stub answered
-	Socket    string   // a TCP socket: the first line the other end sent
-	After     string   // waitUntil: when the work after the last answer finished
-	Request   string   // the request's properties, as workers-go reads them (request.cf)
-	Sent      string   // email: whom the last message was sent to
-	Received  string   // email: the sender and subject of the last message received
-}
-
 // Cloud is the page at /cloud: one card per thing Cloudflare gives the Worker, each used through workers-go's own
-// package, as simply as it can be. The forms are plain posts, answered with a redirect back here.
-component Cloud(s CloudState) {
+// package, as simply as it can be (package cloud, a file each). The forms are plain posts, answered with a redirect back here.
+component Cloud(s cloud.State) {
 	<Layout title={locales.CloudTitle} description={locales.CloudDescription}>
 		<h1 class="text-2xl font-semibold">{ locales.CloudHeading }</h1>
 		<p class="text-muted-foreground">{ locales.CloudIntro }</p>

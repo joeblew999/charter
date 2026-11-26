@@ -12,7 +12,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/joeblew999/charter/follow"
+	"github.com/joeblew999/charter/live"
 )
 
 // Env is what the platform supplies: bindings on Cloudflare (platform_js.go), memory elsewhere
@@ -92,7 +92,7 @@ func (env Env) Recent(ctx context.Context, limit int) ([]Message, error) {
 	return store.Before(ctx, math.MaxInt64, limit)
 }
 
-// Feed is the log and its wake-up together: what charter/follow follows. The store is the log, the
+// Feed is the log and its wake-up together: what charter/live follows. The store is the log, the
 // hub only wakes followers, so a stream loses nothing when the hub does.
 type Feed struct {
 	store Store
@@ -109,8 +109,8 @@ func (f Feed) Latest(ctx context.Context) (int64, error) { return f.store.Latest
 
 // Feed opens the feed and reads the resume position: the newest of the positions given (the page's
 // `after`, and the Last-Event-ID a reconnecting browser sends). None: from now on.
-func (env Env) Feed(positions ...string) (Feed, follow.Options, error) {
-	options := follow.Options{After: follow.Newest(positions...), OnBroken: func(err error) { log.Printf("follow: hub subscription broken, resubscribing: %v", err) }}
+func (env Env) Feed(positions ...string) (Feed, live.Options, error) {
+	options := live.Options{After: live.Newest(positions...), OnBroken: func(err error) { log.Printf("follow: hub subscription broken, resubscribing: %v", err) }}
 	store, err := env.Store()
 	if err != nil {
 		return Feed{}, options, err

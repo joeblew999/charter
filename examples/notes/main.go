@@ -10,7 +10,7 @@ import (
 	"github.com/joeblew999/charter/bindings"
 	"github.com/joeblew999/charter/d1"
 	"github.com/joeblew999/charter/examples/notes/api"
-	"github.com/joeblew999/charter/hub"
+	"github.com/joeblew999/charter/live"
 	"github.com/joeblew999/charter/transport"
 )
 
@@ -26,6 +26,6 @@ func main() {
 			}
 			return api.D1Store{DB: db}, nil
 		},
-		Hub: func() (api.Hub, error) { return hub.DurableObject[api.Note]("HUB", "notes") },
+		Hub: func() (api.Hub, error) { return live.DurableObject[api.Note]("HUB", "notes") },
 	}))
 }

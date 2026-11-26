@@ -10,7 +10,7 @@ import (
 // (gsx's Package renderers guide: generate and publish the package before another module consumes it). So charter's
 // own gsx packages commit their *.x.go, and this fails when one is not what its .gsx generates now.
 func TestGeneratedIsCommitted(t *testing.T) {
-	for _, dir := range []string{"../gsxapp", "../gsxintl", "../gsxseo"} {
+	for _, dir := range []string{"../gsxapp", "../gsxintl"} {
 		gen := exec.Command("go", "tool", "gsx", "generate")
 		gen.Dir = dir
 		gen.Env = append(gen.Environ(), "GOWORK=off")

@@ -15,8 +15,6 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
-
-	"github.com/joeblew999/charter/problem"
 )
 
 func init() {
@@ -155,10 +153,10 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if len(allow) > 0 {
 			slices.Sort(allow)
 			w.Header().Set("Allow", strings.Join(slices.Compact(allow), ", "))
-			problem.Write(w, http.StatusMethodNotAllowed, "method not allowed")
+			WriteProblem(w, http.StatusMethodNotAllowed, "method not allowed")
 			return
 		}
-		problem.Write(w, http.StatusNotFound, "not found")
+		WriteProblem(w, http.StatusNotFound, "not found")
 		return
 	}
 	route := a.routes[best]

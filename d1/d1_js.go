@@ -3,11 +3,13 @@
 package d1
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"syscall/js"
 
 	"github.com/syumai/workers-go/cloudflare"
+	workersd1 "github.com/syumai/workers-go/cloudflare/d1"
 
 	"github.com/joeblew999/charter/internal/promise"
 )
@@ -75,4 +77,15 @@ func Batch(db DB, statements ...Statement) error {
 		return fmt.Errorf("d1: batch: %w", err)
 	}
 	return nil
+}
+
+// SQL is the database bound as name for database/sql, through workers-go's own driver
+// (github.com/syumai/workers-go/cloudflare/d1): for code written the workers-go way. Under go test it is the same
+// SQLite stand-in Open gives, so that code runs there too. The caller closes it.
+func SQL(name string) (*sql.DB, error) {
+	connector, err := workersd1.OpenConnector(name)
+	if err != nil {
+		return nil, fmt.Errorf("d1: %s: %w", name, err)
+	}
+	return sql.OpenDB(connector), nil
 }

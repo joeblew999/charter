@@ -3,7 +3,6 @@ package gsxapp
 import (
 	"github.com/gsxhq/vite"
 	"github.com/joeblew999/charter/gsxintl"
-	"github.com/joeblew999/charter/gsxseo"
 )
 
 // Head is a page's <head>, but its charset and viewport: its title and description as search engines and link
@@ -13,7 +12,7 @@ component Head(title string, description string) {
 	{{ h := headOf(ctx, "") }}
 	<meta charset="utf-8"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
-	<gsxseo.Head
+	<seoHead
 		title={title}
 		description={description}
 		siteName={h.Name}

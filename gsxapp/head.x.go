@@ -7,53 +7,52 @@ import (
 	_gsxrt "github.com/gsxhq/gsx"
 	"github.com/gsxhq/vite"
 	"github.com/joeblew999/charter/gsxintl"
-	"github.com/joeblew999/charter/gsxseo"
 	_gsxio "io"
 )
 
-//line head.gsx:9:1
+//line head.gsx:8:1
 // Head is a page's <head>, but its charset and viewport: its title and description as search engines and link
 // previews read them, its languages (canonical URL, every language's alternate), and the site's own files as Vite
 // built them. title and description are the page's own text, in its language.
 
-//line head.gsx:12:1
+//line head.gsx:11:1
 func Head(title string, description string) _gsxrt.Node {
 	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
 		_gsxgw := _gsxrt.W(_gsxw)
-//line head.gsx:13:2
+//line head.gsx:12:2
 		h := headOf(ctx, "")
-//line head.gsx:14:2
+//line head.gsx:13:2
 		_gsxgw.S("<meta charset=\"utf-8\">")
-//line head.gsx:15:2
+//line head.gsx:14:2
 		_gsxgw.S("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
-//line head.gsx:16:2
-		_gsxgw.Node(ctx, gsxseo.Head( /*line head.gsx:17:10*/ title /*line head.gsx:18:16*/, description /*line head.gsx:19:13*/, h.Name /*line head.gsx:20:9*/, h.Icon /*line head.gsx:21:9*/, h.Home /*line head.gsx:22:9*/, h.Lang))
-//line head.gsx:24:2
-		if /*line head.gsx:24:7*/ h.Languages {
-//line head.gsx:25:3
-			_gsxgw.Node(ctx, gsxintl.Head( /*line head.gsx:25:23*/ h.Page))
+//line head.gsx:15:2
+		_gsxgw.NodeResult(_gsxrenderseoHead(ctx, _gsxgw /*line head.gsx:16:10*/, title /*line head.gsx:17:16*/, description /*line head.gsx:18:13*/, h.Name /*line head.gsx:19:9*/, h.Icon /*line head.gsx:20:9*/, h.Home /*line head.gsx:21:9*/, h.Lang))
+//line head.gsx:23:2
+		if /*line head.gsx:23:7*/ h.Languages {
+//line head.gsx:24:3
+			_gsxgw.Node(ctx, gsxintl.Head( /*line head.gsx:24:23*/ h.Page))
 		}
-//line head.gsx:27:2
-		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:27:18*/, h.Assets))
+//line head.gsx:26:2
+		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:26:18*/, h.Assets))
 		return _gsxgw.Err()
 	})
 }
 
-//line head.gsx:30:1
+//line head.gsx:29:1
 // Entry loads another of Vite's entries (vite.config.ts's input), for the one page that needs it: its stylesheets,
 // the chunks it imports, and its module.
 
-//line head.gsx:32:1
+//line head.gsx:31:1
 func Entry(name string) _gsxrt.Node {
 	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
 		_gsxgw := _gsxrt.W(_gsxw)
-//line head.gsx:33:2
-		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:33:18*/, headOf(ctx, name).Assets))
+//line head.gsx:32:2
+		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:32:18*/, headOf(ctx, name).Assets))
 		return _gsxgw.Err()
 	})
 }
 
-//line head.gsx:36:1
+//line head.gsx:35:1
 func assets(bundle vite.Bundle) _gsxrt.Node {
 	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
 		_gsxgw := _gsxrt.W(_gsxw)
@@ -65,29 +64,29 @@ func _gsxrenderassets(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, bundle vite.Bu
 	if _gsxerr := _gsxgw.Err(); _gsxerr != nil {
 		return _gsxerr
 	}
-//line head.gsx:37:2
-	for /*line head.gsx:37:8*/ _, href := range bundle.CSS {
-//line head.gsx:38:3
+//line head.gsx:36:2
+	for /*line head.gsx:36:8*/ _, href := range bundle.CSS {
+//line head.gsx:37:3
 		_gsxgw.S("<link rel=\"stylesheet\" href=\"")
-		_gsxgw.URL(string( /*line head.gsx:38:32*/ href))
+		_gsxgw.URL(string( /*line head.gsx:37:32*/ href))
 		_gsxgw.S("\"")
 		_gsxgw.Nonce(ctx)
 		_gsxgw.S(">")
 	}
-//line head.gsx:40:2
-	for /*line head.gsx:40:8*/ _, href := range bundle.Preloads {
-//line head.gsx:41:3
+//line head.gsx:39:2
+	for /*line head.gsx:39:8*/ _, href := range bundle.Preloads {
+//line head.gsx:40:3
 		_gsxgw.S("<link rel=\"modulepreload\" href=\"")
-		_gsxgw.URL(string( /*line head.gsx:41:35*/ href))
+		_gsxgw.URL(string( /*line head.gsx:40:35*/ href))
 		_gsxgw.S("\"")
 		_gsxgw.Nonce(ctx)
 		_gsxgw.S(">")
 	}
-//line head.gsx:43:2
-	for /*line head.gsx:43:8*/ _, src := range bundle.JS {
-//line head.gsx:44:3
+//line head.gsx:42:2
+	for /*line head.gsx:42:8*/ _, src := range bundle.JS {
+//line head.gsx:43:3
 		_gsxgw.S("<script type=\"module\" src=\"")
-		_gsxgw.URL(string( /*line head.gsx:44:30*/ src))
+		_gsxgw.URL(string( /*line head.gsx:43:30*/ src))
 		_gsxgw.S("\"")
 		_gsxgw.Nonce(ctx)
 		_gsxgw.S("></script>")
