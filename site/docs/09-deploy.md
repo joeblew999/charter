@@ -19,6 +19,18 @@ That is the D1 migrations, then `wrangler deploy`.
 
 charter runs wrangler under fnox, which it brings itself. The token comes from your keychain or password manager, never from a file. In CI the two variables are the environment's.
 
+## Secrets
+
+The Worker's secrets are named in `.dev.vars.example`, each with a throwaway value for `charter dev`. Their real values are kept in fnox, beside Cloudflare's credentials, each under the Worker's name: `ADMIN_TOKEN` of the Worker `my-app` is `MY_APP_ADMIN_TOKEN`.
+
+```sh
+go tool charter run secrets                         # which the app names, and which fnox has
+go tool charter run secrets:put ADMIN_TOKEN --random   # a new random value: kept in fnox, put on the deployed Worker
+go tool charter run secrets:put MAIL_TO             # the value fnox has, or one piped in
+```
+
+A value is never printed and never on a command line. `go tool charter test --deployed` hands the tests the ones fnox has.
+
 ## After a deploy
 
 ```sh

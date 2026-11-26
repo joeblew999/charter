@@ -115,7 +115,8 @@ type App struct {
 // Seed registers what fills the app's database for a developer: the rows a new checkout starts with (charter run
 // db:seed; charter dev, on a database it has just made). It is written in db/seed.go, a file that is built only for
 // that (//go:build seed), with the app's own typed queries, and runs in a Worker started on this machine, on the
-// real database binding: a seed is never part of a Worker that is deployed.
+// real database binding: a seed is never part of a Worker that is deployed. A deployed database is filled by the
+// same seed, from this machine (charter run db:seed --deployed <worker>): SeedIsDeployed says so.
 //
 //	//go:build seed
 //
@@ -134,6 +135,19 @@ var seeds []seed
 // SeedPath is where charter asks a Worker built with its seed to run it.
 const SeedPath = "/__charter/seed"
 
+// SeedDeployed is the header charter sends when the database the seed fills is a deployed one (charter run
+// db:seed --deployed): the Worker still runs on this machine, with that database for its binding.
+const SeedDeployed = "X-Charter-Seed-Deployed"
+
+type seedDeployed struct{}
+
+// SeedIsDeployed says the seed that is running fills a deployed database, where what a local one may have must
+// not be: a token whose value is written down in the app's code (api.SeedPerson keeps none there).
+func SeedIsDeployed(ctx context.Context) bool {
+	deployed, _ := ctx.Value(seedDeployed{}).(bool)
+	return deployed
+}
+
 // seeded runs the seeds, for a request from this machine.
 func seeded(w http.ResponseWriter, r *http.Request) {
 	// From this machine itself, by its name: the address charter asks at. An address of the network around it is
@@ -143,10 +157,14 @@ func seeded(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "a seed runs for charter, on this machine", http.StatusForbidden)
 		return
 	}
+	ctx := r.Context()
+	if r.Header.Get(SeedDeployed) != "" {
+		ctx = context.WithValue(ctx, seedDeployed{}, true)
+	}
 	for _, s := range seeds {
 		db, err := cloud.Open(s.binding)
 		if err == nil {
-			err = s.fill(r.Context(), db)
+			err = s.fill(ctx, db)
 		}
 		if err != nil {
 			http.Error(w, "the seed failed: "+err.Error(), http.StatusInternalServerError)

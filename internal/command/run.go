@@ -56,7 +56,7 @@ var tasks = []task{
 	{"db:status", "which migrations of db/migrations have run", db("migrations", "list")},
 	{"db:migrate", "the migrations that have not run, applied (charter dev and charter deploy do this themselves; the migrations are written from db/schema.sql by charter check --fix)", db("migrations", "apply")},
 	{"db:execute", "one statement: charter run db:execute \"SELECT count(*) FROM notes\"", dbExecute},
-	{"db:seed", "the local database made again and filled by the app's seed: db/seed.go (Go, the app's own queries) or db/seed.sql", dbSeed},
+	{"db:seed", "the local database made again and filled by the app's seed: seed.go (Go, the app's own types and functions) or db/seed.sql. --deployed: what the deployed one has, and with the Worker's name (--deployed my-worker) every row deleted and the seed's put there", dbSeed},
 	{"db:reset", "the local database made again from db/migrations, and seeded when the app has a seed", dbReset},
 	{"db:export", "the database as SQL: charter run db:export backup.sql", dbExport},
 	// The components (gsxui).
@@ -68,6 +68,8 @@ var tasks = []task{
 	{"logs", "the deployed Worker's live logs, until Ctrl-C (wrangler tail; an environment first: charter run logs staging)", func(p *project.Project, a []string) {
 		check(cloudflare(p, append([]string{"tail"}, envArgs(p, &a)...), a))
 	}},
+	{"secrets", "the secrets the app names (.dev.vars.example), and which fnox has for the deployed Worker", secrets},
+	{"secrets:put", "a secret put on the deployed Worker and kept in fnox: charter run secrets:put ADMIN_TOKEN --random (a new random value), or the value fnox has, or one piped in", secretsPut},
 	{"bench", "how long the Worker takes to answer, on wrangler dev: charter run bench /  /api/hello  (-n requests each)", bench},
 }
 

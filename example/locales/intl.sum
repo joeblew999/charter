@@ -66,6 +66,9 @@ ar home.remove c3812fc4acb8 3054d6b491cc
 ar home.sign_in_to_write 9db14094636b 066774c8fd4c
 ar home.when 56c3507708fc 4746e732aa75
 ar screens.account 7e1b0d5641f2 66dcee1f4616
+ar screens.account_leave 21d5294717e2 c669c4188915
+ar screens.account_leave_confirm 0c3d8950a137 54c8c04d2931
+ar screens.account_leave_intro 2b674e5b4b46 9ba1a26db03e
 ar screens.also_in 5d73b6d757bd 61d515b16a6b
 ar screens.close 7d9eb7acb13e ca90c297b099
 ar screens.docs 7af023c43013 9d66d0084b75
@@ -171,6 +174,9 @@ de home.remove c3812fc4acb8 3828375a2d45
 de home.sign_in_to_write 9db14094636b ff1a3eb990f7
 de home.when 56c3507708fc 3883c5faf5e7
 de screens.account 7e1b0d5641f2 df8525011f61
+de screens.account_leave 21d5294717e2 85fc0961014a
+de screens.account_leave_confirm 0c3d8950a137 00796fc4bdac
+de screens.account_leave_intro 2b674e5b4b46 1cbca3868fcf
 de screens.also_in 5d73b6d757bd fc700d9aa96c
 de screens.close 7d9eb7acb13e b808f6e97075
 de screens.docs 7af023c43013 2a9d508bdc77
@@ -213,5 +219,5 @@ file pages/screens/docs.gsx 27186bc52060
 file pages/screens/language-list.gsx a362660dc34d
 file pages/screens/language-offer.gsx 99b5c5b72cd3
 file pages/screens/preferences.gsx 724682d890df
-file pages/screens/sign-in.gsx d35aa43ef332
+file pages/screens/sign-in.gsx e42976bebb96
 file pages/screens/theme-toggle.gsx 3d8bf9b79d18

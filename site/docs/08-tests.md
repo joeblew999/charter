@@ -70,6 +70,19 @@ The client is the one in `sdk/go`, generated from the contract: the same one ano
 
 A test that only one can answer asks `apptest.Local()`.
 
+## A test leaves the Worker as it found it
+
+The same tests ask the deployed Worker, whose database is real. So a test takes away what it makes:
+
+- **People.** `page.SignUp` deletes the account again when the test is done, on the account page's own form, and with it what the app keeps of that person. A test that signs up by hand calls `page.Leave(path)`.
+- **Rows.** A test that writes through the API takes the row away in `t.Cleanup` (the example's `write` helper).
+
+The example holds itself to this in `test/main_test.go`: a local Worker starts with the seed, and when the tests are done it must have the seed's people and notes and no more, or the run fails and names what was left.
+
+## Secrets a test needs
+
+A test that must be someone asks for a secret of the Worker by name: `apptest.Secret(t, "ADMIN_TOKEN")`. Locally that is the throwaway value in `.dev.vars`. For the deployed Worker, `go tool charter test --deployed` hands the tests each secret fnox has for it (see [deploying](09-deploy.md)); a test whose secret is missing is skipped, and charter says which.
+
 ## What else `charter test` does
 
 The standard test of an API with a contract, and the search-engine audit.

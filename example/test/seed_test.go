@@ -12,12 +12,13 @@ import (
 )
 
 // The Worker under test starts with the seed (api.Seeded): the people and notes a developer's own database starts
-// with, which these tests name by the same values. A deployed Worker has no seed, so they run on a local one only.
+// with, which these tests name by the same values, and are those people by the tokens the seed gives them. A
+// deployed database has none of those tokens, so these run on a local Worker only.
 
 // The seeded people are there, each with their role, and their notes are on the page under their names.
 func TestTheWorkerStartsWithTheSeed(t *testing.T) {
 	if !apptest.Local() {
-		t.Skip("a deployed Worker has no seed")
+		t.Skip("a deployed database has none of the seed's tokens")
 	}
 	// Ada is the seed's admin: her token says who is what.
 	people, err := sdk(t, option.WithToken(api.Seeded.Ada.Token)).People.List(t.Context())
@@ -45,7 +46,7 @@ func TestTheWorkerStartsWithTheSeed(t *testing.T) {
 // away Lin's. The same rule the page and the API are under everywhere else, with no one to sign up first.
 func TestTheSeededPeopleAreWhoTheirRolesSay(t *testing.T) {
 	if !apptest.Local() {
-		t.Skip("a deployed Worker has no seed")
+		t.Skip("a deployed database has none of the seed's tokens")
 	}
 	lin := sdk(t, option.WithToken(api.Seeded.Lin.Token))
 	grace := sdk(t, option.WithToken(api.Seeded.Grace.Token))

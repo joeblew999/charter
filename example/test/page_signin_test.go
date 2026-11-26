@@ -53,6 +53,7 @@ func TestTheAccountPageNeedsSomeoneSignedIn(t *testing.T) {
 	page.Type("#sign-up-name", "Grace")
 	page.Click(`#sign-up button[type=submit]`)
 	page.WaitText("#signed-in", "Grace")
+	page.Leave(at(screens.SignInPage{}))
 	if path := page.Path(); path != at(screens.AccountPage{}) {
 		t.Errorf("after signing in, at %s", path)
 	}
@@ -264,5 +265,25 @@ func TestAnAdminGivesRolesOnThePeoplePage(t *testing.T) {
 	boss.Open(at(screens.AccountPage{}))
 	if boss.Has("#people-link") {
 		t.Error("a moderator is offered the people page")
+	}
+}
+
+// Deleting an account is its person's to do, on their account page, asked twice. With it goes what they wrote:
+// the page no longer has their note, and they are nobody again.
+func TestAnAccountIsDeletedWithWhatItWrote(t *testing.T) {
+	page := apptest.Browser(t)
+	page.SignUp(at(screens.SignInPage{}), "Leaver")
+	page.Open(at(pages.Home{}))
+	body := "left behind at " + time.Now().Format(time.RFC3339Nano)
+	page.Type(el(pages.Home.Form)+` input[name=body]`, body)
+	page.Click(el(pages.Home.Form) + ` button[type=submit]`)
+	page.WaitText(el(pages.Home.List), body)
+
+	page.Open(at(screens.AccountPage{}))
+	page.Click(`#leave summary`)
+	page.Click(`#leave button[type=submit]`)
+	page.WaitText("#sign-in-link", "Sign in")
+	if strings.Contains(apptest.Get(t, at(pages.Home{})), body) {
+		t.Error("the note is still on the page after its writer deleted their account")
 	}
 }

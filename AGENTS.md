@@ -50,7 +50,13 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   proven by calling the Worker (`example/test/sdk`), never only by compiling.
 - **The seed and the tests are one thing.** What fills a developer's database is typed values and a function that
   writes them through the app's own functions; tests call the same function and name the same values. A seed never
-  ships, is compiled before anything is dropped, and is for the local database only.
+  ships and is compiled before anything is dropped. A deployed database is filled by the same seed only when the
+  Worker is named (`charter run db:seed --deployed <worker>`), and never gets a seeded token.
+- **A test leaves the Worker as it found it.** The same tests ask a deployed Worker: whoever a test signs up it
+  deletes (`apptest`'s `SignUp` does), and a row it writes it takes away. The example's `test/main_test.go` fails a
+  run that leaves more than the seed.
+- **A secret is never fetched by hand.** `charter run secrets:put` keeps one in fnox and puts it on the Worker;
+  `charter test --deployed` hands the tests the ones fnox has.
 - **A page uses what it shows, and nothing else.** No page calls every binding to fill cards: each thing
   Cloudflare gives does a job in the app, on a page of its own (`example/built`). A call to another site happens
   when someone asks for it. Times and numbers are kept as such and shown through Intl.

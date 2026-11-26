@@ -64,6 +64,7 @@ func (n *notes) Before(_ context.Context, before int64, limit int) (out []api.No
 }
 
 func (n *notes) Since(context.Context, int64, int) ([]api.Note, error) { return nil, nil }
+func (n *notes) RemoveBy(context.Context, string) error                { return nil }
 func (n *notes) Latest(context.Context) (int64, error)                 { return n.next, nil }
 
 // The home page's data is the newest notes first, and where its stream starts: after the newest.

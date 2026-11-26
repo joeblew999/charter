@@ -15,6 +15,8 @@ type Store interface {
 	Create(ctx context.Context, body, authorID, author string) (Note, error)
 	// Remove takes a note away.
 	Remove(ctx context.Context, id int64) error
+	// RemoveBy takes away everything someone wrote: what goes with their account.
+	RemoveBy(ctx context.Context, authorID string) error
 	// Get is the note with that id.
 	Get(ctx context.Context, id int64) (Note, error)
 	// Before is the notes with an id below before, newest first, at most limit.
@@ -44,8 +46,21 @@ func (s d1) Create(_ context.Context, body, authorID, author string) (Note, erro
 	return Note{row}, err
 }
 
+// Remove takes the note away, and with it what the activity page recorded of it.
 func (s d1) Remove(_ context.Context, id int64) error {
-	_, err := db.RemoveNote(s.db, id)
+	if _, err := db.RemoveNote(s.db, id); err != nil {
+		return err
+	}
+	return db.ForgetNote(s.db, id)
+}
+
+func (s d1) RemoveBy(_ context.Context, authorID string) error {
+	gone, err := db.RemoveNotesBy(s.db, authorID)
+	for _, note := range gone {
+		if err == nil {
+			err = db.ForgetNote(s.db, note.ID)
+		}
+	}
 	return err
 }
 

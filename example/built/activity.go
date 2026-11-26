@@ -29,6 +29,7 @@ import (
 // the consumer of email. And it has each note written told to the queue. main calls it before it serves.
 func Background() {
 	api.OnPost = queue
+	api.OnLeave = forget
 	queues.ConsumeNonBlock(consume)
 	cron.ScheduleTaskNonBlock(summarise)
 	onEmail()
@@ -69,6 +70,11 @@ func consume(batch *queues.MessageBatch) error {
 		var note written
 		if err := json.Unmarshal([]byte(body), &note); err != nil {
 			m.Ack() // not one of ours: it would never become one
+			continue
+		}
+		// A note that was taken away before the queue got to it leaves nothing to record.
+		if _, err := db.Note(conn, note.Note); err != nil {
+			m.Ack()
 			continue
 		}
 		if err := Record(context.Background(), conn, NoteWritten, note.Note, note.Author, 0); err != nil {

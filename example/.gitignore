@@ -21,3 +21,5 @@
 
 .DS_Store
 .playwright-mcp/
+# charter run db:seed --deployed writes this for the moment it runs.
+wrangler.charter-seed.json

@@ -11,7 +11,6 @@ import (
 
 	"github.com/joeblew999/charter/app/apptest"
 	"github.com/joeblew999/charter/example/pages"
-	notes "github.com/joeblew999/charter/example/sdk/go"
 	"github.com/joeblew999/charter/example/sdk/go/option"
 )
 
@@ -117,9 +116,7 @@ func TestActivityFollowsTheQueueLive(t *testing.T) {
 	page := apptest.Browser(t)
 	page.Open(at(pages.ActivityPage{}))
 	writer := sdk(t, option.WithToken(apptest.Secret(t, "WRITE_TOKEN")))
-	if _, err := writer.Notes.Create(t.Context(), &notes.CreateNotesRequest{Body: "for the activity page"}); err != nil {
-		t.Fatal(err)
-	}
+	write(t, writer, "for the activity page")
 	page.WaitText(el(pages.ActivityPage.Row)+` li:first-child`, "wrote a note")
 }
 

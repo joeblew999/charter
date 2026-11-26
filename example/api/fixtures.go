@@ -13,8 +13,9 @@ import (
 // same people.
 //
 // Each person has a token, so that a developer, a test or an agent can be the admin, the moderator or the member
-// at once: Authorization: Bearer ch_seed_grace. The seed is built only for seeding and runs only on this machine;
-// a deployed Worker has neither these people nor their tokens.
+// at once: Authorization: Bearer ch_seed_grace. The seed is built only for seeding and runs only on this machine.
+// A deployed database filled by it (go tool charter run db:seed --deployed) has the people and their notes, and
+// none of the tokens: their values are written here, for anyone to read.
 var Seeded = struct {
 	Ada, Grace, Lin SeededPerson
 	Notes           []SeededNote

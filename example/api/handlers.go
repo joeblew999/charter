@@ -42,6 +42,26 @@ func Post(ctx context.Context, store Store, by charter.Caller, body string) (Not
 // for the activity page). nil: nothing.
 var OnPost func(ctx context.Context, note Note)
 
+// Leaving is what goes with someone's account when they delete it (the account page): the notes they wrote, and
+// whatever else the app keeps of theirs (OnLeave). The app's People are told to do this first.
+func Leaving(ctx context.Context, who charter.Person) error {
+	store, err := open()
+	if err != nil {
+		return err
+	}
+	if err := store.RemoveBy(ctx, who.ID); err != nil {
+		return err
+	}
+	if OnLeave != nil {
+		return OnLeave(ctx, who)
+	}
+	return nil
+}
+
+// OnLeave is told of someone deleting their account, after their notes are gone: what else of theirs the app
+// keeps (package built takes away the files they attached). nil: nothing.
+var OnLeave func(ctx context.Context, who charter.Person) error
+
 // MayRemove is the rule for taking a note away, said once: whoever wrote it may, and so may whoever may moderate.
 // The page asks it to show the button, the page's route and the API's deleteNote ask it before they act.
 func MayRemove(who charter.Caller, note Note) bool {
@@ -81,7 +101,7 @@ var Roles = map[string][]string{
 //
 // An unset secret or setting trusts no one.
 var Trusted = []charter.Trusted{
-	charter.People{Name: "Notes", Accounts: charter.D1Accounts("DB"), Roles: Roles, Role: "member"},
+	charter.People{Name: "Notes", Accounts: charter.D1Accounts("DB"), Roles: Roles, Role: "member", Leaving: Leaving},
 	charter.Token{Secret: "ADMIN_TOKEN", Scopes: Roles["admin"]},
 	charter.Token{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}},
 	charter.Token{Secret: "READ_TOKEN", Scopes: []string{"read"}},

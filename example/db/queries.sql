@@ -8,6 +8,10 @@ INSERT INTO notes (body, author_id, author) VALUES (?, ?, ?) RETURNING *;
 -- RemoveNote takes a note away, and says which it was.
 DELETE FROM notes WHERE id = ? RETURNING *;
 
+-- name: RemoveNotesBy :many
+-- RemoveNotesBy takes away everything someone wrote, and says which notes those were.
+DELETE FROM notes WHERE author_id = ? RETURNING *;
+
 -- name: Note :one
 -- Note is one note, by its id.
 SELECT * FROM notes WHERE id = ?;
@@ -39,6 +43,10 @@ SELECT CAST(COUNT(*) AS INTEGER) AS notes FROM notes WHERE created_at > ?;
 -- name: RecordActivity :one
 INSERT INTO activity (kind, note_id, author, notes) VALUES (?, ?, ?, ?) RETURNING *;
 
+-- name: ForgetNote :exec
+-- ForgetNote takes away what was recorded of a note: it goes with the note.
+DELETE FROM activity WHERE note_id = ?;
+
 -- name: ActivityBefore :many
 -- ActivityBefore is what happened before a position, newest first.
 SELECT * FROM activity WHERE id < ? ORDER BY id DESC LIMIT ?;
@@ -56,6 +64,10 @@ INSERT INTO attachments (object, name, type, size, note_id, author_id, author) V
 -- name: Attachments :many
 -- Attachments is the files attached, newest first.
 SELECT * FROM attachments ORDER BY id DESC LIMIT ?;
+
+-- name: AttachmentsBy :many
+-- AttachmentsBy is the files someone attached.
+SELECT * FROM attachments WHERE author_id = ?;
 
 -- name: Attachment :one
 SELECT * FROM attachments WHERE id = ?;

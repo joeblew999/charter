@@ -127,6 +127,13 @@ func try(p *project.Project, commands []string, base string) error {
 			return err
 		}
 	}
+	env := map[string]string{"BASE": base, "TARGET": target(base)}
+	if target(base) == "deployed" {
+		// The deployed Worker's secrets, which a test needs to be who may do what (apptest.Secret): from fnox.
+		for name, value := range deployedSecrets(p) {
+			env[name] = value
+		}
+	}
 	for _, line := range commands {
 		words := strings.Fields(strings.ReplaceAll(line, "{base}", base))
 		if len(words) == 0 {
@@ -135,7 +142,7 @@ func try(p *project.Project, commands []string, base string) error {
 		if words[0] == "charter" {
 			words[0] = self()
 		}
-		if err := run.Run(p.Root, map[string]string{"BASE": base, "TARGET": target(base)}, words[0], words[1:]...); err != nil {
+		if err := run.Run(p.Root, env, words[0], words[1:]...); err != nil {
 			return err
 		}
 	}
@@ -171,6 +178,10 @@ type served struct {
 	ip    string            // another address of the machine than its name
 	env   map[string]string // more of the environment wrangler dev and its build get
 	local bool              // on the app's own local state (its database as charter dev has it), not a new one
+	// config is another file than wrangler.jsonc for wrangler dev to read, beside it; cloudflare says the Worker
+	// talks to Cloudflare (a binding of that file is the deployed one), so wrangler gets the credentials.
+	config     string
+	cloudflare bool
 }
 
 func servingWith(p *project.Project, how served, body func(base string, port int) error) error {
@@ -189,6 +200,17 @@ func servingWith(p *project.Project, how served, body func(base string, port int
 	// By name, not by number: a passkey belongs to a host name, and a page with sign-in is tested at one.
 	base := "http://localhost:" + strconv.Itoa(ports[0])
 	command := []string{bin, "dev", "--port", strconv.Itoa(ports[0]), "--inspector-port", strconv.Itoa(ports[1]), "--show-interactive-dev-session=false", "--test-scheduled"}
+	if how.config != "" {
+		command = append(command, "--config", how.config)
+	}
+	// What talks to Cloudflare (a binding that is the deployed one) has its credentials, as charter deploy does.
+	if how.cloudflare && os.Getenv("CLOUDFLARE_API_TOKEN") == "" {
+		fnox, err := credentials(p)
+		if err != nil {
+			return err
+		}
+		command = append([]string{fnox, "exec", "--"}, command...)
+	}
 	if !how.local {
 		// A database of its own, made new and thrown away: what is asked changes nothing a developer has.
 		state, err := os.MkdirTemp("", "charter-state-")

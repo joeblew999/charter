@@ -101,6 +101,31 @@ func Detach(_ context.Context, by charter.Caller, id int64) error {
 	return err
 }
 
+// forget takes away the files someone attached, from the bucket and from the table: what goes with their account.
+func forget(_ context.Context, who charter.Person) error {
+	conn, err := cloud.Open("DB")
+	if err != nil {
+		return err
+	}
+	rows, err := db.AttachmentsBy(conn, who.ID)
+	if err != nil || len(rows) == 0 {
+		return err
+	}
+	bucket, err := r2.NewBucket("BUCKET")
+	if err != nil {
+		return err
+	}
+	for _, row := range rows {
+		if err := bucket.Delete(row.Object); err != nil {
+			return err
+		}
+		if _, err := db.RemoveAttachment(conn, row.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // NotesBy are someone's own notes, newest first: what they may attach a file to.
 func NotesBy(_ context.Context, who charter.Caller) ([]db.NotesRow, error) {
 	if who.Subject == "" {

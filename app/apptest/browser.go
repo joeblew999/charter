@@ -78,10 +78,77 @@ func (p *Page) SignUp(signIn, name string) {
 	}
 	for start := time.Now(); time.Since(start) < wait; time.Sleep(50 * time.Millisecond) {
 		if at, ok := p.try(`location.pathname`); ok && !strings.HasSuffix(strings.TrimSuffix(at, "/"), strings.TrimSuffix(signIn, "/")) {
+			// Whoever a test makes, it takes away again: the Worker it asks, a deployed one too, is left as it was.
+			p.t.Cleanup(func() { p.leave(signIn, name) })
 			return
 		}
 	}
 	p.t.Fatalf("signing up as %s never left the sign-in page; it says: %s", name, p.Text("#sign-in-error"))
+}
+
+// Leave deletes the account the tab is signed up with when the test is done, for a test that signed up by hand
+// (SignUp does this itself).
+func (p *Page) Leave(signIn string) {
+	p.t.Cleanup(func() { p.leave(signIn, "by hand") })
+}
+
+// leave deletes the account the tab signed up with, on the account page's own form (the sign-in screen's), signing
+// in again first when the test signed out. With the account goes what the app keeps of that person.
+func (p *Page) leave(signIn, name string) {
+	ask := func(expression string) string { v, _ := p.try(expression); return v }
+	open := func(address string) bool {
+		ctx, cancel := context.WithTimeout(p.ctx, wait)
+		defer cancel()
+		_, err := chromedp.Run(ctx, chromedp.Navigate(address))
+		return err == nil
+	}
+	loaded := func(selector string) bool {
+		for start := time.Now(); time.Since(start) < wait; time.Sleep(50 * time.Millisecond) {
+			if ask(fmt.Sprintf(`String(!!document.querySelector(%q) && document.readyState === "complete")`, selector)) == "true" {
+				return true
+			}
+		}
+		return false
+	}
+	failed := func(why string) { p.t.Errorf("the account made for this test (%s) was not deleted: %s", name, why) }
+	if !open(Base(p.t)+signIn) || !loaded("#signed-in, #sign-in-passkey") {
+		failed("the sign-in page did not open")
+		return
+	}
+	if ask(`String(!!document.querySelector("#signed-in"))`) != "true" {
+		ctx, cancel := context.WithTimeout(p.ctx, wait)
+		err := chromedp.Do(ctx, chromedp.Click(`#sign-in-passkey`))
+		cancel()
+		// Signed in, it leaves the sign-in page. Refused, the page says so: the test deleted the account itself,
+		// and there is nothing left to take away.
+		for start := time.Now(); err == nil; time.Sleep(50 * time.Millisecond) {
+			if at := ask(`location.pathname`); at != "" && !strings.HasSuffix(strings.TrimSuffix(at, "/"), strings.TrimSuffix(signIn, "/")) {
+				break
+			}
+			if strings.TrimSpace(ask(`document.querySelector("#sign-in-error")?.textContent ?? ""`)) != "" {
+				return
+			}
+			if time.Since(start) > wait {
+				err = context.DeadlineExceeded
+			}
+		}
+		if err != nil || !open(Base(p.t)+signIn) || !loaded("#signed-in") {
+			failed("it could not sign in again")
+			return
+		}
+	}
+	account := ask(`document.querySelector("#account").href`)
+	if account == "" || !open(account) || !loaded("#leave form") {
+		failed("its account page has no way to delete it")
+		return
+	}
+	ask(`document.querySelector("#leave form").submit(), ""`)
+	for start := time.Now(); time.Since(start) < wait; time.Sleep(50 * time.Millisecond) {
+		if ask(`String(!document.querySelector("#leave") && document.readyState === "complete")`) == "true" {
+			return
+		}
+	}
+	failed("the form did not answer")
 }
 
 // SignIn signs in on the sign-in screen with the passkey the tab's authenticator has (after SignUp and signing

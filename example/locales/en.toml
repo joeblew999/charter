@@ -163,3 +163,7 @@ token_revoke = "Revoke"
 people = "People"
 role = "Role"
 people_intro = "Everyone who signed up, and what each may do."
+# Deleting the account: the line that opens it, what goes, and the button that does it.
+account_leave = "Delete my account"
+account_leave_intro = "This deletes your account, your passkeys and tokens, and what you wrote here. It cannot be undone."
+account_leave_confirm = "Yes, delete it"

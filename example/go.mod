@@ -7,7 +7,7 @@ require (
 	github.com/gsxhq/gsx v0.5.0
 	github.com/jackielii/structpages v0.12.0
 	github.com/jackielii/tailwind-merge-go v0.0.0-20260726184505-8a911ed0cf9a
-	github.com/joeblew999/charter v0.24.0
+	github.com/joeblew999/charter v0.44.1
 	github.com/joeblew999/charter/example/sdk/go v0.0.0
 	github.com/syumai/workers-go v0.36.0
 )

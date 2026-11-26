@@ -101,7 +101,12 @@ component (p SignInPage) Page(v SignInView) {
 					<ui.CardContent class="flex flex-col gap-4">
 						{ if v.Caller.SignedIn() {
 							<p id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</p>
-							<SignOutForm/>
+							<div class="flex flex-wrap gap-2">
+								<ui.Button variant="outline" size="sm" href={AccountPage{} |> url} id="account">
+									{ locales.ScreensAccount }
+								</ui.Button>
+								<SignOutForm/>
+							</div>
 						} else {
 							<div
 								id="sign-in"
@@ -207,10 +212,11 @@ component AccountLink(attrs gsx.Attrs) {
 // Account is what is someone's own: who they are, signing out, and the tokens they make for their programs. Its
 // Needs is why no one else gets here: whoever is not signed in is sent to sign in first.
 type Account struct {
-	page   AccountPage `route:"GET /{$} Account"`
-	create TokenCreate `route:"POST /tokens TokenCreate"`
-	revoke TokenRevoke `route:"POST /tokens/{token}/revoke TokenRevoke"`
-	people People      `route:"/people People"`
+	page   AccountPage  `route:"GET /{$} Account"`
+	create TokenCreate  `route:"POST /tokens TokenCreate"`
+	revoke TokenRevoke  `route:"POST /tokens/{token}/revoke TokenRevoke"`
+	leave  AccountLeave `route:"POST /leave AccountLeave"`
+	people People       `route:"/people People"`
 }
 
 // Needs is what every route here needs: someone signed in.
@@ -269,6 +275,17 @@ func (TokenRevoke) ServeHTTP(w http.ResponseWriter, r *http.Request, caller api.
 	return structpages.RenderComponent(AccountPage{}.Tokens(AccountView{Caller: caller, Tokens: tokens}))
 }
 
+// AccountLeave deletes the account of whoever is signed in, with what the app keeps of theirs, and goes to the
+// front page: a plain form's target.
+type AccountLeave struct{}
+
+func (AccountLeave) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) error {
+	if err := auth.Leave(w, r); err != nil {
+		return err
+	}
+	return app.Redirect{To: intl.URL(r.Context(), "/")}
+}
+
 component (p AccountPage) Page(v AccountView) {
 	<!DOCTYPE html>
 	<html { app.HTML(ctx)... }>
@@ -304,6 +321,14 @@ component (p AccountPage) Page(v AccountView) {
 					</ui.CardContent>
 				</ui.Card>
 				<p.Tokens v={v}/>
+				// Leaving: asked twice, the second time with what goes.
+				<details id="leave" class="rounded-md border px-3 py-2 text-sm">
+					<summary class="cursor-pointer text-muted-foreground">{ locales.ScreensAccountLeave }</summary>
+					<form method="post" action={AccountLeave{} |> url} class="flex flex-col items-start gap-3 pt-3">
+						<p>{ locales.ScreensAccountLeaveIntro }</p>
+						<ui.Button type="submit" variant="destructive" size="sm">{ locales.ScreensAccountLeaveConfirm }</ui.Button>
+					</form>
+				</details>
 			</main>
 		</body>
 	</html>

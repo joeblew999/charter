@@ -86,6 +86,15 @@ func (m *fakeAccounts) Revoke(_ context.Context, userID string, id int64, hash s
 	}
 	return nil
 }
+func (m *fakeAccounts) Remove(_ context.Context, id string) error {
+	delete(m.people, id)
+	for h, t := range m.tokens {
+		if t.user == id {
+			delete(m.tokens, h)
+		}
+	}
+	return nil
+}
 func (m *fakeAccounts) Begin(context.Context, string, string, time.Time) error { return nil }
 func (m *fakeAccounts) Take(context.Context, string) (string, error)           { return "", ErrNoAccount }
 
@@ -172,4 +181,43 @@ func httptestWith(session string) *http.Request {
 	r := httptest.NewRequest("GET", "/", nil)
 	r.AddCookie(&http.Cookie{Name: SessionCookie, Value: session})
 	return r
+}
+
+// An account is deleted by its person, signed in: what the app keeps of theirs goes first (Leaving), then they do,
+// with their session and the tokens they made. A program with one of their tokens may not.
+func TestLeavingTakesTheAccountAndWhatIsTheirs(t *testing.T) {
+	accounts := newFakeAccounts()
+	ada := Person{ID: "u1", Name: "Ada", Role: "member"}
+	accounts.Create(t.Context(), ada)
+	var left []string
+	auth := NewAuth(nil, People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil },
+		Roles: map[string][]string{"member": {"read", "write"}}, Role: "member",
+		Leaving: func(_ context.Context, who Person) error { left = append(left, who.ID); return nil }})
+	session, hash := newToken()
+	accounts.Issue(t.Context(), ada.ID, SessionScheme, "", hash, nil, time.Time{})
+	made, err := auth.NewToken(httptestWith(session), "a script")
+	if err != nil {
+		t.Fatal(err)
+	}
+	program := httptest.NewRequest("POST", "/", nil)
+	program.Header.Set("Authorization", "Bearer "+made)
+	if err := auth.Leave(httptest.NewRecorder(), program); err == nil || len(left) != 0 {
+		t.Fatalf("a program deleted its person's account: %v, %v", err, left)
+	}
+	w := httptest.NewRecorder()
+	if err := auth.Leave(w, httptestWith(session)); err != nil {
+		t.Fatal(err)
+	}
+	if len(left) != 1 || left[0] != ada.ID {
+		t.Errorf("the app was told of %v leaving, want %s", left, ada.ID)
+	}
+	if c, _ := auth.Caller(httptestWith(session)); c.SignedIn() {
+		t.Errorf("the session of a deleted account is still %+v", c)
+	}
+	if c, _ := auth.Caller(program); c.SignedIn() {
+		t.Errorf("the token of a deleted account is still %+v", c)
+	}
+	if cookie := w.Result().Cookies(); len(cookie) != 1 || cookie[0].MaxAge >= 0 {
+		t.Errorf("the session's cookie was not taken back: %v", cookie)
+	}
 }

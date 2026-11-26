@@ -72,6 +72,13 @@ func RemoveNote(db cloud.DB, id int64) (NotesRow, error) {
 	return cloud.One[NotesRow](db, qRemoveNote, id)
 }
 
+const qRemoveNotesBy = "DELETE FROM notes WHERE author_id = ? RETURNING id, body, author_id, author, created_at"
+
+// RemoveNotesBy takes away everything someone wrote, and says which notes those were.
+func RemoveNotesBy(db cloud.DB, authorID string) ([]NotesRow, error) {
+	return cloud.Query[NotesRow](db, qRemoveNotesBy, authorID)
+}
+
 const qNote = "SELECT id, body, author_id, author, created_at FROM notes WHERE id = ?"
 
 // Note is one note, by its id.
@@ -130,6 +137,13 @@ func RecordActivity(db cloud.DB, kind string, noteID int64, author string, notes
 	return cloud.One[ActivityRow](db, qRecordActivity, kind, noteID, author, notes)
 }
 
+const qForgetNote = "DELETE FROM activity WHERE note_id = ?"
+
+// ForgetNote takes away what was recorded of a note: it goes with the note.
+func ForgetNote(db cloud.DB, noteID int64) error {
+	return cloud.Exec(db, qForgetNote, noteID)
+}
+
 const qActivityBefore = "SELECT id, kind, note_id, author, notes, created_at FROM activity WHERE id < ? ORDER BY id DESC LIMIT ?"
 
 // ActivityBefore is what happened before a position, newest first.
@@ -164,6 +178,13 @@ const qAttachments = "SELECT id, object, name, type, size, note_id, author_id, a
 // Attachments is the files attached, newest first.
 func Attachments(db cloud.DB, limit int64) ([]AttachmentsRow, error) {
 	return cloud.Query[AttachmentsRow](db, qAttachments, limit)
+}
+
+const qAttachmentsBy = "SELECT id, object, name, type, size, note_id, author_id, author, created_at FROM attachments WHERE author_id = ?"
+
+// AttachmentsBy is the files someone attached.
+func AttachmentsBy(db cloud.DB, authorID string) ([]AttachmentsRow, error) {
+	return cloud.Query[AttachmentsRow](db, qAttachmentsBy, authorID)
 }
 
 const qAttachment = "SELECT id, object, name, type, size, note_id, author_id, author, created_at FROM attachments WHERE id = ?"

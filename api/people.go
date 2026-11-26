@@ -43,6 +43,9 @@ type People struct {
 	// Manage is the scope that lets someone see everyone and change their roles (Auth.Everyone, Auth.SetRole).
 	// Empty: "admin".
 	Manage string
+	// Leaving is what the app does when someone deletes their account (Auth.Leave), before the account goes: its
+	// own rows that are theirs, such as what they wrote. An error keeps the account.
+	Leaving func(ctx context.Context, who Person) error
 }
 
 // scopes are what a role may do; a role that is no longer one of them is the one new people get.
@@ -112,6 +115,8 @@ type Accounts interface {
 	Create(ctx context.Context, p Person) error
 	Everyone(ctx context.Context) ([]Person, error)
 	SetRole(ctx context.Context, id, role string) error
+	// Remove takes a user away, with their passkeys, sessions and tokens.
+	Remove(ctx context.Context, id string) error
 	// Passkeys are a user's passkeys, each as it was kept; AddPasskey keeps one, and again when it was used.
 	Passkeys(ctx context.Context, userID string) ([]string, error)
 	AddPasskey(ctx context.Context, userID, id, credential string) error
@@ -299,13 +304,14 @@ func AccountsOn(db cloud.DB) Accounts { return d1Accounts{db} }
 
 // SeedPerson keeps a person for an app's seed, and, when token is not empty, a token that is them: a value the seed
 // names, so that a developer, a test and an agent can be that person on a database they have just seeded. A token
-// starts with "ch_", as every token the app issues does. This is for a seed, which no deployed Worker has: a token
-// whose value is written down is no secret.
+// starts with "ch_", as every token the app issues does. A token whose value is written down is no secret, so it
+// is kept on a local database only: a seed that fills a deployed one (charter run db:seed --deployed) keeps the
+// person and no token, whatever it is handed.
 func SeedPerson(ctx context.Context, accounts Accounts, who Person, token string) error {
 	if err := accounts.Create(ctx, who); err != nil {
 		return err
 	}
-	if token == "" {
+	if token == "" || app.SeedIsDeployed(ctx) {
 		return nil
 	}
 	if !strings.HasPrefix(token, tokenPrefix) {
@@ -365,6 +371,14 @@ func (a d1Accounts) SetRole(_ context.Context, id, role string) error {
 		return ErrNoAccount
 	}
 	return err
+}
+
+func (a d1Accounts) Remove(_ context.Context, id string) error {
+	// One batch: all of it goes, or none.
+	return cloud.Batch(a.db,
+		cloud.Statement{Query: "DELETE FROM tokens WHERE user_id = ?", Args: []any{id}},
+		cloud.Statement{Query: "DELETE FROM passkeys WHERE user_id = ?", Args: []any{id}},
+		cloud.Statement{Query: "DELETE FROM users WHERE id = ?", Args: []any{id}})
 }
 
 func (a d1Accounts) Passkeys(_ context.Context, userID string) ([]string, error) {

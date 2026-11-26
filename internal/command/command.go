@@ -148,6 +148,23 @@ func cloudflareQuietly(p *project.Project, words ...string) error {
 	return err
 }
 
+// cloudflareOutput is cloudflare for an answer that is read: nothing is shown, and what wrangler said is returned.
+func cloudflareOutput(p *project.Project, words ...string) (string, error) {
+	bin, err := npm(p, "wrangler")
+	if err != nil {
+		return "", err
+	}
+	quiet := map[string]string{"WRANGLER_SEND_METRICS": "false", "CI": "1"}
+	if os.Getenv("CLOUDFLARE_API_TOKEN") == "" {
+		fnox, err := credentials(p)
+		if err != nil {
+			return "", err
+		}
+		return run.Output(p.Root, quiet, fnox, append([]string{"exec", "--", bin}, words...)...)
+	}
+	return run.Output(p.Root, quiet, bin, words...)
+}
+
 // cloudflareTo is cloudflare, with wrangler's output also written to copy.
 func cloudflareTo(copy io.Writer, p *project.Project, words, rest []string) error {
 	bin, err := npm(p, "wrangler")

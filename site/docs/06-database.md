@@ -126,8 +126,9 @@ A seed is what a new checkout's database starts with. In charter it is also what
 // same people.
 //
 // Each person has a token, so that a developer, a test or an agent can be the admin, the moderator or the member
-// at once: Authorization: Bearer ch_seed_grace. The seed is built only for seeding and runs only on this machine;
-// a deployed Worker has neither these people nor their tokens.
+// at once: Authorization: Bearer ch_seed_grace. The seed is built only for seeding and runs only on this machine.
+// A deployed database filled by it (go tool charter run db:seed --deployed) has the people and their notes, and
+// none of the tokens: their values are written here, for anyone to read.
 var Seeded = struct {
 	Ada, Grace, Lin SeededPerson
 	Notes           []SeededNote
@@ -192,6 +193,7 @@ go tool charter run db:seed
 | `charter dev`, the first time | The database it has just made is filled; one that is there is yours, and is left alone |
 | `charter test` | The Worker under test starts on a database of its own, filled the same way |
 | A test of a page, as plain Go | Calls `api.Seed` on its own store: the same people and notes, in memory |
+| `charter run db:seed --deployed my-worker` | Every row of the deployed database is deleted, and the seed's put there |
 
 So a page test, a browser test and your own screen show the same notes by the same people.
 
@@ -209,6 +211,19 @@ What keeps this safe:
 - **It runs where the app's database code always runs:** in a Worker charter starts here, on the real binding. Beside a running `charter dev` it works in place, with no restart.
 
 `db/seed.sql` works too, for plain SQL, in place of `seed.go`.
+
+### A deployed database
+
+A demo, or a staging environment, shows the seed's data too. The same seed fills it:
+
+```sh
+go tool charter run db:seed --deployed             # what the deployed database has, table by table; changes nothing
+go tool charter run db:seed --deployed my-worker   # every row deleted, then the seed's rows
+```
+
+It deletes everything, so it is asked for twice: the second time with the Worker's name. The tables stay as the migrations made them, and the deployed Worker keeps answering.
+
+The seed still runs on your machine: a Worker started here, built with the seed, whose database binding is the deployed database. The deployed Worker never has the seed in it. What is safe only locally stays out: `api.SeedPerson` keeps the person and no token, because a token whose value is in your code is no secret. `app.SeedIsDeployed(ctx)` tells your own seed the same.
 
 ## By hand
 

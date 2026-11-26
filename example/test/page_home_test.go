@@ -8,7 +8,6 @@ import (
 	"github.com/joeblew999/charter/app/apptest"
 	"github.com/joeblew999/charter/example/pages"
 	"github.com/joeblew999/charter/example/pages/screens"
-	notes "github.com/joeblew999/charter/example/sdk/go"
 	"github.com/joeblew999/charter/example/sdk/go/option"
 )
 
@@ -38,9 +37,7 @@ func TestAnAPINoteShowsOnTheOpenPage(t *testing.T) {
 	home.Open("/")
 	body := "from the SDK at " + time.Now().Format(time.RFC3339Nano)
 	writer := sdk(t, option.WithToken(apptest.Secret(t, "WRITE_TOKEN")))
-	if _, err := writer.Notes.Create(t.Context(), &notes.CreateNotesRequest{Body: body}); err != nil {
-		t.Fatal(err)
-	}
+	write(t, writer, body)
 	home.WaitText(el(pages.Home.List), body)
 }
 

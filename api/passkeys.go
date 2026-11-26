@@ -243,6 +243,27 @@ func (a *Auth) SignOut(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// Leave deletes the account of the person signed in: what the app keeps of theirs (People's Leaving), then the
+// person, their passkeys, sessions and tokens. It is theirs to do and no one else's: a program with one of their
+// tokens may not, only they on a page.
+func (a *Auth) Leave(w http.ResponseWriter, r *http.Request) error {
+	who, accounts, err := a.signedIn(r)
+	if err != nil {
+		return err
+	}
+	person := Person{ID: who.Subject, Name: who.Person, Role: who.Role}
+	if a.people.Leaving != nil {
+		if err := a.people.Leaving(r.Context(), person); err != nil {
+			return err
+		}
+	}
+	if err := accounts.Remove(r.Context(), person.ID); err != nil {
+		return err
+	}
+	http.SetCookie(w, &http.Cookie{Name: SessionCookie, Path: "/", MaxAge: -1})
+	return nil
+}
+
 // NewToken makes a token for a program of the person signed in, with a name to know it by and the scopes it may
 // use: theirs, or fewer. The token is returned once and never kept; a program sends it as Authorization: Bearer.
 func (a *Auth) NewToken(r *http.Request, name string, scopes ...string) (string, error) {

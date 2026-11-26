@@ -139,6 +139,14 @@ RequestArgs: []any{api.OpenStore, api.Auth.Caller},
 
 Someone signed in has a session: a token the app issued, kept by their browser as a cookie that scripts cannot read. On their account page they make tokens for their programs, each with a name; a token is shown once, and the database keeps only its SHA-256. A program sends one as `Authorization: Bearer`, and is that person.
 
+At the foot of the account page someone can delete their account: asked twice, the second time with what goes. Their passkeys, sessions and tokens go with it, and so does what your app keeps of theirs, which you say once:
+
+```go
+charter.People{…, Leaving: func(ctx context.Context, who charter.Person) error { … }}
+```
+
+The example takes away the notes they wrote, what the activity page recorded of those, and the files they attached. Only the person can do this, signed in on the page: a program with one of their tokens cannot.
+
 A passkey belongs to a host name. Under `charter dev` that is `localhost`; an IP address has none.
 
 ## Testing it
