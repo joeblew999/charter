@@ -1,6 +1,8 @@
 package command
 
 import (
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/joeblew999/charter/internal/command/intl"
@@ -9,6 +11,7 @@ import (
 	"github.com/joeblew999/charter/internal/run"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -60,9 +63,7 @@ var tasks = []task{
 	{"ui:list", "the components charter add ui:<name> accepts", func(p *project.Project, a []string) {
 		check(run.Run(p.Root, nil, "go", append([]string{"tool", "gsxui", "list"}, a...)...))
 	}},
-	{"ui:theme", "the app's style and theme switched to a preset: charter run ui:theme <preset>", func(p *project.Project, a []string) {
-		check(run.Run(p.Root, nil, "go", append([]string{"tool", "gsxui", "apply"}, a...)...))
-	}},
+	{"ui:theme", "the app's style and theme (gsxui's presets): charter run ui:theme shows it; charter run ui:theme <preset> switches to a file, a share code from https://ui.gsxhq.dev/theme, or a URL (--only theme|style)", uiTheme},
 	// The Worker.
 	{"logs", "the deployed Worker's live logs, until Ctrl-C (wrangler tail; an environment first: charter run logs staging)", func(p *project.Project, a []string) {
 		check(cloudflare(p, append([]string{"tail"}, envArgs(p, &a)...), a))
@@ -173,3 +174,41 @@ var generated = []string{"build", "dist", ".wrangler", ".charter", filepath.Join
 
 // modulePath is how a Go module path looks beside an npm package name: a host with a dot, then a path.
 var modulePath = regexp.MustCompile(`^[a-z0-9.-]+\.[a-z]+/`)
+
+// uiTheme is charter run ui:theme: gsxui's own apply, which writes gsxui.preset.json and web/gsxui/theme.css and, for
+// another style, vendors every component again in it. With no preset it says what the app has and where one is
+// made. The pages follow at once under charter dev; the theme-toggle screen switches between its light and dark.
+func uiTheme(p *project.Project, a []string) {
+	var preset string
+	var flags []string
+	for i := 0; i < len(a); i++ {
+		switch {
+		case a[i] == "--only" || a[i] == "-only" || a[i] == "--preset" || a[i] == "-preset":
+			if i+1 < len(a) {
+				if strings.HasSuffix(a[i], "preset") {
+					preset = a[i+1]
+				} else {
+					flags = append(flags, "--only", a[i+1])
+				}
+				i++
+			}
+		case strings.HasPrefix(a[i], "-"):
+			flags = append(flags, a[i]) // --overwrite
+		default:
+			preset = a[i]
+		}
+	}
+	if preset == "" {
+		var now struct{ Style, Radius, FontSans string }
+		b, err := os.ReadFile(filepath.Join(p.Root, "gsxui.preset.json"))
+		if err != nil {
+			check(errors.New("no gsxui.preset.json: the app has no gsxui yet (go tool gsxui init)"))
+		}
+		check(json.Unmarshal(b, &now))
+		say("style %s, radius %s, font %s (gsxui.preset.json; the colours are web/gsxui/theme.css)\n\nAnother: make one at https://ui.gsxhq.dev/theme, then\n  go tool charter run ui:theme '<its share code>'\n  go tool charter run ui:theme my-preset.json --only theme", now.Style, now.Radius, now.FontSans)
+		return
+	}
+	// --yes: gsxui asks before it rewrites; a command an agent or a script runs cannot answer.
+	check(run.Run(p.Root, nil, "go", append([]string{"tool", "gsxui", "apply", "--preset", preset, "--yes"}, flags...)...))
+	check(generate(p))
+}

@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joeblew999/charter/intl/registry"
 	"github.com/joeblew999/charter/app/screens"
+	"github.com/joeblew999/charter/intl/registry"
 )
 
 // add is charter add screen:<name>: charter's screens (app/screens), copied into the app the way gsxui add copies
@@ -25,4 +25,13 @@ func add(args []string) {
 	code, err := screens.Screens.Add(c, f.Args(), registry.Options{Dir: screens.Dir, Diff: *diff, Overwrite: *overwrite})
 	must(err)
 	os.Exit(code)
+}
+
+// ScreensBehind are the screens the app has, unchanged, that this charter writes differently (registry.Behind).
+func ScreensBehind() ([]string, error) { return screens.Screens.Behind(app(), screens.Dir) }
+
+// UpdateScreens brings those up to date, as charter add screen:<name> would.
+func UpdateScreens(names []string) error {
+	_, err := screens.Screens.Add(app(), names, registry.Options{Dir: screens.Dir})
+	return err
 }

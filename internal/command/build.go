@@ -13,7 +13,9 @@ import (
 	"github.com/joeblew999/charter/internal/run"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 )
 
 const library = "github.com/joeblew999/charter"
@@ -43,11 +45,17 @@ func Build(args []string) {
 		return
 	}
 	p := load()
+	// The folder wrangler.jsonc has wrangler watch (build's watch_dir) is there for it.
+	os.MkdirAll(builtDir(p), 0o755)
 	if *limit == 0 {
 		*limit = p.Build.Limit
 	}
 	if *dev {
-		check(wasm(p, 0))
+		// What charter dev's watchers could not build (a catalog, the schema, a page of the docs) fails the build, so
+		// gsx's overlay shows it.
+		check(devFailures(p))
+		check(wasm(p, 0, true))
+		check(swapWorker(p))
 		return
 	}
 	if *only == "docs" {
@@ -72,7 +80,7 @@ func Build(args []string) {
 	if *only == "generate" {
 		return
 	}
-	check(wasm(p, *limit))
+	check(wasm(p, *limit, false))
 }
 
 // generate writes what the app's own Go needs before it compiles: the messages, the components' Go, Vite's output.
@@ -105,12 +113,22 @@ func generate(p *project.Project) error {
 
 // wasm builds the Worker into build/: workers-go's JavaScript, the Wasm, charter's glue (app/worker/*.mjs of the charter
 // go.mod requires, so the JavaScript is the one written for the Go it runs), and intl's Worker modules.
-func wasm(p *project.Project, limit int) error {
-	if err := run.Run(p.Root, nil, "go", "run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=go"); err != nil {
+func wasm(p *project.Project, limit int, again bool) error {
+	// workers-go's JavaScript is the same for every build of one go.mod: under charter dev, where a save should cost
+	// the Wasm and little else, it is written once.
+	if _, err := os.Stat(filepath.Join(p.Root, "build", "wasm_exec.js")); err != nil || !again {
+		if err := run.Run(p.Root, nil, "go", "run", "github.com/syumai/workers-go/cmd/workers-assets-gen", "-mode=go"); err != nil {
+			return err
+		}
+	}
+	// The build says which it is (/healthz's X-Charter-Build), so that charter dev knows when the Worker answering is
+	// the one just built.
+	id := strconv.FormatInt(time.Now().UnixNano(), 36)
+	out := filepath.Join("build", "app.wasm")
+	if err := run.Run(p.Root, map[string]string{"GOOS": "js", "GOARCH": "wasm"}, "go", "build", "-trimpath", "-ldflags=-s -X "+library+"/app.build="+id, "-o", out, "."); err != nil {
 		return err
 	}
-	out := filepath.Join("build", "app.wasm")
-	if err := run.Run(p.Root, map[string]string{"GOOS": "js", "GOARCH": "wasm"}, "go", "build", "-trimpath", "-ldflags=-s", "-o", out, "."); err != nil {
+	if err := os.WriteFile(filepath.Join(p.Root, "build", "id"), []byte(id), 0o644); err != nil {
 		return err
 	}
 	dir, err := run.Output(p.Root, nil, "go", "list", "-m", "-f", "{{.Dir}}", library)
@@ -149,6 +167,9 @@ func wasm(p *project.Project, limit int) error {
 	}
 	if hasIntl(p) {
 		intl.Main([]string{"assets", "-worker", "build"})
+	}
+	if again {
+		return nil // how large the Wasm is matters where it ships
 	}
 	b, err := os.ReadFile(filepath.Join(p.Root, out))
 	if err != nil {

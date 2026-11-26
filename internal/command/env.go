@@ -39,6 +39,11 @@ func Env(args []string) {
 	fmt.Printf("%s fnox       %s: Cloudflare's credentials, from the keychain, for deploy\n", mark(fnox), fnox)
 	fmt.Printf("%s containers %s: for charter pack, which generates the SDKs\n", mark(containers), containers)
 	if p, err := project.Load("."); err == nil {
+		if state, ok := devState(p); ok {
+			fmt.Printf("✓ dev        running at %s (the Worker itself: %s; its log: %s)\n", state.URL, state.Worker, state.Log)
+		} else {
+			fmt.Println("· dev        not running here: go tool charter dev")
+		}
 		for _, tool := range []string{"wrangler", "vite"} {
 			if tool == "vite" && !hasVite(p) {
 				continue

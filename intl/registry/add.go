@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/joeblew999/charter/internal/intlkit/catalog"
 	"github.com/joeblew999/charter/internal/intlkit/setup"
@@ -358,4 +359,57 @@ func lines(b []byte) []string {
 		return nil
 	}
 	return strings.Split(strings.TrimSuffix(string(b), "\n"), "\n")
+}
+
+// Behind are the registry's components the app has in dir, has not changed since add wrote them, and that the
+// registry now writes differently: what a newer charter improved. Add, for those names, brings them up to date; a
+// copy the app changed is its own and is never listed.
+func (r *Registry) Behind(c config.Config, dir string) ([]string, error) {
+	gsxui := cmp.Or(c.Gsxui, setup.DetectGsxui(c.Root))
+	if gsxui == "" {
+		return nil, nil
+	}
+	catalogs, err := catalog.PackagePath(c.CatalogDir())
+	if err != nil {
+		return nil, err
+	}
+	components, err := catalog.PackagePath(filepath.Join(c.Root, gsxui))
+	if err != nil {
+		return nil, err
+	}
+	p, err := catalog.Read(c)
+	if err != nil {
+		return nil, err
+	}
+	// Each copy is compared with what add would write now, formatted by the app's own gsx fmt: at once, since each
+	// is a program started.
+	paths := Paths{Catalogs: catalogs, Gsxui: components}
+	differs := make([]bool, len(r.Components))
+	errs := make([]error, len(r.Components))
+	var wg sync.WaitGroup
+	for i, comp := range r.Components {
+		rel := filepath.ToSlash(filepath.Join(dir, comp.Name+".gsx"))
+		old, err := os.ReadFile(filepath.Join(c.Root, rel))
+		if err != nil || catalog.FileHash(old) != p.Copied(rel) {
+			continue
+		}
+		wg.Go(func() {
+			src, err := r.Source(comp, paths)
+			if err == nil {
+				src, err = Format(c.Root, rel, src)
+			}
+			differs[i], errs[i] = err == nil && !bytes.Equal(old, src), err
+		})
+	}
+	wg.Wait()
+	var behind []string
+	for i, comp := range r.Components {
+		if errs[i] != nil {
+			return nil, errs[i]
+		}
+		if differs[i] {
+			behind = append(behind, comp.Name)
+		}
+	}
+	return behind, nil
 }

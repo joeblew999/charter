@@ -99,6 +99,10 @@ type App struct {
 	tree  *structpages.StructPages
 }
 
+// build names the build, which charter build sets when it links the Wasm: charter dev asks /healthz which build is
+// answering.
+var build string
+
 // Run serves the app as a Worker and never returns.
 func (a *App) Run() { Run(a.Handler()) }
 
@@ -161,6 +165,9 @@ func (a *App) Handler() http.Handler {
 		// A path that touches no binding: what gsx dev probes after each rebuild, what a Go runtime answers as it
 		// starts warm, what a health check asks.
 		if r.URL.Path == "/healthz" {
+			if build != "" {
+				w.Header().Set("X-Charter-Build", build)
+			}
 			w.Write([]byte("ok"))
 			return
 		}

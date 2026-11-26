@@ -8,8 +8,9 @@
   // Cloudflare tells the Worker when a reader has left (request.signal): a handler that waits then returns. The
   // default from compatibility date 2026-11-17.
   "compatibility_flags": ["enable_request_signal"],
-  // charter build writes dist/ (Vite) and build/ (the Wasm, and the JavaScript that runs it).
-  "build": { "command": "go tool charter build" },
+  // charter build writes dist/ (Vite) and build/ (the Wasm, and the JavaScript that runs it). Under charter dev the
+  // Worker stays running across builds: charter writes into watch_dir when there is a new one, and wrangler takes it.
+  "build": { "command": "go tool charter build", "watch_dir": ".charter/built" },
   // Vite's output, served before the Worker runs.
   "assets": { "directory": "dist" },
   // MAIL_FROM is whom the email card writes as: an address on a domain of the account with Email Routing on. Whom

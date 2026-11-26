@@ -38,6 +38,25 @@ func Check(args []string) {
 	if *fix {
 		t.part("tidy", func() error { return run.Run(p.Root, nil, "go", "mod", "tidy") })
 	}
+	if hasIntl(p) && exists(filepath.Join(p.Root, "pages", "screens")) {
+		// charter's screens the app has and has not changed follow charter, as its library code does.
+		t.part("screens", func() error {
+			behind, err := intl.ScreensBehind()
+			if err != nil || len(behind) == 0 {
+				return err
+			}
+			if !*fix {
+				return fmt.Errorf("charter writes these screens differently now, and the app has not changed its copies: %s (charter check --fix brings them up to date)", strings.Join(behind, ", "))
+			}
+			say("screens brought up to date: %s", strings.Join(behind, ", "))
+			return intl.UpdateScreens(behind)
+		})
+	}
+	if *fix && exists(filepath.Join(p.Root, "pages")) {
+		if b, _ := os.ReadFile(filepath.Join(p.Root, "go.mod")); !strings.Contains(string(b), linter) {
+			t.part("linter", func() error { return run.Run(p.Root, nil, "go", "get", "-tool", linter) })
+		}
+	}
 	t.part("lint", func() error { return lint(p) })
 	if p.Spec != "" {
 		t.part("contract", func() error {

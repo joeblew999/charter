@@ -246,3 +246,22 @@ func Foreground(dir string, env map[string]string, program string, args ...strin
 		return nil
 	}
 }
+
+// Detached starts program in a process group of its own, writing to the file at log, and returns its process id: a
+// server that outlives the process that started it, until KillGroup stops it. It reads nothing and holds none of
+// this process's pipes.
+func Detached(dir string, env map[string]string, log, program string, args ...string) (int, error) {
+	out, err := os.OpenFile(log, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return 0, err
+	}
+	defer out.Close()
+	cmd := exec.Command(Bin(program, dir), args...)
+	cmd.Dir, cmd.Env, cmd.Stdout, cmd.Stderr = dir, Env(env), out, out
+	group(cmd)
+	if err := cmd.Start(); err != nil {
+		return 0, err
+	}
+	pid := cmd.Process.Pid
+	return pid, cmd.Process.Release()
+}

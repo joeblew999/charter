@@ -16,3 +16,9 @@ func kill(cmd *exec.Cmd) {
 		syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
 	}
 }
+
+// KillGroup stops the process group that pid leads: what Detached started, and what that started.
+func KillGroup(pid int) { syscall.Kill(-pid, syscall.SIGTERM) }
+
+// Alive reports whether the process is there.
+func Alive(pid int) bool { return pid > 0 && syscall.Kill(pid, 0) == nil }

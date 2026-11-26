@@ -157,6 +157,37 @@ func TestDev(t *testing.T) {
 	os.WriteFile("api/handlers.go", []byte(strings.Replace(string(broken), `"Greetings from "`, `"Mended, from "`, 1)), 0o644)
 	until("mending it", "/api/hello", "Mended, from charter-example, renamed")
 
+	// A catalog that does not compile is a build that fails, said where a developer is looking: gsx's overlay gets
+	// what is wrong (charter dev keeps it for the build to fail with), the page stays, and mending it brings the new text.
+	catalog, err := os.ReadFile("locales/de.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile("locales/de.toml", []byte(strings.Replace(string(catalog), `heading = "Pinnwand"`, `heading = "{count, plural, one {eine"`, 1)), 0o644)
+	for start := time.Now(); ; time.Sleep(200 * time.Millisecond) {
+		if b, err := os.ReadFile(".charter/dev/messages.err"); err == nil && len(b) > 0 && strings.Contains(log.String(), "de.toml home.heading") {
+			t.Logf("✓ a catalog that does not compile fails the build, with what is wrong, after %.1f s", time.Since(start).Seconds())
+			break
+		}
+		if time.Since(start) > 60*time.Second {
+			t.Fatalf("✗ a broken catalog never failed the build\n%s", log.String())
+		}
+	}
+	until("a broken catalog keeps the last page serving", "/de/", "<h1>Pinnwand</h1>")
+	os.WriteFile("locales/de.toml", []byte(strings.Replace(string(catalog), `heading = "Pinnwand"`, `heading = "Zettel"`, 1)), 0o644)
+	until("mending the catalog", "/de/", "<h1>Zettel</h1>")
+
+	// What is running is written down for the other commands, and for an agent: charter env says where.
+	env, _ := exec.Command("go", "tool", "charter", "env").CombinedOutput()
+	if !strings.Contains(string(env), "dev        running at "+base) {
+		t.Errorf("✗ charter env does not say where dev is running:\n%s", env)
+	} else {
+		t.Log("✓ charter env says where dev is running, and where its log is")
+	}
+	if b, err := os.ReadFile(".charter/dev/dev.log"); err != nil || len(b) == 0 {
+		t.Errorf("✗ no log of the Worker and the builds at .charter/dev/dev.log: %v", err)
+	}
+
 	// Another command beside it: charter check passes, and dev is not disturbed.
 	check := exec.Command("go", "tool", "charter", "check")
 	if b, err := check.CombinedOutput(); err != nil {
