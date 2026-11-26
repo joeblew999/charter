@@ -1,14 +1,17 @@
 {
-  "extraKnownMarketplaces": {
-    "charter": {
-      "source": { "source": "github", "repo": "joeblew999/charter" },
-      "autoUpdate": true
-    }
-  },
   "enabledPlugins": {
     "charter@charter": true,
     "gsx@charter": true,
     "gsxui@charter": true,
     "structpages@charter": true
+  },
+  "extraKnownMarketplaces": {
+    "charter": {
+      "source": {
+        "source": "github",
+        "repo": "joeblew999/charter"
+      },
+      "autoUpdate": true
+    }
   }
 }
