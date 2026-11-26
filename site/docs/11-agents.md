@@ -33,6 +33,25 @@ In Claude Code:
 /plugin install structpages@charter
 ```
 
+## One set of commands
+
+The skills of gsx, gsxui and structpages are written for any app. A charter app runs those tools through charter, so charter's skill says what each of their instructions is here:
+
+| Their skill says | In a charter app |
+|---|---|
+| `gsx generate`, `gsx dev`, `gsx fmt` | Nothing to run: `charter dev` is gsx dev, and `check --fix` generates and formats |
+| `gsxui add`, `gsxui list`, `gsxui apply` | `charter add ui:<name>`, `charter run ui:list`, `charter run ui:theme` |
+| Run `structpages-lint` | `charter check` runs it |
+| Mount the tree with an error handler and a target selector | `app.App` does |
+
+Their tools are the app's own Go tools too (`go tool gsx info`), at the versions `go.mod` pins.
+
+## What an agent can ask
+
+- `go tool charter env`: is `charter dev` running here, at which address, and where is its log.
+- `go tool charter check`: everything wrong with the code, with file and line. No command asks a question.
+- The page itself, at the address `env` gives: a save is on it in about two seconds.
+
 ## What a language model reads
 
 Any agent, with or without the plugins, can read these docs as Markdown:

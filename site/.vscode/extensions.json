@@ -1,0 +1,4 @@
+{
+  // gsx: highlighting and its language server (go tool charter install puts gsx where the extension looks for it).
+  "recommendations": ["gsxhq.gsx", "golang.go", "bradlc.vscode-tailwindcss"]
+}

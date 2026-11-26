@@ -10,7 +10,26 @@ cd my-app
 go tool charter dev
 ```
 
-`create` copies this site's source under your name, installs what it pins and writes its specs. `dev` runs it on the real runtime and opens it; a save rebuilds and reloads. Leave it running and run everything else beside it.
+`create` copies [the example](https://github.com/joeblew999/charter/tree/main/example) under your name, installs what it pins and writes its specs.
+
+## Working on it
+
+`dev` runs the app on the real runtime: workers-go on wrangler dev, with the bindings of `wrangler.jsonc`. Leave it running and run everything else beside it.
+
+| You save | What happens | On the page after about |
+|---|---|---|
+| A `.gsx` or `.go` file | gsx regenerates, the Wasm is built, the running Worker takes it | 1.5 s |
+| A catalog (`locales/*.toml`) | the messages are compiled, then the same | 1.6 s |
+| A page of the docs (`docs/*.md`) | it is written as Go, then the same | 2 s |
+| `db/schema.sql` | the local database follows, its migration and the queries' Go are written | 2 s |
+| `wrangler.jsonc` | wrangler reloads the Worker | 0.6 s |
+| A file of `web/`, CSS | Vite replaces it in the open page | at once |
+
+The Worker is started once and never restarted: each build is handed to it. A mistake, in any of these files, shows in the browser in gsx's overlay, and the last page that worked stays up. Cmd-D (Ctrl-D) opens gsx's dev panel, with the Worker's log.
+
+`go tool charter env` says where the loop is running and where its log is, for a second terminal or a coding agent.
+
+`go tool charter install` puts gsx's language server where your editor's gsx extension finds it. The app's `.vscode/` recommends the extension and formats a gsx file when it is saved.
 
 ## Before a push
 
@@ -19,7 +38,7 @@ go tool charter check
 go tool charter test
 ```
 
-`check` says everything that can be said without running the app: formatting, lint, the API's contract, the database's schema, the languages. `check --fix` writes what it can. `test` runs the Worker on wrangler dev and asks it: the pages in a real browser, the API through its own SDK, and the search-engine audit.
+`check` says everything that can be said without running the app: formatting, go vet and structpages' linter (for the machine and for the Worker's build), the API's contract, the database's schema, the languages, and charter's screens. `check --fix` writes what it can. `test` runs the Worker on wrangler dev and asks it: the pages in a real browser, the API through its own SDK, and the search-engine audit.
 
 ## Shipping it
 

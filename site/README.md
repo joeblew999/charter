@@ -2,8 +2,8 @@
 
 A front page and the docs, as a charter app. Deployed at https://charter.gedw99.workers.dev.
 
-The docs are the Markdown in [`docs/`](docs): edit a page there. The pages that show them are the library's
-(`charter/app/docs`), the same ones the example's docs and every app's docs get.
+The docs are the Markdown in [`docs/`](docs): edit a page there. The pages that show them are charter's
+docs screen (`pages/screens`, from `charter add screen:docs`), the same the example's docs and every app's docs get.
 
 `npm install` at the repo's top, then here:
 

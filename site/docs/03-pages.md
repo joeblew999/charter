@@ -10,7 +10,7 @@ Every route is a field, with its route in the field's tag.
 type Pages struct {
 	home     Home       `route:"GET /{$} Home"`
 	bindings Bindings   `route:"GET /bindings Bindings"`
-	docs     docs.Pages `route:"/docs Docs"`
+	docs     screens.Docs `route:"/docs Docs"`
 
 	post   PostNote    `route:"POST /notes PostNote"`
 	stream NotesStream `route:"GET /notes/stream NotesStream"`
@@ -40,7 +40,7 @@ A part of a page that htmx replaces is a component of that page. Its id and its 
 component (p Home) Form(body string, refused bool) {
 	<form
 		id={Home.Form |> id}
-		hx-post={PostNote{} |> action}
+		hx-post={PostNote{} |> url}
 		hx-target={Home.Form |> target}
 		hx-swap="outerHTML"
 	>
@@ -78,10 +78,11 @@ A link or a form's target comes from the tree, never from a path written as a st
 
 ```gsx
 <a href={Bindings{} |> url}>…</a>
-<form hx-post={PostNote{} |> action}>…</form>
+<form hx-post={PostNote{} |> url}>…</form>
+<a href={Note{} |> url(map[string]any{"id": note.ID})}>…</a>
 ```
 
-`url` is a page's address in the reader's language; `action` is a route that is no page. structpages' own linter runs inside `charter check` and fails on a hard-coded path.
+`url` is structpages' own `URLFor`. charter mounts the tree once for each language, each told its prefix, so every address it gives is in the reader's language by itself: a page, a form's target, a stream. structpages' linter runs inside `charter check`, for the machine and for the Worker's build, and fails on a link to a page that is not there, a missing parameter, or a path written as a string.
 
 ## Which pages search engines get
 

@@ -1,0 +1,12 @@
+{
+  // As gsx's editor guide has it: a .gsx file is formatted, and its imports sorted, when it is saved. It is what
+  // go tool charter check holds every gsx file to.
+  "[gsx]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  // Tailwind's classes are completed in gsx too.
+  "tailwindCSS.includeLanguages": { "gsx": "html" }
+}

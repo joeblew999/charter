@@ -8,7 +8,7 @@ import (
 )
 
 // Install runs charter install: everything the app pins, installed: npm's packages as package-lock.json has them, Go's
-// modules, the tools go.mod names, the agent skills of everything the app is built with, as Claude Code plugins (skills.go), and the two
+// modules, the tools go.mod names, gsx's language server for the editor, the agent skills of everything the app is built with, as Claude Code plugins (skills.go), and the two
 // programs charter brings beside Go and Node: fnox and a container engine (package tools).
 func Install(args []string) {
 	p := load()
@@ -19,6 +19,11 @@ func Install(args []string) {
 	}
 	check(run.Run(p.Root, nil, "go", "mod", "download"))
 	check(agentPlugins(p))
+	// gsx's compiler where an editor looks for it (GOBIN, GOPATH/bin), at the version go.mod pins: its language
+	// server is gsx lsp, which the editor's gsx extension starts (.vscode/extensions.json recommends it).
+	if hasGSX(p) && os.Getenv("CI") == "" {
+		check(run.Run(p.Root, nil, "go", "install", "github.com/gsxhq/gsx/cmd/gsx"))
+	}
 	// The two programs charter picks for every developer and brings itself (package tools): fnox for secrets, and a
 	// container engine (Kiri, unless one already answers) for the SDK generators.
 	if _, err := tools.Fnox(); err != nil {

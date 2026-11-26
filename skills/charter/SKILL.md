@@ -19,7 +19,7 @@ changing that part.
 | A page or its route | `pages/`: a type in the tree (`pages.Pages`) with a `Page` component, and `Props` that names what it needs as parameters (the store, from `app.App`'s `RequestArgs`) | the running `charter dev` reloads it |
 | A region htmx replaces | a component of its page (`component (p Home) Form(…)`), with `id={Home.Form \|> id}` and `hx-target={Home.Form \|> target}` | |
 | What a page calls | a type with `ServeHTTP(w, r, …) error` that returns `structpages.RenderComponent(…)`, or `app.NotFound`, `app.Status`, `app.Redirect{To}`; it never writes an error or a redirect itself | |
-| A link or a form's target | `{ Page{} \|> url }`, `{ Action{} \|> action }`: never a path as a string | |
+| A link, a form's target, a stream | `{ Page{} \|> url }`, `{ PostNote{} \|> url }`, with parameters `\|> url(map[string]any{"id": id})`: structpages' own `URLFor`, in the reader's language by itself. Never a path as a string | |
 | A type the API serves that is a table's row | embed the row (`type Note struct{ db.NotesRow }`); its examples are the schema's comments (`-- example: 42; doc: …`) | |
 | An API operation | `api/contract.go` and its handler | `go tool charter check --fix` writes `fern/`; `go tool charter pack -publish` the Go SDK |
 | What is followed live | one `live.Feed` (`api.Notes` in the example): `Publish` after the write, `Fragments` for a page, `Events` and `Lines` for the API | |
@@ -29,8 +29,10 @@ changing that part.
 | Browser code or CSS | `web/` (Vite); `go tool charter add <npm package>` | |
 | A message a reader sees | `locales/en.toml`, written `{ locales.Key }` in gsx | `go tool charter run intl:translate`; `go tool charter run intl:status` says what is left |
 | A language | `go tool charter add locale:de` | translate its catalog |
-| A page of the docs | `docs/NN-name.md`: Markdown, its first heading the title; link to another page by its file. The pages that show them are charter's (`charter/app/docs`, mounted in the tree; `app.App`'s `Docs`): never write your own | the running `charter dev` shows it at `/docs/name`; it is in the sitemap, `/docs/name.md`, `/llms.txt` and `/llms-full.txt` |
-| A UI component | `go tool charter add ui:dialog` | |
+| A page of the docs | `docs/NN-name.md`: Markdown, its first heading the title; link to another page by its file. The pages that show them are the docs screen (`go tool charter add screen:docs`, mounted in the tree at `/docs`; `app.App`'s `Docs`) | the running `charter dev` shows it at `/docs/name`; it is in the sitemap, `/docs/name.md`, `/llms.txt` and `/llms-full.txt` |
+| A UI component | `go tool charter add ui:dialog` (gsxui add; `-diff`, `-overwrite` pass through); `go tool charter run ui:list` | |
+| What every app has: the language list, the offer of the reader's language, the time zone dialog, the light and dark switch, the docs' pages | `go tool charter add screen:<name>`: charter's screens, copied into `pages/screens` and built from the app's own gsxui components. Never write one of these by hand | an unchanged copy follows charter through `check --fix`; a changed one is the app's |
+| The look: colours, radius, fonts, the component style | `go tool charter run ui:theme` shows it; `go tool charter run ui:theme '<share code from https://ui.gsxhq.dev/theme>'` or a preset file switches it (gsxui apply). Light and dark are the theme's own; `<screens.ThemeToggle/>` switches | |
 | A test of a page's logic | `pages/pages_test.go`: plain Go, the page handed a store of the test's own | `go test ./pages` |
 | A test of a page as a reader uses it | `test/page_*_test.go`: `apptest.Browser(t)` (Chrome): `Open`, `Type`, `Click`, `WaitText`, `Tab`; addresses and selectors from the tree (`at`, `el` in `test/tree_test.go`) | `go tool charter test`, and `--deployed` |
 | A test of the API | `test/api_test.go`, through `sdk/go` | the same |
@@ -47,17 +49,44 @@ changing that part.
   `cron.ScheduleTaskNonBlock`, `queues.ConsumeNonBlock`, `cloud.ConsumeEmail`.
 - **Memory between requests is a cache, never state**: any request may start a new Go runtime.
 - **D1 has no interactive transactions**: single statements with `RETURNING`, or `cloud.Batch`.
-- Never hand-write what a command generates: `db/migrations/`, `*.gen.go`, `*.x.go`, `fern/`, `sdk/`, `build/`, `dist/`. Never run
-  gsx, gsxui's migrations, sqlc or structpages-lint by hand either: `dev`, `check --fix` and `test` run them.
-- The skills for gsx, gsxui and structpages are plugins of charter's marketplace beside this one (the app's
-  `.claude/settings.json` enables them; `go tool charter install` installs them): use them for those tools' own rules.
+- Never hand-write what a command generates: `db/migrations/`, `*.gen.go`, `*.x.go`, `fern/`, `sdk/`, `build/`, `dist/`.
 - Not in git: `.dev.vars` (made from `.dev.vars.example`), and what is built each time (`*.x.go`,
   `*.built.go`, `.charter/`, `build/`, `dist/`). In git, and held to its source by `check`: `*.gen.go`,
   `db/migrations/`, `fern/`, `sdk/go/`.
 - The app is `(&app.App{Name, Dist, Pages, API}).Run()` and `<app.Head title=… description=…/>`: never wire Vite,
-  languages, robots.txt or the sitemap by hand.
+  languages, the theme, robots.txt or the sitemap by hand. The page tree's options (the error handler, htmx 4's
+  target selector, the language's prefix) are the app's: a test that mounts the tree itself passes
+  `(&app.App{}).Options(false)`.
 - No literal reader-facing text in a `.gsx` file: a message in the source catalog.
 - `charter.toml` holds only `url` and `[pack]`.
+
+## The gsx, gsxui and structpages skills
+
+They are plugins of charter's marketplace beside this one (the app's `.claude/settings.json` enables them), each kept
+by its tool's owner. Use them for how to write gsx, which component to choose and how a page works: they are right
+about their tool. charter runs those tools for you, so where one of them tells you to run or set something up, this
+is what it is in a charter app:
+
+| Their skill says | In a charter app |
+|---|---|
+| `gsx generate`, `gsx dev`, `gsx fmt` | Nothing to run: `go tool charter dev` is `gsx dev` (with wrangler as its server), and `check --fix` generates and formats. Running one yourself is harmless; always as `go tool gsx …`, never a bare `gsx`. |
+| `gsx info`, `gsx fix`, `gsx lsp` | `go tool gsx info` and the others, as they are. |
+| `.x.go` committed | Not in git here: built each time. |
+| `gsxui init`, `gsxui add <name>`, `gsxui list` | `go tool charter add ui:<name>`, `go tool charter run ui:list`. The app is set up already. |
+| `gsxui apply --preset …` | `go tool charter run ui:theme <preset>`: the same, without the question it asks. |
+| Register the `url`, `id`, `target`, `key` filters | Done in `gsx.toml`, exactly as structpages has them. |
+| `structpages.Mount(…, WithErrorHandler, WithTargetSelector, WithArgs)` | `app.App` mounts the tree, once for each language. A handler returns `app.NotFound`, `app.Status` or `app.Redirect{To}`; what it needs is `app.App`'s `Args` and `RequestArgs`. |
+| Run `structpages-lint` | `go tool charter check` runs it, for the host and for the Worker's build. |
+| A dark mode toggle, a language switcher, docs pages | A screen: `go tool charter add screen:<name>`. |
+
+## Working as an agent
+
+- `go tool charter env` says whether `charter dev` is running here, at which address, and where its log is
+  (`.charter/dev/dev.log`: the builds and the Worker). When it is running, do not start another: edit, and read
+  the page at that address. A save reaches the page in about two seconds, and a mistake is in the log.
+- No command asks a question. `go tool charter check` is the truth about the code: run it after a change, and
+  `--fix` for what it can write.
+- When no `charter dev` is running, `go tool charter test` starts a Worker of its own.
 
 ## Commands
 

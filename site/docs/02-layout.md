@@ -4,6 +4,7 @@ charter finds everything by where it is. There is nothing to configure for any o
 
 ```
 pages/         the page tree and its components
+pages/screens/ charter's screens: the docs' pages, the languages, the theme switch
 api/           contract.go: the API
 db/            schema.sql, queries.sql, seed.sql
 docs/          the app's docs, as Markdown
@@ -26,7 +27,7 @@ func main() {
 		Dist:  dist,
 		Pages: pages.Mount,
 		API:   api.Handler(api.Env{Var: cloud.Var}),
-		Docs:  &app.Docs{Name: "My App", Pages: docs.Pages},
+		Docs:  &app.Docs{Name: "My App", Pages: docs.Pages}, // docs/*.md, built
 		// What a page's Props may ask for, made from the request.
 		RequestArgs: []any{api.OpenStore},
 	}).Run()

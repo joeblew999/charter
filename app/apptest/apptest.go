@@ -37,9 +37,16 @@ func Base(t testing.TB) string {
 func Local() bool { return os.Getenv("TARGET") != "deployed" }
 
 // Get is the body of a GET of path, which must answer 200.
-func Get(t testing.TB, path string) string {
+func Get(t testing.TB, path string, headers ...string) string {
 	t.Helper()
-	res, err := http.Get(Base(t) + path)
+	req, err := http.NewRequest(http.MethodGet, Base(t)+path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i+1 < len(headers); i += 2 {
+		req.Header.Set(headers[i], headers[i+1])
+	}
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}

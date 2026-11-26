@@ -27,11 +27,16 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   does not use is not done; a bug the example cannot show is a missing part of the example.
 - **`site/` is charter's own site**, a charter app: a front page, and the docs (`site/docs/*.md`; never write docs
   anywhere else). A change to how charter works changes the page of the docs that says so, in the same commit. The
-  pages that show docs are the library's (`app/docs`), the same for the site, the example and every app: change them
-  there, never in one app.
+  pages that show docs are the docs screen.
+- **What every app needs is a screen** (`app/screens`: the docs' pages, the theme switch, the language list and
+  offer, the time zone dialog): a gsx template of gsxui components that `charter add screen:<name>` copies into an
+  app, as gsxui copies a component, so it is built from the app's own components and theme. Change a screen in
+  `app/screens`, then `go tool charter check --fix` in `example/` and `site/`, which brings their copies up to date.
+  Nothing in the library imports gsxui.
 - **structpages is used the structpages way.** A page's `Props` and a handler's `ServeHTTP` declare what they need
   (`app.App`'s `Args` and `RequestArgs`) and return errors (`app.NotFound`, `app.Status`, `app.Redirect`); a region
-  that changes by itself is a component of its page, with its id and target from the tree. Never a path, an id or a
+  that changes by itself is a component of its page, with its id and target from the tree. `url` is
+  structpages' own `URLFor`: the tree is mounted once for each language with its prefix. Never a path, an id or a
   selector as a string, in pages or in tests.
 - **A developer never has to remember to run something.** What an upstream tool generates or checks runs inside
   `dev`, `check`, `test` or `deploy`. What is left is a namespaced task of `charter run` (`intl:`, `seo:`, `db:`,
@@ -44,6 +49,9 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
 - **A feed is declared once** (`live.Feed`) and serves pages, API and SDK alike.
 - **The commands are Vite+'s verbs** (https://viteplus.dev/guide/), plus `deploy`. Anything else is a task of
   `charter run`.
+- **Upstream's tools, upstream's way.** gsx, gsxui and structpages-lint are the app's own Go tools, driven by the
+  verb where a developer already is (`dev`, `check`, `add`, `run ui:`). Their skills stay true in a charter app:
+  `skills/charter/SKILL.md` has the one table that says what each of their commands is here. Keep it complete.
 - **`charter dev` stays running.** A command is not done until it has been run beside a live `charter dev`
   (`example/test/devloop`).
 - **Checks:** `go test ./...` at the top, then in `example/` and in `site/`: `go tool charter check && go tool charter test`, and
