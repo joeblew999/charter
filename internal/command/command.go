@@ -13,14 +13,110 @@ package command
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
-	"regexp"
-
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
+	"io"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"time"
 )
+
+// times says how long each part of a command took.
+type times struct {
+	name  string
+	start time.Time
+	parts []string
+}
+
+func newTimes(name string) *times { return &times{name: name, start: time.Now()} }
+
+func (t *times) part(name string, f func() error) {
+	start := time.Now()
+	if err := f(); err != nil {
+		check(fmt.Errorf("%s: %w", name, err))
+	}
+	t.parts = append(t.parts, name+" "+run.Seconds(time.Since(start)))
+}
+
+func (t *times) done() {
+	say("✓ %s took %s: %s", t.name, run.Seconds(time.Since(t.start)), strings.Join(t.parts, ", "))
+}
+
+func with(env map[string]string, key, value string) map[string]string {
+	out := map[string]string{key: value}
+	for k, v := range env {
+		out[k] = v
+	}
+	return out
+}
+
+// passthrough runs a program with the terminal, until it ends.
+func passthrough(p *project.Project, program string, args ...string) error {
+	cmd := exec.Command(program, args...)
+	cmd.Dir, cmd.Stdin, cmd.Stdout, cmd.Stderr = p.Root, os.Stdin, os.Stdout, os.Stderr
+	return cmd.Run()
+}
+
+// flagsFirst is args with its flags (-x) before the rest, which Go's flag package stops at: charter pack group -if-stale
+// is charter pack -if-stale group. sdk's flags take no values, so none is taken from its place.
+func flagsFirst(args []string) []string {
+	var flags, rest []string
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			flags = append(flags, a)
+		} else {
+			rest = append(rest, a)
+		}
+	}
+	return append(flags, rest...)
+}
+
+func cmpOr(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}
+
+// envArgs takes a leading environment name (one of wrangler.jsonc's env) off args, as wrangler's --env.
+func envArgs(p *project.Project, args *[]string) []string {
+	if len(*args) > 0 {
+		if _, ok := p.Worker.Env[(*args)[0]]; ok {
+			env := (*args)[0]
+			*args = (*args)[1:]
+			return []string{"--env", env}
+		}
+	}
+	return nil
+}
+
+// cloudflare runs wrangler with words then rest, for what talks to Cloudflare. Its credentials are wrangler's:
+// CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, or wrangler login. When the environment has no token and fnox is
+// installed (https://fnox.jdx.dev: secrets from the keychain, never a file), wrangler runs under fnox exec, so a
+// developer who keeps them there types nothing more.
+func cloudflare(p *project.Project, words, rest []string) error {
+	return cloudflareTo(nil, p, words, rest)
+}
+
+// cloudflareTo is cloudflare, with wrangler's output also written to copy.
+func cloudflareTo(copy io.Writer, p *project.Project, words, rest []string) error {
+	bin, err := npm(p, "wrangler")
+	if err != nil {
+		return err
+	}
+	args := append(words, rest...)
+	if os.Getenv("CLOUDFLARE_API_TOKEN") == "" {
+		// A fnox that answers: a version manager's shim can be on the PATH with no fnox behind it.
+		if fnox, err := exec.LookPath("fnox"); err == nil && exec.Command(fnox, "--version").Run() == nil {
+			return run.Tee(copy, p.Root, nil, fnox, append([]string{"exec", "--", bin}, args...)...)
+		}
+	}
+	return run.Tee(copy, p.Root, nil, bin, args...)
+}
 
 // load is the app of the working directory, which the command moves to the root of.
 func load() *project.Project {
@@ -86,8 +182,10 @@ func wrangler(p *project.Project, env map[string]string, args ...string) error {
 
 // hasGSX reports whether the app has gsx components; hasVite whether Vite builds browser files for it; hasIntl whether
 // it has languages (charter.toml's [intl]).
-func hasGSX(p *project.Project) bool  { return exists(filepath.Join(p.Root, "gsx.toml")) }
+func hasGSX(p *project.Project) bool { return exists(filepath.Join(p.Root, "gsx.toml")) }
+
 func hasIntl(p *project.Project) bool { return p.Intl != nil }
+
 func hasVite(p *project.Project) bool {
 	m, _ := filepath.Glob(filepath.Join(p.Root, "vite.config.*"))
 	return len(m) > 0

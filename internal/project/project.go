@@ -2,19 +2,25 @@
 // deploys (https://developers.cloudflare.com/workers/wrangler/configuration/), and charter's own settings from an
 // optional charter.toml beside it.
 //
-//	# charter.toml: only what wrangler has no place for
+//	# charter.toml: only what wrangler has no place for, a block per command
 //	health = "/healthz"                # a path that answers once the Worker is up (default "/")
 //	url = "https://app.example.com"    # where it is deployed: the server the specs name, the site search engines read
+//
+//	[check]
 //	spec = "fern/openapi.json"         # an API with a contract: charter check --fix writes its specs, charter check tests them
 //	db = "sqlc"                        # api/queries.sql: charter check --fix writes its Go (api/queries.go), with sqlc
 //
 //	[build]
 //	limit = 10000000                   # fail the build over this many bytes of Wasm, gzipped (default: none)
 //
-//	[sdks]                             # the clients Fern makes from the specs (charter pack)
+//	[pack]                             # the clients Fern makes from the specs (charter pack)
 //	name = "Notes"
 //
-//	[test]                             # commands run against the Worker: {base} is its URL, BASE in their environment
+//	[staged]                           # charter staged, before a commit (default: charter check)
+//	run = ["charter check", "go test ./..."]
+//
+//	[test]                             # commands run against the Worker: {base} is its URL, BASE in their environment;
+//	                                   # TARGET is local (wrangler dev) or deployed
 //	run = ["go test ./test/..."]       # charter test: against wrangler dev, or a deployed Worker (--env, --base)
 //	live = ["go test ./test/..."]      # only when a deployed Worker is asked something else than run
 //	[test.suites]                      # more, by name: charter test e2e [--env preview | --base https://…]
@@ -64,6 +70,11 @@ type Project struct {
 	Build      Build  `toml:"build"`
 	SDKs       SDKs   `toml:"sdks"`
 	Test       Test   `toml:"test"`
+	// A block per command. [check] and [pack] are where spec, spec_server, db and [sdks] are written since v0.29;
+	// read fills the fields above from them, and an older file's own spelling still reads.
+	Check  Check  `toml:"check"`
+	Pack   SDKs   `toml:"pack"`
+	Staged Staged `toml:"staged"`
 	// URLs is where each of wrangler.jsonc's environments is deployed, by its name: what charter test --env asks.
 	URLs map[string]string `toml:"urls"`
 	Run  Run               `toml:"run"`
@@ -168,6 +179,19 @@ type Task struct {
 	Worker  bool   `toml:"worker"`
 }
 
+// Check is what charter check holds the app to, beyond what every app is held to.
+type Check struct {
+	Spec       string `toml:"spec"`        // an API with a contract: where its OpenAPI document is written
+	SpecServer string `toml:"spec_server"` // the server the specs name, when it is not url
+	DB         string `toml:"db"`          // "sqlc": api/queries.sql's Go is written and kept current
+}
+
+// Staged is what charter staged runs before a commit, after it has formatted the staged files: commands, as [test]'s
+// are written. Without any it runs charter check.
+type Staged struct {
+	Run []string `toml:"run"`
+}
+
 // SDKs are the clients Fern makes from the specs: charter check --fix writes fern/generators.yml from them and the spec.
 type SDKs struct {
 	Name      string   `toml:"name"`      // the API's name in its SDKs (Notes); lower case, the Go package and the CLI's command
@@ -221,6 +245,18 @@ func read(root string) (*Project, error) {
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
+	if p.Check.Spec != "" {
+		p.Spec = p.Check.Spec
+	}
+	if p.Check.SpecServer != "" {
+		p.SpecServer = p.Check.SpecServer
+	}
+	if p.Check.DB != "" {
+		p.DB = p.Check.DB
+	}
+	if p.Pack.Name != "" {
+		p.SDKs = p.Pack
+	}
 	path = filepath.Join(root, Wrangler)
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -237,4 +273,28 @@ func read(root string) (*Project, error) {
 		return nil, fmt.Errorf("%s: no name", path)
 	}
 	return p, nil
+}
+
+// SetURL records in charter.toml that the environment called env is deployed at address: a line of the [urls] table,
+// which is added when the file has none. The rest of the file stays as it is written.
+func SetURL(root, env, address string) error {
+	path := filepath.Join(root, "charter.toml")
+	b, err := os.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	text := string(b)
+	line := fmt.Sprintf("%s = %q\n", env, address)
+	if i := strings.Index(text, "\n[urls]\n"); i >= 0 {
+		at := i + len("\n[urls]\n")
+		text = text[:at] + line + text[at:]
+	} else if strings.HasPrefix(text, "[urls]\n") {
+		text = "[urls]\n" + line + text[len("[urls]\n"):]
+	} else {
+		if text != "" && !strings.HasSuffix(text, "\n") {
+			text += "\n"
+		}
+		text += "\n# Where wrangler.jsonc's environments are deployed: go tool charter test --env <name>.\n[urls]\n" + line
+	}
+	return os.WriteFile(path, []byte(text), 0o644)
 }

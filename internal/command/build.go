@@ -5,13 +5,12 @@ import (
 	"compress/gzip"
 	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/joeblew999/charter/internal/command/intl"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 const library = "github.com/joeblew999/charter"

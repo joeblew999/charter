@@ -4,6 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/joeblew999/charter/internal/run"
+	"github.com/joeblew999/charter/internal/version"
 	"io/fs"
 	"log"
 	"os"
@@ -11,9 +13,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/joeblew999/charter/internal/run"
-	"github.com/joeblew999/charter/internal/version"
 )
 
 const repository = "https://github.com/joeblew999/charter"

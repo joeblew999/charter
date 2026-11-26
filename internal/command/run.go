@@ -1,0 +1,158 @@
+package command
+
+import (
+	"flag"
+	"fmt"
+	"github.com/joeblew999/charter/internal/command/intl"
+	"github.com/joeblew999/charter/internal/command/seo"
+	"github.com/joeblew999/charter/internal/project"
+	"github.com/joeblew999/charter/internal/run"
+	"io"
+	"net/http"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"sort"
+	"strings"
+	"time"
+)
+
+// task is a built-in task of charter run.
+type task struct {
+	name, about string
+	run         func(p *project.Project, args []string)
+}
+
+// tasks are what charter run has for every app: what is no verb of its own. An app adds its own in charter.toml's
+// [run.tasks].
+var tasks = []task{
+	{"translate", "Claude Code translates what is missing or stale, a worker per language (charter run translate de)", func(_ *project.Project, a []string) { intl.Main(append([]string{"translate"}, a...)) }},
+	{"languages", "per language: translated, inherited, stale, missing; with languages named (de fr), their catalogs checked", func(_ *project.Project, a []string) {
+		if len(a) > 0 {
+			intl.Main(append([]string{"check"}, a...))
+		}
+		intl.Main([]string{"status"})
+	}},
+	{"todo", "what is left to translate, with what a translator needs (--json)", func(_ *project.Project, a []string) { intl.Main(append([]string{"todo"}, a...)) }},
+	{"confirm", "stale translations that are still right, kept (de, or de:home.title)", func(_ *project.Project, a []string) { intl.Main(append([]string{"confirm"}, a...)) }},
+	{"export", "XLIFF for translators (--all, --out dir)", func(_ *project.Project, a []string) { intl.Main(append([]string{"export"}, a...)) }},
+	{"import", "translators' XLIFF read back", func(_ *project.Project, a []string) { intl.Main(append([]string{"import"}, a...)) }},
+	{"prune", "messages the source no longer has, removed from every catalog", func(_ *project.Project, a []string) { intl.Main(append([]string{"prune"}, a...)) }},
+	{"audit", "the live site as a search engine reads it (--site: another address)", func(_ *project.Project, a []string) { seo.Main(append([]string{"audit"}, a...)) }},
+	{"lighthouse", "Lighthouse on the live site, on Google's servers", func(_ *project.Project, a []string) { seo.Main(append([]string{"lighthouse"}, a...)) }},
+	{"badges", "Lighthouse and the audit, then the README's badges and scores table", func(_ *project.Project, a []string) { seo.Main(append([]string{"badges"}, a...)) }},
+	{"search", "Google Search Console: setup, sites, submit, status, todo, inspect (charter run search status)", func(_ *project.Project, a []string) {
+		if len(a) == 0 {
+			a = []string{"status"}
+		}
+		seo.Main(a)
+	}},
+	{"logs", "the deployed Worker's live logs, until Ctrl-C (wrangler tail; an environment first: charter run logs staging)", func(p *project.Project, a []string) {
+		check(cloudflare(p, append([]string{"tail"}, envArgs(p, &a)...), a))
+	}},
+	{"bench", "how long the Worker takes to answer, on wrangler dev: charter run bench /  /api/hello  (-n requests each)", bench},
+}
+
+// Run runs charter run <task> [args]: a built-in task, or one of charter.toml's [run.tasks]. Alone, it lists them.
+func Run(args []string) {
+	p := load()
+	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
+		fmt.Println("charter run <task> [arguments]\n\nBuilt in:")
+		for _, t := range tasks {
+			fmt.Printf("  %-11s %s\n", t.name, t.about)
+		}
+		if len(p.Run.Tasks) > 0 {
+			fmt.Println("\nThis app's (charter.toml's [run.tasks]):")
+			names := make([]string, 0, len(p.Run.Tasks))
+			for name := range p.Run.Tasks {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			for _, name := range names {
+				fmt.Printf("  %-11s %s\n", name, cmpOr(p.Run.Tasks[name].About, p.Run.Tasks[name].Command))
+			}
+		}
+		return
+	}
+	name, rest := args[0], args[1:]
+	if own, ok := p.Run.Tasks[name]; ok {
+		do := func(base string) error {
+			words := strings.Fields(strings.ReplaceAll(own.Command, "{base}", base))
+			if len(words) == 0 {
+				return fmt.Errorf("charter.toml's [run.tasks.%s] has no command", name)
+			}
+			if words[0] == "charter" {
+				words[0] = self()
+			}
+			env := map[string]string{}
+			if base != "" {
+				env["BASE"] = base
+			}
+			return run.Run(p.Root, env, words[0], append(words[1:], rest...)...)
+		}
+		if own.Worker {
+			check(serving(p, do))
+		} else {
+			check(do(""))
+		}
+		return
+	}
+	for _, t := range tasks {
+		if t.name == name {
+			t.run(p, rest)
+			return
+		}
+	}
+	check(fmt.Errorf("no task %s: charter run lists them", name))
+}
+
+// bench is charter run bench: the Worker on wrangler dev, each path asked for n times, one at a time, and how long an
+// answer took: the median and the slowest tenth. It is the time a request waits on this machine, for comparing one
+// build with another; it is not what Cloudflare bills.
+func bench(p *project.Project, args []string) {
+	fs := flag.NewFlagSet("charter run bench", flag.ExitOnError)
+	n := fs.Int("n", 100, "requests per path")
+	fs.Parse(args)
+	paths := fs.Args()
+	if len(paths) == 0 {
+		paths = []string{p.HealthPath()}
+	}
+	check(serving(p, func(base string) error {
+		fmt.Printf("\n%-40s %10s %10s\n", "path ("+fmt.Sprint(*n)+" requests)", "median", "p90")
+		for _, path := range paths {
+			took := make([]time.Duration, 0, *n)
+			for range *n {
+				start := time.Now()
+				if err := get(base + path); err != nil {
+					return err
+				}
+				took = append(took, time.Since(start))
+			}
+			slices.Sort(took)
+			fmt.Printf("%-40s %8.1f ms %8.1f ms\n", path, ms(took[len(took)/2]), ms(took[len(took)*9/10]))
+		}
+		return nil
+	}))
+}
+
+// get asks for url and reads the whole answer; a status of 500 or more is an error.
+func get(url string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode >= 500 {
+		return fmt.Errorf("%s: HTTP %d", url, resp.StatusCode)
+	}
+	return nil
+}
+
+func ms(d time.Duration) float64 { return float64(d.Microseconds()) / 1000 }
+
+// generated are what a build writes, in an app: charter cache clean removes them.
+var generated = []string{"build", "dist", ".wrangler", ".charter", filepath.Join("web", "intl"), filepath.Join("sdk", "out")}
+
+// modulePath is how a Go module path looks beside an npm package name: a host with a dot, then a path.
+var modulePath = regexp.MustCompile(`^[a-z0-9.-]+\.[a-z]+/`)

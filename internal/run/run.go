@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -59,6 +60,12 @@ func Env(env map[string]string) []string {
 // Run runs program with args in dir (by default here) with the terminal's output, and fails if it does. A run of a
 // second or more says how long it took.
 func Run(dir string, env map[string]string, program string, args ...string) error {
+	return Tee(nil, dir, env, program, args...)
+}
+
+// Tee is Run, with what the program writes to its standard output also written to copy (when it is not nil): for a
+// command whose output says something the caller needs, an address it deployed to.
+func Tee(copy io.Writer, dir string, env map[string]string, program string, args ...string) error {
 	where := ""
 	if dir != "" && dir != "." {
 		where = "   (in " + dir + ")"
@@ -67,6 +74,9 @@ func Run(dir string, env map[string]string, program string, args ...string) erro
 	start := time.Now()
 	cmd := exec.Command(Bin(program, dir), args...)
 	cmd.Dir, cmd.Env, cmd.Stdin, cmd.Stdout, cmd.Stderr = dir, Env(env), os.Stdin, os.Stdout, os.Stderr
+	if copy != nil {
+		cmd.Stdout = io.MultiWriter(os.Stdout, copy)
+	}
 	err := cmd.Run()
 	took := time.Since(start)
 	if err != nil {

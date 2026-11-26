@@ -1,4 +1,4 @@
-# Written by `charter check --fix` from fern/openapi.json and charter.toml ([sdks]): don't edit, change
+# Written by `charter check --fix` from fern/openapi.json and charter.toml ([pack]): don't edit, change
 # those and run charter check --fix. Fern's generators are charter's, at the versions it pins.
 api:
   specs:

@@ -33,7 +33,7 @@ wrong.
   start a new one.
 - **D1 has no interactive transactions**: single statements with `RETURNING`, or `d1.Batch`.
 - Never hand-write what a command generates: `fern/`, `api/queries.go`, `*.x.go`, `build/`, `dist/`.
-- `charter.toml` holds only what wrangler has no place for: `health`, `url`, `spec`, `db`, `[sdks]`, `[test]`,
+- `charter.toml` holds only what wrangler has no place for: `health`, `url`, `[check]` (`spec`, `db`), `[pack]`, `[test]`, `[staged]`, `[urls]`,
   `[intl]`, `[seo]`.
 - A site is `gsxapp.App{…}.Handler(mux)` and `<gsxapp.Head title=… description=…/>`: never wire Vite, languages or
   robots.txt by hand.

@@ -1,6 +1,8 @@
 # What charter adds to wrangler.jsonc (go doc github.com/joeblew999/charter/internal/project).
 health = "/healthz"
 url = "https://charter-site.gedw99.workers.dev"
+
+[check]
 # The API's contract: charter check --fix writes fern/ from api/contract.go, and api/queries.go from api/queries.sql.
 spec = "fern/openapi.json"
 db = "sqlc"
@@ -14,7 +16,7 @@ run = ["go test -count=1 ./test"]
 [urls]
 preview = "https://charter-site-preview.gedw99.workers.dev"
 
-[sdks]
+[pack]
 name = "Api"
 
 # How it answers search engines (charter seo): charter check audits the site as a crawler reads it. Its live site is

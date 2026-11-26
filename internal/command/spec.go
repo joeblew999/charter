@@ -3,18 +3,16 @@ package command
 import (
 	"errors"
 	"flag"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/joeblew999/charter/internal/dbcode"
 	"github.com/joeblew999/charter/internal/fern"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
+	"os"
+	"path/filepath"
 )
 
 // Spec runs charter check --fix: both specs from the contract (fern/openapi.json, fern/asyncapi.json), Fern's settings
-// (fern/generators.yml) from them and [sdks], and the database's code from migrations/ (db = "sqlc"). With -check it
+// (fern/generators.yml) from them and [pack], and the database's code from migrations/ (db = "sqlc"). With -check it
 // writes nothing, and fails where what is there is not what the contract gives.
 func Spec(args []string) {
 	fs := flag.NewFlagSet("charter check --fix", flag.ExitOnError)
@@ -82,6 +80,7 @@ func main() {
 	specs.Must(specs.Problems(spec))
 	specs.Main(spec.OpenAPI, spec.AsyncAPI)
 }
+
 `), 0o644)
 }
 
@@ -102,55 +101,14 @@ func fernSettings(p *project.Project, goModule string, checkOnly bool) error {
 	file := filepath.Join(p.Root, "fern", "generators.yml")
 	if checkOnly {
 		if b, err := os.ReadFile(file); err != nil || string(b) != text {
-			return errors.New("fern/generators.yml is not what the spec and charter.toml's [sdks] give: charter check --fix")
+			return errors.New("fern/generators.yml is not what the spec and charter.toml's [pack] give: charter check --fix")
 		}
-		say("fern/generators.yml is what the spec and charter.toml's [sdks] give")
+		say("fern/generators.yml is what the spec and charter.toml's [pack] give")
 		return nil
 	}
 	if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
 		return err
 	}
-	say("fern/generators.yml: from the spec and charter.toml's [sdks]")
+	say("fern/generators.yml: from the spec and charter.toml's [pack]")
 	return nil
-}
-
-// flagsFirst is args with its flags (-x) before the rest, which Go's flag package stops at: charter pack group -if-stale
-// is charter pack -if-stale group. sdk's flags take no values, so none is taken from its place.
-func flagsFirst(args []string) []string {
-	var flags, rest []string
-	for _, a := range args {
-		if strings.HasPrefix(a, "-") {
-			flags = append(flags, a)
-		} else {
-			rest = append(rest, a)
-		}
-	}
-	return append(flags, rest...)
-}
-
-// SDK runs charter pack: an SDK with Fern (Docker) into sdk/out, by default the Go one; -prove: every client,
-// proven in its language; -publish: the Go SDK into sdk/go, which the project commits.
-func SDK(args []string) {
-	fs := flag.NewFlagSet("charter pack", flag.ExitOnError)
-	prove := fs.Bool("prove", false, "generate every client (or those named) and prove each in its language")
-	publish := fs.Bool("publish", false, "the Go SDK into sdk/go, proven ([sdks] go = true)")
-	ifStale := fs.Bool("if-stale", false, "only when fern/ is not what the SDK was made from")
-	fs.Parse(flagsFirst(args))
-	p := load()
-	switch {
-	case *publish:
-		if !p.SDKs.Go {
-			check(errors.New("sdk -publish needs [sdks] go = true in charter.toml: a project that commits its Go SDK"))
-		}
-		check(fern.Publish(p.Root, false))
-	case *prove:
-		check(fern.Prove(p.Root, fs.Args(), p.SDKs.Go))
-	default:
-		group := "go"
-		if fs.NArg() > 0 {
-			group = fs.Arg(0)
-		}
-		_, err := fern.Generate(p.Root, group, *ifStale, false)
-		check(err)
-	}
 }

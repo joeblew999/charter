@@ -42,7 +42,7 @@ tool that owns the job. Run them as `go tool charter <command>` in the app's fol
 | `dev` | The loop you work in, on the real runtime. Leave it running |
 | `check` | Everything that can be said without running the app: format, lint, the contract, the languages. `--fix` writes what it can |
 | `fmt`, `lint` | The two halves of `check`, alone |
-| `test` | `go test`, then the Worker on wrangler dev: its API, the app's own tests, the search-engine audit. The same tests ask a deployed Worker with `--env <environment>` (its address in `charter.toml`'s `[urls]`) or `--base <url>`. `test e2e` runs a suite |
+| `test` | `go test`, then the Worker on wrangler dev: its API, the app's own tests, the search-engine audit. The same tests ask a deployed Worker with `--env <environment>` (its address in `charter.toml`'s `[urls]`, which `deploy` writes) or `--base <url>`; a test command gets `BASE` and `TARGET` (`local` or `deployed`). `test e2e` runs a suite |
 | `build` | The messages, the components' Go, the browser's files and the Wasm. wrangler runs it itself |
 | `preview` | The production build on wrangler dev |
 | `deploy` | The D1 migrations, then wrangler deploy: `deploy staging` |
@@ -117,10 +117,26 @@ That is Vite's files in dev and in production, a URL per language (`/about`, `/d
 `<head>`, `robots.txt`, a sitemap in every language, `/healthz`, and `noindex` on previews. `charter test` then
 audits the site the way a search engine reads it.
 
-Languages and search engines are two tables of `charter.toml`:
+`charter.toml` holds what wrangler has no place for, a block per command:
 
 ```toml
+health = "/healthz"
 url = "https://app.example.com"
+
+[check]               # an API with a contract
+spec = "fern/openapi.json"
+
+[test]                # asked of the Worker, on wrangler dev or deployed: BASE is its URL, TARGET local or deployed
+run = ["go test ./test"]
+
+[urls]                # where each environment is deployed: charter deploy writes it, charter test --env reads it
+preview = "https://app-preview.example.workers.dev"
+
+[pack]                # the SDKs Fern makes from the specs
+name = "App"
+
+[staged]              # before a commit (default: charter check)
+run = ["charter check"]
 
 [intl]                # charter add locale:de writes it
 locales = ["en", "de"]
@@ -128,6 +144,9 @@ catalogs = "locales"
 
 [seo]                 # the live site is url, above
 ```
+
+An app written for an older charter: `go tool charter upgrade` moves charter and runs `charter migrate`, which
+rewrites the import paths, the names that moved with them and `charter.toml`.
 
 ## The library
 

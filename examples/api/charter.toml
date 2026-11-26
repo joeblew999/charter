@@ -2,9 +2,11 @@
 health = "/api/openapi.json"
 # Where it is deployed: the server the specs name, and what charter test --base tries.
 url = "https://charter-api.gedw99.workers.dev"
+
+[check]
 # An API with a contract: charter check --fix writes fern/ from api/contract.go, charter check holds the Worker to it.
 spec = "fern/openapi.json"
 
 # The SDKs Fern makes from the specs (charter pack).
-[sdks]
+[pack]
 name = "Api"

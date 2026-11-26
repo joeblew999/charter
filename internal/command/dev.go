@@ -3,16 +3,15 @@ package command
 import (
 	"errors"
 	"fmt"
+	"github.com/joeblew999/charter/internal/project"
+	"github.com/joeblew999/charter/internal/run"
+	intlconfig "github.com/joeblew999/charter/intl/config"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/joeblew999/charter/internal/project"
-	"github.com/joeblew999/charter/internal/run"
-	intlconfig "github.com/joeblew999/charter/intl/config"
 )
 
 // Dev runs charter dev: the loop a developer works in, on the runtime the app ships on.
@@ -102,95 +101,4 @@ func watchLanguages(p *project.Project) {
 		}
 		fmt.Println("charter dev: languages compiled")
 	}
-}
-
-// Preview runs charter preview: the Worker as Cloudflare runs it, on wrangler dev, with the local D1's migrations
-// applied first. More arguments are wrangler dev's.
-func Preview(args []string) {
-	p := load()
-	check(migrate(p, nil, "--local"))
-	bin, err := npm(p, "wrangler")
-	check(err)
-	check(passthrough(p, bin, append([]string{"dev"}, args...)...))
-}
-
-// Deploy runs charter deploy [environment]: the D1 migrations, then wrangler deploy. An environment is one of
-// wrangler.jsonc's env (production, staging). More arguments are wrangler deploy's. Credentials are wrangler's
-// (cloudflare, in verbs.go, says where they come from).
-func Deploy(args []string) {
-	p := load()
-	var env []string
-	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		if _, ok := p.Worker.Env[args[0]]; !ok {
-			check(fmt.Errorf("%s has no environment %q", project.Wrangler, args[0]))
-		}
-		env, args = []string{"--env", args[0]}, args[1:]
-	}
-	for _, db := range p.Worker.D1 {
-		check(cloudflare(p, append([]string{"d1", "migrations", "apply", db.Binding, "--remote"}, env...), nil))
-	}
-	check(cloudflare(p, append([]string{"deploy"}, env...), args))
-	// What next: the same tests that ask the local Worker ask the deployed one.
-	switch {
-	case len(env) == 0 && p.URL != "":
-		say("deployed. To test it: go tool charter test --base %s", p.URL)
-	case len(env) == 0:
-	case p.URLs[env[1]] != "":
-		say("deployed. To test it: go tool charter test --env %s", env[1])
-	default:
-		say("deployed. To test it: go tool charter test --base <the address above>, or put the address in charter.toml under [urls] as %s and use --env %s", env[1], env[1])
-	}
-}
-
-// migrate applies every D1 database's migrations with wrangler (its own record of which ran).
-func migrate(p *project.Project, env map[string]string, where ...string) error {
-	for _, db := range p.Worker.D1 {
-		if err := wrangler(p, with(env, "CI", "1"), append([]string{"d1", "migrations", "apply", db.Binding}, where...)...); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func with(env map[string]string, key, value string) map[string]string {
-	out := map[string]string{key: value}
-	for k, v := range env {
-		out[k] = v
-	}
-	return out
-}
-
-// passthrough runs a program with the terminal, until it ends.
-func passthrough(p *project.Project, program string, args ...string) error {
-	cmd := exec.Command(program, args...)
-	cmd.Dir, cmd.Stdin, cmd.Stdout, cmd.Stderr = p.Root, os.Stdin, os.Stdout, os.Stderr
-	return cmd.Run()
-}
-
-// serving runs body with the Worker on wrangler dev at base: a free port, and state in a folder of its own that goes
-// when it ends, so a run starts from nothing and two runs never share a database.
-func serving(p *project.Project, body func(base string) error) error {
-	bin, err := npm(p, "wrangler")
-	if err != nil {
-		return err
-	}
-	ports, err := run.FreePorts(2)
-	if err != nil {
-		return err
-	}
-	state, err := os.MkdirTemp("", "charter-state-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(state)
-	quiet := map[string]string{"WRANGLER_SEND_METRICS": "false", "CI": "1"}
-	if err := migrate(p, quiet, "--local", "--persist-to", state); err != nil {
-		return err
-	}
-	base := "http://127.0.0.1:" + strconv.Itoa(ports[0])
-	server := run.Server{
-		Command: []string{bin, "dev", "--port", strconv.Itoa(ports[0]), "--inspector-port", strconv.Itoa(ports[1]), "--persist-to", state, "--show-interactive-dev-session=false", "--test-scheduled"},
-		Dir:     p.Root, Env: quiet, Ready: base + p.HealthPath(),
-	}
-	return run.With(server, func() error { return body(base) })
 }

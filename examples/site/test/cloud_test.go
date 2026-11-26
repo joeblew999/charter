@@ -1,5 +1,5 @@
-// Package test asks the Worker, on wrangler dev, for the Cloudflare page: BASE is its URL (go tool charter test sets
-// it). Each card's binding is used through the page, as a reader would.
+// Package test asks the Worker for the Cloudflare page: BASE is its URL and TARGET says whether it is local
+// (wrangler dev) or deployed. go tool charter test sets both. Each card's binding is used through the page, as a reader would.
 package test
 
 import (
@@ -16,9 +16,9 @@ import (
 
 var base = strings.TrimRight(os.Getenv("BASE"), "/")
 
-// local says the Worker is wrangler dev on this machine, which has two things a deployed one has not: a Cron Trigger
+// local says the Worker is wrangler dev on this machine (charter's TARGET), which has two things a deployed one has not: a Cron Trigger
 // can be fired by hand, and an email can be handed to the Worker.
-var local = strings.Contains(base, "://127.0.0.1") || strings.Contains(base, "://localhost")
+var local = os.Getenv("TARGET") != "deployed"
 
 func TestMain(m *testing.M) {
 	if base == "" {

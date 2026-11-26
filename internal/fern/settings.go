@@ -1,5 +1,5 @@
 // Package fern is the SDKs, made with Fern from a project's fern/ (its specs and generators.yml): Fern's settings
-// written from the spec and charter.toml's [sdks]; a group generated (Docker) into sdk/out/<group> when fern/ is newer
+// written from the spec and charter.toml's [pack]; a group generated (Docker) into sdk/out/<group> when fern/ is newer
 // than what made it; proven in its language (Go: build, vet, and Fern's tests against WireMock; TypeScript:
 // typechecked with the TypeScript its SDKs are written for; Python: mypy and its own tests; the CLI, in Rust: built);
 // and the Go SDK a project commits, in sdk/go. The toolchains a proof needs (cargo, uv) are the developer's own.
@@ -44,7 +44,7 @@ type scheme struct {
 // whether fern/ has an overlay of the OpenAPI spec (overlays.yml).
 func Settings(specJSON []byte, sdks project.SDKs, goModule string, overlays bool) (string, error) {
 	lines := []string{
-		"# Written by `charter check --fix` from fern/openapi.json and charter.toml ([sdks]): don't edit, change",
+		"# Written by `charter check --fix` from fern/openapi.json and charter.toml ([pack]): don't edit, change",
 		"# those and run charter check --fix. Fern's generators are charter's, at the versions it pins.",
 		"api:",
 		"  specs:",
@@ -159,7 +159,7 @@ func Settings(specJSON []byte, sdks project.SDKs, goModule string, overlays bool
 	lines = append(lines, "", "# The SDKs. Generate one: charter pack <group>   (into sdk/out/<group>)", "groups:")
 	lines = append(lines, group("go", "Go: the module charter pack -publish commits in sdk/go, in a project that keeps it.", generators["go"],
 		[]string{"module:", "  path: " + goModule, `  version: "1.22"`, "packageName: " + lower})[1:]...)
-	// Other languages are the app's choice ([sdks] more): its API's users write in them, charter does not.
+	// Other languages are the app's choice ([pack] more): its API's users write in them, charter does not.
 	if slices.Contains(sdks.More, "typescript") {
 		lines = append(lines, group("typescript", "TypeScript, as sources (.ts).", generators["typescript"], typescript)...)
 		lines = append(lines, group("typescript-dist", "TypeScript, compiled (.js and .d.ts): what a Worker or a Node program imports.", generators["typescript"],
