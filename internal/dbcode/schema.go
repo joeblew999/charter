@@ -198,7 +198,7 @@ func Diff(from, to string) (statements []string, name string, notes []string, er
 		// A table made again takes every view and trigger down with it for a moment: they all go first and come back
 		// after, whether their own text changed or not.
 		if err == nil && slices.ContainsFunc(statements, func(st string) bool {
-			return strings.HasPrefix(st, "ALTER TABLE ") && strings.Contains(st, " RENAME TO ")
+			return strings.HasPrefix(st, "CREATE TABLE ") && strings.Contains(st, "_rows AS SELECT * FROM ")
 		}) {
 			var drops []string
 			again = again[:0]
@@ -302,14 +302,18 @@ func Diff(from, to string) (statements []string, name string, notes []string, er
 					notes = append(notes, fmt.Sprintf("%s.%s is dropped, with what its rows held (a column that was renamed says so in the schema: -- was: %s)", n, c, c))
 				}
 			}
-			temp := n + "_new"
-			create := regexp.MustCompile(`(?i)^(\s*CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?)["\x60]?`+n+`["\x60]?`).ReplaceAllString(t.sql, "${1}"+temp)
+			// The rows are set aside, the table dropped and made as it now is, and the rows put back under its own
+			// name. The order matters where other tables' rows point at this one (a foreign key): D1 checks those when
+			// the migration ends, and they are only good again once this table, by this name, has its rows back. A
+			// new table that was merely given the name afterwards would leave every such row pointing at nothing.
+			aside := n + "_rows"
 			statements = append(statements,
 				"PRAGMA defer_foreign_keys = true;",
-				create+";",
-				fmt.Sprintf("INSERT INTO %s (%s) SELECT %s FROM %s;", temp, strings.Join(into, ", "), strings.Join(out, ", "), n),
+				fmt.Sprintf("CREATE TABLE %s AS SELECT * FROM %s;", aside, n),
 				"DROP TABLE "+n+";",
-				fmt.Sprintf("ALTER TABLE %s RENAME TO %s;", temp, n))
+				t.sql+";",
+				fmt.Sprintf("INSERT INTO %s (%s) SELECT %s FROM %s;", n, strings.Join(into, ", "), strings.Join(out, ", "), aside),
+				"DROP TABLE "+aside+";")
 			statements = append(statements, indexes(t)...)
 			words = append(words, "change_"+n)
 		}

@@ -1,8 +1,11 @@
 package dbcode
 
 import (
+	"database/sql"
 	"strings"
 	"testing"
+
+	_ "modernc.org/sqlite"
 )
 
 const notesV1 = "CREATE TABLE notes (id INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL);\n"
@@ -44,7 +47,7 @@ func TestAColumnAddedInPlace(t *testing.T) {
 func TestTheTableMadeAgain(t *testing.T) {
 	sql, name, notes := diff(t, "CREATE TABLE notes (id INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL, old TEXT);",
 		"CREATE TABLE notes (id INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);")
-	for _, want := range []string{"CREATE TABLE notes_new", "INSERT INTO notes_new (id, body) SELECT id, body FROM notes;", "DROP TABLE notes;", "ALTER TABLE notes_new RENAME TO notes;"} {
+	for _, want := range []string{"CREATE TABLE notes_rows AS SELECT * FROM notes;", "DROP TABLE notes;", "INSERT INTO notes (id, body) SELECT id, body FROM notes_rows;", "DROP TABLE notes_rows;"} {
 		if !strings.Contains(sql, want) {
 			t.Errorf("no %q in:\n%s", want, sql)
 		}
@@ -57,7 +60,7 @@ func TestTheTableMadeAgain(t *testing.T) {
 // A renamed column says what it was, and keeps its rows' values.
 func TestARenamedColumnKeepsItsData(t *testing.T) {
 	sql, _, notes := diff(t, notesV1, "CREATE TABLE notes (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  text TEXT NOT NULL -- was: body\n);")
-	if !strings.Contains(sql, "INSERT INTO notes_new (id, text) SELECT id, body FROM notes;") || len(notes) != 0 {
+	if !strings.Contains(sql, "INSERT INTO notes (id, text) SELECT id, body FROM notes_rows;") || len(notes) != 0 {
 		t.Fatalf("%v\n%s", notes, sql)
 	}
 }
@@ -92,7 +95,43 @@ func TestAViewFollowsItsText(t *testing.T) {
 func TestATableMadeAgainUnderAView(t *testing.T) {
 	view := "CREATE VIEW recent AS SELECT id FROM notes;"
 	sql, _, _ := diff(t, notesV1+view, "CREATE TABLE notes (id INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"+view)
-	if !strings.HasPrefix(sql, "DROP VIEW recent;") || !strings.HasSuffix(sql, view) || !strings.Contains(sql, "ALTER TABLE notes_new RENAME TO notes;") {
+	if !strings.HasPrefix(sql, "DROP VIEW recent;") || !strings.HasSuffix(sql, view) || !strings.Contains(sql, "DROP TABLE notes_rows;") {
 		t.Fatalf("%s", sql)
+	}
+}
+
+// A table that other tables' rows point at is made again with those rows there, and the database still holds:
+// D1 checks foreign keys when a migration ends (they are deferred, not off), so the rows must be back under the
+// table's own name by then. The first form of this, a new table given the name afterwards, failed on the first
+// database that had people in it.
+func TestATableMadeAgainUnderRowsThatPointAtIt(t *testing.T) {
+	from := "CREATE TABLE users (id TEXT PRIMARY KEY, scopes TEXT NOT NULL);\nCREATE TABLE tokens (id INTEGER PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users (id));\n"
+	to := "CREATE TABLE users (\n  id TEXT PRIMARY KEY,\n  role TEXT NOT NULL -- was: scopes\n);\nCREATE TABLE tokens (id INTEGER PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users (id));\n"
+	migration, _, _ := diff(t, from, to)
+	db, err := sql.Open("sqlite", ":memory:?_pragma=foreign_keys(1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+	for _, st := range []string{from, "INSERT INTO users VALUES ('u1', 'read write');", "INSERT INTO tokens (user_id) VALUES ('u1');"} {
+		if _, err := db.Exec(st); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// As D1 runs a migration: one transaction, foreign keys on.
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(migration); err != nil {
+		t.Fatalf("%v\n%s", err, migration)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("the migration does not hold with rows that point at the table: %v\n%s", err, migration)
+	}
+	var role string
+	if err := db.QueryRow("SELECT role FROM users JOIN tokens ON tokens.user_id = users.id").Scan(&role); err != nil || role != "read write" {
+		t.Errorf("the rows after: %q %v", role, err)
 	}
 }
