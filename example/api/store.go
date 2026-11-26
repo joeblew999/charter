@@ -11,7 +11,10 @@ import (
 // Store is the notes: what a page's Props and the handlers ask for. On a Worker it is D1 (the table of
 // db/schema.sql, through the queries of db/queries.sql); a test gives one of its own.
 type Store interface {
-	Create(ctx context.Context, body string) (Note, error)
+	// Create keeps a note, by whoever wrote it (their id and name).
+	Create(ctx context.Context, body, authorID, author string) (Note, error)
+	// Remove takes a note away.
+	Remove(ctx context.Context, id int64) error
 	// Get is the note with that id.
 	Get(ctx context.Context, id int64) (Note, error)
 	// Before is the notes with an id below before, newest first, at most limit.
@@ -33,9 +36,14 @@ func open() (Store, error) {
 
 type d1 struct{ db cloud.DB }
 
-func (s d1) Create(_ context.Context, body string) (Note, error) {
-	row, err := db.CreateNote(s.db, body)
+func (s d1) Create(_ context.Context, body, authorID, author string) (Note, error) {
+	row, err := db.CreateNote(s.db, body, authorID, author)
 	return Note{row}, err
+}
+
+func (s d1) Remove(_ context.Context, id int64) error {
+	_, err := db.RemoveNote(s.db, id)
+	return err
 }
 
 func (s d1) Get(_ context.Context, id int64) (Note, error) {

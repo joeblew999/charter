@@ -10,6 +10,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	charter "github.com/joeblew999/charter/api"
+	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/live"
 )
@@ -23,9 +24,10 @@ type Env struct {
 // The page's live list, the API's stream and its WebSocket channel are all this.
 var Notes = live.Feed[Note]{Binding: "HUB", Name: "notes", Log: func() (live.Log[Note], error) { return open() }}
 
-// Post writes a note to the store and wakes every follower: what the API's createNote and the page's form both do.
-func Post(ctx context.Context, store Store, body string) (Note, error) {
-	note, err := store.Create(ctx, body)
+// Post writes a note to the store, as whoever is asking, and wakes every follower: what the API's createNote and
+// the page's form both do.
+func Post(ctx context.Context, store Store, by charter.Caller, body string) (Note, error) {
+	note, err := store.Create(ctx, body, by.Subject, by.Name())
 	if err != nil {
 		return Note{}, err
 	}
@@ -33,9 +35,38 @@ func Post(ctx context.Context, store Store, body string) (Note, error) {
 	return note, nil
 }
 
-// Trusted is who may do what (reads are public, writing needs write):
-//   - the app's own people, who sign in on its pages with a passkey: someone who signs up may read and write, on
-//     the page and, with a token they make on their account page, through the API;
+// MayRemove is the rule for taking a note away, said once: whoever wrote it may, and so may whoever may moderate.
+// The page asks it to show the button, the page's route and the API's deleteNote ask it before they act.
+func MayRemove(who charter.Caller, note Note) bool {
+	return who.May("moderate") || (who.SignedIn() && who.Subject != "" && who.Subject == note.AuthorID)
+}
+
+// Remove takes a note away for whoever is asking, if they may: what the API's deleteNote and the page's button
+// both do.
+func Remove(ctx context.Context, store Store, by charter.Caller, id int64) error {
+	note, err := store.Get(ctx, id)
+	if err != nil {
+		return app.NotFound("no such note")
+	}
+	if !MayRemove(by, note) {
+		return app.Status(http.StatusForbidden, by.Name()+" may not remove this note: it is someone else's, and removing those needs moderate")
+	}
+	return store.Remove(ctx, id)
+}
+
+// Roles are what the app's people may be, and what each may do. Someone who signs up is a member. A moderator
+// may also take anyone's note away; an admin may also say who is what.
+var Roles = map[string][]string{
+	"member":    {"read", "write"},
+	"moderator": {"read", "write", "moderate"},
+	"admin":     {"read", "write", "moderate", "admin"},
+}
+
+// Trusted is who may do what (reads are public, writing needs write, removing someone else's note moderate,
+// saying who is what admin):
+//   - the app's own people, who sign in on its pages with a passkey, each with a role (Roles): on the pages and,
+//     with a token they make on their account page, through the API;
+//   - ADMIN_TOKEN, the operator's: how the first admin is made (setRole), and what a test promotes people with;
 //   - the Worker's secrets (wrangler secret put; .dev.vars locally), each with its scopes: READ_TOKEN may not write;
 //   - Cloudflare Access, once it is in front of the Worker: a person who
 //     logged in writes, a machine's service token reads (and writes with the write token beside it);
@@ -43,7 +74,8 @@ func Post(ctx context.Context, store Store, body string) (Note, error) {
 //
 // An unset secret or setting trusts no one.
 var Trusted = []charter.Trusted{
-	charter.People{Name: "Notes", Accounts: charter.D1Accounts("DB"), Scopes: []string{"read", "write"}},
+	charter.People{Name: "Notes", Accounts: charter.D1Accounts("DB"), Roles: Roles, Role: "member"},
+	charter.Token{Secret: "ADMIN_TOKEN", Scopes: Roles["admin"]},
 	charter.Token{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}},
 	charter.Token{Secret: "READ_TOKEN", Scopes: []string{"read"}},
 	charter.Access{People: []string{"read", "write"}, Machines: []string{"read"}},
@@ -109,11 +141,49 @@ func (env Env) create(ctx context.Context, in *CreateInput) (*NoteOutput, error)
 	if err != nil {
 		return nil, err
 	}
-	note, err := Post(ctx, store, in.Body.Body)
+	who, _ := charter.CallerOf(ctx)
+	note, err := Post(ctx, store, who, in.Body.Body)
 	if err != nil {
 		return nil, err
 	}
 	return &NoteOutput{Body: note}, nil
+}
+
+func (env Env) remove(ctx context.Context, in *NoteInput) (*struct{}, error) {
+	store, err := open()
+	if err != nil {
+		return nil, err
+	}
+	who, _ := charter.CallerOf(ctx)
+	return nil, problem(Remove(ctx, store, who, in.ID))
+}
+
+func (env Env) people(ctx context.Context, _ *struct{}) (*PeopleOutput, error) {
+	everyone, err := Auth.Everyone(Auth.For(ctx))
+	if err != nil {
+		return nil, problem(err)
+	}
+	out := &PeopleOutput{}
+	out.Body.Data = make([]Person, len(everyone))
+	for i, p := range everyone {
+		out.Body.Data[i] = Person{ID: p.ID, Name: p.Name, Role: p.Role}
+	}
+	return out, nil
+}
+
+func (env Env) setRole(ctx context.Context, in *RoleInput) (*PersonOutput, error) {
+	if err := Auth.SetRole(Auth.For(ctx), in.ID, in.Body.Role); err != nil {
+		return nil, problem(err)
+	}
+	return &PersonOutput{Body: Person{ID: in.ID, Role: in.Body.Role}}, nil
+}
+
+// problem is an error of the app's as the API says it: with its status.
+func problem(err error) error {
+	if status, message, ok := app.StatusOf(err); ok {
+		return huma.NewError(status, message)
+	}
+	return err
 }
 
 // watch is the feed as server-sent events for SDK clients: every event's id is the note id, so `after` and Last-Event-ID are the

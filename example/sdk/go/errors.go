@@ -7,6 +7,68 @@ import (
 	core "github.com/joeblew999/charter/example/sdk/go/core"
 )
 
+// Forbidden
+type ForbiddenError struct {
+	*core.APIError
+	Body *ErrorModel
+}
+
+func (f *ForbiddenError) UnmarshalJSON(data []byte) error {
+	var body *ErrorModel
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	f.StatusCode = 403
+	f.Body = body
+	return nil
+}
+
+func (f *ForbiddenError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(f.Body)
+}
+
+func (f *ForbiddenError) Unwrap() error {
+	return f.APIError
+}
+
+func (f *ForbiddenError) GetBody() *ErrorModel {
+	if f == nil {
+		return nil
+	}
+	return f.Body
+}
+
+// Not Found
+type NotFoundError struct {
+	*core.APIError
+	Body *ErrorModel
+}
+
+func (n *NotFoundError) UnmarshalJSON(data []byte) error {
+	var body *ErrorModel
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	n.StatusCode = 404
+	n.Body = body
+	return nil
+}
+
+func (n *NotFoundError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(n.Body)
+}
+
+func (n *NotFoundError) Unwrap() error {
+	return n.APIError
+}
+
+func (n *NotFoundError) GetBody() *ErrorModel {
+	if n == nil {
+		return nil
+	}
+	return n.Body
+}
+
 // Too Many Requests: more than 100 calls in 60 s by this caller
 type TooManyRequestsError struct {
 	*core.APIError

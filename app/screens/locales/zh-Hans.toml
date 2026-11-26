@@ -35,6 +35,9 @@ token_name = "用途"
 token_new = "创建令牌"
 token_once = "请立即复制：不会再次显示。"
 token_revoke = "撤销"
+people = "人员"
+role = "角色"
+people_intro = "所有已注册的人，以及每个人可以做什么。"
 
 [gsxui]
 close = "关闭"

@@ -27,14 +27,29 @@ func newFakeAccounts() *fakeAccounts {
 	}{}}
 }
 
-func (m *fakeAccounts) ByToken(_ context.Context, hash string) (Person, string, error) {
+func (m *fakeAccounts) ByToken(_ context.Context, hash string) (Person, string, []string, error) {
 	t, ok := m.tokens[hash]
 	if !ok {
-		return Person{}, "", ErrNoAccount
+		return Person{}, "", nil, ErrNoAccount
 	}
-	p := m.people[t.user]
-	p.Scopes = t.scopes
-	return p, t.kind, nil
+	return m.people[t.user], t.kind, t.scopes, nil
+}
+
+func (m *fakeAccounts) Everyone(context.Context) (out []Person, err error) {
+	for _, p := range m.people {
+		out = append(out, p)
+	}
+	return out, nil
+}
+
+func (m *fakeAccounts) SetRole(_ context.Context, id, role string) error {
+	p, ok := m.people[id]
+	if !ok {
+		return ErrNoAccount
+	}
+	p.Role = role
+	m.people[id] = p
+	return nil
 }
 func (m *fakeAccounts) Person(_ context.Context, id string) (Person, error) {
 	p, ok := m.people[id]
@@ -79,12 +94,14 @@ func (m *fakeAccounts) Take(context.Context, string) (string, error)           {
 // nobody, with no error (a browser keeps cookies).
 func TestPeopleAreOneCallerByCookieAndByToken(t *testing.T) {
 	accounts := newFakeAccounts()
-	ada := Person{ID: "u1", Name: "Ada", Scopes: []string{"read", "write"}}
+	ada := Person{ID: "u1", Name: "Ada", Role: "member"}
 	accounts.Create(t.Context(), ada)
-	auth := NewAuth(nil, People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil }, Scopes: ada.Scopes})
+	roles := map[string][]string{"reader": {"read"}, "member": {"read", "write"}, "admin": {"read", "write", "admin"}}
+	auth := NewAuth(nil, People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil }, Roles: roles, Role: "member"},
+		Token{Secret: "ADMIN_TOKEN", Scopes: []string{"admin"}})
 
 	session, hash := newToken()
-	accounts.Issue(t.Context(), ada.ID, SessionScheme, "", hash, ada.Scopes, time.Time{})
+	accounts.Issue(t.Context(), ada.ID, SessionScheme, "", hash, nil, time.Time{})
 	page := httptest.NewRequest("GET", "/", nil)
 	page.AddCookie(&http.Cookie{Name: SessionCookie, Value: session})
 	if c, _ := auth.Caller(page); c.Scheme != SessionScheme || c.Person != "Ada" || !c.May("write") {
@@ -123,6 +140,23 @@ func TestPeopleAreOneCallerByCookieAndByToken(t *testing.T) {
 		t.Errorf("a revoked token is still %+v", c)
 	}
 
+	// What someone is decides what they may do, at once: in the session they have open.
+	if err := auth.SetRole(page, ada.ID, "admin"); err == nil {
+		t.Error("a member changed a role")
+	}
+	accounts.SetRole(t.Context(), ada.ID, "reader")
+	if err := auth.Allow(httptestWith(session), "write"); err == nil {
+		t.Error("someone made a reader still writes, in the session they had")
+	}
+	accounts.SetRole(t.Context(), ada.ID, "admin")
+	asAdmin := httptestWith(session)
+	if people, err := auth.Everyone(asAdmin); err != nil || len(people) != 1 {
+		t.Errorf("an admin's list of people: %v %v", people, err)
+	}
+	if err := auth.SetRole(asAdmin, ada.ID, "no-such-role"); err == nil {
+		t.Error("a role that is none was given")
+	}
+
 	gone := httptest.NewRequest("GET", "/", nil)
 	gone.AddCookie(&http.Cookie{Name: SessionCookie, Value: tokenPrefix + "ended"})
 	if c, err := auth.Caller(gone); err != nil || c.SignedIn() {
@@ -131,4 +165,11 @@ func TestPeopleAreOneCallerByCookieAndByToken(t *testing.T) {
 	if err := auth.Allow(gone); err == nil {
 		t.Error("nobody passed a check for someone signed in")
 	}
+}
+
+// httptestWith is a page's request with a session's cookie.
+func httptestWith(session string) *http.Request {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.AddCookie(&http.Cookie{Name: SessionCookie, Value: session})
+	return r
 }

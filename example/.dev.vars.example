@@ -1,6 +1,9 @@
 # Throwaway values for wrangler dev and charter check only. The deployed Worker's are secrets:
 #   wrangler secret put READ_TOKEN
 #   wrangler secret put WRITE_TOKEN
+#   wrangler secret put ADMIN_TOKEN
 READ_TOKEN=local-read-token
 WRITE_TOKEN=local-write-token
+# The operator's: how the first admin is made (the API's setRole).
+ADMIN_TOKEN=local-admin-token
 MAIL_TO=you@example.com

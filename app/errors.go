@@ -19,6 +19,16 @@ import (
 // refused. A plain error is a 500, logged, with nothing of it shown.
 func Status(status int, message string) error { return statusError{status, message} }
 
+// StatusOf is the status and message of an error made by Status or NotFound: for what answers in another form
+// than a page does (an API's problem document).
+func StatusOf(err error) (status int, message string, ok bool) {
+	var known statusError
+	if errors.As(err, &known) {
+		return known.status, known.message, true
+	}
+	return 0, "", false
+}
+
 // NotFound is Status(404): what a page's Props returns when what was asked for is not there.
 func NotFound(what string) error { return statusError{http.StatusNotFound, what} }
 

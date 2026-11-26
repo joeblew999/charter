@@ -41,6 +41,20 @@
       "Note": {
         "additionalProperties": false,
         "properties": {
+          "author": {
+            "description": "What they call themselves",
+            "examples": [
+              "Ada"
+            ],
+            "type": "string"
+          },
+          "author_id": {
+            "description": "Who wrote it: their id, empty for a program with one of the Worker's own tokens",
+            "examples": [
+              "4f1c9a0e7b2d4c6f8a1b3c5d7e9f0a1b"
+            ],
+            "type": "string"
+          },
           "body": {
             "examples": [
               "Buy milk"
@@ -64,6 +78,8 @@
         "required": [
           "id",
           "body",
+          "author_id",
+          "author",
           "created_at"
         ],
         "type": "object"

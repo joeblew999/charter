@@ -13,9 +13,10 @@ The log, a D1 table, is the truth. The hub, a Durable Object, only wakes whoever
 ## Writing
 
 ```go file=../example/api/handlers.go#Post
-// Post writes a note to the store and wakes every follower: what the API's createNote and the page's form both do.
-func Post(ctx context.Context, store Store, body string) (Note, error) {
-	note, err := store.Create(ctx, body)
+// Post writes a note to the store, as whoever is asking, and wakes every follower: what the API's createNote and
+// the page's form both do.
+func Post(ctx context.Context, store Store, by charter.Caller, body string) (Note, error) {
+	note, err := store.Create(ctx, body, by.Subject, by.Name())
 	if err != nil {
 		return Note{}, err
 	}

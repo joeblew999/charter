@@ -35,6 +35,9 @@ token_name = "למה הוא משמש"
 token_new = "יצירת אסימון"
 token_once = "העתיקו אותו עכשיו: הוא לא יוצג שוב."
 token_revoke = "ביטול"
+people = "אנשים"
+role = "תפקיד"
+people_intro = "כל מי שנרשם, ומה מותר לכל אחד."
 
 [gsxui]
 close = "סגירה"

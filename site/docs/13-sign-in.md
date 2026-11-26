@@ -48,31 +48,66 @@ A page that shows something of the caller declares them, as it declares the stor
 // Props loads what the request wants, as structpages has it. A row's button asks for that row alone (its target is
 // Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. Anything
 // else is the page, with the newest notes. Each component takes its share of the results by their types.
-func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, api.Note, Open, error) {
+func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, api.Note, Open, Removable, error) {
 	if target.Is(p.Item) {
 		id, err := strconv.ParseInt(structpages.KeyOf(target), 10, 64)
 		if err != nil {
-			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
+			return HomeProps{}, api.Note{}, false, false, app.NotFound("no such note")
 		}
 		note, err := store.Get(r.Context(), id)
 		if err != nil {
-			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
+			return HomeProps{}, api.Note{}, false, false, app.NotFound("no such note")
 		}
-		return HomeProps{}, note, r.URL.Query().Get("open") != "", nil
+		return HomeProps{}, note, r.URL.Query().Get("open") != "", Removable(api.MayRemove(caller, note)), nil
 	}
 	notes, err := store.Before(r.Context(), math.MaxInt64, shown)
 	if err != nil {
-		return HomeProps{}, api.Note{}, false, err
+		return HomeProps{}, api.Note{}, false, false, err
 	}
-	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...)}
+	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...), Caller: caller}
 	if len(notes) > 0 {
 		props.After = notes[0].ID
 	}
-	return props, api.Note{}, false, nil
+	return props, api.Note{}, false, false, nil
 }
 ```
 
 In a component, `caller.May("write")` decides what to show: the form, or the way to sign in. Hiding a button protects nothing; the check on the route does.
+
+## Roles
+
+What people may be is said once, as names and what each may do. A person has one role; someone who signs up gets the first you name.
+
+```go file=../example/api/handlers.go#Roles
+// Roles are what the app's people may be, and what each may do. Someone who signs up is a member. A moderator
+// may also take anyone's note away; an admin may also say who is what.
+var Roles = map[string][]string{
+	"member":    {"read", "write"},
+	"moderator": {"read", "write", "moderate"},
+	"admin":     {"read", "write", "moderate", "admin"},
+}
+```
+
+A role changes for everyone who has it when you change it here, and a person's changes at their next request: in the session they have open, and for the tokens they made before.
+
+A rule that is about more than a scope is a function, asked by the page and by the API alike:
+
+```go file=../example/api/handlers.go#MayRemove
+// MayRemove is the rule for taking a note away, said once: whoever wrote it may, and so may whoever may moderate.
+// The page asks it to show the button, the page's route and the API's deleteNote ask it before they act.
+func MayRemove(who charter.Caller, note Note) bool {
+	return who.May("moderate") || (who.SignedIn() && who.Subject != "" && who.Subject == note.AuthorID)
+}
+```
+
+In the example a note says who wrote it. Its writer may take it away, and so may a moderator: the page shows the button to exactly those, and the page's route and the API's `deleteNote` ask the same function before they act.
+
+Who is what is an admin's to say: on the people page (from their account), and through the API (`listPeople`, `setRole`), so the generated clients and the command-line client can do it too. The first admin is made with the operator's own token, a secret of the Worker (`ADMIN_TOKEN`):
+
+```sh
+notes people list
+notes people setRole --id <id> --role admin
+```
 
 ## Signing in
 
@@ -110,7 +145,7 @@ A passkey belongs to a host name. Under `charter dev` that is `localhost`; an IP
 | A page in a browser | `page.SignUp(path, "Ada")`: Chrome's own virtual authenticator makes the passkey, in a fraction of a second |
 | The API | A bearer token: one of the Worker's secrets |
 
-The example holds both sides to one rule in `test/page_signin_test.go`: nobody is refused by the page's form and by the API's `createNote`; someone signed in is let through by both, and so is the token they made.
+The example holds both sides to one rule in `test/page_signin_test.go`: nobody is refused by the page's form and by the API's `createNote`; someone signed in is let through by both, and so is the token they made. A member may not remove another's note, on the page or through the API; made a moderator, they may, through both, at once.
 
 ## The clients
 
@@ -119,4 +154,4 @@ Every client Fern generates is run against the Worker itself (`go tool charter p
 ## What is left to you
 
 - **A lost device.** A passkey is on a device. Until the app sends email to anyone, the answer is a second passkey.
-- **Roles.** A person has scopes, set when they sign up (`api.People`'s `Scopes`). Who gets which is your app's to decide.
+- **More than one role each, groups, teams.** A person has one role. Anything richer is your app's own tables and its own rule, written as `MayRemove` is.

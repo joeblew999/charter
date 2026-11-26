@@ -9,6 +9,8 @@ import "github.com/joeblew999/charter/cloud"
 type NotesRow struct {
 	ID        int64  `json:"id" example:"42"`
 	Body      string `json:"body" example:"Buy milk"`
+	AuthorID  string `json:"author_id" example:"4f1c9a0e7b2d4c6f8a1b3c5d7e9f0a1b" doc:"Who wrote it: their id, empty for a program with one of the Worker's own tokens"`
+	Author    string `json:"author" example:"Ada" doc:"What they call themselves"`
 	CreatedAt string `json:"created_at" example:"2026-10-01 12:00:00"`
 }
 
@@ -17,28 +19,35 @@ type NewestNoteRow struct {
 	ID int64 `json:"id"`
 }
 
-const qCreateNote = "INSERT INTO notes (body) VALUES (?) RETURNING id, body, created_at"
+const qCreateNote = "INSERT INTO notes (body, author_id, author) VALUES (?, ?, ?) RETURNING id, body, author_id, author, created_at"
 
 // CreateNote runs the query CreateNote of db/queries.sql.
-func CreateNote(db cloud.DB, body string) (NotesRow, error) {
-	return cloud.One[NotesRow](db, qCreateNote, body)
+func CreateNote(db cloud.DB, body string, authorID string, author string) (NotesRow, error) {
+	return cloud.One[NotesRow](db, qCreateNote, body, authorID, author)
 }
 
-const qNote = "SELECT id, body, created_at FROM notes WHERE id = ?"
+const qRemoveNote = "DELETE FROM notes WHERE id = ? RETURNING id, body, author_id, author, created_at"
+
+// RemoveNote takes a note away, and says which it was.
+func RemoveNote(db cloud.DB, id int64) (NotesRow, error) {
+	return cloud.One[NotesRow](db, qRemoveNote, id)
+}
+
+const qNote = "SELECT id, body, author_id, author, created_at FROM notes WHERE id = ?"
 
 // Note is one note, by its id.
 func Note(db cloud.DB, id int64) (NotesRow, error) {
 	return cloud.One[NotesRow](db, qNote, id)
 }
 
-const qNotesBefore = "SELECT id, body, created_at FROM notes WHERE id < ? ORDER BY id DESC LIMIT ?"
+const qNotesBefore = "SELECT id, body, author_id, author, created_at FROM notes WHERE id < ? ORDER BY id DESC LIMIT ?"
 
 // NotesBefore is a page of notes, newest first, before a note id.
 func NotesBefore(db cloud.DB, id int64, limit int64) ([]NotesRow, error) {
 	return cloud.Query[NotesRow](db, qNotesBefore, id, limit)
 }
 
-const qNotesAfter = "SELECT id, body, created_at FROM notes WHERE id > ? ORDER BY id LIMIT ?"
+const qNotesAfter = "SELECT id, body, author_id, author, created_at FROM notes WHERE id > ? ORDER BY id LIMIT ?"
 
 // NotesAfter is the notes after a note id, oldest first: the log a stream follows.
 func NotesAfter(db cloud.DB, id int64, limit int64) ([]NotesRow, error) {

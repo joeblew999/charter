@@ -10,11 +10,13 @@ import (
 	meta "github.com/joeblew999/charter/example/sdk/go/meta"
 	notes "github.com/joeblew999/charter/example/sdk/go/notes"
 	option "github.com/joeblew999/charter/example/sdk/go/option"
+	people "github.com/joeblew999/charter/example/sdk/go/people"
 )
 
 type Client struct {
-	Meta  *meta.Client
-	Notes *notes.Client
+	Meta   *meta.Client
+	Notes  *notes.Client
+	People *people.Client
 
 	options *core.RequestOptions
 	baseURL string
@@ -36,6 +38,7 @@ func NewClient(opts ...option.RequestOption) *Client {
 	return &Client{
 		Meta:    meta.NewClient(options),
 		Notes:   notes.NewClient(options),
+		People:  people.NewClient(options),
 		options: options,
 		baseURL: options.BaseURL,
 		caller: internal.NewCaller(

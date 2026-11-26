@@ -45,6 +45,7 @@ type Pages struct {
 
 	// What the pages call: routes, not pages.
 	post   PostNote       `route:"POST /notes PostNote"`
+	remove RemoveNote     `route:"POST /notes/{note}/remove RemoveNote"`
 	stream NotesStream    `route:"GET /notes/stream NotesStream"`
 	act    BindingsAction `route:"POST /bindings/{action} BindingsAction"`
 }
@@ -69,35 +70,40 @@ type HomeProps struct {
 	// MayWrite is whether the reader may write a note: the form, or the way to sign in. It is what PostNote
 	// needs, asked of the same caller.
 	MayWrite bool
+	// Caller is the reader: each note's row asks whether they may take it away.
+	Caller charter.Caller
 }
 
 // Open says whether a note's row shows when it was written in full: what the row's own button asks for.
 type Open bool
 
+// Removable says whether the reader may take a note away (api.MayRemove): whether its row has the button.
+type Removable bool
+
 // Props loads what the request wants, as structpages has it. A row's button asks for that row alone (its target is
 // Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. Anything
 // else is the page, with the newest notes. Each component takes its share of the results by their types.
-func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, api.Note, Open, error) {
+func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, api.Note, Open, Removable, error) {
 	if target.Is(p.Item) {
 		id, err := strconv.ParseInt(structpages.KeyOf(target), 10, 64)
 		if err != nil {
-			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
+			return HomeProps{}, api.Note{}, false, false, app.NotFound("no such note")
 		}
 		note, err := store.Get(r.Context(), id)
 		if err != nil {
-			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
+			return HomeProps{}, api.Note{}, false, false, app.NotFound("no such note")
 		}
-		return HomeProps{}, note, r.URL.Query().Get("open") != "", nil
+		return HomeProps{}, note, r.URL.Query().Get("open") != "", Removable(api.MayRemove(caller, note)), nil
 	}
 	notes, err := store.Before(r.Context(), math.MaxInt64, shown)
 	if err != nil {
-		return HomeProps{}, api.Note{}, false, err
+		return HomeProps{}, api.Note{}, false, false, err
 	}
-	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...)}
+	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...), Caller: caller}
 	if len(notes) > 0 {
 		props.After = notes[0].ID
 	}
-	return props, api.Note{}, false, nil
+	return props, api.Note{}, false, false, nil
 }
 
 // current is how a link in the header looks: marked when the page being shown is that page, or under it
@@ -122,7 +128,7 @@ func (PostNote) Needs() []string { return []string{"write"} }
 // The longest note the form takes.
 const maxBody = 500
 
-func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Store) error {
+func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Store, caller charter.Caller) error {
 	body := strings.TrimSpace(r.PostFormValue("body"))
 	if body == "" || len(body) > maxBody || strings.Contains(body, api.END) {
 		// htmx 4 swaps a 422 too: the form comes back with what was typed.
@@ -130,10 +136,25 @@ func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Stor
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return structpages.RenderComponent(Home{}.Form(body, true))
 	}
-	if _, err := api.Post(r.Context(), store, body); err != nil {
+	if _, err := api.Post(r.Context(), store, caller, body); err != nil {
 		return err
 	}
 	return structpages.RenderComponent(Home{}.Form("", false))
+}
+
+// RemoveNote is a row's remove button: it takes the note away if the reader may (api.Remove, the rule the API's
+// deleteNote is under too), and answers with nothing, which is what the row becomes.
+type RemoveNote struct{}
+
+// Needs is what it needs before the rule is asked: someone who may write.
+func (RemoveNote) Needs() []string { return []string{"write"} }
+
+func (RemoveNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Store, caller charter.Caller) error {
+	id, err := strconv.ParseInt(r.PathValue("note"), 10, 64)
+	if err != nil {
+		return app.NotFound("no such note")
+	}
+	return api.Remove(r.Context(), store, caller, id)
 }
 
 // NotesStream is the page's side of the feed (api.Notes): every new note as Home's Item, over server-sent events,
@@ -144,7 +165,7 @@ type NotesStream struct{}
 func (NotesStream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	api.Notes.Fragments(w, r, func(ctx context.Context, note api.Note) (string, error) {
 		var html bytes.Buffer
-		err := Home{}.Item(note, false).Render(ctx, &html)
+		err := Home{}.Item(note, false, false).Render(ctx, &html)
 		return strings.TrimSpace(html.String()), err
 	})
 }

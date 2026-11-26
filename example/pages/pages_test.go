@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -27,12 +29,21 @@ import (
 func TestMain(m *testing.M) { os.Exit(intltest.Main(m)) }
 
 // notes is a store in memory.
-type notes struct{ all []api.Note }
+type notes struct {
+	all  []api.Note
+	next int64
+}
 
-func (n *notes) Create(_ context.Context, body string) (api.Note, error) {
-	note := api.Note{NotesRow: db.NotesRow{ID: int64(len(n.all) + 1), Body: body, CreatedAt: "2026-10-01 12:00:00"}}
+func (n *notes) Create(_ context.Context, body, authorID, author string) (api.Note, error) {
+	n.next++
+	note := api.Note{NotesRow: db.NotesRow{ID: n.next, Body: body, AuthorID: authorID, Author: author, CreatedAt: "2026-10-01 12:00:00"}}
 	n.all = append(n.all, note)
 	return note, nil
+}
+
+func (n *notes) Remove(_ context.Context, id int64) error {
+	n.all = slices.DeleteFunc(n.all, func(note api.Note) bool { return note.ID == id })
+	return nil
 }
 
 func (n *notes) Get(_ context.Context, id int64) (api.Note, error) {
@@ -54,14 +65,14 @@ func (n *notes) Before(_ context.Context, before int64, limit int) (out []api.No
 }
 
 func (n *notes) Since(context.Context, int64, int) ([]api.Note, error) { return nil, nil }
-func (n *notes) Latest(context.Context) (int64, error)                 { return int64(len(n.all)), nil }
+func (n *notes) Latest(context.Context) (int64, error)                 { return n.next, nil }
 
 // The home page's data is the newest notes first, and where its stream starts: after the newest.
 func TestHomeProps(t *testing.T) {
 	store := &notes{}
-	store.Create(context.Background(), "first")
-	store.Create(context.Background(), "second")
-	props, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
+	store.Create(context.Background(), "first", "u1", "Ada")
+	store.Create(context.Background(), "second", "u1", "Ada")
+	props, _, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
 	if err != nil || len(props.Notes) != 2 || props.Notes[0].Body != "second" || props.After != 2 {
 		t.Fatalf("%+v %v", props, err)
 	}
@@ -111,7 +122,7 @@ func serve(t *testing.T, store api.Store, who ...charter.Caller) http.Handler {
 // The page has its form and its notes, each under the id the tree gives it.
 func TestHomePage(t *testing.T) {
 	store := &notes{}
-	store.Create(context.Background(), "a note <b>as typed</b>")
+	store.Create(context.Background(), "a note <b>as typed</b>", "u1", "Ada")
 	rec := httptest.NewRecorder()
 	serve(t, store).ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
 	html := rec.Body.String()
@@ -151,7 +162,7 @@ func TestItemAlone(t *testing.T) {
 	}
 	var html bytes.Buffer
 	note := api.Note{NotesRow: db.NotesRow{ID: 7, Body: "seven", CreatedAt: "2026-10-01 12:00:00"}}
-	if err := (Home{}).Item(note, false).Render(sp.PageContext(context.Background()), &html); err != nil {
+	if err := (Home{}).Item(note, false, false).Render(sp.PageContext(context.Background()), &html); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(html.String(), `<li id="home-item--7"`) || !strings.Contains(html.String(), "seven") {
@@ -162,8 +173,8 @@ func TestItemAlone(t *testing.T) {
 // A row's button asks for that row alone: the answer is the one note, open, and nothing of the page around it.
 func TestOneRowAlone(t *testing.T) {
 	store := &notes{}
-	store.Create(context.Background(), "first")
-	store.Create(context.Background(), "second")
+	store.Create(context.Background(), "first", "u1", "Ada")
+	store.Create(context.Background(), "second", "u1", "Ada")
 	r := httptest.NewRequest("GET", "/?open=1", nil)
 	r.Header.Set("HX-Request", "true")
 	r.Header.Set("HX-Target", "li#home-item--1")
@@ -194,7 +205,7 @@ func TestEveryRouteHasAnAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sample := map[string]any{"slug": "how-it-is-built", "action": "note", "token": 1}
+	sample := map[string]any{"slug": "how-it-is-built", "action": "note", "token": 1, "note": 1, "person": "u1"}
 	for _, node := range routes {
 		if _, err := sp.URLFor(node.Value.Interface(), sample); err != nil {
 			t.Errorf("%s (%s): %v", node.Name, node.FullRoute(), err)
@@ -241,5 +252,42 @@ func TestWritingNeedsSomeoneSignedIn(t *testing.T) {
 	}
 	if code := post(writer); code != http.StatusOK || len(store.all) != 1 {
 		t.Errorf("someone who may write, posting: HTTP %d, %d kept", code, len(store.all))
+	}
+}
+
+// Who may take a note away is one rule (api.MayRemove): whoever wrote it, and a moderator. The page shows the button
+// to exactly those, and the route refuses everyone else.
+func TestWhoMayRemoveANote(t *testing.T) {
+	store := &notes{}
+	note, _ := store.Create(context.Background(), "Ada's note", "u1", "Ada")
+	other := charter.Caller{Scheme: charter.SessionScheme, Subject: "u2", Person: "Bo", Role: "member", Scopes: []string{"read", "write"}}
+	moderator := charter.Caller{Scheme: charter.SessionScheme, Subject: "u3", Person: "Mo", Role: "moderator", Scopes: []string{"read", "write", "moderate"}}
+	button := func(who charter.Caller) bool {
+		rec := httptest.NewRecorder()
+		serve(t, store, who).ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+		return strings.Contains(rec.Body.String(), "data-remove")
+	}
+	remove := func(who charter.Caller) int {
+		rec := httptest.NewRecorder()
+		serve(t, store, who).ServeHTTP(rec, httptest.NewRequest("POST", "/notes/1/remove", nil))
+		return rec.Code
+	}
+	if button(nobody) || button(other) || !button(writer) || !button(moderator) {
+		t.Errorf("the button: nobody %v, another member %v, the writer %v, a moderator %v", button(nobody), button(other), button(writer), button(moderator))
+	}
+	if code := remove(nobody); code != http.StatusUnauthorized {
+		t.Errorf("nobody removing: HTTP %d", code)
+	}
+	if code := remove(other); code != http.StatusForbidden || len(store.all) != 1 {
+		t.Errorf("another member removing: HTTP %d, %d left", code, len(store.all))
+	}
+	if code := remove(moderator); code != http.StatusOK || len(store.all) != 0 {
+		t.Errorf("a moderator removing: HTTP %d, %d left", code, len(store.all))
+	}
+	note, _ = store.Create(context.Background(), "Ada's second", "u1", "Ada")
+	rec := httptest.NewRecorder()
+	serve(t, store, writer).ServeHTTP(rec, httptest.NewRequest("POST", "/notes/"+strconv.FormatInt(note.ID, 10)+"/remove", nil))
+	if rec.Code != http.StatusOK || len(store.all) != 0 {
+		t.Errorf("the writer removing their own: HTTP %d, %d left", rec.Code, len(store.all))
 	}
 }

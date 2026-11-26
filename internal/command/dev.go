@@ -129,13 +129,19 @@ func devState(p *project.Project) (state DevState, ok bool) {
 		return state, false
 	}
 	// A loop that was killed leaves its file: it is running when its Worker answers.
-	client := http.Client{Timeout: time.Second}
-	res, err := client.Get(state.Worker + p.HealthPath())
-	if err != nil {
-		return state, false
+	// Asked more than once: while it takes a new build the Worker is a moment away, and that is running too.
+	client := http.Client{Timeout: 3 * time.Second}
+	for range 3 {
+		if res, err := client.Get(state.Worker + p.HealthPath()); err == nil {
+			res.Body.Close()
+			return state, true
+		}
+		if !run.Alive(state.PID) {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
 	}
-	res.Body.Close()
-	return state, true
+	return state, false
 }
 
 // devWorker is charter dev -worker, what gsx dev runs after each build and stops before the next. The Worker itself,

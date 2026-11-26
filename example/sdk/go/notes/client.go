@@ -223,3 +223,28 @@ func (c *Client) Watch(
 		},
 	)
 }
+
+// Example:
+//
+//	request := &notes.DeleteNotesRequest{
+//	    ID: int64(42),
+//	}
+//	client.Notes.Delete(
+//	    context.TODO(),
+//	    request,
+//	)
+func (c *Client) Delete(
+	ctx context.Context,
+	request *notes.DeleteNotesRequest,
+	opts ...option.RequestOption,
+) error {
+	_, err := c.WithRawResponse.Delete(
+		ctx,
+		request,
+		opts...,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}

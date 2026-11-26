@@ -9,4 +9,5 @@ which is who may do what, as the contract says it:
 3. Someone who may write writes, and what they wrote is read back.
 
 A program gets `BASE` (where the Worker is), `READ_TOKEN` and `WRITE_TOKEN` (the Worker's own, from `.dev.vars`).
-The Go client's turn is `test/api_test.go`, which every `charter test` runs.
+The Go client's turn is `test/api_test.go` and `test/page_signin_test.go`, which every `charter test` runs: there it also
+holds roles to one rule on the page and through the API.

@@ -12,6 +12,7 @@
 package command
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,14 +29,16 @@ import (
 	"time"
 )
 
-// times says how long each part of a command took.
+// times says how long each part of a command took, and which took much longer than is usual here (times.go).
 type times struct {
 	name  string
 	start time.Time
 	parts []string
+	usual usual
+	slow  []string
 }
 
-func newTimes(name string) *times { return &times{name: name, start: time.Now()} }
+func newTimes(name string) *times { return &times{name: name, start: time.Now(), usual: readUsual()} }
 
 func (t *times) part(name string, f func() error) {
 	start := time.Now()
@@ -47,11 +50,27 @@ func (t *times) part(name string, f func() error) {
 	if err := f(); err != nil {
 		check(fmt.Errorf("%s: %w", name, err))
 	}
-	t.parts = append(t.parts, name+" "+run.Seconds(time.Since(start)))
+	d := time.Since(start)
+	said := name + " " + run.Seconds(d)
+	if median, slow := t.usual.took(t.name+"/"+name, d); slow {
+		said += " (usually " + run.Seconds(median) + ")"
+		t.slow = append(t.slow, name)
+	}
+	t.parts = append(t.parts, said)
 }
 
 func (t *times) done() {
-	say("✓ %s took %s: %s", t.name, run.Seconds(time.Since(t.start)), strings.Join(t.parts, ", "))
+	d := time.Since(t.start)
+	median, slow := t.usual.took(t.name, d)
+	t.usual.save()
+	reported = true
+	say("✓ %s took %s: %s", t.name, run.Seconds(d), strings.Join(t.parts, ", "))
+	switch {
+	case len(t.slow) > 0:
+		say("  slower than usual here: %s", strings.Join(t.slow, ", "))
+	case slow:
+		say("  slower than usual here (%s)", run.Seconds(median))
+	}
 }
 
 func with(env map[string]string, key, value string) map[string]string {
@@ -225,11 +244,37 @@ func hasVite(p *project.Project) bool {
 // else's and so not in git: made from .dev.vars.example, the throwaway values the app's tests are written against.
 func localVars(p *project.Project) {
 	vars, example := filepath.Join(p.Root, project.DevVars), filepath.Join(p.Root, project.DevVars+".example")
-	if exists(vars) {
+	wanted, err := os.ReadFile(example)
+	if err != nil {
 		return
 	}
-	if b, err := os.ReadFile(example); err == nil && os.WriteFile(vars, b, 0o600) == nil {
-		say("%s: made from %s.example (local values for wrangler dev; not in git)", project.DevVars, project.DevVars)
+	have, err := os.ReadFile(vars)
+	if err != nil {
+		if os.WriteFile(vars, wanted, 0o600) == nil {
+			say("%s: made from %s.example (local values for wrangler dev; not in git)", project.DevVars, project.DevVars)
+		}
+		return
+	}
+	// A name the example has since gained (a pull brought a new secret) is added, with the example's throwaway value:
+	// what a developer set themselves stays.
+	names := func(b []byte) map[string]string {
+		out := map[string]string{}
+		for _, line := range strings.Split(string(b), "\n") {
+			if name, _, ok := strings.Cut(strings.TrimSpace(line), "="); ok && !strings.HasPrefix(name, "#") {
+				out[strings.TrimSpace(name)] = line
+			}
+		}
+		return out
+	}
+	mine, added := names(have), []string{}
+	for _, line := range strings.Split(string(wanted), "\n") {
+		if name, _, ok := strings.Cut(strings.TrimSpace(line), "="); ok && !strings.HasPrefix(name, "#") && mine[strings.TrimSpace(name)] == "" {
+			have = append(bytes.TrimRight(have, "\n"), ("\n" + line + "\n")...)
+			added = append(added, strings.TrimSpace(name))
+		}
+	}
+	if len(added) > 0 && os.WriteFile(vars, have, 0o600) == nil {
+		say("%s: %s added from %s.example", project.DevVars, strings.Join(added, ", "), project.DevVars)
 	}
 }
 

@@ -35,6 +35,9 @@ token_name = "用途"
 token_new = "トークンを作成"
 token_once = "今すぐコピーしてください。再表示されません。"
 token_revoke = "取り消す"
+people = "ユーザー"
+role = "ロール"
+people_intro = "登録したすべての人と、それぞれができること。"
 
 [gsxui]
 close = "閉じる"

@@ -35,6 +35,9 @@ token_name = "الغرض منه"
 token_new = "إنشاء رمز"
 token_once = "انسخه الآن: لن يُعرض مرة أخرى."
 token_revoke = "إلغاء"
+people = "الأشخاص"
+role = "الدور"
+people_intro = "كل من سجّل، وما يُسمح لكلٍّ منهم به."
 
 [gsxui]
 close = "إغلاق"

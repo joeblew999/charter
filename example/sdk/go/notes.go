@@ -58,6 +58,33 @@ func (c *CreateNotesRequest) MarshalJSON() ([]byte, error) {
 }
 
 var (
+	deleteNotesRequestFieldID = big.NewInt(1 << 0)
+)
+
+type DeleteNotesRequest struct {
+	ID int64 `json:"-" url:"-"`
+
+	// Private bitmask of fields set to an explicit value and therefore not to be omitted
+	explicitFields *big.Int `json:"-" url:"-"`
+}
+
+func (d *DeleteNotesRequest) require(field *big.Int) {
+	next := new(big.Int)
+	if d.explicitFields != nil {
+		next.Set(d.explicitFields)
+	}
+	next.Or(next, field)
+	d.explicitFields = next
+}
+
+// SetID sets the ID field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (d *DeleteNotesRequest) SetID(id int64) {
+	d.ID = id
+	d.require(deleteNotesRequestFieldID)
+}
+
+var (
 	listNotesRequestFieldCursor = big.NewInt(1 << 0)
 	listNotesRequestFieldLimit  = big.NewInt(1 << 1)
 )
@@ -95,12 +122,18 @@ func (l *ListNotesRequest) SetLimit(limit *int) {
 }
 
 var (
-	noteFieldBody      = big.NewInt(1 << 0)
-	noteFieldCreatedAt = big.NewInt(1 << 1)
-	noteFieldID        = big.NewInt(1 << 2)
+	noteFieldAuthor    = big.NewInt(1 << 0)
+	noteFieldAuthorID  = big.NewInt(1 << 1)
+	noteFieldBody      = big.NewInt(1 << 2)
+	noteFieldCreatedAt = big.NewInt(1 << 3)
+	noteFieldID        = big.NewInt(1 << 4)
 )
 
 type Note struct {
+	// What they call themselves
+	Author string `json:"author" url:"author"`
+	// Who wrote it: their id, empty for a program with one of the Worker's own tokens
+	AuthorID  string `json:"author_id" url:"author_id"`
 	Body      string `json:"body" url:"body"`
 	CreatedAt string `json:"created_at" url:"created_at"`
 	ID        int64  `json:"id" url:"id"`
@@ -110,6 +143,20 @@ type Note struct {
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
+}
+
+func (n *Note) GetAuthor() string {
+	if n == nil {
+		return ""
+	}
+	return n.Author
+}
+
+func (n *Note) GetAuthorID() string {
+	if n == nil {
+		return ""
+	}
+	return n.AuthorID
 }
 
 func (n *Note) GetBody() string {
@@ -147,6 +194,20 @@ func (n *Note) require(field *big.Int) {
 	}
 	next.Or(next, field)
 	n.explicitFields = next
+}
+
+// SetAuthor sets the Author field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (n *Note) SetAuthor(author string) {
+	n.Author = author
+	n.require(noteFieldAuthor)
+}
+
+// SetAuthorID sets the AuthorID field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (n *Note) SetAuthorID(authorID string) {
+	n.AuthorID = authorID
+	n.require(noteFieldAuthorID)
 }
 
 // SetBody sets the Body field and marks it as non-optional;

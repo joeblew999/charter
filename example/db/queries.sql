@@ -2,7 +2,11 @@
 -- charter/cloud (queries.gen.go), their types worked out by sqlc.
 
 -- name: CreateNote :one
-INSERT INTO notes (body) VALUES (?) RETURNING *;
+INSERT INTO notes (body, author_id, author) VALUES (?, ?, ?) RETURNING *;
+
+-- name: RemoveNote :one
+-- RemoveNote takes a note away, and says which it was.
+DELETE FROM notes WHERE id = ? RETURNING *;
 
 -- name: Note :one
 -- Note is one note, by its id.

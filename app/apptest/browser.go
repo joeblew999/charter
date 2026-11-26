@@ -139,7 +139,8 @@ func (p *Page) try(expression string) (string, bool) {
 func (p *Page) until(selector string) {
 	p.t.Helper()
 	for start := time.Now(); time.Since(start) < wait; time.Sleep(50 * time.Millisecond) {
-		if found, _ := p.try(fmt.Sprintf(`String(!!document.querySelector(%q))`, selector)); found == "true" {
+		// There, on a page that has loaded, scripts and all: what a reader does next finds htmx listening.
+		if found, _ := p.try(fmt.Sprintf(`String(!!document.querySelector(%q) && document.readyState === "complete")`, selector)); found == "true" {
 			return
 		}
 	}
@@ -183,6 +184,20 @@ func (p *Page) Attr(selector, name string) string {
 	p.t.Helper()
 	p.until(selector)
 	return p.js("read "+selector, fmt.Sprintf(`document.querySelector(%q).getAttribute(%q) ?? ""`, selector, name))
+}
+
+// Select chooses the option with that value in the menu a CSS selector names, as a reader does: its change event
+// follows.
+func (p *Page) Select(selector, value string) {
+	p.t.Helper()
+	p.until(selector)
+	p.js("choose in "+selector, fmt.Sprintf(`(() => { const e = document.querySelector(%q); e.value = %q; e.dispatchEvent(new Event("change", { bubbles: true })); return "" })()`, selector, value))
+}
+
+// Has reports whether the page has an element a CSS selector names, now: for what must not be there.
+func (p *Page) Has(selector string) bool {
+	p.t.Helper()
+	return p.js("look for "+selector, fmt.Sprintf(`String(!!document.querySelector(%q))`, selector)) == "true"
 }
 
 // Path is the path of the page the tab is on.

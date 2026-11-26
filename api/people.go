@@ -32,8 +32,32 @@ type People struct {
 	Name string
 	// Accounts opens where users, passkeys and tokens are kept, for a request: D1Accounts("DB").
 	Accounts func() (Accounts, error)
-	// Scopes are what someone who signs up may do.
-	Scopes []string
+	// Roles are what people may be, each a name and the scopes it has: who may do what is said here once, and a
+	// person has one role. Role is the one someone who signs up gets. Changing what a role may do changes it for
+	// everyone who has it, at their next request.
+	//
+	//	Roles: map[string][]string{"member": {"read", "write"}, "moderator": {"read", "write", "moderate"}},
+	//	Role:  "member",
+	Roles map[string][]string
+	Role  string
+	// Manage is the scope that lets someone see everyone and change their roles (Auth.Everyone, Auth.SetRole).
+	// Empty: "admin".
+	Manage string
+}
+
+// scopes are what a role may do; a role that is no longer one of them is the one new people get.
+func (p People) scopes(role string) []string {
+	if s, ok := p.Roles[role]; ok {
+		return s
+	}
+	return p.Roles[p.Role]
+}
+
+func (p People) manage() string {
+	if p.Manage != "" {
+		return p.Manage
+	}
+	return "admin"
 }
 
 func (People) trusted() {}
@@ -63,9 +87,9 @@ var ErrNoAccount = errors.New("no such account")
 
 // Person is one of the app's users.
 type Person struct {
-	ID     string   // a random id: what a passkey is tied to
-	Name   string   // what they called themselves
-	Scopes []string // what they may do
+	ID   string // a random id: what a passkey is tied to
+	Name string // what they called themselves
+	Role string // what they are (People's Roles): what they may do follows from it
 }
 
 // IssuedToken is a token someone holds, as a page lists it: never the token itself, which is shown once, when it
@@ -79,13 +103,15 @@ type IssuedToken struct {
 
 // Accounts is where People are kept. D1Accounts is the one a Worker uses; a test has one in memory.
 type Accounts interface {
-	// ByToken is who holds the token with this hash, with the token's own scopes and kind (SessionScheme or
-	// TokenScheme): ErrNoAccount when none does, or it has expired.
-	ByToken(ctx context.Context, hash string) (Person, string, error)
+	// ByToken is who holds the token with this hash, its kind (SessionScheme or TokenScheme) and the scopes it was
+	// made with (none: all its holder has): ErrNoAccount when none does, or it has expired.
+	ByToken(ctx context.Context, hash string) (who Person, kind string, scopes []string, err error)
 	// Person is the user with that id.
 	Person(ctx context.Context, id string) (Person, error)
-	// Create keeps a new user.
+	// Create keeps a new user; Everyone is all of them, oldest first; SetRole changes what one is.
 	Create(ctx context.Context, p Person) error
+	Everyone(ctx context.Context) ([]Person, error)
+	SetRole(ctx context.Context, id, role string) error
 	// Passkeys are a user's passkeys, each as it was kept; AddPasskey keeps one, and again when it was used.
 	Passkeys(ctx context.Context, userID string) ([]string, error)
 	AddPasskey(ctx context.Context, userID, id, credential string) error
@@ -135,7 +161,7 @@ func (g gate) person(ctx context.Context, bearerToken, cookies string) (Caller, 
 	if err != nil {
 		return Caller{}, false, err
 	}
-	who, kind, err := accounts.ByToken(ctx, hashOf(token))
+	who, kind, narrowed, err := accounts.ByToken(ctx, hashOf(token))
 	switch {
 	case errors.Is(err, ErrNoAccount) && fromCookie:
 		return Caller{}, false, nil
@@ -144,7 +170,13 @@ func (g gate) person(ctx context.Context, bearerToken, cookies string) (Caller, 
 	case err != nil:
 		return Caller{}, false, err
 	}
-	return Caller{Scheme: kind, Subject: who.ID, Person: who.Name, Scopes: who.Scopes}, true, nil
+	// What they may do is their role's, now: a role that changed, or was taken away, has. A token made to do less
+	// does that much of it.
+	scopes := g.people.scopes(who.Role)
+	if len(narrowed) > 0 {
+		scopes = slices.DeleteFunc(slices.Clone(narrowed), func(s string) bool { return !slices.Contains(scopes, s) })
+	}
+	return Caller{Scheme: kind, Subject: who.ID, Person: who.Name, Role: who.Role, Scopes: scopes}, true, nil
 }
 
 // May reports whether the caller has every one of these scopes. No one (a Caller that is nobody) has none.
@@ -212,6 +244,12 @@ func (a *Auth) identified(r *http.Request) Caller {
 	return best
 }
 
+// For is a request that is ctx's, for an operation of the contract (which has a context, and no request) to ask
+// what a page asks: auth.Everyone(auth.For(ctx)). Its caller is the one the API's middleware let in.
+func (a *Auth) For(ctx context.Context) *http.Request {
+	return (&http.Request{Header: http.Header{}}).WithContext(ctx)
+}
+
 // Current is who the page being rendered is for: for a component that is no page's own, such as a header that
 // says who is signed in. Nobody when the app has no Auth.
 func Current(ctx context.Context) Caller {
@@ -261,13 +299,12 @@ type d1Accounts struct{ db cloud.DB }
 type personRow struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
+	Role   string `json:"role"`
 	Scopes string `json:"scopes"`
 	Kind   string `json:"kind"`
 }
 
-func (r personRow) person() Person {
-	return Person{ID: r.ID, Name: r.Name, Scopes: strings.Fields(r.Scopes)}
-}
+func (r personRow) person() Person { return Person{ID: r.ID, Name: r.Name, Role: r.Role} }
 
 // stamp is a time as SQLite's CURRENT_TIMESTAMP writes it, so the two compare as text.
 func stamp(t time.Time) string { return t.UTC().Format("2006-01-02 15:04:05") }
@@ -279,19 +316,35 @@ func none(err error) error {
 	return err
 }
 
-func (a d1Accounts) ByToken(_ context.Context, hash string) (Person, string, error) {
-	// The token's own scopes: a program's token may do less than the person who made it.
-	row, err := cloud.One[personRow](a.db, "SELECT users.id, users.name, tokens.scopes, tokens.kind FROM tokens JOIN users ON users.id = tokens.user_id WHERE tokens.hash = ? AND (tokens.expires_at IS NULL OR tokens.expires_at > CURRENT_TIMESTAMP)", hash)
-	return row.person(), row.Kind, none(err)
+func (a d1Accounts) ByToken(_ context.Context, hash string) (Person, string, []string, error) {
+	row, err := cloud.One[personRow](a.db, "SELECT users.id, users.name, users.role, tokens.scopes, tokens.kind FROM tokens JOIN users ON users.id = tokens.user_id WHERE tokens.hash = ? AND (tokens.expires_at IS NULL OR tokens.expires_at > CURRENT_TIMESTAMP)", hash)
+	return row.person(), row.Kind, strings.Fields(row.Scopes), none(err)
 }
 
 func (a d1Accounts) Person(_ context.Context, id string) (Person, error) {
-	row, err := cloud.One[personRow](a.db, "SELECT id, name, scopes FROM users WHERE id = ?", id)
+	row, err := cloud.One[personRow](a.db, "SELECT id, name, role FROM users WHERE id = ?", id)
 	return row.person(), none(err)
 }
 
 func (a d1Accounts) Create(_ context.Context, p Person) error {
-	return cloud.Exec(a.db, "INSERT INTO users (id, name, scopes) VALUES (?, ?, ?)", p.ID, p.Name, strings.Join(p.Scopes, " "))
+	return cloud.Exec(a.db, "INSERT INTO users (id, name, role) VALUES (?, ?, ?)", p.ID, p.Name, p.Role)
+}
+
+func (a d1Accounts) Everyone(context.Context) ([]Person, error) {
+	rows, err := cloud.Query[personRow](a.db, "SELECT id, name, role FROM users ORDER BY created_at, id LIMIT 500")
+	out := make([]Person, len(rows))
+	for i, row := range rows {
+		out[i] = row.person()
+	}
+	return out, err
+}
+
+func (a d1Accounts) SetRole(_ context.Context, id, role string) error {
+	n, err := cloud.ExecRows(a.db, "UPDATE users SET role = ? WHERE id = ?", role, id)
+	if err == nil && n == 0 {
+		return ErrNoAccount
+	}
+	return err
 }
 
 func (a d1Accounts) Passkeys(_ context.Context, userID string) ([]string, error) {
@@ -351,12 +404,12 @@ func (a d1Accounts) Take(_ context.Context, id string) (string, error) {
 
 // AccountsSchema is the tables D1Accounts keeps People in, as charter add screen:sign-in writes them into
 // db/schema.sql (the one place a table is written down; charter writes the migration from there).
-const AccountsSchema = `-- The app's own users (charter's sign-in screen, package api): who signed up, the passkeys they sign in with, the
--- sessions and tokens they hold (never the token: its SHA-256), and sign-ins that were started.
+const AccountsSchema = `-- The app's own users (charter's sign-in screen, package api): who signed up and what they are (their role), the
+-- passkeys they sign in with, the sessions and tokens they hold (never the token: its SHA-256), and sign-ins that were started.
 CREATE TABLE users (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  scopes TEXT NOT NULL,
+  role TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -384,3 +437,54 @@ CREATE TABLE ceremonies (
   expires_at TEXT NOT NULL
 );
 `
+
+// Everyone is the app's people, for whoever may manage them (People's Manage scope): a person signed in, or a
+// program with a token that has it.
+func (a *Auth) Everyone(r *http.Request) ([]Person, error) {
+	accounts, err := a.managing(r)
+	if err != nil {
+		return nil, err
+	}
+	return accounts.Everyone(r.Context())
+}
+
+// SetRole makes a person what role says, for whoever may manage people. What they may do changes at their next
+// request, in their open sessions and for the tokens they made.
+func (a *Auth) SetRole(r *http.Request, id, role string) error {
+	accounts, err := a.managing(r)
+	if err != nil {
+		return err
+	}
+	if _, ok := a.people.Roles[role]; !ok {
+		return app.Status(http.StatusUnprocessableEntity, "no such role: "+role)
+	}
+	if err := accounts.SetRole(r.Context(), id, role); errors.Is(err, ErrNoAccount) {
+		return app.NotFound("no such person")
+	} else if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Roles are the roles there are, in order of their names: what a page that changes someone's offers.
+func (a *Auth) Roles() []string {
+	if a.people == nil {
+		return nil
+	}
+	names := make([]string, 0, len(a.people.Roles))
+	for name := range a.people.Roles {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	return names
+}
+
+func (a *Auth) managing(r *http.Request) (Accounts, error) {
+	if a.people == nil {
+		return nil, errors.New("api: the app's Auth has no People")
+	}
+	if err := a.Allow(r, a.people.manage()); err != nil {
+		return nil, err
+	}
+	return a.people.Accounts()
+}

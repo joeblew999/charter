@@ -116,7 +116,7 @@ func (a *Auth) SignUpBegin(w http.ResponseWriter, r *http.Request) error {
 	if in.Name == "" || len([]rune(in.Name)) > 60 {
 		return app.Status(http.StatusUnprocessableEntity, "a name is needed, of at most 60 characters")
 	}
-	who := Person{ID: randomID(), Name: in.Name, Scopes: a.people.Scopes}
+	who := Person{ID: randomID(), Name: in.Name, Role: a.people.Role}
 	// A passkey the device itself lists (a "discoverable" one), so signing in asks for no name.
 	options, session, err := wa.BeginRegistration(passkeyUser{Person: who},
 		webauthn.WithResidentKeyRequirement(protocol.ResidentKeyRequirementRequired),
@@ -216,7 +216,8 @@ func keep(r *http.Request, accounts Accounts, userID string, credential *webauth
 func (a *Auth) signIn(w http.ResponseWriter, r *http.Request, accounts Accounts, who Person) error {
 	token, hash := newToken()
 	expires := time.Now().Add(sessionLasts)
-	if err := accounts.Issue(r.Context(), who.ID, SessionScheme, "", hash, who.Scopes, expires); err != nil {
+	// With no scopes of its own: a session may do what its person may, whatever that becomes.
+	if err := accounts.Issue(r.Context(), who.ID, SessionScheme, "", hash, nil, expires); err != nil {
 		return err
 	}
 	// Not readable by scripts, sent on a link from elsewhere but on no request another site makes for itself.
@@ -253,9 +254,7 @@ func (a *Auth) NewToken(r *http.Request, name string, scopes ...string) (string,
 	if name == "" || len([]rune(name)) > 60 {
 		return "", app.Status(http.StatusUnprocessableEntity, "a token needs a name, of at most 60 characters")
 	}
-	if len(scopes) == 0 {
-		scopes = who.Scopes
-	}
+	// With no scopes of its own, a token may do what its maker may, whatever that becomes.
 	if slices.ContainsFunc(scopes, func(s string) bool { return !slices.Contains(who.Scopes, s) }) {
 		return "", app.Status(http.StatusForbidden, "a token may do what you may, or less")
 	}

@@ -35,6 +35,9 @@ token_name = "À quoi il sert"
 token_new = "Créer un jeton"
 token_once = "Copiez-le maintenant : il ne sera plus affiché."
 token_revoke = "Révoquer"
+people = "Personnes"
+role = "Rôle"
+people_intro = "Toutes les personnes inscrites et ce que chacune peut faire."
 
 [gsxui]
 close = "Fermer"

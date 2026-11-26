@@ -210,6 +210,7 @@ type Account struct {
 	page   AccountPage `route:"GET /{$} Account"`
 	create TokenCreate `route:"POST /tokens TokenCreate"`
 	revoke TokenRevoke `route:"POST /tokens/{token}/revoke TokenRevoke"`
+	people People      `route:"/people People"`
 }
 
 // Needs is what every route here needs: someone signed in.
@@ -223,6 +224,8 @@ type AccountView struct {
 	Caller api.Caller
 	Tokens []api.IssuedToken
 	Made   string
+	// MayManage is whether they may see everyone and change roles: the link to that page.
+	MayManage bool
 }
 
 // Noindex keeps the page out of the sitemap and of search engines: it is one person's.
@@ -230,7 +233,7 @@ func (AccountPage) Noindex() bool { return true }
 
 func (AccountPage) Props(r *http.Request, caller api.Caller, auth *api.Auth) (AccountView, error) {
 	tokens, err := auth.Tokens(r)
-	return AccountView{Caller: caller, Tokens: tokens}, err
+	return AccountView{Caller: caller, Tokens: tokens, MayManage: caller.May(People{}.Needs()...)}, err
 }
 
 // TokenCreate makes a token and answers with the list again, the new token shown once.
@@ -285,7 +288,18 @@ component (p AccountPage) Page(v AccountView) {
 						</ui.CardTitle>
 						<ui.CardDescription id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</ui.CardDescription>
 					</ui.CardHeader>
-					<ui.CardContent>
+					<ui.CardContent class="flex flex-wrap items-center gap-2">
+						// What they are, and with it what they may do.
+						<ui.Badge id="role" translate="no">{ v.Caller.Role }</ui.Badge>
+						{ for _, scope := range v.Caller.Scopes {
+							<ui.Badge variant="secondary" translate="no">{ scope }</ui.Badge>
+						} }
+						<span class="flex-1"></span>
+						{ if v.MayManage {
+							<ui.Button variant="outline" size="sm" href={PeoplePage{} |> url} id="people-link">
+								{ locales.ScreensPeople }
+							</ui.Button>
+						} }
 						<SignOutForm/>
 					</ui.CardContent>
 				</ui.Card>
@@ -352,4 +366,99 @@ component (p AccountPage) Tokens(v AccountView) {
 			</ul>
 		</ui.CardContent>
 	</ui.Card>
+}
+
+// People is everyone who signed up, and what each is: for whoever may manage people. What a role may do is the
+// app's to say (api.People's Roles); here a person is given one.
+type People struct {
+	page PeoplePage `route:"GET /{$} People"`
+	set  RoleSet    `route:"POST /{person}/role RoleSet"`
+}
+
+// Needs is what every route here needs: the scope that manages people. Someone signed in without it gets a 403.
+func (People) Needs() []string { return []string{"admin"} }
+
+// PeoplePage is the page.
+type PeoplePage struct{}
+
+func (PeoplePage) Noindex() bool { return true }
+
+// PeopleView is what it shows: everyone, and the roles there are.
+type PeopleView struct {
+	Caller api.Caller
+	People []api.Person
+	Roles  []string
+}
+
+func (PeoplePage) Props(r *http.Request, caller api.Caller, auth *api.Auth) (PeopleView, error) {
+	people, err := auth.Everyone(r)
+	return PeopleView{Caller: caller, People: people, Roles: auth.Roles()}, err
+}
+
+// RoleSet gives a person a role and answers with their row again.
+type RoleSet struct{}
+
+func (RoleSet) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) error {
+	id, role := r.PathValue("person"), r.PostFormValue("role")
+	if err := auth.SetRole(r, id, role); err != nil {
+		return err
+	}
+	return structpages.RenderComponent(PeoplePage{}.Person(api.Person{
+		ID:   id,
+		Name: r.PostFormValue("name"),
+		Role: role,
+	}, auth.Roles()))
+}
+
+component (p PeoplePage) Page(v PeopleView) {
+	<!DOCTYPE html>
+	<html { app.HTML(ctx)... }>
+		<head>
+			<app.Head title={locales.ScreensPeople |> text} description={locales.ScreensPeopleIntro |> text}/>
+		</head>
+		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
+			<main class="mx-auto flex max-w-xl flex-col gap-6 p-4 pt-10">
+				<ui.Button variant="link" class="self-start px-0" href={AccountPage{} |> url}>
+					<icon.ArrowLeft class="rtl:rotate-180"/>
+					{ locales.ScreensAccount }
+				</ui.Button>
+				<ui.Card>
+					<ui.CardHeader>
+						<ui.CardTitle>
+							<h1>{ locales.ScreensPeople }</h1>
+						</ui.CardTitle>
+						<ui.CardDescription>{ locales.ScreensPeopleIntro }</ui.CardDescription>
+					</ui.CardHeader>
+					<ui.CardContent>
+						<ul id="people" class="flex flex-col gap-2">
+							{ for _, person := range v.People {
+								<p.Person person={person} roles={v.Roles}/>
+							} }
+						</ul>
+					</ui.CardContent>
+				</ui.Card>
+			</main>
+		</body>
+	</html>
+}
+
+// Person is one person and their role, which changes as it is chosen: the row asks for itself again (its id is
+// the component's, keyed by the person).
+component (p PeoplePage) Person(person api.Person, roles []string) {
+	<li id={PeoplePage.Person |> key(person.ID)} class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2">
+		<span dir="auto" class="flex-1" translate="no">{ person.Name }</span>
+		<form
+			hx-post={RoleSet{} |> url(map[string]any{"person": person.ID})}
+			hx-target={PeoplePage.Person |> keytarget(person.ID)}
+			hx-swap="outerHTML"
+			hx-trigger="change"
+		>
+			<input type="hidden" name="name" value={person.Name}/>
+			<ui.NativeSelect name="role" aria-label={locales.ScreensRole}>
+				{ for _, role := range roles {
+					<ui.NativeSelectOption value={role} selected={role == person.Role}>{ role }</ui.NativeSelectOption>
+				} }
+			</ui.NativeSelect>
+		</form>
+	</li>
 }

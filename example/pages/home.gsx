@@ -3,6 +3,8 @@ package pages
 import (
 	"strconv"
 
+	charter "github.com/joeblew999/charter/api"
+
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/locales"
 	"github.com/joeblew999/charter/example/pages/screens"
@@ -40,7 +42,7 @@ component (p Home) Page(props HomeProps) {
 					hx-sse:connect=f`@{NotesStream{} |> url}?after=@{strconv.FormatInt(props.After, 10)}`
 					hx-swap="afterbegin"
 				>
-					<p.List notes={props.Notes}/>
+					<p.List notes={props.Notes} reader={props.Caller}/>
 				</ul>
 			</ui.CardContent>
 		</ui.Card>
@@ -76,22 +78,28 @@ component (p Home) Form(body string, refused bool) {
 	</form>
 }
 
-// List is the notes of the list.
-component (p Home) List(notes []api.Note) {
+// List is the notes of the list, each with what the reader may do with it.
+component (p Home) List(notes []api.Note, reader charter.Caller) {
 	{ for _, note := range notes {
-		<p.Item note={note} open={false}/>
+		<p.Item note={note} open={false} removable={Removable(api.MayRemove(reader, note))}/>
 	} }
 }
 
 // Item is one note: in the list, what the stream sends of each new one, and what its own button asks for again. Its
-// id is the component's, keyed by the note, so the button's target is this row and no other, and Home's Props knows
-// which note is wanted (structpages.KeyOf). Open, it says when the note was written in full.
-component (p Home) Item(note api.Note, open Open) {
+// id is the component's, keyed by the note, so a button's target is this row and no other, and Home's Props knows
+// which note is wanted (structpages.KeyOf). It says who wrote it; open, also when, in full. Whoever may take it
+// away (its writer, a moderator) has the button for that.
+component (p Home) Item(note api.Note, open Open, removable Removable) {
 	<li
 		id={Home.Item |> key(strconv.FormatInt(note.ID, 10))}
 		class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2"
 	>
-		<span dir="auto" class="flex-1">{ note.Body }</span>
+		<span class="flex flex-1 flex-col">
+			<span dir="auto">{ note.Body }</span>
+			{ if note.Author != "" {
+				<span class="text-xs text-muted-foreground" dir="auto" translate="no">{ note.Author }</span>
+			} }
+		</span>
 		// How long ago, in the reader's language; the browser's half of intl keeps it current.
 		<span class="text-xs text-muted-foreground">{ note.Created() |> since }</span>
 		<ui.Button
@@ -107,6 +115,21 @@ component (p Home) Item(note api.Note, open Open) {
 		>
 			<icon.Clock/>
 		</ui.Button>
+		{ if removable {
+			<ui.Button
+				variant="ghost"
+				size="icon-sm"
+				type="button"
+				data-remove
+				hx-post={RemoveNote{} |> url(map[string]any{"note": note.ID})}
+				hx-target={Home.Item |> keytarget(strconv.FormatInt(note.ID, 10))}
+				hx-swap="delete"
+				aria-label={locales.HomeRemove}
+				title={locales.HomeRemove}
+			>
+				<icon.Trash2/>
+			</ui.Button>
+		} }
 		{ if open {
 			<p class="w-full text-sm text-muted-foreground">
 				{ note.Created() |> date("dateStyle", "full", "timeStyle", "long") }

@@ -35,6 +35,9 @@ token_name = "用途"
 token_new = "建立權杖"
 token_once = "請立即複製：不會再次顯示。"
 token_revoke = "撤銷"
+people = "人員"
+role = "角色"
+people_intro = "所有已註冊的人，以及每個人可以做什麼。"
 
 [gsxui]
 close = "關閉"

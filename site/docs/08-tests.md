@@ -10,9 +10,9 @@ A page declares what it needs, so a test hands it its own. No Worker, no databas
 // The home page's data is the newest notes first, and where its stream starts: after the newest.
 func TestHomeProps(t *testing.T) {
 	store := &notes{}
-	store.Create(context.Background(), "first")
-	store.Create(context.Background(), "second")
-	props, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
+	store.Create(context.Background(), "first", "u1", "Ada")
+	store.Create(context.Background(), "second", "u1", "Ada")
+	props, _, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
 	if err != nil || len(props.Notes) != 2 || props.Notes[0].Body != "second" || props.After != 2 {
 		t.Fatalf("%+v %v", props, err)
 	}

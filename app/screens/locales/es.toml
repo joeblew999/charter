@@ -35,6 +35,9 @@ token_name = "Para qué es"
 token_new = "Crear un token"
 token_once = "Cópialo ahora: no se volverá a mostrar."
 token_revoke = "Revocar"
+people = "Personas"
+role = "Rol"
+people_intro = "Todas las personas registradas y lo que puede hacer cada una."
 
 [gsxui]
 close = "Cerrar"

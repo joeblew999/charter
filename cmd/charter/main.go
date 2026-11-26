@@ -9,6 +9,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
+	"time"
 
 	"github.com/joeblew999/charter/internal/command"
 	"github.com/joeblew999/charter/internal/version"
@@ -50,7 +52,17 @@ func main() {
 	if len(os.Args) > 1 {
 		for _, c := range commands {
 			if c.name == os.Args[1] {
+				start := time.Now()
 				c.run(os.Args[2:])
+				// How long it took, and whether that is longer than is usual here: for every command that ends by
+				// itself (the loop and what a developer drives by hand do not).
+				if !slices.Contains([]string{"dev", "preview", "exec", "env", "version"}, c.name) {
+					name := c.name
+					if c.name == "run" && len(os.Args) > 2 {
+						name += " " + os.Args[2]
+					}
+					command.Finished(name, start)
+				}
 				return
 			}
 		}

@@ -103,6 +103,7 @@ func (Issued) trusted() {}
 type Caller struct {
 	Scheme  string   // what vouched for it: Name (a token), "access", oIDCName, or an Issued's Scheme
 	Person  string   // one of the app's own users (People): what they called themselves
+	Role    string   // their role, for one of the app's own users
 	Email   string   // a person: from Access, or from an OIDC token that has it
 	Machine string   // an Access service token's Client ID (the JWT's common_name)
 	Subject string   // the token's sub: a user's id at the issuer

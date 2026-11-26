@@ -60,6 +60,10 @@ token_name = "What it is for"
 token_new = "Make a token"
 token_once = "Copy it now: it is not shown again."
 token_revoke = "Revoke"
+# The page of everyone who signed up, for whoever may manage people: its title, a role's menu, and its first line.
+people = "People"
+role = "Role"
+people_intro = "Everyone who signed up, and what each may do."
 
 [gsxui]
 close = "Close"

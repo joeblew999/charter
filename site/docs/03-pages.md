@@ -22,6 +22,7 @@ type Pages struct {
 
 	// What the pages call: routes, not pages.
 	post   PostNote       `route:"POST /notes PostNote"`
+	remove RemoveNote     `route:"POST /notes/{note}/remove RemoveNote"`
 	stream NotesStream    `route:"GET /notes/stream NotesStream"`
 	act    BindingsAction `route:"POST /bindings/{action} BindingsAction"`
 }
@@ -35,27 +36,27 @@ A page is a type with a `Page` component, and `Props` for its data. `Props` name
 // Props loads what the request wants, as structpages has it. A row's button asks for that row alone (its target is
 // Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. Anything
 // else is the page, with the newest notes. Each component takes its share of the results by their types.
-func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, api.Note, Open, error) {
+func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, api.Note, Open, Removable, error) {
 	if target.Is(p.Item) {
 		id, err := strconv.ParseInt(structpages.KeyOf(target), 10, 64)
 		if err != nil {
-			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
+			return HomeProps{}, api.Note{}, false, false, app.NotFound("no such note")
 		}
 		note, err := store.Get(r.Context(), id)
 		if err != nil {
-			return HomeProps{}, api.Note{}, false, app.NotFound("no such note")
+			return HomeProps{}, api.Note{}, false, false, app.NotFound("no such note")
 		}
-		return HomeProps{}, note, r.URL.Query().Get("open") != "", nil
+		return HomeProps{}, note, r.URL.Query().Get("open") != "", Removable(api.MayRemove(caller, note)), nil
 	}
 	notes, err := store.Before(r.Context(), math.MaxInt64, shown)
 	if err != nil {
-		return HomeProps{}, api.Note{}, false, err
+		return HomeProps{}, api.Note{}, false, false, err
 	}
-	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...)}
+	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...), Caller: caller}
 	if len(notes) > 0 {
 		props.After = notes[0].ID
 	}
-	return props, api.Note{}, false, nil
+	return props, api.Note{}, false, false, nil
 }
 ```
 
@@ -111,7 +112,7 @@ A route with `Props` and no `Page` is a fragment: markup for part of a page, suc
 A type with `ServeHTTP` that returns an error. It answers with a component, and never writes an error or a redirect itself.
 
 ```go file=../example/pages/pages.go#PostNote.ServeHTTP
-func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Store) error {
+func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Store, caller charter.Caller) error {
 	body := strings.TrimSpace(r.PostFormValue("body"))
 	if body == "" || len(body) > maxBody || strings.Contains(body, api.END) {
 		// htmx 4 swaps a 422 too: the form comes back with what was typed.
@@ -119,7 +120,7 @@ func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Stor
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return structpages.RenderComponent(Home{}.Form(body, true))
 	}
-	if _, err := api.Post(r.Context(), store, body); err != nil {
+	if _, err := api.Post(r.Context(), store, caller, body); err != nil {
 		return err
 	}
 	return structpages.RenderComponent(Home{}.Form("", false))

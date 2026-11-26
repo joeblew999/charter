@@ -107,3 +107,162 @@ func TestThePageAndTheAPIAgreeOnWhoMayWrite(t *testing.T) {
 		}
 	}
 }
+
+// Roles are one rule too. A member's note: another member may not take it away, on the page (no button) or through
+// the API (403); made a moderator by an admin, the same person may, through both. What they are changes at once:
+// in the session they have open, and for the token they made before.
+func TestRolesDecideWhoMayRemoveANote(t *testing.T) {
+	admin := sdk(t, option.WithToken(apptest.Secret(t, "ADMIN_TOKEN")))
+	// Ada writes a note.
+	ada := apptest.Browser(t)
+	ada.SignUp(at(screens.SignInPage{}), "Ada the writer")
+	ada.Open(at(pages.Home{}))
+	body := "Ada's, at " + time.Now().Format(time.RFC3339Nano)
+	ada.Type(el(pages.Home.Form)+` input[name=body]`, body)
+	ada.Click(el(pages.Home.Form) + ` button[type=submit]`)
+	ada.WaitText(el(pages.Home.List), body)
+
+	// Mo, another member, with a token for a program of theirs.
+	mo := apptest.Browser(t)
+	name := "Mo " + time.Now().Format("150405.000000")
+	mo.SignUp(at(screens.SignInPage{}), name)
+	mo.Open(at(screens.AccountPage{}))
+	mo.WaitText("#role", "member")
+	mo.Type(el(screens.AccountPage.Tokens)+` input[name=name]`, "Mo's program")
+	mo.Click(el(screens.AccountPage.Tokens) + ` button[type=submit]`)
+	mo.WaitText("#token-made", "ch_")
+	program := sdk(t, option.WithToken(strings.TrimSpace(mo.Text("#token-made"))))
+
+	// Ada's note, as the API has it, and as Mo's page shows it: with no way to take it away.
+	list, err := program.Notes.List(t.Context(), &notes.ListNotesRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var note int64
+	for _, n := range list.Results {
+		if n.Body == body {
+			note = n.ID
+		}
+	}
+	if note == 0 {
+		t.Fatalf("Ada's note is not in the list")
+	}
+	row := el(pages.Home.List) + ` li:first-child`
+	mo.Open(at(pages.Home{}))
+	mo.WaitText(row, body)
+	if mo.Has(row + ` [data-remove]`) {
+		t.Error("a member's page has the button for another's note")
+	}
+	if err := program.Notes.Delete(t.Context(), &notes.DeleteNotesRequest{ID: note}); err == nil || !strings.Contains(err.Error(), "403") {
+		t.Errorf("a member removing another's note through the API: %v, want 403", err)
+	}
+	// Nor may Mo say who is what.
+	if _, err := program.People.List(t.Context()); err == nil || !strings.Contains(err.Error(), "403") {
+		t.Errorf("a member listing people: %v, want 403", err)
+	}
+
+	// An admin makes Mo a moderator.
+	people, err := admin.People.List(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var id string
+	for _, p := range people.Data {
+		if p.Name != nil && *p.Name == name {
+			id = p.ID
+		}
+	}
+	if id == "" {
+		t.Fatalf("%s is not among the people", name)
+	}
+	if _, err := admin.People.SetRole(t.Context(), &notes.SetRolePeopleRequest{ID: id, Role: notes.SetRolePeopleRequestRoleModerator}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Now Mo may: the page they open has the button, in the session they had; and it takes the note away.
+	mo.Open(at(screens.AccountPage{}))
+	mo.WaitText("#role", "moderator")
+	mo.Open(at(pages.Home{}))
+	mo.WaitText(row, body)
+	mo.Click(row + ` [data-remove]`)
+	for start := time.Now(); strings.Contains(mo.Text(el(pages.Home.List)), body); time.Sleep(100 * time.Millisecond) {
+		if time.Since(start) > 10*time.Second {
+			t.Fatal("the moderator's button did not take the note away")
+		}
+	}
+	// And so may the token Mo made before, through the API: on another note of Ada's.
+	body2 := body + ", again"
+	ada.Open(at(pages.Home{}))
+	ada.Type(el(pages.Home.Form)+` input[name=body]`, body2)
+	ada.Click(el(pages.Home.Form) + ` button[type=submit]`)
+	ada.WaitText(el(pages.Home.List), body2)
+	list, err = program.Notes.List(t.Context(), &notes.ListNotesRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range list.Results {
+		if n.Body == body2 {
+			if err := program.Notes.Delete(t.Context(), &notes.DeleteNotesRequest{ID: n.ID}); err != nil {
+				t.Errorf("a moderator's token removing another's note through the API: %v", err)
+			}
+		}
+	}
+}
+
+// Who is what is an admin's to say, on a page: a member gets a 403 there; made an admin (by the operator's token,
+// which is how the first one is), they see everyone and give someone a role by choosing it.
+func TestAnAdminGivesRolesOnThePeoplePage(t *testing.T) {
+	operator := sdk(t, option.WithToken(apptest.Secret(t, "ADMIN_TOKEN")))
+	boss := apptest.Browser(t)
+	name := "Boss " + time.Now().Format("150405.000000")
+	boss.SignUp(at(screens.SignInPage{}), name)
+	res, err := http.Get(apptest.Base(t) + at(screens.PeoplePage{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	boss.Open(at(screens.AccountPage{}))
+	if boss.Has("#people-link") {
+		t.Error("a member is offered the people page")
+	}
+	people, err := operator.People.List(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var id string
+	for _, p := range people.Data {
+		if p.Name != nil && *p.Name == name {
+			id = p.ID
+		}
+	}
+	if _, err := operator.People.SetRole(t.Context(), &notes.SetRolePeopleRequest{ID: id, Role: notes.SetRolePeopleRequestRoleAdmin}); err != nil {
+		t.Fatal(err)
+	}
+	boss.Open(at(screens.AccountPage{}))
+	boss.Click("#people-link")
+	boss.WaitText("#people", name)
+	// Their own row: an admin makes themselves a moderator, and the page says so.
+	row := el(screens.PeoplePage.Person) + "--" + id
+	boss.Select(row+` select`, "moderator")
+	for start := time.Now(); ; time.Sleep(100 * time.Millisecond) {
+		after, err := operator.People.List(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		done := false
+		for _, p := range after.Data {
+			done = done || (p.ID == id && p.Role == notes.PersonRoleModerator)
+		}
+		if done {
+			break
+		}
+		if time.Since(start) > 10*time.Second {
+			t.Fatal("choosing a role on the people page did not give it")
+		}
+	}
+	// No longer an admin, the page is no longer theirs.
+	boss.Open(at(screens.AccountPage{}))
+	if boss.Has("#people-link") {
+		t.Error("a moderator is offered the people page")
+	}
+}

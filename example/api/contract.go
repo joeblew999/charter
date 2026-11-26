@@ -97,6 +97,34 @@ type NoteOutput struct {
 	Body Note
 }
 
+type NoteInput struct {
+	ID int64 `path:"id" example:"42"`
+}
+
+// Person is one of the app's people, as whoever may manage them sees one.
+type Person struct {
+	ID   string `json:"id" example:"4f1c9a0e7b2d4c6f8a1b3c5d7e9f0a1b"`
+	Name string `json:"name,omitempty" example:"Ada"`
+	Role string `json:"role" example:"member" enum:"member,moderator,admin"`
+}
+
+type PeopleOutput struct {
+	Body struct {
+		Data []Person `json:"data"`
+	}
+}
+
+type RoleInput struct {
+	ID   string `path:"id" example:"4f1c9a0e7b2d4c6f8a1b3c5d7e9f0a1b"`
+	Body struct {
+		Role string `json:"role" example:"moderator" enum:"member,moderator,admin"`
+	}
+}
+
+type PersonOutput struct {
+	Body Person
+}
+
 // sdk is Fern's names for the SDK method: client.<group>.<method>() and `cli <group> <method>`.
 func sdk(group, method string, extra map[string]any) map[string]any {
 	extensions := map[string]any{"x-fern-sdk-group-name": group, "x-fern-sdk-method-name": method}
@@ -159,6 +187,32 @@ func Routes(env Env) []charter.Route {
 				Security:   charter.Needs("write"),
 				Extensions: sdk("notes", "create", charter.Limited(WriteLimit, nil)),
 			}, env.create)
+		}},
+		// Whoever wrote a note may take it away, and whoever may moderate (api.MayRemove): the same rule the page's
+		// button is under.
+		{Method: http.MethodDelete, Path: "/api/notes/{id}", OperationID: "deleteNote", Register: func(api huma.API) {
+			huma.Register(api, huma.Operation{
+				OperationID: "deleteNote", Method: http.MethodDelete, Path: "/api/notes/{id}",
+				Summary: "Remove a note: your own, or anyone's if you may moderate", Tags: []string{"notes"},
+				Security: charter.Needs("write"), Errors: []int{http.StatusForbidden, http.StatusNotFound},
+				Extensions: sdk("notes", "delete", nil),
+			}, env.remove)
+		}},
+		// Who is what: for an admin. It is how the first admin is made, with the operator's own token.
+		{Method: http.MethodGet, Path: "/api/people", OperationID: "listPeople", Register: func(api huma.API) {
+			huma.Register(api, huma.Operation{
+				OperationID: "listPeople", Method: http.MethodGet, Path: "/api/people",
+				Summary: "Everyone who signed up, and their role", Tags: []string{"people"},
+				Security: charter.Needs("admin"), Extensions: sdk("people", "list", nil),
+			}, env.people)
+		}},
+		{Method: http.MethodPut, Path: "/api/people/{id}/role", OperationID: "setRole", Register: func(api huma.API) {
+			huma.Register(api, huma.Operation{
+				OperationID: "setRole", Method: http.MethodPut, Path: "/api/people/{id}/role",
+				Summary: "Make someone a member, a moderator or an admin", Tags: []string{"people"},
+				Security: charter.Needs("admin"), Errors: []int{http.StatusNotFound, http.StatusUnprocessableEntity},
+				Extensions: sdk("people", "setRole", nil),
+			}, env.setRole)
 		}},
 	}
 }

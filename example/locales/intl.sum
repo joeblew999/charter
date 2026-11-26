@@ -32,6 +32,7 @@ ar home.intro 66000b571077 63c017805507
 ar home.label d8da2c49df39 a2bc8b7eea3a
 ar home.placeholder ab0f84062e48 9126b0952229
 ar home.post a5554622c655 b19234315bac
+ar home.remove c3812fc4acb8 3054d6b491cc
 ar home.sign_in_to_write 9db14094636b 066774c8fd4c
 ar home.when 56c3507708fc 4746e732aa75
 ar screens.account 7e1b0d5641f2 66dcee1f4616
@@ -49,8 +50,11 @@ ar screens.languages 318655cea4bd 93a9465a5006
 ar screens.loading ba3bbbe10d8b aa5ebc30e485
 ar screens.name dcd1d5223f73 52ab09847cf8
 ar screens.no_thanks 49780701dc2d 1724c2e89ea0
+ar screens.people 7db20897053b 8dbd6b8bdba4
+ar screens.people_intro 5feb6f4e2d85 f9e42efb463b
 ar screens.preferences 1490d0caef75 031ba60613fa
 ar screens.preferences_description 09123771ebf4 3e5a7bbd9310
+ar screens.role 14736a2eb9f4 de69d94fee12
 ar screens.save 1509f561f241 ddfcaf9d0144
 ar screens.sign_in bfd402b2f6f3 beb869eecc12
 ar screens.sign_in_failed d38eba7d0144 c9ab12ab9600
@@ -103,6 +107,7 @@ de home.intro 66000b571077 e41641a84cd0
 de home.label d8da2c49df39 74b487d9d223
 de home.placeholder ab0f84062e48 dc7a409c4c32
 de home.post a5554622c655 079bef4e232f
+de home.remove c3812fc4acb8 3828375a2d45
 de home.sign_in_to_write 9db14094636b ff1a3eb990f7
 de home.when 56c3507708fc 3883c5faf5e7
 de screens.account 7e1b0d5641f2 df8525011f61
@@ -120,8 +125,11 @@ de screens.languages 318655cea4bd 17d630275f43
 de screens.loading ba3bbbe10d8b 976723893920
 de screens.name dcd1d5223f73 dcd1d5223f73
 de screens.no_thanks 49780701dc2d 98fb8c35dc94
+de screens.people 7db20897053b cf996a8dbe36
+de screens.people_intro 5feb6f4e2d85 c7a592d41fd6
 de screens.preferences 1490d0caef75 9e1bfd75573a
 de screens.preferences_description 09123771ebf4 1049fb0c8ae6
+de screens.role 14736a2eb9f4 0038a9cf8661
 de screens.save 1509f561f241 f6b2ff39f540
 de screens.sign_in bfd402b2f6f3 a329a32263a4
 de screens.sign_in_failed d38eba7d0144 6632d80bc657
@@ -145,5 +153,5 @@ file pages/screens/docs.gsx 27186bc52060
 file pages/screens/language-list.gsx a362660dc34d
 file pages/screens/language-offer.gsx 99b5c5b72cd3
 file pages/screens/preferences.gsx 724682d890df
-file pages/screens/sign-in.gsx 04e3e3d94354
+file pages/screens/sign-in.gsx d35aa43ef332
 file pages/screens/theme-toggle.gsx 3d8bf9b79d18
