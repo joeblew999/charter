@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/joeblew999/charter/internal/command/intl"
 	"github.com/joeblew999/charter/internal/run"
+	"slices"
 	"strings"
 )
 
@@ -12,7 +13,7 @@ import (
 //
 //	charter add locale:de            a language: charter.toml's [intl], and its catalog to translate
 //	charter add ui:dialog            a gsxui component (gsxui add)
-//	charter add screen:language-list one of intl's screens, as gsx to own
+//	charter add screen:language-list one of intl's screens, as gsx to own (-diff: what changed; -overwrite: again)
 //	charter add d1:DB                a D1 database, created on Cloudflare and bound in wrangler.jsonc
 //	charter add github.com/x/y       a Go module (go get)
 //	charter add leaflet              an npm package (npm install)
@@ -21,6 +22,15 @@ func Add(args []string) {
 		check(errors.New("usage: charter add locale:<id> | ui:<component> | screen:<name> | d1:<binding> | <Go module> | <npm package>"))
 	}
 	p := load()
+	// Flags are for the screens (charter add screen:preferences -overwrite, or -diff).
+	var flags []string
+	args = slices.DeleteFunc(args, func(a string) bool {
+		if strings.HasPrefix(a, "-") {
+			flags = append(flags, a)
+			return true
+		}
+		return false
+	})
 	for _, what := range args {
 		kind, name, typed := strings.Cut(what, ":")
 		switch {
@@ -33,7 +43,7 @@ func Add(args []string) {
 		case typed && kind == "ui":
 			check(run.Run(p.Root, nil, "go", "tool", "gsxui", "add", name))
 		case typed && kind == "screen":
-			intl.Main([]string{"add", name})
+			intl.Main(append(append([]string{"add"}, flags...), name))
 		case typed && kind == "d1":
 			check(cloudflare(p, []string{"d1", "create", p.Worker.Name + "-" + strings.ToLower(name), "--binding", name, "--update-config"}, nil))
 		case typed:
