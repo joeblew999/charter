@@ -325,3 +325,19 @@ func TestAnInvitationMakesAnAdmin(t *testing.T) {
 		t.Errorf("signing up with an invitation that was used: HTTP %d, want 422", again.StatusCode)
 	}
 }
+
+// Someone who has an account already opens an invitation's link and accepts it: they are what it says, at once.
+func TestAnInvitationIsAcceptedBySomeoneSignedIn(t *testing.T) {
+	page := apptest.Browser(t)
+	page.SignUp(at(screens.SignInPage{}), "Here already")
+	res := as(t, "ADMIN_TOKEN", "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=moderator"))
+	html, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	link := regexp.MustCompile(`/__charter/invite\?code=[A-Za-z0-9_-]+`).FindString(string(html))
+	if link == "" {
+		t.Fatalf("making an invitation: HTTP %d\n%s", res.StatusCode, html)
+	}
+	page.Open(link)
+	page.Click("#accept button")
+	page.WaitText("#role", "moderator")
+}

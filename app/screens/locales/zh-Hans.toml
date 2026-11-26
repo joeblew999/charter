@@ -45,6 +45,7 @@ invite = "邀请他人"
 invite_intro = "通过此链接注册的人将获得你选择的角色。链接只能使用一次，一小时内有效。"
 invite_new = "生成链接"
 invite_once = "请现在发送：它不会再次显示。"
+invite_accept = "接受邀请"
 
 [gsxui]
 close = "关闭"

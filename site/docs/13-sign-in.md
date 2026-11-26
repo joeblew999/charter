@@ -118,7 +118,7 @@ go tool charter run people:invite admin --deployed   # on the deployed Worker
 go tool charter run people                           # who signed up, and what each is
 ```
 
-Open the link, give a name, and your device makes the passkey: you are signed in as an admin. From then on you invite others on the people page ("Invite someone"), to any role, or change the role of someone who signed up already.
+Open the link, give a name, and your device makes the passkey: you are signed in as an admin. Someone who has an account already, and is signed in, gets a button there instead: "Accept the invitation". From then on you invite others on the people page ("Invite someone"), to any role, or change the role of someone who signed up already.
 
 An invitation is kept as a started sign-in is, by the SHA-256 of its code, so the database has nothing that invites anyone. A program does the same with `auth.Invite(r, role)`.
 

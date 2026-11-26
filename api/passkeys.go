@@ -71,6 +71,23 @@ func (a *Auth) Invite(r *http.Request, role string) (string, error) {
 	return code, accounts.Begin(r.Context(), InviteID(code), role, time.Now().Add(InviteLasts))
 }
 
+// Accept gives the person signed in what an invitation says: for someone who has an account already. The
+// invitation is taken for good.
+func (a *Auth) Accept(r *http.Request, code string) error {
+	who, accounts, err := a.signedIn(r)
+	if err != nil {
+		return err
+	}
+	role, err := accounts.Take(r.Context(), InviteID(code))
+	if err != nil {
+		return app.Status(http.StatusUnprocessableEntity, "this invitation was used already, or is more than an hour old: ask for a new one")
+	}
+	if _, ok := a.people.Roles[role]; !ok {
+		return app.Status(http.StatusUnprocessableEntity, "the invitation is to be "+role+", which the app has no such role for")
+	}
+	return accounts.SetRole(r.Context(), who.Subject, role)
+}
+
 // invited is the role an invitation gives. It is kept a little longer, for the moments the device takes, and
 // taken for good when the account is made: one invitation, one person.
 func (a *Auth) invited(ctx context.Context, accounts Accounts, code string) (role string, err error) {

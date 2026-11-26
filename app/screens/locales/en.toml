@@ -68,11 +68,13 @@ account_leave_confirm = "Yes, delete it"
 people = "People"
 role = "Role"
 people_intro = "Everyone who signed up, and what each may do."
-# An invitation, on the people page: its title, what it is, the button that makes one, and the line above its link.
+# An invitation, on the people page: its title, what it is, the button that makes one, and the line above its link;
+# and the button for someone already signed in who opens one.
 invite = "Invite someone"
 invite_intro = "A link that makes whoever signs up through it what you choose. It works once, within the hour."
 invite_new = "Make a link"
 invite_once = "Send it to them now: it is not shown again."
+invite_accept = "Accept the invitation"
 
 [gsxui]
 close = "Close"

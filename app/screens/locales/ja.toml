@@ -45,6 +45,7 @@ invite = "招待する"
 invite_intro = "このリンクから登録した人に、選んだロールが付きます。1 回だけ、1 時間以内に使えます。"
 invite_new = "リンクを作成"
 invite_once = "今すぐ送ってください。再表示はされません。"
+invite_accept = "招待を受ける"
 
 [gsxui]
 close = "閉じる"

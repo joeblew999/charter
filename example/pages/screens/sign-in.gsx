@@ -31,6 +31,7 @@ type SignIn struct {
 	inBegin  SignInBegin  `route:"POST /begin SignInBegin"`
 	inFinish SignInFinish `route:"POST /finish SignInFinish"`
 	out      SignOut      `route:"POST /out SignOut"`
+	accept   InviteAccept `route:"POST /accept InviteAccept"`
 }
 
 // SignInPage is the page: sign in, or make an account.
@@ -81,6 +82,20 @@ func (SignInFinish) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.
 	return auth.SignInFinish(w, r)
 }
 
+// InviteAccept gives whoever is signed in what an invitation says, and goes to their account, which shows it.
+type InviteAccept struct{}
+
+func (InviteAccept) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) error {
+	if err := auth.Accept(r, r.PostFormValue("invite")); err != nil {
+		return err
+	}
+	to, err := structpages.URLFor(r.Context(), AccountPage{})
+	if err != nil {
+		return err
+	}
+	return app.Redirect{To: to}
+}
+
 // SignOut ends the session and goes to the front page: a plain form's target.
 func (SignOut) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) {
 	if err := auth.SignOut(w, r); err != nil {
@@ -107,6 +122,13 @@ component (p SignInPage) Page(v SignInView) {
 					<ui.CardContent class="flex flex-col gap-4">
 						{ if v.Caller.SignedIn() {
 							<p id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</p>
+							// Here by an invitation's link, with an account already: it is theirs to accept.
+							{ if v.Invite != "" {
+								<form method="post" action={InviteAccept{} |> url} id="accept">
+									<input type="hidden" name="invite" value={v.Invite}/>
+									<ui.Button type="submit">{ locales.ScreensInviteAccept }</ui.Button>
+								</form>
+							} }
 							<div class="flex flex-wrap gap-2">
 								<ui.Button variant="outline" size="sm" href={AccountPage{} |> url} id="account">
 									{ locales.ScreensAccount }

@@ -45,6 +45,7 @@ invite = "Inviter quelqu’un"
 invite_intro = "Un lien qui donne à la personne qui s’inscrit par lui le rôle que vous choisissez. Il fonctionne une fois, pendant une heure."
 invite_new = "Créer un lien"
 invite_once = "Envoyez-le maintenant : il ne sera plus affiché."
+invite_accept = "Accepter l’invitation"
 
 [gsxui]
 close = "Fermer"

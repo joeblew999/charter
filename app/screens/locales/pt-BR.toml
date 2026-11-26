@@ -45,6 +45,7 @@ invite = "Convidar alguém"
 invite_intro = "Um link que dá a quem se cadastrar por ele o papel que você escolher. Funciona uma vez, dentro de uma hora."
 invite_new = "Criar link"
 invite_once = "Envie agora: ele não será mostrado de novo."
+invite_accept = "Aceitar o convite"
 
 [gsxui]
 close = "Fechar"
