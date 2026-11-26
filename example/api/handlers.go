@@ -32,8 +32,15 @@ func Post(ctx context.Context, store Store, by charter.Caller, body string) (Not
 		return Note{}, err
 	}
 	Notes.Publish(ctx, note)
+	if OnPost != nil {
+		OnPost(ctx, note)
+	}
 	return note, nil
 }
+
+// OnPost is told of each note written, after it is kept: what else the app does with one (package built queues it
+// for the activity page). nil: nothing.
+var OnPost func(ctx context.Context, note Note)
 
 // MayRemove is the rule for taking a note away, said once: whoever wrote it may, and so may whoever may moderate.
 // The page asks it to show the button, the page's route and the API's deleteNote ask it before they act.

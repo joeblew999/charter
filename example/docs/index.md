@@ -9,7 +9,7 @@ charter itself is documented at [charter's site](https://charter.gedw99.workers.
 | Where | What |
 |---|---|
 | [The home page](../) | Notes, live: write one and it shows at once on every open page |
-| [The bindings page](../bindings) | A card for everything Cloudflare gives a Worker |
+| [How it's built](../built/) | Each thing Cloudflare gives a Worker doing one job, on a page of its own |
 | [The API](/api/openapi.json) | The notes API, from a contract, with tokens, limits, a stream and SDKs |
 | These pages | Docs from Markdown |
 

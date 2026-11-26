@@ -9,7 +9,7 @@ go tool charter add locale:de
 go tool charter run intl:translate
 ```
 
-Every page has a URL per language (`/bindings`, `/de/bindings`). Text in a page is a message from the catalog, never a literal:
+Every page has a URL per language (`/built/`, `/de/built/`). Text in a page is a message from the catalog, never a literal:
 
 ```gsx
 <h1>{ locales.HomeHeading }</h1>

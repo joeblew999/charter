@@ -51,6 +51,9 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
 - **The seed and the tests are one thing.** What fills a developer's database is typed values and a function that
   writes them through the app's own functions; tests call the same function and name the same values. A seed never
   ships, is compiled before anything is dropped, and is for the local database only.
+- **A page uses what it shows, and nothing else.** No page calls every binding to fill cards: each thing
+  Cloudflare gives does a job in the app, on a page of its own (`example/built`). A call to another site happens
+  when someone asks for it. Times and numbers are kept as such and shown through Intl.
 - **A table is written down once**, in `db/schema.sql`. Migrations, the queries' Go and the API's row types come
   from it; none is hand-written.
 - **A feed is declared once** (`live.Feed`) and serves pages, API and SDK alike.

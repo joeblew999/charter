@@ -57,10 +57,10 @@ func TestTheLanguages(t *testing.T) {
 		t.Errorf("Arabic: lang %q dir %q at %s", lang, dir, path)
 	}
 	// The link to the other page keeps the language.
-	home.Click(`main a[href$="/bindings"]`)
-	home.WaitText("h1", "Cloudflare")
-	if path := home.Path(); path != "/ar/bindings" {
-		t.Errorf("the Cloudflare page from Arabic is at %s", path)
+	home.Click(`header nav a[href$="/built/"]`)
+	home.WaitText("h1", "كيف بُني")
+	if path := home.Path(); path != "/ar/built/" {
+		t.Errorf("the next page from Arabic is at %s", path)
 	}
 }
 

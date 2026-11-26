@@ -15,6 +15,31 @@ CREATE TABLE notes (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP    -- example: 2026-10-01 12:00:00
 );
 
+-- What happened, as the app records it: a note written (the queue's consumer writes the row, a moment after the
+-- note), and once a day how many there were (the Cron Trigger's task). The activity page follows this table live.
+CREATE TABLE activity (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL,
+  note_id INTEGER NOT NULL DEFAULT 0,
+  author TEXT NOT NULL DEFAULT '',
+  notes INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- A file someone attached: where it is in the bucket (R2 keeps the file, this table what is known of it), and the
+-- note it goes with, 0 for none.
+CREATE TABLE attachments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  object TEXT NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  note_id INTEGER NOT NULL DEFAULT 0,
+  author_id TEXT NOT NULL,
+  author TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- The app's own users (charter's sign-in screen, package api): who signed up, the passkeys they sign in with, the
 -- sessions and tokens they hold (never the token: its SHA-256), and sign-ins that were started.
 CREATE TABLE users (
@@ -145,6 +170,13 @@ func Seed(ctx context.Context, store Store, accounts charter.Accounts) error {
 // on this machine: a Worker that is deployed has none of it.
 func init() {
 	app.Seed("DB", func(ctx context.Context, conn cloud.DB) error {
+		// What the app does with each note written, it does for a seeded one: here at once, where a request would
+		// leave it to the queue, so the activity page has the seed's notes on it when the seed is done.
+		queued := api.OnPost
+		api.OnPost = func(ctx context.Context, note api.Note) {
+			built.Record(ctx, conn, built.NoteWritten, note.ID, note.Author, 0)
+		}
+		defer func() { api.OnPost = queued }()
 		return api.Seed(ctx, api.StoreOn(conn), charter.AccountsOn(conn))
 	})
 }

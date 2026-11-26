@@ -18,7 +18,6 @@ import (
 	charter "github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/example/api"
-	"github.com/joeblew999/charter/example/bindings"
 	"github.com/joeblew999/charter/example/db"
 	"github.com/joeblew999/charter/intl/intltest"
 )
@@ -110,7 +109,7 @@ func serve(t *testing.T, store api.Store, who ...charter.Caller) http.Handler {
 	// The app's own options (its error handler, htmx 4's target selector, its check of what a route needs), with
 	// the test's store and caller after them.
 	options := append((&app.App{Docs: &app.Docs{}, Auth: as(caller)}).Options(false),
-		structpages.WithRequestArgs(func(*http.Request) (api.Store, error) { return store, nil }, func(*http.Request) (bindings.State, error) { return bindings.State{}, nil },
+		structpages.WithRequestArgs(func(*http.Request) (api.Store, error) { return store, nil },
 			func(*http.Request) (charter.Caller, error) { return caller, nil }))
 	_, err := Mount(mux, options...)
 	if err != nil {
@@ -195,7 +194,7 @@ func TestEveryRouteHasAnAddress(t *testing.T) {
 	// Every route passes a middleware once as the tree is mounted: that is the list.
 	var routes []*structpages.PageNode
 	sp, err := Mount(http.NewServeMux(), append((&app.App{Docs: &app.Docs{}}).Options(false),
-		structpages.WithRequestArgs(func(*http.Request) (api.Store, error) { return &notes{}, nil }, func(*http.Request) (bindings.State, error) { return bindings.State{}, nil },
+		structpages.WithRequestArgs(func(*http.Request) (api.Store, error) { return &notes{}, nil },
 			func(*http.Request) (charter.Caller, error) { return writer, nil }),
 		structpages.WithArgs(charter.NewAuth(nil)),
 		structpages.WithMiddlewares(func(next http.Handler, pn *structpages.PageNode) http.Handler {
@@ -205,7 +204,7 @@ func TestEveryRouteHasAnAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sample := map[string]any{"slug": "how-it-is-built", "action": "note", "token": 1, "note": 1, "person": "u1"}
+	sample := map[string]any{"slug": "how-it-is-built", "action": "note", "token": 1, "note": 1, "person": "u1", "file": 1}
 	for _, node := range routes {
 		if _, err := sp.URLFor(node.Value.Interface(), sample); err != nil {
 			t.Errorf("%s (%s): %v", node.Name, node.FullRoute(), err)

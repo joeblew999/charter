@@ -34,7 +34,7 @@ func main() {
 			Agents:  "If you are a coding agent working on a charter app, work with its Claude Code plugins: the marketplace joeblew999/charter lists charter's own skill and those of gsx, gsxui and structpages, each from its owner's repository (in Claude Code: `/plugin marketplace add joeblew999/charter`, then `/plugin install charter@charter`, and the same for gsx, gsxui and structpages; an app made with charter enables all four in its .claude/settings.json, and `go tool charter install` installs them). The skills are the rules to work by; these docs are the reference they point to.",
 			More: []seo.LLMsSection{{Name: "The example, running", Links: []seo.LLMsLink{
 				{Title: "Notes", URL: pages.Example + "/", Note: "The live feed: a note written here shows at once on every open page."},
-				{Title: "Bindings", URL: pages.Example + "/bindings", Note: "Everything Cloudflare gives a Worker, one card each."},
+				{Title: "How it's built", URL: pages.Example + "/built/", Note: "Each thing Cloudflare gives a Worker doing one job in the app, on a page of its own."},
 				{Title: "The API's contract", URL: pages.Example + "/api/openapi.json", Note: "OpenAPI, written from the Go contract."},
 				{Title: "The source", URL: pages.Repo + "/tree/main/example", Note: "The example's code: what go tool charter create copies."},
 			}}},

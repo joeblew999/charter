@@ -21,6 +21,9 @@ func Post(ctx context.Context, store Store, by charter.Caller, body string) (Not
 		return Note{}, err
 	}
 	Notes.Publish(ctx, note)
+	if OnPost != nil {
+		OnPost(ctx, note)
+	}
 	return note, nil
 }
 ```

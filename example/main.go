@@ -13,7 +13,7 @@ import (
 	"github.com/joeblew999/charter/app"
 	charter "github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/example/api"
-	"github.com/joeblew999/charter/example/bindings"
+	"github.com/joeblew999/charter/example/built"
 	"github.com/joeblew999/charter/example/docs"
 	"github.com/joeblew999/charter/example/pages"
 	"github.com/joeblew999/charter/example/pages/screens"
@@ -25,8 +25,8 @@ import (
 var dist embed.FS
 
 func main() {
-	// What the Worker does that is no request: a Cron Trigger, a queue's consumer, email (package bindings).
-	bindings.Background()
+	// What the Worker does that is no request: a queue's consumer, a Cron Trigger's task, email (package built).
+	built.Background()
 	(&app.App{
 		Name:  "charter-example",
 		Dist:  dist,
@@ -45,9 +45,8 @@ func main() {
 		Auth:   api.Auth,
 		SignIn: screens.SignInPage{},
 		Args:   []any{api.Auth},
-		// What a page asks for by type, made from the request: the notes' store (D1), the bindings' state, and who
-		// is asking.
-		RequestArgs: []any{api.OpenStore, bindings.Read, api.Auth.Caller},
+		// What a page asks for by type, made from the request: the notes' store (D1), and who is asking.
+		RequestArgs: []any{api.OpenStore, api.Auth.Caller},
 		API:         api.Handler(api.Env{Var: charter.Var}),
 	}).Run()
 }

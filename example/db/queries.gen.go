@@ -19,6 +19,45 @@ type NewestNoteRow struct {
 	ID int64 `json:"id"`
 }
 
+// NotesReportRow is a row of NotesReport.
+type NotesReportRow struct {
+	Notes   int64 `json:"notes"`
+	Authors int64 `json:"authors"`
+}
+
+// NotesSinceRow is a row of NotesSince.
+type NotesSinceRow struct {
+	Notes int64 `json:"notes"`
+}
+
+// ActivityRow is a row of the table activity.
+type ActivityRow struct {
+	ID        int64  `json:"id"`
+	Kind      string `json:"kind"`
+	NoteID    int64  `json:"note_id"`
+	Author    string `json:"author"`
+	Notes     int64  `json:"notes"`
+	CreatedAt string `json:"created_at"`
+}
+
+// NewestActivityRow is a row of NewestActivity.
+type NewestActivityRow struct {
+	ID int64 `json:"id"`
+}
+
+// AttachmentsRow is a row of the table attachments.
+type AttachmentsRow struct {
+	ID        int64  `json:"id"`
+	Object    string `json:"object"`
+	Name      string `json:"name"`
+	Type      string `json:"type"`
+	Size      int64  `json:"size"`
+	NoteID    int64  `json:"note_id"`
+	AuthorID  string `json:"author_id"`
+	Author    string `json:"author"`
+	CreatedAt string `json:"created_at"`
+}
+
 const qCreateNote = "INSERT INTO notes (body, author_id, author) VALUES (?, ?, ?) RETURNING id, body, author_id, author, created_at"
 
 // CreateNote runs the query CreateNote of db/queries.sql.
@@ -60,4 +99,83 @@ const qNewestNote = "SELECT CAST(COALESCE(MAX(id), 0) AS INTEGER) AS id FROM not
 func NewestNote(db cloud.DB) (int64, error) {
 	row, err := cloud.One[NewestNoteRow](db, qNewestNote)
 	return row.ID, err
+}
+
+const qNotesBy = "SELECT id, body, author_id, author, created_at FROM notes WHERE author_id = ? ORDER BY id DESC LIMIT ?"
+
+// NotesBy is someone's notes, newest first: what they may attach a file to.
+func NotesBy(db cloud.DB, authorID string, limit int64) ([]NotesRow, error) {
+	return cloud.Query[NotesRow](db, qNotesBy, authorID, limit)
+}
+
+const qNotesReport = "SELECT CAST(COUNT(*) AS INTEGER) AS notes, CAST(COUNT(DISTINCT author_id) AS INTEGER) AS authors FROM notes"
+
+// NotesReport is how many notes there are, and by how many people.
+func NotesReport(db cloud.DB) (NotesReportRow, error) {
+	return cloud.One[NotesReportRow](db, qNotesReport)
+}
+
+const qNotesSince = "SELECT CAST(COUNT(*) AS INTEGER) AS notes FROM notes WHERE created_at > ?"
+
+// NotesSince is how many notes were written after a time.
+func NotesSince(db cloud.DB, createdAt string) (int64, error) {
+	row, err := cloud.One[NotesSinceRow](db, qNotesSince, createdAt)
+	return row.Notes, err
+}
+
+const qRecordActivity = "INSERT INTO activity (kind, note_id, author, notes) VALUES (?, ?, ?, ?) RETURNING id, kind, note_id, author, notes, created_at"
+
+// RecordActivity runs the query RecordActivity of db/queries.sql.
+func RecordActivity(db cloud.DB, kind string, noteID int64, author string, notes int64) (ActivityRow, error) {
+	return cloud.One[ActivityRow](db, qRecordActivity, kind, noteID, author, notes)
+}
+
+const qActivityBefore = "SELECT id, kind, note_id, author, notes, created_at FROM activity WHERE id < ? ORDER BY id DESC LIMIT ?"
+
+// ActivityBefore is what happened before a position, newest first.
+func ActivityBefore(db cloud.DB, id int64, limit int64) ([]ActivityRow, error) {
+	return cloud.Query[ActivityRow](db, qActivityBefore, id, limit)
+}
+
+const qActivityAfter = "SELECT id, kind, note_id, author, notes, created_at FROM activity WHERE id > ? ORDER BY id LIMIT ?"
+
+// ActivityAfter is what happened after a position, oldest first: the log its feed follows.
+func ActivityAfter(db cloud.DB, id int64, limit int64) ([]ActivityRow, error) {
+	return cloud.Query[ActivityRow](db, qActivityAfter, id, limit)
+}
+
+const qNewestActivity = "SELECT CAST(COALESCE(MAX(id), 0) AS INTEGER) AS id FROM activity"
+
+// NewestActivity runs the query NewestActivity of db/queries.sql.
+func NewestActivity(db cloud.DB) (int64, error) {
+	row, err := cloud.One[NewestActivityRow](db, qNewestActivity)
+	return row.ID, err
+}
+
+const qAddAttachment = "INSERT INTO attachments (object, name, type, size, note_id, author_id, author) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id, object, name, type, size, note_id, author_id, author, created_at"
+
+// AddAttachment runs the query AddAttachment of db/queries.sql.
+func AddAttachment(db cloud.DB, object string, name string, type_ string, size int64, noteID int64, authorID string, author string) (AttachmentsRow, error) {
+	return cloud.One[AttachmentsRow](db, qAddAttachment, object, name, type_, size, noteID, authorID, author)
+}
+
+const qAttachments = "SELECT id, object, name, type, size, note_id, author_id, author, created_at FROM attachments ORDER BY id DESC LIMIT ?"
+
+// Attachments is the files attached, newest first.
+func Attachments(db cloud.DB, limit int64) ([]AttachmentsRow, error) {
+	return cloud.Query[AttachmentsRow](db, qAttachments, limit)
+}
+
+const qAttachment = "SELECT id, object, name, type, size, note_id, author_id, author, created_at FROM attachments WHERE id = ?"
+
+// Attachment runs the query Attachment of db/queries.sql.
+func Attachment(db cloud.DB, id int64) (AttachmentsRow, error) {
+	return cloud.One[AttachmentsRow](db, qAttachment, id)
+}
+
+const qRemoveAttachment = "DELETE FROM attachments WHERE id = ? RETURNING id, object, name, type, size, note_id, author_id, author, created_at"
+
+// RemoveAttachment runs the query RemoveAttachment of db/queries.sql.
+func RemoveAttachment(db cloud.DB, id int64) (AttachmentsRow, error) {
+	return cloud.One[AttachmentsRow](db, qRemoveAttachment, id)
 }

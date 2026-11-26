@@ -9,9 +9,9 @@ Every route is a field, with its route in the field's tag.
 ```go file=../example/pages/pages.go#Pages
 // Pages is the tree.
 type Pages struct {
-	home     Home         `route:"GET /{$} Home"`
-	bindings Bindings     `route:"GET /bindings Bindings"`
-	docs     screens.Docs `route:"/docs Docs"`
+	home  Home         `route:"GET /{$} Home"`
+	built Built        `route:"/built Built"`
+	docs  screens.Docs `route:"/docs Docs"`
 
 	// The app's own people: signing in with a passkey, and what is someone's own (charter's sign-in screen).
 	signIn  screens.SignIn  `route:"/sign-in SignIn"`
@@ -21,10 +21,9 @@ type Pages struct {
 	preferences screens.Preferences `route:"/preferences Preferences"`
 
 	// What the pages call: routes, not pages.
-	post   PostNote       `route:"POST /notes PostNote"`
-	remove RemoveNote     `route:"POST /notes/{note}/remove RemoveNote"`
-	stream NotesStream    `route:"GET /notes/stream NotesStream"`
-	act    BindingsAction `route:"POST /bindings/{action} BindingsAction"`
+	post   PostNote    `route:"POST /notes PostNote"`
+	remove RemoveNote  `route:"POST /notes/{note}/remove RemoveNote"`
+	stream NotesStream `route:"GET /notes/stream NotesStream"`
 }
 ```
 
@@ -53,6 +52,12 @@ func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, tar
 		return HomeProps{}, api.Note{}, false, false, err
 	}
 	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...), Caller: caller}
+	if props.MayWrite {
+		// One read of KV, for someone who may write: their draft. A reader who is nobody costs none.
+		if props.Draft, err = built.DraftOf(r.Context(), caller.Subject); err != nil {
+			return HomeProps{}, api.Note{}, false, false, err
+		}
+	}
 	if len(notes) > 0 {
 		props.After = notes[0].ID
 	}
@@ -88,11 +93,17 @@ component (p Home) Form(body string, refused bool) {
 			dir="auto"
 			placeholder={locales.HomePlaceholder}
 			aria-label={locales.HomeLabel}
+			hx-post={DraftSave{} |> url}
+			hx-trigger="input changed delay:700ms"
+			hx-target={Home.Saved |> target}
+			hx-swap="innerHTML"
 			{ if refused {
 				aria-invalid="true"
 			} }
 		/>
 		<ui.Button type="submit">{ locales.HomePost }</ui.Button>
+		// When what is typed was last kept as a draft (DraftSave answers with it).
+		<span id={Home.Saved |> id} class="w-full text-xs text-muted-foreground"></span>
 	</form>
 }
 ```
@@ -123,6 +134,8 @@ func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Stor
 	if _, err := api.Post(r.Context(), store, caller, body); err != nil {
 		return err
 	}
+	// Posted, it is a draft no longer.
+	built.SaveDraft(r.Context(), caller.Subject, "")
 	return structpages.RenderComponent(Home{}.Form("", false))
 }
 ```

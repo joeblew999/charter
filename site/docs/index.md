@@ -19,7 +19,7 @@ A charter app runs on Cloudflare and nowhere else. Locally that is `wrangler dev
 
 ## See it running
 
-[The example](https://charter-example.gedw99.workers.dev) is one app that uses all of charter: its notes are the live feed, and its bindings page uses everything Cloudflare gives a Worker. Its source is [`example/`](https://github.com/joeblew999/charter/tree/main/example) in charter's repository, and it is what `charter create` copies.
+[The example](https://charter-example.gedw99.workers.dev) is one app that uses all of charter: its notes are the live feed, people sign in with a passkey and have roles, and each thing Cloudflare gives a Worker does one job in it, on a page of its own. Its source is [`example/`](https://github.com/joeblew999/charter/tree/main/example) in charter's repository, and it is what `charter create` copies.
 
 This site is a charter app too: [`site/`](https://github.com/joeblew999/charter/tree/main/site), a front page and these docs, which are Markdown files in its `docs/` folder. The pages that show them are charter's own, the same ones [your app's docs](10-docs.md) get.
 

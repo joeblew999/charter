@@ -11,7 +11,8 @@ engines, in one Worker.
 
 Both are charter apps in this repository. [`site/`](site) is the docs: the Markdown in [`site/docs/`](site/docs),
 which is where to read them on GitHub. [`example/`](example) is the one app that uses all of charter: its notes are
-the live feed, its bindings page uses everything Cloudflare gives a Worker, and it is what `charter create` copies.
+the live feed, people sign in and have roles, each thing Cloudflare gives a Worker does one job in it, and it is what
+`charter create` copies.
 
 ## Start
 

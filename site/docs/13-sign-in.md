@@ -65,6 +65,12 @@ func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, tar
 		return HomeProps{}, api.Note{}, false, false, err
 	}
 	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...), Caller: caller}
+	if props.MayWrite {
+		// One read of KV, for someone who may write: their draft. A reader who is nobody costs none.
+		if props.Draft, err = built.DraftOf(r.Context(), caller.Subject); err != nil {
+			return HomeProps{}, api.Note{}, false, false, err
+		}
+	}
 	if len(notes) > 0 {
 		props.After = notes[0].ID
 	}

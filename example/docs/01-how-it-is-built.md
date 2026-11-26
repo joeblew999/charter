@@ -4,10 +4,10 @@ Every part of the app is in the folder charter looks for it in.
 
 | Folder | What is in it |
 |---|---|
-| `pages/` | The page tree: the home page with its live list, the bindings page, and the routes they call |
+| `pages/` | The page tree: the home page with its live list, the pages of [how it's built](../built/), and the routes they call |
 | `api/` | The notes API's contract and handlers, and the one feed behind the page's list and the API's stream |
 | `db/` | `schema.sql`, the tables as they are now, and `queries.sql` |
-| `bindings/` | One file per thing Cloudflare gives a Worker |
+| `built/` | What the app does with what Cloudflare gives a Worker, one job each |
 | `locales/` | English, German, Arabic |
 | `docs/` | These pages |
 | `test/` | Tests of the pages in a real browser, and of the API through its own SDK |

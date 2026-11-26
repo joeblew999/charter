@@ -25,8 +25,8 @@ component Layout(title intl.Msg, description intl.Msg, children gsx.Node) {
 				// The pages, the one being shown marked (current, by the tree).
 				<nav class="flex items-center gap-1">
 					<ui.Button variant={current(ctx, Home{})} size="sm" href={Home{} |> url}>{ locales.HomeHeading }</ui.Button>
-					<ui.Button variant={current(ctx, Bindings{})} size="sm" href={Bindings{} |> url} translate="no">
-						Cloudflare
+					<ui.Button variant={current(ctx, Built{})} size="sm" href={BuiltIndex{} |> url}>
+						{ locales.BuiltNav }
 					</ui.Button>
 					<ui.Button variant="ghost" size="sm" href={screens.DocsIndex{} |> url}>{ locales.DocsNav }</ui.Button>
 				</nav>

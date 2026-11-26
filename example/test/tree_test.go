@@ -16,7 +16,7 @@ var tree = func() *structpages.StructPages {
 	return sp
 }()
 
-// at is a route's address: at(pages.Bindings{}), at(pages.BindingsAction{}, "action", "note").
+// at is a route's address: at(pages.BuiltIndex{}), at(pages.AttachedFile{}, "file", 1).
 func at(page any, params ...any) string {
 	path, err := tree.URLFor(page, params...)
 	if err != nil {

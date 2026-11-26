@@ -2,12 +2,12 @@
 // the field's tag.
 //
 //   - A page is a type with a Page component, and Props for its data. Props declares what it needs (the store, the
-//     bindings' state) and structpages hands it over: nothing here opens a database or reads a binding.
+//     caller) and structpages hands it over: nothing here opens a database or reads a binding.
 //   - A region of a page that changes by itself is a component of that page (Home's Form), with an id and a target
 //     from the tree ({ Home.Form |> id }, { Home.Form |> target }), never a string.
 //   - What a page calls is a type with ServeHTTP that returns an error: it never writes an error or a redirect
 //     itself (app.Status, app.Redirect), and answers with a component (structpages.RenderComponent).
-//   - Links and forms' targets come from the tree too ({ Bindings{} |> url }, { PostNote{} |> url }), in the
+//   - Links and forms' targets come from the tree too ({ BuiltIndex{} |> url }, { PostNote{} |> url }), in the
 //     reader's language.
 //   - What every app has (the language list, the docs' pages, the theme switch) is charter's screens, copied into
 //     pages/screens (charter add screen:<name>) and built from this app's own gsxui components.
@@ -26,15 +26,15 @@ import (
 	charter "github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/example/api"
-	"github.com/joeblew999/charter/example/bindings"
+	"github.com/joeblew999/charter/example/built"
 	"github.com/joeblew999/charter/example/pages/screens"
 )
 
 // Pages is the tree.
 type Pages struct {
-	home     Home         `route:"GET /{$} Home"`
-	bindings Bindings     `route:"GET /bindings Bindings"`
-	docs     screens.Docs `route:"/docs Docs"`
+	home  Home         `route:"GET /{$} Home"`
+	built Built        `route:"/built Built"`
+	docs  screens.Docs `route:"/docs Docs"`
 
 	// The app's own people: signing in with a passkey, and what is someone's own (charter's sign-in screen).
 	signIn  screens.SignIn  `route:"/sign-in SignIn"`
@@ -44,10 +44,9 @@ type Pages struct {
 	preferences screens.Preferences `route:"/preferences Preferences"`
 
 	// What the pages call: routes, not pages.
-	post   PostNote       `route:"POST /notes PostNote"`
-	remove RemoveNote     `route:"POST /notes/{note}/remove RemoveNote"`
-	stream NotesStream    `route:"GET /notes/stream NotesStream"`
-	act    BindingsAction `route:"POST /bindings/{action} BindingsAction"`
+	post   PostNote    `route:"POST /notes PostNote"`
+	remove RemoveNote  `route:"POST /notes/{note}/remove RemoveNote"`
+	stream NotesStream `route:"GET /notes/stream NotesStream"`
 }
 
 // Mount mounts the tree: what app.App's Pages is. The call is here so that structpages-lint finds the tree and can
@@ -72,6 +71,8 @@ type HomeProps struct {
 	MayWrite bool
 	// Caller is the reader: each note's row asks whether they may take it away.
 	Caller charter.Caller
+	// Draft is what the reader typed here and did not post (package built: KV keeps it), for someone signed in.
+	Draft built.Draft
 }
 
 // Open says whether a note's row shows when it was written in full: what the row's own button asks for.
@@ -100,6 +101,12 @@ func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, tar
 		return HomeProps{}, api.Note{}, false, false, err
 	}
 	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...), Caller: caller}
+	if props.MayWrite {
+		// One read of KV, for someone who may write: their draft. A reader who is nobody costs none.
+		if props.Draft, err = built.DraftOf(r.Context(), caller.Subject); err != nil {
+			return HomeProps{}, api.Note{}, false, false, err
+		}
+	}
 	if len(notes) > 0 {
 		props.After = notes[0].ID
 	}
@@ -139,6 +146,8 @@ func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Stor
 	if _, err := api.Post(r.Context(), store, caller, body); err != nil {
 		return err
 	}
+	// Posted, it is a draft no longer.
+	built.SaveDraft(r.Context(), caller.Subject, "")
 	return structpages.RenderComponent(Home{}.Form("", false))
 }
 
@@ -168,25 +177,4 @@ func (NotesStream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := Home{}.Item(note, false, false).Render(ctx, &html)
 		return strings.TrimSpace(html.String()), err
 	})
-}
-
-// Bindings is the page of what Cloudflare gives the Worker, one card each (package bindings). Their state is the
-// app's request arg: reading it uses every binding once.
-type Bindings struct{}
-
-func (Bindings) Props(state bindings.State) (bindings.State, error) { return state, nil }
-
-// BindingsAction is the bindings page's forms (/bindings/note, /bindings/queue, /bindings/email): it does what the
-// form asks, then sends the reader back to the page, in their language.
-type BindingsAction struct{}
-
-func (BindingsAction) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
-	if err := bindings.Post(r); err != nil {
-		return err
-	}
-	back, err := structpages.URLFor(r.Context(), Bindings{})
-	if err != nil {
-		return err
-	}
-	return app.Redirect{To: back}
 }
