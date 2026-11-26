@@ -102,6 +102,22 @@ func cloudflare(p *project.Project, words, rest []string) error {
 	return cloudflareTo(nil, p, words, rest)
 }
 
+// cloudflareQuietly is cloudflare for a question: nothing is shown, and the error says whether wrangler answered.
+func cloudflareQuietly(p *project.Project, words ...string) error {
+	bin, err := npm(p, "wrangler")
+	if err != nil {
+		return err
+	}
+	if os.Getenv("CLOUDFLARE_API_TOKEN") == "" {
+		if fnox, err := exec.LookPath("fnox"); err == nil && exec.Command(fnox, "--version").Run() == nil {
+			_, err := run.Output(p.Root, nil, fnox, append([]string{"exec", "--", bin}, words...)...)
+			return err
+		}
+	}
+	_, err = run.Output(p.Root, nil, bin, words...)
+	return err
+}
+
 // cloudflareTo is cloudflare, with wrangler's output also written to copy.
 func cloudflareTo(copy io.Writer, p *project.Project, words, rest []string) error {
 	bin, err := npm(p, "wrangler")

@@ -130,6 +130,7 @@ func (p *Project) Var(name string) (value string, ok bool) {
 type D1 struct {
 	Binding    string `json:"binding"`
 	Name       string `json:"database_name"`
+	ID         string `json:"database_id"` // "" when wrangler provisions the database itself, on the first deploy
 	Migrations string `json:"migrations_dir"`
 }
 

@@ -13,35 +13,20 @@
   // Vite's output, served before the Worker runs.
   "assets": { "directory": "dist" },
   "vars": { "APP_NAME": "charter-site" },
+  // No ids here: wrangler makes the database, the KV namespace, the bucket and the queue on the first deploy, under
+  // these names, and finds them again by name.
   // The log of messages. charter deploy applies migrations/ first.
-  "d1_databases": [{ "binding": "DB", "database_name": "charter-site", "database_id": "local", "migrations_dir": "migrations" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "charter-site", "migrations_dir": "migrations" }],
   // One hub wakes every open page when a message is posted (charter's hub.mjs).
   "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }],
-  // The Cloudflare page (/cloud): one binding of each kind, used through workers-go (pages/cloud_js.go).
-  "kv_namespaces": [{ "binding": "KV", "id": "local" }],
+  // The Cloudflare page (/cloud): one binding of each kind, used through workers-go (package cloud).
+  "kv_namespaces": [{ "binding": "KV" }],
   "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "charter-site" }],
   "queues": {
     "producers": [{ "binding": "QUEUE", "queue": "charter-site" }],
     "consumers": [{ "queue": "charter-site", "max_batch_timeout": 1 }]
   },
   "triggers": { "crons": ["*/5 * * * *"] },
-  "send_email": [{ "name": "MAIL" }],
-  "env": {
-    // go tool charter deploy preview: the site on Cloudflare with resources of its own, not indexed (APP_PREVIEW).
-    // An environment states its own bindings: wrangler inherits none of them.
-    "preview": {
-      "name": "charter-site-preview",
-      "vars": { "APP_NAME": "charter-site-preview", "APP_PREVIEW": "1" },
-      "d1_databases": [{ "binding": "DB", "database_name": "charter-site-preview", "database_id": "ca1dfe60-16cc-4d5c-a465-93715c1378f1", "migrations_dir": "migrations" }],
-      "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
-      "kv_namespaces": [{ "binding": "KV", "id": "eeeb4d22c9bf467a902ede89c5483fec" }],
-      "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "charter-site-preview" }],
-      "queues": {
-        "producers": [{ "binding": "QUEUE", "queue": "charter-site-preview" }],
-        "consumers": [{ "queue": "charter-site-preview", "max_batch_timeout": 1 }]
-      },
-      "send_email": [{ "name": "MAIL" }]
-    }
-  }
+  "send_email": [{ "name": "MAIL" }]
 }

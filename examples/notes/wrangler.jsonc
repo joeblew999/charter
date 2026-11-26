@@ -11,8 +11,9 @@
   // charter build writes build/: the Wasm, and the JavaScript that runs it.
   "build": { "command": "go tool charter build" },
   "vars": { "APP_NAME": "charter-notes" },
-  // The notes. charter deploy applies migrations/ first.
-  "d1_databases": [{ "binding": "DB", "database_name": "charter-notes", "database_id": "local", "migrations_dir": "migrations" }],
+  // The notes. charter deploy applies migrations/ first. No id: wrangler makes the database on the first deploy,
+  // under this name, and finds it again by name.
+  "d1_databases": [{ "binding": "DB", "database_name": "charter-notes", "migrations_dir": "migrations" }],
   // One hub: every stream of notes listens to it (charter's hub.mjs).
   "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }],

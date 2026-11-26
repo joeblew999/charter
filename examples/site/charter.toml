@@ -8,13 +8,10 @@ spec = "fern/openapi.json"
 db = "sqlc"
 
 # Asked of the Worker: the Cloudflare page, card by card. On wrangler dev (go tool charter test), or deployed
-# (go tool charter test --env preview, or --base https://…).
+# (go tool charter test --deployed).
 [test]
-run = ["go test -count=1 ./test"]
-
-# Where wrangler.jsonc's environments are deployed (go tool charter deploy preview).
-[urls]
-preview = "https://charter-site-preview.gedw99.workers.dev"
+# -timeout: a deployed Worker's new Cron Trigger can take a quarter of an hour to run the first time.
+run = ["go test -count=1 -timeout 20m ./test"]
 
 [pack]
 name = "Api"

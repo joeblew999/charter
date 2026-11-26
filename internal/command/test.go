@@ -21,7 +21,8 @@ import (
 //
 //	charter test                  all of that
 //	charter test e2e              one of charter.toml's [test.suites], against the Worker on wrangler dev
-//	charter test --env preview    the standard test and [test] run against that environment, deployed ([urls])
+//	charter test --deployed       the standard test and [test] run against the deployed Worker (charter.toml's url)
+//	charter test --env staging    the same against that environment of wrangler.jsonc ([urls])
 //	charter test --base <url>     the same against any address
 //	charter test e2e --base <url> a suite against a deployed Worker
 func Test(args []string) {
@@ -32,8 +33,17 @@ func Test(args []string) {
 	fs := flag.NewFlagSet("charter test", flag.ExitOnError)
 	base := fs.String("base", "", "the address of a Worker already running or deployed, instead of wrangler dev")
 	env := fs.String("env", "", "an environment of "+project.Wrangler+", deployed: its address is charter.toml's [urls]")
+	deployed := fs.Bool("deployed", false, "the deployed Worker, at charter.toml's url")
 	fs.Parse(args)
 	p := load()
+	if *deployed {
+		if *base != "" || *env != "" {
+			check(errors.New("--deployed, --env and --base each name the Worker to test: give one"))
+		}
+		if *base = p.URL; *base == "" {
+			check(errors.New(`charter.toml has no url, where the Worker is deployed: url = "https://…"`))
+		}
+	}
 	if *env != "" {
 		if *base != "" {
 			check(errors.New("--env and --base both name the Worker to test: give one"))

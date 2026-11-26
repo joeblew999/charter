@@ -32,6 +32,7 @@ package gsxapp
 import (
 	"context"
 	"io/fs"
+	"net"
 	"net/http"
 	"os"
 	"slices"
@@ -112,6 +113,12 @@ func (s *App) Handler(next http.Handler) http.Handler {
 		// starts warm, what a health check asks.
 		if r.URL.Path == "/healthz" {
 			w.Write([]byte("ok"))
+			return
+		}
+		// One address per page: a deployed site asked over http answers with the https one. (A zone can do this
+		// itself; workers.dev does not.)
+		if origin := transport.Origin(r); bindings.OnWorkers && strings.HasPrefix(origin, "http://") && !local(r) {
+			http.Redirect(w, r, "https://"+strings.TrimPrefix(origin, "http://")+r.URL.RequestURI(), http.StatusMovedPermanently)
 			return
 		}
 		v, err := s.assets()
@@ -214,4 +221,13 @@ func headOf(ctx context.Context, entry string) head {
 		h.Home = transport.Origin(p.r) + p.r.URL.Path
 	}
 	return h
+}
+
+// local says the request was made to this machine (wrangler dev), where there is no https to move to.
+func local(r *http.Request) bool {
+	host := r.URL.Hostname()
+	if host == "" {
+		host, _, _ = strings.Cut(r.Host, ":")
+	}
+	return host == "localhost" || net.ParseIP(strings.Trim(host, "[]")).IsLoopback()
 }

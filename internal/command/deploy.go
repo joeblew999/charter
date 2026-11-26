@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/joeblew999/charter/internal/project"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -20,16 +21,30 @@ func Deploy(args []string) {
 		}
 		env, args = []string{"--env", args[0]}, args[1:]
 	}
-	for _, db := range p.Worker.D1 {
-		check(cloudflare(p, append([]string{"d1", "migrations", "apply", db.Binding, "--remote"}, env...), nil))
+	migrations := func() {
+		for _, db := range p.Worker.D1 {
+			check(cloudflare(p, append([]string{"d1", "migrations", "apply", db.Binding, "--remote"}, env...), nil))
+		}
+	}
+	// The migrations go first, so the new code never meets the old schema. Except on the very first deploy of a
+	// Worker whose database wrangler provisions itself (a binding with no database_id): there is no database until
+	// wrangler deploy has made it, so there the Worker goes first.
+	first := len(env) == 0 && slices.ContainsFunc(p.Worker.D1, func(db project.D1) bool {
+		return db.ID == "" && (db.Name == "" || cloudflareQuietly(p, "d1", "info", db.Name) != nil)
+	})
+	if !first {
+		migrations()
 	}
 	var said bytes.Buffer
 	check(cloudflareTo(&said, p, append([]string{"deploy"}, env...), args))
+	if first {
+		migrations()
+	}
 	// What next: the same tests that ask the local Worker ask the deployed one. An environment's address is kept in
 	// charter.toml's [urls] the first time wrangler says it, so charter test --env needs nothing typed.
 	switch {
 	case len(env) == 0 && p.URL != "":
-		say("deployed. To test it: go tool charter test --base %s", p.URL)
+		say("deployed. To test it: go tool charter test --deployed   (%s)", p.URL)
 	case len(env) == 0:
 	case p.URLs[env[1]] != "":
 		say("deployed. To test it: go tool charter test --env %s", env[1])

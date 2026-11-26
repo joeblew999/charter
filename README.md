@@ -42,10 +42,10 @@ tool that owns the job. Run them as `go tool charter <command>` in the app's fol
 | `dev` | The loop you work in, on the real runtime. Leave it running |
 | `check` | Everything that can be said without running the app: format, lint, the contract, the languages. `--fix` writes what it can |
 | `fmt`, `lint` | The two halves of `check`, alone |
-| `test` | `go test`, then the Worker on wrangler dev: its API, the app's own tests, the search-engine audit. The same tests ask a deployed Worker with `--env <environment>` (its address in `charter.toml`'s `[urls]`, which `deploy` writes) or `--base <url>`; a test command gets `BASE` and `TARGET` (`local` or `deployed`). `test e2e` runs a suite |
+| `test` | `go test`, then the Worker on wrangler dev: its API, the app's own tests, the search-engine audit. The same tests ask a deployed Worker with `--deployed` (at `url`), `--env <environment>` (its address in `charter.toml`'s `[urls]`, which `deploy` writes) or `--base <url>`; a test command gets `BASE` and `TARGET` (`local` or `deployed`). `test e2e` runs a suite |
 | `build` | The messages, the components' Go, the browser's files and the Wasm. wrangler runs it itself |
 | `preview` | The production build on wrangler dev |
-| `deploy` | The D1 migrations, then wrangler deploy: `deploy staging` |
+| `deploy` | The D1 migrations, then wrangler deploy. `wrangler.jsonc` needs no ids: wrangler makes a database, KV namespace, bucket or queue it names on the first deploy. `deploy staging` deploys an environment |
 | `pack` | What others consume: an SDK from the contract |
 | `run <task>` | Everything that is not a verb: `translate`, `languages`, `lighthouse`, `badges`, `logs`, `bench`, and the app's own tasks. Alone, it lists them |
 | `exec <tool>` | One of the app's tools as it pins it: `exec wrangler …`, `vite`, `gsx`, `gsxui` |
