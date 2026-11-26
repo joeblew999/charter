@@ -72,8 +72,8 @@ func Test(args []string) {
 		return
 	}
 	if *base != "" {
-		// A deployed Worker is asked what the local one is: the standard test and the app's own. Not go test (it
-		// asks no Worker), and not the search-engine audit, which is of the site at url.
+		// A deployed Worker is asked what the local one is: the standard test, the app's own, and the search-engine
+		// audit, which a deployed site is what a search engine sees of. Not go test (it asks no Worker).
 		commands := p.Test.Live
 		if len(commands) == 0 {
 			commands = p.Test.Run
@@ -83,6 +83,9 @@ func Test(args []string) {
 		}
 		t := newTimes("test of " + *base)
 		t.part("worker", func() error { return try(p, commands, *base) })
+		if p.SEO != nil {
+			t.part("audit", func() error { return seo.Audit(strings.TrimRight(*base, "/")) })
+		}
 		t.done()
 		return
 	}

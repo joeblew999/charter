@@ -22,7 +22,7 @@ These live beside the pages (`pages/pages_test.go`) and run with `go test`, whic
 
 ```sh
 go tool charter test             # the Worker on wrangler dev
-go tool charter test --deployed  # the deployed one, with the same tests
+go tool charter test --deployed  # the deployed one: the same tests, and the audit
 ```
 
 ## A page, in a real browser

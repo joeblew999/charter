@@ -93,7 +93,9 @@ func Create(args []string) {
 	readme := fmt.Sprintf("# %s\n\nA Go app on Cloudflare Workers, made with [charter](%s) from its example.\n\n```sh\nnpm install\ngo tool charter dev                              # work on it; leave it running\ngo tool charter check && go tool charter test    # before a push\ngo tool charter deploy                           # ship it\n```\n\n`go tool charter` lists every command.\n", name, repository)
 	check(os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0o644))
 	// The new module path sorts differently among the imports: written as gofmt and gsx fmt have them.
-	check(run.Run(dir, nil, "go", "mod", "tidy"))
+	// -e: the packages a build writes (the messages, the docs) are not there until the check below has built them, and
+	// tidied again.
+	check(run.Run(dir, nil, "go", "mod", "tidy", "-e"))
 	check(run.Run(dir, nil, "gofmt", "-w", "."))
 	if exists(filepath.Join(dir, "gsx.toml")) {
 		check(run.Run(dir, nil, "go", "tool", "gsx", "fmt", "-w", "."))
