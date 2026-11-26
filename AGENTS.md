@@ -1,6 +1,6 @@
 # Rules for agents
 
-How the repo works: [README.md](README.md). Plans and open work are GitHub issues here, never files.
+How the repo works: the docs, which are `example/docs/*.md` and are served by the example itself. Plans and open work are GitHub issues here, never files.
 
 - **One way.** Cloudflare only (wrangler dev locally, Cloudflare remotely), gsx and structpages only, one example.
   Before adding an option, a setting or a second way to do something, don't: make the one way better.
@@ -23,7 +23,9 @@ How the repo works: [README.md](README.md). Plans and open work are GitHub issue
   second choice or a way around one.
 - **Six library folders at the top** (`app`, `api`, `cloud`, `live`, `intl`, `seo`), with `cmd`, `internal`,
   `example` and `skills` (the skill charter ships, as gsx and structpages ship theirs). Don't add another.
-- **`example/` uses all of charter** and is what `charter create` copies. A feature of charter that the example does
+- **`example/` uses all of charter**, is charter's docs site (its `docs/` folder; never write docs anywhere else),
+  and is what `charter create` copies. A change to how charter works changes the page of the docs that says so, in
+  the same commit. A feature of charter that the example does
   not use is not done; a bug the example cannot show is a missing part of the example.
 - **A developer never has to remember to run something.** What an upstream tool generates or checks runs inside
   `dev`, `check`, `test` or `deploy`. What is left is a namespaced task of `charter run` (`intl:`, `seo:`, `db:`,

@@ -22,6 +22,7 @@ tree rendered with gsx, and charter finds every part by where it is. Change the 
 | Browser code or CSS | `web/` (Vite); `go tool charter add <npm package>` | |
 | A message a reader sees | `locales/en.toml`, written `{ locales.Key }` in gsx | `go tool charter run intl:translate`; `go tool charter run intl:status` says what is left |
 | A language | `go tool charter add locale:de` | translate its catalog |
+| A page of the docs | `docs/NN-name.md`: Markdown, its first heading the title; link to another page by its file | the running `charter dev` shows it at `/docs/name`; it is in the sitemap and `/llms.txt` |
 | A UI component | `go tool charter add ui:dialog` | |
 | A test of a page | `test/page_*_test.go`: `apptest.Browser(t)` (Chrome): `Open`, `Type`, `Click`, `WaitText`, `Tab` | `go tool charter test`, and `--deployed` |
 | A test of the API | `test/api_test.go`, through `sdk/go` | the same |

@@ -29,6 +29,7 @@ func main() {
 		Name:  "charter-example",
 		Dist:  dist,
 		Pages: pages.Mount,
+		LLMs:  pages.LLMs,
 		API:   api.Handler(api.Env{Var: charter.Var}),
 	}).Run()
 }

@@ -39,5 +39,11 @@ email_to = "Senden an"
 fetch = "Eine Anfrage dieses Workers an eine andere Website."
 vars = "Eine Variable des Workers, aus wrangler.jsonc."
 
+[docs]
+nav = "Dokumentation"
+notes = "Notizen"
+on_this_page = "Auf dieser Seite"
+english = "Die Dokumentation ist auf Englisch verfasst."
+
 [gsxui]
 close = "Schließen"

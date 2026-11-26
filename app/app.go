@@ -19,7 +19,8 @@
 //
 //   - Pages (github.com/jackielii/structpages): Pages is the tree of them, each page a type with its route in the
 //     field's tag and a Page component. The tree is the one source of routes: links are { About{} |> url } (URL), and
-//     the pages search engines may index are the tree's GET routes without parameters.
+//     the pages search engines may index are the tree's GET routes without parameters, and those a page with a
+//     parameter lists (Paths).
 //   - Everything that is no page goes to API.
 //   - Vite (github.com/gsxhq/vite): with charter dev a page loads web/main.js from Vite's dev server and reloads on a
 //     save; built, it loads the hashed files of dist/, which Workers Static Assets serve.
@@ -38,7 +39,9 @@ package app
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io/fs"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -111,13 +114,19 @@ func (a *App) Handler() http.Handler {
 			if path, ok := indexed(pn); ok {
 				a.pages = append(a.pages, path)
 			}
+			// A page whose route has a parameter says which addresses it has (the docs: one for each page of them).
+			if many, ok := pn.Value.Interface().(interface{ Paths() []string }); ok {
+				if _, isPage := pn.Components["Page"]; isPage {
+					a.pages = append(a.pages, many.Paths()...)
+				}
+			}
 			// A page goes out whole; an action or a stream writes as it goes.
 			if _, isPage := pn.Components["Page"]; isPage {
 				return whole(next)
 			}
 			return next
 		}
-		if _, err := a.Pages(mux, structpages.WithArgs(a.Args...),
+		if _, err := a.Pages(mux, structpages.WithArgs(a.Args...), structpages.WithErrorHandler(failed),
 			structpages.WithMiddlewares(each), structpages.WithTargetSelector(structpages.HTMXv4RenderTarget)); err != nil {
 			panic(err) // the page tree is code: the first run shows a mistake in it
 		}
@@ -182,9 +191,7 @@ func indexed(pn *structpages.PageNode) (path string, ok bool) {
 	if n, is := pn.Value.Interface().(interface{ Noindex() bool }); is && n.Noindex() {
 		return "", false
 	}
-	if path != "/" {
-		path = strings.TrimSuffix(path, "/")
-	}
+	// A group's own page keeps its slash (/docs/): that is the address it answers at.
 	return path, true
 }
 
@@ -284,4 +291,26 @@ func local(r *http.Request) bool {
 		host, _, _ = strings.Cut(r.Host, ":")
 	}
 	return host == "localhost" || net.ParseIP(strings.Trim(host, "[]")).IsLoopback()
+}
+
+// NotFound is an error for a page's Props to return when what was asked for is not there: the answer is a 404.
+func NotFound(what string) error { return statusError{http.StatusNotFound, what} }
+
+type statusError struct {
+	status int
+	what   string
+}
+
+func (e statusError) Error() string { return e.what }
+
+// failed answers for a page whose Props or handler returned an error: its status when it has one (NotFound), else
+// 500, logged, with nothing of the error shown.
+func failed(w http.ResponseWriter, r *http.Request, err error) {
+	var known statusError
+	if errors.As(err, &known) {
+		http.Error(w, http.StatusText(known.status), known.status)
+		return
+	}
+	log.Printf("app: %s %s: %v", r.Method, r.URL.Path, err)
+	http.Error(w, "Something went wrong.", http.StatusInternalServerError)
 }

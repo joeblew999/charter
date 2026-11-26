@@ -17,6 +17,11 @@ component Layout(title intl.Msg, description intl.Msg, children gsx.Node) {
 			<app.Head title={title |> text} description={description |> text}/>
 		</head>
 		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
+			<header class="mx-auto flex max-w-xl items-center gap-3 px-4 pt-4">
+				<a href={Home{} |> url} class="font-semibold" translate="no">charter</a>
+				<span class="flex-1"></span>
+				<a href={DocsIndex{} |> url} class="text-sm underline underline-offset-4">{ locales.DocsNav }</a>
+			</header>
 			<main class="mx-auto flex max-w-xl flex-col gap-6 p-4">{ children }</main>
 			<footer class="mx-auto flex max-w-xl flex-wrap items-center gap-3 p-4 text-sm text-muted-foreground">
 				<span>{ locales.HomeLanguages }</span>

@@ -12,6 +12,7 @@ require (
 	github.com/jackielii/structpages v0.12.0
 	github.com/syumai/workers-go v0.36.0
 	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
+	github.com/yuin/goldmark v1.8.7
 	golang.org/x/net v0.63.0
 	modernc.org/sqlite v1.63.0
 )

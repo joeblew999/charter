@@ -42,6 +42,7 @@ func Dev(args []string) {
 		go watchLanguages(p)
 	}
 	go watchSchema(p)
+	go watchDocs(p)
 	// As gsx's flags take them: a command line, split on spaces. go tool charter is this charter, by the app's go.mod.
 	gsx := []string{"tool", "gsx", "dev", "--build", "go tool charter build -dev", "--run", "go tool charter dev -worker"}
 	check(passthrough(p, "go", append(gsx, args...)...))
@@ -135,5 +136,38 @@ func watchSchema(p *project.Project) {
 			continue
 		}
 		fmt.Println("charter dev: database and queries follow db/schema.sql")
+	}
+}
+
+// watchDocs writes the docs' Go again whenever a page of docs/ changes, for as long as dev runs: save the Markdown
+// and the open page has it.
+func watchDocs(p *project.Project) {
+	stamp := func() string {
+		files, _ := filepath.Glob(filepath.Join(p.Root, "docs", "*.md"))
+		var b strings.Builder
+		for _, f := range files {
+			if info, err := os.Stat(f); err == nil {
+				fmt.Fprintf(&b, "%s %d %d\n", f, info.Size(), info.ModTime().UnixNano())
+			}
+		}
+		return b.String()
+	}
+	last := stamp()
+	if last == "" {
+		return
+	}
+	for range time.Tick(500 * time.Millisecond) {
+		now := stamp()
+		if now == last {
+			continue
+		}
+		last = now
+		cmd := exec.Command(self(), "build", "-only", "docs")
+		cmd.Dir = p.Root
+		if out, err := cmd.CombinedOutput(); err != nil {
+			fmt.Printf("charter dev: the docs did not build (fix the Markdown and save again):\n%s", out)
+			continue
+		}
+		fmt.Println("charter dev: docs written")
 	}
 }

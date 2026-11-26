@@ -39,5 +39,11 @@ email_to = "إرسال إلى"
 fetch = "طلب أرسله هذا الـ Worker إلى موقع آخر."
 vars = "متغير من متغيرات الـ Worker، من wrangler.jsonc."
 
+[docs]
+nav = "التوثيق"
+notes = "الملاحظات"
+on_this_page = "في هذه الصفحة"
+english = "التوثيق مكتوب بالإنجليزية."
+
 [gsxui]
 close = "إغلاق"

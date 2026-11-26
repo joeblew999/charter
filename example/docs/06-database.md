@@ -1,0 +1,53 @@
+# The database
+
+`db/schema.sql` is the one place a table is written down.
+
+```sql
+CREATE TABLE notes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,                 -- example: 42
+  body TEXT NOT NULL,                                   -- example: Buy milk
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP    -- example: 2026-10-01 12:00:00
+);
+```
+
+## Changing it
+
+Edit the schema and save. Nobody writes a migration.
+
+| When | What happens |
+|---|---|
+| `charter dev` is running | the local database gets exactly the difference, and keeps its rows |
+| `charter check --fix` | the migration for the change is written to `db/migrations` |
+| `charter check` | fails while the schema is ahead of the migrations |
+| `charter deploy` | applies it |
+
+A column added at the end becomes `ALTER TABLE … ADD COLUMN`. Anything else about a table makes the table again and copies its rows. A renamed column says what it was:
+
+```sql
+title TEXT NOT NULL, -- was: name
+```
+
+A change that would lose data is refused until you ask for it: `charter check --fix --drop`.
+
+## Queries
+
+`db/queries.sql` holds the queries. charter writes each as a typed Go function in `db/queries.gen.go`.
+
+```sql
+-- name: CreateNote :one
+INSERT INTO notes (body) VALUES (?) RETURNING *;
+```
+
+Select whole rows, and a new column needs no change here.
+
+## One definition
+
+A column's comment becomes its tag in Go, so the row is also what the API serves.
+
+```go
+type Note struct{ db.NotesRow }
+```
+
+## By hand
+
+`go tool charter run db:status`, `db:execute "…"`, `db:reset`, `db:seed`, `db:export`. Each is for the local database, or the deployed one with `--deployed`.

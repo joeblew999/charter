@@ -24,7 +24,8 @@ import (
 // Pages is the tree.
 type Pages struct {
 	home     Home     `route:"GET /{$} Home"`
-	bindings Bindings `route:"GET /bindings Cloud"`
+	bindings Bindings `route:"GET /bindings Bindings"`
+	docs     Docs     `route:"/docs Docs"`
 
 	// What the pages call: routes, not pages.
 	post   PostNote       `route:"POST /notes PostNote"`
@@ -34,9 +35,14 @@ type Pages struct {
 
 // Mount mounts the tree: what app.App's Pages is. The call is here so that structpages-lint finds the tree and can
 // check every link against it.
-func Mount(mux structpages.Mux, options ...structpages.Option) (*structpages.StructPages, error) {
-	return structpages.Mount(mux, Pages{}, "/", "charter-example", options...)
+func Mount(mux structpages.Mux, options ...structpages.Option) (tree *structpages.StructPages, err error) {
+	tree, err = structpages.Mount(mux, Pages{}, "/", "charter-example", options...)
+	mounted = tree
+	return tree, err
 }
+
+// mounted is the tree once mounted, for an address that is needed outside a request (/llms.txt).
+var mounted *structpages.StructPages
 
 // The newest notes the home page shows.
 const shown = 50

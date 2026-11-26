@@ -20,6 +20,15 @@ post = "Post"
 # Above the list of languages at the foot of the page.
 languages = "Languages"
 
+[docs]
+# The docs: the link to them in every page's header, and the link back to the notes.
+nav = "Docs"
+notes = "Notes"
+# Above the list of a docs page's sections.
+on_this_page = "On this page"
+# Shown above a docs page in a language other than English.
+english = "The docs are written in English."
+
 # Text gsxui's own components write.
 
 [bindings]
