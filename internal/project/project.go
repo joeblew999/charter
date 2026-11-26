@@ -327,3 +327,24 @@ func SetURL(root, env, address string) error {
 	}
 	return os.WriteFile(path, []byte(text), 0o644)
 }
+
+// SetTopURL records in charter.toml where the Worker is deployed: the url line, replaced or added at the top.
+func SetTopURL(root, address string) error {
+	path := filepath.Join(root, File)
+	b, err := os.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	line := fmt.Sprintf("url = %q", address)
+	lines := strings.Split(string(b), "\n")
+	for i, l := range lines {
+		if strings.HasPrefix(l, "[") {
+			break
+		}
+		if strings.HasPrefix(strings.TrimSpace(l), "url") && strings.Contains(l, "=") {
+			lines[i] = line
+			return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644)
+		}
+	}
+	return os.WriteFile(path, []byte(line+"\n"+string(b)), 0o644)
+}

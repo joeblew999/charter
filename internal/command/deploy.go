@@ -42,6 +42,13 @@ func Deploy(args []string) {
 	}
 	// What next: the same tests that ask the local Worker ask the deployed one. An environment's address is kept in
 	// charter.toml's [urls] the first time wrangler says it, so charter test --env needs nothing typed.
+	// A new app's url is a placeholder until it has been deployed (charter create writes <name>.example.workers.dev):
+	// the first deploy puts the real address there, which the specs then name (charter check --fix).
+	if address := deployedURL.FindString(said.String()); len(env) == 0 && address != "" && (p.URL == "" || strings.Contains(p.URL, ".example.workers.dev")) {
+		check(project.SetTopURL(p.Root, address))
+		p.URL = address
+		say("charter.toml: url = %q. charter check --fix writes it into the specs", address)
+	}
 	switch {
 	case len(env) == 0 && p.URL != "":
 		say("deployed. To test it: go tool charter test --deployed   (%s)", p.URL)

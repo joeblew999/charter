@@ -27,3 +27,21 @@ func TestSetURL(t *testing.T) {
 		t.Fatalf("urls = %v\n%s", p.URLs, b)
 	}
 }
+
+// The first deploy's address replaces a new app's placeholder url, and is added to a file without one.
+func TestSetTopURL(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "charter.toml")
+	os.WriteFile(path, []byte("# about\nurl = \"https://app.example.workers.dev\"\n\n[pack]\nname = \"App\"\n"), 0o644)
+	if err := SetTopURL(dir, "https://app.me.workers.dev"); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != "# about\nurl = \"https://app.me.workers.dev\"\n\n[pack]\nname = \"App\"\n" {
+		t.Fatalf("%s", b)
+	}
+	os.WriteFile(path, []byte("[pack]\nname = \"App\"\n"), 0o644)
+	SetTopURL(dir, "https://app.me.workers.dev")
+	if b, _ := os.ReadFile(path); string(b) != "url = \"https://app.me.workers.dev\"\n[pack]\nname = \"App\"\n" {
+		t.Fatalf("%s", b)
+	}
+}
