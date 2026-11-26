@@ -26,7 +26,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: go tool charter build -only generate
+      # As a developer's machine is after its first check: what reads the schema and the contract is built.
+      - run: go tool charter check
         working-directory: example
       - run: go test -count=1 -run TestDev -v -timeout 15m ./test/devloop
         working-directory: example

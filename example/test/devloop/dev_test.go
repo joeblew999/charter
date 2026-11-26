@@ -141,7 +141,8 @@ func TestDev(t *testing.T) {
 			t.Log("✓ a table added to db/schema.sql is in the local database")
 			break
 		}
-		if time.Since(start) > 60*time.Second {
+		// The first time on a machine, the programs that read the schema are built first: minutes, once.
+		if time.Since(start) > 4*time.Minute {
 			t.Fatalf("✗ the schema's new table never reached the local database\n%s\n%s", out, log.String())
 		}
 	}
