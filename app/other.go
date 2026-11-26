@@ -14,3 +14,6 @@ func Run(http.Handler) {
 
 // Serve is h: what it adds on Cloudflare has nothing to add here.
 func Serve(h http.Handler) http.Handler { return h }
+
+// besideTheWasm is empty off a Worker: there is nothing beside a Wasm that is not there.
+func besideTheWasm(string) string { return "" }

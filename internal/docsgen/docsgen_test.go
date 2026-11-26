@@ -16,15 +16,15 @@ func TestWrite(t *testing.T) {
 	if err != nil || n != 2 {
 		t.Fatal(n, err)
 	}
-	b, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.go"))
+	b, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.json"))
 	code := string(b)
-	for _, want := range []string{`Slug: "", Title: "Start"`, `Slug: "pages", Title: "Pages"`, `Description: "How pages work."`, `Description: "What it is. See the pages."`, `{ID: "routes", Title: "Routes", Depth: 2}`,
-		`href=\"pages#routes\"`, `href=\"./\"`, `<h2 id=\"routes\">Routes</h2>`, `<pre class=\"chroma\">`, `<span class=\"mi\">1</span>`} {
+	for _, want := range []string{`"Title": "Start"`, `"Slug": "pages"`, `"Description": "How pages work."`, `"Description": "What it is. See the pages."`, `"ID": "routes"`,
+		`href=\"pages#routes\"`, `href=\"./\"`, `routes\"\u003eRoutes\u003c/h2`, `pre class=\"chroma\"`, `span class=\"mi\"\u003e1\u003c/span`} {
 		if !strings.Contains(code, want) {
 			t.Errorf("no %s in:\n%s", want, code)
 		}
 	}
-	if strings.Index(code, `Title: "Start"`) > strings.Index(code, `Title: "Pages"`) {
+	if strings.Index(code, `"Title": "Start"`) > strings.Index(code, `"Title": "Pages"`) {
 		t.Error("index.md is not first")
 	}
 }
@@ -64,7 +64,7 @@ func TestSamples(t *testing.T) {
 	if _, err := Write(dir); err != nil {
 		t.Fatal(err)
 	}
-	if built, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.go")); !strings.Contains(string(built), "<figcaption>pages/pages.go</figcaption>") {
+	if built, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.json")); !strings.Contains(string(built), "figcaption\\u003epages/pages.go") {
 		t.Errorf("the page does not say which file the code is from:\n%s", built)
 	}
 	os.WriteFile(page, []byte("# Start\n\n```go file=pages/pages.go#Gone\n```\n"), 0o644)

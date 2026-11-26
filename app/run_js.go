@@ -114,3 +114,12 @@ func incoming(r *http.Request) (out *http.Request) {
 	raw, _ := json.Marshal(cf)
 	return r.WithContext(withValue(r.Context(), cfValue{cf, raw}))
 }
+
+// besideTheWasm is data the Worker's entry (build/worker.mjs, which charter build writes) put in a global before Go
+// started: the docs' pages. "" when the app has none.
+func besideTheWasm(name string) string {
+	if v := js.Global().Get(name); v.Type() == js.TypeString {
+		return v.String()
+	}
+	return ""
+}

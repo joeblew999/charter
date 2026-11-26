@@ -121,14 +121,8 @@ func wasm(p *project.Project, limit int, again bool) error {
 			return err
 		}
 	}
-	// The build says which it is (/healthz's X-Charter-Build), so that charter dev knows when the Worker answering is
-	// the one just built.
-	id := strconv.FormatInt(time.Now().UnixNano(), 36)
 	out := filepath.Join("build", "app.wasm")
-	if err := run.Run(p.Root, map[string]string{"GOOS": "js", "GOARCH": "wasm"}, "go", "build", "-trimpath", "-ldflags=-s -X "+library+"/app.build="+id, "-o", out, "."); err != nil {
-		return err
-	}
-	if err := os.WriteFile(filepath.Join(p.Root, "build", "id"), []byte(id), 0o644); err != nil {
+	if err := run.Run(p.Root, map[string]string{"GOOS": "js", "GOARCH": "wasm"}, "go", "build", "-trimpath", "-ldflags=-s", "-o", out, "."); err != nil {
 		return err
 	}
 	dir, err := run.Output(p.Root, nil, "go", "list", "-m", "-f", "{{.Dir}}", library)
@@ -154,6 +148,15 @@ func wasm(p *project.Project, limit int, again bool) error {
 	// the app's languages. An app with more of its own (another Durable Object, routes in JavaScript) has an entry of
 	// its own that imports from ./build/ the same way.
 	entry := "// Written by charter build: the Worker's entry (wrangler.jsonc's main).\nimport { goWorker } from \"./go.mjs\";\n"
+	// The docs' pages, as data beside the Wasm: Go reads them when it starts (app.BuiltDocs), so a page that is
+	// edited is a new Worker without a new build of the Go.
+	if pages, err := os.ReadFile(filepath.Join(p.Root, "docs", "docs.built.json")); err == nil {
+		text, _ := json.Marshal(string(pages))
+		if err := os.WriteFile(filepath.Join(p.Root, "build", "docs.mjs"), []byte("// Written by charter build from docs/*.md: the docs' pages.\nexport const docs = "+string(text)+";\n"), 0o644); err != nil {
+			return err
+		}
+		entry += "import { docs } from \"./docs.mjs\";\n\nglobalThis.charterDocs = docs;\n"
+	}
 	if hasIntl(p) {
 		entry += "import { goIntl } from \"./intl-worker.mjs\";\n\n// The app's languages, for Go (charter's intl).\nglobalThis.goIntl = goIntl;\n"
 	}
@@ -161,7 +164,19 @@ func wasm(p *project.Project, limit int, again bool) error {
 	if p.Health != "" {
 		entry += fmt.Sprintf("await go.warm({ paths: [%q] });\n", p.Health)
 	}
-	entry += "\n// Requests, Cron Triggers and queues, as workers-go's own entry has them, and email (charter/bindings).\nexport default { fetch: go.fetch, scheduled: go.scheduled, queue: go.queue, email: go.email };\n"
+	fetch := "go.fetch"
+	if again {
+		// Under charter dev the Worker says which build it is (/healthz's X-Charter-Build), so that charter dev knows
+		// when the Worker answering is the one just built. It is said here and not in the Go, which a change to a
+		// page of the docs or to a translation leaves as it was: such a save builds no Wasm.
+		id := strconv.FormatInt(time.Now().UnixNano(), 36)
+		if err := os.WriteFile(filepath.Join(p.Root, "build", "id"), []byte(id), 0o644); err != nil {
+			return err
+		}
+		entry += fmt.Sprintf("\n// charter dev: which build this is.\nconst fetch = async (request, env, ctx) => {\n  const response = await go.fetch(request, env, ctx);\n  if (new URL(request.url).pathname !== %q) return response;\n  const headers = new Headers(response.headers);\n  headers.set(\"X-Charter-Build\", %q);\n  return new Response(response.body, { status: response.status, headers });\n};\n", p.HealthPath(), id)
+		fetch = "fetch"
+	}
+	entry += "\n// Requests, Cron Triggers and queues, as workers-go's own entry has them, and email (charter/bindings).\nexport default { fetch: " + fetch + ", scheduled: go.scheduled, queue: go.queue, email: go.email };\n"
 	if err := os.WriteFile(filepath.Join(p.Root, "build", "worker.mjs"), []byte(entry), 0o644); err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@
 # messages as Go, Vite's and the Worker's output, wrangler's local state, charter's own files.
 *.x.go
 *.built.go
+*.built.json
 /dist/
 /build/
 /.wrangler/

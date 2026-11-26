@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -140,4 +141,20 @@ func (d *Docs) text(w http.ResponseWriter, r *http.Request) (ok bool) {
 	w.Header().Set("X-Robots-Tag", "noindex") // the page itself is what a search engine lists
 	w.Write([]byte(body))
 	return true
+}
+
+// BuiltDocs are the pages charter build wrote from docs/*.md: what the app's docs package calls for its Pages. On a
+// Worker they are beside the Wasm (built is empty, and they are read from where the Worker's entry put them), so a
+// page that is edited is a new Worker without a new build of the Go; anywhere else built is the package's own copy.
+func BuiltDocs(built string) []Doc {
+	if built == "" {
+		built = besideTheWasm("charterDocs")
+	}
+	var pages []Doc
+	if built != "" {
+		if err := json.Unmarshal([]byte(built), &pages); err != nil {
+			panic("app: the docs charter build wrote are not what this charter reads: " + err.Error())
+		}
+	}
+	return pages
 }
