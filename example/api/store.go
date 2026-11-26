@@ -8,7 +8,7 @@ import (
 )
 
 // Store is the notes: the table of db/migrations on the D1 binding DB, through the queries of db/queries.sql, which
-// charter check --fix writes as typed Go (db/queries.go). It is the log the feed follows.
+// charter check --fix writes as typed Go (db/queries.gen.go). It is the log the feed follows.
 type Store struct{ DB cloud.DB }
 
 // Open is the store on the request's database: a binding belongs to the request's environment.

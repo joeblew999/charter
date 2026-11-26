@@ -33,7 +33,7 @@ func Env(args []string) {
 	show("npm", "it comes with Node", true, "npm", "--version")
 	show("git", "charter create copies a template with it", false, "git", "--version")
 	show("docker", "only charter pack needs it (Fern generates SDKs in containers)", false, "docker", "--version")
-	show("claude", "only charter run translate needs it (Claude Code)", false, "claude", "--version")
+	show("claude", "only charter run intl:translate needs it (Claude Code)", false, "claude", "--version")
 	show("fnox", "optional: Cloudflare credentials from the keychain for charter deploy", false, "fnox", "--version")
 	if p, err := project.Load("."); err == nil {
 		for _, tool := range []string{"wrangler", "vite"} {

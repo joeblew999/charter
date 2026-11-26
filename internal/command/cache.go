@@ -2,6 +2,7 @@ package command
 
 import (
 	"errors"
+	"github.com/joeblew999/charter/internal/run"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,7 +29,7 @@ func Cache(args []string) {
 			return filepath.SkipDir
 		}
 		name := d.Name()
-		if !d.IsDir() && (strings.HasSuffix(name, ".x.go") || name == "intl_gen.go" || name == "intl-messages.mjs") {
+		if !d.IsDir() && (strings.HasSuffix(name, ".x.go") || name == "messages.gen.go" || name == "intl-messages.mjs") {
 			if os.Remove(path) == nil {
 				n++
 			}
@@ -40,4 +41,8 @@ func Cache(args []string) {
 		return nil
 	})
 	say("removed %d generated files", n)
+	// gsx's own cache of what it generated.
+	if hasGSX(p) {
+		check(run.Run(p.Root, nil, "go", "tool", "gsx", "clean", "--cache"))
+	}
 }

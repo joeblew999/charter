@@ -7,17 +7,17 @@
 //	catalogs = "locales"           # <locale>.toml (ICU MessageFormat), and the generated package
 //	gsxui = "ui"                   # optional: where gsxui add vendors components; gen translates their i18n.T
 //	ui = "pages/intl"              # optional: where charter add screen:<name> copies intl's screens (default pages/intl)
-//	xliff = "xliff"                # optional: where charter run export writes and import reads (default xliff)
+//	xliff = "xliff"                # optional: where charter run intl:export writes and import reads (default xliff)
 //	badge = "docs/badges/intl.svg" # optional: an SVG badge gen keeps current, "languages | 14, all translated"
 //
 //	[intl.inherit]                 # optional: a locale that takes what it doesn't translate from another
 //	en-IN = "en"                   # (charter check confirms with Intl that both write the same script)
 //
-//	[intl.translate]               # optional: charter run translate (Claude Code)
+//	[intl.translate]               # optional: charter run intl:translate (Claude Code)
 //	model = "sonnet"               # the model it runs on (claude --model); default: Claude Code's
 //	workers = 6                    # languages translated at once (default 6)
 //
-//	[intl.notes]                   # optional: guidance for whoever translates (people, and Claude: charter run todo)
+//	[intl.notes]                   # optional: guidance for whoever translates (people, and Claude: charter run intl:todo)
 //	"*" = "A developer tool. Keep product names in English."
 //	de = "Address the reader as du."
 package config

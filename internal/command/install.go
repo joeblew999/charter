@@ -6,7 +6,7 @@ import (
 )
 
 // Install runs charter install: everything the app pins, installed: npm's packages as package-lock.json has them, Go's
-// modules, and the tools go.mod names.
+// modules, the tools go.mod names, and the agent skills of everything the app is built with (skills.go).
 func Install(args []string) {
 	p := load()
 	if exists(filepath.Join(p.Root, "package-lock.json")) {
@@ -15,4 +15,5 @@ func Install(args []string) {
 		check(run.Run(p.Root, nil, "npm", "install"))
 	}
 	check(run.Run(p.Root, nil, "go", "mod", "download"))
+	check(skills(p, true))
 }

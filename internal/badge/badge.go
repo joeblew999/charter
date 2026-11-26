@@ -1,5 +1,5 @@
 // Package badge draws a small two-part SVG badge, label and value, as README badges look (shields.io's flat
-// style), with no service and no fonts to fetch: charter run search's Lighthouse and audit badges (charter run badges).
+// style), with no service and no fonts to fetch: charter run seo:search's Lighthouse and audit badges (charter run seo:badges).
 package badge
 
 import (

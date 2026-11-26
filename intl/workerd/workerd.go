@@ -1,6 +1,6 @@
 // Package workerd is intl's Intl outside a Cloudflare Worker: workerd, the Workers runtime, serving intl's
 // js/intl-worker.mjs with the app's catalogs, set as intl.Runtime. On a Worker, Intl is the Worker's own; anywhere
-// else (an ordinary Go server, go test, charter run languages) it is this one, so every place formats with the same engine.
+// else (an ordinary Go server, go test, charter run intl:status) it is this one, so every place formats with the same engine.
 //
 // An app on an ordinary Go server starts it before serving:
 //

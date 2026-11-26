@@ -26,27 +26,45 @@ type task struct {
 // tasks are what charter run has for every app: what is no verb of its own. An app adds its own in charter.toml's
 // [run.tasks].
 var tasks = []task{
-	{"translate", "Claude Code translates what is missing or stale, a worker per language (charter run translate de)", func(_ *project.Project, a []string) { intl.Main(append([]string{"translate"}, a...)) }},
-	{"languages", "per language: translated, inherited, stale, missing; with languages named (de fr), their catalogs checked", func(_ *project.Project, a []string) {
+	// The languages (intl).
+	{"intl:status", "per language: translated, inherited, stale, missing; with languages named (de fr), their catalogs checked", func(_ *project.Project, a []string) {
 		if len(a) > 0 {
 			intl.Main(append([]string{"check"}, a...))
 		}
 		intl.Main([]string{"status"})
 	}},
-	{"todo", "what is left to translate, with what a translator needs (--json)", func(_ *project.Project, a []string) { intl.Main(append([]string{"todo"}, a...)) }},
-	{"confirm", "stale translations that are still right, kept (de, or de:home.title)", func(_ *project.Project, a []string) { intl.Main(append([]string{"confirm"}, a...)) }},
-	{"export", "XLIFF for translators (--all, --out dir)", func(_ *project.Project, a []string) { intl.Main(append([]string{"export"}, a...)) }},
-	{"import", "translators' XLIFF read back", func(_ *project.Project, a []string) { intl.Main(append([]string{"import"}, a...)) }},
-	{"prune", "messages the source no longer has, removed from every catalog", func(_ *project.Project, a []string) { intl.Main(append([]string{"prune"}, a...)) }},
-	{"audit", "the live site as a search engine reads it (--site: another address)", func(_ *project.Project, a []string) { seo.Main(append([]string{"audit"}, a...)) }},
-	{"lighthouse", "Lighthouse on the live site, on Google's servers", func(_ *project.Project, a []string) { seo.Main(append([]string{"lighthouse"}, a...)) }},
-	{"badges", "Lighthouse and the audit, then the README's badges and scores table", func(_ *project.Project, a []string) { seo.Main(append([]string{"badges"}, a...)) }},
-	{"search", "Google Search Console: setup, sites, submit, status, todo, inspect (charter run search status)", func(_ *project.Project, a []string) {
+	{"intl:translate", "Claude Code translates what is missing or stale, a worker per language (charter run intl:translate de)", func(_ *project.Project, a []string) { intl.Main(append([]string{"translate"}, a...)) }},
+	{"intl:todo", "what is left to translate, with what a translator needs (--json)", func(_ *project.Project, a []string) { intl.Main(append([]string{"todo"}, a...)) }},
+	{"intl:confirm", "stale translations that are still right, kept (de, or de:home.title)", func(_ *project.Project, a []string) { intl.Main(append([]string{"confirm"}, a...)) }},
+	{"intl:export", "XLIFF for translators (--all, --out dir)", func(_ *project.Project, a []string) { intl.Main(append([]string{"export"}, a...)) }},
+	{"intl:import", "translators' XLIFF read back", func(_ *project.Project, a []string) { intl.Main(append([]string{"import"}, a...)) }},
+	{"intl:prune", "messages the source no longer has, removed from every catalog", func(_ *project.Project, a []string) { intl.Main(append([]string{"prune"}, a...)) }},
+	// Search engines (seo).
+	{"seo:audit", "the live site as a search engine reads it (--site: another address)", func(_ *project.Project, a []string) { seo.Main(append([]string{"audit"}, a...)) }},
+	{"seo:lighthouse", "Lighthouse on the live site, on Google's servers", func(_ *project.Project, a []string) { seo.Main(append([]string{"lighthouse"}, a...)) }},
+	{"seo:badges", "Lighthouse and the audit, then the README's badges and scores table", func(_ *project.Project, a []string) { seo.Main(append([]string{"badges"}, a...)) }},
+	{"seo:search", "Google Search Console: setup, sites, submit, status, todo, inspect (charter run seo:search status)", func(_ *project.Project, a []string) {
 		if len(a) == 0 {
 			a = []string{"status"}
 		}
 		seo.Main(a)
 	}},
+	// The database (D1, through wrangler). The local one by default; --deployed is the deployed one.
+	{"db:status", "which migrations of db/migrations have run", db("migrations", "list")},
+	{"db:migrate", "the migrations that have not run, applied (charter dev and charter deploy do this themselves)", db("migrations", "apply")},
+	{"db:new", "a new, empty migration in db/migrations: charter run db:new add_tags", dbNew},
+	{"db:execute", "one statement: charter run db:execute \"SELECT count(*) FROM notes\"", dbExecute},
+	{"db:seed", "db/seed.sql run on the database", dbSeed},
+	{"db:reset", "the local database made again from db/migrations, then db/seed.sql when there is one", dbReset},
+	{"db:export", "the database as SQL: charter run db:export backup.sql", dbExport},
+	// The components (gsxui).
+	{"ui:list", "the components charter add ui:<name> accepts", func(p *project.Project, a []string) {
+		check(run.Run(p.Root, nil, "go", append([]string{"tool", "gsxui", "list"}, a...)...))
+	}},
+	{"ui:theme", "the app's style and theme switched to a preset: charter run ui:theme <preset>", func(p *project.Project, a []string) {
+		check(run.Run(p.Root, nil, "go", append([]string{"tool", "gsxui", "apply"}, a...)...))
+	}},
+	// The Worker.
 	{"logs", "the deployed Worker's live logs, until Ctrl-C (wrangler tail; an environment first: charter run logs staging)", func(p *project.Project, a []string) {
 		check(cloudflare(p, append([]string{"tail"}, envArgs(p, &a)...), a))
 	}},
@@ -59,7 +77,7 @@ func Run(args []string) {
 	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
 		fmt.Println("charter run <task> [arguments]\n\nBuilt in:")
 		for _, t := range tasks {
-			fmt.Printf("  %-11s %s\n", t.name, t.about)
+			fmt.Printf("  %-15s %s\n", t.name, t.about)
 		}
 		if len(p.Run.Tasks) > 0 {
 			fmt.Println("\nThis app's (charter.toml's [run.tasks]):")

@@ -35,7 +35,7 @@ func (r repo) siteOf(c config.Config, flagSite string) string {
 		fail(fmt.Errorf("no site: set site in %s (or url, above it), or pass --site", config.File))
 	}
 	site = strings.TrimRight(site, "/")
-	fmt.Fprintf(os.Stderr, "charter run search: %s (from %s)\n", site, from)
+	fmt.Fprintf(os.Stderr, "charter run seo:search: %s (from %s)\n", site, from)
 	return site
 }
 
@@ -100,7 +100,7 @@ func must(err error) {
 }
 
 func fail(err error) {
-	fmt.Fprintln(os.Stderr, "charter run search:", err)
+	fmt.Fprintln(os.Stderr, "charter run seo:search:", err)
 	os.Exit(1)
 }
 

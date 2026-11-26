@@ -50,7 +50,7 @@ func Init(root string, o Options, log io.Writer) error {
 	for i, id := range o.Locales {
 		q[i] = `"` + id + `"`
 	}
-	conf := "\n# The app's languages (charter run languages; go doc github.com/joeblew999/charter/intl/config): BCP 47 ids, the\n# source first.\n[intl]\n" +
+	conf := "\n# The app's languages (charter run intl:status; go doc github.com/joeblew999/charter/intl/config): BCP 47 ids, the\n# source first.\n[intl]\n" +
 		"locales = [" + strings.Join(q, ", ") + "]\n" +
 		"# <locale>.toml per language, ICU MessageFormat; charter build writes the Go package of messages there.\n" +
 		"catalogs = " + `"` + o.Catalogs + `"` + "\n"
@@ -58,7 +58,7 @@ func Init(root string, o Options, log io.Writer) error {
 		conf += "# Where gsxui add vendors components: their own text is translated from the catalogs' [gsxui].\n" +
 			"gsxui = " + `"` + o.Gsxui + `"` + "\n"
 	}
-	conf += "\n# Guidance for whoever translates, people or Claude (charter run todo shows it); \"*\" is for every language.\n" +
+	conf += "\n# Guidance for whoever translates, people or Claude (charter run intl:todo shows it); \"*\" is for every language.\n" +
 		"[intl.notes]\n\"*\" = \"\"\n"
 	path := filepath.Join(root, "charter.toml")
 	have, _ := os.ReadFile(path)
@@ -79,7 +79,7 @@ func Init(root string, o Options, log io.Writer) error {
 	}
 	for _, id := range o.Locales[1:] {
 		if err := write(filepath.Join(o.Catalogs, id+".toml"),
-			"# "+id+": the translations of "+source+".toml, same tables and keys. charter run todo lists what is left.\n"); err != nil {
+			"# "+id+": the translations of "+source+".toml, same tables and keys. charter run intl:todo lists what is left.\n"); err != nil {
 			return err
 		}
 	}
@@ -101,9 +101,27 @@ func Init(root string, o Options, log io.Writer) error {
 	return gitignore(filepath.Join(root, ".gitignore"), log)
 }
 
+// Wire is what an app with languages needs of gsx, written where it is missing: gsx.toml's filters and renderers for
+// intl, the renderer for the text gsxui's components write themselves, and .gitignore's lines for what a build
+// writes. charter check --fix calls it, so an app's languages work without anyone setting them up.
+func Wire(root, gsxui string, log io.Writer) error {
+	renderers := [][2]string{
+		{intlPkg + ".Msg", intlPkg + ".Translate"},
+		{intlPkg + ".Value", gsxintlPkg + ".Render"},
+		{intlPkg + ".Plain", intlPkg + ".PlainText"},
+	}
+	if err := gsxToml(filepath.Join(root, "gsx.toml"), renderers, log); err != nil {
+		return err
+	}
+	if err := GsxuiRenderer(root, gsxui, log); err != nil {
+		return err
+	}
+	return gitignore(filepath.Join(root, ".gitignore"), log)
+}
+
 // UsesGsx reports whether the app at root is a gsx app: it has gsxui (gsxui), a gsx.toml, or .gsx files of its own.
 // Its go.mod isn't the sign: the module an app is a folder of may require gsx for packages of its own (the template,
-// where it is, is a folder of charter run languages's, which needs gsx).
+// where it is, is a folder of charter run intl:status's, which needs gsx).
 func UsesGsx(root, gsxui string) bool {
 	if gsxui != "" {
 		return true
@@ -133,7 +151,7 @@ func UsesGsx(root, gsxui string) bool {
 }
 
 // GoMod is the go.mod of the module root is in, the nearest up from it: the app's own, or for the template where it is,
-// charter run languages's. "" when root is in none. It reads the files, so it needs no Go.
+// charter run intl:status's. "" when root is in none. It reads the files, so it needs no Go.
 func GoMod(root string) string {
 	for dir := root; ; dir = filepath.Dir(dir) {
 		if p := filepath.Join(dir, "go.mod"); fileExists(p) {
@@ -277,7 +295,7 @@ func gitignore(path string, log io.Writer) error {
 	}
 	s := string(b)
 	var add []string
-	for _, p := range []string{"intl_gen.go", "intl-messages.mjs", "intl-workerd/", "/xliff/"} {
+	for _, p := range []string{"messages.gen.go", "intl-messages.mjs", "intl-workerd/", "/xliff/"} {
 		if !regexp.MustCompile(`(?m)^/?` + regexp.QuoteMeta(p) + `$`).MatchString(s) {
 			add = append(add, p)
 		}
@@ -288,7 +306,7 @@ func gitignore(path string, log io.Writer) error {
 	if s != "" && !strings.HasSuffix(s, "\n") {
 		s += "\n"
 	}
-	s += "# charter build output (charter run languages)\n" + strings.Join(add, "\n") + "\n"
+	s += "# charter build output (charter run intl:status)\n" + strings.Join(add, "\n") + "\n"
 	fmt.Fprintln(log, "updated .gitignore:", strings.Join(add, ", "))
 	return os.WriteFile(path, []byte(s), 0o644)
 }

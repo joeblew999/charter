@@ -12,7 +12,9 @@
   "build": { "command": "go tool charter build" },
   // Vite's output, served before the Worker runs.
   "assets": { "directory": "dist" },
-  "vars": { "APP_NAME": "charter-example" },
+  // MAIL_FROM is whom the email card writes as: an address on a domain of the account with Email Routing on. Whom
+  // it writes to is the secret MAIL_TO (wrangler secret put MAIL_TO; .dev.vars locally).
+  "vars": { "APP_NAME": "charter-example", "MAIL_FROM": "charter-example@ubuntusoftware.net" },
   // No ids here: wrangler makes the database, the KV namespace, the bucket and the queue on the first deploy, under
   // these names, and finds them again by name.
   // The log of messages. charter deploy applies migrations/ first.

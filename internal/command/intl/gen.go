@@ -7,7 +7,7 @@ import (
 )
 
 // gen is charter build (charter build): the catalogs compiled into the app's messages package
-// (intl_gen.go, intl-messages.mjs), the gsxui translator, and intl.sum.
+// (messages.gen.go, intl-messages.mjs), the gsxui translator, and intl.sum.
 func gen(args []string) {
 	c := app()
 	p := read(c)

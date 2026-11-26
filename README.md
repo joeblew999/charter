@@ -38,11 +38,11 @@ charter finds everything by where it is. There is nothing to configure for any o
 ```
 pages/         the page tree (structpages) and its gsx: routes, links, the sitemap
 api/           contract.go: the API, from which come its specs, MCP tools and SDKs
-db/            migrations/*.sql and queries.sql, written as typed Go (db/queries.go)
+db/            migrations/*.sql and queries.sql, written as typed Go (db/queries.gen.go)
 locales/       <language>.toml: the languages are the files here
 web/  public/  what the browser loads (Vite)
 ui/            gsxui's components
-test/          tests of the Worker, run on wrangler dev and against the deployed one
+test/          tests of the pages (a real browser) and the API (its SDK), on wrangler dev and deployed
   dev/         only a local Worker
   deployed/    only a deployed one
 sdk/go/        the app's own Go client, generated from the contract
@@ -57,6 +57,19 @@ func main() {
 }
 ```
 
+## What you never have to remember
+
+- **Skills for your coding agent.** gsx, gsxui, structpages and charter each ship their skill inside their Go module.
+  `charter install` copies them into `.claude/skills/` from the versions `go.mod` pins, and `dev` and `check` do it
+  again whenever `go.sum` has moved. Updating a module updates its skill.
+- **Generation.** `dev` and `build` write what is built from your sources (gsx's `*.x.go`, the messages, the browser's
+  files): none of it is committed. `check --fix` writes what is committed and held to its source: `db/queries.gen.go`,
+  `fern/`, `sdk/go/`. Everything generated is named for it (`*.gen.go`, `*.x.go`) or in a folder of its own, and
+  `.gitattributes` marks it.
+- **The upstream tools.** `gsx generate`, `gsx fmt`, `gsx dev`, `gsxui migrate rtl`, `structpages-lint`, `sqlc`,
+  `vite build`, `wrangler d1 migrations apply` all run inside `dev`, `check`, `test` and `deploy`, at the moment
+  they are needed.
+
 ## Commands
 
 The commands are [Vite+](https://viteplus.dev/guide/)'s verbs. Run them as `go tool charter <command>` in the app's
@@ -67,10 +80,10 @@ folder.
 | `create` | A new app, from the example |
 | `dev` | The loop you work in, on the real runtime. Leave it running and run everything else beside it |
 | `check` | What can be said without running the app: format, lint, the contract, the languages. `--fix` writes what it can |
-| `test` | The Worker on wrangler dev: the standard API test, `test/`, the search-engine audit. `--deployed` asks the deployed one the same |
+| `test` | The Worker on wrangler dev: the standard API test, `test/` (pages in a real browser, the API through its own SDK), the search-engine audit. `--deployed` asks the deployed one the same |
 | `deploy` | `wrangler deploy` and the D1 migrations. The first deploy makes the database, KV namespace, bucket and queue `wrangler.jsonc` names |
 | `pack` | The SDKs, from the contract |
-| `run <task>` | `translate`, `languages`, `audit`, `lighthouse`, `logs`, `bench`, and the app's own. Alone, it lists them |
+| `run <task>` | Everything that is no verb, by what it is about: `intl:translate`, `intl:status`, `seo:audit`, `seo:lighthouse`, `db:status`, `db:new`, `db:reset`, `db:seed`, `db:execute`, `db:export`, `ui:list`, `ui:theme`, `logs`, `bench`, and the app's own. Alone, it lists them |
 | `add`, `remove` | `add locale:de`, `add ui:dialog`, a Go module, an npm package |
 | `build`, `preview`, `fmt`, `lint`, `install`, `exec`, `update`, `outdated`, `upgrade`, `staged`, `cache`, `env` | As in Vite+ |
 
@@ -82,7 +95,7 @@ Six packages, `github.com/joeblew999/charter/<name>`:
 
 | Package | For |
 |---|---|
-| `app` | The app as a Worker: `app.App` (pages, API, Vite, languages, search engines in one value), `<app.Head>`, and `app/apptest` for its tests |
+| `app` | The app as a Worker: `app.App` (pages, API, Vite, languages, search engines in one value), `<app.Head>`, and `app/apptest` for its tests: `Browser` (Chrome), `Get`, `Events`, `Secret`, `Local` |
 | `api` | An API from a contract: Huma on Workers, OpenAPI and AsyncAPI, MCP tools, auth, rate limits |
 | `live` | A feed declared once (`live.Feed`): a D1 table as the log, a Durable Object to wake followers, and from it the page's live fragments, the API's stream and its WebSocket channel |
 | `cloud` | What workers-go lacks or gives differently: D1 as typed rows and batches, rate limits, email. For everything else, import workers-go's own packages |

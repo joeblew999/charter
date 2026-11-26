@@ -6,7 +6,7 @@
 // regional catalog holds only what differs; inheriting from the source locale counts as translated. A key with
 // nowhere to come from is missing, and shows the source text. intl.sum, beside the catalogs, records the source text
 // each translation was made from: when the source changes, the translation is stale until it is updated or
-// confirmed. A key the source no longer has is obsolete until charter run prune removes it.
+// confirmed. A key the source no longer has is obsolete until charter run intl:prune removes it.
 package catalog
 
 import (
@@ -63,7 +63,7 @@ type Locale struct {
 	ID       string
 	File     string   // its catalog
 	Entries  []Entry  // one per Project.Messages
-	Obsolete []string // keys its catalog has that the source no longer does (charter run prune)
+	Obsolete []string // keys its catalog has that the source no longer does (charter run intl:prune)
 }
 
 // Entry is a locale's text for one message.

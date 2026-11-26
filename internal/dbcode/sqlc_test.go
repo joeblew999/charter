@@ -9,12 +9,12 @@ import (
 )
 
 // TestAsCommitted: for every Go example with queries, what sqlc works out of its schema and queries is written as the
-// db/queries.go it commits. It runs sqlc (go run, the first time a download).
+// db/queries.gen.go it commits. It runs sqlc (go run, the first time a download).
 func TestAsCommitted(t *testing.T) {
 	for _, example := range []string{"example"} {
 		t.Run(example, func(t *testing.T) {
 			dir := filepath.Join("..", "..", example)
-			committed, err := os.ReadFile(filepath.Join(dir, "db", "queries.go"))
+			committed, err := os.ReadFile(filepath.Join(dir, "db", "queries.gen.go"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -27,7 +27,7 @@ func TestAsCommitted(t *testing.T) {
 				t.Fatal(err)
 			}
 			if want := string(committed); got != want {
-				t.Errorf("db/queries.go differs from the committed one\ngot:\n%s\nwant:\n%s", got, want)
+				t.Errorf("db/queries.gen.go differs from the committed one\ngot:\n%s\nwant:\n%s", got, want)
 			}
 		})
 	}

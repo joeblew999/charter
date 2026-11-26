@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/joeblew999/charter/internal/intlkit/setup"
 	"os"
 	"path/filepath"
 	"slices"
@@ -91,10 +92,10 @@ func localeProblems(p *catalog.Project, locs []*catalog.Locale) []string {
 	var out []string
 	for _, l := range locs {
 		if n := l.Count(catalog.Missing) + l.Count(catalog.Stale); n > 0 {
-			out = append(out, l.Summary(len(p.Messages))+": charter run translate "+l.ID+" (or todo)")
+			out = append(out, l.Summary(len(p.Messages))+": charter run intl:translate "+l.ID+" (or todo)")
 		}
 		if len(l.Obsolete) > 0 {
-			out = append(out, fmt.Sprintf("%s has %s, which the source no longer does: charter run prune", l.File, strings.Join(l.Obsolete, ", ")))
+			out = append(out, fmt.Sprintf("%s has %s, which the source no longer does: charter run intl:prune", l.File, strings.Join(l.Obsolete, ", ")))
 		}
 	}
 	return out
@@ -117,7 +118,7 @@ func checkAll(c config.Config, warnMissing bool) int {
 			}
 		}
 		for _, s := range localeProblems(p, p.Locales) {
-			if !strings.Contains(s, ": charter run translate ") {
+			if !strings.Contains(s, ": charter run intl:translate ") {
 				add(s)
 			}
 		}
@@ -201,4 +202,41 @@ func missingDefault() string {
 		return "warn"
 	}
 	return "fail"
+}
+
+// FixRTL wires the app's languages into gsx (setup.Wire), and does what a right-to-left language needs of gsxui, when it is not done: "rtl": true in gsxui.json, and the
+// vendored components rewritten with logical direction classes (gsxui migrate rtl). It reports whether it did.
+func FixRTL(migrate func() error) (bool, error) {
+	c := app()
+	if err := setup.Wire(c.Root, c.Gsxui, os.Stdout); err != nil {
+		return false, err
+	}
+	if c.Gsxui == "" {
+		return false, nil
+	}
+	if _, err := os.Stat(filepath.Join(c.Root, "gsxui.json")); err != nil {
+		return false, nil
+	}
+	startIntl()
+	rtl := false
+	for _, id := range c.Locales {
+		rtl = rtl || intl.NewLocale(id).Dir() == "rtl"
+	}
+	path := filepath.Join(c.Root, "gsxui.json")
+	b, err := os.ReadFile(path)
+	if err != nil || !rtl {
+		return false, nil
+	}
+
+	var gsxui struct {
+		RTL bool `json:"rtl"`
+	}
+	if json.Unmarshal(b, &gsxui); gsxui.RTL {
+		return false, nil
+	}
+	text := strings.Replace(string(b), "{", "{\n  \"rtl\": true,", 1)
+	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+		return false, err
+	}
+	return true, migrate()
 }

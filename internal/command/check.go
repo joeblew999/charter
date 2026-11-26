@@ -28,6 +28,7 @@ func Check(args []string) {
 	fix := fs.Bool("fix", false, "write what can be written: formatting, go.mod, the specs and the queries' Go")
 	fs.Parse(args)
 	p := load()
+	check(skills(p, false)) // the agent skills of what the app is built with, when go.sum has moved
 	t := newTimes("check")
 	if p.Spec != "" && p.DB != "" && *fix {
 		t.part("queries", func() error { return dbcode.Write(p.Root, p.DB, false) })
@@ -44,6 +45,17 @@ func Check(args []string) {
 				return err
 			}
 			return limitsDeclared(p)
+		})
+	}
+	if hasIntl(p) && *fix {
+		// The languages wired into gsx where they are not (gsx.toml, gsxui's text), and gsxui's components rewritten
+		// for a right-to-left language among them, once.
+		t.part("languages wired", func() error {
+			did, err := intl.FixRTL(func() error { return run.Run(p.Root, nil, "go", "tool", "gsxui", "migrate", "rtl") })
+			if did {
+				say("gsxui.json: \"rtl\": true, and the components rewritten for right-to-left languages")
+			}
+			return err
 		})
 	}
 	if hasIntl(p) {

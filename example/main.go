@@ -14,7 +14,6 @@ import (
 	charter "github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/cloud"
-	_ "github.com/joeblew999/charter/example/locales" // the app's languages (locales/*.toml)
 	"github.com/joeblew999/charter/example/pages"
 )
 

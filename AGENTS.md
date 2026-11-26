@@ -17,10 +17,15 @@ How the repo works: [README.md](README.md). Plans and open work are GitHub issue
   what it lacks (`cloud`), and says so where it is defined.
 - **Go and Node are all a machine needs.** `go.mod` and `package-lock.json` pin everything. No TypeScript of ours:
   `vite.config.ts` is gsx's file.
-- **Six library folders at the top** (`app`, `api`, `cloud`, `live`, `intl`, `seo`), with `cmd`, `internal` and
-  `example`. Don't add another.
+- **Six library folders at the top** (`app`, `api`, `cloud`, `live`, `intl`, `seo`), with `cmd`, `internal`,
+  `example` and `skills` (the skill charter ships, as gsx and structpages ship theirs). Don't add another.
 - **`example/` uses all of charter** and is what `charter create` copies. A feature of charter that the example does
   not use is not done; a bug the example cannot show is a missing part of the example.
+- **A developer never has to remember to run something.** What an upstream tool generates or checks runs inside
+  `dev`, `check`, `test` or `deploy`. What is left is a namespaced task of `charter run` (`intl:`, `seo:`, `db:`,
+  `ui:`).
+- **Tests are of the pages and of the API**: pages in a real browser (`apptest.Browser`), the API through its own
+  SDK. Skills come from the modules in `go.mod` (`skills/charter` is ours), never copied by hand.
 - **A feed is declared once** (`live.Feed`) and serves pages, API and SDK alike.
 - **The commands are Vite+'s verbs** (https://viteplus.dev/guide/), plus `deploy`. Anything else is a task of
   `charter run`.

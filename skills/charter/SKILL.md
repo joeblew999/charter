@@ -16,13 +16,15 @@ tree rendered with gsx, and charter finds every part by where it is. Change the 
 | An API operation | `api/contract.go` and its handler | `go tool charter check --fix` writes `fern/`; `go tool charter pack -publish` the Go SDK |
 | What is followed live | one `live.Feed` (`api.Notes` in the example): `Publish` after the write, `Fragments` for a page, `Events` and `Lines` for the API | |
 | The database's schema | a new idempotent `db/migrations/NNNN_name.sql` | `go tool charter deploy` applies it |
-| A query | `db/queries.sql` | `go tool charter check --fix` writes `db/queries.go` |
+| A query | `db/queries.sql` | `go tool charter check --fix` writes `db/queries.gen.go` |
 | A binding, a variable | `wrangler.jsonc`, without ids: the first deploy makes the resource | the running `charter dev` reloads |
 | Browser code or CSS | `web/` (Vite); `go tool charter add <npm package>` | |
-| A message a reader sees | `locales/en.toml`, written `{ locales.Key }` in gsx | `go tool charter run translate`; `go tool charter run languages` says what is left |
+| A message a reader sees | `locales/en.toml`, written `{ locales.Key }` in gsx | `go tool charter run intl:translate`; `go tool charter run intl:status` says what is left |
 | A language | `go tool charter add locale:de` | translate its catalog |
 | A UI component | `go tool charter add ui:dialog` | |
-| A test of the Worker | `test/` (package `app/apptest`: `Base`, `Get`, `Events`, `Local`, `Secret`); the API through `sdk/go` | `go tool charter test`, and `--deployed` |
+| A test of a page | `test/page_*_test.go`: `apptest.Browser(t)` (Chrome): `Open`, `Type`, `Click`, `WaitText`, `Tab` | `go tool charter test`, and `--deployed` |
+| A test of the API | `test/api_test.go`, through `sdk/go` | the same |
+| The database by hand | `go tool charter run db:status`, `db:new <name>`, `db:reset`, `db:seed`, `db:execute "…"` (`--deployed` for the deployed one) | |
 
 ## Rules
 
@@ -35,7 +37,9 @@ tree rendered with gsx, and charter finds every part by where it is. Change the 
   `cron.ScheduleTaskNonBlock`, `queues.ConsumeNonBlock`, `cloud.ConsumeEmail`.
 - **Memory between requests is a cache, never state**: any request may start a new Go runtime.
 - **D1 has no interactive transactions**: single statements with `RETURNING`, or `cloud.Batch`.
-- Never hand-write what a command generates: `fern/`, `db/queries.go`, `sdk/`, `*.x.go`, `build/`, `dist/`.
+- Never hand-write what a command generates: `*.gen.go`, `*.x.go`, `fern/`, `sdk/`, `build/`, `dist/`. Never run
+  gsx, gsxui's migrations, sqlc or structpages-lint by hand either: `dev`, `check --fix` and `test` run them.
+- `.claude/skills/` is written by `go tool charter install` from the modules `go.mod` pins: don't edit or commit it.
 - The app is `(&app.App{Name, Dist, Pages, API}).Run()` and `<app.Head title=… description=…/>`: never wire Vite,
   languages, robots.txt or the sitemap by hand.
 - No literal reader-facing text in a `.gsx` file: a message in the source catalog.

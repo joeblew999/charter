@@ -4,7 +4,7 @@ package test
 
 import (
 	"fmt"
-	"io"
+	"github.com/joeblew999/charter/app/apptest"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,31 +16,19 @@ import (
 
 var base = strings.TrimRight(os.Getenv("BASE"), "/")
 
-// local says the Worker is wrangler dev on this machine (charter's TARGET), which has two things a deployed one has not: a Cron Trigger
-// can be fired by hand, and an email can be handed to the Worker.
-var local = os.Getenv("TARGET") != "deployed"
-
+// Without a Worker to ask (plain go test ./...), there is nothing to test here: go tool charter test gives BASE.
 func TestMain(m *testing.M) {
 	if base == "" {
-		fmt.Println("no BASE, the Worker's URL: go tool charter test")
+		fmt.Println("no BASE, the Worker's address: go tool charter test")
 		os.Exit(0)
 	}
 	os.Exit(m.Run())
 }
 
-func page(t *testing.T, path string) string {
-	t.Helper()
-	res, err := http.Get(base + path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	b, _ := io.ReadAll(res.Body)
-	if res.StatusCode != 200 {
-		t.Fatalf("GET %s: HTTP %d\n%s", path, res.StatusCode, b)
-	}
-	return string(b)
-}
+// The Cloudflare page (/cloud): a card for each thing Cloudflare gives the Worker. Each test uses one through the
+// page, as a reader would, and reads what its card then says.
+
+func page(t *testing.T, path string) string { return apptest.Get(t, path) }
 
 // post sends a form as the page's own does, and follows the redirect back to it.
 func post(t *testing.T, path string, form url.Values) {
@@ -63,7 +51,7 @@ func soon(t *testing.T, what, want string) {
 	t.Helper()
 	// On Cloudflare, KV answers a read from its cache for up to a minute, so what a consumer wrote shows that much later.
 	patience := 30 * time.Second
-	if !local {
+	if !apptest.Local() {
 		patience = 3 * time.Minute
 	}
 	for start := time.Now(); time.Since(start) < patience; time.Sleep(time.Second) {
@@ -96,15 +84,14 @@ func TestQueueReachesItsConsumer(t *testing.T) {
 
 func TestCronTrigger(t *testing.T) {
 	want := `<p id="cron" class="text-sm" translate="no">*/5 * * * *`
-	if !local {
-		// Deployed, Cloudflare fires it every five minutes; a schedule just deployed can take a quarter of an hour to
-		// start. Once it has run, the page keeps showing it.
-		for start := time.Now(); time.Since(start) < 16*time.Minute; time.Sleep(10 * time.Second) {
-			if strings.Contains(page(t, "/cloud"), want) {
-				return
-			}
+	if !apptest.Local() {
+		// Deployed, Cloudflare fires it every five minutes, and the page keeps showing the last run. Only a schedule
+		// deployed for the first time has not run yet (Cloudflare takes up to a quarter of an hour to start one):
+		// that is said, not waited for.
+		if !strings.Contains(page(t, "/cloud"), want) {
+			t.Skip("the Cron Trigger has not run yet: a new schedule starts within fifteen minutes of its first deploy")
 		}
-		t.Fatal("the Cron Trigger did not run in sixteen minutes")
+		return
 	}
 	// wrangler dev --test-scheduled fires one by hand.
 	res, err := http.Get(base + "/__scheduled?cron=*/5+*+*+*+*")
@@ -131,18 +118,17 @@ func TestTheGermanPage(t *testing.T) {
 }
 
 func TestEmail(t *testing.T) {
-	if !local {
-		// Deployed, Cloudflare sends only to an address verified in Email Routing, and only Email Routing hands the
-		// Worker a message: EMAIL_TO names such an address to send to; receiving is tried on wrangler dev alone.
-		to := os.Getenv("EMAIL_TO")
-		if to == "" {
-			t.Skip("deployed: no EMAIL_TO, an address verified in Email Routing, to send to")
+	if !apptest.Local() {
+		// Deployed, the message goes from MAIL_FROM to MAIL_TO (the Worker's secret: an address verified in Email
+		// Routing), at most one an hour whoever asks. The card then says when the last one went.
+		post(t, "/cloud/email", url.Values{})
+		if !regexp.MustCompile(`<p id="sent"[^>]*>\d{4}-\d\d-\d\dT`).MatchString(page(t, "/cloud")) {
+			t.Error("the page does not say when a message was last sent")
 		}
-		post(t, "/cloud/email", url.Values{"to": {to}})
 		return
 	}
 	post(t, "/cloud/email", url.Values{"to": {"you@example.com"}})
-	if !strings.Contains(page(t, "/cloud"), "→ you@example.com") {
+	if !strings.Contains(page(t, "/cloud"), "→ y…@example.com") {
 		t.Error("the page does not say whom the message was sent to")
 	}
 	// wrangler dev hands the Worker a message posted here, as Email Routing would.

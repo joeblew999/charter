@@ -18,5 +18,9 @@ go tool charter deploy                           # then: go tool charter test --
 | `db/` | The migrations and the queries, typed |
 | `cloud/` | One file per thing Cloudflare gives a Worker, through workers-go's own packages |
 | `locales/` | English, German, Arabic |
-| `test/` | Tests of the Worker: the API through `sdk/go`, the feed, a test per Cloudflare card. `test/devloop` works on the app under `charter dev` |
+| `test/` | `page_*_test.go`: the pages in a real browser (a note typed in one tab shows in another; Arabic is right to left; a card per Cloudflare binding). `api_test.go`: the API through `sdk/go`. `test/devloop` works on the app under `charter dev` |
 | `sdk/go/` | The Go client, generated from the contract |
+
+Generated, never edited: `*.x.go` and `locales/messages.gen.go` (written by `dev` and `build`, not committed);
+`db/queries.gen.go`, `fern/` and `sdk/go/` (written by `check --fix` and `pack -publish`, committed and checked).
+`ui/` and `web/gsxui/` are gsxui's components, vendored by `charter add ui:<name>`.

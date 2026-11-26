@@ -24,7 +24,7 @@ import (
 //
 // Everything else a developer runs meanwhile, in another terminal, reaches the open page by itself: gsx dev watches
 // the Go and gsx files (gsxui add), Vite the browser's files (npm install), and charter the languages: a change to a
-// catalog or to charter.toml (charter add locale:<id>, charter run translate, an edit by hand) compiles the
+// catalog or to charter.toml (charter add locale:<id>, charter run intl:translate, an edit by hand) compiles the
 // messages again, which gsx dev then picks up.
 func Dev(args []string) {
 	if len(args) > 0 && args[0] == "-worker" {
@@ -32,6 +32,7 @@ func Dev(args []string) {
 		return
 	}
 	p := load()
+	check(skills(p, false)) // the agent skills of what the app is built with, when go.sum has moved
 	if !hasGSX(p) {
 		Preview(args)
 		return

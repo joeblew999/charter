@@ -8,7 +8,7 @@ import (
 	"github.com/joeblew999/charter/internal/intlkit/catalog"
 )
 
-// confirm is charter run confirm [<locale>[:<key>]…]: stale translations that are still right, kept (every one
+// confirm is charter run intl:confirm [<locale>[:<key>]…]: stale translations that are still right, kept (every one
 // of them by default).
 func confirm(args []string) {
 	c := app()

@@ -28,7 +28,7 @@ func addLocale(args []string) {
 		}
 		l := intl.NewLocale(ids[0])
 		must(catalog.AddLocale(c, ids[0], l.Name()))
-		fmt.Printf("added %s, %s: translate it (charter run todo %s)\n", ids[0], l.Name(), ids[0])
+		fmt.Printf("added %s, %s: translate it (charter run intl:todo %s)\n", ids[0], l.Name(), ids[0])
 		c, err = config.Find(".")
 		must(err)
 	}

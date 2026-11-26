@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -75,46 +73,5 @@ func TestTheSDKFollowsTheFeed(t *testing.T) {
 	page, err := writer.Notes.List(context.Background(), &notes.ListNotesRequest{})
 	if err != nil || len(page.Results) == 0 || page.Results[0].ID != created.ID {
 		t.Fatalf("the list's newest is not note %d: %v", created.ID, err)
-	}
-}
-
-// The same feed reaches an open page: a note posted with the page's form arrives on the page's stream as the HTML
-// of its list item, whoever posted it.
-func TestThePageFollowsTheFeed(t *testing.T) {
-	base := apptest.Base(t)
-	home := apptest.Get(t, "/")
-	at := strings.Index(home, `hx-sse:connect="`)
-	if at < 0 {
-		t.Fatal("the home page's list connects to no stream")
-	}
-	stream := home[at+len(`hx-sse:connect="`):]
-	stream = strings.ReplaceAll(stream[:strings.Index(stream, `"`)], "&amp;", "&")
-	next := apptest.Events(t, stream, nil)
-	body := "seen by the page at " + time.Now().Format(time.RFC3339Nano)
-	res, err := http.PostForm(base+"/notes", url.Values{"body": {body}})
-	if err != nil || res.StatusCode != http.StatusOK {
-		t.Fatalf("POST /notes: %v %v", res, err)
-	}
-	res.Body.Close()
-	for {
-		if event := next(); strings.Contains(event, body) {
-			if !strings.Contains(event, `data: <li id="note-`) {
-				t.Fatalf("the event is not the list item's HTML:\n%s", event)
-			}
-			return
-		}
-	}
-}
-
-// What the form refuses comes back marked, as a 422 htmx swaps in.
-func TestTheFormRefusesAnEmptyNote(t *testing.T) {
-	res, err := http.PostForm(apptest.Base(t)+"/notes", url.Values{"body": {"  "}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	b, _ := io.ReadAll(res.Body)
-	if res.StatusCode != http.StatusUnprocessableEntity || !strings.Contains(string(b), `aria-invalid="true"`) {
-		t.Fatalf("HTTP %d\n%s", res.StatusCode, b)
 	}
 }

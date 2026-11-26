@@ -9,5 +9,5 @@
 //
 // Both are formatted by js/intl.mjs, the same module in the Worker (where Go calls it through js/intl-worker.mjs) and
 // in the browser. Outside a Worker the only Intl is workerd's: tests run under intltest. The catalogs, their
-// translation and checks are charter run languages (charter run).
+// translation and checks are charter run intl:status (charter run).
 package intl

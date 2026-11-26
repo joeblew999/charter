@@ -80,7 +80,6 @@ component (p Cloud) Page(s cloud.State) {
 					name="to"
 					type="email"
 					class="flex-1"
-					required
 					placeholder="you@example.com"
 					aria-label={locales.CloudEmailTo}
 				/>

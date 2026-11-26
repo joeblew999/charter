@@ -34,11 +34,11 @@
 //	command = "go run ./cmd/seed {base}"
 //	worker = true                      # with the Worker on wrangler dev, BASE its URL
 //
-//	[intl]                             # the app's languages (charter run languages; go doc …/intl/config)
+//	[intl]                             # the app's languages (charter run intl:status; go doc …/intl/config)
 //	locales = ["en", "de"]
 //	catalogs = "locales"
 //
-//	[seo]                              # how it answers search engines (charter run search; go doc …/seo/config)
+//	[seo]                              # how it answers search engines (charter run seo:search; go doc …/seo/config)
 package project
 
 import (

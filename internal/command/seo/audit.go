@@ -10,7 +10,7 @@ import (
 	"github.com/joeblew999/charter/seo/audit"
 )
 
-// auditReport is charter run audit --json. Its field names are the stable interface; the text renders the same values.
+// auditReport is charter run seo:audit --json. Its field names are the stable interface; the text renders the same values.
 type auditReport struct {
 	Site     string   `json:"site"`
 	URLs     int      `json:"urls"`
@@ -18,7 +18,7 @@ type auditReport struct {
 	Problems []string `json:"problems"`
 }
 
-// audit is charter run audit: robots.txt, the sitemap and every URL in it fetched live as Googlebot, and
+// audit is charter run seo:audit: robots.txt, the sitemap and every URL in it fetched live as Googlebot, and
 // every problem that would keep a page out of Google's index or look wrong in a result, one a line (audit.Audit); exit
 // 1 on any. [seo] site, or --site's: a local build, a preview. It needs no Google account.
 func (r repo) audit(args []string) {

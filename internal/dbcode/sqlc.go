@@ -1,7 +1,7 @@
 // Package dbcode is a project's database code, typed, from its schema (db/migrations/*.sql, the one place the tables are
 // said). charter check --fix writes it beside the specs (charter.toml's db), and charter check fails when it is stale.
 //
-//   - Go (db = "sqlc"): the queries of db/queries.sql as functions over charter's cloud package, in db/queries.go. sqlc
+//   - Go (db = "sqlc"): the queries of db/queries.sql as functions over charter's cloud package, in db/queries.gen.go. sqlc
 //     works out each one's parameters and columns against the schema; charter writes the Go, with no database/sql
 //     (charter/d1 says why).
 //   - TypeScript (db = "drizzle"): the tables as Drizzle has them, api/tables.ts, read from the schema as SQLite itself
@@ -196,7 +196,7 @@ func jsonString(s string) string {
 	return strings.TrimSuffix(b.String(), "\n")
 }
 
-// GoQueries is db/queries.go for what sqlc worked out: a function for each query, over charter's cloud package.
+// GoQueries is db/queries.gen.go for what sqlc worked out: a function for each query, over charter's cloud package.
 func GoQueries(r *Request, pkg string) (string, error) {
 	tables := map[string][]Column{}
 	for _, s := range r.Catalog.Schemas {
@@ -347,7 +347,7 @@ func Write(dir, db string, check bool) error {
 	return writeQueries(dir, check)
 }
 
-// writeQueries writes dir's db/queries.go (package db) from its schema and queries; with check it writes nothing, and
+// writeQueries writes dir's db/queries.gen.go (package db) from its schema and queries; with check it writes nothing, and
 // fails if the one there is not what they give.
 func writeQueries(dir string, check bool) error {
 	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
@@ -362,17 +362,17 @@ func writeQueries(dir string, check bool) error {
 	if err != nil {
 		return err
 	}
-	file := filepath.Join(dir, "db", "queries.go")
+	file := filepath.Join(dir, "db", "queries.gen.go")
 	if !check {
 		if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
 			return err
 		}
-		fmt.Println("db/queries.go: from db/migrations/ and db/queries.sql (sqlc)")
+		fmt.Println("db/queries.gen.go: from db/migrations/ and db/queries.sql (sqlc)")
 		return nil
 	}
 	if b, err := os.ReadFile(file); err != nil || string(b) != text {
-		return errors.New("db/queries.go is not what db/migrations/ and db/queries.sql give: charter check --fix")
+		return errors.New("db/queries.gen.go is not what db/migrations/ and db/queries.sql give: charter check --fix")
 	}
-	fmt.Println("db/queries.go is what db/migrations/ gives")
+	fmt.Println("db/queries.gen.go is what db/migrations/ gives")
 	return nil
 }

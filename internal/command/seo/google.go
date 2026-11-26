@@ -17,7 +17,7 @@ import (
 	"github.com/joeblew999/charter/seo/config"
 )
 
-// The keys the commands that ask Google read: a service account's JSON key for Search Console (charter run search setup makes
+// The keys the commands that ask Google read: a service account's JSON key for Search Console (charter run seo:search setup makes
 // it), and a PageSpeed Insights API key for Lighthouse, which falls back on the service account's.
 const (
 	consoleKey   = "GOOGLE_SEARCH_CONSOLE_KEY"
@@ -41,7 +41,7 @@ func secret(name string) string {
 }
 
 // noConsoleKey is what a command that asks Search Console says without the key.
-var noConsoleKey = errors.New(consoleKey + " is neither in the environment nor in fnox: charter run search setup makes a service account and stores its key in fnox (once per person)")
+var noConsoleKey = errors.New(consoleKey + " is neither in the environment nor in fnox: charter run seo:search setup makes a service account and stores its key in fnox (once per person)")
 
 // console is a Search Console client for the property of [seo] site, with the service account key's token, and
 // the key; without the key it fails, saying how to make one.
@@ -56,7 +56,7 @@ func console(ctx context.Context, c config.Config, site string) (*searchconsole.
 	token, err := key.Token(ctx, httpc, searchconsole.Scope)
 	must(err)
 	property := cmp.Or(c.Property, domainProperty(host(site)))
-	fmt.Fprintf(os.Stderr, "charter run search: Search Console property %s, as %s\n", property, key.ClientEmail)
+	fmt.Fprintf(os.Stderr, "charter run seo:search: Search Console property %s, as %s\n", property, key.ClientEmail)
 	return &searchconsole.Client{HTTP: httpc, Token: token, Site: property}, key
 }
 
@@ -73,7 +73,7 @@ func access(sites []searchconsole.Site, property string) bool {
 
 // noAccess is what a command says when the service account lacks Full access to the property.
 func noAccess(key searchconsole.Key, property string) error {
-	return fmt.Errorf("%s has no Full access to %s: Search Console → the property → Settings → Users and permissions → Add user (Full), then charter run search sites", key.ClientEmail, property)
+	return fmt.Errorf("%s has no Full access to %s: Search Console → the property → Settings → Users and permissions → Add user (Full), then charter run seo:search sites", key.ClientEmail, property)
 }
 
 // consoleWithAccess is console, failing unless the account has Full access to the property: every command that asks
@@ -97,7 +97,7 @@ func pagespeedAuth(ctx context.Context) pagespeed.Auth {
 	raw := secret(consoleKey)
 	if raw == "" {
 		fail(fmt.Errorf("Lighthouse needs %s (a free key: Google Cloud console → APIs & Services → Credentials → API key, "+
-			"restricted to the PageSpeed Insights API; then fnox set %s) or %s (charter run search setup), in the environment or in fnox",
+			"restricted to the PageSpeed Insights API; then fnox set %s) or %s (charter run seo:search setup), in the environment or in fnox",
 			pagespeedKey, pagespeedKey, consoleKey))
 	}
 	key, err := searchconsole.ParseKey([]byte(raw))

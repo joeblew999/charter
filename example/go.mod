@@ -16,9 +16,12 @@ require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/a-h/parse v0.0.0-20250122154542-74294addb73e // indirect
 	github.com/a-h/templ v0.3.1020 // indirect
+	github.com/chromedp/cdproto v0.160.1 // indirect
+	github.com/chromedp/chromedp v0.24.0 // indirect
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.7 // indirect
+	github.com/go-json-experiment/json v0.0.0-20260213210345-44df1a37e875 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gsxhq/gsxui v0.0.0-20261124142639-b9ffdfaa8826 // indirect
 	github.com/gsxhq/vite v0.3.2 // indirect
