@@ -9,7 +9,7 @@
 //	}
 //
 // workerd is the one npm installed for the app (Path). The first Start runs it on a free port, serving the
-// files charter build writes beside the catalogs (intl-workerd/), and it stops when the program that started it
+// files charter build writes in the app's .charter/intl/workerd, and it stops when the program that started it
 // ends, however it ends. INTL_WORKERD_URL names a workerd of your own instead (a server's, deployed with it). Each Intl
 // call is a request to it on 127.0.0.1, about 0.1 ms.
 package workerd
@@ -119,13 +119,13 @@ func Start() error {
 	return nil
 }
 
-// served is the workerd config to serve: the one charter build wrote beside the app's catalogs (intl-workerd/), for
+// served is the workerd config to serve: the one charter build wrote in the app's .charter/intl/workerd, for
 // the app whose charter.toml's [intl] is found up from the working directory; with no charter.toml's [intl], intl's own modules with no
 // catalogs, in charter's cache: Intl's formats with no messages, which is all a program without catalogs asks for.
 func served() (string, error) {
 	c, err := config.Find(".")
 	if err == nil {
-		capnp := filepath.Join(c.CatalogDir(), "intl-workerd", "intl-workerd.capnp")
+		capnp := filepath.Join(c.BuiltDir(), "workerd", "intl-workerd.capnp")
 		if _, err := os.Stat(capnp); err != nil {
 			return "", fmt.Errorf("%s: %w (charter build writes it)", capnp, err)
 		}

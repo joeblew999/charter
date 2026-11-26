@@ -29,6 +29,8 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     clearScreen: false,
+    // What charter build writes for the browser and nobody edits is in .charter/, with everything else it builds.
+    resolve: { alias: { "charter/intl": new URL(".charter/intl/browser/intl-browser.mjs", import.meta.url).pathname } },
     // Dev serves all Vite assets under /__vite/ (matches gsxhq/vite DevBase);
     // prod uses the default base ("/"): hashed assets are /assets/…, which
     // Workers Static Assets serve from dist (wrangler.jsonc).

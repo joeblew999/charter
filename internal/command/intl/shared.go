@@ -55,7 +55,7 @@ func pick(p *catalog.Project, ids []string) []*catalog.Locale {
 // not been built yet, the files workerd serves are written first, so the first command a developer runs works.
 func startIntl() {
 	c := app()
-	if _, err := os.Stat(filepath.Join(c.CatalogDir(), "intl-workerd", "intl-workerd.capnp")); err != nil {
+	if _, err := os.Stat(filepath.Join(c.BuiltDir(), "workerd", "intl-workerd.capnp")); err != nil {
 		must(read(c).Generate(os.Stderr))
 	}
 	if err := workerd.Start(); err != nil {

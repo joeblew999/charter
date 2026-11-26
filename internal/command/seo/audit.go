@@ -47,3 +47,20 @@ func (r repo) audit(args []string) {
 		os.Exit(1)
 	}
 }
+
+// Audit is the audit of a server, for a command that has more to do after it (charter test, which still has a local
+// Worker to stop): every problem said, and an error when there is one.
+func Audit(base string) error {
+	urls, problems, err := audit.Audit(context.Background(), &http.Client{Timeout: time.Minute}, base)
+	if err != nil {
+		return err
+	}
+	if len(problems) == 0 {
+		fmt.Printf("✓ robots.txt and all %d sitemap URLs pass (fetched as Googlebot)\n", urls)
+		return nil
+	}
+	for _, p := range problems {
+		fmt.Println("✗ " + p)
+	}
+	return fmt.Errorf("the search-engine audit found %d problem(s) across robots.txt and %d sitemap URLs", len(problems), urls)
+}

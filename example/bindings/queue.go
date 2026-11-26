@@ -1,6 +1,6 @@
 //go:build js && wasm
 
-package cloud
+package bindings
 
 import (
 	"strings"

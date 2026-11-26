@@ -1,24 +1,24 @@
 # العربية (ar): the translations of en.toml, same tables and keys. charter run intl:todo lists what is left.
 
 [site]
-title = "رسائل مباشرة"
-description = "موقع صغير على Cloudflare Workers مكتوب بلغة Go: انشر رسالة فتظهر فورًا في كل صفحة مفتوحة."
+title = "ملاحظات مباشرة"
+description = "تطبيق صغير على Cloudflare Workers مكتوب بلغة Go: اكتب ملاحظة فتظهر فورًا في كل صفحة مفتوحة."
 
 [home]
-heading = "الرسائل"
-intro = "انشر رسالة، فتظهر فورًا في كل صفحة مفتوحة هنا."
-placeholder = "اكتب شيئًا"
-label = "الرسالة"
+heading = "الملاحظات"
+intro = "اكتب ملاحظة، فتظهر فورًا في كل صفحة مفتوحة هنا."
+placeholder = "اكتب ملاحظة"
+label = "الملاحظة"
 post = "نشر"
 languages = "اللغات"
 
-[cloud]
+[bindings]
 link = "ما تقدّمه Cloudflare لهذا الـ Worker"
 title = "Cloudflare، بطاقة لكل خدمة"
-description = "KV وR2 وQueues وCron Triggers وfetch والمتغيرات في Cloudflare Worker مكتوب بلغة Go، كل منها مستخدم مرة واحدة وبأبسط شكل."
+description = "KV وR2 وQueues وD1 وCron Triggers وCache API وDurable Objects والمقابس وfetch والبريد الإلكتروني في Cloudflare Worker بلغة Go، كل منها مرة واحدة."
 heading = "ما تقدّمه Cloudflare لهذا الـ Worker"
 intro = "تستخدم كل بطاقة خدمة واحدة عبر حزمة workers-go نفسها."
-back = "العودة إلى الرسائل"
+back = "العودة إلى الملاحظات"
 off_workers = "تعمل هذه الصفحة خارج Worker حيث لا توجد ارتباطات: البطاقات فارغة."
 kv = "عدّاد في KV: عدد مرات فتح هذه الصفحة."
 r2 = "ملاحظة محفوظة ككائن واحد في حاوية R2."
@@ -28,15 +28,15 @@ queues = "رسالة تُرسل إلى قائمة انتظار. يستلمها �
 message = "الرسالة"
 send = "إرسال"
 cron = "الجدول الذي نُفّذ آخر مرة، ومتى."
-d1 = "عدد الصفوف في قاعدة بيانات D1، محسوبًا عبر مشغّل database/sql من workers-go: رسائل الصفحة الرئيسية."
+d1 = "عدد الصفوف في قاعدة بيانات D1، محسوبًا عبر مشغّل database/sql من workers-go: ملاحظات الصفحة الرئيسية."
 cache = "قيمة تُحفظ في Cache API لمدة دقيقة. الزيارة الأولى تخزّنها، والزيارات التالية تقرؤها."
 object = "كائن Durable Object يُستدعى عبر الـ stub الخاص به: الـ Hub الذي يقف خلف القائمة المباشرة."
-socket = "مقبس TCP مفتوح إلى عنوان هذا الموقع نفسه، وأول سطر عاد منه."
+socket = "مقبس TCP مفتوح إلى موقع آخر، وأول سطر عاد منه."
 after = "عمل نُفّذ بعد إرسال الإجابة السابقة، ووقت انتهائه."
 request = "ما تعرفه Cloudflare عن طلبك: البلد والمدينة والمنطقة الزمنية ومركز البيانات والبروتوكول."
-email = "رسالة تُرسل عبر ارتباط send_email، وآخر رسالة سلّمها Email Routing إلى هذا الـ Worker."
+email = "رسالة تُرسل عبر ارتباط send_email، واحدة في الساعة على الأكثر، وآخر رسالة سلّمها Email Routing إلى هذا الـ Worker."
 email_to = "إرسال إلى"
-fetch = "طلب أرسله هذا الـ Worker إلى فحص سلامته."
+fetch = "طلب أرسله هذا الـ Worker إلى موقع آخر."
 vars = "متغير من متغيرات الـ Worker، من wrangler.jsonc."
 
 [gsxui]

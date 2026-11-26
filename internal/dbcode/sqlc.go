@@ -371,6 +371,11 @@ func writeQueries(dir string, check bool) error {
 		return err
 	}
 	schema, _ := os.ReadFile(filepath.Join(dir, "db", "schema.sql"))
+	if !check {
+		for _, note := range partRows(r) {
+			fmt.Println("· " + note)
+		}
+	}
 	text, err := GoQueries(r, pkg, Tags(string(schema)))
 	if err != nil {
 		return err
@@ -388,4 +393,30 @@ func writeQueries(dir string, check bool) error {
 	}
 	fmt.Println("db/queries.gen.go is what db/schema.sql gives")
 	return nil
+}
+
+// partRows says which queries return some of a table's columns, by name: their rows are a type of their own, not the
+// table's row, which is what a developer who has just added a column to the schema trips over (the Go that used the
+// table's row no longer compiles, and says nothing of the query).
+func partRows(r *Request) (notes []string) {
+	tables := map[string]int{}
+	for _, s := range r.Catalog.Schemas {
+		for _, t := range s.Tables {
+			tables[t.Rel.Name] = len(t.Columns)
+		}
+	}
+	for _, q := range r.Queries {
+		if len(q.Columns) < 2 || q.Columns[0].Table == nil {
+			continue
+		}
+		table, one := q.Columns[0].Table.Name, true
+		for _, c := range q.Columns {
+			one = one && c.Table != nil && c.Table.Name == table
+		}
+		if one && len(q.Columns) < tables[table] {
+			notes = append(notes, fmt.Sprintf("db/queries.sql: %s returns %d of the %s table's %d columns, so its rows are %sRow, not %sRow. To return the whole row, new columns too: SELECT * or RETURNING *",
+				q.Name, len(q.Columns), table, tables[table], q.Name, exported(table)))
+		}
+	}
+	return notes
 }

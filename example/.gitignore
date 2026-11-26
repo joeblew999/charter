@@ -5,8 +5,6 @@
 /sdk/out/
 # charter intl gen output (charter intl)
 messages.gen.go
-intl-messages.mjs
-intl-workerd/
 /xliff/
 # charter's scratch files
 /.charter/

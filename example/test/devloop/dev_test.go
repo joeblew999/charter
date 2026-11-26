@@ -106,7 +106,7 @@ func TestDev(t *testing.T) {
 		}
 	}
 
-	until("charter dev serves the page", "/", "<h1>Messages</h1>")
+	until("charter dev serves the page", "/", "<h1>Notes</h1>")
 	until("its scripts are Vite's dev server's", "/", `src="/__vite/web/main.js"`)
 	until("a variable is wrangler.jsonc's", "/api/hello", "Hello from charter-example")
 
@@ -116,7 +116,7 @@ func TestDev(t *testing.T) {
 	edit("pages/home.gsx", `class="flex flex-col gap-2"`, `class="flex flex-col gap-3"`)
 	until("a gsx edit", "/", `class="flex flex-col gap-3"`)
 
-	edit("locales/de.toml", `heading = "Nachrichten"`, `heading = "Pinnwand"`)
+	edit("locales/de.toml", `heading = "Notizen"`, `heading = "Pinnwand"`)
 	until("a translation alone", "/de/", "<h1>Pinnwand</h1>")
 
 	edit("wrangler.jsonc", `"APP_NAME": "charter-example"`, `"APP_NAME": "charter-example, renamed"`)

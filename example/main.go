@@ -13,7 +13,7 @@ import (
 	"github.com/joeblew999/charter/app"
 	charter "github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/example/api"
-	"github.com/joeblew999/charter/example/cloud"
+	"github.com/joeblew999/charter/example/bindings"
 	"github.com/joeblew999/charter/example/pages"
 )
 
@@ -23,8 +23,8 @@ import (
 var dist embed.FS
 
 func main() {
-	// What the Worker does that is no request: a Cron Trigger, a queue's consumer, email (package cloud).
-	cloud.Background()
+	// What the Worker does that is no request: a Cron Trigger, a queue's consumer, email (package bindings).
+	bindings.Background()
 	(&app.App{
 		Name:  "charter-example",
 		Dist:  dist,

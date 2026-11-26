@@ -19,7 +19,7 @@ component (p Home) Page(props HomeProps) {
 					<h1>{ locales.HomeHeading }</h1>
 				</ui.CardTitle>
 				<ui.CardDescription>{ locales.HomeIntro }</ui.CardDescription>
-				<a href={Cloud{} |> url} class="text-sm underline underline-offset-4">{ locales.CloudLink }</a>
+				<a href={Bindings{} |> url} class="text-sm underline underline-offset-4">{ locales.BindingsLink }</a>
 			</ui.CardHeader>
 			<ui.CardContent class="flex flex-col gap-4">
 				<Form body="" refused={false}/>
@@ -65,5 +65,7 @@ component Form(body string, refused bool) {
 component Item(note api.Note) {
 	<li id={"note-" + strconv.FormatInt(note.ID, 10)} class="rounded-md border px-3 py-2">
 		<span dir="auto">{ note.Body }</span>
+		// How long ago, in the reader's language; the browser's half of intl keeps it current.
+		<span class="ms-2 text-xs text-muted-foreground">{ note.Created() |> since }</span>
 	</li>
 }

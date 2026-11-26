@@ -1,6 +1,6 @@
 //go:build js && wasm
 
-package cloud
+package bindings
 
 import (
 	"io"
@@ -16,7 +16,7 @@ import (
 // The Cache API: a value stored under an address of this site, for a minute. The first visit stores it.
 
 func cached(r *http.Request) string {
-	at, _ := http.NewRequestWithContext(r.Context(), http.MethodGet, app.Origin(r)+"/cloud/cached", nil)
+	at, _ := http.NewRequestWithContext(r.Context(), http.MethodGet, app.Origin(r)+"/bindings/cached", nil)
 	c := cache.New()
 	if hit, err := c.Match(at, nil); err == nil {
 		b, _ := io.ReadAll(hit.Body)

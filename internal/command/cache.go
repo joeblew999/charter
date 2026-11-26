@@ -29,14 +29,10 @@ func Cache(args []string) {
 			return filepath.SkipDir
 		}
 		name := d.Name()
-		if !d.IsDir() && (strings.HasSuffix(name, ".x.go") || name == "messages.gen.go" || name == "intl-messages.mjs") {
+		if !d.IsDir() && (strings.HasSuffix(name, ".x.go") || name == "messages.gen.go") {
 			if os.Remove(path) == nil {
 				n++
 			}
-		}
-		if d.IsDir() && name == "intl-workerd" {
-			os.RemoveAll(path)
-			return filepath.SkipDir
 		}
 		return nil
 	})

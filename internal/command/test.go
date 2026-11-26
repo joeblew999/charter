@@ -104,7 +104,7 @@ func Test(args []string) {
 				return err
 			}
 			if p.SEO != nil {
-				seo.Main([]string{"audit", "--site", base})
+				return seo.Audit(base)
 			}
 			return nil
 		})

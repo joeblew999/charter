@@ -63,7 +63,7 @@ func main() {
   `charter install` copies them into `.claude/skills/` from the versions `go.mod` pins, and `dev` and `check` do it
   again whenever `go.sum` has moved. Updating a module updates its skill.
 - **Generation.** `dev` and `build` write what is built from your sources (gsx's `*.x.go`, the messages, the browser's
-  files): none of it is committed. `check --fix` writes what is committed and held to its source: `db/queries.gen.go`,
+  files): none of it is committed, and all of it that is not a Go file of one of your packages is in `.charter/`. `check --fix` writes what is committed and held to its source: `db/queries.gen.go`,
   `fern/`, `sdk/go/`. Everything generated is named for it (`*.gen.go`, `*.x.go`) or in a folder of its own, and
   `.gitattributes` marks it.
 - **The database.** `db/schema.sql` is the one place a table is written down. `dev` keeps the local database in step
@@ -110,7 +110,7 @@ Six packages, `github.com/joeblew999/charter/<name>`:
 ## The example
 
 [`example/`](example) is deployed at https://charter-example.gedw99.workers.dev. It has pages in three languages (one
-right to left), a notes API with tokens, limits, a stream and SDKs in Go, Python and as a CLI, one feed behind the
-page's live list and the API's stream, and `/cloud`: a card for everything Cloudflare gives a Worker (KV, R2, Queues,
+right to left, with ages, counts and times formatted by Intl), a notes API with tokens, limits, a stream and SDKs in Go, Python and as a CLI, one feed behind the
+page's live list and the API's stream, and `/bindings`: a card for everything Cloudflare gives a Worker (KV, R2, Queues,
 D1, Cron Triggers, the Cache API, Durable Objects, sockets, fetch, email), each used through workers-go's own package.
 Its tests use its own generated Go SDK as the client, and run unchanged against the local and the deployed Worker.

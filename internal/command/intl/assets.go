@@ -21,7 +21,7 @@ func assets(args []string) {
 	}
 	if *worker != "" {
 		must(copyJS(*worker, "intl.mjs", "intl-worker.mjs"))
-		b, err := os.ReadFile(filepath.Join(c.CatalogDir(), "intl-messages.mjs"))
+		b, err := os.ReadFile(filepath.Join(c.BuiltDir(), "intl-messages.mjs"))
 		must(err)
 		must(os.WriteFile(filepath.Join(*worker, "intl-messages.mjs"), b, 0o644))
 	}

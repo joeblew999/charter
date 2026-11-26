@@ -1,6 +1,6 @@
 //go:build js && wasm
 
-package cloud
+package bindings
 
 import (
 	"log"
@@ -19,7 +19,7 @@ func visit(ns *kv.Namespace) int {
 	n, _ := strconv.Atoi(get(ns, "visits"))
 	n++
 	if err := ns.PutString("visits", strconv.Itoa(n), nil); err != nil {
-		log.Printf("cloud: visit not counted: %v", err)
+		log.Printf("bindings: visit not counted: %v", err)
 	}
 	return n
 }

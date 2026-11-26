@@ -25,7 +25,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// The Cloudflare page (/cloud): a card for each thing Cloudflare gives the Worker. Each test uses one through the
+// The Cloudflare page (/bindings): a card for each thing Cloudflare gives the Worker. Each test uses one through the
 // page, as a reader would, and reads what its card then says.
 
 func page(t *testing.T, path string) string { return apptest.Get(t, path) }
@@ -35,13 +35,13 @@ func post(t *testing.T, path string, form url.Values) {
 	t.Helper()
 	req, _ := http.NewRequest("POST", base+path, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Referer", base+"/cloud")
+	req.Header.Set("Referer", base+"/bindings")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer res.Body.Close()
-	if res.StatusCode != 200 || !strings.HasSuffix(res.Request.URL.Path, "/cloud") {
+	if res.StatusCode != 200 || !strings.HasSuffix(res.Request.URL.Path, "/bindings") {
 		t.Fatalf("POST %s: HTTP %d at %s, want the page again", path, res.StatusCode, res.Request.URL)
 	}
 }
@@ -55,7 +55,7 @@ func soon(t *testing.T, what, want string) {
 		patience = 3 * time.Minute
 	}
 	for start := time.Now(); time.Since(start) < patience; time.Sleep(time.Second) {
-		if strings.Contains(page(t, "/cloud"), want) {
+		if strings.Contains(page(t, "/bindings"), want) {
 			return
 		}
 	}
@@ -63,32 +63,32 @@ func soon(t *testing.T, what, want string) {
 }
 
 func TestKVCountsVisits(t *testing.T) {
-	visits := regexp.MustCompile(`<p id="visits"[^>]*>(\d+)</p>`)
-	a, b := visits.FindStringSubmatch(page(t, "/cloud")), visits.FindStringSubmatch(page(t, "/cloud"))
+	visits := regexp.MustCompile(`<p id="visits" data-value="(\d+)"`)
+	a, b := visits.FindStringSubmatch(page(t, "/bindings")), visits.FindStringSubmatch(page(t, "/bindings"))
 	if a == nil || b == nil || a[1] == b[1] {
 		t.Errorf("visits: %v then %v, want a count that goes up", a, b)
 	}
 }
 
 func TestR2KeepsTheNote(t *testing.T) {
-	post(t, "/cloud/note", url.Values{"note": {"kept in a bucket"}})
-	if !strings.Contains(page(t, "/cloud"), `value="kept in a bucket"`) {
+	post(t, "/bindings/note", url.Values{"note": {"kept in a bucket"}})
+	if !strings.Contains(page(t, "/bindings"), `value="kept in a bucket"`) {
 		t.Error("the note is not on the page")
 	}
 }
 
 func TestQueueReachesItsConsumer(t *testing.T) {
-	post(t, "/cloud/queue", url.Values{"message": {"through the queue"}})
+	post(t, "/bindings/queue", url.Values{"message": {"through the queue"}})
 	soon(t, "the queue's consumer", ">through the queue</li>")
 }
 
 func TestCronTrigger(t *testing.T) {
-	want := `<p id="cron" class="text-sm" translate="no">*/5 * * * *`
+	want := `<p id="cron" data-value="*/5 * * * *`
 	if !apptest.Local() {
 		// Deployed, Cloudflare fires it every five minutes, and the page keeps showing the last run. Only a schedule
 		// deployed for the first time has not run yet (Cloudflare takes up to a quarter of an hour to start one):
 		// that is said, not waited for.
-		if !strings.Contains(page(t, "/cloud"), want) {
+		if !strings.Contains(page(t, "/bindings"), want) {
 			t.Skip("the Cron Trigger has not run yet: a new schedule starts within fifteen minutes of its first deploy")
 		}
 		return
@@ -103,7 +103,7 @@ func TestCronTrigger(t *testing.T) {
 }
 
 func TestVariableAndFetch(t *testing.T) {
-	p := page(t, "/cloud")
+	p := page(t, "/bindings")
 	for _, want := range []string{`translate="no">charter-example`, "GET https://example.com/ → 200"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("the page has no %q", want)
@@ -112,8 +112,8 @@ func TestVariableAndFetch(t *testing.T) {
 }
 
 func TestTheGermanPage(t *testing.T) {
-	if p := page(t, "/de/cloud"); !strings.Contains(p, "<h1") || !strings.Contains(p, "Was Cloudflare diesem Worker bereitstellt") {
-		t.Error("/de/cloud is not in German")
+	if p := page(t, "/de/bindings"); !strings.Contains(p, "<h1") || !strings.Contains(p, "Was Cloudflare diesem Worker bereitstellt") {
+		t.Error("/de/bindings is not in German")
 	}
 }
 
@@ -121,14 +121,14 @@ func TestEmail(t *testing.T) {
 	if !apptest.Local() {
 		// Deployed, the message goes from MAIL_FROM to MAIL_TO (the Worker's secret: an address verified in Email
 		// Routing), at most one an hour whoever asks. The card then says when the last one went.
-		post(t, "/cloud/email", url.Values{})
-		if !regexp.MustCompile(`<p id="sent"[^>]*>\d{4}-\d\d-\d\dT`).MatchString(page(t, "/cloud")) {
+		post(t, "/bindings/email", url.Values{})
+		if !regexp.MustCompile(`<p id="sent" data-value="\d{4}-\d\d-\d\dT`).MatchString(page(t, "/bindings")) {
 			t.Error("the page does not say when a message was last sent")
 		}
 		return
 	}
-	post(t, "/cloud/email", url.Values{"to": {"you@example.com"}})
-	if !strings.Contains(page(t, "/cloud"), "→ y…@example.com") {
+	post(t, "/bindings/email", url.Values{"to": {"you@example.com"}})
+	if !strings.Contains(page(t, "/bindings"), "→ y…@example.com") {
 		t.Error("the page does not say whom the message was sent to")
 	}
 	// wrangler dev hands the Worker a message posted here, as Email Routing would.
@@ -144,7 +144,12 @@ func TestEmail(t *testing.T) {
 // card is what the card called id shows.
 func card(t *testing.T, id string) string {
 	t.Helper()
-	m := regexp.MustCompile(`<p id="` + id + `"[^>]*>([^<]*)</p>`).FindStringSubmatch(page(t, "/cloud"))
+	html := page(t, "/bindings")
+	// A card that shows a count or a time through Intl keeps the plain value beside it.
+	m := regexp.MustCompile(`<p id="` + id + `" data-value="([^"]*)"`).FindStringSubmatch(html)
+	if m == nil {
+		m = regexp.MustCompile(`<p id="` + id + `"[^>]*>([^<]*)</p>`).FindStringSubmatch(html)
+	}
 	if m == nil {
 		t.Fatalf("the page has no card %q", id)
 	}

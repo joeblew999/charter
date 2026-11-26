@@ -3,36 +3,36 @@
 
 [site]
 # The page's title, in the browser's tab and in search results.
-title = "Messages, live"
+title = "Notes, live"
 # The page's description, in search results.
-description = "A small site on Cloudflare Workers in Go: post a message and it shows at once on every open page."
+description = "A small app on Cloudflare Workers in Go: write a note and it shows at once on every open page."
 
 [home]
 # The page's heading.
-heading = "Messages"
+heading = "Notes"
 # Under the heading.
-intro = "Post one, and it shows at once on every page open here."
+intro = "Write one, and it shows at once on every page open here."
 # The text field's hint and its label for screen readers.
-placeholder = "Say something"
-label = "Message"
-# The button that sends the message.
+placeholder = "Write a note"
+label = "Note"
+# The button that posts the note.
 post = "Post"
 # Above the list of languages at the foot of the page.
 languages = "Languages"
 
 # Text gsxui's own components write.
 
-[cloud]
-# The link from the home page to the Cloudflare page.
+[bindings]
+# The link from the home page to the page of what Cloudflare gives the Worker.
 link = "What Cloudflare gives this Worker"
 # The Cloudflare page: its title and description, in the tab and in search results.
 title = "Cloudflare, one card each"
-description = "KV, R2, Queues, Cron Triggers, fetch and variables on a Cloudflare Worker in Go, each used once, as simply as it can be."
+description = "KV, R2, Queues, D1, Cron Triggers, the Cache API, Durable Objects, sockets, fetch and email on a Cloudflare Worker in Go, each used once."
 # Its heading and the line under it.
 heading = "What Cloudflare gives this Worker"
 intro = "Each card uses one thing through workers-go's own package."
 # The link back to the home page.
-back = "Back to the messages"
+back = "Back to the notes"
 # Shown when the page runs outside a Worker (a test).
 off_workers = "This page is running outside a Worker, where there are no bindings: the cards are empty."
 # Each card's line of explanation, and its form's labels and buttons.
@@ -44,15 +44,15 @@ queues = "A message sent to a queue. The consumer takes it a moment later: open 
 message = "Message"
 send = "Send"
 cron = "The schedule that last ran, and when."
-d1 = "Rows in the D1 database, counted through workers-go's database/sql driver: the messages of the home page."
+d1 = "Rows in the D1 database, counted through workers-go's database/sql driver: the notes of the home page."
 cache = "A value kept in the Cache API for a minute. The first visit stores it; the next ones read it."
 object = "A Durable Object called through its stub: the hub behind the live list."
-socket = "A TCP socket opened to this site's own address, and the first line that came back."
+socket = "A TCP socket opened to another site, and the first line that came back."
 after = "Work that ran after the previous answer had been sent, and when it finished."
 request = "What Cloudflare knows of your request: country, city, time zone, data center, protocol."
-email = "A message sent through a send_email binding, and the last one Email Routing handed this Worker."
+email = "A message sent through a send_email binding, at most one an hour, and the last one Email Routing handed this Worker."
 email_to = "Send to"
-fetch = "A request this Worker made, to its own health check."
+fetch = "A request this Worker made to another site."
 vars = "A variable of the Worker, from wrangler.jsonc."
 
 [gsxui]

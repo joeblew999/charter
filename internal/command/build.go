@@ -73,7 +73,7 @@ func generate(p *project.Project) error {
 	if hasIntl(p) {
 		intl.Main([]string{"gen"})
 		if exists(filepath.Join(p.Root, "web")) {
-			intl.Main([]string{"assets", "-browser", filepath.Join("web", "intl")})
+			intl.Main([]string{"assets", "-browser", filepath.Join(".charter", "intl", "browser")})
 		}
 	}
 	if hasGSX(p) {

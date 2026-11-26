@@ -22,7 +22,7 @@
   // One hub wakes every open page when a message is posted (charter's hub.mjs).
   "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }],
-  // The Cloudflare page (/cloud): one binding of each kind, used through workers-go (package cloud).
+  // The Cloudflare page (/bindings): one binding of each kind, used through workers-go (package bindings).
   "kv_namespaces": [{ "binding": "KV" }],
   "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "charter-example" }],
   "queues": {

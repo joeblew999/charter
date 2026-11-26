@@ -10,6 +10,7 @@ package api
 import (
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -40,6 +41,12 @@ const END = "[end-of-stream]"
 // Note is a note as the API shows it: the table's row, as db/schema.sql has it (db.NotesRow, whose examples are the
 // schema's comments). A note is written down once, in the schema.
 type Note struct{ db.NotesRow }
+
+// Created is when the note was written: D1's CURRENT_TIMESTAMP, which is UTC.
+func (n Note) Created() time.Time {
+	t, _ := time.Parse("2006-01-02 15:04:05", n.CreatedAt)
+	return t
+}
 
 // Position is the note's place in the log: the only position anywhere, in every stream and cursor.
 func (n Note) Position() int64 { return n.ID }

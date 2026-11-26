@@ -51,14 +51,14 @@ func TestTheLanguages(t *testing.T) {
 		t.Errorf("/: lang %q dir %q", lang, dir)
 	}
 	home.Click(`footer a[hreflang=ar]`)
-	home.WaitText("h1", "الرسائل")
+	home.WaitText("h1", "الملاحظات")
 	if lang, dir, path := home.Attr("html", "lang"), home.Attr("html", "dir"), home.Path(); lang != "ar" || dir != "rtl" || path != "/ar/" {
 		t.Errorf("Arabic: lang %q dir %q at %s", lang, dir, path)
 	}
 	// The link to the other page keeps the language.
-	home.Click(`main a[href$="/cloud"]`)
+	home.Click(`main a[href$="/bindings"]`)
 	home.WaitText("h1", "Cloudflare")
-	if path := home.Path(); path != "/ar/cloud" {
+	if path := home.Path(); path != "/ar/bindings" {
 		t.Errorf("the Cloudflare page from Arabic is at %s", path)
 	}
 }

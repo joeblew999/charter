@@ -169,7 +169,7 @@ func get(url string) error {
 func ms(d time.Duration) float64 { return float64(d.Microseconds()) / 1000 }
 
 // generated are what a build writes, in an app: charter cache clean removes them.
-var generated = []string{"build", "dist", ".wrangler", ".charter", filepath.Join("web", "intl"), filepath.Join("sdk", "out")}
+var generated = []string{"build", "dist", ".wrangler", ".charter", filepath.Join("sdk", "out")}
 
 // modulePath is how a Go module path looks beside an npm package name: a host with a dot, then a path.
 var modulePath = regexp.MustCompile(`^[a-z0-9.-]+\.[a-z]+/`)

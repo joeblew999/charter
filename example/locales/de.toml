@@ -1,24 +1,24 @@
 # Deutsch (de): the translations of en.toml, same tables and keys. charter run intl:todo lists what is left.
 
 [site]
-title = "Nachrichten, live"
-description = "Eine kleine Website auf Cloudflare Workers in Go: Schreiben Sie eine Nachricht, und sie erscheint sofort auf jeder geöffneten Seite."
+title = "Notizen, live"
+description = "Eine kleine App auf Cloudflare Workers in Go: Schreiben Sie eine Notiz, und sie erscheint sofort auf jeder geöffneten Seite."
 
 [home]
-heading = "Nachrichten"
+heading = "Notizen"
 intro = "Schreiben Sie eine, und sie erscheint sofort auf jeder hier geöffneten Seite."
-placeholder = "Schreiben Sie etwas"
-label = "Nachricht"
+placeholder = "Schreiben Sie eine Notiz"
+label = "Notiz"
 post = "Senden"
 languages = "Sprachen"
 
-[cloud]
+[bindings]
 link = "Was Cloudflare diesem Worker bereitstellt"
 title = "Cloudflare, je eine Karte"
-description = "KV, R2, Queues, Cron Triggers, fetch und Variablen in einem Cloudflare Worker in Go, jedes einmal und so einfach wie möglich verwendet."
+description = "KV, R2, Queues, D1, Cron Triggers, die Cache API, Durable Objects, Sockets, fetch und E-Mail in einem Cloudflare Worker in Go, jedes einmal verwendet."
 heading = "Was Cloudflare diesem Worker bereitstellt"
 intro = "Jede Karte verwendet eine Sache über das eigene Paket von workers-go."
-back = "Zurück zu den Nachrichten"
+back = "Zurück zu den Notizen"
 off_workers = "Diese Seite läuft außerhalb eines Workers, wo es keine Bindings gibt: Die Karten sind leer."
 kv = "Ein Zähler in KV: wie oft diese Seite geöffnet wurde."
 r2 = "Eine Notiz, als ein Objekt in einem R2-Bucket gespeichert."
@@ -28,15 +28,15 @@ queues = "Eine Nachricht an eine Queue. Der Consumer holt sie einen Moment spät
 message = "Nachricht"
 send = "Senden"
 cron = "Der Zeitplan, der zuletzt lief, und wann."
-d1 = "Zeilen in der D1-Datenbank, gezählt über den database/sql-Treiber von workers-go: die Nachrichten der Startseite."
+d1 = "Zeilen in der D1-Datenbank, gezählt über den database/sql-Treiber von workers-go: die Notizen der Startseite."
 cache = "Ein Wert, der eine Minute lang in der Cache API liegt. Der erste Besuch speichert ihn, die nächsten lesen ihn."
 object = "Ein Durable Object, über seinen Stub aufgerufen: der Hub hinter der Live-Liste."
-socket = "Ein TCP-Socket zur eigenen Adresse dieser Website und die erste Zeile der Antwort."
+socket = "Ein TCP-Socket zu einer anderen Website und die erste Zeile der Antwort."
 after = "Arbeit, die lief, nachdem die vorige Antwort gesendet war, und wann sie fertig wurde."
 request = "Was Cloudflare über Ihre Anfrage weiß: Land, Stadt, Zeitzone, Rechenzentrum, Protokoll."
-email = "Eine Nachricht, über ein send_email-Binding gesendet, und die letzte, die Email Routing diesem Worker übergeben hat."
+email = "Eine Nachricht, über ein send_email-Binding gesendet, höchstens eine pro Stunde, und die letzte, die Email Routing diesem Worker übergeben hat."
 email_to = "Senden an"
-fetch = "Eine Anfrage dieses Workers an seinen eigenen Health-Check."
+fetch = "Eine Anfrage dieses Workers an eine andere Website."
 vars = "Eine Variable des Workers, aus wrangler.jsonc."
 
 [gsxui]

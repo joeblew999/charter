@@ -23,13 +23,13 @@ const ImportPath = "github.com/joeblew999/charter/intl"
 // PseudoCatalog is the en-XA catalog: the source, pseudo-localized (accented, bracketed, ~40% longer).
 const PseudoCatalog = "en-XA"
 
-// Generate is charter build: it writes what package intl needs beside the catalogs, and intl.sum:
+// Generate is charter build: it writes what package intl needs (messages.gen.go and intl.sum beside the catalogs, the runtime's files in .charter/intl):
 //
-//	intl-messages.mjs         every catalog as data for js/intl.mjs's message, which formats it with Intl
+//	.charter/intl/intl-messages.mjs  every catalog as data for js/intl.mjs's message, which formats it with Intl
 //	messages.gen.go               an intl.Msg per key (so a missing key is a compile error): a value for a message
 //	                          without arguments, a constructor for one with; the shipped locales, and their
 //	                          registration with intl
-//	intl-workerd/             Intl outside a Worker: intl's modules and intl-messages.mjs, which workerd serves (the
+//	.charter/intl/workerd/    Intl outside a Worker: intl's modules and intl-messages.mjs, which workerd serves (the
 //	                          package workerd; a Worker imports intl-messages.mjs itself)
 //	<gsxui>/i18n/messages.gen.go  with [intl] gsxui: the renderer for the text gsxui components write themselves
 //	<badge>                   with [intl] badge: the languages badge (badge.go)
@@ -68,7 +68,11 @@ func (p *Project) Generate(log io.Writer) error {
 	catalogs[PseudoCatalog] = pseudo
 
 	name := filepath.Base(dir)
-	if err := writeJS(filepath.Join(dir, "intl-messages.mjs"), name, append(ids, PseudoCatalog), catalogs); err != nil {
+	built := p.Config.BuiltDir()
+	if err := os.MkdirAll(built, 0o755); err != nil {
+		return err
+	}
+	if err := writeJS(filepath.Join(built, "intl-messages.mjs"), name, append(ids, PseudoCatalog), catalogs); err != nil {
 		return err
 	}
 
@@ -130,7 +134,7 @@ func (p *Project) Generate(log io.Writer) error {
 	if err := writeGo(filepath.Join(dir, "messages.gen.go"), b.String()); err != nil {
 		return err
 	}
-	if err := writeWorkerd(dir); err != nil {
+	if err := writeWorkerd(built); err != nil {
 		return err
 	}
 	if err := p.WriteSum(); err != nil {
@@ -228,10 +232,10 @@ func writeJS(path, dir string, ids []string, catalogs map[string][]any) error {
 	return writeFile(path, []byte(b.String()))
 }
 
-// writeWorkerd writes intl-workerd/ beside the catalogs in dir: what workerd serves outside a Worker, intl's modules
+// writeWorkerd writes workerd/ in dir (the app's .charter/intl), beside intl-messages.mjs: what workerd serves outside a Worker, intl's modules
 // and the catalogs.
 func writeWorkerd(dir string) error {
-	to := filepath.Join(dir, "intl-workerd")
+	to := filepath.Join(dir, "workerd")
 	if err := os.MkdirAll(to, 0o755); err != nil {
 		return err
 	}

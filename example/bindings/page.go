@@ -1,6 +1,6 @@
 //go:build js && wasm
 
-package cloud
+package bindings
 
 import "net/http"
 
@@ -38,14 +38,14 @@ func Read(r *http.Request) (State, error) {
 	return s, nil
 }
 
-// Post is the page's forms: /cloud/note, /cloud/email and /cloud/queue.
+// Post is the page's forms: /bindings/note, /bindings/email and /bindings/queue.
 func Post(r *http.Request) error {
 	switch r.URL.Path {
-	case "/cloud/note":
+	case "/bindings/note":
 		return keepNote(r.PostFormValue("note"))
-	case "/cloud/email":
+	case "/bindings/email":
 		return send(r.PostFormValue("to"))
-	case "/cloud/queue":
+	case "/bindings/queue":
 		return enqueue(r.PostFormValue("message"))
 	}
 	return http.ErrNotSupported

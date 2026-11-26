@@ -75,6 +75,11 @@ func (c Config) UIDir() string {
 // CatalogDir is the catalogs' directory.
 func (c Config) CatalogDir() string { return filepath.Join(c.Root, c.Catalogs) }
 
+// BuiltDir is where what charter builds from the catalogs for the runtime goes: .charter/intl in the app's folder,
+// with everything else a build writes and nobody edits or commits. (The Go package of messages, messages.gen.go,
+// stays with the catalogs: it is their package.)
+func (c Config) BuiltDir() string { return filepath.Join(c.Root, ".charter", "intl") }
+
 // Find is the languages of the app at or above dir (the folder with wrangler.jsonc or charter.toml), by convention:
 // the catalogs are locales/<locale>.toml, the languages are the catalogs there (en first, the source), and gsxui's
 // components are in ui/. charter.toml's [intl] says anything else, and what the folders cannot: notes for

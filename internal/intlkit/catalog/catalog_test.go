@@ -141,7 +141,7 @@ func TestGenerate(t *testing.T) {
 			t.Errorf("messages.gen.go lacks %q:\n%s", want, goSrc)
 		}
 	}
-	js := a.read("cat/intl-messages.mjs")
+	js := a.read(".charter/intl/intl-messages.mjs")
 	for _, want := range []string{`"de": [`, `["p",0,0,{"one":[["#"]," file"],"other":[["#"]," files"]}]`, `"Hallo, ",["a",0]`, `"en-XA": [`} {
 		if !strings.Contains(js, want) {
 			t.Errorf("intl-messages.mjs lacks %s:\n%s", want, js)

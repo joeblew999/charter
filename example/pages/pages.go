@@ -1,6 +1,6 @@
 // Package pages is the site's pages, as a tree structpages reads: every route is a field of Pages, with its route in
 // the field's tag. A page is a type with a Page component (and Props for its data); what a page calls is a type with
-// ServeHTTP. Links and form targets come from the tree ({ Cloud{} |> url }, { PostNote{} |> action }), never a path
+// ServeHTTP. Links and form targets come from the tree ({ Bindings{} |> url }, { PostNote{} |> action }), never a path
 // written as a string, and the pages search engines may index are the tree's GET pages.
 package pages
 
@@ -18,18 +18,18 @@ import (
 
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/example/api"
-	"github.com/joeblew999/charter/example/cloud"
+	"github.com/joeblew999/charter/example/bindings"
 )
 
 // Pages is the tree.
 type Pages struct {
-	home  Home  `route:"GET /{$} Home"`
-	cloud Cloud `route:"GET /cloud Cloud"`
+	home     Home     `route:"GET /{$} Home"`
+	bindings Bindings `route:"GET /bindings Cloud"`
 
 	// What the pages call: routes, not pages.
-	post   PostNote    `route:"POST /notes PostNote"`
-	stream NotesStream `route:"GET /notes/stream NotesStream"`
-	act    CloudAction `route:"POST /cloud/{action} CloudAction"`
+	post   PostNote       `route:"POST /notes PostNote"`
+	stream NotesStream    `route:"GET /notes/stream NotesStream"`
+	act    BindingsAction `route:"POST /bindings/{action} BindingsAction"`
 }
 
 // Mount mounts the tree: what app.App's Pages is. The call is here so that structpages-lint finds the tree and can
@@ -102,22 +102,22 @@ func (NotesStream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Cloud is the page of what Cloudflare gives the Worker, one card each (package cloud).
-type Cloud struct{}
+// Cloud is the page of what Cloudflare gives the Worker, one card each (package bindings).
+type Bindings struct{}
 
-func (Cloud) Props(r *http.Request) (cloud.State, error) { return cloud.Read(r) }
+func (Bindings) Props(r *http.Request) (bindings.State, error) { return bindings.Read(r) }
 
-// CloudAction is the Cloudflare page's forms (/cloud/note, /cloud/queue, /cloud/email): plain posts, answered with
+// BindingsAction is the Cloudflare page's forms (/bindings/note, /bindings/queue, /bindings/email): plain posts, answered with
 // a redirect back to the page.
-type CloudAction struct{}
+type BindingsAction struct{}
 
-func (CloudAction) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := cloud.Post(r); err != nil {
+func (BindingsAction) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if err := bindings.Post(r); err != nil {
 		fail(w, err)
 		return
 	}
 	// Back to the page, in the reader's language.
-	back, err := app.URL(r.Context(), Cloud{})
+	back, err := app.URL(r.Context(), Bindings{})
 	if err != nil {
 		fail(w, err)
 		return
