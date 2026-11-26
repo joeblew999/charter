@@ -2,7 +2,7 @@
 // and has a page of its own that shows it (pages: the group Built). Nothing is used before the page that needs it is
 // opened, or the note that needs it is written.
 //
-//	attachments.go   R2: a file attached to a note        drafts.go    KV: the note you have not posted yet
+//	attachments.go   R2: a file attached to a note        notice.go    KV: a line for everyone, on every visit
 //	activity.go      Queues, a Cron Trigger and D1: what happened, followed live through a Durable Object
 //	mail.go          email, out and in                    limits.go    a rate limit, and the Cache API
 //	outside.go       fetch and a TCP socket, to another site, when asked
@@ -53,11 +53,14 @@ func (a Attachment) At() time.Time { return stamp(a.CreatedAt) }
 // MaxFile is the largest file that may be attached.
 const MaxFile = 1 << 20
 
-// Draft is a note someone has typed and not posted: kept so that it is there on their next visit, on any device.
-type Draft struct {
-	Text  string
-	Saved time.Time
+// Notice is a line for everyone, which whoever may moderate writes: shown on the notes page to every reader.
+type Notice struct {
+	Text string
+	Set  time.Time
 }
+
+// MaxNotice is the longest notice.
+const MaxNotice = 200
 
 // Mail is the last message the Worker sent and the last it was handed. Addresses are kept shortened (a…@example.com):
 // the page is public.

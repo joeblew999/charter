@@ -6,12 +6,10 @@ import (
 	charter "github.com/joeblew999/charter/api"
 
 	"github.com/joeblew999/charter/example/api"
-	"github.com/joeblew999/charter/example/built"
 	"github.com/joeblew999/charter/example/locales"
 	"github.com/joeblew999/charter/example/pages/screens"
 	"github.com/joeblew999/charter/example/ui"
 	"github.com/joeblew999/charter/example/ui/icon"
-	"github.com/joeblew999/charter/intl"
 )
 
 // Page is the home page: the form, and the newest notes, newest first. The list follows the feed from the newest
@@ -19,6 +17,12 @@ import (
 // (hx-swap), and when it connects again it sends the id of the last event it had, so no note is lost or shown twice.
 component (p Home) Page(props HomeProps) {
 	<Layout title={locales.SiteTitle} description={locales.SiteDescription}>
+		// A line for everyone, when whoever may moderate has set one.
+		{ if props.Notice.Text != "" {
+			<ui.Alert id="notice">
+				<ui.AlertTitle dir="auto">{ props.Notice.Text }</ui.AlertTitle>
+			</ui.Alert>
+		} }
 		<ui.Card>
 			<ui.CardHeader>
 				<ui.CardTitle>
@@ -29,7 +33,7 @@ component (p Home) Page(props HomeProps) {
 			<ui.CardContent class="flex flex-col gap-4">
 				// Anyone reads; writing is for whoever is signed in.
 				{ if props.MayWrite {
-					<p.Form body={props.Draft.Text} refused={false}/>
+					<p.Form body="" refused={false}/>
 				} else {
 					<p id="sign-in-to-write" class="text-sm text-muted-foreground">
 						<ui.Button variant="link" class="px-0" href={screens.SignInPage{} |> url}>
@@ -71,25 +75,12 @@ component (p Home) Form(body string, refused bool) {
 			dir="auto"
 			placeholder={locales.HomePlaceholder}
 			aria-label={locales.HomeLabel}
-			hx-post={DraftSave{} |> url}
-			hx-trigger="input changed delay:700ms"
-			hx-target={Home.Saved |> target}
-			hx-swap="innerHTML"
 			{ if refused {
 				aria-invalid="true"
 			} }
 		/>
 		<ui.Button type="submit">{ locales.HomePost }</ui.Button>
-		// When what is typed was last kept as a draft (DraftSave answers with it).
-		<span id={Home.Saved |> id} class="w-full text-xs text-muted-foreground"></span>
 	</form>
-}
-
-// Saved says when the draft was kept: what DraftSave answers with as the reader types, put under the field.
-component (p Home) Saved(draft built.Draft) {
-	{ if !draft.Saved.IsZero() {
-		{ locales.BuiltDraftSaved(intl.Since(draft.Saved)) }
-	} }
 }
 
 // List is the notes of the list, each with what the reader may do with it.

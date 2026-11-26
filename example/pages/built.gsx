@@ -35,9 +35,9 @@ component (p BuiltIndex) Page(f built.Facts) {
 				uses={[]string{"Queues", "Cron Triggers", "D1", "Durable Objects"}}
 			/>
 			<BuiltLink
-				href={DraftsPage{} |> url}
-				title={locales.BuiltDraftsTitle}
-				about={locales.BuiltDraftsAbout}
+				href={NoticePage{} |> url}
+				title={locales.BuiltNoticeTitle}
+				about={locales.BuiltNoticeAbout}
 				uses={[]string{"KV"}}
 			/>
 			<BuiltLink
@@ -230,24 +230,33 @@ component (p ActivityPage) Row(a built.Activity) {
 	</li>
 }
 
-component (p DraftsPage) Page(v DraftsView) {
-	<BuiltPage title={locales.BuiltDraftsTitle} about={locales.BuiltDraftsAbout} uses={[]string{"KV"}}>
-		{ if !v.Caller.SignedIn() {
-			<SignInFirst/>
-		} else {
-			<ui.Card>
-				<ui.CardContent class="flex flex-col gap-2 pt-6">
-					{ if v.Draft.Saved.IsZero() {
-						<p id="draft" class="text-sm text-muted-foreground">{ locales.BuiltDraftNone }</p>
-					} else {
-						<p id="draft" dir="auto">{ v.Draft.Text }</p>
-						<p class="text-xs text-muted-foreground">{ locales.BuiltDraftSaved(intl.Since(v.Draft.Saved)) }</p>
-					} }
-					<ui.Button variant="outline" size="sm" class="self-start" href={Home{} |> url}>
-						{ locales.BuiltDraftWrite }
-					</ui.Button>
-				</ui.CardContent>
-			</ui.Card>
+component (p NoticePage) Page(v NoticeView) {
+	<BuiltPage title={locales.BuiltNoticeTitle} about={locales.BuiltNoticeAbout} uses={[]string{"KV"}}>
+		<ui.Card>
+			<ui.CardContent class="flex flex-col gap-2 pt-6">
+				{ if v.Notice.Text == "" {
+					<p id="notice-now" class="text-sm text-muted-foreground">{ locales.BuiltNoticeNone }</p>
+				} else {
+					<p id="notice-now" dir="auto">{ v.Notice.Text }</p>
+					<p class="text-xs text-muted-foreground">{ v.Notice.Set |> since }</p>
+				} }
+				<p class="text-xs text-muted-foreground">{ locales.BuiltNoticeDelay }</p>
+			</ui.CardContent>
+		</ui.Card>
+		{ if v.MaySet {
+			<form id="set-notice" method="post" action={NoticeSet{} |> url} class="flex flex-wrap gap-2">
+				<ui.Input
+					name="notice"
+					class="flex-1"
+					value={v.Notice.Text}
+					maxlength={strconv.Itoa(built.MaxNotice)}
+					autocomplete="off"
+					dir="auto"
+					placeholder={locales.BuiltNoticeLine}
+					aria-label={locales.BuiltNoticeLine}
+				/>
+				<ui.Button type="submit">{ locales.BuiltNoticeSet }</ui.Button>
+			</form>
 		} }
 	</BuiltPage>
 }

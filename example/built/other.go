@@ -26,17 +26,15 @@ func Record(context.Context, cloud.DB, string, int64, string, int64) error {
 func Recent(context.Context, int) ([]Activity, int64, error)         { return nil, 0, nil }
 func Attachments(context.Context) ([]Attachment, error)              { return nil, nil }
 func NotesBy(context.Context, charter.Caller) ([]db.NotesRow, error) { return nil, nil }
-func DraftOf(context.Context, string) (Draft, error)                 { return Draft{}, nil }
-func SaveDraft(context.Context, string, string) (Draft, error) {
-	return Draft{}, cloud.ErrNotCloudflare
-}
-func MailNow(context.Context) (Mail, error)               { return Mail{}, nil }
-func SendMail(context.Context) error                      { return cloud.ErrNotCloudflare }
-func UseLimit(string) (Limit, error)                      { return Limit{}, cloud.ErrNotCloudflare }
-func ReportNow(*http.Request) (Report, error)             { return Report{}, nil }
-func Fetch(context.Context) Outside                       { return Outside{Failed: true} }
-func Socket(context.Context) Outside                      { return Outside{Failed: true} }
-func Detach(context.Context, charter.Caller, int64) error { return cloud.ErrNotCloudflare }
+func NoticeNow(context.Context) (Notice, error)                      { return Notice{}, nil }
+func SetNotice(context.Context, string) (Notice, error)              { return Notice{}, cloud.ErrNotCloudflare }
+func MailNow(context.Context) (Mail, error)                          { return Mail{}, nil }
+func SendMail(context.Context) error                                 { return cloud.ErrNotCloudflare }
+func UseLimit(string) (Limit, error)                                 { return Limit{}, cloud.ErrNotCloudflare }
+func ReportNow(*http.Request) (Report, error)                        { return Report{}, nil }
+func Fetch(context.Context) Outside                                  { return Outside{Failed: true} }
+func Socket(context.Context) Outside                                 { return Outside{Failed: true} }
+func Detach(context.Context, charter.Caller, int64) error            { return cloud.ErrNotCloudflare }
 
 func Attach(context.Context, charter.Caller, string, string, int64, []byte) (Attachment, error) {
 	return Attachment{}, cloud.ErrNotCloudflare

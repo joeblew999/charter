@@ -52,11 +52,9 @@ func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, tar
 		return HomeProps{}, api.Note{}, false, false, err
 	}
 	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...), Caller: caller}
-	if props.MayWrite {
-		// One read of KV, for someone who may write: their draft. A reader who is nobody costs none.
-		if props.Draft, err = built.DraftOf(r.Context(), caller.Subject); err != nil {
-			return HomeProps{}, api.Note{}, false, false, err
-		}
+	// One read of KV, for every reader: what it is for.
+	if props.Notice, err = built.NoticeNow(r.Context()); err != nil {
+		return HomeProps{}, api.Note{}, false, false, err
 	}
 	if len(notes) > 0 {
 		props.After = notes[0].ID
@@ -93,17 +91,11 @@ component (p Home) Form(body string, refused bool) {
 			dir="auto"
 			placeholder={locales.HomePlaceholder}
 			aria-label={locales.HomeLabel}
-			hx-post={DraftSave{} |> url}
-			hx-trigger="input changed delay:700ms"
-			hx-target={Home.Saved |> target}
-			hx-swap="innerHTML"
 			{ if refused {
 				aria-invalid="true"
 			} }
 		/>
 		<ui.Button type="submit">{ locales.HomePost }</ui.Button>
-		// When what is typed was last kept as a draft (DraftSave answers with it).
-		<span id={Home.Saved |> id} class="w-full text-xs text-muted-foreground"></span>
 	</form>
 }
 ```
@@ -134,8 +126,6 @@ func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Stor
 	if _, err := api.Post(r.Context(), store, caller, body); err != nil {
 		return err
 	}
-	// Posted, it is a draft no longer.
-	built.SaveDraft(r.Context(), caller.Subject, "")
 	return structpages.RenderComponent(Home{}.Form("", false))
 }
 ```

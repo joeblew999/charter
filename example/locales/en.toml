@@ -60,12 +60,13 @@ activity_about = "Each note is put on a queue and recorded a moment later; once 
 wrote = "{author} wrote a note"
 summary = "{count, plural, one {# note} other {# notes}} in the last day"
 activity_empty = "Nothing has happened yet."
-# Drafts (KV). {when} is how long ago.
-drafts_title = "Drafts"
-drafts_about = "What you type on the notes page is kept until you post it, so it is there on your next visit, on any device."
-draft_saved = "Saved {when}"
-draft_none = "You have no draft."
-draft_write = "Write a note"
+# The notice (KV): a line whoever may moderate sets for everyone.
+notice_title = "Notice"
+notice_about = "A line for everyone on the notes page, set by whoever may moderate. It is read on every visit and written rarely: what a key-value store is for."
+notice_line = "A line for everyone"
+notice_set = "Show it"
+notice_none = "No notice."
+notice_delay = "A change may take up to a minute to show everywhere."
 # Mail (email out and in). {to} and {from} are shortened addresses, {when} how long ago.
 mail_title = "Mail"
 mail_about = "The Worker sends a message to its owner, at most one an hour, and shows the last one it was handed."

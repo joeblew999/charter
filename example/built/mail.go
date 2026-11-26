@@ -18,7 +18,7 @@ import (
 
 // MailNow is the last message sent and the last received.
 func MailNow(context.Context) (Mail, error) {
-	ns, err := drafts()
+	ns, err := store()
 	if err != nil {
 		return Mail{}, err
 	}
@@ -43,7 +43,7 @@ func SendMail(ctx context.Context) error {
 	if err != nil || time.Now().Before(now.MayNotSendBefore) {
 		return err
 	}
-	ns, err := drafts()
+	ns, err := store()
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func SendMail(ctx context.Context) error {
 // onEmail keeps who wrote, and the subject, of each message Email Routing hands the Worker.
 func onEmail() {
 	cloud.ConsumeEmail(func(_ context.Context, m *cloud.EmailMessage) error {
-		ns, err := drafts()
+		ns, err := store()
 		if err != nil {
 			return err
 		}

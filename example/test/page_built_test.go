@@ -11,7 +11,6 @@ import (
 
 	"github.com/joeblew999/charter/app/apptest"
 	"github.com/joeblew999/charter/example/pages"
-	"github.com/joeblew999/charter/example/pages/screens"
 	notes "github.com/joeblew999/charter/example/sdk/go"
 	"github.com/joeblew999/charter/example/sdk/go/option"
 )
@@ -44,7 +43,8 @@ func as(t *testing.T, secret, method, path, contentType string, body io.Reader) 
 func soon(t *testing.T, what, path, want string) string {
 	t.Helper()
 	var html string
-	for start := time.Now(); time.Since(start) < 30*time.Second; time.Sleep(300 * time.Millisecond) {
+	// Up to what KV takes to show a change everywhere, and a queue to hand a message over.
+	for start := time.Now(); time.Since(start) < 90*time.Second; time.Sleep(500 * time.Millisecond) {
 		if html = apptest.Get(t, path); strings.Contains(html, want) {
 			return html
 		}
@@ -57,8 +57,8 @@ func soon(t *testing.T, what, path, want string) string {
 // in every language the app has, in that language.
 func TestTheOverviewOfHowItIsBuilt(t *testing.T) {
 	html := apptest.Get(t, at(pages.BuiltIndex{}))
-	for _, want := range []string{"How it&#39;s built", "Attachments", "Activity", "Drafts", "Mail", "Limits and cache", "Outside", `id="facts"`, "charter-example",
-		at(pages.AttachmentsPage{}), at(pages.ActivityPage{}), at(pages.DraftsPage{}), at(pages.MailPage{}), at(pages.LimitsPage{}), at(pages.OutsidePage{})} {
+	for _, want := range []string{"How it&#39;s built", "Attachments", "Activity", "Notice", "Mail", "Limits and cache", "Outside", `id="facts"`, "charter-example",
+		at(pages.AttachmentsPage{}), at(pages.ActivityPage{}), at(pages.NoticePage{}), at(pages.MailPage{}), at(pages.LimitsPage{}), at(pages.OutsidePage{})} {
 		if !strings.Contains(html, want) {
 			t.Errorf("the overview has no %s", want)
 		}
@@ -140,25 +140,22 @@ func TestTheDaysCountFromTheCronTrigger(t *testing.T) {
 	}
 }
 
-// What someone types on the notes page is kept as they type, is there on the drafts page, and is gone once posted.
-func TestADraftIsKeptUntilItIsPosted(t *testing.T) {
-	page := apptest.Browser(t)
-	page.SignUp(at(screens.SignInPage{}), "Drafter")
-	page.Open(at(pages.Home{}))
-	text := "a draft, " + time.Now().Format("150405.000000")
-	page.Type(el(pages.Home.Form)+` input[name=body]`, text)
-	page.WaitText(el(pages.Home.Saved), "Saved")
-	page.Open(at(pages.DraftsPage{}))
-	page.WaitText("#draft", text)
-	// It is in the form again on the notes page; posted, it is a draft no longer.
-	page.Open(at(pages.Home{}))
-	if kept := page.Attr(el(pages.Home.Form)+` input[name=body]`, "value"); kept != text {
-		t.Errorf("the form has %q, want the draft", kept)
+// A line set by whoever may moderate is shown to everyone on the notes page; a member may not set one. KV answers
+// with what it had for a while after a change, which is why this waits, and why a notice is what KV is given to do.
+func TestANoticeForEveryone(t *testing.T) {
+	line := "a notice, " + time.Now().Format("150405.000000")
+	form := "notice=" + strings.ReplaceAll(line, " ", "+")
+	if res := as(t, "WRITE_TOKEN", "POST", at(pages.NoticeSet{}), "application/x-www-form-urlencoded", strings.NewReader(form)); res.StatusCode != http.StatusForbidden {
+		t.Errorf("a writer who may not moderate setting the notice: HTTP %d, want 403", res.StatusCode)
 	}
-	page.Click(el(pages.Home.Form) + ` button[type=submit]`)
-	page.WaitText(el(pages.Home.List), text)
-	page.Open(at(pages.DraftsPage{}))
-	page.WaitText("#draft", "no draft")
+	if res := as(t, "ADMIN_TOKEN", "POST", at(pages.NoticeSet{}), "application/x-www-form-urlencoded", strings.NewReader(form)); res.StatusCode != http.StatusSeeOther {
+		t.Fatalf("setting the notice: HTTP %d", res.StatusCode)
+	}
+	t.Cleanup(func() {
+		as(t, "ADMIN_TOKEN", "POST", at(pages.NoticeSet{}), "application/x-www-form-urlencoded", strings.NewReader("notice=")).Body.Close()
+	})
+	soon(t, "the notice on the notes page", at(pages.Home{}), line)
+	soon(t, "the notice on its own page", at(pages.NoticePage{}), line)
 }
 
 // The Worker sends its owner a message and is handed one: the page says to whom and from whom, shortened, and when.

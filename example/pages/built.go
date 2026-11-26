@@ -30,8 +30,8 @@ type Built struct {
 	activity       ActivityPage   `route:"GET /activity Activity"`
 	activityStream ActivityStream `route:"GET /activity/stream ActivityStream"`
 
-	drafts    DraftsPage `route:"GET /drafts Drafts"`
-	saveDraft DraftSave  `route:"POST /drafts DraftSave"`
+	notice    NoticePage `route:"GET /notice Notice"`
+	setNotice NoticeSet  `route:"POST /notice NoticeSet"`
 
 	mail     MailPage `route:"GET /mail Mail"`
 	sendMail MailSend `route:"POST /mail MailSend"`
@@ -156,32 +156,35 @@ func (ActivityStream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// DraftsPage is the note the reader has typed and not posted (KV).
-type DraftsPage struct{}
+// NoticePage is the line for everyone (KV), and the form that sets it.
+type NoticePage struct{}
 
-// DraftsView is the reader, and their draft.
-type DraftsView struct {
-	Caller charter.Caller
-	Draft  built.Draft
+// NoticeView is the notice, and whether the reader may set it.
+type NoticeView struct {
+	Notice built.Notice
+	MaySet bool
 }
 
-func (DraftsPage) Props(r *http.Request, caller charter.Caller) (DraftsView, error) {
-	draft, err := built.DraftOf(r.Context(), caller.Subject)
-	return DraftsView{caller, draft}, err
+func (NoticePage) Props(r *http.Request, caller charter.Caller) (NoticeView, error) {
+	notice, err := built.NoticeNow(r.Context())
+	return NoticeView{notice, caller.May(NoticeSet{}.Needs()...)}, err
 }
 
-// DraftSave keeps what is being typed on the notes page, and answers with when it was kept.
-type DraftSave struct{}
+// NoticeSet shows a line to everyone, and goes back to the page.
+type NoticeSet struct{}
 
-// Needs is someone signed in: a draft is someone's.
-func (DraftSave) Needs() []string { return nil }
+// Needs is whoever may moderate: what everyone sees is theirs to say.
+func (NoticeSet) Needs() []string { return []string{"moderate"} }
 
-func (DraftSave) ServeHTTP(w http.ResponseWriter, r *http.Request, caller charter.Caller) error {
-	draft, err := built.SaveDraft(r.Context(), caller.Subject, r.PostFormValue("body"))
+func (NoticeSet) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
+	if _, err := built.SetNotice(r.Context(), r.PostFormValue("notice")); err != nil {
+		return err
+	}
+	back, err := structpages.URLFor(r.Context(), NoticePage{})
 	if err != nil {
 		return err
 	}
-	return structpages.RenderComponent(Home{}.Saved(draft))
+	return app.Redirect{To: back}
 }
 
 // MailPage is the last message sent and the last received (email).

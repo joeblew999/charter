@@ -71,8 +71,8 @@ type HomeProps struct {
 	MayWrite bool
 	// Caller is the reader: each note's row asks whether they may take it away.
 	Caller charter.Caller
-	// Draft is what the reader typed here and did not post (package built: KV keeps it), for someone signed in.
-	Draft built.Draft
+	// Notice is the line for everyone (package built: KV keeps it), empty when there is none.
+	Notice built.Notice
 }
 
 // Open says whether a note's row shows when it was written in full: what the row's own button asks for.
@@ -101,11 +101,9 @@ func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, tar
 		return HomeProps{}, api.Note{}, false, false, err
 	}
 	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...), Caller: caller}
-	if props.MayWrite {
-		// One read of KV, for someone who may write: their draft. A reader who is nobody costs none.
-		if props.Draft, err = built.DraftOf(r.Context(), caller.Subject); err != nil {
-			return HomeProps{}, api.Note{}, false, false, err
-		}
+	// One read of KV, for every reader: what it is for.
+	if props.Notice, err = built.NoticeNow(r.Context()); err != nil {
+		return HomeProps{}, api.Note{}, false, false, err
 	}
 	if len(notes) > 0 {
 		props.After = notes[0].ID
@@ -146,8 +144,6 @@ func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Stor
 	if _, err := api.Post(r.Context(), store, caller, body); err != nil {
 		return err
 	}
-	// Posted, it is a draft no longer.
-	built.SaveDraft(r.Context(), caller.Subject, "")
 	return structpages.RenderComponent(Home{}.Form("", false))
 }
 
