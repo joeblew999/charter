@@ -64,11 +64,20 @@ func (p *Page) js(what, expression string) string {
 	return value
 }
 
+// try is js for a page that may be between two documents (a click that navigates): no value is not a failure, and
+// whoever waits asks again.
+func (p *Page) try(expression string) (string, bool) {
+	ctx, cancel := context.WithTimeout(p.ctx, 5*time.Second)
+	defer cancel()
+	value, err := chromedp.Run(ctx, chromedp.Evaluate[string](expression))
+	return value, err == nil
+}
+
 // until waits for an element a CSS selector names to be in the page.
 func (p *Page) until(selector string) {
 	p.t.Helper()
 	for start := time.Now(); time.Since(start) < wait; time.Sleep(50 * time.Millisecond) {
-		if p.js("look for "+selector, fmt.Sprintf(`String(!!document.querySelector(%q))`, selector)) == "true" {
+		if found, _ := p.try(fmt.Sprintf(`String(!!document.querySelector(%q))`, selector)); found == "true" {
 			return
 		}
 	}
@@ -126,8 +135,10 @@ func (p *Page) WaitText(selector, text string) {
 	p.t.Helper()
 	var got string
 	for start := time.Now(); time.Since(start) < wait; time.Sleep(100 * time.Millisecond) {
-		if got = p.js("read "+selector, fmt.Sprintf(`document.querySelector(%q)?.textContent ?? ""`, selector)); strings.Contains(got, text) {
-			return
+		if now, ok := p.try(fmt.Sprintf(`document.querySelector(%q)?.textContent ?? ""`, selector)); ok {
+			if got = now; strings.Contains(got, text) {
+				return
+			}
 		}
 	}
 	p.t.Fatalf("%s never showed %q; it shows:\n%s", selector, text, strings.TrimSpace(got))
