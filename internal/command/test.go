@@ -159,6 +159,17 @@ func serving(p *project.Project, body func(base string) error) error {
 // servingOn is serving on an address of the machine other than its own name: "0.0.0.0", for what asks from a
 // container. body gets the port too.
 func servingOn(p *project.Project, ip string, body func(base string, port int) error) error {
+	return servingWith(p, served{ip: ip}, body)
+}
+
+// served is how a Worker is started for something to ask it.
+type served struct {
+	ip    string            // another address of the machine than its name
+	env   map[string]string // more of the environment wrangler dev and its build get
+	local bool              // on the app's own local state (its database as charter dev has it), not a new one
+}
+
+func servingWith(p *project.Project, how served, body func(base string, port int) error) error {
 	bin, err := npm(p, "wrangler")
 	if err != nil {
 		return err
@@ -167,23 +178,28 @@ func servingOn(p *project.Project, ip string, body func(base string, port int) e
 	if err != nil {
 		return err
 	}
-	state, err := os.MkdirTemp("", "charter-state-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(state)
 	quiet := map[string]string{"WRANGLER_SEND_METRICS": "false", "CI": "1"}
-	if err := migrate(p, quiet, "--local", "--persist-to", state); err != nil {
-		return err
+	for k, v := range how.env {
+		quiet[k] = v
 	}
 	// By name, not by number: a passkey belongs to a host name, and a page with sign-in is tested at one.
 	base := "http://localhost:" + strconv.Itoa(ports[0])
-	server := run.Server{
-		Command: []string{bin, "dev", "--port", strconv.Itoa(ports[0]), "--inspector-port", strconv.Itoa(ports[1]), "--persist-to", state, "--show-interactive-dev-session=false", "--test-scheduled"},
-		Dir:     p.Root, Env: quiet, Ready: base + p.HealthPath(),
+	command := []string{bin, "dev", "--port", strconv.Itoa(ports[0]), "--inspector-port", strconv.Itoa(ports[1]), "--show-interactive-dev-session=false", "--test-scheduled"}
+	if !how.local {
+		// A database of its own, made new and thrown away: what is asked changes nothing a developer has.
+		state, err := os.MkdirTemp("", "charter-state-")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(state)
+		if err := migrate(p, quiet, "--local", "--persist-to", state); err != nil {
+			return err
+		}
+		command = append(command, "--persist-to", state)
 	}
-	if ip != "" {
-		server.Command = append(server.Command, "--ip", ip)
+	if how.ip != "" {
+		command = append(command, "--ip", how.ip)
 	}
+	server := run.Server{Command: command, Dir: p.Root, Env: quiet, Ready: base + p.HealthPath()}
 	return run.With(server, func() error { return body(base, ports[0]) })
 }

@@ -78,6 +78,13 @@ func vet(p *project.Project) error {
 	if err := run.Run(p.Root, nil, "go", "vet", "./..."); err != nil {
 		return err
 	}
+	// The seed is Go like the rest (db/seed.go, built only for charter run db:seed): a seed that no longer fits
+	// the schema or the queries fails here, not the day someone needs it.
+	if exists(filepath.Join(p.Root, "db", "seed.go")) {
+		if err := run.Run(p.Root, nil, "go", "vet", "-tags", "seed", "./db/..."); err != nil {
+			return err
+		}
+	}
 	worker := map[string]string{"GOOS": "js", "GOARCH": "wasm"}
 	if err := run.Run(p.Root, worker, "go", "vet", "."); err != nil {
 		return err

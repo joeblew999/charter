@@ -20,6 +20,9 @@ import (
 
 const library = "github.com/joeblew999/charter"
 
+// seedBuild is set for the wrangler dev that charter run db:seed starts: its build has the app's seed.
+const seedBuild = "CHARTER_SEED"
+
 // devBuilt is set for the wrangler dev that charter dev runs: the build is already there.
 const devBuilt = "CHARTER_DEV_BUILT"
 
@@ -122,7 +125,12 @@ func wasm(p *project.Project, limit int, again bool) error {
 		}
 	}
 	out := filepath.Join("build", "app.wasm")
-	if err := run.Run(p.Root, map[string]string{"GOOS": "js", "GOARCH": "wasm"}, "go", "build", "-trimpath", "-ldflags=-s", "-o", out, "."); err != nil {
+	build := []string{"build", "-trimpath", "-ldflags=-s"}
+	// For charter run db:seed: the Worker with the app's seed in it (db/seed.go, built only then).
+	if os.Getenv(seedBuild) != "" {
+		build = append(build, "-tags", "seed")
+	}
+	if err := run.Run(p.Root, map[string]string{"GOOS": "js", "GOARCH": "wasm"}, "go", append(build, "-o", out, ".")...); err != nil {
 		return err
 	}
 	dir, err := run.Output(p.Root, nil, "go", "list", "-m", "-f", "{{.Dir}}", library)

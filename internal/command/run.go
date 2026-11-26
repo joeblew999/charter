@@ -56,8 +56,8 @@ var tasks = []task{
 	{"db:status", "which migrations of db/migrations have run", db("migrations", "list")},
 	{"db:migrate", "the migrations that have not run, applied (charter dev and charter deploy do this themselves; the migrations are written from db/schema.sql by charter check --fix)", db("migrations", "apply")},
 	{"db:execute", "one statement: charter run db:execute \"SELECT count(*) FROM notes\"", dbExecute},
-	{"db:seed", "db/seed.sql run on the database", dbSeed},
-	{"db:reset", "the local database made again from db/migrations, then db/seed.sql when there is one", dbReset},
+	{"db:seed", "the local database made again and filled by the app's seed: db/seed.go (Go, the app's own queries) or db/seed.sql", dbSeed},
+	{"db:reset", "the local database made again from db/migrations, and seeded when the app has a seed", dbReset},
 	{"db:export", "the database as SQL: charter run db:export backup.sql", dbExport},
 	// The components (gsxui).
 	{"ui:list", "the components charter add ui:<name> accepts", func(p *project.Project, a []string) {

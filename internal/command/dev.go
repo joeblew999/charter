@@ -49,7 +49,14 @@ func Dev(args []string) {
 	check(os.RemoveAll(devDir(p)))
 	check(os.MkdirAll(devDir(p), 0o755))
 	check(generate(p)) // the first build needs the messages and Vite's manifest
+	// A database that is made here for the first time starts with the app's seed, so the first page has something
+	// on it. One that is there is a developer's own, and is left as it is.
+	fresh := !exists(filepath.Join(p.Root, ".wrangler", "state", "v3", "d1"))
 	check(migrate(p, map[string]string{"WRANGLER_SEND_METRICS": "false"}, "--local"))
+	if fresh && hasSeed(p) {
+		say("a new local database: seeding it (go tool charter run db:seed makes it again any time)")
+		check(seedLocal(p))
+	}
 	if c, err := intlconfig.Find(p.Root); err == nil && hasIntl(p) {
 		go watch(p, "languages", "messages", func() []string {
 			files, _ := filepath.Glob(filepath.Join(c.CatalogDir(), "*.toml"))

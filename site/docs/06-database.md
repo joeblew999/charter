@@ -89,6 +89,55 @@ A column's comment becomes its tag in Go, so the row is also what the API serves
 type Note struct{ db.NotesRow }
 ```
 
+## Seeding
+
+A seed is what a new checkout's database starts with. It is Go, with the app's own queries, so a column that changes breaks it when it is compiled, not when someone needs it.
+
+```go file=../example/db/seed.go#seed
+func seed(_ context.Context, conn cloud.DB) error {
+	people := []struct{ id, name, role string }{
+		{"seed-ada", "Ada", "admin"},
+		{"seed-grace", "Grace", "moderator"},
+		{"seed-lin", "Lin", "member"},
+	}
+	for _, p := range people {
+		// The people's table is the sign-in screen's, with no query of the app's own.
+		if err := cloud.Exec(conn, "INSERT INTO users (id, name, role) VALUES (?, ?, ?)", p.id, p.name, p.role); err != nil {
+			return err
+		}
+	}
+	notes := []struct {
+		by   int
+		body string
+	}{
+		{2, "Lin here. A member writes notes, and takes away their own."},
+		{1, "Grace, moderating: I can take away anyone's note."},
+		{0, "Ada, the admin: I say who is what, on the people page."},
+		{2, "Sign up with a passkey and write one yourself."},
+	}
+	for _, n := range notes {
+		if _, err := CreateNote(conn, n.body, people[n.by].id, people[n.by].name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+```
+
+```go
+//go:build seed
+
+func init() { app.Seed("DB", seed) }
+```
+
+```sh
+go tool charter run db:seed
+```
+
+That makes the local database again (its rows gone, the migrations run) and fills it. `charter dev` does the same for a database it has just made, so the first page has something on it; a database that is there is yours, and is left alone.
+
+The seed runs where the app's database code always runs, in a Worker: charter starts one here, built with the seed in it, asks it to run, and stops it. A Worker that is deployed has none of it, and `db:seed` refuses a deployed database. `db/seed.sql` works too, for plain SQL.
+
 ## By hand
 
-`go tool charter run db:status`, `db:execute "…"`, `db:reset`, `db:seed`, `db:export`. Each is for the local database, or the deployed one with `--deployed`.
+`go tool charter run db:status`, `db:execute "…"`, `db:export`: each for the local database, or the deployed one with `--deployed`. `db:seed` and `db:reset` make the local database again, and only that one.

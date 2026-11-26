@@ -14,7 +14,7 @@ go tool charter dev
 
 ## Working on it
 
-`dev` runs the app on the real runtime: workers-go on wrangler dev, with the bindings of `wrangler.jsonc`. Leave it running and run everything else beside it.
+`dev` runs the app on the real runtime: workers-go on wrangler dev, with the bindings of `wrangler.jsonc`. The first time, it makes the local database and fills it with the app's [seed](06-database.md). Leave it running and run everything else beside it.
 
 | You save | What happens | On the page after about |
 |---|---|---|

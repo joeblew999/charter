@@ -30,6 +30,9 @@ func TestDev(t *testing.T) {
 	if sum, err := os.ReadFile("locales/intl.sum"); err == nil {
 		t.Cleanup(func() { os.WriteFile("locales/intl.sum", sum, 0o644) })
 	}
+	// A checkout that has no local database yet gets one, seeded: the first page has people's notes on it.
+	_, err := os.Stat(".wrangler/state/v3/d1")
+	fresh := err != nil
 	dev := exec.Command("go", "tool", "charter", "dev")
 	own(dev)
 	out, err := dev.StdoutPipe()
@@ -107,6 +110,9 @@ func TestDev(t *testing.T) {
 	}
 
 	until("charter dev serves the page", "/", "<h1>Notes</h1>")
+	if fresh {
+		until("a new local database is seeded", "/", "Grace, moderating")
+	}
 	until("its scripts are Vite's dev server's", "/", `src="/__vite/web/main.js"`)
 	until("a variable is wrangler.jsonc's", "/api/hello", "Hello from charter-example")
 

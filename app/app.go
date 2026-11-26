@@ -112,6 +112,47 @@ type App struct {
 	tree   *structpages.StructPages
 }
 
+// Seed registers what fills the app's database for a developer: the rows a new checkout starts with (charter run
+// db:seed; charter dev, on a database it has just made). It is written in db/seed.go, a file that is built only for
+// that (//go:build seed), with the app's own typed queries, and runs in a Worker started on this machine, on the
+// real database binding: a seed is never part of a Worker that is deployed.
+//
+//	//go:build seed
+//
+//	func init() { app.Seed("DB", func(ctx context.Context, conn cloud.DB) error { … }) }
+func Seed(binding string, fill func(ctx context.Context, db cloud.DB) error) {
+	seeds = append(seeds, seed{binding, fill})
+}
+
+type seed struct {
+	binding string
+	fill    func(ctx context.Context, db cloud.DB) error
+}
+
+var seeds []seed
+
+// SeedPath is where charter asks a Worker built with its seed to run it.
+const SeedPath = "/__charter/seed"
+
+// seeded runs the seeds, for a request from this machine.
+func seeded(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost || !local(r) {
+		http.Error(w, "a seed runs for charter, on this machine", http.StatusForbidden)
+		return
+	}
+	for _, s := range seeds {
+		db, err := cloud.Open(s.binding)
+		if err == nil {
+			err = s.fill(r.Context(), db)
+		}
+		if err != nil {
+			http.Error(w, "the seed failed: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	w.Write([]byte("seeded"))
+}
+
 // Run serves the app as a Worker and never returns.
 func (a *App) Run() { Run(a.Handler()) }
 
@@ -215,6 +256,11 @@ func (a *App) Handler() http.Handler {
 		// starts warm, what a health check asks.
 		if r.URL.Path == "/healthz" {
 			w.Write([]byte("ok"))
+			return
+		}
+		// A Worker built with the app's seed (charter run db:seed) runs it when charter asks.
+		if r.URL.Path == SeedPath && len(seeds) > 0 {
+			seeded(w, r)
 			return
 		}
 		// One address per page: a deployed site asked over http answers with the https one. (A zone can do this
