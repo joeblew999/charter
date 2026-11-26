@@ -1,5 +1,6 @@
 # What a command writes and nobody edits: GitHub folds it in a diff and leaves it out of the language count.
 *.gen.go          linguist-generated
+db/migrations/**  linguist-generated
 *.x.go            linguist-generated
 fern/**           linguist-generated
 sdk/**            linguist-generated

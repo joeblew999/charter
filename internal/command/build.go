@@ -6,10 +6,12 @@ import (
 	"flag"
 	"fmt"
 	"github.com/joeblew999/charter/internal/command/intl"
+	"github.com/joeblew999/charter/internal/dbcode"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -30,7 +32,7 @@ const devBuilt = "CHARTER_DEV_BUILT"
 // main.go embeds).
 func Build(args []string) {
 	fs := flag.NewFlagSet("charter build", flag.ExitOnError)
-	only := fs.String("only", "", `"generate": stop once the Go that go test and go vet need is written; "messages": the languages alone, as charter dev compiles them on a change to a catalog`)
+	only := fs.String("only", "", `"generate": stop once the Go that go test and go vet need is written; "messages": the languages alone, as charter dev compiles them on a change to a catalog; "db": the schema alone, likewise`)
 	dev := fs.Bool("dev", false, "the Wasm only: what charter dev runs on each save, after gsx has regenerated")
 	limit := fs.Int("limit", 0, "fail when build/app.wasm is more than this many bytes gzipped (default: charter.toml's [build] limit)")
 	fs.Parse(args)
@@ -45,6 +47,12 @@ func Build(args []string) {
 	}
 	if *dev {
 		check(wasm(p, 0))
+		return
+	}
+	if *only == "db" {
+		// As charter dev does on a change to db/schema.sql or db/queries.sql: the migration for the change, the
+		// queries' Go, and the local database brought to the schema.
+		check(pushSchema(p))
 		return
 	}
 	if *only == "messages" {
@@ -144,4 +152,30 @@ func wasm(p *project.Project, limit int) error {
 		return fmt.Errorf("%s is %d bytes gzipped, over the limit of %d", out, buf.Len(), limit)
 	}
 	return nil
+}
+
+// pushSchema is what Void calls db push: the local database follows db/schema.sql as it is edited. The migration for
+// what is not committed yet is written again from the schema, the queries' Go with it, and the local database gets
+// it. When that migration replaces one the local database already had, the local database is made again from the
+// migrations (and db/seed.sql): a database for developing on is one that can be made again.
+func pushSchema(p *project.Project) error {
+	if len(p.Worker.D1) == 0 || p.DB == "" {
+		return nil
+	}
+	dir := filepath.Join(p.Root, p.Worker.D1[0].MigrationsDir())
+	before, _ := filepath.Glob(filepath.Join(dir, "*.sql"))
+	if err := dbcode.Write(p.Root, p.DB, false); err != nil {
+		return err
+	}
+	after, _ := filepath.Glob(filepath.Join(dir, "*.sql"))
+	replaced := false
+	for _, f := range before {
+		replaced = replaced || !slices.Contains(after, f)
+	}
+	if replaced {
+		say("the local database is made again: the migration being worked on changed")
+		dbReset(p, nil)
+		return nil
+	}
+	return migrate(p, nil, "--local")
 }

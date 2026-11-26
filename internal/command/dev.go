@@ -42,6 +42,7 @@ func Dev(args []string) {
 	if hasIntl(p) {
 		go watchLanguages(p)
 	}
+	go watchSchema(p)
 	// As gsx's flags take them: a command line, split on spaces. go tool charter is this charter, by the app's go.mod.
 	gsx := []string{"tool", "gsx", "dev", "--build", "go tool charter build -dev", "--run", "go tool charter dev -worker"}
 	check(passthrough(p, "go", append(gsx, args...)...))
@@ -101,5 +102,39 @@ func watchLanguages(p *project.Project) {
 			continue
 		}
 		fmt.Println("charter dev: languages compiled")
+	}
+}
+
+// watchSchema keeps the local database and the queries' Go in step with db/schema.sql and db/queries.sql for as long
+// as dev runs (charter build -only db): edit the schema, save, and the page has the new column.
+func watchSchema(p *project.Project) {
+	files := []string{filepath.Join(p.Root, "db", "schema.sql"), filepath.Join(p.Root, "db", "queries.sql"), filepath.Join(p.Root, "db", "seed.sql")}
+	stamp := func() string {
+		var b strings.Builder
+		for _, f := range files {
+			if info, err := os.Stat(f); err == nil {
+				fmt.Fprintf(&b, "%s %d %d\n", f, info.Size(), info.ModTime().UnixNano())
+			}
+		}
+		return b.String()
+	}
+	last := stamp()
+	if last == "" {
+		return
+	}
+	for range time.Tick(500 * time.Millisecond) {
+		now := stamp()
+		if now == last {
+			continue
+		}
+		last = now
+		// As its own program: SQL half-written fails this run, not dev.
+		cmd := exec.Command(self(), "build", "-only", "db")
+		cmd.Dir = p.Root
+		if out, err := cmd.CombinedOutput(); err != nil {
+			fmt.Printf("charter dev: the schema did not work out (fix db/schema.sql or db/queries.sql and save again):\n%s", out)
+			continue
+		}
+		fmt.Println("charter dev: database and queries follow db/schema.sql")
 	}
 }

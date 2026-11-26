@@ -22,7 +22,8 @@ func TestAsCommitted(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			got, err := GoQueries(r, "db")
+			schema, _ := os.ReadFile(filepath.Join(dir, "db", "schema.sql"))
+			got, err := GoQueries(r, "db", Tags(string(schema)))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -60,7 +61,7 @@ func TestCommands(t *testing.T) {
 	query := func(name, cmd string) string {
 		return `{"name":"` + name + `","cmd":"` + cmd + `","text":"DELETE FROM notes WHERE id < ?","params":[{"number":1,"column":{"name":"id","not_null":true,"type":{"name":"INTEGER"}}}]}`
 	}
-	got, err := GoQueries(request(query("Trim", ":execrows")+","+query("Clear", ":exec")), "api")
+	got, err := GoQueries(request(query("Trim", ":execrows")+","+query("Clear", ":exec")), "api", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +76,7 @@ func TestCommands(t *testing.T) {
 	if strings.Contains(got, "//go:build") {
 		t.Error("the code has a build constraint: it must build off Workers")
 	}
-	if _, err := GoQueries(request(query("Copy", ":copyfrom")), "api"); err == nil || !strings.Contains(err.Error(), ":execrows") {
+	if _, err := GoQueries(request(query("Copy", ":copyfrom")), "api", nil); err == nil || !strings.Contains(err.Error(), ":execrows") {
 		t.Errorf("a :copyfrom query: %v", err)
 	}
 }

@@ -13,8 +13,9 @@ import (
 // own D1 command on the app's database: the one the binding of wrangler.jsonc's first d1_databases entry names, with
 // its migrations in db/migrations. The local database (wrangler dev's) unless --deployed is given.
 //
-// The schema is the migrations: SQL files, applied in order, which charter dev applies locally before it serves and
-// charter deploy applies remotely. The queries are db/queries.sql, which charter check --fix writes as typed Go.
+// The schema is db/schema.sql. Its migrations are written from it (charter check --fix; charter dev as it is
+// edited), applied locally by charter dev and remotely by charter deploy. The queries are db/queries.sql, written as
+// typed Go.
 
 // where is the binding of the app's database and wrangler's flag for which one: --local, or --remote for --deployed
 // (taken out of args).
@@ -45,13 +46,6 @@ func db(group, verb string) func(*project.Project, []string) {
 		binding, flag := where(p, &args)
 		d1(p, flag, append([]string{group, verb, binding}, args...)...)
 	}
-}
-
-func dbNew(p *project.Project, args []string) {
-	if len(args) != 1 {
-		check(errors.New("usage: charter run db:new <name>   (add_tags)"))
-	}
-	check(wrangler(p, nil, "d1", "migrations", "create", p.Worker.D1[0].Binding, args[0]))
 }
 
 func dbExecute(p *project.Project, args []string) {

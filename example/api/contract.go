@@ -14,6 +14,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	charter "github.com/joeblew999/charter/api"
+	"github.com/joeblew999/charter/example/db"
 )
 
 // What the specs say about the API as a whole.
@@ -36,14 +37,11 @@ var WriteLimit = charter.Limit{Binding: "WRITE_LIMIT", Limit: 100, Period: 60}
 // Upstream: fern-api/fern#17939 (when fixed: the Rust generator escapes it, so any text would do)
 const END = "[end-of-stream]"
 
-// Note is the one resource.
-type Note struct {
-	ID        int64  `json:"id" example:"42"`
-	Body      string `json:"body" example:"Buy milk"`
-	CreatedAt string `json:"created_at" example:"2026-10-01 12:00:00"`
-}
+// Note is a note as the API shows it: the table's row, as db/schema.sql has it (db.NotesRow, whose examples are the
+// schema's comments). A note is written down once, in the schema.
+type Note struct{ db.NotesRow }
 
-// Position is the note's place in the log: the only position anywhere (docs/self/streaming.md, rule 1).
+// Position is the note's place in the log: the only position anywhere, in every stream and cursor.
 func (n Note) Position() int64 { return n.ID }
 
 // The resume position in every stream: a note id, as an opaque string like list's cursor.

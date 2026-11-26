@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -120,6 +121,26 @@ func TestDev(t *testing.T) {
 
 	edit("wrangler.jsonc", `"APP_NAME": "charter-example"`, `"APP_NAME": "charter-example, renamed"`)
 	until("a variable in wrangler.jsonc", "/api/hello", "Greetings from charter-example, renamed")
+
+	// The schema: a table added to db/schema.sql is in the local database a moment later (its migration written,
+	// and applied), with nothing run by hand.
+	t.Cleanup(func() {
+		pending, _ := filepath.Glob("db/migrations/*create_scratch*.sql")
+		for _, f := range pending {
+			os.Remove(f)
+		}
+	})
+	edit("db/schema.sql", "CREATE TABLE notes (", "CREATE TABLE scratch (id INTEGER PRIMARY KEY, label TEXT);\n\nCREATE TABLE notes (")
+	for start := time.Now(); ; time.Sleep(time.Second) {
+		out, _ := exec.Command("go", "tool", "charter", "run", "db:execute", "SELECT name FROM sqlite_master WHERE name = 'scratch'").CombinedOutput()
+		if strings.Contains(string(out), `"name": "scratch"`) {
+			t.Log("✓ a table added to db/schema.sql is in the local database")
+			break
+		}
+		if time.Since(start) > 60*time.Second {
+			t.Fatalf("✗ the schema's new table never reached the local database\n%s\n%s", out, log.String())
+		}
+	}
 
 	// A build that fails keeps the last version that worked; mending it brings the new one.
 	broken, err := os.ReadFile("api/handlers.go")

@@ -1,5 +1,5 @@
--- The notes' queries, against the schema in migrations/. charter spec writes them as Go functions over
--- charter/d1 (api/queries.go), their types worked out by sqlc.
+-- The notes' queries, against schema.sql. charter check --fix writes them as Go functions over
+-- charter/cloud (queries.gen.go), their types worked out by sqlc.
 
 -- name: CreateNote :one
 INSERT INTO notes (body) VALUES (?) RETURNING id, body, created_at;

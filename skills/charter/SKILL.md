@@ -13,9 +13,10 @@ tree rendered with gsx, and charter finds every part by where it is. Change the 
 |---|---|---|
 | A page or its route | `pages/`: a type in the tree (`pages.Pages`) with a `Page` component | the running `charter dev` reloads it |
 | A link or a form's target | `{ Page{} \|> url }`, `{ Action{} \|> action }`: never a path as a string | |
+| A type the API serves that is a table's row | embed the row (`type Note struct{ db.NotesRow }`); its examples are the schema's comments (`-- example: 42; doc: …`) | |
 | An API operation | `api/contract.go` and its handler | `go tool charter check --fix` writes `fern/`; `go tool charter pack -publish` the Go SDK |
 | What is followed live | one `live.Feed` (`api.Notes` in the example): `Publish` after the write, `Fragments` for a page, `Events` and `Lines` for the API | |
-| The database's schema | a new idempotent `db/migrations/NNNN_name.sql` | `go tool charter deploy` applies it |
+| The database's schema | `db/schema.sql`: the tables as they are now. A renamed column says `-- was: old_name` on its line | the running `charter dev` brings the local database to it; `go tool charter check --fix` writes the migration (never write one by hand); `go tool charter deploy` applies it |
 | A query | `db/queries.sql` | `go tool charter check --fix` writes `db/queries.gen.go` |
 | A binding, a variable | `wrangler.jsonc`, without ids: the first deploy makes the resource | the running `charter dev` reloads |
 | Browser code or CSS | `web/` (Vite); `go tool charter add <npm package>` | |
@@ -24,7 +25,7 @@ tree rendered with gsx, and charter finds every part by where it is. Change the 
 | A UI component | `go tool charter add ui:dialog` | |
 | A test of a page | `test/page_*_test.go`: `apptest.Browser(t)` (Chrome): `Open`, `Type`, `Click`, `WaitText`, `Tab` | `go tool charter test`, and `--deployed` |
 | A test of the API | `test/api_test.go`, through `sdk/go` | the same |
-| The database by hand | `go tool charter run db:status`, `db:new <name>`, `db:reset`, `db:seed`, `db:execute "…"` (`--deployed` for the deployed one) | |
+| The database by hand | `go tool charter run db:status`, `db:reset`, `db:seed`, `db:execute "…"` (`--deployed` for the deployed one) | |
 
 ## Rules
 
@@ -37,7 +38,7 @@ tree rendered with gsx, and charter finds every part by where it is. Change the 
   `cron.ScheduleTaskNonBlock`, `queues.ConsumeNonBlock`, `cloud.ConsumeEmail`.
 - **Memory between requests is a cache, never state**: any request may start a new Go runtime.
 - **D1 has no interactive transactions**: single statements with `RETURNING`, or `cloud.Batch`.
-- Never hand-write what a command generates: `*.gen.go`, `*.x.go`, `fern/`, `sdk/`, `build/`, `dist/`. Never run
+- Never hand-write what a command generates: `db/migrations/`, `*.gen.go`, `*.x.go`, `fern/`, `sdk/`, `build/`, `dist/`. Never run
   gsx, gsxui's migrations, sqlc or structpages-lint by hand either: `dev`, `check --fix` and `test` run them.
 - `.claude/skills/` is written by `go tool charter install` from the modules `go.mod` pins: don't edit or commit it.
 - The app is `(&app.App{Name, Dist, Pages, API}).Run()` and `<app.Head title=… description=…/>`: never wire Vite,

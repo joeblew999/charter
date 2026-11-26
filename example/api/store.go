@@ -19,7 +19,7 @@ func Open() (Store, error) {
 
 func (s Store) Create(_ context.Context, body string) (Note, error) {
 	row, err := db.CreateNote(s.DB, body)
-	return Note(row), err
+	return Note{row}, err
 }
 
 // Before is the notes with an id below before, newest first, at most limit.
@@ -41,7 +41,7 @@ func (s Store) Latest(context.Context) (int64, error) { return db.NewestNote(s.D
 func notes(rows []db.NotesRow) []Note {
 	out := make([]Note, len(rows))
 	for i, row := range rows {
-		out[i] = Note(row)
+		out[i] = Note{row}
 	}
 	return out
 }

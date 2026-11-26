@@ -66,6 +66,10 @@ func main() {
   files): none of it is committed. `check --fix` writes what is committed and held to its source: `db/queries.gen.go`,
   `fern/`, `sdk/go/`. Everything generated is named for it (`*.gen.go`, `*.x.go`) or in a folder of its own, and
   `.gitattributes` marks it.
+- **The database.** `db/schema.sql` is the one place a table is written down. `dev` keeps the local database in step
+  with it as you edit; `check --fix` writes the migration for what changed (one for everything not yet committed) and
+  the typed Go for `db/queries.sql`; `deploy` applies it. A column's comment (`-- example: 42`) becomes its tag, so
+  the row is also what the API's contract serves: a note is written down once.
 - **The upstream tools.** `gsx generate`, `gsx fmt`, `gsx dev`, `gsxui migrate rtl`, `structpages-lint`, `sqlc`,
   `vite build`, `wrangler d1 migrations apply` all run inside `dev`, `check`, `test` and `deploy`, at the moment
   they are needed.
@@ -83,7 +87,7 @@ folder.
 | `test` | The Worker on wrangler dev: the standard API test, `test/` (pages in a real browser, the API through its own SDK), the search-engine audit. `--deployed` asks the deployed one the same |
 | `deploy` | `wrangler deploy` and the D1 migrations. The first deploy makes the database, KV namespace, bucket and queue `wrangler.jsonc` names |
 | `pack` | The SDKs, from the contract |
-| `run <task>` | Everything that is no verb, by what it is about: `intl:translate`, `intl:status`, `seo:audit`, `seo:lighthouse`, `db:status`, `db:new`, `db:reset`, `db:seed`, `db:execute`, `db:export`, `ui:list`, `ui:theme`, `logs`, `bench`, and the app's own. Alone, it lists them |
+| `run <task>` | Everything that is no verb, by what it is about: `intl:translate`, `intl:status`, `seo:audit`, `seo:lighthouse`, `db:status`, `db:reset`, `db:seed`, `db:execute`, `db:export`, `ui:list`, `ui:theme`, `logs`, `bench`, and the app's own. Alone, it lists them |
 | `add`, `remove` | `add locale:de`, `add ui:dialog`, a Go module, an npm package |
 | `build`, `preview`, `fmt`, `lint`, `install`, `exec`, `update`, `outdated`, `upgrade`, `staged`, `cache`, `env` | As in Vite+ |
 

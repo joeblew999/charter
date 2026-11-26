@@ -51,8 +51,7 @@ var tasks = []task{
 	}},
 	// The database (D1, through wrangler). The local one by default; --deployed is the deployed one.
 	{"db:status", "which migrations of db/migrations have run", db("migrations", "list")},
-	{"db:migrate", "the migrations that have not run, applied (charter dev and charter deploy do this themselves)", db("migrations", "apply")},
-	{"db:new", "a new, empty migration in db/migrations: charter run db:new add_tags", dbNew},
+	{"db:migrate", "the migrations that have not run, applied (charter dev and charter deploy do this themselves; the migrations are written from db/schema.sql by charter check --fix)", db("migrations", "apply")},
 	{"db:execute", "one statement: charter run db:execute \"SELECT count(*) FROM notes\"", dbExecute},
 	{"db:seed", "db/seed.sql run on the database", dbSeed},
 	{"db:reset", "the local database made again from db/migrations, then db/seed.sql when there is one", dbReset},
