@@ -205,9 +205,9 @@ curl -H "Authorization: Bearer ch_seed_grace" -X DELETE http://localhost:5173/ap
 
 What keeps this safe:
 
-- **The seed never ships.** It is built only when charter seeds, and `charter deploy` builds without it whatever the environment says. A deployed Worker has neither the people nor their tokens.
+- **The seed never ships.** It is built only when charter seeds, and `charter deploy` builds without it whatever the environment says. A deployed Worker never has the seed in it, and a deployed database never has a seeded token.
 - **Nothing is dropped for a seed that does not build.** It is compiled first, and `check` compiles it on every push.
-- **Only the local database.** `db:seed` takes no flag, and refuses one it does not know.
+- **The local database, unless you say otherwise twice.** `db:seed` alone fills the local one and refuses a flag it does not know. The deployed one needs `--deployed` and then the Worker's name ([below](#a-deployed-database)).
 - **It runs where the app's database code always runs:** in a Worker charter starts here, on the real binding. Beside a running `charter dev` it works in place, with no restart.
 
 `db/seed.sql` works too, for plain SQL, in place of `seed.go`.
@@ -227,4 +227,4 @@ The seed still runs on your machine: a Worker started here, built with the seed,
 
 ## By hand
 
-`go tool charter run db:status`, `db:execute "…"`, `db:export`: each for the local database, or the deployed one with `--deployed`. `db:seed` and `db:reset` make the local database again, and only that one.
+`go tool charter run db:status`, `db:execute "…"`, `db:export`: each for the local database, or the deployed one with `--deployed`. `db:reset` makes the local database again, and only that one; `db:seed` does too, and fills a deployed one only as [above](#a-deployed-database).

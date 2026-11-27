@@ -28,6 +28,8 @@ go tool charter test             # the Worker on wrangler dev
 go tool charter test --deployed  # the deployed one: the same tests, and the audit
 ```
 
+The local Worker starts on a database of its own, made new, filled by the app's [seed](06-database.md#seeding) and thrown away: a test can count on the seed's people and notes, and changes nothing you have. The deployed Worker's database is real, which is why a test leaves it as it found it ([below](#a-test-leaves-the-worker-as-it-found-it)), and why a test that needs the seed's tokens runs only locally (`apptest.Local()`): a deployed database never has them.
+
 ## A page, in a real browser
 
 ```go file=../example/test/page_home_test.go#TestANoteShowsOnEveryOpenPage

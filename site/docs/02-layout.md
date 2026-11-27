@@ -6,7 +6,9 @@ charter finds everything by where it is. There is nothing to configure for any o
 pages/         the page tree and its components
 pages/screens/ charter's screens: the docs' pages, the languages, the theme switch
 api/           contract.go: the API
-db/            schema.sql, queries.sql, seed.sql
+db/            schema.sql, queries.sql; the migrations charter writes from them
+seed.go        what a new database starts with, and what the tests know is there
+fnox.toml      the deployed Worker's secrets: their names and who keeps them, never a value
 docs/          the app's docs, as Markdown
 locales/       <language>.toml: the languages are the files here
 web/  public/  what the browser loads

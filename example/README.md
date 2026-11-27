@@ -16,7 +16,8 @@ go tool charter deploy                           # then: go tool charter test --
 | `pages/` | The page tree (structpages): the home page with its live list, the pages of how it's built (`Built`), and the routes they call |
 | `api/` | The notes API's contract and handlers; `api.Notes` is the one feed behind the page's list and the API's stream; `api.Auth`, `api.Roles` and `api.MayRemove` are who may do what, for the pages and the API alike |
 | `db/` | `schema.sql`, the tables as they are now, and `queries.sql`; charter writes `migrations/` and `queries.gen.go` from them |
-| `seed.go`, `api/fixtures.go` | What the local database starts with, and what the tests know is there: three people, one of each role, with a token each (`ch_seed_ada`, `ch_seed_grace`, `ch_seed_lin`), and their notes |
+| `fnox.toml` | The deployed Worker's secrets: their names and the provider that keeps each, never a value (`go tool charter run secrets`) |
+| `seed.go`, `api/fixtures.go` | What the local database starts with, and what the tests know is there: three people, one of each role, with a token each (`ch_seed_ada`, `ch_seed_grace`, `ch_seed_lin`), and their notes. The deployed example is filled by the same seed (`go tool charter run db:seed --deployed charter-example`), without the tokens |
 | `built/` | What the app does with what Cloudflare gives a Worker, one job each, through workers-go's own packages: a file attached to a note (R2), what happened (Queues, a Cron Trigger, D1, followed live through a Durable Object), a notice for everyone (KV), mail, a rate limit and the cache, a request to another site |
 | `locales/` | English, German, Arabic |
 | `docs/` | The app's own docs, as Markdown |
