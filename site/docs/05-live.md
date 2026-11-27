@@ -32,12 +32,41 @@ func Post(ctx context.Context, store Store, by charter.Caller, body string) (Not
 
 | For | Call | What it sends |
 |---|---|---|
-| An open page | `Notes.Fragments(w, r, render)` | each item as HTML, which htmx swaps into the list |
+| An open page | `Notes.Signal(since, after, "li")` and `Notes.Since(ctx, after, limit)` | "there is something new", and then the rows, as that reader sees them |
 | An SDK client | `Notes.Events(ctx, w, positions, seconds, end)` | each item as JSON over server-sent events |
 | A WebSocket | `Notes.Lines(ctx, w, positions)` | each item as a line of JSON |
 
 Write a note on [the home page](../) in one tab and it appears in another. Create one through the SDK and it appears there too.
 
+## A page's stream holds no Go
+
+A Go runtime takes 13 MB or more of a Worker's 128 MB for as long as it serves a request, and a stream is a request that lasts minutes. Served by Go, a handful of open pages took a Worker over its memory, and Cloudflare ended it with every request it was answering (a 503 for each; `exceededMemory` in its analytics).
+
+So a page's stream is the hub's, a small Durable Object in JavaScript, and it says one thing: there is something after the position you have, ask for it.
+
+```gsx
+<ul hx-sse:connect={notesSignal(ctx, props.After)} hx-swap="afterbegin">
+```
+
+```go
+func notesSignal(ctx context.Context, after int64) (string, error) {
+	since, err := structpages.URLFor(ctx, NotesSince{})
+	return api.Notes.Signal(since, after, "li"), err
+}
+
+func (NotesSince) ServeHTTP(w http.ResponseWriter, r *http.Request, caller charter.Caller) error {
+	notes, err := api.Notes.Since(r.Context(), r.URL.Query().Get("after"), 50)
+	if err != nil {
+		return err
+	}
+	return structpages.RenderComponent(Home{}.List(notes, caller))
+}
+```
+
+Each event of the stream is one hidden element that htmx puts where the items go, and that asks `NotesSince` for itself. That is a short, ordinary request: Go renders the new rows for that reader, in their language, with the buttons they may use, and they take the element's place. A thousand open pages cost the Worker nothing while nothing happens.
+
+The API's stream for SDK clients (`Events`) is still a Go handler: it ends after the seconds its caller asked for.
+
 ## Resuming
 
-Every event's id is the item's position in the log. A browser sends the last one it had when it reconnects, and an SDK client passes `after`. Nothing in between is lost.
+Every event's id is the item's position in the log. A browser sends the last one it was told of when it reconnects, and is told at once to ask from there; an SDK client passes `after`. The log is the truth, so nothing in between is lost.

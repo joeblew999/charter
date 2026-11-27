@@ -12,7 +12,12 @@
 // memory to collect. Here a runtime that has finished a request waits for the next one.
 //
 //   - A runtime serves one request at a time. A request that finds none waiting starts its own,
-//     exactly as workers-go does, so nothing waits for another request.
+//     exactly as workers-go does, so nothing waits for another request, while there is memory for one.
+//   - The runtimes of an isolate share its memory, and Cloudflare ends a Worker that takes more than 128 MB,
+//     with every request it was answering (they get a 503, and its analytics say exceededMemory). So what all
+//     of them hold together is counted, from each one's own WebAssembly memory, and kept under a budget: a
+//     runtime that would wait for the next request above it is let go instead, the largest first, and a request
+//     that would have to start one above it waits a moment for one that is serving to finish.
 //   - A runtime is reused when its handler has returned (app.Serve says so). After an error it is
 //     dropped.
 //   - A runtime is dropped before Go's collector would run in it: Go says when its heap has no
@@ -66,7 +71,20 @@ new ReadableStream({
 	},
 });
 
-const MAX_WAITING = 4; // runtimes kept for the next request; each holds its Go heap (8 MB)
+// Where a page's stream is asked for: LIVE, then the Durable Object binding of the hub and the feed's name (the Go
+// package live writes the address: Feed.Signal).
+const LIVE = "/__charter/live/";
+
+const MAX_WAITING = 4; // runtimes kept for the next request
+
+// Memory. A runtime of the standard compiler starts at some 13 MB of WebAssembly memory and grows as its heap does;
+// that memory never shrinks. BUDGET is what all the runtimes of the isolate may hold together: the rest of the
+// 128 MB is the module's compiled code and the JavaScript around it.
+const MB = 1048576;
+const BUDGET = 80 * MB;
+const NEW = 14 * MB; // what a runtime that has just started holds
+const WAIT = 3000; // how long a request waits for a runtime to finish before it starts one over the budget, in ms
+const LOOK = 20; // how often it looks for one, in ms
 
 // workers-go's Go code calls this.
 globalThis.tryCatch = fn => {
@@ -80,7 +98,26 @@ globalThis.tryCatch = fn => {
 // goWorker is a Worker (its fetch) over the workers-go build beside this file (runtime.mjs).
 export function goWorker({ createRuntimeContext, loadModule } = build) {
 	const waiting = [];
-	let warmFailure = ""; // why no runtime was started while the module loaded, for the x-go-runtime header
+	const alive = new Set(); // every runtime that holds memory: waiting, or serving
+	let warmFailure = "";
+
+	// held is the WebAssembly memory a runtime holds: what the isolate is charged for it.
+	const held = runtime => runtime.go._inst?.exports?.mem?.buffer?.byteLength ?? NEW;
+	const total = () => {
+		let sum = 0;
+		for (const runtime of alive) sum += held(runtime);
+		return sum;
+	};
+
+	// retire lets a runtime go: it is given no more requests and is no longer counted, and with nothing left
+	// that refers to it, its memory goes when the engine collects it. It is not stopped: it may still be
+	// finishing what a request left it to do after its answer (cloudflare.WaitUntil), and a request whose work
+	// is cut off is one the Workers runtime ends as hung.
+	function retire(runtime) {
+		alive.delete(runtime);
+		const at = waiting.indexOf(runtime);
+		if (at >= 0) waiting.splice(at, 1);
+	}
 
 	// begin starts a runtime. Go's start-up runs inside go.run, up to workers.Ready(): started says
 	// whether it got there before go.run returned, isReady resolves when it does.
@@ -90,6 +127,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		binding.EmailMessage = EmailMessage;
 		const context = createRuntimeContext({ env, ctx, binding });
 		const runtime = { go, binding, context, started: false, served: 0, warm: Boolean(warm) };
+		alive.add(runtime);
 		runtime.isReady = new Promise(resolve => {
 			// The runtime's seed is the first random bytes it takes, before any of the program's code runs (the scheduler
 			// starts before package initialisers), through the same import as crypto/rand. While the module loads,
@@ -128,9 +166,12 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 					},
 				},
 			});
-			go.run(instance, context).catch(error => {
-				if (warm) warmFailure = `start-up failed while the module loaded: ${String((error && error.stack) || error).replace(/\s+/g, " ").slice(0, 900)}`;
-			});
+			go.run(instance, context)
+				.catch(error => {
+					if (warm) warmFailure = `start-up failed while the module loaded: ${String((error && error.stack) || error).replace(/\s+/g, " ").slice(0, 900)}`;
+				})
+				// A Go program that has ended, however it did, holds nothing the isolate should count or keep.
+				.finally(() => retire(runtime));
 		});
 		return runtime;
 	}
@@ -141,6 +182,25 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		return runtime;
 	}
 
+	// runtimeFor is a runtime for one request or event: one that is waiting, or a new one. When a new one would take
+	// the isolate over its budget, it first waits for one that is serving to finish (WAIT at most): a request that is
+	// a moment late is answered, and one that takes the Worker over its memory ends it, with everything in flight.
+	async function runtimeFor(env, ctx) {
+		let runtime = take();
+		// It looks again every few milliseconds, itself: a request may not be woken by another request's work (the
+		// Workers runtime ends one that waits for that, as hung).
+		for (let waited = 0; !runtime && alive.size > 0 && total() + NEW > BUDGET && waited < WAIT; waited += LOOK) {
+			await new Promise(resolve => setTimeout(resolve, LOOK));
+			runtime = take();
+		}
+		if (runtime) {
+			runtime.context.env = env;
+			runtime.context.ctx = ctx;
+			return { runtime, kind: runtime.served ? "reused" : runtime.warm ? "warm" : "new" };
+		}
+		return { runtime: await start(env, ctx), kind: "new" };
+	}
+
 	// take is a waiting runtime whose Go program is still running. One that served with workers-go's blocking
 	// workers.Serve ends itself when its answer's body closes, as workers-go means it to (a runtime per request): it
 	// is passed over, and the request starts a new one.
@@ -149,8 +209,16 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		return undefined;
 	}
 
+	// done is a runtime that has finished what it was given. One that may serve again waits for the next request;
+	// one that may not (its Go program ended, or says its heap is full) is ended.
+	// Then what waits is cut back to the budget, the largest first: memory is for requests, before it is for the
+	// next one's start.
 	function done(runtime) {
-		if (!runtime.go.exited && !runtime.binding.full && waiting.length < MAX_WAITING) waiting.push(runtime);
+		if (runtime.go.exited || runtime.binding.full) retire(runtime);
+		else waiting.push(runtime);
+		while (waiting.length > 0 && (waiting.length > MAX_WAITING || total() > BUDGET)) {
+			retire(waiting.reduce((largest, other) => (held(other) > held(largest) ? other : largest)));
+		}
 	}
 
 	return { fetch, scheduled, queue, email, warm };
@@ -159,13 +227,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 	// waiting, or a new one. The bindings and waitUntil are this event's. It gives the event to what the Go program
 	// registered for it, as workers-go's own entry does, and the runtime is free again when that settles.
 	async function run(env, ctx, handler, event, what) {
-		let runtime = take();
-		if (runtime) {
-			runtime.context.env = env;
-			runtime.context.ctx = ctx;
-		} else {
-			runtime = await start(env, ctx);
-		}
+		const { runtime } = await runtimeFor(env, ctx);
 		runtime.served++;
 		const handle = runtime.binding[handler];
 		if (typeof handle !== "function") {
@@ -201,6 +263,14 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		if (request.headers.has(CF_HEADER)) {
 			request = new Request(request);
 			request.headers.delete(CF_HEADER);
+		}
+		// A page's stream is the hub's to hold, in JavaScript: no Go runtime waits on it (hub.mjs says why).
+		const url = new URL(request.url);
+		if (request.method === "GET" && url.pathname.startsWith(LIVE)) {
+			const [binding, ...name] = url.pathname.slice(LIVE.length).split("/");
+			const namespace = env[binding];
+			if (typeof namespace?.idFromName !== "function" || name.length !== 1 || !name[0]) return new Response("no such feed", { status: 404 });
+			return namespace.get(namespace.idFromName(decodeURIComponent(name[0]))).fetch(new Request("https://hub/signal" + url.search, { headers: request.headers, signal: request.signal }));
 		}
 		if (request.headers.get("upgrade") === "websocket") {
 			// Each message of the socket reaches Go as a request the adapter makes, which Cloudflare knows nothing
@@ -250,14 +320,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 	// back; measured on 2026-11-25 with the standard compiler it saved 0.2 to 0.3 ms a request, and cost workers-go's
 	// request properties and Cache API. It went.)
 	async function serve(request, env, ctx) {
-		let runtime = take();
-		const kind = runtime ? (runtime.served ? "reused" : runtime.warm ? "warm" : "new") : "new";
-		if (runtime) {
-			runtime.context.env = env;
-			runtime.context.ctx = ctx;
-		} else {
-			runtime = await start(env, ctx);
-		}
+		const { runtime, kind } = await runtimeFor(env, ctx);
 		runtime.served++;
 		// workers-go answers when the handler has written its headers: Go is still writing the body. The runtime
 		// serves one request at a time, so it waits for the next only when the handler has returned, which
@@ -273,11 +336,19 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		const left = () => runtime.binding.cancel?.();
 		if (request.signal?.aborted) left();
 		else request.signal?.addEventListener("abort", left, { once: true });
-		// If this throws, the runtime is not offered again.
-		const response = await runtime.binding.handleRequest(request);
+		// If this throws, the runtime is not offered again, and what it held is not counted.
+		let response;
+		try {
+			response = await runtime.binding.handleRequest(request);
+		} catch (error) {
+			retire(runtime);
+			throw error;
+		}
 		if (!request.headers.has("x-go-runtime")) return response;
 		const told = new Response(response.body, response);
-		told.headers.set("x-go-runtime", warmFailure ? `${kind}; ${warmFailure}` : kind);
+		// Who asks is told which runtime answered, and what the isolate's runtimes hold between them.
+		const memory = `${alive.size} runtimes, ${Math.round(total() / MB)} MB of ${BUDGET / MB}`;
+		told.headers.set("x-go-runtime", warmFailure ? `${kind}; ${memory}; ${warmFailure}` : `${kind}; ${memory}`);
 		return told;
 	}
 }

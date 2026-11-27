@@ -1,12 +1,10 @@
 package pages
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/jackielii/structpages"
 
@@ -27,8 +25,8 @@ type Built struct {
 	file        AttachedFile    `route:"GET /attachments/{file} AttachedFile"`
 	detach      DetachFile      `route:"POST /attachments/{file}/remove DetachFile"`
 
-	activity       ActivityPage   `route:"GET /activity Activity"`
-	activityStream ActivityStream `route:"GET /activity/stream ActivityStream"`
+	activity      ActivityPage  `route:"GET /activity Activity"`
+	activitySince ActivitySince `route:"GET /activity/since ActivitySince"`
 
 	notice    NoticePage `route:"GET /notice Notice"`
 	setNotice NoticeSet  `route:"POST /notice NoticeSet"`
@@ -145,15 +143,23 @@ func (ActivityPage) Props(r *http.Request) (ActivityView, error) {
 	return ActivityView{latest, after}, err
 }
 
-// ActivityStream is the page's side of the feed: each thing that happens, as the page's own row.
-type ActivityStream struct{}
+// activitySignal is the address of the activity page's stream: the hub's, which tells the page to ask
+// ActivitySince for what happened after the newest row it has.
+func activitySignal(ctx context.Context, after int64) (string, error) {
+	since, err := structpages.URLFor(ctx, ActivitySince{})
+	return built.Feed.Signal(since, after, "li"), err
+}
 
-func (ActivityStream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	built.Feed.Fragments(w, r, func(ctx context.Context, a built.Activity) (string, error) {
-		var html bytes.Buffer
-		err := ActivityPage{}.Row(a).Render(ctx, &html)
-		return strings.TrimSpace(html.String()), err
-	})
+// ActivitySince is what happened after what a page has, as its own rows: what the page's stream (built.Feed.Signal)
+// tells it to fetch.
+type ActivitySince struct{}
+
+func (ActivitySince) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
+	rows, err := built.Feed.Since(r.Context(), r.URL.Query().Get("after"), 50)
+	if err != nil {
+		return err
+	}
+	return structpages.RenderComponent(ActivityPage{}.Rows(rows))
 }
 
 // NoticePage is the line for everyone (KV), and the form that sets it.

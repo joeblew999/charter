@@ -126,7 +126,7 @@ func TestHomePage(t *testing.T) {
 	rec := httptest.NewRecorder()
 	serve(t, store).ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
 	html := rec.Body.String()
-	for _, want := range []string{`<form id="home-form"`, `hx-target="#home-form"`, `hx-post="/notes"`, `<ul id="home-list"`, `id="home-item--1"`, "a note &lt;b&gt;as typed&lt;/b&gt;", "/notes/stream?after=1"} {
+	for _, want := range []string{`<form id="home-form"`, `hx-target="#home-form"`, `hx-post="/notes"`, `<ul id="home-list"`, `id="home-item--1"`, "a note &lt;b&gt;as typed&lt;/b&gt;", "/__charter/live/HUB/notes?after=1&amp;as=li&amp;get=%2Fnotes%2Fsince"} {
 		if !strings.Contains(html, want) {
 			t.Errorf("the page has no %s", want)
 		}

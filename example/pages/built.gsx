@@ -193,6 +193,13 @@ component (p AttachmentsPage) File(file built.Attachment, removable bool) {
 }
 
 // The activity: the list follows its feed from the newest row it shows, as the notes' list follows the notes.
+// Rows are rows of the page, newest first: what it starts with, and what ActivitySince answers with.
+component (p ActivityPage) Rows(rows []built.Activity) {
+	{ for _, a := range rows {
+		<p.Row a={a}/>
+	} }
+}
+
 component (p ActivityPage) Page(v ActivityView) {
 	<BuiltPage
 		title={locales.BuiltActivityTitle}
@@ -202,12 +209,10 @@ component (p ActivityPage) Page(v ActivityView) {
 		<ul
 			id={ActivityPage.Row |> id}
 			class="flex flex-col gap-2"
-			hx-sse:connect=f`@{ActivityStream{} |> url}?after=@{strconv.FormatInt(v.After, 10)}`
+			hx-sse:connect={activitySignal(ctx, v.After)}
 			hx-swap="afterbegin"
 		>
-			{ for _, a := range v.Latest {
-				<p.Row a={a}/>
-			} }
+			<p.Rows rows={v.Latest}/>
 		</ul>
 		{ if len(v.Latest) == 0 {
 			<p class="text-sm text-muted-foreground">{ locales.BuiltActivityEmpty }</p>

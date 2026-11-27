@@ -14,7 +14,6 @@
 package pages
 
 import (
-	"bytes"
 	"context"
 	"math"
 	"net/http"
@@ -47,9 +46,9 @@ type Pages struct {
 	preferences screens.Preferences `route:"/preferences Preferences"`
 
 	// What the pages call: routes, not pages.
-	post   PostNote    `route:"POST /notes PostNote"`
-	remove RemoveNote  `route:"POST /notes/{note}/remove RemoveNote"`
-	stream NotesStream `route:"GET /notes/stream NotesStream"`
+	post   PostNote   `route:"POST /notes PostNote"`
+	remove RemoveNote `route:"POST /notes/{note}/remove RemoveNote"`
+	since  NotesSince `route:"GET /notes/since NotesSince"`
 }
 
 // Mount mounts the tree: what app.App's Pages is. The call is here so that structpages-lint finds the tree and can
@@ -165,15 +164,22 @@ func (RemoveNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.St
 	return api.Remove(r.Context(), store, caller, id)
 }
 
-// NotesStream is the page's side of the feed (api.Notes): every new note as Home's Item, over server-sent events,
-// which htmx 4's SSE extension puts at the top of the list. A stream writes as it goes, so this is the one handler
-// that returns no error.
-type NotesStream struct{}
+// notesSignal is the address of the page's stream: the hub's, which tells the page to ask NotesSince, at its
+// address in the reader's language, for what came after the newest note it has.
+func notesSignal(ctx context.Context, after int64) (string, error) {
+	since, err := structpages.URLFor(ctx, NotesSince{})
+	return api.Notes.Signal(since, after, "li"), err
+}
 
-func (NotesStream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	api.Notes.Fragments(w, r, func(ctx context.Context, note api.Note) (string, error) {
-		var html bytes.Buffer
-		err := Home{}.Item(note, false, false).Render(ctx, &html)
-		return strings.TrimSpace(html.String()), err
-	})
+// NotesSince is the notes after the one a page has, as Home shows them to whoever asks: what the page's stream
+// (api.Notes.Signal) tells the page to fetch when there is a new one. The stream itself is the hub's; this is an
+// ordinary request, so each reader gets the rows that are theirs: in their language, with the buttons they may use.
+type NotesSince struct{}
+
+func (NotesSince) ServeHTTP(w http.ResponseWriter, r *http.Request, caller charter.Caller) error {
+	notes, err := api.Notes.Since(r.Context(), r.URL.Query().Get("after"), 50)
+	if err != nil {
+		return err
+	}
+	return structpages.RenderComponent(Home{}.List(notes, caller))
 }

@@ -44,7 +44,12 @@ func (h durableObject[T]) Publish(_ context.Context, item T) error {
 			return err
 		}
 	}
-	if _, err := promise.Await(h.stub.Call("publish", string(message))); err != nil {
+	// The item's place in the log goes with it, when it has one: what the hub tells the pages whose stream it holds.
+	args := []any{string(message)}
+	if placed, ok := any(item).(interface{ Position() int64 }); ok {
+		args = append(args, placed.Position())
+	}
+	if _, err := promise.Await(h.stub.Call("publish", args...)); err != nil {
 		return fmt.Errorf("hub %s publish: %w", h.name, err)
 	}
 	return nil

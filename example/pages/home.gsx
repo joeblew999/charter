@@ -44,7 +44,7 @@ component (p Home) Page(props HomeProps) {
 				<ul
 					id={Home.List |> id}
 					class="flex flex-col gap-2"
-					hx-sse:connect=f`@{NotesStream{} |> url}?after=@{strconv.FormatInt(props.After, 10)}`
+					hx-sse:connect={notesSignal(ctx, props.After)}
 					hx-swap="afterbegin"
 				>
 					<p.List notes={props.Notes} reader={props.Caller}/>

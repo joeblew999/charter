@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
+	"net/url"
+	"slices"
+	"strconv"
 	"time"
 
 	"github.com/joeblew999/charter/app"
@@ -20,7 +22,7 @@ type Log[T Item] interface {
 	Latest(ctx context.Context) (int64, error)
 }
 
-// Feed is a log that is followed live, declared once and used by everything that shows it: the pages (Fragments),
+// Feed is a log that is followed live, declared once and used by everything that shows it: the pages (Signal and Since),
 // the API's stream for SDK clients (Events) and its WebSocket channel (Lines). The log (a D1 table) is the truth; the
 // hub (a Durable Object) only wakes followers, so no item is lost or sent twice, across reconnects and deploys alike.
 //
@@ -84,34 +86,40 @@ func (f Feed[T]) Follow(ctx context.Context, positions []string, emit func(T) er
 	return Follow(ctx, source[T]{feedLog, hub}, options, emit)
 }
 
-// lifetime is how long a page's stream stays open. Then it ends, and the browser connects again from the last item
-// it has: a stream never outlives a deploy by long, and one whose browser has gone ends too.
-const lifetime = 5 * time.Minute
+// SignalPath begins the address of a page's stream: the Worker's JavaScript (worker/go.mjs) gives what is under it
+// to the hub, and no Go runtime waits on it.
+const SignalPath = "/__charter/live/"
 
-// Fragments answers a page's stream: every item as one server-sent event whose data is the HTML render gives, which
-// htmx 4's SSE extension swaps in. It starts after ?after= (the newest item the page was rendered with) or the
-// Last-Event-ID a reconnecting browser sends, whichever is newer.
-func (f Feed[T]) Fragments(w http.ResponseWriter, r *http.Request, render func(ctx context.Context, item T) (html string, err error)) {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	out := app.Flushing(w)
-	// A comment first: the response starts now, not at the first item.
-	if _, err := io.WriteString(out, ": \n\n"); err != nil {
-		return
-	}
-	ctx, cancel := context.WithTimeout(r.Context(), lifetime)
-	defer cancel()
-	err := f.Follow(ctx, []string{r.URL.Query().Get("after"), r.Header.Get("Last-Event-ID")}, func(item T) error {
-		html, err := render(ctx, item)
-		if err != nil {
-			return err
-		}
-		_, err = fmt.Fprintf(out, "id: %d\n%s\n\n", item.Position(), Data("", html))
-		return err
-	})
+// Signal is the address of a page's stream of this feed, for htmx's hx-sse:connect on the element the feed's items
+// go into:
+//
+//	<ul hx-sse:connect={ api.Notes.Signal(since, props.After, "li") } hx-swap="afterbegin">
+//
+// The stream is the hub's, which holds it in JavaScript: it tells the page only that there is something after the
+// position it has (after: the newest item the page was rendered with), with an element (as: li in a list, div
+// elsewhere) that asks get for it, and htmx puts that element where the items go. get is a route of the app, by
+// its address in the reader's language, that answers ?after=<position> with the items since (Feed.Since), as the
+// page shows them to that reader; they take the element's place.
+//
+// A page's stream is not a Go handler, on purpose. A Go runtime holds some 13 MB or more of a Worker's 128 MB for
+// as long as it serves a request, and a stream is a request that lasts minutes: a handful of open pages took a
+// Worker over its memory. What a reader gets is still theirs alone: the request the page makes is an ordinary one.
+func (f Feed[T]) Signal(get string, after int64, as string) string {
+	return SignalPath + url.PathEscape(f.Binding) + "/" + url.PathEscape(f.Name) +
+		"?after=" + strconv.FormatInt(after, 10) + "&as=" + url.QueryEscape(as) + "&get=" + url.QueryEscape(get)
+}
+
+// Since is the feed's items after a position, newest first, as a page shows them: what the route a page's stream
+// names answers with. after is the request's ?after=, as it came; limit is the most a page takes at once.
+func (f Feed[T]) Since(ctx context.Context, after string, limit int) ([]T, error) {
+	feedLog, err := f.Log()
 	if err != nil {
-		log.Printf("live: %s: page stream ended: %v", f.Name, err)
+		return nil, err
 	}
+	position, _ := strconv.ParseInt(after, 10, 64)
+	items, err := feedLog.Since(ctx, position, limit)
+	slices.Reverse(items)
+	return items, err
 }
 
 // Events writes the API's stream for SDK clients: every item as a server-sent event `message` whose data is its JSON

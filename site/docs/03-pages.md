@@ -24,9 +24,9 @@ type Pages struct {
 	preferences screens.Preferences `route:"/preferences Preferences"`
 
 	// What the pages call: routes, not pages.
-	post   PostNote    `route:"POST /notes PostNote"`
-	remove RemoveNote  `route:"POST /notes/{note}/remove RemoveNote"`
-	stream NotesStream `route:"GET /notes/stream NotesStream"`
+	post   PostNote   `route:"POST /notes PostNote"`
+	remove RemoveNote `route:"POST /notes/{note}/remove RemoveNote"`
+	since  NotesSince `route:"GET /notes/since NotesSince"`
 }
 ```
 

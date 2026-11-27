@@ -8,6 +8,9 @@
   // Cloudflare tells the Worker when a reader has left (request.signal): a handler that waits then returns. The
   // default from compatibility date 2026-11-17.
   "compatibility_flags": ["enable_request_signal"],
+  // Workers Logs: what the Worker printed and how each request ended, kept by Cloudflare, so a failure that is over
+  // can still be read (go tool charter run logs follows them live).
+  "observability": { "enabled": true },
   // charter build writes dist/ (Vite) and build/ (the Wasm, and the JavaScript that runs it). Under charter dev the
   // Worker stays running across builds: charter writes into watch_dir when there is a new one, and wrangler takes it.
   "build": { "command": "go tool charter build", "watch_dir": ".charter/built" },

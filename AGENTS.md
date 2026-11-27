@@ -55,6 +55,10 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
 - **A test leaves the Worker as it found it.** The same tests ask a deployed Worker: whoever a test signs up it
   deletes (`apptest`'s `SignUp` does), and a row it writes it takes away. The example's `test/main_test.go` fails a
   run that leaves more than the seed.
+- **Nothing long holds a Go runtime.** A runtime takes 13 MB or more of a Worker's 128 MB while it serves, so a
+  request that lasts (a page's stream) is the hub's, in JavaScript (`live.Feed`'s `Signal` and `Since`), and
+  `worker/go.mjs` keeps what the runtimes hold together under a budget. Cloudflare's analytics say `exceededMemory`
+  when this is broken; local dev has no such limit and never shows it.
 - **A resource is its id.** `charter deploy` writes the database's and the KV namespace's ids into
   `wrangler.jsonc` and stops on a renamed bucket or queue (a new, empty one). `charter run delete` takes the whole
   app away, asked twice; nothing on Cloudflare is made or removed by hand.
