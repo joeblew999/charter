@@ -20,7 +20,15 @@ const (
 	paidSize   = 10e6 // bytes, gzipped
 	startLimit = 1000 // ms of CPU
 	nearLimit  = 0.8  // of a limit: worth saying
-	grewBy     = 1.1  // of what is usual here: worth saying
+)
+
+// How much above what is usual here a number must be to be worth saying, for each: as much as it varies by itself
+// and more. The size of the same code is the same every time; the CPU a start takes varied from 142 to 224 ms over
+// deploys of the same version; what a Go runtime holds grows with the requests it has served.
+const (
+	sizeGrew    = 1.10
+	startGrew   = 1.50
+	runtimeGrew = 1.30
 )
 
 // measured records a number under a name and gives what is usual for it here: the median of the last ones, known
@@ -41,11 +49,11 @@ func measured(name string, value float64) (usually float64, known bool) {
 	return usually, known
 }
 
-// remark is what to say of a number beside it: that it has grown from what is usual here, and that it is near its
-// limit. Empty when it is neither.
-func remark(value, usually float64, known bool, limit float64, unit func(float64) string) string {
+// remark is what to say of a number beside it: that it has grown by more than grew from what is usual here, and that
+// it is near its limit. Empty when it is neither.
+func remark(value, usually float64, known bool, grew, limit float64, unit func(float64) string) string {
 	var said string
-	if known && value > usually*grewBy {
+	if known && value > usually*grew {
 		said += fmt.Sprintf("; up from %s, the usual here", unit(usually))
 	}
 	if limit > 0 && value > limit*nearLimit {
@@ -68,7 +76,7 @@ func startedIn(deploy string) {
 	}
 	ms, _ := strconv.ParseFloat(m[1], 64)
 	usually, known := measured("start-up", ms)
-	say("· the Worker starts in %s of CPU, of the %s Cloudflare allows%s", millis(ms), millis(startLimit), remark(ms, usually, known, startLimit, millis))
+	say("· the Worker starts in %s of CPU, of the %s Cloudflare allows%s", millis(ms), millis(startLimit), remark(ms, usually, known, startGrew, startLimit, millis))
 }
 
 // runtimeHeld is what the Worker says of its Go runtimes in an answer's x-go-runtime (worker/go.mjs).
@@ -100,7 +108,7 @@ func runtimesHold(base, path, where string) {
 	each := held / count
 	usually, known := measured("runtime-memory/"+where, each)
 	grown := ""
-	if known && each > usually*grewBy {
+	if known && each > usually*runtimeGrew {
 		grown = fmt.Sprintf("; up from %.0f MB, the usual here", usually)
 	}
 	say("· a Go runtime holds about %.0f MB: %d fit in the %.0f MB the Worker gives them, so it answers that many at once in one instance%s", each, int(budget/each), budget, grown)

@@ -204,7 +204,7 @@ func wasm(p *project.Project, limit int, again bool) error {
 	z.Close()
 	usually, known := measured("size", float64(buf.Len()))
 	say("✓ %s: %.2f MB, %.2f MB gzipped (Workers Free takes 3, Paid 10)%s", out, float64(len(b))/1e6, float64(buf.Len())/1e6,
-		remark(float64(buf.Len()), usually, known, paidSize, megabytes))
+		remark(float64(buf.Len()), usually, known, sizeGrew, paidSize, megabytes))
 	if limit > 0 && buf.Len() > limit {
 		return fmt.Errorf("%s is %d bytes gzipped, over the limit of %d", out, buf.Len(), limit)
 	}

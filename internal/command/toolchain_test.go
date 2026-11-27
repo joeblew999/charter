@@ -60,3 +60,23 @@ experimental = true
 		t.Errorf("raised again: %v", again)
 	}
 }
+
+// A number is remarked on when it has grown by more than it varies by itself, or is near its limit; not otherwise.
+func TestRemark(t *testing.T) {
+	ms := func(v float64) string { return millis(v) }
+	if got := remark(165, 148, true, startGrew, startLimit, ms); got != "" {
+		t.Errorf("a start 11%% over the usual was remarked on: %q", got)
+	}
+	if got := remark(240, 148, true, startGrew, startLimit, ms); !strings.Contains(got, "up from 148 ms") {
+		t.Errorf("a start 62%% over the usual: %q", got)
+	}
+	if got := remark(850, 800, true, startGrew, startLimit, ms); !strings.Contains(got, "85% of the 1000 ms") {
+		t.Errorf("a start near its limit: %q", got)
+	}
+	if got := remark(7.5e6, 6.7e6, true, sizeGrew, paidSize, megabytes); !strings.Contains(got, "up from 6.70 MB") {
+		t.Errorf("a size 12%% over the usual: %q", got)
+	}
+	if got := remark(240, 0, false, startGrew, startLimit, ms); got != "" {
+		t.Errorf("with nothing usual known yet: %q", got)
+	}
+}

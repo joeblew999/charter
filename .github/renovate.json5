@@ -5,6 +5,10 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["config:recommended"],
   schedule: ["before 6am on monday"],
+  // A patch or minor update merges itself once every check on its branch passes (CI runs all a push runs): Renovate
+  // merges it, not GitHub's auto-merge, which would merge at once since main requires no checks. A major one waits
+  // for a person.
+  platformAutomerge: false,
   // go mod tidy -e: an app's components are .gsx, whose Go is generated and not committed, so a plain tidy in a fresh
   // checkout stops at them. With -e it goes on, and gives the go.mod and go.sum a tidy after generating them gives
   // (tried on example/ and site/). And it is run in every module that uses the one updated through a local replace
@@ -41,6 +45,14 @@
       matchUpdateTypes: ["major"],
       enabled: false,
     },
+    {
+      // goldmark v2 needs goldmark-highlighting v3, which needs chroma v3: an alpha so far (#179).
+      matchManagers: ["gomod"],
+      matchPackageNames: ["github.com/yuin/goldmark"],
+      matchUpdateTypes: ["major"],
+      enabled: false,
+    },
+    { matchUpdateTypes: ["minor", "patch", "digest"], automerge: true },
     { matchManagers: ["mise"], groupName: "tools" },
     { matchManagers: ["github-actions"], groupName: "actions" },
   ],

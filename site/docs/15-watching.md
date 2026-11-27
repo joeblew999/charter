@@ -44,6 +44,8 @@ Go on Workers lives within three limits, and an app drifts towards each a little
 · a Go runtime holds about 20 MB: 4 fit in the 80 MB the Worker gives them, so it answers that many at once in one instance
 ```
 
+A number is remarked on when it is past 80% of its limit, or above what is usual here by more than it varies by itself: 10% for the size, which is the same for the same code; 50% for the start-up, which varies from deploy to deploy; 30% for a runtime's memory, which grows with what it has served.
+
 They are the numbers that say when a limit is coming, and the ones to measure a change of compiler or of design against.
 
 ## Under load
