@@ -30,6 +30,8 @@ import (
 func Background() {
 	api.OnPost = queue
 	api.OnLeave = forget
+	// A note taken away takes its rows of the activity page with it (api's store): that page is told.
+	api.OnRemove = Feed.Changed
 	queues.ConsumeNonBlock(consume)
 	cron.ScheduleTaskNonBlock(summarise)
 	onEmail()

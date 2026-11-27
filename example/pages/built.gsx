@@ -10,6 +10,7 @@ import (
 	"github.com/joeblew999/charter/example/pages/screens"
 	"github.com/joeblew999/charter/example/ui"
 	"github.com/joeblew999/charter/intl"
+	"github.com/joeblew999/charter/live"
 )
 
 // The pages that show what the app is built with (the group Built, package built). Every time and number on them
@@ -193,28 +194,34 @@ component (p AttachmentsPage) File(file built.Attachment, removable bool) {
 }
 
 // The activity: the list follows its feed from the newest row it shows, as the notes' list follows the notes.
-// Rows are rows of the page, newest first: what it starts with, and what ActivitySince answers with.
+// Rows are the rows of the page, newest first: what it starts with, and what it asks for again when its stream
+// says there is more.
 component (p ActivityPage) Rows(rows []built.Activity) {
 	{ for _, a := range rows {
 		<p.Row a={a}/>
 	} }
 }
 
-component (p ActivityPage) Page(v ActivityView) {
+component (p ActivityPage) Page(latest []built.Activity) {
 	<BuiltPage
 		title={locales.BuiltActivityTitle}
 		about={locales.BuiltActivityAbout}
 		uses={[]string{"Queues", "Cron Triggers", "D1", "Durable Objects"}}
 	>
-		<ul
-			id={ActivityPage.Row |> id}
-			class="flex flex-col gap-2"
-			hx-sse:connect={activitySignal(ctx, v.After)}
-			hx-swap="afterbegin"
-		>
-			<p.Rows rows={v.Latest}/>
-		</ul>
-		{ if len(v.Latest) == 0 {
+		<div hx-sse:connect={built.Feed.Signal()}>
+			<ul
+				id={ActivityPage.Rows |> id}
+				class="flex flex-col gap-2"
+				hx-trigger={live.OnChange}
+				hx-get={again(ctx, ActivityPage{})}
+				hx-target={ActivityPage.Rows |> target}
+				hx-swap="innerMorph"
+				hx-sync="this:replace"
+			>
+				<p.Rows rows={latest}/>
+			</ul>
+		</div>
+		{ if len(latest) == 0 {
 			<p class="text-sm text-muted-foreground">{ locales.BuiltActivityEmpty }</p>
 		} }
 	</BuiltPage>

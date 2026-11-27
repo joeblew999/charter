@@ -7,8 +7,8 @@ import (
 	"io"
 	"log"
 	"net/url"
-	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joeblew999/charter/app"
@@ -23,7 +23,7 @@ type Log[T Item] interface {
 	Latest(ctx context.Context) (int64, error)
 }
 
-// Feed is a log that is followed live, declared once and used by everything that shows it: the pages (Signal and Since),
+// Feed is a log that is followed live, declared once and used by everything that shows it: the pages (Signal),
 // the API's stream for SDK clients (Events) and its WebSocket channel (Lines). The log (a D1 table) is the truth; the
 // hub (a Durable Object) only wakes followers, so no item is lost or sent twice, across reconnects and deploys alike.
 //
@@ -87,43 +87,75 @@ func (f Feed[T]) Follow(ctx context.Context, positions []string, emit func(T) er
 	return Follow(ctx, source[T]{feedLog, hub}, options, emit)
 }
 
+// Changed tells every open page that what it shows has changed, for a change that is no new item: one that was
+// taken away, one that was altered. A new item is Publish's, which tells the pages too. Like Publish, a hub that
+// cannot be reached is logged and not returned: the change has happened.
+//
+//	if err := store.Remove(ctx, id); err != nil { … }
+//	Notes.Changed(ctx)
+func (f Feed[T]) Changed(ctx context.Context) {
+	hub, err := f.hub()
+	if err == nil {
+		err = hub.Changed(ctx)
+	}
+	if err != nil {
+		log.Printf("live: %s: a change is not announced: %v", f.Name, err)
+	}
+}
+
 // SignalPath begins the address of a page's stream: the Worker's JavaScript (worker/go.mjs) gives what is under it
 // to the hub, and no Go runtime waits on it.
 const SignalPath = "/__charter/live/"
 
-// Signal is the address of a page's stream of this feed, for htmx's hx-sse:connect on the element the feed's items
-// go into:
+// changedEvent is the one event a page's stream sends (the hub's CHANGED, app/worker/hub.mjs): what has changed is
+// not said, only that something has.
+const changedEvent = "changed"
+
+// OnChange is when the part of a page that shows a feed asks for itself again (its hx-trigger): when the stream
+// says something changed. The stream belongs to an element around that part (hx-sse:connect), which is where its
+// events arrive. (htmx takes a source with a space in it in quotes.)
+const OnChange = changedEvent + ` from:"closest [hx-sse\:connect]"`
+
+// Signal is the address of a page's stream of this feed, for htmx's hx-sse:connect on an element around the part
+// of the page that shows the feed. That part asks for itself again when the stream says something changed, and
+// what comes takes the place of what it had:
 //
-//	<ul hx-sse:connect={ api.Notes.Signal(since, props.After, "li") } hx-swap="afterbegin">
+//	<div hx-sse:connect={ api.Notes.Signal() }>
+//		<ul
+//			id={ Home.List |> id }
+//			hx-trigger={ live.OnChange }
+//			hx-get={ again(ctx, Home{}) }
+//			hx-target={ Home.List |> target }
+//			hx-swap="innerMorph"
+//			hx-sync="this:replace"
+//		>
 //
-// The stream is the hub's, which holds it in JavaScript: it tells the page only that there is something after the
-// position it has (after: the newest item the page was rendered with), with an element (as: li in a list, div
-// elsewhere) that asks get for it, and htmx puts that element where the items go. get is a route of the app, by
-// its address in the reader's language, that answers ?after=<position> with the items since (Feed.Since), as the
-// page shows them to that reader; they take the element's place.
+// The stream is on its own element because htmx opens it on that element's trigger, and replaces nothing there:
+// what is replaced is inside it, so the stream stays open across every change.
+//
+// The page is told that something changed, never what. So an item added, one taken away and one altered reach it
+// the same way; nothing is shown twice or left behind; and when changes come together, the last request is the one
+// that counts (hx-sync), and the page ends as the log is. The swap is a morph, so a row the reader has open, or is
+// typing in, stays as it is.
+//
+// The address says when the page was rendered: a change between that and the stream's opening is told at once.
 //
 // A page's stream is not a Go handler, on purpose. A Go runtime holds some 13 MB or more of a Worker's 128 MB for
 // as long as it serves a request, and a stream is a request that lasts minutes: a handful of open pages took a
 // Worker over its memory. What a reader gets is still theirs alone: the request the page makes is an ordinary one.
-func (f Feed[T]) Signal(get string, after int64, as string) string {
-	return SignalPath + url.PathEscape(f.Binding) + "/" + url.PathEscape(f.Name) +
-		"?after=" + strconv.FormatInt(after, 10) + "&as=" + url.QueryEscape(as) + "&get=" + url.QueryEscape(get)
+func (f Feed[T]) Signal() string {
+	return SignalPath + url.PathEscape(f.Binding) + "/" + url.PathEscape(f.Name) + "?at=" + strconv.FormatInt(time.Now().UnixMilli(), 10)
 }
 
-// Since is the feed's items after a position, newest first, as a page shows them: what the route a page's stream
-// names answers with. after is the request's ?after=, as it came; limit is the most a page takes at once.
-func (f Feed[T]) Since(ctx context.Context, after string, limit int) ([]T, error) {
-	feedLog, err := f.Log()
-	if err != nil {
-		return nil, err
+// Again is address as a part of a page asks it when its feed says something changed: the same address, saying
+// that what it reads must be the newest (cloud.NewestQuery), since a copy of the database that is behind would
+// show the page as it was before the change it was just told of.
+func Again(address string) string {
+	mark := "?"
+	if strings.Contains(address, "?") {
+		mark = "&"
 	}
-	position, _ := strconv.ParseInt(after, 10, 64)
-	// A reader asks this because the feed just told them there is something new: a copy of the database that is
-	// behind would answer that there is not, and the item would be lost to them until the next one.
-	cloud.Newest()
-	items, err := feedLog.Since(ctx, position, limit)
-	slices.Reverse(items)
-	return items, err
+	return address + mark + cloud.NewestQuery + "=1"
 }
 
 // FollowHeader is the header of an answer whose stream the hub carries on (worker/go.mjs joins it): what Events

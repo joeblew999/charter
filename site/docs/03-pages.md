@@ -26,7 +26,6 @@ type Pages struct {
 	// What the pages call: routes, not pages.
 	post   PostNote   `route:"POST /notes PostNote"`
 	remove RemoveNote `route:"POST /notes/{note}/remove RemoveNote"`
-	since  NotesSince `route:"GET /notes/since NotesSince"`
 }
 ```
 
@@ -36,33 +35,35 @@ A page is a type with a `Page` component, and `Props` for its data. `Props` name
 
 ```go file=../example/pages/pages.go#Home.Props
 // Props loads what the request wants, as structpages has it. A row's button asks for that row alone (its target is
-// Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. Anything
-// else is the page, with the newest notes. Each component takes its share of the results by their types.
-func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, api.Note, Open, Removable, error) {
+// Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. The
+// list asks for itself when its stream says the notes changed (its target is Home's List): then the newest notes
+// are read, and structpages renders List with them, for this reader. Anything else is the page. Each component
+// takes its share of the results by their types.
+func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, []api.Note, charter.Caller, api.Note, Open, Removable, error) {
 	if target.Is(p.Item) {
 		id, err := strconv.ParseInt(structpages.KeyOf(target), 10, 64)
 		if err != nil {
-			return HomeProps{}, api.Note{}, false, false, app.NotFound("no such note")
+			return HomeProps{}, nil, caller, api.Note{}, false, false, app.NotFound("no such note")
 		}
 		note, err := store.Get(r.Context(), id)
 		if err != nil {
-			return HomeProps{}, api.Note{}, false, false, app.NotFound("no such note")
+			return HomeProps{}, nil, caller, api.Note{}, false, false, app.NotFound("no such note")
 		}
-		return HomeProps{}, note, r.URL.Query().Get("open") != "", Removable(api.MayRemove(caller, note)), nil
+		return HomeProps{}, nil, caller, note, r.URL.Query().Get("open") != "", Removable(api.MayRemove(caller, note)), nil
 	}
 	notes, err := store.Before(r.Context(), math.MaxInt64, shown)
 	if err != nil {
-		return HomeProps{}, api.Note{}, false, false, err
+		return HomeProps{}, nil, caller, api.Note{}, false, false, err
+	}
+	if target.Is(p.List) {
+		return HomeProps{}, notes, caller, api.Note{}, false, false, nil
 	}
 	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...), Caller: caller}
 	// One read of KV, for every reader: what it is for.
 	if props.Notice, err = built.NoticeNow(r.Context()); err != nil {
-		return HomeProps{}, api.Note{}, false, false, err
+		return HomeProps{}, nil, caller, api.Note{}, false, false, err
 	}
-	if len(notes) > 0 {
-		props.After = notes[0].ID
-	}
-	return props, api.Note{}, false, false, nil
+	return props, notes, caller, api.Note{}, false, false, nil
 }
 ```
 

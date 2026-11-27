@@ -52,6 +52,7 @@ func Leaving(ctx context.Context, who charter.Person) error {
 	if err := store.RemoveBy(ctx, who.ID); err != nil {
 		return err
 	}
+	removed(ctx)
 	if OnLeave != nil {
 		return OnLeave(ctx, who)
 	}
@@ -78,8 +79,25 @@ func Remove(ctx context.Context, store Store, by charter.Caller, id int64) error
 	if !MayRemove(by, note) {
 		return app.Status(http.StatusForbidden, by.Name()+" may not remove this note: it is someone else's, and removing those needs moderate")
 	}
-	return store.Remove(ctx, id)
+	if err := store.Remove(ctx, id); err != nil {
+		return err
+	}
+	removed(ctx)
+	return nil
 }
+
+// removed tells whoever shows the notes that some are gone: every open page of them, and what else the app shows
+// of a note (OnRemove).
+func removed(ctx context.Context) {
+	Notes.Changed(ctx)
+	if OnRemove != nil {
+		OnRemove(ctx)
+	}
+}
+
+// OnRemove is told when notes are taken away, after they are gone: what else of the app shows something of a note
+// (package built's activity page, whose rows of them go too). nil: nothing.
+var OnRemove func(ctx context.Context)
 
 // Roles are what the app's people may be, and what each may do. Someone who signs up is a member. A moderator
 // may also take anyone's note away; an admin may also say who is what.

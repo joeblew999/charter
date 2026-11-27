@@ -7,13 +7,13 @@ Tests are of the pages and of the API. Two kinds: a page as plain Go, in a fract
 A page declares what it needs, so a test hands it its own. No Worker, no database, no browser.
 
 ```go file=../example/pages/pages_test.go#TestHomeProps
-// The home page's data is the newest notes first, and where its stream starts: after the newest.
+// The home page's data is the newest notes first.
 func TestHomeProps(t *testing.T) {
 	store := &notes{}
 	store.Create(context.Background(), "first", "u1", "Ada")
 	store.Create(context.Background(), "second", "u1", "Ada")
-	props, _, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
-	if err != nil || len(props.Notes) != 2 || props.Notes[0].Body != "second" || props.After != 2 {
+	props, _, _, _, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
+	if err != nil || len(props.Notes) != 2 || props.Notes[0].Body != "second" {
 		t.Fatalf("%+v %v", props, err)
 	}
 }

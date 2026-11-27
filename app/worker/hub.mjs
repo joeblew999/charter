@@ -19,11 +19,16 @@
 // A page's stream is held here, not by a Go runtime. A Go runtime takes some 13 MB or more of the Worker's 128 MB
 // for as long as it serves a request, and a page's stream is a request that lasts minutes: a handful of open pages
 // took a Worker over its memory, and Cloudflare ended it with every request it was answering. So the stream a page
-// holds open tells it only that there is something new, and where to ask for it: each event is one element that
-// htmx puts in the page, and which then asks for itself (hx-get, on load) what came after the position the page
-// has. That is one short, ordinary request, which Go renders for that reader, in their language, with what they
-// may do. The log stays the truth, and nothing is lost: a stream opens with the page's own position as its id, so a page that connects again says the last position it was
-// told of (Last-Event-ID), and is told to ask from there.
+// holds open tells it one thing: what you show has changed (the event "changed"). The page then asks for that part
+// of itself again, which is one short, ordinary request that Go renders for that reader, in their language, with
+// what they may do, and puts what comes in place of what it had. It is told that something changed, never what:
+// so what was added, taken away or altered all reach it the same way, nothing is shown twice, and however many
+// changes come together, the page ends as the log is.
+//
+// Nothing is lost when a stream breaks. A page says when it was rendered (?at=, in milliseconds), and a stream
+// that connects again says when it was last told (Last-Event-ID); the hub answers "changed" at once when
+// something changed since then, or when it cannot know because it started since then itself, as it does on a
+// deploy.
 //
 // The API's streams are held here too, for the same reason. Go answers such a request with what the log has after
 // the position its caller gave, says where it stopped, and is done; worker/go.mjs then joins this object's /follow
@@ -39,29 +44,35 @@ import { DurableObject } from "cloudflare:workers";
 const LIFETIME = 5 * 60 * 1000;
 // A comment this often keeps what is between the Worker and the browser from closing a quiet stream.
 const BEAT = 25 * 1000;
-// What a page may ask to be told to fetch: a path of the app, and the kind of element to say it with.
-const PATH = /^\/[A-Za-z0-9._~\/-]*$/;
-const ELEMENTS = new Set(["div", "li", "tr", "span", "p", "section"]);
+// What a page's stream says: the name of its one event, which the page's markup listens for (live.Changed in Go).
+const CHANGED = "changed";
+// How far two clocks may be apart, the Worker's and this hub's: a change this little before a page was rendered is
+// taken as after it.
+const SLACK = 10 * 1000;
 // How many of the last published items are remembered, for a stream that starts a moment after one of them.
 const REMEMBERED = 200;
 const encoder = new TextEncoder();
 
 export class Hub extends DurableObject {
-	// Pages with a stream open: each its stream's controller, the last position it was told of, and what it asked
-	// to be told to fetch. In memory only: a hub that restarts closes their streams, and they connect again.
+	// Streams that are open: a page's (its controller), or an API stream's (its controller, the last position it was
+	// sent, and how it is written). In memory only: a hub that restarts closes them, and they connect again.
 	readers = new Set();
+	// When this hub started, and when it last knew of a change: what a page that connects is measured against.
+	startedAt = Date.now();
+	changedAt = 0;
 	// The last items published, each with its position: in memory only.
 	recent = [];
 
 	// publish is what the Go hub calls (Workers RPC): a method call costs the caller less CPU than
 	// a fetch, which has a Request and a Response to make. position is the item's place in the log,
-	// when it has one: what a page's stream is told.
+	// when it has one: what an API stream is sent from. Every open page is told that something changed.
 	publish(message, position) {
 		if (Number.isFinite(position)) {
 			this.recent.push({ position, message });
 			if (this.recent.length > REMEMBERED) this.recent.shift();
-			for (const reader of this.readers) if (position > reader.last) this.tell(reader, position, message);
+			for (const reader of this.readers) if (reader.kind !== "page" && position > reader.last) this.tell(reader, position, message);
 		}
+		this.changed();
 		let sent = 0;
 		for (const socket of this.ctx.getWebSockets()) {
 			try {
@@ -74,15 +85,29 @@ export class Hub extends DurableObject {
 		return sent;
 	}
 
-	// tell gives a reader what was published at a position: a page, that there is something after the position it
-	// has (an element that asks for it); an API stream, the item itself, as an event or as a line.
+	// changed tells every open page that what it shows has changed: what the Go hub calls for a change that is no
+	// new item (one taken away, one altered), and what publish does for a new one.
+	changed() {
+		this.changedAt = Date.now();
+		let told = 0;
+		for (const reader of this.readers) {
+			if (reader.kind !== "page") continue;
+			this.say(reader);
+			told++;
+		}
+		return told;
+	}
+
+	// say tells one page that what it shows has changed. The id is when: what the page says if it connects again.
+	say(reader) {
+		this.write(reader, `id: ${Date.now()}\nevent: ${CHANGED}\ndata:\n\n`);
+	}
+
+	// tell gives an API stream the item published at a position, as an event or as a line.
 	tell(reader, position, message) {
-		const after = reader.last;
 		reader.last = position;
 		if (reader.kind === "events") return this.write(reader, `event: message\nretry: 1000\nid: ${position}\ndata: ${message}\n\n`);
-		if (reader.kind === "lines") return this.write(reader, `${message}\n`);
-		const element = `<${reader.as} hidden hx-get="${reader.get}?after=${after}" hx-trigger="load" hx-swap="outerHTML"></${reader.as}>`;
-		this.write(reader, `id: ${position}\ndata: ${element}\n\n`);
+		this.write(reader, `${message}\n`);
 	}
 
 	write(reader, text) {
@@ -142,31 +167,27 @@ export class Hub extends DurableObject {
 
 	// signal answers a page's stream.
 	signal(request, url) {
-		const get = url.searchParams.get("get") ?? "";
-		const as = url.searchParams.get("as") ?? "div";
-		if (!PATH.test(get) || !ELEMENTS.has(as)) return new Response("a stream is asked with get=<a path of the app> and as=<an element>", { status: 400 });
-		// Where the page is: the last position this stream told it of, when it connects again, else the one it was
-		// rendered with.
+		// When the page last knew what it shows was current: when this stream last told it, if it connects again,
+		// else when it was rendered.
 		const again = request.headers.get("Last-Event-ID");
-		const last = Number(again ?? url.searchParams.get("after")) || 0;
+		const at = Number(again ?? url.searchParams.get("at")) || 0;
 		let reader;
 		const body = new ReadableStream({
 			start: controller => {
-				reader = { controller, last, get, as };
+				reader = { controller, kind: "page" };
 				this.readers.add(reader);
 				reader.end = setTimeout(() => this.gone(reader), LIFETIME);
 				this.beat ??= setInterval(() => {
 					for (const each of this.readers) if (each.kind !== "lines") this.write(each, ": \n\n");
 				}, BEAT);
-				// The page's position first, as an id and nothing else: the response starts now, not at the first item,
-				// and a page whose stream breaks before any item (this hub restarting, as it does on a deploy) connects
-				// again saying where it was. A browser keeps an id that comes alone and shows nothing for it.
-				this.write(reader, `id: ${last}\n\n`);
-				// Back after a break: whatever came meanwhile is asked for at once.
-				if (again !== null) this.tell(reader, last);
-				// Not back, and something was published since the page was rendered, before this stream was open: that
-				// is asked for at once too.
-				else if (this.recent.length > 0 && this.recent[this.recent.length - 1].position > last) this.tell(reader, this.recent[this.recent.length - 1].position);
+				// Something changed since then, or this hub started since then and cannot know: the page is told at
+				// once. A clock is not another's to the millisecond (the page's time is the Worker's, this one the
+				// hub's), so a change a little before counts too: a page told once too often asks once too often.
+				if (Math.max(this.changedAt, this.startedAt) > at - SLACK) this.say(reader);
+				// Else when it was, as an id and nothing else: the response starts now, and a stream that breaks before
+				// anything changes connects again saying where the page was. A browser keeps an id that comes alone and
+				// shows nothing for it.
+				else this.write(reader, `id: ${at}\n\n`);
 			},
 			cancel: () => this.gone(reader),
 		});

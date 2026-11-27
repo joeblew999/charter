@@ -20,6 +20,9 @@ import (
 // Hub is the live fan-out of items of one type.
 type Hub[T any] interface {
 	Publish(ctx context.Context, item T) error
+	// Changed tells every open page that what it shows has changed, for a change that is no new item: one taken
+	// away, one altered.
+	Changed(ctx context.Context) error
 	// Subscribe calls listener for every published item and onError when the subscription breaks;
 	// neither may block. It returns unsubscribe.
 	Subscribe(listener func(T), onError func(error)) (unsubscribe func(), err error)
@@ -44,6 +47,9 @@ func (m *Memory[T]) Publish(_ context.Context, item T) error {
 	}
 	return nil
 }
+
+// Changed is nothing for a Memory: it has no pages, only listeners of items.
+func (m *Memory[T]) Changed(context.Context) error { return nil }
 
 func (m *Memory[T]) Subscribe(listener func(T), _ func(error)) (func(), error) {
 	m.mu.Lock()

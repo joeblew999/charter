@@ -86,6 +86,10 @@ func Serve(h http.Handler) http.Handler {
 		// the bookmark of what it wrote (bookmark.go, cloud/session.go).
 		cloud.Begin(brought(r))
 		defer cloud.End()
+		// A part of a page that asks for itself again because its feed said something changed reads what is newest.
+		if r.URL.Query().Has(cloud.NewestQuery) {
+			cloud.Newest()
+		}
 		out := carrying(w, r, cloud.Written, cloud.Served)
 		h.ServeHTTP(out, incoming(r.WithContext(ctx)))
 		out.give()

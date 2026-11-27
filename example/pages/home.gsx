@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	charter "github.com/joeblew999/charter/api"
+	"github.com/joeblew999/charter/live"
 
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/locales"
@@ -12,9 +13,10 @@ import (
 	"github.com/joeblew999/charter/example/ui/icon"
 )
 
-// Page is the home page: the form, and the newest notes, newest first. The list follows the feed from the newest
-// note it shows: htmx 4's SSE extension (hx-sse:connect) puts the HTML of each event at the top of the list
-// (hx-swap), and when it connects again it sends the id of the last event it had, so no note is lost or shown twice.
+// Page is the home page: the form, and the newest notes, newest first. The list keeps itself current: its stream
+// (hx-sse:connect, the hub's) says when the notes have changed, and it then asks for itself again (hx-get, with the
+// list as its target) and morphs what comes into place. So a note added, one taken away, and several at once all
+// reach every open page, and a row a reader has opened stays open.
 component (p Home) Page(props HomeProps) {
 	<Layout title={locales.SiteTitle} description={locales.SiteDescription}>
 		// A line for everyone, when whoever may moderate has set one.
@@ -41,14 +43,20 @@ component (p Home) Page(props HomeProps) {
 						</ui.Button>
 					</p>
 				} }
-				<ul
-					id={Home.List |> id}
-					class="flex flex-col gap-2"
-					hx-sse:connect={notesSignal(ctx, props.After)}
-					hx-swap="afterbegin"
-				>
-					<p.List notes={props.Notes} reader={props.Caller}/>
-				</ul>
+				// The stream is this element's; the list inside it asks for itself again when the stream says so.
+				<div hx-sse:connect={api.Notes.Signal()}>
+					<ul
+						id={Home.List |> id}
+						class="flex flex-col gap-2"
+						hx-trigger={live.OnChange}
+						hx-get={again(ctx, Home{})}
+						hx-target={Home.List |> target}
+						hx-swap="innerMorph"
+						hx-sync="this:replace"
+					>
+						<p.List notes={props.Notes} reader={props.Caller}/>
+					</ul>
+				</div>
 			</ui.CardContent>
 		</ui.Card>
 	</Layout>

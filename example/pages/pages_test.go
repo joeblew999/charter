@@ -67,13 +67,13 @@ func (n *notes) Since(context.Context, int64, int) ([]api.Note, error) { return 
 func (n *notes) RemoveBy(context.Context, string) error                { return nil }
 func (n *notes) Latest(context.Context) (int64, error)                 { return n.next, nil }
 
-// The home page's data is the newest notes first, and where its stream starts: after the newest.
+// The home page's data is the newest notes first.
 func TestHomeProps(t *testing.T) {
 	store := &notes{}
 	store.Create(context.Background(), "first", "u1", "Ada")
 	store.Create(context.Background(), "second", "u1", "Ada")
-	props, _, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
-	if err != nil || len(props.Notes) != 2 || props.Notes[0].Body != "second" || props.After != 2 {
+	props, _, _, _, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
+	if err != nil || len(props.Notes) != 2 || props.Notes[0].Body != "second" {
 		t.Fatalf("%+v %v", props, err)
 	}
 }
@@ -126,7 +126,7 @@ func TestHomePage(t *testing.T) {
 	rec := httptest.NewRecorder()
 	serve(t, store).ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
 	html := rec.Body.String()
-	for _, want := range []string{`<form id="home-form"`, `hx-target="#home-form"`, `hx-post="/notes"`, `<ul id="home-list"`, `id="home-item--1"`, "a note &lt;b&gt;as typed&lt;/b&gt;", "/__charter/live/HUB/notes?after=1&amp;as=li&amp;get=%2Fnotes%2Fsince"} {
+	for _, want := range []string{`<form id="home-form"`, `hx-target="#home-form"`, `hx-post="/notes"`, `<ul id="home-list"`, `id="home-item--1"`, "a note &lt;b&gt;as typed&lt;/b&gt;", `hx-sse:connect="/__charter/live/HUB/notes?at=`, `hx-trigger="changed from:&#34;closest [hx-sse\:connect]&#34;"`, `hx-get="/?newest=1"`, `hx-target="#home-list"`, `hx-swap="innerMorph"`, `hx-sync="this:replace"`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("the page has no %s", want)
 		}

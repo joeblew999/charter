@@ -117,7 +117,7 @@ func TestActivityFollowsTheQueueLive(t *testing.T) {
 	page.Open(at(pages.ActivityPage{}))
 	writer := sdk(t, option.WithToken(apptest.Secret(t, "WRITE_TOKEN")))
 	write(t, writer, "for the activity page")
-	page.WaitText(el(pages.ActivityPage.Row)+` li:first-child`, "wrote a note")
+	page.WaitText(el(pages.ActivityPage.Rows)+` li:first-child`, "wrote a note")
 }
 
 // The Cron Trigger's task counts the day's notes: fired by hand on a local Worker, its line is on the page, in the

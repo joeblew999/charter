@@ -58,6 +58,14 @@ func (h durableObject[T]) Publish(_ context.Context, item T) error {
 // Subscribe opens a WebSocket to the hub (workers-go has no WebSocket client, so this is
 // syscall/js). The hub's side hibernates; every published item arrives as one text frame. A close
 // or an error (a deploy restarts the hub) is reported once, and Follow resubscribes.
+// Changed tells every open page that what it shows has changed.
+func (h durableObject[T]) Changed(context.Context) error {
+	if _, err := promise.Await(h.stub.Call("changed")); err != nil {
+		return fmt.Errorf("hub %s changed: %w", h.name, err)
+	}
+	return nil
+}
+
 func (h durableObject[T]) Subscribe(listener func(T), onError func(error)) (func(), error) {
 	res, err := promise.Await(h.stub.Call("fetch", "https://hub/subscribe", map[string]any{"headers": map[string]any{"Upgrade": "websocket"}}))
 	if err != nil {

@@ -1,7 +1,6 @@
 package pages
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"strconv"
@@ -25,8 +24,7 @@ type Built struct {
 	file        AttachedFile    `route:"GET /attachments/{file} AttachedFile"`
 	detach      DetachFile      `route:"POST /attachments/{file}/remove DetachFile"`
 
-	activity      ActivityPage  `route:"GET /activity Activity"`
-	activitySince ActivitySince `route:"GET /activity/since ActivitySince"`
+	activity ActivityPage `route:"GET /activity Activity"`
 
 	notice    NoticePage `route:"GET /notice Notice"`
 	setNotice NoticeSet  `route:"POST /notice NoticeSet"`
@@ -132,34 +130,11 @@ func (DetachFile) ServeHTTP(w http.ResponseWriter, r *http.Request, caller chart
 // ActivityPage is what happened (Queues, a Cron Trigger, D1), followed live (a Durable Object).
 type ActivityPage struct{}
 
-// ActivityView is what it shows: the latest, and the position its stream starts after.
-type ActivityView struct {
-	Latest []built.Activity
-	After  int64
-}
-
-func (ActivityPage) Props(r *http.Request) (ActivityView, error) {
-	latest, after, err := built.Recent(r.Context(), 30)
-	return ActivityView{latest, after}, err
-}
-
-// activitySignal is the address of the activity page's stream: the hub's, which tells the page to ask
-// ActivitySince for what happened after the newest row it has.
-func activitySignal(ctx context.Context, after int64) (string, error) {
-	since, err := structpages.URLFor(ctx, ActivitySince{})
-	return built.Feed.Signal(since, after, "li"), err
-}
-
-// ActivitySince is what happened after what a page has, as its own rows: what the page's stream (built.Feed.Signal)
-// tells it to fetch.
-type ActivitySince struct{}
-
-func (ActivitySince) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
-	rows, err := built.Feed.Since(r.Context(), r.URL.Query().Get("after"), 50)
-	if err != nil {
-		return err
-	}
-	return structpages.RenderComponent(ActivityPage{}.Rows(rows))
+// Props is the latest of what happened: for the page, and for its rows alone when their stream says there is more
+// (the target is ActivityPage's Rows).
+func (ActivityPage) Props(r *http.Request) ([]built.Activity, error) {
+	latest, _, err := built.Recent(r.Context(), 30)
+	return latest, err
 }
 
 // NoticePage is the line for everyone (KV), and the form that sets it.

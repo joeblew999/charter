@@ -27,6 +27,7 @@ import (
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/built"
 	"github.com/joeblew999/charter/example/pages/screens"
+	"github.com/joeblew999/charter/live"
 )
 
 // Pages is the tree.
@@ -48,7 +49,6 @@ type Pages struct {
 	// What the pages call: routes, not pages.
 	post   PostNote   `route:"POST /notes PostNote"`
 	remove RemoveNote `route:"POST /notes/{note}/remove RemoveNote"`
-	since  NotesSince `route:"GET /notes/since NotesSince"`
 }
 
 // Mount mounts the tree: what app.App's Pages is. The call is here so that structpages-lint finds the tree and can
@@ -63,11 +63,9 @@ const shown = 50
 // Home is the home page: the form, and the newest notes, which the feed keeps current.
 type Home struct{}
 
-// HomeProps is what Home shows: the notes, newest first, and the id of the newest, where its stream starts, so
-// nothing between the two is lost.
+// HomeProps is what Home shows: the notes, newest first.
 type HomeProps struct {
 	Notes []api.Note
-	After int64
 	// MayWrite is whether the reader may write a note: the form, or the way to sign in. It is what PostNote
 	// needs, asked of the same caller.
 	MayWrite bool
@@ -84,33 +82,35 @@ type Open bool
 type Removable bool
 
 // Props loads what the request wants, as structpages has it. A row's button asks for that row alone (its target is
-// Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. Anything
-// else is the page, with the newest notes. Each component takes its share of the results by their types.
-func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, api.Note, Open, Removable, error) {
+// Home's Item, with the note's id as its key): then one note is read, and structpages renders Item with it. The
+// list asks for itself when its stream says the notes changed (its target is Home's List): then the newest notes
+// are read, and structpages renders List with them, for this reader. Anything else is the page. Each component
+// takes its share of the results by their types.
+func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, []api.Note, charter.Caller, api.Note, Open, Removable, error) {
 	if target.Is(p.Item) {
 		id, err := strconv.ParseInt(structpages.KeyOf(target), 10, 64)
 		if err != nil {
-			return HomeProps{}, api.Note{}, false, false, app.NotFound("no such note")
+			return HomeProps{}, nil, caller, api.Note{}, false, false, app.NotFound("no such note")
 		}
 		note, err := store.Get(r.Context(), id)
 		if err != nil {
-			return HomeProps{}, api.Note{}, false, false, app.NotFound("no such note")
+			return HomeProps{}, nil, caller, api.Note{}, false, false, app.NotFound("no such note")
 		}
-		return HomeProps{}, note, r.URL.Query().Get("open") != "", Removable(api.MayRemove(caller, note)), nil
+		return HomeProps{}, nil, caller, note, r.URL.Query().Get("open") != "", Removable(api.MayRemove(caller, note)), nil
 	}
 	notes, err := store.Before(r.Context(), math.MaxInt64, shown)
 	if err != nil {
-		return HomeProps{}, api.Note{}, false, false, err
+		return HomeProps{}, nil, caller, api.Note{}, false, false, err
+	}
+	if target.Is(p.List) {
+		return HomeProps{}, notes, caller, api.Note{}, false, false, nil
 	}
 	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...), Caller: caller}
 	// One read of KV, for every reader: what it is for.
 	if props.Notice, err = built.NoticeNow(r.Context()); err != nil {
-		return HomeProps{}, api.Note{}, false, false, err
+		return HomeProps{}, nil, caller, api.Note{}, false, false, err
 	}
-	if len(notes) > 0 {
-		props.After = notes[0].ID
-	}
-	return props, api.Note{}, false, false, nil
+	return props, notes, caller, api.Note{}, false, false, nil
 }
 
 // current is how a link in the header looks: marked when the page being shown is that page, or under it
@@ -164,22 +164,9 @@ func (RemoveNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.St
 	return api.Remove(r.Context(), store, caller, id)
 }
 
-// notesSignal is the address of the page's stream: the hub's, which tells the page to ask NotesSince, at its
-// address in the reader's language, for what came after the newest note it has.
-func notesSignal(ctx context.Context, after int64) (string, error) {
-	since, err := structpages.URLFor(ctx, NotesSince{})
-	return api.Notes.Signal(since, after, "li"), err
-}
-
-// NotesSince is the notes after the one a page has, as Home shows them to whoever asks: what the page's stream
-// (api.Notes.Signal) tells the page to fetch when there is a new one. The stream itself is the hub's; this is an
-// ordinary request, so each reader gets the rows that are theirs: in their language, with the buttons they may use.
-type NotesSince struct{}
-
-func (NotesSince) ServeHTTP(w http.ResponseWriter, r *http.Request, caller charter.Caller) error {
-	notes, err := api.Notes.Since(r.Context(), r.URL.Query().Get("after"), 50)
-	if err != nil {
-		return err
-	}
-	return structpages.RenderComponent(Home{}.List(notes, caller))
+// again is a page's own address as the part of it that shows a feed asks it when the feed says something changed
+// (live.Again): the same page, in the reader's language, read where the database is newest.
+func again(ctx context.Context, page any) (string, error) {
+	address, err := structpages.URLFor(ctx, page)
+	return live.Again(address), err
 }
