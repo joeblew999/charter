@@ -64,6 +64,11 @@ func Create(args []string) {
 		if d.IsDir() {
 			return os.MkdirAll(to, 0o755)
 		}
+		// The example's secrets are the example's: where its own are kept is nothing a new app starts with (charter
+		// run secrets:put writes the app's fnox.toml).
+		if base := filepath.Base(rel); base == "fnox.toml" || strings.HasPrefix(base, "fnox.") && strings.HasSuffix(base, ".toml") {
+			return nil
+		}
 		b, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -95,6 +100,13 @@ func Create(args []string) {
 	// The new module path sorts differently among the imports: written as gofmt and gsx fmt have them.
 	// -e: the packages a build writes (the messages, the docs) are not there until the check below has built them, and
 	// tidied again.
+	// A charter that is no release (a developer's own build) copied the example as it is now: the app builds
+	// against that same commit, not against whatever release the example's go.mod last named.
+	if !version.Released() {
+		if head, err := exec.Command("git", "-C", tmp, "rev-parse", "HEAD").Output(); err == nil {
+			check(run.Run(dir, nil, "go", "get", "github.com/joeblew999/charter@"+strings.TrimSpace(string(head))))
+		}
+	}
 	check(run.Run(dir, nil, "go", "mod", "tidy", "-e"))
 	check(run.Run(dir, nil, "gofmt", "-w", "."))
 	if exists(filepath.Join(dir, "gsx.toml")) {
