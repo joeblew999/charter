@@ -69,6 +69,9 @@ account_leave_confirm = "Yes, delete it"
 people = "People"
 role = "Role"
 people_intro = "Everyone who signed up, and what each may do."
+# Taking a person away, on the people page: the button's name and what it asks first ({name} is the person).
+person_remove = "Remove {name}"
+person_remove_confirm = "Remove {name}, and what they wrote here? This cannot be undone."
 # An invitation, on the people page: its title, what it is, the button that makes one, and the line above its link;
 # and the button for someone already signed in who opens one.
 invite = "Invite someone"

@@ -408,3 +408,46 @@ func TestAnInvitationIsShared(t *testing.T) {
 		t.Errorf("the share sheet was handed %q, want the link %q", shared, link)
 	}
 }
+
+// An admin takes a person away on the people page, with what they wrote; nobody else may, and the admin's own row
+// has no such button.
+func TestAnAdminRemovesAPerson(t *testing.T) {
+	page := apptest.Browser(t)
+	page.SignUp(at(screens.SignInPage{}), "To be removed")
+	page.Open(at(pages.Home{}))
+	body := "by someone removed at " + time.Now().Format(time.RFC3339Nano)
+	page.Type(el(pages.Home.Form)+` input[name=body]`, body)
+	page.Click(el(pages.Home.Form) + ` button[type=submit]`)
+	page.WaitText(el(pages.Home.List), body)
+
+	people, err := sdk(t, option.WithToken(apptest.Secret(t, "ADMIN_TOKEN"))).People.List(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ""
+	for _, p := range people.Data {
+		if p.Name != nil && *p.Name == "To be removed" {
+			id = p.ID
+		}
+	}
+	if id == "" {
+		t.Fatal("the person who signed up is not among the people")
+	}
+	remove := at(screens.PersonRemove{}, "person", id)
+	if res := as(t, "WRITE_TOKEN", "POST", remove, "", nil); res.StatusCode != http.StatusForbidden {
+		t.Errorf("a writer removing a person: HTTP %d, want 403", res.StatusCode)
+	}
+	if res := as(t, "ADMIN_TOKEN", "POST", remove, "", nil); res.StatusCode != http.StatusOK {
+		t.Fatalf("an admin removing a person: HTTP %d", res.StatusCode)
+	}
+	html := apptest.Get(t, at(screens.PeoplePage{}), "Authorization", "Bearer "+apptest.Secret(t, "ADMIN_TOKEN"))
+	if strings.Contains(html, "To be removed") {
+		t.Error("the person is still on the people page")
+	}
+	if !strings.Contains(html, "data-remove") {
+		t.Error("the people page has no button that removes a person")
+	}
+	if strings.Contains(apptest.Get(t, at(pages.Home{})), body) {
+		t.Error("what the removed person wrote is still on the page")
+	}
+}

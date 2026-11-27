@@ -509,6 +509,31 @@ func (a *Auth) SetRole(r *http.Request, id, role string) error {
 	return nil
 }
 
+// Remove takes a person away, for whoever may manage people: what the app keeps of theirs first (People's
+// Leaving), then the person, their passkeys, sessions and tokens. Their own account is theirs to delete, on their
+// account page (Leave), so nobody removes themselves here by a slip.
+func (a *Auth) Remove(r *http.Request, id string) error {
+	accounts, err := a.managing(r)
+	if err != nil {
+		return err
+	}
+	if who, _ := a.Caller(r); who.Subject == id {
+		return app.Status(http.StatusUnprocessableEntity, "your own account is deleted on your account page")
+	}
+	person, err := accounts.Person(r.Context(), id)
+	if errors.Is(err, ErrNoAccount) {
+		return app.NotFound("no such person")
+	} else if err != nil {
+		return err
+	}
+	if a.people.Leaving != nil {
+		if err := a.people.Leaving(r.Context(), person); err != nil {
+			return err
+		}
+	}
+	return accounts.Remove(r.Context(), id)
+}
+
 // Roles are the roles there are, in order of their names: what a page that changes someone's offers.
 func (a *Auth) Roles() []string {
 	if a.people == nil {

@@ -473,6 +473,7 @@ type People struct {
 	page PeoplePage `route:"GET /{$} People"`
 	set  RoleSet    `route:"POST /{person}/role RoleSet"`
 	invite PeopleInvite `route:"POST /invite PeopleInvite"`
+	remove PersonRemove `route:"POST /{person}/remove PersonRemove"`
 }
 
 // Needs is what every route here needs: the scope that manages people. Someone signed in without it gets a 403.
@@ -503,7 +504,18 @@ func (RoleSet) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth)
 	if err := auth.SetRole(r, id, role); err != nil {
 		return err
 	}
-	return structpages.RenderComponent(PeoplePage{}.Person(api.Person{ID: id, Name: r.PostFormValue("name"), Role: role}, auth.Roles()))
+	return structpages.RenderComponent(PeoplePage{}.Person(api.Person{ID: id, Name: r.PostFormValue("name"), Role: role}, auth.Roles(), false))
+}
+
+// PersonRemove takes a person away, with what the app keeps of theirs, and answers with nothing: their row goes.
+type PersonRemove struct{}
+
+func (PersonRemove) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) error {
+	if err := auth.Remove(r, r.PathValue("person")); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusOK)
+	return nil
 }
 
 // PeopleInvite makes an invitation to a role and answers with its link, shown this once: whoever signs up through
@@ -541,7 +553,7 @@ component (p PeoplePage) Page(v PeopleView) {
 					<ui.CardContent>
 						<ul id="people" class="flex flex-col gap-2">
 							{ for _, person := range v.People {
-								<p.Person person={person} roles={v.Roles}/>
+								<p.Person person={person} roles={v.Roles} mine={person.ID == v.Caller.Subject}/>
 							} }
 						</ul>
 					</ui.CardContent>
@@ -603,7 +615,7 @@ component (p PeoplePage) Invite(roles []string, link string) {
 
 // Person is one person and their role, which changes as it is chosen: the row asks for itself again (its id is
 // the component's, keyed by the person).
-component (p PeoplePage) Person(person api.Person, roles []string) {
+component (p PeoplePage) Person(person api.Person, roles []string, mine bool) {
 	<li id={PeoplePage.Person |> key(person.ID)} class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2">
 		<span dir="auto" class="flex-1" translate="no">{ person.Name }</span>
 		<form
@@ -619,5 +631,23 @@ component (p PeoplePage) Person(person api.Person, roles []string) {
 				} }
 			</ui.NativeSelect>
 		</form>
+		// Anyone but oneself, asked first: one's own account is deleted on one's account page.
+		{ if !mine {
+			<ui.Button
+				type="button"
+				variant="ghost"
+				size="icon"
+				class="size-8"
+				data-remove
+				aria-label={locales.ScreensPersonRemove(person.Name)}
+				title={locales.ScreensPersonRemove(person.Name)}
+				hx-post={PersonRemove{} |> url(map[string]any{"person": person.ID})}
+				hx-confirm={locales.ScreensPersonRemoveConfirm(person.Name)}
+				hx-target={PeoplePage.Person |> keytarget(person.ID)}
+				hx-swap="delete"
+			>
+				<icon.Trash2/>
+			</ui.Button>
+		} }
 	</li>
 }

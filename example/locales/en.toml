@@ -183,3 +183,6 @@ have_account = "Already have an account here?"
 # is on the clipboard instead.
 invite_share = "Share"
 invite_copied = "Copied"
+# Taking a person away, on the people page: the button's name and what it asks first ({name} is the person).
+person_remove = "Remove {name}"
+person_remove_confirm = "Remove {name}, and what they wrote here? This cannot be undone."

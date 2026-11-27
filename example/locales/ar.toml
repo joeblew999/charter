@@ -131,3 +131,5 @@ name_hint = "يظهر بجانب ما تكتبه. ليس بريدك الإلكت
 have_account = "لديك حساب هنا بالفعل؟"
 invite_share = "مشاركة"
 invite_copied = "تم النسخ"
+person_remove = "إزالة {name}"
+person_remove_confirm = "هل تريد إزالة {name} وما كتبه هنا؟ لا يمكن التراجع عن ذلك."

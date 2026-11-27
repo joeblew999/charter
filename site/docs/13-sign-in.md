@@ -120,6 +120,8 @@ go tool charter run people                           # who signed up, and what e
 
 Open the link, give a name, and your device makes the passkey: you are signed in as an admin. Someone who has an account already, and is signed in, gets a button there instead: "Accept the invitation". From then on you invite others on the people page ("Invite someone"), to any role, or change the role of someone who signed up already.
 
+On the people page an admin also takes a person away (the bin on their row, asked first): what your app keeps of theirs goes as it does when they delete their own account (`Leaving`). An admin's own row has no bin; their account is theirs to delete, on their account page.
+
 An invitation is kept as a started sign-in is, by the SHA-256 of its code, so the database has nothing that invites anyone. A program does the same with `auth.Invite(r, role)`.
 
 ## Signing in
