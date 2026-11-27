@@ -5,7 +5,11 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["config:recommended"],
   schedule: ["before 6am on monday"],
-  postUpdateOptions: ["gomodTidy"],
+  // go mod tidy -e: an app's components are .gsx, whose Go is generated and not committed, so a plain tidy in a fresh
+  // checkout stops at them. With -e it goes on, and gives the go.mod and go.sum a tidy after generating them gives
+  // (tried on example/ and site/). And it is run in every module that uses the one updated through a local replace
+  // (example/ and site/ use charter's root module so), so their go.sum follow an update of the library's.
+  postUpdateOptions: ["gomodTidyE", "gomodTidyAll"],
   // example/ and site/ build against the checkout beside them (go.mod's replace): their charter is this one.
   ignoreDeps: ["github.com/joeblew999/charter"],
   // The API's clients are written by Fern (go tool charter pack), go.mod and all: Fern decides what they depend on.
