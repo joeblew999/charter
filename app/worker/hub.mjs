@@ -22,7 +22,7 @@
 // holds open tells it only that there is something new, and where to ask for it: each event is one element that
 // htmx puts in the page, and which then asks for itself (hx-get, on load) what came after the position the page
 // has. That is one short, ordinary request, which Go renders for that reader, in their language, with what they
-// may do. The log stays the truth, and nothing is lost: a page that connects again says the last position it was
+// may do. The log stays the truth, and nothing is lost: a stream opens with the page's own position as its id, so a page that connects again says the last position it was
 // told of (Last-Event-ID), and is told to ask from there.
 //
 // The API's streams are held here too, for the same reason. Go answers such a request with what the log has after
@@ -158,10 +158,15 @@ export class Hub extends DurableObject {
 				this.beat ??= setInterval(() => {
 					for (const each of this.readers) if (each.kind !== "lines") this.write(each, ": \n\n");
 				}, BEAT);
-				// A comment first: the response starts now, not at the first item.
-				this.write(reader, ": \n\n");
+				// The page's position first, as an id and nothing else: the response starts now, not at the first item,
+				// and a page whose stream breaks before any item (this hub restarting, as it does on a deploy) connects
+				// again saying where it was. A browser keeps an id that comes alone and shows nothing for it.
+				this.write(reader, `id: ${last}\n\n`);
 				// Back after a break: whatever came meanwhile is asked for at once.
 				if (again !== null) this.tell(reader, last);
+				// Not back, and something was published since the page was rendered, before this stream was open: that
+				// is asked for at once too.
+				else if (this.recent.length > 0 && this.recent[this.recent.length - 1].position > last) this.tell(reader, this.recent[this.recent.length - 1].position);
 			},
 			cancel: () => this.gone(reader),
 		});

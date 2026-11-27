@@ -44,6 +44,8 @@ A Go runtime takes 13 MB or more of a Worker's [128 MB](https://developers.cloud
 
 So a page's stream is the hub's, a small Durable Object in JavaScript, and it says one thing: there is something after the position you have, ask for it.
 
+Nothing is lost when a stream breaks, which every one does when the Worker is deployed: the hub restarts and holds nothing. A stream opens by giving the page's position as an id, so a page that connects again says where it was, and is told at once to ask for what came after, whether or not anything had reached it yet.
+
 ```gsx
 <ul hx-sse:connect={notesSignal(ctx, props.After)} hx-swap="afterbegin">
 ```
