@@ -28,6 +28,8 @@ go tool charter add screen:docs screen:theme-toggle
 
 A copy you have not changed follows charter: `check` says when charter writes it differently, and `check --fix` brings it up to date. A copy you changed is yours, and is left alone (`go tool charter add screen:docs -diff` shows the difference, `-overwrite` takes charter's).
 
+A screen's text follows the same way, message by message and in every language: one you have as charter wrote it takes charter's new wording, and one you worded yourself keeps yours. `locales/intl.sum` records which is which (its `file text:…` lines), so you never mark anything.
+
 ## Themes
 
 The look is gsxui's preset: a style (how components are shaped), colours for light and for dark, a radius and fonts. It is `gsxui.preset.json`, and `web/gsxui/theme.css` written from it.

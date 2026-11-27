@@ -118,7 +118,7 @@ go tool charter run people:invite admin --deployed   # on the deployed Worker
 go tool charter run people                           # who signed up, and what each is
 ```
 
-Open the link, give a name, and your device makes the passkey: you are signed in as an admin. Someone who has an account already, and is signed in, gets a button there instead: "Accept the invitation". From then on you invite others on the people page ("Invite someone"), to any role, or change the role of someone who signed up already.
+Open the link, give a display name, and your device makes the passkey: you are signed in as an admin. The link's page says what the invitation is to, and one that was used or is too old says so. Someone who has an account already, and is signed in, gets a button there instead: "Accept the invitation". From then on you invite others on the people page ("Invite someone"), to any role, or change the role of someone who signed up already. Under a new invitation's link is a Share button: the device's own share sheet on a phone, the clipboard elsewhere.
 
 On the people page an admin also takes a person away (the bin on their row, asked first): what your app keeps of theirs goes as it does when they delete their own account (`Leaving`). An admin's own row has no bin; their account is theirs to delete, on their account page.
 
@@ -147,6 +147,8 @@ RequestArgs: []any{api.OpenStore, api.Auth.Caller},
 ```
 
 `<screens.AccountLink/>` in a header says who is signed in, or leads to signing in.
+
+The name someone gives when they make an account is a display name: it is shown to everyone, beside what they write. The field says so, and an email address is refused there, by the browser and by the Worker.
 
 Someone signed in has a session: a token the app issued, kept by their browser as a cookie that scripts cannot read. On their account page they make tokens for their programs, each with a name; a token is shown once, and the database keeps only its SHA-256. A program sends one as `Authorization: Bearer`, and is that person.
 

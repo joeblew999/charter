@@ -77,6 +77,8 @@ The same tests ask the deployed Worker, whose database is real. So a test takes 
 - **People.** `page.SignUp` deletes the account again when the test is done, on the account page's own form, and with it what the app keeps of that person. A test that signs up by hand calls `page.Leave(path)`.
 - **Rows.** A test that writes through the API takes the row away in `t.Cleanup` (the example's `write` helper).
 
+`page.JS(expression)` evaluates in the page, for what a test cannot do as a reader does: the example stands in for the device's share sheet with it, and checks what the Share button hands over.
+
 The example holds itself to this in `test/main_test.go`: a local Worker starts with the seed, and when the tests are done it must have the seed's people and notes and no more, or the run fails and names what was left.
 
 ## Secrets a test needs
