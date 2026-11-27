@@ -190,13 +190,19 @@ func span(s string) (time.Duration, error) {
 
 // spanWords is a duration as it is said: 30 minutes, 6 hours, 7 days.
 func spanWords(d time.Duration) string {
+	count := func(n time.Duration, one string) string {
+		if n == 1 {
+			return one
+		}
+		return fmt.Sprintf("%d %ss", n, one)
+	}
 	switch {
 	case d%(24*time.Hour) == 0:
-		return fmt.Sprintf("%d days", d/(24*time.Hour))
+		return count(d/(24*time.Hour), "day")
 	case d%time.Hour == 0:
-		return fmt.Sprintf("%d hours", d/time.Hour)
+		return count(d/time.Hour, "hour")
 	}
-	return fmt.Sprintf("%d minutes", d/time.Minute)
+	return count(d/time.Minute, "minute")
 }
 
 func healthTask(p *project.Project, args []string) {
