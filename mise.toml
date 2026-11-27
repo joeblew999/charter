@@ -6,9 +6,9 @@
 # own (charter create, charter upgrade).
 [tools]
 go = "1.27.4"
-node = "26.13.1"
+node = "26.12.1"
 # By its GitHub releases: Renovate knows it by that name.
-"github:jdx/fnox" = "1.50.0"
+"github:jdx/fnox" = "1.48.0"
 
 [settings]
 # The systems charter is built and run on: what mise lock writes into mise.lock.
