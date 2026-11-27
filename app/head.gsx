@@ -23,6 +23,7 @@ component Head(title string, description string) {
 	/>
 	<intl.Head page={h.Page}/>
 	<theme/>
+	<styled dev={h.Dev}/>
 	<assets bundle={h.Assets}/>
 }
 
@@ -41,6 +42,39 @@ component assets(bundle vite.Bundle) {
 	} }
 	{ for _, src := range bundle.JS {
 		<script type="module" src={src}></script>
+	} }
+}
+
+// styled keeps a page from being seen before it is styled, under charter dev. Vite's dev server gives the stylesheet
+// by script (so a change to it shows without a reload), which comes after the page's markup: the page would be
+// seen bare, then styled. It is hidden until then, as gsxui's own site does it. What is built for a deploy has its
+// stylesheet as a link in the head, which a browser waits for by itself.
+component styled(dev bool) {
+	{ if dev {
+		<style>
+			html[data-loading] body {
+				visibility: hidden;
+			}
+
+			html[data-loading] * {
+				transition: none !important;
+			}
+		</style>
+		<script>
+			document.documentElement.dataset.loading = "true";
+			var unhide = function () {
+				document.documentElement.removeAttribute("data-loading");
+			};
+			var reveal = function () {
+				requestAnimationFrame(function () { requestAnimationFrame(unhide); });
+			};
+			if (document.readyState === "loading") {
+				document.addEventListener("DOMContentLoaded", reveal);
+			} else {
+				reveal();
+			}
+			setTimeout(unhide, 5000);
+		</script>
 	} }
 }
 

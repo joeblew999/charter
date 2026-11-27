@@ -33,26 +33,28 @@ func Head(title string, description string) _gsxrt.Node {
 //line head.gsx:25:2
 		_gsxgw.NodeResult(_gsxrendertheme(ctx, _gsxgw))
 //line head.gsx:26:2
-		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:26:18*/, h.Assets))
+		_gsxgw.NodeResult(_gsxrenderstyled(ctx, _gsxgw /*line head.gsx:26:15*/, h.Dev))
+//line head.gsx:27:2
+		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:27:18*/, h.Assets))
 		return _gsxgw.Err()
 	})
 }
 
-//line head.gsx:29:1
+//line head.gsx:30:1
 // Entry loads another of Vite's entries (vite.config.ts's input), for the one page that needs it: its stylesheets,
 // the chunks it imports, and its module.
 
-//line head.gsx:31:1
+//line head.gsx:32:1
 func Entry(name string) _gsxrt.Node {
 	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
 		_gsxgw := _gsxrt.W(_gsxw)
-//line head.gsx:32:2
-		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:32:18*/, headOf(ctx, name).Assets))
+//line head.gsx:33:2
+		_gsxgw.NodeResult(_gsxrenderassets(ctx, _gsxgw /*line head.gsx:33:18*/, headOf(ctx, name).Assets))
 		return _gsxgw.Err()
 	})
 }
 
-//line head.gsx:35:1
+//line head.gsx:36:1
 func assets(bundle vite.Bundle) _gsxrt.Node {
 	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
 		_gsxgw := _gsxrt.W(_gsxw)
@@ -64,29 +66,29 @@ func _gsxrenderassets(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, bundle vite.Bu
 	if _gsxerr := _gsxgw.Err(); _gsxerr != nil {
 		return _gsxerr
 	}
-//line head.gsx:36:2
-	for /*line head.gsx:36:8*/ _, href := range bundle.CSS {
-//line head.gsx:37:3
+//line head.gsx:37:2
+	for /*line head.gsx:37:8*/ _, href := range bundle.CSS {
+//line head.gsx:38:3
 		_gsxgw.S("<link rel=\"stylesheet\" href=\"")
-		_gsxgw.URL(string( /*line head.gsx:37:32*/ href))
+		_gsxgw.URL(string( /*line head.gsx:38:32*/ href))
 		_gsxgw.S("\"")
 		_gsxgw.Nonce(ctx)
 		_gsxgw.S(">")
 	}
-//line head.gsx:39:2
-	for /*line head.gsx:39:8*/ _, href := range bundle.Preloads {
-//line head.gsx:40:3
+//line head.gsx:40:2
+	for /*line head.gsx:40:8*/ _, href := range bundle.Preloads {
+//line head.gsx:41:3
 		_gsxgw.S("<link rel=\"modulepreload\" href=\"")
-		_gsxgw.URL(string( /*line head.gsx:40:35*/ href))
+		_gsxgw.URL(string( /*line head.gsx:41:35*/ href))
 		_gsxgw.S("\"")
 		_gsxgw.Nonce(ctx)
 		_gsxgw.S(">")
 	}
-//line head.gsx:42:2
-	for /*line head.gsx:42:8*/ _, src := range bundle.JS {
-//line head.gsx:43:3
+//line head.gsx:43:2
+	for /*line head.gsx:43:8*/ _, src := range bundle.JS {
+//line head.gsx:44:3
 		_gsxgw.S("<script type=\"module\" src=\"")
-		_gsxgw.URL(string( /*line head.gsx:43:30*/ src))
+		_gsxgw.URL(string( /*line head.gsx:44:30*/ src))
 		_gsxgw.S("\"")
 		_gsxgw.Nonce(ctx)
 		_gsxgw.S("></script>")
@@ -94,13 +96,45 @@ func _gsxrenderassets(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, bundle vite.Bu
 	return _gsxgw.Err()
 }
 
-//line head.gsx:47:1
+//line head.gsx:48:1
+// styled keeps a page from being seen before it is styled, under charter dev. Vite's dev server gives the stylesheet
+// by script (so a change to it shows without a reload), which comes after the page's markup: the page would be
+// seen bare, then styled. It is hidden until then, as gsxui's own site does it. What is built for a deploy has its
+// stylesheet as a link in the head, which a browser waits for by itself.
+
+//line head.gsx:52:1
+func styled(dev bool) _gsxrt.Node {
+	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
+		_gsxgw := _gsxrt.W(_gsxw)
+		return _gsxrenderstyled(ctx, _gsxgw, dev)
+	})
+}
+
+func _gsxrenderstyled(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, dev bool) error {
+	if _gsxerr := _gsxgw.Err(); _gsxerr != nil {
+		return _gsxerr
+	}
+//line head.gsx:53:2
+	if /*line head.gsx:53:7*/ dev {
+//line head.gsx:54:3
+		_gsxgw.S("<style")
+		_gsxgw.Nonce(ctx)
+		_gsxgw.S(">\nhtml[data-loading] body {\n\tvisibility: hidden;\n}\n\nhtml[data-loading] * {\n\ttransition: none !important;\n}\n</style>")
+//line head.gsx:63:3
+		_gsxgw.S("<script")
+		_gsxgw.Nonce(ctx)
+		_gsxgw.S(">\ndocument.documentElement.dataset.loading = \"true\";\nvar unhide = function () {\n\tdocument.documentElement.removeAttribute(\"data-loading\");\n};\nvar reveal = function () {\n\trequestAnimationFrame(function () { requestAnimationFrame(unhide); });\n};\nif (document.readyState === \"loading\") {\n\tdocument.addEventListener(\"DOMContentLoaded\", reveal);\n} else {\n\treveal();\n}\nsetTimeout(unhide, 5000);\n</script>")
+	}
+	return _gsxgw.Err()
+}
+
+//line head.gsx:81:1
 // theme is the light or dark theme of the app's gsxui preset (web/gsxui/theme.css: the class dark on <html>), as
 // gsxui's own site does it. It runs before the first paint, so a page never shows in the wrong one: what the reader
 // chose (kept by the browser), else what their system asks for. Any element with data-theme-toggle switches it:
 // the theme-toggle screen is one.
 
-//line head.gsx:51:1
+//line head.gsx:85:1
 func theme() _gsxrt.Node {
 	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
 		_gsxgw := _gsxrt.W(_gsxw)
@@ -112,7 +146,7 @@ func _gsxrendertheme(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer) error {
 	if _gsxerr := _gsxgw.Err(); _gsxerr != nil {
 		return _gsxerr
 	}
-//line head.gsx:52:2
+//line head.gsx:86:2
 	_gsxgw.S("<script")
 	_gsxgw.Nonce(ctx)
 	_gsxgw.S(">\n(function () {\n\tvar root = document.documentElement;\n\ttry {\n\t\tvar chosen = localStorage.getItem(\"theme\");\n\t\tif (chosen === \"dark\" || (!chosen && matchMedia(\"(prefers-color-scheme: dark)\").matches)) root.classList.add(\"dark\");\n\t} catch (e) {}\n\tdocument.addEventListener(\"click\", function (event) {\n\t\tif (!event.target.closest || !event.target.closest(\"[data-theme-toggle]\")) return;\n\t\tvar dark = root.classList.toggle(\"dark\");\n\t\ttry { localStorage.setItem(\"theme\", dark ? \"dark\" : \"light\"); } catch (e) {}\n\t});\n})();\n</script>")

@@ -469,6 +469,8 @@ func HTML(ctx context.Context) gsx.Attrs { return intl.HTML(ctx) }
 type head struct {
 	Name, Icon, Home, Lang, Page, Entry string
 	Assets                              vite.Bundle
+	// Dev is whether Vite's dev server serves the site's files (charter dev): the stylesheet then comes by script.
+	Dev bool
 }
 
 func headOf(ctx context.Context, entry string) head {
@@ -482,6 +484,7 @@ func headOf(ctx context.Context, entry string) head {
 	}
 	if v := vite.FromContext(ctx); v != nil {
 		h.Assets = v.Entry(h.Entry)
+		h.Dev = v.Dev()
 	}
 	h.Page = intl.Unprefixed(p.r.URL.Path)
 	h.Lang = intl.Current(ctx).ID()
