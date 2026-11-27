@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Test runs charter test: the app's Go tests, then the Worker itself, built and run on wrangler dev on a port and
@@ -86,9 +87,15 @@ func Test(args []string) {
 			}
 		}
 		t := newTimes("test of " + *base)
+		began := time.Now()
 		t.part("worker", func() error { return try(p, commands, *base) })
 		if p.SEO != nil {
 			t.part("audit", func() error { return seo.Audit(strings.TrimRight(*base, "/")) })
+		}
+		// And what no test sees: whether Cloudflare ended any request of the run instead of the Worker answering it
+		// (over its memory, over its CPU time, an exception). Only for a Worker this app deploys.
+		if deployedHere(p, *base) {
+			t.part("health", func() error { return healthOf(p, envOf(p, *base), began) })
 		}
 		t.done()
 		return
@@ -246,4 +253,18 @@ func servingWith(p *project.Project, how served, body func(base string, port int
 	}
 	server := run.Server{Command: command, Dir: p.Root, Env: quiet, Ready: base + p.HealthPath()}
 	return run.With(server, func() error { return body(base, ports[0]) })
+}
+
+// deployedHere reports whether base is where this app's Worker, or an environment of it, is deployed.
+func deployedHere(p *project.Project, base string) bool {
+	base = strings.TrimRight(base, "/")
+	if base == strings.TrimRight(p.URL, "/") && p.URL != "" {
+		return true
+	}
+	for _, at := range p.URLs {
+		if strings.TrimRight(at, "/") == base {
+			return true
+		}
+	}
+	return false
 }

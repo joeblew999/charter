@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 )
 
 // Deploy runs charter deploy [environment]: the D1 migrations, then wrangler deploy. An environment is one of
@@ -50,6 +51,11 @@ func Deploy(args []string) {
 		check(err)
 	} else if len(changed) > 0 && !force {
 		check(fmt.Errorf("%s\nA bucket and a queue cannot be renamed: deploying makes a new, empty one and leaves the old one behind, with what it holds. Put the name back, or to start a new one on purpose:\n  go tool charter deploy %s--new-resources", strings.Join(changed, "\n"), envWord(envName)))
+	}
+	// How the version that is going did, the last day: what the new one is to be compared with, and the moment a
+	// fault nobody saw is seen. It never stops a deploy, which may be its mending.
+	if outcomes, cpu50, cpu99, err := health(p, deployedName(p, envName), time.Now().Add(-24*time.Hour), time.Now()); err == nil && len(outcomes) > 0 {
+		report(deployedName(p, envName), "the last 24 hours, before this deploy", outcomes, cpu50, cpu99)
 	}
 	var said bytes.Buffer
 	check(cloudflareTo(&said, p, append([]string{"deploy"}, env...), args))
