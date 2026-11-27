@@ -88,14 +88,16 @@ func TestTwoOpenPagesKeepUp(t *testing.T) {
 	settles(t, "reader", reader, stamp, "6|"+want)
 	settles(t, "writer", writer, stamp, "6|"+want)
 
-	// What is left is taken away, so the Worker is as it was.
-	for range 4 {
+	// What is left is taken away, one at a time, each gone from the writer's page before the next is asked for: so
+	// the Worker is as it was.
+	for left := shownIn(writer, stamp); left != ""; left = shownIn(writer, stamp) {
+		first, rest, _ := strings.Cut(left, "|")
 		writer.JS(fmt.Sprintf(`(() => {
-			const row = [...document.querySelectorAll(%q)].find(li => (li.querySelector("span[dir]")?.textContent ?? "").startsWith(%q));
+			const row = [...document.querySelectorAll(%q)].find(li => (li.querySelector("span[dir]")?.textContent ?? "") === %q);
 			row?.querySelector("[data-remove]").click();
 			return "clicked";
-		})()`, el(pages.Home.List)+" > li", stamp))
-		time.Sleep(300 * time.Millisecond)
+		})()`, el(pages.Home.List)+" > li", stamp+first))
+		settles(t, "writer", writer, stamp, rest)
 	}
 	settles(t, "reader", reader, stamp, "")
 }
