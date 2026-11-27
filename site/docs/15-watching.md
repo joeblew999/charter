@@ -77,7 +77,7 @@ What that means for a charter app, from the example over the 30 days to 2026-11-
 
 - **It is for Workers Paid.** A Go Worker takes more than Free's 10 ms of CPU for many of its requests: the example's median is 10 ms, its 99th percentile 166 ms.
 - **Size is not near its limit.** The example is 27.25 MiB of the 64. What size costs is time to start, which is not billed: it is the reader who waits for it.
-- **Memory is the limit a Go Worker meets first.** A runtime holds 13 MB or more of the isolate's 128 MB ([below](#memory)), and in the 7 days to 2026-11-27 the example had 123 requests (0.6%) ended over it.
+- **Memory is the limit a Go Worker meets first.** A runtime holds 13 MB or more of the isolate's 128 MB ([below](#memory)). While a Go runtime held each page's stream, the example had 123 requests ended over it, on 2026-11-26 and 27; since the hub has held the streams (bdf9572), it has had none.
 - **CPU time is what it pays for.** The example took 20 ms a request: 0.42 million ms for its 20,930 requests, well inside the 30 million included. Past what is included, 20 ms a request is $0.40 a million requests, beside the $0.30 for the requests themselves.
 - **The hub is billed by time.** A page's stream held open keeps the hub's Durable Object active, which is counted at 128 MB a second. The example's hub was active for 1,406 seconds: 180 GB-s of the 400,000 included.
 
