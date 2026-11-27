@@ -103,6 +103,39 @@ charter-example, while it was loaded: 3,222 requests
 
 It only reads: the pages of the sitemap, and the streams they open. It waits until Cloudflare has counted what it sent, so what it says is of all of it; that takes about a minute, and is why it is no part of a deploy.
 
+## A first hit
+
+Where no instance of the Worker is running, a reader waits for one to start. For an app without constant traffic everywhere, most readers in most places are that first hit, and one machine never shows it: its second request finds the instance its first one started.
+
+```sh
+go tool charter run cold                        # the deployed Worker's front page, from 30 places
+go tool charter run cold -path /docs/ -from 50
+go tool charter run cold staging                # an environment
+```
+
+```
+charter-example, GET /docs/ from 30 places (Globalping), the time from the connection to the first byte:
+· the first request: 29 met a new instance (half under 628 ms, 90% under 979 ms); 1 met a running one (half under 520 ms, 90% under 520 ms)
+· again from each: 23 met a new instance (half under 501 ms, 90% under 635 ms); 7 met a running one (half under 54 ms, 90% under 131 ms)
+```
+
+The places are the probes of [Globalping](https://globalping.io), a public service: it is told the Worker's address and the page, and nothing else. Each asks once, then again. Which answers were a first hit is counted, not guessed: the Worker says which runtime answered (the header `x-go-runtime`), and one that started as the instance did is a first hit. The time is from the connection made to the first byte, so it is what the Worker and Cloudflare take, without the reader's distance to Cloudflare. Without an account Globalping gives an address 250 probes an hour; this takes two for each place.
+
+What it found on 2026-11-27, from 30 places each:
+
+| | A first hit, half under | A running instance, half under |
+|---|---|---|
+| `site/`, `/docs/`: 14.4 MiB, starts in 103 ms of CPU | 433 ms | 55 ms |
+| The example, `/docs/`: 27.3 MiB, starts in 142 to 224 ms | 628 ms | 54 ms |
+| The example, `/`, which reads D1 | 810 ms | 266 to 313 ms |
+
+- **A second request is still a first hit, two times in three.** Cloudflare runs a Worker on many machines at a location, and each starts its own instance. So what counts is less how long an instance is kept than how many of them a reader's requests meet.
+- **Of a first hit, charter's part is the smaller.** The request itself took at most 87 ms and the module's start-up 142 to 224 ms of CPU, by Cloudflare's own counts; the rest is Cloudflare making the instance, before any code of the app runs.
+- **A smaller Worker that starts sooner has a shorter first hit**: `site/` is half the example's size and 0.2 s sooner.
+- **A page that reads D1 waits for it**, 0.2 s and more, on a running instance too.
+
+It is for after a change to what the Worker loads or does as it starts. It is no part of a deploy.
+
 ## What happened?
 
 Workers Logs keep what the Worker printed and how each request ended, for a week. They are on in `wrangler.jsonc`:

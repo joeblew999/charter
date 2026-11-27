@@ -63,7 +63,8 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   when this is broken; local dev has no such limit and never shows it.
 - **A deployed Worker is watched, and no deploy waits on it.** `charter run health` asks Cloudflare how requests
   ended; `deploy` and `test --deployed` say how it did before them; a workflow asks daily; `charter run load
-  --deployed` is for before a release. A check that costs seconds does not go into `check`, `test` or `deploy`.
+  --deployed` is for before a release, `charter run cold` (a first hit, from many places) for after a change to how
+  the Worker starts. A check that costs seconds does not go into `check`, `test` or `deploy`.
   Workers Logs are on, and `charter run logs --since` reads them. A failure is one
   JSON line with a reference, and never has what a request sent.
 - **A resource is its id.** `charter deploy` writes the database's and the KV namespace's ids into
