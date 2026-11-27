@@ -43,7 +43,18 @@ func main() {
 		// method, and whoever is not signed in is sent to the sign-in screen.
 		Auth:   api.Auth,
 		SignIn: screens.SignInPage{},
-		Args:   []any{api.Auth},
+		// The app's own lines on the admin screen's overview: asked when that page is.
+		Facts: []app.Fact{
+			{Label: locales.FactsNotes, Value: func(ctx context.Context) (any, error) {
+				report, err := api.Report(ctx)
+				return report.Notes, err
+			}},
+			{Label: locales.FactsWriters, Value: func(ctx context.Context) (any, error) {
+				report, err := api.Report(ctx)
+				return report.Authors, err
+			}},
+		},
+		Args: []any{api.Auth},
 		// What a page asks for by type, made from the request: the notes' store (D1), and who is asking.
 		RequestArgs: []any{api.OpenStore, api.Auth.Caller},
 		API:         api.Handler(api.Env{Var: charter.Var}),

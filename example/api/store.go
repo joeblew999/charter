@@ -81,6 +81,15 @@ func (s d1) Since(_ context.Context, after int64, limit int) ([]Note, error) {
 
 func (s d1) Latest(context.Context) (int64, error) { return db.NewestNote(s.db) }
 
+// Report is how many notes there are, and by how many people: what the admin screen's overview says of the app.
+func Report(context.Context) (db.NotesReportRow, error) {
+	conn, err := cloud.Open("DB")
+	if err != nil {
+		return db.NotesReportRow{}, err
+	}
+	return db.NotesReport(conn)
+}
+
 // notes are the table's rows as the API's notes.
 func notes(rows []db.NotesRow) []Note {
 	out := make([]Note, len(rows))

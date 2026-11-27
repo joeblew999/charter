@@ -205,7 +205,7 @@ func TestEveryRouteHasAnAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sample := map[string]any{"slug": "how-it-is-built", "action": "note", "token": 1, "note": 1, "person": "u1", "file": 1}
+	sample := map[string]any{"slug": "how-it-is-built", "action": "note", "token": 1, "note": 1, "person": "u1", "file": 1, "invitation": "abc", "binding": "DB"}
 	for _, node := range routes {
 		if _, err := sp.URLFor(node.Value.Interface(), sample); err != nil {
 			t.Errorf("%s (%s): %v", node.Name, node.FullRoute(), err)

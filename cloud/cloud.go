@@ -32,3 +32,33 @@ func ClientKey(r *http.Request) string {
 	}
 	return "local"
 }
+
+// Binding is one name of the Worker's environment, and what kind of thing is bound there.
+type Binding struct {
+	Name string `json:"name"`
+	Kind string `json:"kind"`
+	// Set, for a variable or a secret: whether it has a value. The value is never given.
+	Set bool `json:"set,omitempty"`
+}
+
+// The kinds of binding.
+const (
+	KindDatabase      = "database"
+	KindKV            = "kv"
+	KindBucket        = "bucket"
+	KindQueue         = "queue"
+	KindDurableObject = "durable object"
+	KindRateLimit     = "rate limit"
+	KindEmail         = "email"
+	KindService       = "service"
+	KindOther         = "other"
+	KindText          = "text"
+)
+
+var kinds = []string{KindDatabase, KindKV, KindBucket, KindQueue, KindDurableObject, KindRateLimit, KindEmail, KindService, KindOther, KindText}
+
+// ErrNoProbe is Probe's answer for a binding that has nothing harmless to ask.
+var ErrNoProbe = errors.New("cloud: nothing to ask a binding of this kind")
+
+// Probes reports whether Probe has something to ask a binding of this kind.
+func Probes(kind string) bool { return kind == KindDatabase || kind == KindKV || kind == KindBucket }

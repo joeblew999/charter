@@ -92,6 +92,9 @@ type App struct {
 	//
 	// and every route at or under it is checked before it runs. nil: an app where every page is everyone's.
 	Auth Auth
+	// Facts are lines the app adds to the admin screen's overview (charter add screen:admin): what an admin wants to
+	// know of the app itself, each asked when the page is.
+	Facts []Fact
 	// SignIn is the page someone who is not signed in is sent to when a page needs them to be (the sign-in
 	// screen: screens.SignIn{}), with where they were going in ?return=. nil: such a request is a 401.
 	SignIn any
@@ -202,6 +205,21 @@ func Name(ctx context.Context) string {
 		return p.site.Name
 	}
 	return ""
+}
+
+// Fact is one line of the admin screen's overview that is the app's own: what it is called, and its value now. A
+// number is shown as the reader's language writes one, a time.Time as a date, anything else as it prints.
+type Fact struct {
+	Label intl.Msg
+	Value func(ctx context.Context) (any, error)
+}
+
+// Facts are the app's facts (App.Facts), for the admin screen.
+func Facts(ctx context.Context) []Fact {
+	if p, ok := ctx.Value(key{}).(page); ok && p.site != nil {
+		return p.site.Facts
+	}
+	return nil
 }
 
 // AuthOf is the app's Auth, for the same: nil for an app without one.

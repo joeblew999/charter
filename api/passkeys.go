@@ -55,7 +55,10 @@ type started struct {
 const InviteLasts = time.Hour
 
 // InviteID is where an invitation with that code is kept (Accounts' Begin and Take; the ceremonies table).
-func InviteID(code string) string { return "invite:" + hashOf(code) }
+func InviteID(code string) string { return invitePrefix + hashOf(code) }
+
+// invitePrefix begins what an invitation is kept under, among the sign-ins that were started.
+const invitePrefix = "invite:"
 
 // Invite makes an invitation to be role, for whoever may manage people, and gives its code: app.InvitePath with
 // ?code= is its link. charter run people:invite makes one from the command line.

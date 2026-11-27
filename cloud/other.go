@@ -5,6 +5,7 @@ package cloud
 import (
 	"database/sql"
 	"net/http"
+	"time"
 )
 
 // Not a Worker: the package compiles, and every call answers ErrNotCloudflare.
@@ -25,3 +26,6 @@ func Batch(DB, ...Statement) error                 { return ErrNotCloudflare }
 
 // DB is a D1 database.
 type DB struct{}
+
+func Bindings() []Binding                 { return nil }
+func Probe(string) (time.Duration, error) { return 0, ErrNotCloudflare }

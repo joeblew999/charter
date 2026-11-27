@@ -130,6 +130,8 @@ type Accounts interface {
 	Take(ctx context.Context, id string) (string, error)
 	// Look is what Take would give, left where it is.
 	Look(ctx context.Context, id string) (string, error)
+	// Invitations are the invitations that can still be taken up, soonest to end first.
+	Invitations(ctx context.Context) ([]Invitation, error)
 }
 
 // newToken is a token and its hash.

@@ -17,6 +17,9 @@ type Pages struct {
 	signIn  screens.SignIn  `route:"/sign-in SignIn"`
 	account screens.Account `route:"/account Account"`
 
+	// What an admin sees of the system (charter's admin screen): the app at a glance, its bindings, its database.
+	admin screens.Admin `route:"/admin Admin"`
+
 	// The time zone and clock dialog's form, and where it is sent.
 	preferences screens.Preferences `route:"/preferences Preferences"`
 

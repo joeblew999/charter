@@ -55,6 +55,8 @@ ar built.took 23a992f7f262 216071eefafe
 ar built.worker a67b04cd5c49 a67b04cd5c49
 ar built.wrote 838a2f8368e3 5061339c25d7
 ar docs.nav 7af023c43013 e3b066ec52ba
+ar facts.notes 8a7525b1492f cee9f2b0adc8
+ar facts.writers 94b7b29eaf62 9f9764e30fbb
 ar gsxui.close 7d9eb7acb13e ca90c297b099
 ar gsxui.suggestions 16c1d601fc66 7cc69d912c83
 ar home.heading 8a7525b1492f cee9f2b0adc8
@@ -69,6 +71,32 @@ ar screens.account 7e1b0d5641f2 66dcee1f4616
 ar screens.account_leave 21d5294717e2 c669c4188915
 ar screens.account_leave_confirm 0c3d8950a137 54c8c04d2931
 ar screens.account_leave_intro 2b674e5b4b46 9ba1a26db03e
+ar screens.admin c1c224b03cd9 a3b53d11ac20
+ar screens.admin_answers 677fe21b65f4 812f489b9103
+ar screens.admin_bindings 7697ab84cd81 32502d2e7cc4
+ar screens.admin_bound 5e1cf42878df fc4860ba0769
+ar screens.admin_cancel 19766ed6ccb2 9a30dc2a96b8
+ar screens.admin_committed dd9061853d8b 46404d4c7fb4
+ar screens.admin_database fa7fe67124e9 430e2c93e7bb
+ar screens.admin_database_intro a1e9886d7a72 ed0395aa4f6f
+ar screens.admin_facts d494f204e8e6 d83483faf7f9
+ar screens.admin_invitations 4abf945c3cb4 6940e660d0e1
+ar screens.admin_invitations_intro b2eff7b58a20 979d25d23c75
+ar screens.admin_migrations fe0313c05643 6963fa054dea
+ar screens.admin_modified c74e76e18e15 6fd4be623b6f
+ar screens.admin_no_answer 935cbc8ef57a 913b5ab7bf73
+ar screens.admin_none 903ea500e7cc e5db0651f54b
+ar screens.admin_overview d4b1ea5708dd 567544099c5e
+ar screens.admin_overview_intro dee30145f55c f015b987d793
+ar screens.admin_probe 9d60841e0a78 eee0654092ac
+ar screens.admin_revision 2e516d68f42f d2d4b7f9cfb5
+ar screens.admin_set 6ee0eb490ff8 0c7880258eae
+ar screens.admin_settings 68ef4a7bafaf f4712045d1ff
+ar screens.admin_settings_intro c72e7734ae20 8f8b4086159e
+ar screens.admin_system 6725e7bbcd28 df8d4a3bd114
+ar screens.admin_system_intro 3a7583b72a17 69af45a92d89
+ar screens.admin_tables 9a8d62b6f58a f7bf68613a7a
+ar screens.admin_unset 1aef93991721 3eed0035cf5d
 ar screens.also_in 5d73b6d757bd 61d515b16a6b
 ar screens.close 7d9eb7acb13e ca90c297b099
 ar screens.docs 7af023c43013 9d66d0084b75
@@ -177,6 +205,8 @@ de built.took 23a992f7f262 dfd58d6bc119
 de built.worker a67b04cd5c49 a67b04cd5c49
 de built.wrote 838a2f8368e3 ab80df1cf45f
 de docs.nav 7af023c43013 c2ec0b49f5bf
+de facts.notes 8a7525b1492f 7800bd538c37
+de facts.writers 94b7b29eaf62 2eea903e0838
 de gsxui.close 7d9eb7acb13e b808f6e97075
 de gsxui.suggestions 16c1d601fc66 4238ec18355e
 de home.heading 8a7525b1492f 7800bd538c37
@@ -191,6 +221,32 @@ de screens.account 7e1b0d5641f2 df8525011f61
 de screens.account_leave 21d5294717e2 85fc0961014a
 de screens.account_leave_confirm 0c3d8950a137 00796fc4bdac
 de screens.account_leave_intro 2b674e5b4b46 1cbca3868fcf
+de screens.admin c1c224b03cd9 2456bb8ed72f
+de screens.admin_answers 677fe21b65f4 95b065ec0a7a
+de screens.admin_bindings 7697ab84cd81 dd04078a2d55
+de screens.admin_bound 5e1cf42878df 322addc9f507
+de screens.admin_cancel 19766ed6ccb2 53b0832683e3
+de screens.admin_committed dd9061853d8b f771b921733f
+de screens.admin_database fa7fe67124e9 4cc80701da55
+de screens.admin_database_intro a1e9886d7a72 4f3951eb35ce
+de screens.admin_facts d494f204e8e6 c1b86f337b14
+de screens.admin_invitations 4abf945c3cb4 f630f6b5d308
+de screens.admin_invitations_intro b2eff7b58a20 0b4c1e180117
+de screens.admin_migrations fe0313c05643 1d518d0af7b4
+de screens.admin_modified c74e76e18e15 4e3c0ff7b27f
+de screens.admin_no_answer 935cbc8ef57a c91ff4054bec
+de screens.admin_none 903ea500e7cc 9de70b86d6b8
+de screens.admin_overview d4b1ea5708dd 2d2baea43a0e
+de screens.admin_overview_intro dee30145f55c 5f1f243c7bfc
+de screens.admin_probe 9d60841e0a78 a1ca13575987
+de screens.admin_revision 2e516d68f42f 2e516d68f42f
+de screens.admin_set 6ee0eb490ff8 6086bd092e10
+de screens.admin_settings 68ef4a7bafaf f30988b25105
+de screens.admin_settings_intro c72e7734ae20 7bea4c2a6c58
+de screens.admin_system 6725e7bbcd28 6725e7bbcd28
+de screens.admin_system_intro 3a7583b72a17 4be033e0d62c
+de screens.admin_tables 9a8d62b6f58a dd6d970ff6c2
+de screens.admin_unset 1aef93991721 19e6b450a04d
 de screens.also_in 5d73b6d757bd fc700d9aa96c
 de screens.close 7d9eb7acb13e b808f6e97075
 de screens.docs 7af023c43013 2a9d508bdc77
@@ -243,6 +299,7 @@ de screens.tokens 71ef74d05e87 ff0df073477b
 de screens.tokens_intro 1c6d96696955 a918f0304511
 de site.description 4678adbf73e2 770309db6d44
 de site.title a53f68bc82b2 b6d1b994b50b
+file pages/screens/admin.gsx 4f9ee4ce38dc
 file pages/screens/docs.gsx 27186bc52060
 file pages/screens/language-list.gsx a362660dc34d
 file pages/screens/language-offer.gsx 99b5c5b72cd3
@@ -253,6 +310,32 @@ file text:screens.account 7e1b0d5641f2
 file text:screens.account_leave 21d5294717e2
 file text:screens.account_leave_confirm 0c3d8950a137
 file text:screens.account_leave_intro 2b674e5b4b46
+file text:screens.admin c1c224b03cd9
+file text:screens.admin_answers 677fe21b65f4
+file text:screens.admin_bindings 7697ab84cd81
+file text:screens.admin_bound 5e1cf42878df
+file text:screens.admin_cancel 19766ed6ccb2
+file text:screens.admin_committed dd9061853d8b
+file text:screens.admin_database fa7fe67124e9
+file text:screens.admin_database_intro a1e9886d7a72
+file text:screens.admin_facts d494f204e8e6
+file text:screens.admin_invitations 4abf945c3cb4
+file text:screens.admin_invitations_intro b2eff7b58a20
+file text:screens.admin_migrations fe0313c05643
+file text:screens.admin_modified c74e76e18e15
+file text:screens.admin_no_answer 935cbc8ef57a
+file text:screens.admin_none 903ea500e7cc
+file text:screens.admin_overview d4b1ea5708dd
+file text:screens.admin_overview_intro dee30145f55c
+file text:screens.admin_probe 9d60841e0a78
+file text:screens.admin_revision 2e516d68f42f
+file text:screens.admin_set 6ee0eb490ff8
+file text:screens.admin_settings 68ef4a7bafaf
+file text:screens.admin_settings_intro c72e7734ae20
+file text:screens.admin_system 6725e7bbcd28
+file text:screens.admin_system_intro 3a7583b72a17
+file text:screens.admin_tables 9a8d62b6f58a
+file text:screens.admin_unset 1aef93991721
 file text:screens.also_in 5d73b6d757bd
 file text:screens.close 7d9eb7acb13e
 file text:screens.docs 7af023c43013

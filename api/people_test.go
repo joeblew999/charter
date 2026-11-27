@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -102,6 +103,15 @@ func (m *fakeAccounts) Begin(_ context.Context, id, data string, _ time.Time) er
 	}
 	m.started[id] = data
 	return nil
+}
+func (m *fakeAccounts) Invitations(context.Context) ([]Invitation, error) {
+	var out []Invitation
+	for id, role := range m.started {
+		if strings.HasPrefix(id, invitePrefix) {
+			out = append(out, Invitation{ID: strings.TrimPrefix(id, invitePrefix), Role: role})
+		}
+	}
+	return out, nil
 }
 func (m *fakeAccounts) Look(_ context.Context, id string) (string, error) {
 	data, ok := m.started[id]
@@ -279,5 +289,45 @@ func TestAnInvitationGivesItsRoleOnce(t *testing.T) {
 	}
 	if _, err := auth.invited(t.Context(), accounts, "ch_made_up"); err == nil {
 		t.Error("a code nobody made is an invitation")
+	}
+}
+
+// The overview counts people by role and lists the invitations that wait; one is cancelled by its id, which is not
+// its code. None of it is for someone who may not manage people.
+func TestTheOverviewIsForWhoeverManagesPeople(t *testing.T) {
+	accounts := newFakeAccounts()
+	accounts.Create(t.Context(), Person{ID: "u1", Name: "Ada", Role: "member"})
+	accounts.Create(t.Context(), Person{ID: "u2", Name: "Lin", Role: "member"})
+	auth := NewAuth(func(name string) string { return map[string]string{"ADMIN_TOKEN": "operator"}[name] },
+		People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil },
+			Roles: map[string][]string{"member": {"read"}, "admin": {"read", "admin"}}, Role: "member"},
+		Token{Secret: "ADMIN_TOKEN", Scopes: []string{"admin"}})
+	if _, err := auth.Overview(httptest.NewRequest("GET", "/", nil)); err == nil {
+		t.Error("nobody was shown the overview")
+	}
+	operator := httptest.NewRequest("GET", "/", nil)
+	operator.Header.Set("Authorization", "Bearer operator")
+	code, err := auth.Invite(operator, "admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	o, err := auth.Overview(operator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(o.People) != 2 || o.People[0] != (RoleCount{"admin", 0}) || o.People[1] != (RoleCount{"member", 2}) {
+		t.Errorf("people by role: %+v", o.People)
+	}
+	if len(o.Invitations) != 1 || o.Invitations[0].Role != "admin" || strings.Contains(code, o.Invitations[0].ID) {
+		t.Fatalf("invitations: %+v", o.Invitations)
+	}
+	if err := auth.CancelInvitation(operator, o.Invitations[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := auth.Invited(operator, code); ok {
+		t.Error("a cancelled invitation can still be taken up")
+	}
+	if err := auth.CancelInvitation(operator, o.Invitations[0].ID); err == nil {
+		t.Error("an invitation was cancelled twice")
 	}
 }

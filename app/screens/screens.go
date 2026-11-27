@@ -47,6 +47,11 @@ var Screens = &registry.Registry{
 				"    account screens.Account `route:\"/account Account\"`\n" +
 				"    (&app.App{Auth: auth, SignIn: screens.SignInPage{}, Args: []any{auth}, RequestArgs: []any{auth.Caller}, …})\n" +
 				"  <screens.AccountLink/>        in the header: who is signed in, or the way to sign in"},
+		{Name: "admin", Gsxui: []string{"badge", "button", "card", "icon"}, Needs: []string{"sign-in"},
+			Use: "  what an admin sees of the system: the app at a glance, what the Worker is bound to, what its databases hold. In the page tree:\n" +
+				"    admin screens.Admin `route:\"/admin Admin\"`\n" +
+				"  <screens.AdminLink/>          in the header: there for whoever may open it\n" +
+				"  (&app.App{Facts: []app.Fact{{Label: locales.Notes, Value: …}}, …}: lines of the app's own on its overview)"},
 		{Name: "docs", Gsxui: []string{"badge", "button", "separator", "command", "kbd", "popover", "icon"}, Needs: []string{"theme-toggle"},
 			Use: "  the docs' pages (docs/*.md), in the page tree, with the docs named in the App:\n" +
 				"    docs screens.Docs `route:\"/docs Docs\"`\n" +

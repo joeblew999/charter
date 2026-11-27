@@ -1,0 +1,430 @@
+package screens
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/gsxhq/gsx"
+	"github.com/jackielii/structpages"
+	"github.com/joeblew999/charter/api"
+	"github.com/joeblew999/charter/app"
+	"github.com/joeblew999/charter/cloud"
+	"github.com/joeblew999/charter/example/locales"
+	"github.com/joeblew999/charter/example/ui"
+	"github.com/joeblew999/charter/example/ui/icon"
+	"github.com/joeblew999/charter/intl"
+)
+
+// Admin is what an admin sees of the system: the app at a glance, what the Worker is bound to, and what its
+// databases hold. Each page asks only for what it shows, and nothing here changes anything but an invitation
+// that is cancelled. Mount it in the tree, beside the sign-in screen it needs:
+//
+//	admin screens.Admin `route:"/admin Admin"`
+//
+// and put <screens.AdminLink/> in the header: it shows for whoever may come here, and for no one else.
+type Admin struct {
+	overview AdminOverview `route:"GET /{$} Admin"`
+	cancel   InviteCancel  `route:"POST /invitations/{invitation}/cancel InviteCancel"`
+	system   AdminSystem   `route:"GET /system AdminSystem"`
+	probe    AdminProbe    `route:"POST /system/{binding}/probe AdminProbe"`
+	database AdminDatabase `route:"GET /database AdminDatabase"`
+}
+
+// Needs is what every route here needs: the scope that manages people. Someone signed in without it gets a 403.
+func (Admin) Needs() []string { return []string{"admin"} }
+
+// AdminLink is the way to the admin pages, for a header: there for whoever may open them.
+component AdminLink(attrs gsx.Attrs) {
+	{ if api.Current(ctx).May(Admin{}.Needs()...) {
+		<ui.Button variant="ghost" size="sm" href={AdminOverview{} |> url} id="admin-link" { attrs... }>
+			<icon.Settings/>
+			{ locales.ScreensAdmin }
+		</ui.Button>
+	} }
+}
+
+// adminPage is the pages' frame: the way back, the pages' names with the one shown marked, and the page.
+component adminPage(title intl.Msg, about intl.Msg, here string, children gsx.Node) {
+	<!DOCTYPE html>
+	<html { app.HTML(ctx)... }>
+		<head>
+			<app.Head title={title |> text} description={about |> text}/>
+		</head>
+		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
+			<main class="mx-auto flex max-w-2xl flex-col gap-6 p-4 pt-10">
+				<ui.Button variant="link" class="self-start px-0" href={intl.URL(ctx, "/")}>
+					<icon.ArrowLeft class="rtl:rotate-180"/>
+					<span translate="no">{ app.Name(ctx) }</span>
+				</ui.Button>
+				<nav id="admin-nav" class="flex flex-wrap gap-1" aria-label={locales.ScreensAdmin}>
+					<adminTab href={AdminOverview{} |> url} name={locales.ScreensAdminOverview} here={here == "overview"}/>
+					<adminTab href={PeoplePage{} |> url} name={locales.ScreensPeople} here={false}/>
+					<adminTab href={AdminSystem{} |> url} name={locales.ScreensAdminSystem} here={here == "system"}/>
+					<adminTab href={AdminDatabase{} |> url} name={locales.ScreensAdminDatabase} here={here == "database"}/>
+				</nav>
+				<div class="flex flex-col gap-1">
+					<h1 class="text-xl font-semibold">{ title }</h1>
+					<p class="text-sm text-muted-foreground">{ about }</p>
+				</div>
+				{ children }
+			</main>
+		</body>
+	</html>
+}
+
+component adminTab(href string, name intl.Msg, here bool) {
+	{ if here {
+		<ui.Button variant="secondary" size="sm" href={href} aria-current="page">{ name }</ui.Button>
+	} else {
+		<ui.Button variant="ghost" size="sm" href={href}>{ name }</ui.Button>
+	} }
+}
+
+// adminRow is one line of a list: what it is, and what it is now.
+component adminRow(children gsx.Node) {
+	<li class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm">{ children }</li>
+}
+
+// AdminOverview is the app at a glance: what it is built from, who there is, the invitations that wait, and the
+// app's own facts.
+type AdminOverview struct{}
+
+func (AdminOverview) Noindex() bool { return true }
+
+// AdminOverviewView is what it shows.
+type AdminOverviewView struct {
+	api.Overview
+	Facts []AdminFact
+}
+
+// AdminFact is one of the app's facts (app.App's Facts), with its value as it is now: a number, a time, or text.
+type AdminFact struct {
+	Label  intl.Msg
+	Number *int64
+	Time   *time.Time
+	Text   string
+}
+
+func (AdminOverview) Props(r *http.Request, auth *api.Auth) (AdminOverviewView, error) {
+	overview, err := auth.Overview(r)
+	if err != nil {
+		return AdminOverviewView{}, err
+	}
+	v := AdminOverviewView{Overview: overview}
+	for _, fact := range app.Facts(r.Context()) {
+		row, err := adminFact(r.Context(), fact)
+		if err != nil {
+			return v, err
+		}
+		v.Facts = append(v.Facts, row)
+	}
+	return v, nil
+}
+
+// adminFact asks a fact for its value.
+func adminFact(ctx context.Context, fact app.Fact) (AdminFact, error) {
+	row := AdminFact{Label: fact.Label}
+	value, err := fact.Value(ctx)
+	if err != nil {
+		return row, err
+	}
+	switch v := value.(type) {
+	case int:
+		n := int64(v)
+		row.Number = &n
+	case int64:
+		row.Number = &v
+	case time.Time:
+		row.Time = &v
+	default:
+		row.Text = fmt.Sprint(v)
+	}
+	return row, nil
+}
+
+// InviteCancel takes an invitation away before anyone takes it up, and answers with nothing: its row goes.
+type InviteCancel struct{}
+
+func (InviteCancel) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) error {
+	if err := auth.CancelInvitation(r, r.PathValue("invitation")); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+component (p AdminOverview) Page(v AdminOverviewView) {
+	<adminPage title={locales.ScreensAdminOverview} about={locales.ScreensAdminOverviewIntro} here="overview">
+		<ui.Card>
+			<ui.CardHeader>
+				<ui.CardTitle>
+					<h2 translate="no" dir="auto">{ v.App }</h2>
+				</ui.CardTitle>
+			</ui.CardHeader>
+			<ui.CardContent>
+				<ul id="admin-build" class="flex flex-col gap-2">
+					<adminRow>
+						<span class="flex-1" translate="no">charter</span>
+						<code translate="no">{ v.Charter }</code>
+					</adminRow>
+					<adminRow>
+						<span class="flex-1" translate="no">Go</span>
+						<code translate="no">{ v.Go }</code>
+					</adminRow>
+					{ if v.Revision != "" {
+						<adminRow>
+							<span class="flex-1">{ locales.ScreensAdminRevision }</span>
+							{ if v.Modified {
+								<ui.Badge variant="secondary">{ locales.ScreensAdminModified }</ui.Badge>
+							} }
+							<code translate="no">{ v.Revision[:min(len(v.Revision), 12)] }</code>
+						</adminRow>
+					} }
+					{ if !v.Committed.IsZero() {
+						<adminRow>
+							<span class="flex-1">{ locales.ScreensAdminCommitted }</span>
+							<span>{ v.Committed |> date("dateStyle", "medium", "timeStyle", "short") }</span>
+						</adminRow>
+					} }
+				</ul>
+			</ui.CardContent>
+		</ui.Card>
+		<ui.Card>
+			<ui.CardHeader>
+				<ui.CardTitle>
+					<h2>{ locales.ScreensPeople }</h2>
+				</ui.CardTitle>
+			</ui.CardHeader>
+			<ui.CardContent>
+				<ul id="admin-people" class="flex flex-col gap-2">
+					{ for _, role := range v.People {
+						<adminRow>
+							<span class="flex-1" translate="no">{ role.Role }</span>
+							<span data-role={role.Role}>{ role.Count |> number }</span>
+						</adminRow>
+					} }
+				</ul>
+			</ui.CardContent>
+		</ui.Card>
+		<ui.Card>
+			<ui.CardHeader>
+				<ui.CardTitle>
+					<h2>{ locales.ScreensAdminInvitations }</h2>
+				</ui.CardTitle>
+				<ui.CardDescription>{ locales.ScreensAdminInvitationsIntro }</ui.CardDescription>
+			</ui.CardHeader>
+			<ui.CardContent>
+				{ if len(v.Invitations) == 0 {
+					<p id="admin-invitations" class="text-sm text-muted-foreground">{ locales.ScreensAdminNone }</p>
+				} else {
+					<ul id="admin-invitations" class="flex flex-col gap-2">
+						{ for _, invitation := range v.Invitations {
+							<p.Invitation invitation={invitation}/>
+						} }
+					</ul>
+				} }
+			</ui.CardContent>
+		</ui.Card>
+		{ if len(v.Facts) > 0 {
+			<ui.Card>
+				<ui.CardHeader>
+					<ui.CardTitle>
+						<h2>{ locales.ScreensAdminFacts }</h2>
+					</ui.CardTitle>
+				</ui.CardHeader>
+				<ui.CardContent>
+					<ul id="admin-facts" class="flex flex-col gap-2">
+						{ for _, fact := range v.Facts {
+							<adminRow>
+								<span class="flex-1">{ fact.Label }</span>
+								{ if fact.Number != nil {
+									<span>{ *fact.Number |> number }</span>
+								} else if fact.Time != nil {
+									<span>{ *fact.Time |> date("dateStyle", "medium", "timeStyle", "short") }</span>
+								} else {
+									<span dir="auto">{ fact.Text }</span>
+								} }
+							</adminRow>
+						} }
+					</ul>
+				</ui.CardContent>
+			</ui.Card>
+		} }
+	</adminPage>
+}
+
+// Invitation is one invitation that waits: what it is to, until when, and the button that cancels it.
+component (p AdminOverview) Invitation(invitation api.Invitation) {
+	<li
+		id={AdminOverview.Invitation |> key(invitation.ID)}
+		class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm"
+	>
+		<ui.Badge translate="no">{ invitation.Role }</ui.Badge>
+		<span class="flex-1 text-muted-foreground">{ invitation.Expires |> date("dateStyle", "medium", "timeStyle", "short") }</span>
+		<ui.Button
+			type="button"
+			variant="ghost"
+			size="sm"
+			hx-post={InviteCancel{} |> url(map[string]any{"invitation": invitation.ID})}
+			hx-target={AdminOverview.Invitation |> keytarget(invitation.ID)}
+			hx-swap="delete"
+		>
+			{ locales.ScreensAdminCancel }
+		</ui.Button>
+	</li>
+}
+
+// AdminSystem is what the Worker is bound to, as it runs: its bindings, each with a button that asks it one small
+// thing, and its variables and secrets by name.
+type AdminSystem struct{}
+
+func (AdminSystem) Noindex() bool { return true }
+
+func (AdminSystem) Props(r *http.Request, auth *api.Auth) (api.System, error) { return auth.System(r) }
+
+// AdminProbe asks one binding one small thing and answers with its row again, which says how it went.
+type AdminProbe struct{}
+
+func (AdminProbe) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth) error {
+	name := r.PathValue("binding")
+	probed, err := auth.Probe(r, name)
+	if err != nil {
+		return err
+	}
+	return structpages.RenderComponent(AdminSystem{}.Binding(cloud.Binding{
+		Name: name,
+		Kind: r.PostFormValue("kind"),
+	}, &probed))
+}
+
+component (p AdminSystem) Page(v api.System) {
+	<adminPage title={locales.ScreensAdminSystem} about={locales.ScreensAdminSystemIntro} here="system">
+		<ui.Card>
+			<ui.CardHeader>
+				<ui.CardTitle>
+					<h2>{ locales.ScreensAdminBindings }</h2>
+				</ui.CardTitle>
+			</ui.CardHeader>
+			<ui.CardContent>
+				<ul id="admin-bindings" class="flex flex-col gap-2">
+					{ for _, binding := range v.Bindings {
+						<p.Binding binding={binding} probed={nil}/>
+					} }
+				</ul>
+			</ui.CardContent>
+		</ui.Card>
+		<ui.Card>
+			<ui.CardHeader>
+				<ui.CardTitle>
+					<h2>{ locales.ScreensAdminSettings }</h2>
+				</ui.CardTitle>
+				<ui.CardDescription>{ locales.ScreensAdminSettingsIntro }</ui.CardDescription>
+			</ui.CardHeader>
+			<ui.CardContent>
+				<ul id="admin-settings" class="flex flex-col gap-2">
+					{ for _, setting := range v.Settings {
+						<adminRow>
+							<code class="flex-1" translate="no">{ setting.Name }</code>
+							{ if setting.Set {
+								<ui.Badge variant="secondary">{ locales.ScreensAdminSet }</ui.Badge>
+							} else {
+								<ui.Badge variant="destructive">{ locales.ScreensAdminUnset }</ui.Badge>
+							} }
+						</adminRow>
+					} }
+				</ul>
+			</ui.CardContent>
+		</ui.Card>
+	</adminPage>
+}
+
+// Binding is one binding: its name, its kind, and once it was asked, how it answered.
+component (p AdminSystem) Binding(binding cloud.Binding, probed *api.Probed) {
+	<li
+		id={AdminSystem.Binding |> key(binding.Name)}
+		class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm"
+	>
+		<code translate="no">{ binding.Name }</code>
+		<span class="flex-1 text-muted-foreground" translate="no">{ binding.Kind }</span>
+		{ if probed != nil && probed.Asked && probed.OK {
+			<ui.Badge variant="secondary" data-probed="ok">
+				{ locales.ScreensAdminAnswers } · { probed.Took.Milliseconds() |> number("style", "unit", "unit", "millisecond") }
+			</ui.Badge>
+		} else if probed != nil && probed.Asked {
+			<ui.Badge variant="destructive" data-probed="failed" title={probed.Error}>
+				{ locales.ScreensAdminNoAnswer }
+			</ui.Badge>
+		} else if probed != nil {
+			<ui.Badge variant="outline" data-probed="bound">{ locales.ScreensAdminBound }</ui.Badge>
+		} }
+		// Only what has something harmless to be asked: a queue takes only messages.
+		{ if cloud.Probes(binding.Kind) {
+			<form
+				hx-post={AdminProbe{} |> url(map[string]any{"binding": binding.Name})}
+				hx-target={AdminSystem.Binding |> keytarget(binding.Name)}
+				hx-swap="outerHTML"
+			>
+				<input type="hidden" name="kind" value={binding.Kind}/>
+				<ui.Button type="submit" variant="outline" size="sm">{ locales.ScreensAdminProbe }</ui.Button>
+			</form>
+		} }
+	</li>
+}
+
+// AdminDatabase is what the Worker's databases hold: each table with how many rows it has, and the migrations
+// that ran.
+type AdminDatabase struct{}
+
+func (AdminDatabase) Noindex() bool { return true }
+
+func (AdminDatabase) Props(r *http.Request, auth *api.Auth) ([]api.Database, error) {
+	return auth.Databases(r)
+}
+
+component (p AdminDatabase) Page(databases []api.Database) {
+	<adminPage title={locales.ScreensAdminDatabase} about={locales.ScreensAdminDatabaseIntro} here="database">
+		{ for _, db := range databases {
+			<ui.Card>
+				<ui.CardHeader>
+					<ui.CardTitle>
+						<h2 translate="no">{ db.Binding }</h2>
+					</ui.CardTitle>
+					<ui.CardDescription>{ locales.ScreensAdminTables }</ui.CardDescription>
+				</ui.CardHeader>
+				<ui.CardContent>
+					<ul data-tables={db.Binding} class="flex flex-col gap-2">
+						{ for _, table := range db.Tables {
+							<adminRow>
+								<code class="flex-1" translate="no">{ table.Name }</code>
+								<span data-table={table.Name}>{ table.Rows |> number }</span>
+							</adminRow>
+						} }
+					</ul>
+				</ui.CardContent>
+			</ui.Card>
+			<ui.Card>
+				<ui.CardHeader>
+					<ui.CardTitle>
+						<h2>{ locales.ScreensAdminMigrations }</h2>
+					</ui.CardTitle>
+				</ui.CardHeader>
+				<ui.CardContent>
+					{ if len(db.Migrations) == 0 {
+						<p class="text-sm text-muted-foreground">{ locales.ScreensAdminNone }</p>
+					} else {
+						<ul data-migrations={db.Binding} class="flex flex-col gap-2">
+							{ for _, migration := range db.Migrations {
+								<adminRow>
+									<code class="flex-1" translate="no">{ migration.Name }</code>
+									<span class="text-muted-foreground">{ migration.Applied |> date("dateStyle", "medium", "timeStyle", "short") }</span>
+								</adminRow>
+							} }
+						</ul>
+					} }
+				</ui.CardContent>
+			</ui.Card>
+		} }
+	</adminPage>
+}

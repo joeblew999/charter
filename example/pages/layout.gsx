@@ -31,6 +31,7 @@ component Layout(title intl.Msg, description intl.Msg, children gsx.Node) {
 					<ui.Button variant="ghost" size="sm" href={screens.DocsIndex{} |> url}>{ locales.DocsNav }</ui.Button>
 				</nav>
 				<span class="flex-1"></span>
+				<screens.AdminLink/>
 				<screens.AccountLink/>
 				<screens.PreferencesDialog/>
 				<screens.ThemeToggle/>
