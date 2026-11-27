@@ -122,25 +122,37 @@ func (f Feed[T]) Since(ctx context.Context, after string, limit int) ([]T, error
 	return items, err
 }
 
+// FollowHeader is the header of an answer whose stream the hub carries on (worker/go.mjs joins it): what Events
+// and Lines set on Cloudflare, where no Go runtime waits on a stream.
+const FollowHeader = "X-Charter-Follow"
+
 // Events writes the API's stream for SDK clients: every item as a server-sent event `message` whose data is its JSON
 // and whose id is its position, for `seconds`. A planned end sends the event `close` with end as its data, the
 // terminator generated clients stop at; if the feed gives up, the stream ends without it and they reconnect.
-func (f Feed[T]) Events(ctx context.Context, w io.Writer, positions []string, seconds int, end string) {
-	out := app.Flushing(w)
-	if _, err := io.WriteString(out, ": \n\n"); err != nil {
-		return
-	}
-	until, cancel := context.WithTimeout(ctx, time.Duration(seconds)*time.Second)
-	defer cancel()
-	err := f.Follow(until, positions, func(item T) error {
+//
+// On Cloudflare it writes what the log has after the positions and is done: header sets FollowHeader on the answer
+// (a huma.Context's SetHeader), and the hub writes the rest, for the seconds and with the terminator. A Go runtime
+// held for a stream's seconds, one for each client, is what takes a Worker over its memory.
+func (f Feed[T]) Events(ctx context.Context, header func(name, value string), w io.Writer, positions []string, seconds int, end string) {
+	event := func(out io.Writer, item T) error {
 		data, err := json.Marshal(item)
 		if err != nil {
 			return err
 		}
 		_, err = fmt.Fprintf(out, "event: message\nretry: 1000\nid: %d\ndata: %s\n\n", item.Position(), data)
 		return err
-	})
-	if err != nil {
+	}
+	if f.Hub == nil {
+		f.handOver(ctx, header, w, positions, "events", seconds, fmt.Sprintf("%q", end), ": \n\n", event)
+		return
+	}
+	out := app.Flushing(w)
+	if _, err := io.WriteString(out, ": \n\n"); err != nil {
+		return
+	}
+	until, cancel := context.WithTimeout(ctx, time.Duration(seconds)*time.Second)
+	defer cancel()
+	if err := f.Follow(until, positions, func(item T) error { return event(out, item) }); err != nil {
 		log.Printf("live: %s: API stream gave up, ending without its terminator: %v", f.Name, err)
 		return
 	}
@@ -150,22 +162,78 @@ func (f Feed[T]) Events(ctx context.Context, w io.Writer, positions []string, se
 }
 
 // Lines writes the feed as lines of JSON, one item each, until ctx ends: what a WebSocket channel answers with, each
-// line sent as a frame (worker/websocket.mjs).
-func (f Feed[T]) Lines(ctx context.Context, w io.Writer, positions []string) {
-	out := app.Flushing(w)
-	// An empty line first: the response (and so the 101) goes out now, not at the first item.
-	if _, err := io.WriteString(out, "\n"); err != nil {
-		return
-	}
-	err := f.Follow(ctx, positions, func(item T) error {
+// line sent as a frame (worker/websocket.mjs). On Cloudflare it writes what the log has and hands the rest to the
+// hub, as Events does: a socket stays open for as long as its client likes, and no Go runtime waits on it.
+func (f Feed[T]) Lines(ctx context.Context, header func(name, value string), w io.Writer, positions []string) {
+	line := func(out io.Writer, item T) error {
 		data, err := json.Marshal(item)
 		if err != nil {
 			return err
 		}
 		_, err = out.Write(append(data, '\n'))
 		return err
-	})
-	if err != nil {
+	}
+	// An empty line first: the response (and so the 101) goes out now, not at the first item.
+	if f.Hub == nil {
+		f.handOver(ctx, header, w, positions, "lines", 0, "", "\n", line)
+		return
+	}
+	out := app.Flushing(w)
+	if _, err := io.WriteString(out, "\n"); err != nil {
+		return
+	}
+	if err := f.Follow(ctx, positions, func(item T) error { return line(out, item) }); err != nil {
 		log.Printf("live: %s: channel gave up: %v", f.Name, err)
+	}
+}
+
+// handOver writes the start of a stream and gives the rest to the hub: the header that says where the hub takes
+// over (set before anything is written), what begins the stream, and every item the log has after the positions,
+// in pages. The hub then sends what is published after the last of them.
+func (f Feed[T]) handOver(ctx context.Context, header func(name, value string), w io.Writer, positions []string, as string, seconds int, end, begin string, write func(io.Writer, T) error) {
+	feedLog, err := f.Log()
+	if err != nil {
+		log.Printf("live: %s: the log is not there: %v", f.Name, err)
+		return
+	}
+	// Where the stream starts: after the newest position its caller has, or from what is new.
+	var last int64
+	if after := Newest(positions...); after != nil {
+		last = *after
+	} else if last, err = feedLog.Latest(ctx); err != nil {
+		log.Printf("live: %s: %v", f.Name, err)
+		return
+	}
+	// The log's items first, read before a byte is written: the header must say where they end.
+	var items []T
+	for {
+		page, err := feedLog.Since(ctx, last, 100)
+		if err != nil {
+			log.Printf("live: %s: %v", f.Name, err)
+			return
+		}
+		for _, item := range page {
+			if item.Position() > last {
+				last = item.Position()
+				items = append(items, item)
+			}
+		}
+		if len(page) < 100 {
+			break
+		}
+	}
+	follow := url.Values{"binding": {f.Binding}, "name": {f.Name}, "after": {strconv.FormatInt(last, 10)}, "as": {as}}
+	if seconds > 0 {
+		follow.Set("seconds", strconv.Itoa(seconds))
+		follow.Set("end", end)
+	}
+	header(FollowHeader, follow.Encode())
+	if _, err := io.WriteString(w, begin); err != nil {
+		return
+	}
+	for _, item := range items {
+		if err := write(w, item); err != nil {
+			return
+		}
 	}
 }

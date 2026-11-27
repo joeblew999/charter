@@ -74,6 +74,8 @@ new ReadableStream({
 // Where a page's stream is asked for: LIVE, then the Durable Object binding of the hub and the feed's name (the Go
 // package live writes the address: Feed.Signal).
 const LIVE = "/__charter/live/";
+// The header of an answer whose stream the hub carries on: what to follow, as a query (live.Feed sets it).
+const FOLLOW = "x-charter-follow";
 
 const MAX_WAITING = 4; // runtimes kept for the next request
 
@@ -315,6 +317,29 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		}
 	}
 
+	// handOver joins the hub's stream to an answer of Go's that asks for it (the header FOLLOW, which live.Feed's
+	// Events and Lines set): Go has written what the log had and is done, and the rest of the stream, which lasts,
+	// is the hub's. So no Go runtime waits on a stream. An answer without the header is returned as it is.
+	function handOver(response, request, env, ctx) {
+		const follow = response.headers.get(FOLLOW);
+		if (!follow) return response;
+		const headers = new Headers(response.headers);
+		headers.delete(FOLLOW);
+		const ask = new URLSearchParams(follow);
+		const namespace = env[ask.get("binding")];
+		if (typeof namespace?.idFromName !== "function") return new Response(response.body, { status: response.status, headers });
+		const hub = namespace.get(namespace.idFromName(ask.get("name")));
+		const { readable, writable } = new TransformStream();
+		const joined = (async () => {
+			// Go's part first, to its end; then the hub's, until its reader goes or its time is up.
+			await response.body.pipeTo(writable, { preventClose: true });
+			const rest = await hub.fetch(new Request("https://hub/follow?" + follow, { signal: request.signal }));
+			await rest.body.pipeTo(writable);
+		})().catch(() => writable.abort().catch(() => {}));
+		ctx?.waitUntil?.(joined);
+		return new Response(readable, { status: response.status, headers });
+	}
+
 	// serve gives a request to a Go runtime through workers-go's own path (the handleRequest that workers.Serve,
 	// workers.ServeNonBlock and so charter's app.Run register): the request itself goes to Go, so everything
 	// of workers-go that reads it works as its docs say. What charter adds is that the runtime is kept for the next
@@ -346,6 +371,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 			retire(runtime);
 			throw error;
 		}
+		response = handOver(response, request, env, ctx);
 		if (!request.headers.has("x-go-runtime")) return response;
 		const told = new Response(response.body, response);
 		// Who asks is told which runtime answered, and what the isolate's runtimes hold between them.

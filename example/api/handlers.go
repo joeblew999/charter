@@ -221,7 +221,7 @@ func problem(err error) error {
 func (env Env) watch(_ context.Context, in *WatchInput) (*huma.StreamResponse, error) {
 	return &huma.StreamResponse{Body: func(hc huma.Context) {
 		hc.SetHeader("Content-Type", "text/event-stream")
-		Notes.Events(hc.Context(), hc.BodyWriter(), []string{in.After, in.LastEventID}, int(in.Seconds), END)
+		Notes.Events(hc.Context(), hc.SetHeader, hc.BodyWriter(), []string{in.After, in.LastEventID}, int(in.Seconds), END)
 	}}, nil
 }
 
@@ -235,6 +235,6 @@ func (env Env) live(_ context.Context, in *LiveInput) (*huma.StreamResponse, err
 	}
 	return &huma.StreamResponse{Body: func(hc huma.Context) {
 		hc.SetHeader("Content-Type", "application/x-ndjson")
-		Notes.Lines(hc.Context(), hc.BodyWriter(), []string{in.After})
+		Notes.Lines(hc.Context(), hc.SetHeader, hc.BodyWriter(), []string{in.After})
 	}}, nil
 }

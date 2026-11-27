@@ -14,6 +14,7 @@
 //   publish(message, position)            the message is sent to every subscriber as it is
 //   POST /publish                         the same, with the message as the body
 //   GET  /signal?after=&get=&as=          a page's stream (server-sent events): see below
+//   GET  /follow?after=&as=&seconds=&end= the rest of an API stream that Go began: see below
 //
 // A page's stream is held here, not by a Go runtime. A Go runtime takes some 13 MB or more of the Worker's 128 MB
 // for as long as it serves a request, and a page's stream is a request that lasts minutes: a handful of open pages
@@ -23,6 +24,13 @@
 // has. That is one short, ordinary request, which Go renders for that reader, in their language, with what they
 // may do. The log stays the truth, and nothing is lost: a page that connects again says the last position it was
 // told of (Last-Event-ID), and is told to ask from there.
+//
+// The API's streams are held here too, for the same reason. Go answers such a request with what the log has after
+// the position its caller gave, says where it stopped, and is done; worker/go.mjs then joins this object's /follow
+// to that answer, which sends every item published after that position, as Go would have written it: a server-sent
+// event for an SDK client (as=events, for `seconds`, then the event `close` with `end` as its data), a line of JSON
+// for a WebSocket channel (as=lines, until its reader goes). An item published in the moment between Go's reading
+// the log and this stream's start is in what this object remembers of the last ones, and is sent first.
 // Upstream: syumai/workers-go#220 (when fixed: the hub can be a Go Durable Object)
 import { DurableObject } from "cloudflare:workers";
 
@@ -34,18 +42,26 @@ const BEAT = 25 * 1000;
 // What a page may ask to be told to fetch: a path of the app, and the kind of element to say it with.
 const PATH = /^\/[A-Za-z0-9._~\/-]*$/;
 const ELEMENTS = new Set(["div", "li", "tr", "span", "p", "section"]);
+// How many of the last published items are remembered, for a stream that starts a moment after one of them.
+const REMEMBERED = 200;
 const encoder = new TextEncoder();
 
 export class Hub extends DurableObject {
 	// Pages with a stream open: each its stream's controller, the last position it was told of, and what it asked
 	// to be told to fetch. In memory only: a hub that restarts closes their streams, and they connect again.
 	readers = new Set();
+	// The last items published, each with its position: in memory only.
+	recent = [];
 
 	// publish is what the Go hub calls (Workers RPC): a method call costs the caller less CPU than
 	// a fetch, which has a Request and a Response to make. position is the item's place in the log,
 	// when it has one: what a page's stream is told.
 	publish(message, position) {
-		if (Number.isFinite(position)) for (const reader of this.readers) if (position > reader.last) this.tell(reader, position);
+		if (Number.isFinite(position)) {
+			this.recent.push({ position, message });
+			if (this.recent.length > REMEMBERED) this.recent.shift();
+			for (const reader of this.readers) if (position > reader.last) this.tell(reader, position, message);
+		}
 		let sent = 0;
 		for (const socket of this.ctx.getWebSockets()) {
 			try {
@@ -58,10 +74,14 @@ export class Hub extends DurableObject {
 		return sent;
 	}
 
-	// tell says to a page that there is something after the position it has: an element that asks for it.
-	tell(reader, position) {
-		const element = `<${reader.as} hidden hx-get="${reader.get}?after=${reader.last}" hx-trigger="load" hx-swap="outerHTML"></${reader.as}>`;
+	// tell gives a reader what was published at a position: a page, that there is something after the position it
+	// has (an element that asks for it); an API stream, the item itself, as an event or as a line.
+	tell(reader, position, message) {
+		const after = reader.last;
 		reader.last = position;
+		if (reader.kind === "events") return this.write(reader, `event: message\nretry: 1000\nid: ${position}\ndata: ${message}\n\n`);
+		if (reader.kind === "lines") return this.write(reader, `${message}\n`);
+		const element = `<${reader.as} hidden hx-get="${reader.get}?after=${after}" hx-trigger="load" hx-swap="outerHTML"></${reader.as}>`;
 		this.write(reader, `id: ${position}\ndata: ${element}\n\n`);
 	}
 
@@ -87,6 +107,39 @@ export class Hub extends DurableObject {
 		}
 	}
 
+	// follow answers the rest of an API stream: everything published after a position, as events or as lines.
+	follow(request, url) {
+		const kind = url.searchParams.get("as");
+		if (kind !== "events" && kind !== "lines") return new Response("a stream is followed as=events or as=lines", { status: 400 });
+		const last = Number(url.searchParams.get("after")) || 0;
+		const seconds = Number(url.searchParams.get("seconds")) || 0;
+		const end = url.searchParams.get("end");
+		let reader;
+		const body = new ReadableStream({
+			start: controller => {
+				reader = { controller, last, kind };
+				// What was published since Go read the log, then what is published from now on.
+				for (const item of this.recent) if (item.position > reader.last) this.tell(reader, item.position, item.message);
+				this.readers.add(reader);
+				if (kind === "events") {
+					this.beat ??= setInterval(() => {
+						for (const each of this.readers) if (each.kind !== "lines") this.write(each, ": \n\n");
+					}, BEAT);
+				}
+				// A planned end: the terminator a generated client stops at, then the stream's own end.
+				if (seconds > 0) {
+					reader.end = setTimeout(() => {
+						if (kind === "events" && end !== null) this.write(reader, `event: close\ndata: ${end}\n\n`);
+						this.gone(reader);
+					}, seconds * 1000);
+				}
+			},
+			cancel: () => this.gone(reader),
+		});
+		request.signal?.addEventListener("abort", () => reader && this.gone(reader), { once: true });
+		return new Response(body);
+	}
+
 	// signal answers a page's stream.
 	signal(request, url) {
 		const get = url.searchParams.get("get") ?? "";
@@ -103,7 +156,7 @@ export class Hub extends DurableObject {
 				this.readers.add(reader);
 				reader.end = setTimeout(() => this.gone(reader), LIFETIME);
 				this.beat ??= setInterval(() => {
-					for (const each of this.readers) this.write(each, ": \n\n");
+					for (const each of this.readers) if (each.kind !== "lines") this.write(each, ": \n\n");
 				}, BEAT);
 				// A comment first: the response starts now, not at the first item.
 				this.write(reader, ": \n\n");
@@ -119,6 +172,7 @@ export class Hub extends DurableObject {
 	async fetch(request) {
 		const url = new URL(request.url);
 		if (request.method === "GET" && url.pathname === "/signal") return this.signal(request, url);
+		if (request.method === "GET" && url.pathname === "/follow") return this.follow(request, url);
 		if (request.method === "POST") return Response.json({ sent: this.publish(await request.text()) });
 		if (request.headers.get("upgrade") !== "websocket") return new Response("expected a WebSocket upgrade", { status: 426 });
 		const [client, server] = Object.values(new WebSocketPair());

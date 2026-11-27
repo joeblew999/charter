@@ -33,8 +33,8 @@ func Post(ctx context.Context, store Store, by charter.Caller, body string) (Not
 | For | Call | What it sends |
 |---|---|---|
 | An open page | `Notes.Signal(since, after, "li")` and `Notes.Since(ctx, after, limit)` | "there is something new", and then the rows, as that reader sees them |
-| An SDK client | `Notes.Events(ctx, w, positions, seconds, end)` | each item as JSON over server-sent events |
-| A WebSocket | `Notes.Lines(ctx, w, positions)` | each item as a line of JSON |
+| An SDK client | `Notes.Events(ctx, setHeader, w, positions, seconds, end)` | each item as JSON over server-sent events |
+| A WebSocket | `Notes.Lines(ctx, setHeader, w, positions)` | each item as a line of JSON |
 
 Write a note on [the home page](../) in one tab and it appears in another. Create one through the SDK and it appears there too.
 
@@ -65,7 +65,13 @@ func (NotesSince) ServeHTTP(w http.ResponseWriter, r *http.Request, caller chart
 
 Each event of the stream is one hidden element that htmx puts where the items go, and that asks `NotesSince` for itself. That is a short, ordinary request: Go renders the new rows for that reader, in their language, with the buttons they may use, and they take the element's place. A thousand open pages cost the Worker nothing while nothing happens.
 
-The API's stream for SDK clients (`Events`) is still a Go handler: it ends after the seconds its caller asked for.
+The API's streams hold no Go either. `Events` (an SDK client's stream) and `Lines` (a WebSocket channel) write what the log has after the position their caller gave, say where they stopped, and are done; the hub writes the rest, as Go would have: an event for each item and the terminator at the end, or a line for each. Your handler gives them the answer's `SetHeader`, which is how they say it:
+
+```go
+Notes.Events(hc.Context(), hc.SetHeader, hc.BodyWriter(), []string{in.After, in.LastEventID}, int(in.Seconds), END)
+```
+
+Twenty SDK clients watching for a quarter of a minute hold no Go runtime between them.
 
 ## Resuming
 
