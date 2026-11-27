@@ -31,6 +31,17 @@ go tool charter run secrets:put MAIL_TO             # the value fnox has, or one
 
 A value is never printed and never on a command line. `go tool charter test --deployed` hands the tests the ones fnox has.
 
+## Email
+
+A Worker sends email through its `send_email` binding. To an address verified on your account it sends as it is. To anyone, the domain it sends from is onboarded once (Cloudflare Email Sending, on the Workers Paid plan):
+
+```sh
+go tool charter run mail                           # the domains that send, in the account
+go tool charter run mail:enable mail.example.com   # onboard one, and show its records
+```
+
+Cloudflare adds the records that let it send for that domain. A subdomain keeps them apart from the domain's own mail.
+
 ## After a deploy
 
 ```sh
