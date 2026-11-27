@@ -107,9 +107,52 @@ func generate(p *project.Project) error {
 		if err != nil {
 			return err
 		}
-		return run.Run(p.Root, nil, vite, "build")
+		if err := run.Run(p.Root, nil, vite, "build"); err != nil {
+			return err
+		}
+		return cachedAssets(p)
 	}
 	return nil
+}
+
+// What Vite builds has its contents in its name (assets/main-uiJkX3bL.css): a file of that name never changes, so a
+// browser that has it need never ask again. Cloudflare serves a Worker's static assets to be asked about every
+// time (Cache-Control: public, max-age=0, must-revalidate), and takes other headers from a file _headers among them
+// (https://developers.cloudflare.com/workers/static-assets/headers/). Without it every page a reader opens waits
+// on a question for each of its stylesheet, its script and its font, and the font's answer comes after the text is
+// shown in another: the page is seen to change.
+const assetCaching = "/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n"
+
+// cachedAssets writes that rule into the _headers of what Vite built (wrangler.jsonc's assets directory). An app's
+// own _headers (public/_headers, which Vite copies) is kept, and one that has a rule for /assets/* already is left
+// as it is.
+func cachedAssets(p *project.Project) error {
+	dir := cmpOr(p.Worker.Assets.Directory, "dist")
+	if !exists(filepath.Join(p.Root, dir, "assets")) {
+		return nil
+	}
+	file := filepath.Join(p.Root, dir, "_headers")
+	own, err := os.ReadFile(file)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return os.WriteFile(file, []byte(withAssetCaching(string(own))), 0o644)
+}
+
+// withAssetCaching is an app's _headers with the rule for what Vite built, unless it has one.
+func withAssetCaching(own string) string {
+	for _, line := range strings.Split(own, "\n") {
+		if strings.TrimSpace(line) == "/assets/*" {
+			return own
+		}
+	}
+	if own != "" && !strings.HasSuffix(own, "\n") {
+		own += "\n"
+	}
+	if own != "" {
+		own += "\n"
+	}
+	return own + assetCaching
 }
 
 // wasm builds the Worker into build/: workers-go's JavaScript, the Wasm, charter's glue (app/worker/*.mjs of the charter

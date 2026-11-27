@@ -84,3 +84,23 @@ func TestRemark(t *testing.T) {
 		t.Errorf("with nothing usual known yet: %q", got)
 	}
 }
+
+// What Vite built is cached for good, by a rule in the assets' _headers: beside an app's own rules, and not when
+// the app has said what /assets/* gets itself.
+func TestWithAssetCaching(t *testing.T) {
+	if got := withAssetCaching(""); got != assetCaching {
+		t.Errorf("with no file of its own: %q", got)
+	}
+	own := "/*\n  X-Robots-Tag: noindex"
+	if got, want := withAssetCaching(own), own+"\n\n"+assetCaching; got != want {
+		t.Errorf("beside an app's own rule: %q, want %q", got, want)
+	}
+	theirs := "/assets/*\n  Cache-Control: public, max-age=60\n"
+	if got := withAssetCaching(theirs); got != theirs {
+		t.Errorf("an app's own rule for /assets/* was changed: %q", got)
+	}
+	// Written twice, it is there once.
+	if got := withAssetCaching(withAssetCaching("")); got != assetCaching {
+		t.Errorf("written twice: %q", got)
+	}
+}

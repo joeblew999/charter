@@ -167,3 +167,5 @@ The tree's GET pages without parameters are in the sitemap, in every language. T
 ```
 
 `app.Head` writes the title and description, the canonical address, every language's alternate, Open Graph, and the scripts Vite built.
+
+What Vite built is kept by a browser for good. Each file has its contents in its name (`assets/main-uiJkX3bL.css`), so `charter build` writes the rule for it into the built files' `_headers`: `Cache-Control: public, max-age=31536000, immutable` for `/assets/*`. Cloudflare serves a Worker's static assets to be [asked about on every page](https://developers.cloudflare.com/workers/static-assets/headers/#default-headers) unless told otherwise, and then the font's answer comes after the text is shown in another one: the page is seen to change. An app's own `public/_headers` is kept beside the rule, and one that says what `/assets/*` gets is left as it is.
