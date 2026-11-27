@@ -185,6 +185,13 @@ func (p *Page) Tab() *Page {
 	return &Page{p.t, ctx}
 }
 
+// JS evaluates an expression in the page and gives its value as text: for what a test cannot do as a reader does,
+// such as standing in for the device's share sheet.
+func (p *Page) JS(expression string) string {
+	p.t.Helper()
+	return p.js("evaluating in the page", expression)
+}
+
 // js evaluates an expression in the page and gives its value as text.
 func (p *Page) js(what, expression string) string {
 	p.t.Helper()

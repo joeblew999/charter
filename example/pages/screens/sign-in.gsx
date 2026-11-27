@@ -578,6 +578,21 @@ component (p PeoplePage) Invite(roles []string, link string) {
 				<div class="flex flex-col gap-1">
 					<p class="text-sm font-medium">{ locales.ScreensInviteOnce }</p>
 					<code id="invite-link" class="rounded-md bg-muted px-2 py-1 font-mono text-sm break-all" translate="no">{ link }</code>
+					// The device's own share sheet where it has one (a phone: Messages, Mail, AirDrop), else the
+					// clipboard, and the button says so.
+					<ui.Button
+						type="button"
+						variant="outline"
+						size="sm"
+						class="self-start"
+						id="invite-share"
+						data-link={link}
+						data-copied={locales.ScreensInviteCopied |> text}
+						hx-on:click=js`var b = this, link = b.dataset.link; if (navigator.share) { navigator.share({ url: link }).catch(function () {}); } else { navigator.clipboard.writeText(link).then(function () { b.lastElementChild.textContent = b.dataset.copied; }); }`
+					>
+						<icon.Share/>
+						<span>{ locales.ScreensInviteShare }</span>
+					</ui.Button>
 				</div>
 			} }
 			<form

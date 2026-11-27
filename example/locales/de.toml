@@ -129,3 +129,5 @@ invited_intro = "Wählen Sie einen Anzeigenamen und erstellen Sie Ihr Konto. Ihr
 invite_gone = "Diese Einladung wurde bereits verwendet oder ist älter als eine Stunde. Bitten Sie um eine neue."
 name_hint = "Wird neben Ihren Beiträgen angezeigt. Nicht Ihre E-Mail-Adresse."
 have_account = "Sie haben hier schon ein Konto?"
+invite_share = "Teilen"
+invite_copied = "Kopiert"

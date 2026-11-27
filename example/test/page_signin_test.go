@@ -385,3 +385,26 @@ func TestANameIsNotAnEmailAddress(t *testing.T) {
 		t.Error("the sign-up field does not say what the name is for")
 	}
 }
+
+// An admin makes an invitation on the people page and shares it: the button hands the link to the device's share
+// sheet, which the test stands in for.
+func TestAnInvitationIsShared(t *testing.T) {
+	res := as(t, "ADMIN_TOKEN", "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=admin"))
+	html, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	code := regexp.MustCompile(`/__charter/invite\?code=([A-Za-z0-9_-]+)`).FindStringSubmatch(string(html))
+	if code == nil {
+		t.Fatalf("making an invitation: HTTP %d\n%s", res.StatusCode, html)
+	}
+	admin := apptest.Browser(t)
+	admin.SignUp(at(screens.SignInPage{})+"?invite="+code[1], "Sharer")
+	admin.Open(at(screens.PeoplePage{}))
+	admin.Click(el(screens.PeoplePage.Invite) + ` button[type=submit]`)
+	admin.WaitText("#invite-link", "/__charter/invite?code=")
+	link := strings.TrimSpace(admin.Text("#invite-link"))
+	admin.JS(`(navigator.share = function (what) { window.shared = what.url; return Promise.resolve(); }, "")`)
+	admin.Click("#invite-share")
+	if shared := admin.JS(`String(window.shared)`); shared != link {
+		t.Errorf("the share sheet was handed %q, want the link %q", shared, link)
+	}
+}

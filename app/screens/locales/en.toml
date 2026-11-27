@@ -75,6 +75,10 @@ invite = "Invite someone"
 invite_intro = "A link that makes whoever signs up through it what you choose. It works once, within the hour."
 invite_new = "Make a link"
 invite_once = "Send it to them now: it is not shown again."
+# Under an invitation's link: the button that hands it to the device's share sheet, and what it says once the link
+# is on the clipboard instead.
+invite_share = "Share"
+invite_copied = "Copied"
 invite_accept = "Accept the invitation"
 # Opening an invitation's link: what it is to ({role} is the role's name), what to do, and a link that is spent.
 invited = "You are invited to be {role}"

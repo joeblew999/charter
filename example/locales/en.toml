@@ -179,3 +179,7 @@ invited_intro = "Choose a display name and create your account. Your device keep
 invite_gone = "This invitation was used already, or is more than an hour old. Ask for a new one."
 name_hint = "Shown next to what you write. Not your email address."
 have_account = "Already have an account here?"
+# Under an invitation's link: the button that hands it to the device's share sheet, and what it says once the link
+# is on the clipboard instead.
+invite_share = "Share"
+invite_copied = "Copied"
