@@ -85,6 +85,15 @@ func deleteWorker(p *project.Project, args []string) {
 		check(errors.New("nothing was changed: the Worker has secrets fnox does not"))
 	}
 	if deployed {
+		// Cloudflare keeps a Worker that a queue still hands messages to: it stops consuming first. (charter deploy
+		// makes it the consumer again.)
+		queues, err := consumedBy(p)
+		check(err)
+		for _, queue := range queues {
+			if err := cloudflareQuietly(p, "queues", "consumer", "remove", queue, name); err == nil {
+				say("✓ %s no longer consumes the queue %s", name, queue)
+			}
+		}
 		words := []string{"delete", "--force"}
 		if env != "" {
 			words = append(words, "--env", env)
@@ -108,6 +117,32 @@ func deleteWorker(p *project.Project, args []string) {
 	if failed {
 		check(errors.New("not everything was deleted (a bucket must be empty first): what is left is named above"))
 	}
+}
+
+// consumedBy are the queues wrangler.jsonc makes the Worker a consumer of.
+func consumedBy(p *project.Project) ([]string, error) {
+	b, err := os.ReadFile(filepath.Join(p.Root, project.Wrangler))
+	if err != nil {
+		return nil, err
+	}
+	if b, err = hujson.Standardize(b); err != nil {
+		return nil, err
+	}
+	var c struct {
+		Queues struct {
+			Consumers []struct {
+				Queue string `json:"queue"`
+			} `json:"consumers"`
+		} `json:"queues"`
+	}
+	if err := json.Unmarshal(b, &c); err != nil {
+		return nil, err
+	}
+	var queues []string
+	for _, consumer := range c.Queues.Consumers {
+		queues = append(queues, consumer.Queue)
+	}
+	return queues, nil
 }
 
 // resource is something the Worker's configuration names that wrangler made: its kind, its name, and the wrangler
