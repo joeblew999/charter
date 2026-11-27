@@ -110,6 +110,7 @@ Where no instance of the Worker is running, a reader waits for one to start. For
 ```sh
 go tool charter run cold                        # the deployed Worker's front page, from 30 places
 go tool charter run cold -path /docs/ -from 50
+go tool charter run cold -in DE,US               # one probe in each of these countries: four of Globalping's tests
 go tool charter run cold staging                # an environment
 ```
 

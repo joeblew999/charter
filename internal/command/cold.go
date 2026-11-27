@@ -31,6 +31,7 @@ import (
 //	charter run cold                 the deployed Worker's front page, from 30 places
 //	charter run cold staging         an environment
 //	charter run cold -path /docs/ -from 50
+//	charter run cold -in DE,US       one probe in each of these countries: a few of Globalping's tests, not sixty
 //	charter run cold -everywhere     one probe in every country: the map of which data centre each reaches (colos.go)
 //
 // It is for after a change to what the Worker loads or does as it starts, never part of a deploy. Without an
@@ -41,9 +42,10 @@ func coldTask(p *project.Project, args []string) {
 	from := fs.Int("from", 30, "how many places to ask from (50 at most)")
 	path := fs.String("path", "/", "the page to ask for")
 	all := fs.Bool("everywhere", false, "one probe in every country Globalping has probes in, once: which of Cloudflare's data centres each reaches, and what a reader there waits (the map, kept in .charter/colos.json)")
+	in := fs.String("in", "", "ask from these countries only, one probe in each, by their ISO codes: -in DE,US. Two of Globalping's tests a country, where -from takes two for each of 30 places")
 	fs.Parse(args)
 	if fs.NArg() > 0 || *from < 1 || *from > 50 || !strings.HasPrefix(*path, "/") {
-		check(errors.New("usage: charter run cold [env] [-from 30] [-path /] [-everywhere]"))
+		check(errors.New("usage: charter run cold [env] [-from 30 | -in DE,US | -everywhere] [-path /]"))
 	}
 	base := p.URL
 	if env != "" {
@@ -57,7 +59,16 @@ func coldTask(p *project.Project, args []string) {
 		check(everywhere(p, deployedName(p, env), at.Host, *path))
 		return
 	}
-	first, id, err := probed(at.Host, *path, []map[string]string{{"magic": "world"}}, *from)
+	// Where from: anywhere in the world, or one probe in each country named.
+	var where any = []map[string]string{{"magic": "world"}}
+	if countries := countriesIn(*in); len(countries) > 0 {
+		places := make([]place, len(countries))
+		for i, country := range countries {
+			places[i] = place{country, 1}
+		}
+		where, *from = places, 0
+	}
+	first, id, err := probed(at.Host, *path, where, *from)
 	check(err)
 	// The same probes again: an instance the first request started is there for the second, where Cloudflare
 	// sends it to the same one.
@@ -103,6 +114,17 @@ func coldTask(p *project.Project, args []string) {
 // continents are Globalping's, in the order they are said.
 var continents = []struct{ code, name string }{
 	{"AF", "Africa"}, {"AS", "Asia"}, {"EU", "Europe"}, {"NA", "North America"}, {"OC", "Oceania"}, {"SA", "South America"}, {"AN", "Antarctica"},
+}
+
+// countriesIn reads a list of countries as it is typed: "de, us" is DE and US.
+func countriesIn(list string) []string {
+	var countries []string
+	for _, one := range strings.Split(list, ",") {
+		if code := strings.ToUpper(strings.TrimSpace(one)); code != "" && !slices.Contains(countries, code) {
+			countries = append(countries, code)
+		}
+	}
+	return countries
 }
 
 // firstHitGrew is how much above what is usual here a first hit's median must be to be worth saying: it varies with

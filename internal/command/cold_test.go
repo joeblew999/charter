@@ -2,6 +2,7 @@ package command
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -72,5 +73,14 @@ func TestQuantile(t *testing.T) {
 	}
 	if got := quantile(nil, 0.5); got != 0 {
 		t.Errorf("of nothing: %v", got)
+	}
+}
+
+// The countries to ask from, as they are typed.
+func TestCountriesIn(t *testing.T) {
+	for typed, want := range map[string]string{"DE,US": "DE,US", " de , us,DE ": "DE,US", "": "", ",": "", "th": "TH"} {
+		if got := strings.Join(countriesIn(typed), ","); got != want {
+			t.Errorf("countriesIn(%q) = %q, want %q", typed, got, want)
+		}
 	}
 }
