@@ -18,8 +18,9 @@ import (
 
 // The deployed Worker's secrets. Their names are the app's: .dev.vars.example lists each with a throwaway value for
 // wrangler dev. Their real values are kept where Cloudflare's credentials are, in fnox (the keychain, never a
-// file), each under the Worker's name and its own: ADMIN_TOKEN of the Worker my-app is MY_APP_ADMIN_TOKEN, so one
-// machine keeps the secrets of every app apart.
+// file), each under charter's name, the Worker's and its own: ADMIN_TOKEN of the Worker my-app is
+// CHARTER_MY_APP_ADMIN_TOKEN. So one machine keeps the secrets of every app apart, and none of them can be taken
+// for a key some other tool keeps there.
 //
 //	charter run secrets                    which the app names, and which fnox has
 //	charter run secrets:put NAME --random  a new random value, kept in fnox and put on the deployed Worker
@@ -44,7 +45,11 @@ func secretNames(p *project.Project) []string {
 }
 
 // secretKey is where fnox keeps a secret of this Worker.
-func secretKey(p *project.Project, name string) string {
+func secretKey(p *project.Project, name string) string { return "CHARTER_" + workerKey(p, name) }
+
+// workerKey is where charter kept one before its keys began with its own name: read still, and moved by
+// charter run secrets:put.
+func workerKey(p *project.Project, name string) string {
 	worker := strings.Map(func(r rune) rune {
 		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
 			return r
@@ -80,6 +85,9 @@ func deployedSecrets(p *project.Project) map[string]string {
 		if value, ok := keptSecret(fnox, secretKey(p, name)); ok {
 			out[name] = value
 			say("%s: from fnox (%s)", name, secretKey(p, name))
+		} else if value, ok := keptSecret(fnox, workerKey(p, name)); ok {
+			out[name] = value
+			say("%s: from fnox, under its old key (%s): go tool charter run secrets:put %s moves it to %s", name, workerKey(p, name), name, secretKey(p, name))
 		} else {
 			say("· %s: not in fnox (go tool charter run secrets:put %s): a test that needs it is skipped", name, name)
 		}
@@ -102,6 +110,8 @@ func secrets(p *project.Project, args []string) {
 		key, mark, what := secretKey(p, name), "·", "not in fnox: go tool charter run secrets:put "+name
 		if _, ok := keptSecret(fnox, key); ok {
 			mark, what = "✓", "in fnox"
+		} else if _, ok := keptSecret(fnox, workerKey(p, name)); ok {
+			what = "in fnox under its old key " + workerKey(p, name) + ": go tool charter run secrets:put " + name + " moves it"
 		}
 		say("%s %-16s %s (%s)", mark, name, what, key)
 	}
@@ -123,6 +133,13 @@ func secretsPut(p *project.Project, args []string) {
 	check(err)
 	key := secretKey(p, name)
 	value, have := keptSecret(fnox, key)
+	// One kept under the key charter used before moves to the one it uses now.
+	moved := false
+	if old := workerKey(p, name); !have && !random {
+		if was, ok := keptSecret(fnox, old); ok {
+			value, moved = was, true
+		}
+	}
 	piped := func() bool {
 		info, err := os.Stdin.Stat()
 		return err == nil && info.Mode()&os.ModeCharDevice == 0
@@ -139,7 +156,7 @@ func secretsPut(p *project.Project, args []string) {
 		if value = strings.TrimSpace(string(b)); value == "" {
 			check(errors.New("nothing was piped in"))
 		}
-	case !have:
+	case !have && !moved:
 		check(fmt.Errorf("fnox has no %s. Either:\n  go tool charter run secrets:put %s --random     a new random value (a token of the app's own)\n  %s set --global %s     it asks for the value; then this again", key, name, fnox, key))
 	}
 	if random || !have || piped() {
@@ -148,6 +165,12 @@ func secretsPut(p *project.Project, args []string) {
 		set.Stdin, set.Stderr = strings.NewReader(value), os.Stderr
 		check(set.Run())
 		say("✓ %s is in fnox (%s)", name, key)
+	}
+	// The old key goes, whatever put the new value there: one secret, one place.
+	if old := workerKey(p, name); exec.Command(fnox, "get", old).Run() == nil {
+		if exec.Command(fnox, "remove", "--global", old).Run() == nil {
+			say("✓ its old key %s is gone from fnox", old)
+		}
 	}
 	bin, err := npm(p, "wrangler")
 	check(err)

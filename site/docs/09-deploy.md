@@ -21,7 +21,7 @@ charter runs wrangler under fnox, which it brings itself. The token comes from y
 
 ## Secrets
 
-The Worker's secrets are named in `.dev.vars.example`, each with a throwaway value for `charter dev`. Their real values are kept in fnox, beside Cloudflare's credentials, each under the Worker's name: `ADMIN_TOKEN` of the Worker `my-app` is `MY_APP_ADMIN_TOKEN`.
+The Worker's secrets are named in `.dev.vars.example`, each with a throwaway value for `charter dev`. Their real values are kept in fnox, beside Cloudflare's credentials, each under charter's name and the Worker's: `ADMIN_TOKEN` of the Worker `my-app` is `CHARTER_MY_APP_ADMIN_TOKEN`.
 
 ```sh
 go tool charter run secrets                         # which the app names, and which fnox has
