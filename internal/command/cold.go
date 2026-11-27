@@ -60,6 +60,19 @@ func coldTask(p *project.Project, args []string) {
 	one, two := hitsOf(first), hitsOf(again)
 	say("· the first request: %s", one)
 	say("· again from each: %s", two)
+	// By continent, both rounds together: what a page waits for that is far from some readers (a database's primary)
+	// shows here and in no single number.
+	for _, c := range continents {
+		var there []probe
+		for _, p := range slices.Concat(first, again) {
+			if p.Probe.Continent == c.code {
+				there = append(there, p)
+			}
+		}
+		if h := hitsOf(there); len(h.fresh)+len(h.reused) > 0 {
+			say("  %-14s %s", c.name+":", h)
+		}
+	}
 	if one.unknown+two.unknown > 0 {
 		say("· %d answers did not say which runtime answered (x-go-runtime): a page served without the Worker, or a Worker built before charter said so", one.unknown+two.unknown)
 	}
@@ -72,6 +85,11 @@ func coldTask(p *project.Project, args []string) {
 	if said := remark(half, usually, known, firstHitGrew, 0, millis); said != "" {
 		say("· a first hit, half under %s%s", millis(half), said)
 	}
+}
+
+// continents are Globalping's, in the order they are said.
+var continents = []struct{ code, name string }{
+	{"AF", "Africa"}, {"AS", "Asia"}, {"EU", "Europe"}, {"NA", "North America"}, {"OC", "Oceania"}, {"SA", "South America"}, {"AN", "Antarctica"},
 }
 
 // firstHitGrew is how much above what is usual here a first hit's median must be to be worth saying: it varies with
