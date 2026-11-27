@@ -7,7 +7,7 @@
 //	           says what it is (workers-go's template)
 //	Go         the Wasm (GOOS=js GOARCH=wasm), with charter's glue beside it (worker/*.mjs)
 //
-// Go and Node are all a machine needs: go.mod's toolchain line and package-lock.json pin the rest, on macOS, Linux
+// mise is all a machine needs: the app's mise.toml pins Go, Node and fnox, package-lock.json the rest, on macOS, Linux
 // and Windows.
 package command
 
@@ -124,7 +124,7 @@ func envArgs(p *project.Project, args *[]string) []string {
 // cloudflare runs wrangler with words then rest, for what talks to Cloudflare. Its credentials are wrangler's:
 // CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. In the environment already (CI's secrets), they are used as they
 // are. Otherwise wrangler runs under fnox exec (https://fnox.jdx.dev: secrets from the keychain or a password
-// manager, never a file), with the fnox charter brings (package tools): a developer keeps the two in fnox once
+// manager, never a file), with the fnox the app's mise.toml pins (package tools): a developer keeps the two in fnox once
 // (fnox set CLOUDFLARE_API_TOKEN) and types nothing more.
 func cloudflare(p *project.Project, words, rest []string) error {
 	return cloudflareTo(nil, p, words, rest)
@@ -173,7 +173,7 @@ func cloudflareTo(copy io.Writer, p *project.Project, words, rest []string) erro
 	}
 	args := append(words, rest...)
 	if os.Getenv("CLOUDFLARE_API_TOKEN") == "" {
-		// charter's own fnox (package tools), brought the first time: the token comes from where fnox keeps it.
+		// The app's fnox (mise.toml): the token comes from where fnox keeps it.
 		fnox, err := credentials(p)
 		if err != nil {
 			return err
@@ -343,7 +343,7 @@ func asJSON(command string, args []string) {
 	}
 }
 
-// credentials is charter's fnox, once it is known to hold Cloudflare's two: the token and the account's id. When one
+// credentials is the app's fnox, once it is known to hold Cloudflare's two: the token and the account's id. When one
 // is not there it says what to do, in the three steps a developer new to this takes once; the values go to fnox's
 // store (the keychain), typed at its own prompt, and are never shown.
 func credentials(p *project.Project) (fnox string, err error) {

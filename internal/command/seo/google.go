@@ -31,7 +31,7 @@ func secret(name string) string {
 	if v, ok := os.LookupEnv(name); ok {
 		return v
 	}
-	// charter's own fnox (package tools), which it brings: never one a developer may or may not have installed.
+	// The app's fnox, as mise has it for this folder (package tools).
 	fnox, err := tools.Fnox()
 	if err != nil {
 		return ""

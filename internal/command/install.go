@@ -1,17 +1,23 @@
 package command
 
 import (
+	"errors"
 	"github.com/joeblew999/charter/internal/run"
 	"github.com/joeblew999/charter/internal/tools"
 	"os"
 	"path/filepath"
 )
 
-// Install runs charter install: everything the app pins, installed: npm's packages as package-lock.json has them, Go's
-// modules, the tools go.mod names, gsx's language server for the editor, the agent skills of everything the app is built with, as Claude Code plugins (skills.go), and the two
-// programs charter brings beside Go and Node: fnox and a container engine (package tools).
+// Install runs charter install: everything the app pins, installed: the tools of mise.toml (Go, Node, fnox), npm's
+// packages as package-lock.json has them, Go's modules, the tools go.mod names, gsx's language server for the editor,
+// the agent skills of everything the app is built with, as Claude Code plugins (skills.go), and a container engine
+// (package tools).
 func Install(args []string) {
 	p := load()
+	if tools.Mise() == "" {
+		check(errors.New(tools.NoMise))
+	}
+	check(run.Run(p.Root, nil, tools.Mise(), "install"))
 	if exists(filepath.Join(p.Root, "package-lock.json")) {
 		check(run.Run(p.Root, nil, "npm", "ci"))
 	} else if exists(filepath.Join(p.Root, "package.json")) {
@@ -24,11 +30,8 @@ func Install(args []string) {
 	if hasGSX(p) && os.Getenv("CI") == "" {
 		check(run.Run(p.Root, nil, "go", "install", "github.com/gsxhq/gsx/cmd/gsx"))
 	}
-	// The two programs charter picks for every developer and brings itself (package tools): fnox for secrets, and a
-	// container engine (Kiri, unless one already answers) for the SDK generators.
-	if _, err := tools.Fnox(); err != nil {
-		check(err)
-	}
+	// A container engine (Kiri, unless one already answers) for the SDK generators: an app of its own, which mise does
+	// not install.
 	if os.Getenv("CI") == "" {
 		_, err := tools.Containers()
 		check(err)

@@ -1,0 +1,31 @@
+// Renovate keeps what this repository pins current, in a pull request a week: the tools of mise.toml (Go, Node,
+// fnox) and mise.lock, Go's modules, npm's packages, and the GitHub Actions. Dependabot's security alerts stay on in
+// the repository's settings; its version updates are Renovate's now, since Dependabot does not read mise.toml.
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended"],
+  schedule: ["before 6am on monday"],
+  postUpdateOptions: ["gomodTidy"],
+  // example/ and site/ build against the checkout beside them (go.mod's replace): their charter is this one.
+  ignoreDeps: ["github.com/joeblew999/charter"],
+  packageRules: [
+    {
+      // go.mod's go line is the oldest Go an app may build charter with: raised on purpose, never by a bot.
+      // The Go everything is built with is mise.toml's.
+      matchManagers: ["gomod"],
+      matchDepTypes: ["golang"],
+      enabled: false,
+    },
+    { matchManagers: ["gomod"], groupName: "go modules" },
+    { matchManagers: ["npm"], groupName: "npm" },
+    {
+      // gsx's Vite plugin says which Vite it works with (its peer dependency): a new major waits for it.
+      matchManagers: ["npm"],
+      matchPackageNames: ["vite"],
+      matchUpdateTypes: ["major"],
+      enabled: false,
+    },
+    { matchManagers: ["mise"], groupName: "tools" },
+    { matchManagers: ["github-actions"], groupName: "actions" },
+  ],
+}

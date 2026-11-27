@@ -25,3 +25,6 @@
 wrangler.charter-seed.json
 # charter deploy writes this for the moment it runs, when it adopts resources that are there already.
 wrangler.charter-deploy.json
+# mise's settings of one developer's own, beside the app's mise.toml.
+mise.local.toml
+mise.local.lock

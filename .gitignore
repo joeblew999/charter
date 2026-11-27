@@ -6,3 +6,6 @@ node_modules/
 go.work.sum
 .claude/worktrees/
 .playwright-mcp/
+# mise's settings of one developer's own, beside mise.toml.
+mise.local.toml
+mise.local.lock

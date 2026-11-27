@@ -5,7 +5,8 @@ import (
 )
 
 // Upgrade runs charter upgrade: charter itself moved to its latest, the library and the command together, and then
-// the new charter's check --fix, so that what it writes for an app (its screens, its generated files) follows.
+// the new charter's check --fix, so that what it writes for an app (its screens, its generated files) follows, and
+// the app's mise.toml pins at least the Go, Node and fnox that charter was tested with, installed.
 func Upgrade(args []string) {
 	p := load()
 	check(run.Run(p.Root, nil, "go", "get", library+"@latest"))

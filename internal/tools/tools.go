@@ -1,45 +1,26 @@
-// Package tools is the two programs charter picks for every developer, beside Go and Node, and brings itself when a
-// machine lacks them, so that nobody sets either up or has to remember to:
+// Package tools finds the programs charter runs beside Go and Node, and brings the one mise does not:
 //
+//   - mise (https://mise.jdx.dev) installs Go, Node and fnox at the versions the app's mise.toml pins, on every
+//     machine and in CI, and mise.lock says what each download must be. It is the one thing a developer installs.
 //   - fnox (https://fnox.jdx.dev) keeps secrets: the Cloudflare token a deploy needs comes from the keychain or a
-//     password manager, never from a file or the shell's history. charter runs wrangler under fnox exec.
+//     password manager, never from a file or the shell's history. charter runs wrangler under fnox exec. It is a
+//     tool of mise.toml.
 //   - Kiri (https://runkiri.com) runs containers, which Fern's SDK generators are: charter pack uses its docker.
 //     Where another Docker engine already answers (CI's own, a server's), that one is used and Kiri is left alone.
-//
-// charter install brings both; a command that needs one brings it then, if install was never run.
+//     It is an app of its own, not a tool mise installs, so charter brings it when it is needed.
 package tools
 
 import (
-	"archive/tar"
-	"archive/zip"
-	"bytes"
-	"compress/gzip"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
-
-// fnoxVersion is the fnox charter brings, and fnoxFiles its release file for each system with the file's SHA-256:
-// what is downloaded is that file and no other. A new fnox is a new version here with its sums.
-const fnoxVersion = "1.50.0"
-
-var fnoxFiles = map[string][2]string{
-	"darwin/arm64":  {"fnox-aarch64-apple-darwin.tar.gz", "cf8301a5355c3249284b4102c871b0c4b5e5924cd7b61397f7539f4328041eff"},
-	"darwin/amd64":  {"fnox-x86_64-apple-darwin.tar.gz", "76bd810eaecdce2e02fcbe51deda070e72dcf85c216d746512c469f4012e7f72"},
-	"linux/arm64":   {"fnox-aarch64-unknown-linux-musl.tar.gz", "6dd97b15ca535e52813ad01f4e6e14e0b630fcd18cfaf439a8b9dd76ffd74e85"},
-	"linux/amd64":   {"fnox-x86_64-unknown-linux-musl.tar.gz", "3ad4c13244cd9fb6ae45931cc22f876a3ee8608a0fcc7e429c2f890ff6d7da18"},
-	"windows/arm64": {"fnox-aarch64-pc-windows-msvc.zip", "d7cb1ea29de4935995db0672e123a236f39ae2588f3f827ebf62d5728b11b2d2"},
-	"windows/amd64": {"fnox-x86_64-pc-windows-msvc.zip", "14ddd4b9d97274e5ec725ff98fbf3145291c94d21ef40c6ffa224900ad6d15e6"},
-}
 
 func exe(name string) string {
 	if runtime.GOOS == "windows" {
@@ -48,86 +29,45 @@ func exe(name string) string {
 	return name
 }
 
-// Fnox is the path of fnox: charter's own copy (in the user's cache, at the version above), downloaded the first
-// time. It is charter's and not whichever fnox the PATH has, so that every developer and every machine runs the same
-// one, and a version manager's shim with nothing behind it changes nothing.
-func Fnox() (string, error) {
-	cache, err := os.UserCacheDir()
-	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(cache, "charter", "tools", "fnox-"+fnoxVersion)
-	bin := filepath.Join(dir, exe("fnox"))
-	if _, err := os.Stat(bin); err == nil {
-		return bin, nil
-	}
-	file, ok := fnoxFiles[runtime.GOOS+"/"+runtime.GOARCH]
-	if !ok {
-		return "", fmt.Errorf("fnox has no release for %s/%s", runtime.GOOS, runtime.GOARCH)
-	}
-	url := "https://github.com/jdx/fnox/releases/download/v" + fnoxVersion + "/" + file[0]
-	fmt.Printf("fnox %s is not on this machine yet: getting %s\n", fnoxVersion, url)
-	res, err := (&http.Client{Timeout: 5 * time.Minute}).Get(url)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("%s: HTTP %d", url, res.StatusCode)
-	}
-	archive, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-	if sum := sha256.Sum256(archive); hex.EncodeToString(sum[:]) != file[1] {
-		return "", fmt.Errorf("%s is not the file charter expects (SHA-256 %s, want %s): nothing was installed", url, hex.EncodeToString(sum[:]), file[1])
-	}
-	program, err := member(archive, exe("fnox"), strings.HasSuffix(file[0], ".zip"))
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", file[0], err)
-	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", err
-	}
-	// Written whole, then named: a download that was cut off leaves no fnox behind.
-	if err := os.WriteFile(bin+".part", program, 0o755); err != nil {
-		return "", err
-	}
-	return bin, os.Rename(bin+".part", bin)
+// NoMise is what is said where mise is missing: how to install it, for each system.
+const NoMise = "charter's tools come from mise (https://mise.jdx.dev): install it once (macOS: brew install mise; " +
+	"Linux: curl https://mise.run | sh; Windows: winget install jdx.mise), let your shell use it (mise activate), " +
+	"then mise install in the app's folder"
+
+// Mise is the path of mise, "" when this machine has none.
+func Mise() string {
+	path, _ := exec.LookPath("mise")
+	return path
 }
 
-// member is the file called name in a .tar.gz or .zip archive.
-func member(archive []byte, name string, isZip bool) ([]byte, error) {
-	if isZip {
-		z, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
-		if err != nil {
-			return nil, err
-		}
-		for _, f := range z.File {
-			if filepath.Base(f.Name) == name {
-				r, err := f.Open()
-				if err != nil {
-					return nil, err
-				}
-				defer r.Close()
-				return io.ReadAll(r)
+var fnox struct {
+	once sync.Once
+	path string
+	err  error
+}
+
+// Fnox is the path of fnox: the one mise.toml pins for the folder charter runs in, as mise resolves it. A fnox
+// that is only on the PATH (a shim, another install) is used where mise cannot say.
+func Fnox() (string, error) {
+	fnox.once.Do(func() {
+		if mise := Mise(); mise != "" {
+			out, err := exec.Command(mise, "which", "fnox").Output()
+			if path := strings.TrimSpace(string(out)); err == nil && exists(path) {
+				fnox.path = path
+				return
 			}
 		}
-		return nil, errors.New("no " + name + " in it")
-	}
-	gz, err := gzip.NewReader(bytes.NewReader(archive))
-	if err != nil {
-		return nil, err
-	}
-	for t := tar.NewReader(gz); ; {
-		h, err := t.Next()
-		if err != nil {
-			return nil, errors.New("no " + name + " in it")
+		if path, err := exec.LookPath("fnox"); err == nil && !strings.Contains(filepath.ToSlash(path), "/shims/") {
+			fnox.path = path
+			return
 		}
-		if filepath.Base(h.Name) == name && h.Typeflag == tar.TypeReg {
-			return io.ReadAll(t)
+		if Mise() == "" {
+			fnox.err = errors.New("fnox is not here. " + NoMise)
+		} else {
+			fnox.err = errors.New("fnox is not installed for this folder: mise install (mise.toml pins it)")
 		}
-	}
+	})
+	return fnox.path, fnox.err
 }
 
 // kiriBin is where Kiri puts its commands (kiri, and the docker that talks to it).
@@ -219,13 +159,13 @@ func installKiri() error {
 	}
 }
 
-// State says what this machine has of the two, for charter env.
-func State() (fnox, containers string) {
-	cache, _ := os.UserCacheDir()
-	if bin := filepath.Join(cache, "charter", "tools", "fnox-"+fnoxVersion, exe("fnox")); exists(bin) {
-		fnox = "fnox " + fnoxVersion + " (charter's: " + bin + ")"
+// State says what this machine has of fnox and of a container engine, for charter env.
+func State() (fnoxSays, containers string) {
+	if path, err := Fnox(); err == nil {
+		out, _ := exec.Command(path, "--version").Output()
+		fnoxSays = strings.TrimSpace(string(out)) + " (" + path + ")"
 	} else {
-		fnox = "not yet: charter install brings fnox " + fnoxVersion
+		fnoxSays = "not yet: " + err.Error()
 	}
 	switch d := docker(); {
 	case up(d):
@@ -235,5 +175,5 @@ func State() (fnox, containers string) {
 	default:
 		containers = "not yet: charter install brings Kiri"
 	}
-	return fnox, containers
+	return fnoxSays, containers
 }

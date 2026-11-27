@@ -15,10 +15,12 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   before designing anything.
 - **workers-go is used the workers-go way:** everything it has is imported and called directly. charter adds only
   what it lacks (`cloud`), and says so where it is defined.
-- **Go and Node are all a developer installs.** `go.mod` and `package-lock.json` pin everything. charter brings
-  the two other programs it picks, itself, on every system (`internal/tools`): fnox for secrets (a pinned release,
-  checked against its SHA-256) and Kiri for containers. Never call either through mise or another manager, and
-  never ask a developer to install one. No TypeScript of ours: `vite.config.ts` is gsx's file.
+- **mise is all a developer installs.** `mise.toml` pins Go, Node and fnox (`mise.lock` says what each download
+  must be), `go.mod` and `package-lock.json` pin the rest, and Renovate keeps all of them current
+  (`.github/renovate.json5`). CI installs the same with `.github/actions/tools`. `charter check` fails where other
+  versions run, and raises an app's pins to at least charter's. go.mod's `go` line is the oldest Go an app may use,
+  raised by hand. charter brings only Kiri (an app, not a mise tool). No mise tasks: commands are charter's. No
+  TypeScript of ours: `vite.config.ts` is gsx's file.
 - **We pick winners.** One tool per job, brought and driven by charter, so the hard parts are easy. Don't add a
   second choice or a way around one.
 - **Six library folders at the top** (`app`, `api`, `cloud`, `live`, `intl`, `seo`), with `cmd`, `internal`,

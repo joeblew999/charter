@@ -11,8 +11,8 @@ import (
 	"strings"
 )
 
-// Env runs charter env: what this machine has of what an app needs, and what is missing. Go and Node are all it must
-// have; the rest is for one job each.
+// Env runs charter env: what this machine has of what an app needs, and what is missing. mise is all it must have:
+// it brings Go, Node and fnox at the versions the app pins; the rest is for one job each.
 func Env(args []string) {
 	log.SetFlags(0)
 	missing := false
@@ -29,16 +29,41 @@ func Env(args []string) {
 			fmt.Printf("· %-10s not found: %s\n", name, why)
 		}
 	}
-	show("go", "https://go.dev/dl/", true, "go", "version")
-	show("node", "https://nodejs.org", true, "node", "--version")
+	show("mise", tools.NoMise, true, "mise", "--version")
+	show("go", "mise install", true, "go", "version")
+	show("node", "mise install", true, "node", "--version")
 	show("npm", "it comes with Node", true, "npm", "--version")
 	show("git", "charter create copies a template with it", false, "git", "--version")
 	show("claude", "only charter run intl:translate needs it (Claude Code)", false, "claude", "--version")
-	// The two charter brings itself (package tools).
+	// fnox, as mise has it for this folder, and a container engine.
 	fnox, containers := tools.State()
 	fmt.Printf("%s fnox       %s: Cloudflare's credentials, from the keychain, for deploy\n", mark(fnox), fnox)
 	fmt.Printf("%s containers %s: for charter pack, which generates the SDKs\n", mark(containers), containers)
 	if p, err := project.Load("."); err == nil {
+		// What runs, against what the app pins.
+		if tools.Mise() != "" {
+			if pins, err := effectivePins(p); err == nil {
+				var same, file []string
+				for _, name := range pinned {
+					short := strings.TrimPrefix(name, "github:jdx/")
+					want, ok := pins[name]
+					switch got := running(p, name); {
+					case !ok:
+						missing = true
+						fmt.Printf("✗ pins       mise.toml does not pin %s\n", short)
+					case got == want.Version:
+						same = append(same, short+" "+got)
+						file = append(file, want.File)
+					default:
+						missing = true
+						fmt.Printf("✗ pins       %s %s runs here; %s pins %s: mise install, then a new shell\n", short, orNone(got, "none"), want.File, want.Version)
+					}
+				}
+				if len(same) > 0 {
+					fmt.Printf("✓ pins       %s run here, as %s pins\n", strings.Join(same, ", "), file[0])
+				}
+			}
+		}
 		if state, ok := devState(p); ok {
 			fmt.Printf("✓ dev        running at %s (the Worker itself: %s; its log: %s)\n", state.URL, state.Worker, state.Log)
 		} else {

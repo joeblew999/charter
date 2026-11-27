@@ -21,6 +21,8 @@ import (
 // Check runs charter check: everything that can be said without running the app. It starts nothing, so it is safe
 // beside a running charter dev. --fix writes what it can.
 //
+//	tools      Go, Node and fnox are the versions mise.toml pins, and it pins at least what charter was tested with
+//	           (with --fix: the pins are raised and installed)
 //	generate   the messages, the components' Go and the browser's files, which everything after reads
 //	fmt        charter fmt --check (with --fix: charter fmt)
 //	lint       charter lint (with --fix: go mod tidy)
@@ -39,6 +41,8 @@ func Check(args []string) {
 	}
 	p := load()
 	t := newTimes("check")
+	// The tools first: what everything after runs on.
+	t.part("tools", func() error { return toolchain(p, *fix) })
 	if p.Spec != "" && p.DB != "" && *fix {
 		t.part("queries", func() error { return dbcode.Write(p.Root, p.DB, false, *drop) })
 	}

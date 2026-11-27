@@ -1,0 +1,22 @@
+# The tools mise.toml pins (Go, Node, fnox), installed by mise as mise.lock says, and Go's and npm's caches: what
+# every job runs on, the same as every developer's machine. One place, so no workflow pins a version of its own.
+name: tools
+description: mise.toml's tools from mise.lock, with Go's module and build caches and npm's
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@v5
+    - id: caches
+      shell: bash
+      run: |
+        echo "mod=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+        echo "build=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+        echo "npm=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v6
+      with:
+        path: |
+          ${{ steps.caches.outputs.mod }}
+          ${{ steps.caches.outputs.build }}
+          ${{ steps.caches.outputs.npm }}
+        key: build-${{ runner.os }}-${{ hashFiles('mise.lock', '**/go.sum', '**/package-lock.json') }}
+        restore-keys: build-${{ runner.os }}-

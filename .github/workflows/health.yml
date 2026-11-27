@@ -22,9 +22,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
+      - uses: ./.github/actions/tools
       - name: how ${{ matrix.app }} did the last day
         working-directory: ${{ matrix.app }}
         run: go tool charter run health --since 1d

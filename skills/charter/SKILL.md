@@ -109,6 +109,6 @@ is what it is in a charter app:
 
 `go tool charter` lists them: Vite+'s verbs. Keep `go tool charter dev` running and run everything else beside it.
 Before a push: `go tool charter check && go tool charter test`. To ship: `go tool charter deploy`, then
-`go tool charter test --deployed`. Credentials come from fnox, which charter brings itself: once, `fnox set CLOUDFLARE_API_TOKEN` and
+`go tool charter test --deployed`. Tools come from mise: `mise.toml` pins Go, Node and fnox, `go tool charter check` fails where other versions run (a shell without mise's hook: `eval "$(mise hook-env)"`), and `check --fix` raises an app's pins to charter's. Credentials come from fnox: once, `fnox set CLOUDFLARE_API_TOKEN` and
 `fnox set CLOUDFLARE_ACCOUNT_ID`; in CI they are the environment's. Containers for `go tool charter pack` are Kiri,
 which charter installs and starts.

@@ -17,7 +17,7 @@ That is the D1 migrations, then `wrangler deploy`.
 
 ## Credentials
 
-charter runs wrangler under fnox, which it brings itself. The token comes from your keychain or password manager, never from a file. In CI the two variables are the environment's.
+charter runs wrangler under fnox, which mise installs (`mise.toml`). The token comes from your keychain or password manager, never from a file. In CI the two variables are the environment's.
 
 ## Secrets
 

@@ -1,4 +1,5 @@
-# Go and Node are all a machine needs: go.mod's toolchain line and package-lock.json pin the rest.
+# mise is all a machine needs: mise.toml pins Go, Node and fnox (.github/actions/tools installs them), package-lock.json
+# pins the rest.
 # One job per push: the library's tests, then the example checked, tested on wrangler dev, and worked on under
 # charter dev, and charter's own site checked and tested.
 name: ci
@@ -18,13 +19,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
+      - uses: ./.github/actions/tools
       - run: npm ci
       - run: go build ./... && go vet ./...
         env:

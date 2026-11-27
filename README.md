@@ -16,10 +16,11 @@ the live feed, people sign in and have roles, each thing Cloudflare gives a Work
 
 ## Start
 
-You need Go and Node. charter brings everything else itself.
+You need [mise](https://mise.jdx.dev), once (macOS: `brew install mise`; Linux: `curl https://mise.run | sh`;
+Windows: `winget install jdx.mise`), with `mise activate` in your shell. It brings the Go, Node and fnox each app pins.
 
 ```sh
-go run github.com/joeblew999/charter/cmd/charter@latest create my-app
+mise exec go@latest -- go run github.com/joeblew999/charter/cmd/charter@latest create my-app
 cd my-app
 go tool charter dev
 ```
