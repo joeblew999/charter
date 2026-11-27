@@ -43,6 +43,12 @@ func Deploy(args []string) {
 	if first {
 		migrations()
 	}
+	// Its secrets, where fnox has them and the Worker does not: a first deploy, or one after charter run delete.
+	if len(env) == 0 {
+		pushSecrets(p, "")
+	} else {
+		pushSecrets(p, env[1])
+	}
 	// What next: the same tests that ask the local Worker ask the deployed one. An environment's address is kept in
 	// charter.toml's [urls] the first time wrangler says it, so charter test --env needs nothing typed.
 	// A new app's url is a placeholder until it has been deployed (charter create writes <name>.example.workers.dev):

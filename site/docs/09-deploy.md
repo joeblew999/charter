@@ -47,6 +47,18 @@ go tool charter run secrets:put staging ADMIN_TOKEN --random
 
 Someone who clones the app has the file and not the values. charter tells them which are missing; nothing else stops.
 
+## Taking a Worker away
+
+```sh
+go tool charter run delete                    # what there is: the Worker, its secrets, its data. Changes nothing
+go tool charter run delete my-worker          # the Worker and its secrets; its data stays
+go tool charter run delete my-worker --data   # and its database, bucket, queue and KV namespace
+```
+
+It deletes, so it is asked for twice: the second time with the Worker's name. Without `--data`, `go tool charter deploy` brings the same app back: its data as it was, and its secrets from fnox, which deploy puts on a Worker that lacks them.
+
+Cloudflare never gives a secret back. So while the Worker has a secret that fnox does not, delete stops and names it.
+
 ## Email
 
 A Worker sends email through its `send_email` binding. To an address verified on your account it sends as it is. To anyone, the domain it sends from is onboarded once (Cloudflare Email Sending, on the Workers Paid plan):

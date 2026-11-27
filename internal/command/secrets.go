@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -303,8 +304,16 @@ func secretsPut(p *project.Project, args []string) {
 			say("✓ its old key %s is gone from fnox's global config", was)
 		}
 	}
+	check(putSecret(p, fnox, env, name, value))
+	say("✓ %s is on the deployed Worker %s%s", name, p.Worker.Name, map[bool]string{true: " (" + env + ")"}[env != ""])
+}
+
+// putSecret puts a value on the deployed Worker as its secret, through wrangler's stdin.
+func putSecret(p *project.Project, fnox, env, name, value string) error {
 	bin, err := npm(p, "wrangler")
-	check(err)
+	if err != nil {
+		return err
+	}
 	words := []string{"secret", "put", name}
 	if env != "" {
 		words = append(words, "--env", env)
@@ -313,7 +322,56 @@ func secretsPut(p *project.Project, args []string) {
 	if os.Getenv("CLOUDFLARE_API_TOKEN") != "" {
 		put = exec.Command(bin, words...)
 	}
-	put.Dir, put.Stdin, put.Stdout, put.Stderr = p.Root, strings.NewReader(value), os.Stdout, os.Stderr
-	check(put.Run())
-	say("✓ %s is on the deployed Worker %s%s", name, p.Worker.Name, map[bool]string{true: " (" + env + ")"}[env != ""])
+	var said strings.Builder
+	put.Dir, put.Stdin, put.Stdout, put.Stderr = p.Root, strings.NewReader(value), &said, &said
+	if err := put.Run(); err != nil {
+		return fmt.Errorf("wrangler secret put %s: %w\n%s", name, err, strings.TrimSpace(said.String()))
+	}
+	return nil
+}
+
+// onWorker are the names of the secrets the deployed Worker has, ok false when there is no such Worker.
+func onWorker(p *project.Project, env string) (names []string, ok bool) {
+	words := []string{"secret", "list"}
+	if env != "" {
+		words = append(words, "--env", env)
+	}
+	out, err := cloudflareOutput(p, words...)
+	if err != nil {
+		return nil, false
+	}
+	for _, m := range secretListed.FindAllStringSubmatch(out, -1) {
+		names = append(names, m[1])
+	}
+	return names, true
+}
+
+var secretListed = regexp.MustCompile(`"name":\s*"([^"]+)"`)
+
+// pushSecrets puts on the deployed Worker each of the app's secrets that fnox has and the Worker lacks: what a
+// Worker deployed for the first time, or again after it was deleted, needs before it is asked anything.
+func pushSecrets(p *project.Project, env string) {
+	if os.Getenv("CLOUDFLARE_API_TOKEN") != "" || len(secretNames(p)) == 0 {
+		return // CI: its secrets are the pipeline's to put
+	}
+	fnox, err := tools.Fnox()
+	if err != nil {
+		return
+	}
+	has, ok := onWorker(p, env)
+	if !ok {
+		return
+	}
+	for _, name := range secretNames(p) {
+		if slices.Contains(has, name) {
+			continue
+		}
+		value, kept := keptSecret(p, fnox, env, name)
+		if !kept {
+			say("· the Worker has no %s, and neither has fnox: go tool charter run secrets:put %s%s", name, envWord(env), name)
+			continue
+		}
+		check(putSecret(p, fnox, env, name, value))
+		say("✓ %s is on the deployed Worker (from fnox)", name)
+	}
 }
