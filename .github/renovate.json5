@@ -8,6 +8,8 @@
   postUpdateOptions: ["gomodTidy"],
   // example/ and site/ build against the checkout beside them (go.mod's replace): their charter is this one.
   ignoreDeps: ["github.com/joeblew999/charter"],
+  // The API's clients are written by Fern (go tool charter pack), go.mod and all: Fern decides what they depend on.
+  ignorePaths: ["**/node_modules/**", "example/sdk/**"],
   packageRules: [
     {
       // go.mod's go line is the oldest Go an app may build charter with: raised on purpose, never by a bot.
