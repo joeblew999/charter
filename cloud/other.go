@@ -29,6 +29,7 @@ func Begin(Bookmarks)    {}
 func End()               {}
 func Newest()            {}
 func Written() Bookmarks { return nil }
+func Brought() Bookmarks { return nil }
 func Served() []string   { return nil }
 
 // DB is a D1 database.

@@ -23,6 +23,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/joeblew999/charter/app"
+	"github.com/joeblew999/charter/cloud"
 )
 
 // notJSON is what a body that does not parse is refused with (400), in Go and in charter-lib alike:
@@ -88,6 +89,12 @@ func (a API) Handler() http.Handler {
 		}
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A program that writes and then reads must see what it wrote, and a generated client does not know to bring
+		// a bookmark back: a call that brings none reads the database where it is newest. One that brings back the
+		// X-D1-Bookmark it was given reads near itself (cloud/session.go).
+		if len(cloud.Brought()) == 0 {
+			cloud.Newest()
+		}
 		if token := r.URL.Query().Get("access_token"); token != "" && r.Header.Get("Authorization") == "" && slices.Contains(channels, r.URL.Path) {
 			r = r.Clone(r.Context())
 			r.Header.Set("Authorization", "Bearer "+token)

@@ -21,6 +21,8 @@ import (
 //   - at the primary, when the request says so with Newest: a caller is being identified (a session or a token
 //     that was just taken away must not be accepted by a copy that is behind), or a reader is fetching what a feed
 //     just told them of;
+//   - at the primary too for a call to the API that brought no bookmark: a program that writes and then reads is
+//     right without knowing any of this, and one that brings back the bookmark it was given reads near itself;
 //   - else at the bookmark the request brought, which a response gave this reader after their own write (a cookie
 //     for a browser, so it survives a redirect; a header for a program);
 //   - else anywhere: the nearest copy.
@@ -112,11 +114,13 @@ func (b Bookmarks) Join(other Bookmarks) Bookmarks {
 	return joined
 }
 
-// startOf is where a request's session on a database starts: the primary when the request reads the newest, the
-// bookmark it brought, or anywhere.
-func startOf(newest bool, brought string) string {
+// startOf is where a session on a database starts. Outside a request (a Cron Trigger, a queue's batch, an email,
+// work left for after the answer) it is the primary, each statement in a session of its own: there is no reader
+// whose bookmark could say more. In a request it is the primary when the request reads the newest, else the
+// bookmark it brought, else anywhere.
+func startOf(inRequest, newest bool, brought string) string {
 	switch {
-	case newest:
+	case !inRequest, newest:
 		return fromPrimary
 	case brought != "":
 		return brought

@@ -41,15 +41,20 @@ func TestJoin(t *testing.T) {
 	}
 }
 
-// Where a request's session starts: the primary when it reads the newest, whatever it brought; then its bookmark.
+// Where a session starts: the primary outside a request, whatever else is said, and in one that reads the newest,
+// whatever it brought; then its bookmark; then anywhere.
 func TestStartOf(t *testing.T) {
 	for _, c := range []struct {
-		newest  bool
-		brought string
-		want    string
-	}{{true, older, fromPrimary}, {true, "", fromPrimary}, {false, older, older}, {false, "", fromAnywhere}} {
-		if got := startOf(c.newest, c.brought); got != c.want {
-			t.Errorf("startOf(%v, %q) = %q, want %q", c.newest, c.brought, got, c.want)
+		inRequest, newest bool
+		brought           string
+		want              string
+	}{
+		{true, true, older, fromPrimary}, {true, true, "", fromPrimary}, {true, false, older, older}, {true, false, "", fromAnywhere},
+		// A Cron Trigger, a queue's batch, an email, work after the answer.
+		{false, false, "", fromPrimary}, {false, false, older, fromPrimary}, {false, true, "", fromPrimary},
+	} {
+		if got := startOf(c.inRequest, c.newest, c.brought); got != c.want {
+			t.Errorf("startOf(%v, %v, %q) = %q, want %q", c.inRequest, c.newest, c.brought, got, c.want)
 		}
 	}
 }

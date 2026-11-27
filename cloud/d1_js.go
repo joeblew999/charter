@@ -71,6 +71,14 @@ func Newest() {
 	}
 }
 
+// Brought is the bookmarks the request being served brought. None outside a request.
+func Brought() Bookmarks {
+	if serving == nil {
+		return nil
+	}
+	return serving.brought
+}
+
 // Written is where each database was after the request changed it: what the response gives the reader to bring
 // back, so that their next request sees what this one wrote. Empty for a request that only read.
 func Written() Bookmarks {
@@ -92,12 +100,12 @@ func Served() []string {
 // primary outside a request.
 func (db DB) in() *session {
 	if serving == nil {
-		return db.started(fromPrimary)
+		return db.started(startOf(false, false, ""))
 	}
 	if s := serving.sessions[db.name]; s != nil {
 		return s
 	}
-	s := db.started(startOf(serving.newest, serving.brought[db.name]))
+	s := db.started(startOf(true, serving.newest, serving.brought[db.name]))
 	serving.sessions[db.name] = s
 	return s
 }

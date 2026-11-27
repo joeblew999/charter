@@ -155,3 +155,16 @@ func TestACallerIsIdentifiedAtThePrimary(t *testing.T) {
 		t.Errorf("the first statement of a request with a token was answered by %q (all: %q)", first, res.Header.Get("X-D1-Served"))
 	}
 }
+
+// A call to the API that brings no bookmark is answered by the primary: a program that writes and then reads sees
+// what it wrote without knowing of bookmarks, which a generated client does not. One that brings back the bookmark
+// it was given may be answered by a copy.
+func TestAnAPICallWithoutABookmarkReadsThePrimary(t *testing.T) {
+	if apptest.Local() {
+		t.Skip("one database and no primary under wrangler dev")
+	}
+	res, _ := asked(t, http.MethodGet, "/api/notes", "", "x-go-runtime", "?")
+	if served := res.Header.Get("X-D1-Served"); served == "" || strings.Contains(served, "replica") {
+		t.Errorf("without a bookmark: X-D1-Served %q, want the primary only", served)
+	}
+}
