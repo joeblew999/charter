@@ -2,6 +2,7 @@ package command
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -72,6 +73,11 @@ func coldTask(p *project.Project, args []string) {
 		if h := hitsOf(there); len(h.fresh)+len(h.reused) > 0 {
 			say("  %-14s %s", c.name+":", h)
 		}
+	}
+	// Who answered the page's statements on D1, where the Worker says (X-D1-Served): the primary, or a copy near
+	// the reader.
+	if who := servedBy(slices.Concat(first, again)); who != "" {
+		say("· its statements on D1 were answered by: %s", who)
 	}
 	if one.unknown+two.unknown > 0 {
 		say("· %d answers did not say which runtime answered (x-go-runtime): a page served without the Worker, or a Worker built before charter said so", one.unknown+two.unknown)
@@ -162,6 +168,29 @@ func hitsOf(round []probe) hits {
 	slices.Sort(h.fresh)
 	slices.Sort(h.reused)
 	return h
+}
+
+// servedBy counts who answered the statements of every answer that says: "WEUR replica 14, APAC primary 3".
+func servedBy(round []probe) string {
+	count := map[string]int{}
+	for _, p := range round {
+		told, _ := p.Result.Headers["x-d1-served"].(string)
+		for _, one := range strings.Split(told, ",") {
+			// "DB WEUR replica": who, without the binding's name.
+			if _, who, ok := strings.Cut(strings.TrimSpace(one), " "); ok {
+				count[who]++
+			}
+		}
+	}
+	names := make([]string, 0, len(count))
+	for name := range count {
+		names = append(names, name)
+	}
+	slices.SortFunc(names, func(a, b string) int { return cmp.Or(count[b]-count[a], strings.Compare(a, b)) })
+	for i, name := range names {
+		names[i] = fmt.Sprintf("%s %d", name, count[name])
+	}
+	return strings.Join(names, ", ")
 }
 
 // globalping is Globalping's API (https://api.globalping.io/v1/spec.yaml).

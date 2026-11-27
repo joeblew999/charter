@@ -232,6 +232,8 @@ A D1 database takes its writes in one place, its primary, and can keep a copy in
 - **The statements of one request agree with each other.** They share one [session](https://developers.cloudflare.com/d1/worker-api/d1-database/#withsession), so a later one never sees less than an earlier one did.
 - **A reader sees their own writes.** The answer to a request that changed the database gives a bookmark, the point the database was then at, and the reader's next request brings it back: its reads are at least that new. A browser carries it in a cookie (`d1`, for five minutes, not readable by scripts), so it survives the redirect after a form; a program carries it in a header (`X-D1-Bookmark`), which it sends back as it was given.
 
+`go tool charter deploy` turns the copies on for every database the Worker is bound to (D1's read replication, which wrangler has no setting for): a new app has them from its first deploy, an older one from its next. It costs nothing more: D1 bills the rows a statement reads and writes, with copies or without.
+
 Where a request's reads start:
 
 | The request | Its reads start |

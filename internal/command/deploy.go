@@ -65,6 +65,8 @@ func Deploy(args []string) {
 	startedIn(said.String())
 	// What the deploy made is written down: the Worker is bound to that database and that namespace by their ids.
 	check(recordResources(p, envName))
+	// Its databases keep a copy near every reader, from here on (replicas.go).
+	replicated(p, envName)
 	// Its secrets, where fnox has them and the Worker does not: a first deploy, or one after charter run delete.
 	pushSecrets(p, envName)
 	// What next: the same tests that ask the local Worker ask the deployed one. An environment's address is kept in

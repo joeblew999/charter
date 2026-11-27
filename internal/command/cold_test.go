@@ -43,6 +43,26 @@ func TestHitsOf(t *testing.T) {
 	}
 }
 
+// Who answered a page's statements on D1 is counted from what each answer says, the most first.
+func TestServedBy(t *testing.T) {
+	const results = `[
+		{"result": {"headers": {"x-d1-served": "DB WEUR replica, DB WEUR replica"}}},
+		{"result": {"headers": {"x-d1-served": "DB APAC primary"}}},
+		{"result": {"headers": {"x-d1-served": "DB WEUR replica"}}},
+		{"result": {"headers": {"content-type": "text/html"}}}
+	]`
+	var round []probe
+	if err := json.Unmarshal([]byte(results), &round); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := servedBy(round), "WEUR replica 3, APAC primary 1"; got != want {
+		t.Errorf("servedBy: %q, want %q", got, want)
+	}
+	if got := servedBy(nil); got != "" {
+		t.Errorf("of nothing: %q", got)
+	}
+}
+
 func TestQuantile(t *testing.T) {
 	ten := []float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	for q, want := range map[float64]float64{0.5: 6, 0.9: 10, 0: 1, 1: 10} {
