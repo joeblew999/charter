@@ -155,7 +155,8 @@ func (r *Registry) Add(c config.Config, names []string, o Options) (int, error) 
 		}
 		fmt.Println("added its tables to db/schema.sql (charter check --fix writes the migration)")
 	}
-	if err := r.addText(c, p, picked); err != nil {
+	texts, err := r.addText(c, p, picked)
+	if err != nil {
 		return 1, err
 	}
 	if p, err = catalog.Read(c); err != nil {
@@ -163,6 +164,9 @@ func (r *Registry) Add(c config.Config, names []string, o Options) (int, error) 
 	}
 	for rel, h := range copied {
 		p.SetCopied(rel, h)
+	}
+	for key, h := range texts {
+		p.SetCopied(textRecord+key, h)
 	}
 	if err := p.Generate(os.Stderr); err != nil {
 		return 1, err
@@ -214,15 +218,27 @@ func gsxuiAdd(root, dir string, comps []Component) error {
 	return cmd.Run()
 }
 
+// textRecord begins intl.sum's record of a message's source text as the registry shipped it: text:screens.name.
+const textRecord = "text:"
+
+// follows reports whether the app's text for a message is the registry's own, in an older wording: what the
+// registry shipped and recorded, or shipped before it recorded anything. A text the app wrote itself is neither.
+func (r *Registry) follows(p *catalog.Project, key, has string) bool {
+	return p.Copied(textRecord+key) == catalog.FileHash([]byte(has)) || slices.Contains(r.Superseded[key], has)
+}
+
 // addText writes the components' text into the catalogs: the source's, with the comments translators read, and each
-// translation the registry ships for a locale the app has. A message the app has keeps its text, and a translation
-// goes in only while the app's source says what the registry's does, so it is a translation of it.
-func (r *Registry) addText(c config.Config, p *catalog.Project, comps []Component) error {
+// translation the registry ships for a locale the app has. A message the app worded itself keeps its text, and a
+// translation goes in only while the app's source says what the registry's does, so it is a translation of it. A
+// message the app has as the registry shipped it follows the registry's new wording, in every language. It gives
+// the source text of each message that is now the registry's: what intl.sum records, so the next wording is
+// followed too.
+func (r *Registry) addText(c config.Config, p *catalog.Project, comps []Component) (map[string]string, error) {
 	var keys []string
 	for _, comp := range comps {
 		ks, err := r.Keys(comp)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		for _, k := range ks {
 			if !slices.Contains(keys, k) {
@@ -233,19 +249,19 @@ func (r *Registry) addText(c config.Config, p *catalog.Project, comps []Componen
 	src := c.Locales[0]
 	shipped, err := r.Text(src)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if shipped == nil {
 		fmt.Fprintf(os.Stderr, "%s ships its components' text in %s, not %s: [%s] in %s.toml is English until you write it in your language\n",
 			r.Command, strings.Join(r.Languages(), ", "), src, r.Table, src)
 		if shipped, err = r.Text("en"); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	// The text the app's gsxui components write that its catalogs lack.
 	texts, err := p.Gsxui()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, t := range texts {
 		if _, ok := shipped[t.Key]; ok && p.Message(t.Key) == nil {
@@ -254,14 +270,18 @@ func (r *Registry) addText(c config.Config, p *catalog.Project, comps []Componen
 	}
 	notes, err := r.Notes()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var msgs []catalog.NewMessage
-	same := map[string]bool{} // the app's source says what the registry's does
+	same := map[string]bool{}       // the app's source says what the registry's does
+	reworded := map[string]string{} // the registry's text in an older wording: it follows
 	for _, k := range keys {
 		msgs = append(msgs, catalog.NewMessage{Key: k, Text: shipped[k], Note: notes.Notes[k]})
 		m := p.Message(k)
 		same[k] = m == nil || m.Text == shipped[k]
+		if !same[k] && r.follows(p, k, m.Text) {
+			reworded[k], same[k] = shipped[k], true
+		}
 	}
 	report := func(id string, added []string, err error) error {
 		if err == nil && len(added) > 0 {
@@ -271,12 +291,18 @@ func (r *Registry) addText(c config.Config, p *catalog.Project, comps []Componen
 	}
 	added, err := catalog.AddMessages(filepath.Join(c.CatalogDir(), src+".toml"), msgs, notes.Tables)
 	if err := report(src, added, err); err != nil {
-		return err
+		return nil, err
+	}
+	if len(reworded) > 0 {
+		if err := catalog.SetMessages(filepath.Join(c.CatalogDir(), src+".toml"), reworded); err != nil {
+			return nil, err
+		}
+		fmt.Printf("%s.toml: %d messages reworded, as %s words them now\n", src, len(reworded), r.Command)
 	}
 	for _, id := range c.Locales[1:] {
 		tr, err := r.Text(id)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		var msgs []catalog.NewMessage
 		for _, k := range keys {
@@ -286,10 +312,27 @@ func (r *Registry) addText(c config.Config, p *catalog.Project, comps []Componen
 		}
 		added, err := catalog.AddMessages(filepath.Join(c.CatalogDir(), id+".toml"), msgs, nil)
 		if err := report(id, added, err); err != nil {
-			return err
+			return nil, err
+		}
+		again := map[string]string{}
+		for k := range reworded {
+			if t, ok := tr[k]; ok {
+				again[k] = t
+			}
+		}
+		if len(again) > 0 {
+			if err := catalog.SetMessages(filepath.Join(c.CatalogDir(), id+".toml"), again); err != nil {
+				return nil, err
+			}
 		}
 	}
-	return nil
+	records := map[string]string{}
+	for _, k := range keys {
+		if same[k] {
+			records[k] = catalog.FileHash([]byte(shipped[k]))
+		}
+	}
+	return records, nil
 }
 
 // unified is a unified diff of a and b, the file at rel, with three lines of context.
@@ -427,6 +470,30 @@ func (r *Registry) Behind(c config.Config, dir string) ([]string, error) {
 	wg.Wait()
 	var behind []string
 	recorded := false
+	// A component's text is behind as its file is: the app has a message as the registry shipped it, and the
+	// registry words it differently now. What the app has exactly as the registry words it is recorded as such.
+	shipped, _ := r.Text(c.Locales[0])
+	reworded := func(comp Component) bool {
+		keys, err := r.Keys(comp)
+		if err != nil || shipped == nil {
+			return false
+		}
+		is := false
+		for _, k := range keys {
+			m := p.Message(k)
+			switch {
+			case m == nil:
+			case m.Text == shipped[k]:
+				if h := catalog.FileHash([]byte(m.Text)); p.Copied(textRecord+k) != h {
+					p.SetCopied(textRecord+k, h)
+					recorded = true
+				}
+			case r.follows(p, k, m.Text):
+				is = true
+			}
+		}
+		return is
+	}
 	for i, comp := range r.Components {
 		switch {
 		case errs[i] != nil:
@@ -436,6 +503,9 @@ func (r *Registry) Behind(c config.Config, dir string) ([]string, error) {
 			if h := catalog.FileHash(olds[i]); p.Copied(rels[i]) != h {
 				p.SetCopied(rels[i], h)
 				recorded = true
+			}
+			if reworded(comp) {
+				behind = append(behind, comp.Name)
 			}
 		case catalog.FileHash(olds[i]) == p.Copied(rels[i]):
 			behind = append(behind, comp.Name)

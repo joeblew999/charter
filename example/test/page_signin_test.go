@@ -381,7 +381,7 @@ func TestANameIsNotAnEmailAddress(t *testing.T) {
 		t.Errorf("signing up with an email address as the name: HTTP %d, want 422", res.StatusCode)
 	}
 	html := apptest.Get(t, at(screens.SignInPage{}))
-	if !strings.Contains(html, `id="sign-up-name-hint"`) || !strings.Contains(html, `autocomplete="nickname"`) {
+	if !strings.Contains(html, `id="sign-up-name-hint"`) || !strings.Contains(html, `autocomplete="nickname"`) || !strings.Contains(html, `placeholder="Display name"`) {
 		t.Error("the sign-up field does not say what the name is for")
 	}
 }

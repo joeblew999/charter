@@ -87,10 +87,10 @@ ar screens.invite_intro 708747c44ec1 b7fc003e485d
 ar screens.invite_new 90050a056d87 07a003ab4f74
 ar screens.invite_once ff42eca3739e cfc75e59fc40
 ar screens.invited c132eed95992 ed2da3be598c
-ar screens.invited_intro dac9b4828673 fb7930c878a8
+ar screens.invited_intro 3e8c0cfd2d92 e66e579c5e06
 ar screens.languages 318655cea4bd 93a9465a5006
 ar screens.loading ba3bbbe10d8b aa5ebc30e485
-ar screens.name dcd1d5223f73 52ab09847cf8
+ar screens.name 2b7f6a84de91 41c49e83a042
 ar screens.name_hint 2f69a20f383c 584aa6729faa
 ar screens.no_thanks 49780701dc2d 1724c2e89ea0
 ar screens.people 7db20897053b 8dbd6b8bdba4
@@ -205,10 +205,10 @@ de screens.invite_intro 708747c44ec1 142b4e1b8b83
 de screens.invite_new 90050a056d87 e425ede0ef14
 de screens.invite_once ff42eca3739e 40e4b1f28315
 de screens.invited c132eed95992 96ed5a841c57
-de screens.invited_intro dac9b4828673 60c9c567203d
+de screens.invited_intro 3e8c0cfd2d92 7c4d8441f873
 de screens.languages 318655cea4bd 17d630275f43
 de screens.loading ba3bbbe10d8b 976723893920
-de screens.name dcd1d5223f73 dcd1d5223f73
+de screens.name 2b7f6a84de91 3ab2eacdba90
 de screens.name_hint 2f69a20f383c 0efa1298efb8
 de screens.no_thanks 49780701dc2d 98fb8c35dc94
 de screens.people 7db20897053b cf996a8dbe36
@@ -241,3 +241,53 @@ file pages/screens/language-offer.gsx 99b5c5b72cd3
 file pages/screens/preferences.gsx 724682d890df
 file pages/screens/sign-in.gsx a74095f2903e
 file pages/screens/theme-toggle.gsx 3d8bf9b79d18
+file text:screens.account 7e1b0d5641f2
+file text:screens.account_leave 21d5294717e2
+file text:screens.account_leave_confirm 0c3d8950a137
+file text:screens.account_leave_intro 2b674e5b4b46
+file text:screens.also_in 5d73b6d757bd
+file text:screens.close 7d9eb7acb13e
+file text:screens.docs 7af023c43013
+file text:screens.docs_edit 073fd1036ab1
+file text:screens.docs_none eb1fa11281bc
+file text:screens.docs_on_github 3b16422e27b3
+file text:screens.docs_on_this_page b5658fc8edda
+file text:screens.docs_search 3c1004b71f0f
+file text:screens.have_account d73a8b181608
+file text:screens.hour_cycle 93ff9273de4b
+file text:screens.hour_cycle_auto de6bb7c954a5
+file text:screens.invite 9b7639e8de28
+file text:screens.invite_accept 032b1e3fd7a9
+file text:screens.invite_gone cf8d61ba5148
+file text:screens.invite_intro 708747c44ec1
+file text:screens.invite_new 90050a056d87
+file text:screens.invite_once ff42eca3739e
+file text:screens.invited c132eed95992
+file text:screens.invited_intro 3e8c0cfd2d92
+file text:screens.languages 318655cea4bd
+file text:screens.loading ba3bbbe10d8b
+file text:screens.name 2b7f6a84de91
+file text:screens.name_hint 2f69a20f383c
+file text:screens.no_thanks 49780701dc2d
+file text:screens.people 7db20897053b
+file text:screens.people_intro 5feb6f4e2d85
+file text:screens.preferences 1490d0caef75
+file text:screens.preferences_description 09123771ebf4
+file text:screens.role 14736a2eb9f4
+file text:screens.save 1509f561f241
+file text:screens.sign_in bfd402b2f6f3
+file text:screens.sign_in_failed d38eba7d0144
+file text:screens.sign_in_passkey b09700bcd532
+file text:screens.sign_out 48f0d3d397d4
+file text:screens.sign_up 86033f75a4c0
+file text:screens.sign_up_intro aeadee6ba7b2
+file text:screens.signed_in_as 599a82d98089
+file text:screens.theme 19d8d295e681
+file text:screens.time_zone b9fe1464783e
+file text:screens.time_zone_auto 2cc61310db9b
+file text:screens.token_name 1ad944c4c5dd
+file text:screens.token_new 97f90edd337b
+file text:screens.token_once 6f57e2cf60f5
+file text:screens.token_revoke 87e6d00bbf53
+file text:screens.tokens 71ef74d05e87
+file text:screens.tokens_intro 1c6d96696955

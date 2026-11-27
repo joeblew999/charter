@@ -26,6 +26,11 @@ var Screens = &registry.Registry{
 	Table:   "screens",
 	Files:   files,
 	Locales: "github.com/joeblew999/charter/app/screens/locales",
+	// What the screens said before intl.sum recorded what charter shipped: an app that still says it follows.
+	Superseded: map[string][]string{
+		"screens.name":          {"Name"},
+		"screens.invited_intro": {"Create an account below, or sign in with your passkey if you have one. The invitation is yours either way."},
+	},
 	Components: []registry.Component{
 		{Name: "language-list", Gsxui: []string{"button", "icon"},
 			Use: "  <screens.LanguageList/>       on every page, outside boosted links (a footer: switching language is a full page load)"},

@@ -34,6 +34,10 @@ type Registry struct {
 	Locales string
 	// Components are the registry's components.
 	Components []Component
+	// Superseded is, for a message, the source texts the registry shipped before it kept a record of what it
+	// shipped (intl.sum's text lines): an app that still has one of them has the registry's text, not its own, and
+	// follows when the registry words it better.
+	Superseded map[string][]string
 }
 
 // Component is one of a registry's components.
