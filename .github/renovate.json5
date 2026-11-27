@@ -23,6 +23,14 @@
       enabled: false,
     },
     { matchManagers: ["gomod"], groupName: "go modules" },
+    {
+      // Before tidying, Renovate runs go get -t ./... , which needs every package to be there. In an app, pages/screens
+      // and ui are .gsx until charter generates their Go: it asks only of locales, whose Go is committed, and the tidy
+      // after it does the rest.
+      matchManagers: ["gomod"],
+      matchFileNames: ["example/go.mod", "site/go.mod"],
+      goGetDirs: ["./locales"],
+    },
     { matchManagers: ["npm"], groupName: "npm" },
     {
       // gsx's Vite plugin says which Vite it works with (its peer dependency): a new major waits for it.
