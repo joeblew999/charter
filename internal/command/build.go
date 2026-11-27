@@ -1,8 +1,6 @@
 package command
 
 import (
-	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -40,7 +38,7 @@ func Build(args []string) {
 	fs := flag.NewFlagSet("charter build", flag.ExitOnError)
 	only := fs.String("only", "", `"generate": stop once the Go that go test and go vet need is written; "messages": the languages alone, as charter dev compiles them on a change to a catalog; "db": the schema alone, "docs": the docs alone, likewise`)
 	dev := fs.Bool("dev", false, "the Wasm only: what charter dev runs on each save, after gsx has regenerated")
-	limit := fs.Int("limit", 0, "fail when build/app.wasm is more than this many bytes gzipped (default: charter.toml's [build] limit)")
+	limit := fs.Int("limit", 0, "fail when build/ is more than this many bytes, uncompressed as Cloudflare counts it (default: charter.toml's [build] limit, or Cloudflare's 64 MiB)")
 	fs.Parse(args)
 	// Under charter dev the build is done before wrangler starts: wrangler's own call of its build command has
 	// nothing left to do, which is what lets it start in a second.
@@ -194,21 +192,37 @@ func wasm(p *project.Project, limit int, again bool) error {
 	if again {
 		return nil // how large the Wasm is matters where it ships
 	}
-	b, err := os.ReadFile(filepath.Join(p.Root, out))
+	// What wrangler uploads is build/: the Wasm, and the JavaScript it bundles from the rest (wrangler deploy
+	// --dry-run's Total Upload, to within a few KB). Cloudflare counts it as it is, uncompressed, and has no limit on
+	// its compressed size: https://developers.cloudflare.com/workers/platform/limits/#worker-size
+	size, err := filesSize(filepath.Join(p.Root, "build"))
 	if err != nil {
 		return err
 	}
-	var buf bytes.Buffer
-	z, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
-	z.Write(b)
-	z.Close()
-	usually, known := measured("size", float64(buf.Len()))
-	say("✓ %s: %.2f MB, %.2f MB gzipped (Workers Free takes 3, Paid 10)%s", out, float64(len(b))/1e6, float64(buf.Len())/1e6,
-		remark(float64(buf.Len()), usually, known, sizeGrew, paidSize, megabytes))
-	if limit > 0 && buf.Len() > limit {
-		return fmt.Errorf("%s is %d bytes gzipped, over the limit of %d", out, buf.Len(), limit)
+	if limit <= 0 {
+		limit = workerSize
+	}
+	usually, known := measured("bundle", float64(size))
+	say("✓ build/: %s of the %s a Worker may be, uncompressed%s", mebibytes(float64(size)), mebibytes(workerSize),
+		remark(float64(size), usually, known, sizeGrew, workerSize, mebibytes))
+	if size > int64(limit) {
+		return fmt.Errorf("build/ is %d bytes, over the limit of %d (charter.toml's [build] limit, or Cloudflare's %s)", size, limit, mebibytes(workerSize))
 	}
 	return nil
+}
+
+// filesSize is how many bytes the files under dir hold.
+func filesSize(dir string) (int64, error) {
+	var size int64
+	err := filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		info, err := d.Info()
+		size += info.Size()
+		return err
+	})
+	return size, err
 }
 
 // pushSchema is what Void calls db push: the local database follows db/schema.sql as it is edited, and keeps its

@@ -10,14 +10,17 @@ import (
 )
 
 // Go on Workers lives within three limits, and an app drifts towards each a little at a time: the size of what is
-// deployed (10 MB gzipped on the paid plan, 3 on the free one), the CPU time the Worker takes to start (a second),
-// and the memory a Go runtime holds (of 128 MB for all of them). Each is a number charter already has in passing:
+// deployed (64 MiB, uncompressed, on every plan), the CPU time the Worker takes to start (a second), and the memory
+// a Go runtime holds (of 128 MB for all of them). Each is a number charter already has in passing:
 // the build knows the size, wrangler says the start-up time as it deploys, and the Worker says what its runtimes
 // hold. So each is said where it is known, kept with the last ones (.charter/times.json), and remarked on when it
 // has grown or is near its limit. That costs no time, and is what says, the day it happens, that a limit is coming.
 
 const (
-	paidSize   = 10e6 // bytes, gzipped
+	// workerSize is the most a Worker may be, in bytes: Cloudflare counts what is uploaded uncompressed, the same on
+	// every plan, and has no limit on its compressed size
+	// (https://developers.cloudflare.com/workers/platform/limits/#worker-size).
+	workerSize = 64 << 20
 	startLimit = 1000 // ms of CPU
 	nearLimit  = 0.8  // of a limit: worth saying
 )
@@ -62,7 +65,7 @@ func remark(value, usually float64, known bool, grew, limit float64, unit func(f
 	return said
 }
 
-func megabytes(bytes float64) string { return fmt.Sprintf("%.2f MB", bytes/1e6) }
+func mebibytes(bytes float64) string { return fmt.Sprintf("%.2f MiB", bytes/(1<<20)) }
 func millis(ms float64) string       { return fmt.Sprintf("%.0f ms", ms) }
 
 // startUp is the CPU time the Worker took to start, as wrangler deploy says it.

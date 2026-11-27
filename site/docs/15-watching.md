@@ -35,14 +35,16 @@ Go on Workers lives within three limits, and an app drifts towards each a little
 
 | Number | Its limit | Said by |
 |---|---|---|
-| The size of what is deployed, gzipped | 10 MB (3 on the free plan) | `charter build` |
+| The size of what is deployed, uncompressed | 64 MiB, on every plan | `charter build` |
 | The CPU time the Worker takes to start | 1 second | `charter deploy`, from what wrangler reports |
 | The memory one Go runtime holds | 128 MB for all of them | `charter test`, from what the Worker says |
 
 ```
-✓ build/app.wasm: 28.37 MB, 6.76 MB gzipped (Workers Free takes 3, Paid 10)
+✓ build/: 27.25 MiB of the 64.00 MiB a Worker may be, uncompressed
 · a Go runtime holds about 20 MB: 4 fit in the 80 MB the Worker gives them, so it answers that many at once in one instance
 ```
+
+The size is all of `build/`: the Wasm, and the JavaScript wrangler bundles from the rest, which is what `wrangler deploy --dry-run` calls the Total Upload. Cloudflare counts it as it is: "There is no compressed size limit. Only the uncompressed bundle size counts", the same on the free plan as on the paid one ([Cloudflare's limits](https://developers.cloudflare.com/workers/platform/limits/#worker-size)). The build fails above it, or above `[build] limit` in `charter.toml` when an app sets one lower. What a larger Worker costs is time to start, which is the second number.
 
 A number is remarked on when it is past 80% of its limit, or above what is usual here by more than it varies by itself: 10% for the size, which is the same for the same code; 50% for the start-up, which varies from deploy to deploy; 30% for a runtime's memory, which grows with what it has served.
 

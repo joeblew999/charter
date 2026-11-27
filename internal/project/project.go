@@ -11,7 +11,8 @@
 //	db = "sqlc"                        # api/queries.sql: charter check --fix writes its Go (api/queries.go), with sqlc
 //
 //	[build]
-//	limit = 10000000                   # fail the build over this many bytes of Wasm, gzipped (default: none)
+//	limit = 40000000                   # fail the build when build/ is over this many bytes, uncompressed as Cloudflare
+//	                                   # counts it (default: Cloudflare's 64 MiB)
 //
 //	[pack]                             # the clients Fern makes from the specs (charter pack)
 //	name = "Notes"

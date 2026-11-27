@@ -74,8 +74,11 @@ func TestRemark(t *testing.T) {
 	if got := remark(850, 800, true, startGrew, startLimit, ms); !strings.Contains(got, "85% of the 1000 ms") {
 		t.Errorf("a start near its limit: %q", got)
 	}
-	if got := remark(7.5e6, 6.7e6, true, sizeGrew, paidSize, megabytes); !strings.Contains(got, "up from 6.70 MB") {
+	if got := remark(30.5*(1<<20), 27.25*(1<<20), true, sizeGrew, workerSize, mebibytes); got != "; up from 27.25 MiB, the usual here" {
 		t.Errorf("a size 12%% over the usual: %q", got)
+	}
+	if got := remark(55<<20, 54<<20, true, sizeGrew, workerSize, mebibytes); got != "; 86% of the 64.00 MiB a Worker may have" {
+		t.Errorf("a size near Cloudflare's 64 MiB: %q", got)
 	}
 	if got := remark(240, 0, false, startGrew, startLimit, ms); got != "" {
 		t.Errorf("with nothing usual known yet: %q", got)
