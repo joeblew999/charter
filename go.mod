@@ -5,10 +5,10 @@ go 1.27.1
 require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/alecthomas/chroma/v2 v2.27.0
-	github.com/chromedp/cdproto v0.160.1
+	github.com/chromedp/cdproto v0.160.11
 	github.com/chromedp/chromedp v0.24.0
 	github.com/danielgtaylor/huma/v2 v2.41.0
-	github.com/go-jose/go-jose/v4 v4.1.7
+	github.com/go-jose/go-jose/v4 v4.1.9
 	github.com/go-webauthn/webauthn v0.18.2
 	github.com/gsxhq/gsx v0.5.0
 	github.com/gsxhq/vite v0.3.2
