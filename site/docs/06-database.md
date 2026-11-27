@@ -263,6 +263,16 @@ curl -sD - -o /dev/null -H 'x-go-runtime: ?' https://my-app.example.com/ | grep 
 x-d1-served: DB WEUR replica, DB WEUR replica
 ```
 
+Which copy answers, or whether the primary does, is D1's choice, and nothing a Worker does changes it. Cloudflare says a copy is [active or inactive by the traffic it gets](https://developers.cloudflare.com/changelog/post/2025-04-10-d1-read-replication-beta/), and that reads are sent by its own measure of what is fastest. What was seen of the example (primary in APAC), a page with one read, asked with `go tool charter run cold`:
+
+| When | Reads by a new instance of the Worker | Reads by a running one |
+|---|---|---|
+| The day the copies were turned on, minutes after a deploy, from 123 countries | 20 of 110 at a copy | 11 of 12 at a copy |
+| Later that day, the database an hour unused, from 4 countries | 4 of 8 at a copy | |
+| Minutes after that, from 12 countries | 18 of 23 at a copy | 9 of 9 at a copy |
+
+So a copy that has had no reads for a while is not there for the first of them, and the primary answers until it is. A new instance of the Worker reads a copy as a running one does: Los Angeles read the copy in WNAM on a new instance three times in three. An app with readers in a region has that region's copy; an app nobody is using has the primary, and its first readers the trip to it.
+
 ## By hand
 
 `go tool charter run db:status`, `db:execute "…"`, `db:export`: each for the local database, or the deployed one with `--deployed`. `db:reset` makes the local database again, and only that one; `db:seed` does too, and fills a deployed one only as [above](#a-deployed-database).

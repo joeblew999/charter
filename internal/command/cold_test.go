@@ -84,3 +84,25 @@ func TestCountriesIn(t *testing.T) {
 		}
 	}
 }
+
+// Who answered is said for new instances and running ones apart; an answer that does not say which it was is in
+// neither.
+func TestByInstance(t *testing.T) {
+	const results = `[
+		{"result": {"headers": {"x-go-runtime": "warm; 1 runtimes, 18 MB of 80", "x-d1-served": "DB APAC primary"}}},
+		{"result": {"headers": {"x-go-runtime": "new; 2 runtimes, 36 MB of 80", "x-d1-served": "DB WEUR replica"}}},
+		{"result": {"headers": {"x-go-runtime": "reused; 1 runtimes, 19 MB of 80", "x-d1-served": "DB ENAM replica"}}},
+		{"result": {"headers": {"x-d1-served": "DB OC replica"}}}
+	]`
+	var round []probe
+	if err := json.Unmarshal([]byte(results), &round); err != nil {
+		t.Fatal(err)
+	}
+	fresh, running := byInstance(round)
+	if got, want := servedBy(fresh), "APAC primary 1, WEUR replica 1"; got != want {
+		t.Errorf("new instances: %q, want %q", got, want)
+	}
+	if got, want := servedBy(running), "ENAM replica 1"; got != want {
+		t.Errorf("running ones: %q, want %q", got, want)
+	}
+}

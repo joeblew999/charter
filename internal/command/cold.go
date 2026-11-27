@@ -94,8 +94,14 @@ func coldTask(p *project.Project, args []string) {
 	}
 	// Who answered the page's statements on D1, where the Worker says (X-D1-Served): the primary, or a copy near
 	// the reader.
-	if who := servedBy(slices.Concat(first, again)); who != "" {
-		say("· its statements on D1 were answered by: %s", who)
+	// Said for new instances and running ones apart: a copy answers a new instance as it does a running one, and
+	// only the two side by side show it.
+	fresh, running := byInstance(slices.Concat(first, again))
+	if who := servedBy(fresh); who != "" {
+		say("· a new instance's statements on D1 were answered by: %s", who)
+	}
+	if who := servedBy(running); who != "" {
+		say("· a running one's: %s", who)
 	}
 	if one.unknown+two.unknown > 0 {
 		say("· %d answers did not say which runtime answered (x-go-runtime): a page served without the Worker, or a Worker built before charter said so", one.unknown+two.unknown)
@@ -184,9 +190,7 @@ func hitsOf(round []probe) hits {
 			h.failed++
 			continue
 		}
-		told, _ := p.Result.Headers["x-go-runtime"].(string)
-		kind, _, _ := strings.Cut(told, ";")
-		switch strings.TrimSpace(kind) {
+		switch kindOf(p) {
 		case "warm", "new":
 			h.fresh = append(h.fresh, *p.Result.Timings.FirstByte)
 		case "reused":
@@ -198,6 +202,27 @@ func hitsOf(round []probe) hits {
 	slices.Sort(h.fresh)
 	slices.Sort(h.reused)
 	return h
+}
+
+// kindOf is what the Worker said answered: "warm" or "new" (a runtime that started as the instance did), "reused",
+// or nothing.
+func kindOf(p probe) string {
+	told, _ := p.Result.Headers["x-go-runtime"].(string)
+	kind, _, _ := strings.Cut(told, ";")
+	return strings.TrimSpace(kind)
+}
+
+// byInstance is the answers of new instances and of running ones.
+func byInstance(round []probe) (fresh, running []probe) {
+	for _, p := range round {
+		switch kindOf(p) {
+		case "warm", "new":
+			fresh = append(fresh, p)
+		case "reused":
+			running = append(running, p)
+		}
+	}
+	return fresh, running
 }
 
 // servedBy counts who answered the statements of every answer that says: "WEUR replica 14, APAC primary 3".
