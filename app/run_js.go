@@ -87,7 +87,7 @@ func Serve(h http.Handler) http.Handler {
 		cloud.Begin(brought(r))
 		defer cloud.End()
 		// A part of a page that asks for itself again because its feed said something changed reads what is newest.
-		if r.URL.Query().Has(cloud.NewestQuery) {
+		if r.Header.Get(cloud.NewestHeader) != "" {
 			cloud.Newest()
 		}
 		out := carrying(w, r, cloud.Written, cloud.Served)

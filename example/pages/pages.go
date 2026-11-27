@@ -27,7 +27,6 @@ import (
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/built"
 	"github.com/joeblew999/charter/example/pages/screens"
-	"github.com/joeblew999/charter/live"
 )
 
 // Pages is the tree.
@@ -162,11 +161,4 @@ func (RemoveNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.St
 		return app.NotFound("no such note")
 	}
 	return api.Remove(r.Context(), store, caller, id)
-}
-
-// again is a page's own address as the part of it that shows a feed asks it when the feed says something changed
-// (live.Again): the same page, in the reader's language, read where the database is newest.
-func again(ctx context.Context, page any) (string, error) {
-	address, err := structpages.URLFor(ctx, page)
-	return live.Again(address), err
 }

@@ -126,7 +126,7 @@ func TestHomePage(t *testing.T) {
 	rec := httptest.NewRecorder()
 	serve(t, store).ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
 	html := rec.Body.String()
-	for _, want := range []string{`<form id="home-form"`, `hx-target="#home-form"`, `hx-post="/notes"`, `<ul id="home-list"`, `id="home-item--1"`, "a note &lt;b&gt;as typed&lt;/b&gt;", `hx-sse:connect="/__charter/live/HUB/notes?at=`, `hx-trigger="changed from:&#34;closest [hx-sse\:connect]&#34;"`, `hx-get="/?newest=1"`, `hx-target="#home-list"`, `hx-swap="innerMorph"`, `hx-sync="this:replace"`} {
+	for _, want := range []string{`<form id="home-form"`, `hx-target="#home-form"`, `hx-post="/notes"`, `<ul id="home-list"`, `id="home-item--1"`, "a note &lt;b&gt;as typed&lt;/b&gt;", `hx-sse:connect="/__charter/live/HUB/notes?at=`, `hx-trigger="changed from:&#34;closest [hx-sse\:connect]&#34;"`, `hx-get="/"`, `hx-headers="{&#34;X-D1-Newest&#34;:&#34;1&#34;}"`, `hx-target="#home-list"`, `hx-swap="innerMorph"`, `hx-sync="this:replace"`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("the page has no %s", want)
 		}

@@ -240,7 +240,7 @@ Where a request's reads start:
 |---|---|
 | Says who it is (a session, a token), or signs someone in | At the primary. A session or a token that was just taken away, or a role that just changed, is never accepted by a copy that is behind. The rest of the request reads from there on, so it sees whatever its caller wrote before, bookmark or none |
 | Calls the API and brings no bookmark | At the primary: a program that writes and then reads sees what it wrote, though its client knows nothing of bookmarks. One that sends back the `X-D1-Bookmark` it was given reads near itself |
-| Fetches what a feed just told it of | At the primary: a copy that is behind would say there is nothing new |
+| Is a part of a page asking for itself because its feed said something changed (`live.Follows`), or sends `X-D1-Newest` | At the primary: a copy that is behind would show the page as it was before the change |
 | Brings a bookmark | At least where the bookmark says |
 | Anything else | At the nearest copy |
 | No request at all: a Cron Trigger, a queue's batch, an email, work left for after the answer | At the primary, each statement |

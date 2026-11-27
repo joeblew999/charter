@@ -168,3 +168,15 @@ func TestAnAPICallWithoutABookmarkReadsThePrimary(t *testing.T) {
 		t.Errorf("without a bookmark: X-D1-Served %q, want the primary only", served)
 	}
 }
+
+// A part of a page that asks for itself because its feed said something changed reads the primary: the request
+// says so (live.Follows), and a copy that is behind would show the page as it was before the change.
+func TestARequestThatSaysNewestReadsThePrimary(t *testing.T) {
+	if apptest.Local() {
+		t.Skip("one database and no primary under wrangler dev")
+	}
+	res, _ := asked(t, http.MethodGet, "/", "", cloud.NewestHeader, "1", "x-go-runtime", "?")
+	if served := res.Header.Get("X-D1-Served"); served == "" || strings.Contains(served, "replica") {
+		t.Errorf("with %s: X-D1-Served %q, want the primary only", cloud.NewestHeader, served)
+	}
+}

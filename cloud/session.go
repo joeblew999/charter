@@ -51,10 +51,10 @@ const (
 	BookmarkHeader = "X-D1-Bookmark"
 )
 
-// NewestQuery is a query parameter that says a request reads what is newest: a part of a page asking for itself
-// again because its feed said something changed (live.Again). app.Serve reads it. Anyone may say it: it costs the
-// trip to the primary, which is what every read cost before there were copies.
-const NewestQuery = "newest"
+// NewestHeader is a request header that says the request reads what is newest: a part of a page asking for itself
+// again because its feed said something changed (live.Follows). app.Serve reads it. Anyone may send it: it costs
+// the trip to the primary, which is what every read cost before there were copies.
+const NewestHeader = "X-D1-Newest"
 
 // BookmarkLasts is how long a browser keeps the cookie, in seconds. A copy is behind by less than a second as a
 // rule; the cookie outlives that by far, and is gone before it is one more thing every request carries.

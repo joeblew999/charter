@@ -208,15 +208,13 @@ component (p ActivityPage) Page(latest []built.Activity) {
 		about={locales.BuiltActivityAbout}
 		uses={[]string{"Queues", "Cron Triggers", "D1", "Durable Objects"}}
 	>
-		<div hx-sse:connect={built.Feed.Signal()}>
+		<div { built.Feed.Stream()... }>
 			<ul
 				id={ActivityPage.Rows |> id}
 				class="flex flex-col gap-2"
-				hx-trigger={live.OnChange}
-				hx-get={again(ctx, ActivityPage{})}
+				hx-get={ActivityPage{} |> url}
 				hx-target={ActivityPage.Rows |> target}
-				hx-swap="innerMorph"
-				hx-sync="this:replace"
+				{ live.Follows()... }
 			>
 				<p.Rows rows={latest}/>
 			</ul>

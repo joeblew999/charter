@@ -41,7 +41,7 @@ func Post(ctx context.Context, store Store, by charter.Caller, body string) (Not
 
 | For | Call | What it sends |
 |---|---|---|
-| An open page | `Notes.Signal()`, `live.OnChange` and `live.Again(address)` | "what you show has changed": the page asks for that part of itself again, as that reader sees it |
+| An open page | `Notes.Stream()` and `live.Follows()` | "what you show has changed": the page asks for that part of itself again, as that reader sees it |
 | An SDK client | `Notes.Events(ctx, setHeader, w, positions, seconds, end)` | each item as JSON over server-sent events |
 | A WebSocket | `Notes.Lines(ctx, setHeader, w, positions)` | each item as a line of JSON |
 
@@ -54,36 +54,28 @@ A Go runtime takes 13 MB or more of a Worker's [128 MB](https://developers.cloud
 So a page's stream is the hub's, a small Durable Object in JavaScript, and it says one thing: what you show has changed. The part of the page that shows the feed then asks for itself again, and what comes takes the place of what it had.
 
 ```gsx
-<div hx-sse:connect={api.Notes.Signal()}>
+<div { api.Notes.Stream()... }>
 	<ul
 		id={Home.List |> id}
-		hx-trigger={live.OnChange}
-		hx-get={again(ctx, Home{})}
+		hx-get={Home{} |> url}
 		hx-target={Home.List |> target}
-		hx-swap="innerMorph"
-		hx-sync="this:replace"
+		{ live.Follows()... }
 	>
 		<p.List notes={props.Notes} reader={props.Caller}/>
 	</ul>
 </div>
 ```
 
-```go
-// again is a page's own address as the part of it that shows a feed asks it when the feed says something changed.
-func again(ctx context.Context, page any) (string, error) {
-	address, err := structpages.URLFor(ctx, page)
-	return live.Again(address), err
-}
-```
+`Stream` is the stream, on an element around the list. `Follows` is everything that makes the list keep itself current. What is left in the markup is what is the page's own, from the tree as every other id and address is: the list's id, the page it asks for, and itself as the target.
 
 There is no route for it: the list is a component of its page, so the request is for the page with the list as its target, and structpages renders the list alone (`target.Is(p.List)` in the page's `Props`). It is a short, ordinary request: Go renders the rows for that reader, in their language, with the buttons they may use.
 
 Why it is told that something changed, and never what:
 
 - **Added, taken away or altered, it is one thing.** The page shows what the log has, so nothing is shown twice or left behind.
-- **Changes that come together end right.** The last request is the one that counts (`hx-sync="this:replace"`): however many arrive at once, the page ends as the log is.
-- **What the reader was doing stays.** The swap is a morph (`innerMorph`): a row they have opened stays open, and each row is matched by its id.
-- **It reads what is newest.** `live.Again` marks the request (`?newest=1`), so it is answered by the database's primary: a copy that is behind would show the page as it was before the change it was just told of ([reads near the reader](06-database.md#reads-near-the-reader)).
+- **Changes that come together end right.** The last request is the one that counts: however many arrive at once, the page ends as the log is.
+- **What the reader was doing stays.** What comes is morphed into place: a row they have opened stays open, and each row is matched by its id.
+- **It reads what is newest.** The request says so (the header `X-D1-Newest`), so it is answered by the database's primary: a copy that is behind would show the page as it was before the change it was just told of ([reads near the reader](06-database.md#reads-near-the-reader)).
 
 The stream is on an element of its own, around the list: htmx opens a stream on that element's trigger, and what is replaced is inside it, so the stream stays open across every change.
 

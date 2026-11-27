@@ -44,15 +44,13 @@ component (p Home) Page(props HomeProps) {
 					</p>
 				} }
 				// The stream is this element's; the list inside it asks for itself again when the stream says so.
-				<div hx-sse:connect={api.Notes.Signal()}>
+				<div { api.Notes.Stream()... }>
 					<ul
 						id={Home.List |> id}
 						class="flex flex-col gap-2"
-						hx-trigger={live.OnChange}
-						hx-get={again(ctx, Home{})}
+						hx-get={Home{} |> url}
 						hx-target={Home.List |> target}
-						hx-swap="innerMorph"
-						hx-sync="this:replace"
+						{ live.Follows()... }
 					>
 						<p.List notes={props.Notes} reader={props.Caller}/>
 					</ul>
