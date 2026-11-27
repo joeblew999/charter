@@ -23,3 +23,5 @@
 .playwright-mcp/
 # charter run db:seed --deployed writes this for the moment it runs.
 wrangler.charter-seed.json
+# charter deploy writes this for the moment it runs, when it adopts resources that are there already.
+wrangler.charter-deploy.json
