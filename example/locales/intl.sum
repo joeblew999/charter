@@ -77,6 +77,7 @@ ar screens.docs_none eb1fa11281bc 79aa9470eab3
 ar screens.docs_on_github 3b16422e27b3 855669af4317
 ar screens.docs_on_this_page b5658fc8edda ece4e1c238c9
 ar screens.docs_search 3c1004b71f0f c67f2d87acd9
+ar screens.have_account d73a8b181608 0df7c24d74e4
 ar screens.hour_cycle 93ff9273de4b 7989015170ab
 ar screens.hour_cycle_auto de6bb7c954a5 5848f38365b7
 ar screens.invite 9b7639e8de28 da1d2a3340dc
@@ -194,6 +195,7 @@ de screens.docs_none eb1fa11281bc c4323e663a41
 de screens.docs_on_github 3b16422e27b3 1e8007a07709
 de screens.docs_on_this_page b5658fc8edda c6ea3ff48113
 de screens.docs_search 3c1004b71f0f d3d7a21872c3
+de screens.have_account d73a8b181608 3a18d0f8f9e8
 de screens.hour_cycle 93ff9273de4b e1ac32556c5e
 de screens.hour_cycle_auto de6bb7c954a5 a8f9e14ad5dc
 de screens.invite 9b7639e8de28 d15caec1cab7
@@ -237,5 +239,5 @@ file pages/screens/docs.gsx 27186bc52060
 file pages/screens/language-list.gsx a362660dc34d
 file pages/screens/language-offer.gsx 99b5c5b72cd3
 file pages/screens/preferences.gsx 724682d890df
-file pages/screens/sign-in.gsx cf64bb494f44
+file pages/screens/sign-in.gsx a74095f2903e
 file pages/screens/theme-toggle.gsx 3d8bf9b79d18

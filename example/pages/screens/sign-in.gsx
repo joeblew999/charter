@@ -167,31 +167,18 @@ component (p SignInPage) Page(v SignInView) {
 								data-up-finish={SignUpFinish{} |> url}
 								data-failed={locales.ScreensSignInFailed |> text}
 							>
-								<ui.Button type="button" id="sign-in-passkey">
-									<icon.KeyRound/>
-									{ locales.ScreensSignInPasskey }
-								</ui.Button>
-								<ui.Separator/>
-								<p class="text-sm text-muted-foreground">{ locales.ScreensSignUpIntro }</p>
-								<form id="sign-up" class="flex flex-col gap-2">
-									<ui.Input
-										name="name"
-										id="sign-up-name"
-										required
-										maxlength="60"
-										// What they are called here, for everyone to see: not what a browser fills in as a
-										// user name, and never an address.
-										autocomplete="nickname"
-										pattern="[^@]*"
-										title={locales.ScreensNameHint}
-										aria-describedby="sign-up-name-hint"
-										dir="auto"
-										placeholder={locales.ScreensName}
-										aria-label={locales.ScreensName}
-									/>
-									<p id="sign-up-name-hint" class="text-xs text-muted-foreground">{ locales.ScreensNameHint }</p>
-									<ui.Button type="submit" variant="outline">{ locales.ScreensSignUp }</ui.Button>
-								</form>
+								// By an invitation, the account to make comes first: signing in is for whoever has one.
+								{ if v.Invite != "" {
+									<signUpForm variant="default"/>
+									<ui.Separator/>
+									<p class="text-sm text-muted-foreground">{ locales.ScreensHaveAccount }</p>
+									<passkeyButton variant="outline"/>
+								} else {
+									<passkeyButton variant="default"/>
+									<ui.Separator/>
+									<p class="text-sm text-muted-foreground">{ locales.ScreensSignUpIntro }</p>
+									<signUpForm variant="outline"/>
+								} }
 								<p id="sign-in-error" role="alert" class="text-sm text-destructive" hidden></p>
 							</div>
 							<signInScript/>
@@ -201,6 +188,37 @@ component (p SignInPage) Page(v SignInView) {
 			</main>
 		</body>
 	</html>
+}
+
+// passkeyButton signs in with a passkey the device has.
+component passkeyButton(variant string) {
+	<ui.Button type="button" id="sign-in-passkey" variant={variant}>
+		<icon.KeyRound/>
+		{ locales.ScreensSignInPasskey }
+	</ui.Button>
+}
+
+// signUpForm makes an account: the name its person is shown by, and the button that has the device make a passkey.
+component signUpForm(variant string) {
+	<form id="sign-up" class="flex flex-col gap-2">
+		<ui.Input
+			name="name"
+			id="sign-up-name"
+			required
+			maxlength="60"
+			// What they are called here, for everyone to see: not what a browser fills in as a user name, and never
+			// an address.
+			autocomplete="nickname"
+			pattern="[^@]*"
+			title={locales.ScreensNameHint}
+			aria-describedby="sign-up-name-hint"
+			dir="auto"
+			placeholder={locales.ScreensName}
+			aria-label={locales.ScreensName}
+		/>
+		<p id="sign-up-name-hint" class="text-xs text-muted-foreground">{ locales.ScreensNameHint }</p>
+		<ui.Button type="submit" variant={variant}>{ locales.ScreensSignUp }</ui.Button>
+	</form>
 }
 
 // signInScript asks the device, as the two ceremonies have it: what the app says to ask (begin), the browser's own

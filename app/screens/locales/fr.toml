@@ -48,7 +48,8 @@ invite_new = "Créer un lien"
 invite_once = "Envoyez-le maintenant : il ne sera plus affiché."
 invite_accept = "Accepter l’invitation"
 invited = "Vous êtes invité en tant que {role}"
-invited_intro = "Créez un compte ci-dessous, ou connectez-vous avec votre clé d’accès si vous en avez une. L’invitation vous revient dans les deux cas."
+invited_intro = "Choisissez un nom affiché et créez votre compte. Votre appareil conserve la clé : il n’y a pas de mot de passe."
+have_account = "Vous avez déjà un compte ici ?"
 invite_gone = "Cette invitation a déjà été utilisée ou date de plus d’une heure. Demandez-en une nouvelle."
 
 [gsxui]

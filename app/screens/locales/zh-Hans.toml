@@ -48,7 +48,8 @@ invite_new = "生成链接"
 invite_once = "请现在发送：它不会再次显示。"
 invite_accept = "接受邀请"
 invited = "你受邀成为 {role}"
-invited_intro = "在下方创建账号；如果已有通行密钥，请直接登录。两种方式邀请都有效。"
+invited_intro = "选一个显示名称并创建账户。密钥保存在你的设备上：没有密码。"
+have_account = "已经有账户了？"
 invite_gone = "此邀请已被使用，或已超过一小时。请索取新的邀请。"
 
 [gsxui]

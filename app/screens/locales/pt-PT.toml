@@ -48,7 +48,8 @@ invite_new = "Criar ligação"
 invite_once = "Envie-a agora: não volta a ser mostrada."
 invite_accept = "Aceitar o convite"
 invited = "Foi convidado como {role}"
-invited_intro = "Crie uma conta abaixo ou inicie sessão com a sua chave de acesso, se já tiver uma. O convite é seu em ambos os casos."
+invited_intro = "Escolha um nome a apresentar e crie a sua conta. O seu dispositivo guarda a chave: não há palavra-passe."
+have_account = "Já tem uma conta aqui?"
 invite_gone = "Este convite já foi usado ou tem mais de uma hora. Peça um novo."
 
 [gsxui]
