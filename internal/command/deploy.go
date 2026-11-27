@@ -2,9 +2,12 @@ package command
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/joeblew999/charter/internal/project"
+	"github.com/tailscale/hujson"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -39,7 +42,22 @@ func Deploy(args []string) {
 		migrations()
 	}
 	var said bytes.Buffer
-	check(cloudflareTo(&said, p, append([]string{"deploy"}, env...), args))
+	// A Worker that is not there (a first deploy, or one after charter run delete) has nothing wrangler can find
+	// its resources by: one that is there already under the name wrangler would give it is named to it, by its id.
+	deploy := []string{"deploy"}
+	if len(env) == 0 {
+		config, err := adopted(p)
+		check(err)
+		if config != "" {
+			defer os.Remove(filepath.Join(p.Root, config))
+			deploy = append(deploy, "--config", config)
+		}
+	}
+	err := cloudflareTo(&said, p, append(deploy, env...), args)
+	if len(deploy) > 1 {
+		os.Remove(filepath.Join(p.Root, deploy[2]))
+	}
+	check(err)
 	if first {
 		migrations()
 	}
@@ -86,4 +104,58 @@ func migrate(p *project.Project, env map[string]string, where ...string) error {
 		}
 	}
 	return nil
+}
+
+// adopted is wrangler.jsonc written again beside it for one deploy, with the id of each KV namespace that is there
+// already and that the file leaves wrangler to make: "" when there is nothing to adopt. wrangler finds the
+// resources of a Worker that is deployed by the Worker's own bindings, so it needs this only while there is no
+// Worker: after charter run delete, whose data stayed.
+func adopted(p *project.Project) (string, error) {
+	if _, deployed := onWorker(p, ""); deployed {
+		return "", nil
+	}
+	b, err := os.ReadFile(filepath.Join(p.Root, project.Wrangler))
+	if err != nil {
+		return "", err
+	}
+	if b, err = hujson.Standardize(b); err != nil {
+		return "", err
+	}
+	var config map[string]any
+	if err := json.Unmarshal(b, &config); err != nil {
+		return "", err
+	}
+	namespaces, _ := config["kv_namespaces"].([]any)
+	var there []struct{ ID, Title string }
+	found := false
+	for _, ns := range namespaces {
+		ns, ok := ns.(map[string]any)
+		if id, _ := ns["id"].(string); !ok || id != "" {
+			continue
+		}
+		if there == nil {
+			out, err := cloudflareOutput(p, "kv", "namespace", "list")
+			start := strings.Index(out, "[")
+			if err != nil || start < 0 || json.Unmarshal([]byte(out[start:]), &there) != nil {
+				return "", nil // wrangler makes what it makes
+			}
+			there = append(there, struct{ ID, Title string }{}) // asked, whatever it has
+		}
+		binding, _ := ns["binding"].(string)
+		title := p.Worker.Name + "-" + strings.ToLower(strings.ReplaceAll(binding, "_", "-"))
+		for _, has := range there {
+			if has.Title == title {
+				ns["id"], found = has.ID, true
+				say("the KV namespace %s is there already: the Worker gets it", title)
+			}
+		}
+	}
+	if !found {
+		return "", nil
+	}
+	if b, err = json.MarshalIndent(config, "", "  "); err != nil {
+		return "", err
+	}
+	const name = "wrangler.charter-deploy.json"
+	return name, os.WriteFile(filepath.Join(p.Root, name), b, 0o644)
 }
