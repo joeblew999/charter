@@ -62,6 +62,7 @@ func Deploy(args []string) {
 	if first {
 		migrations()
 	}
+	startedIn(said.String())
 	// What the deploy made is written down: the Worker is bound to that database and that namespace by their ids.
 	check(recordResources(p, envName))
 	// Its secrets, where fnox has them and the Worker does not: a first deploy, or one after charter run delete.

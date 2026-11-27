@@ -75,6 +75,7 @@ var tasks = []task{
 	{"health", "how the deployed Worker is doing, from Cloudflare's count of how each request ended: the ones it never answered (over its memory, over its CPU time, an exception) are found here or not at all. charter run health --since 6h; an environment first", healthTask},
 	{"resources", "the Worker's database, KV namespace, bucket and queue: what wrangler.jsonc names and what the deployed Worker is bound to (an environment first: charter run resources staging)", resources},
 	{"delete", "the deployed Worker taken away, with its secrets: alone it says what there is; with the Worker's name it deletes (charter run delete my-worker). Its data stays, and charter deploy brings the app back; --data deletes the database, bucket, queue and KV namespace too", deleteWorker},
+	{"load", "the Worker's pages asked many at once for a few seconds, with readers' streams held open: how many it answers a second, how fast, and whether Cloudflare ended any. Before a release, never part of a deploy: charter run load --deployed (-at 20 -for 10s -streams 10; an environment first)", loadTask},
 	{"bench", "how long the Worker takes to answer, on wrangler dev: charter run bench /  /api/hello  (-n requests each)", bench},
 }
 

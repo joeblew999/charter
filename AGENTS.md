@@ -59,8 +59,10 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   request that lasts (a page's stream) is the hub's, in JavaScript (`live.Feed`'s `Signal` and `Since`), and
   `worker/go.mjs` keeps what the runtimes hold together under a budget. Cloudflare's analytics say `exceededMemory`
   when this is broken; local dev has no such limit and never shows it.
-- **A deployed Worker is watched.** `charter run health` asks Cloudflare how requests ended; `charter test
-  --deployed` fails on one it ended; Workers Logs are on, and `charter run logs --since` reads them. A failure is one
+- **A deployed Worker is watched, and no deploy waits on it.** `charter run health` asks Cloudflare how requests
+  ended; `deploy` and `test --deployed` say how it did before them; a workflow asks daily; `charter run load
+  --deployed` is for before a release. A check that costs seconds does not go into `check`, `test` or `deploy`.
+  Workers Logs are on, and `charter run logs --since` reads them. A failure is one
   JSON line with a reference, and never has what a request sent.
 - **A resource is its id.** `charter deploy` writes the database's and the KV namespace's ids into
   `wrangler.jsonc` and stops on a renamed bucket or queue (a new, empty one). `charter run delete` takes the whole

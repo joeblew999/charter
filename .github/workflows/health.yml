@@ -1,0 +1,30 @@
+# How the deployed Workers did the last day, asked of Cloudflare once a day: a request it ended (over its memory,
+# over its CPU time, an exception) is found here, and nowhere a developer's own machine looks. What goes wrong
+# under real use does so over hours, so this is where it is watched for, and no deploy waits on it. A day that was
+# not well fails the run, and GitHub tells the repository's owner.
+name: health
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [example, site]
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: how ${{ matrix.app }} did the last day
+        working-directory: ${{ matrix.app }}
+        run: go tool charter run health --since 1d

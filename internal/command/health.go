@@ -26,8 +26,10 @@ import (
 //	charter run health [env]             the last 24 hours
 //	charter run health [env] --since 1h  another span: 30m, 6h, 7d
 //
-// charter test --deployed asks the same of the minutes it ran, and fails when a request of the run ended so;
-// charter deploy says how the Worker did before the new version goes out.
+// charter deploy and charter test --deployed each say first how the Worker did before them (the last day, the
+// last hour): what an earlier run or real use did to it is seen then, at no cost of time. A test run also asks,
+// when it is done, for what Cloudflare has counted of it by then, and fails on a fault among those. A load waits
+// for all of it. And once a day the same is asked for every app (.github/workflows/health.yml).
 
 // outcome is how requests ended, as Cloudflare names it, and how many did.
 type outcome struct {
@@ -218,19 +220,40 @@ func healthTask(p *project.Project, args []string) {
 	}
 }
 
-// healthOf says how the Worker did between two times, for a command that ran in them (a test of the deployed
-// Worker): an error when a request ended in a fault. Without credentials, or when Cloudflare cannot be asked, it
-// says so and is no failure: the tests have said what they say.
-func healthOf(p *project.Project, env string, from time.Time) error {
-	// Cloudflare counts a request a few seconds after it ends.
-	time.Sleep(8 * time.Second)
-	outcomes, cpu50, cpu99, err := health(p, deployedName(p, env), from, time.Now())
-	if err != nil {
-		say("· how the Worker did meanwhile is not known: %v", err)
-		return nil
+// healthOf says how the Worker did since a time, for a command that ran in it, and gives an error when a request
+// ended in a fault. Cloudflare counts requests as they come to it, over the minute after they ended. So:
+//
+//   - sent 0 (a test run, which no one should wait on): it is asked once, at once, for what is counted by now. A
+//     fault among those fails the run; the rest is counted within the minute, and the next deploy, the next test
+//     and the daily check each say how the Worker did before them.
+//   - sent > 0 (a load, which is asked for and takes its time): it waits until what was sent is counted, a minute
+//     and a quarter at most, so that what it says is of all of it.
+//
+// Without credentials, or when Cloudflare cannot be asked, it says so and is no failure.
+func healthOf(p *project.Project, env string, from time.Time, sent int64) error {
+	worker := deployedName(p, env)
+	var outcomes []outcome
+	var cpu50, cpu99 float64
+	for waited := time.Duration(0); ; waited += 5 * time.Second {
+		var err error
+		if outcomes, cpu50, cpu99, err = health(p, worker, from, time.Now()); err != nil {
+			say("· how the Worker did meanwhile is not known: %v", err)
+			return nil
+		}
+		if _, total := unwell(outcomes); sent == 0 || total >= sent*95/100 || waited >= 75*time.Second {
+			break
+		}
+		time.Sleep(5 * time.Second)
 	}
-	if bad := report(deployedName(p, env), "while it was tested", outcomes, cpu50, cpu99); len(bad) > 0 {
+	what := "while it was loaded"
+	if sent == 0 {
+		what = "while it was tested, of what Cloudflare has counted so far"
+	}
+	if bad := report(worker, what, outcomes, cpu50, cpu99); len(bad) > 0 {
 		return errors.New("requests of this run were ended by Cloudflare, not answered: the tests passing does not make that well")
+	}
+	if sent == 0 {
+		say("· the rest is counted within the minute: go tool charter run health --since 10m, or the next deploy, says")
 	}
 	return nil
 }

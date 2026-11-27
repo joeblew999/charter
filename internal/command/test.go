@@ -87,15 +87,23 @@ func Test(args []string) {
 			}
 		}
 		t := newTimes("test of " + *base)
+		// How it did before this run, the last hour: a fault an earlier run or a reader met is seen now.
+		watched := deployedHere(p, *base)
+		if watched {
+			if outcomes, cpu50, cpu99, err := health(p, deployedName(p, envOf(p, *base)), time.Now().Add(-time.Hour), time.Now()); err == nil && len(outcomes) > 0 {
+				report(deployedName(p, envOf(p, *base)), "the last hour, before this run", outcomes, cpu50, cpu99)
+			}
+		}
 		began := time.Now()
 		t.part("worker", func() error { return try(p, commands, *base) })
+		runtimesHold(*base, p.HealthPath(), "deployed")
 		if p.SEO != nil {
 			t.part("audit", func() error { return seo.Audit(strings.TrimRight(*base, "/")) })
 		}
 		// And what no test sees: whether Cloudflare ended any request of the run instead of the Worker answering it
 		// (over its memory, over its CPU time, an exception). Only for a Worker this app deploys.
-		if deployedHere(p, *base) {
-			t.part("health", func() error { return healthOf(p, envOf(p, *base), began) })
+		if watched {
+			t.part("health", func() error { return healthOf(p, envOf(p, *base), began, 0) })
 		}
 		t.done()
 		return
@@ -117,6 +125,7 @@ func Test(args []string) {
 			if err := try(p, commands, base); err != nil {
 				return err
 			}
+			runtimesHold(base, p.HealthPath(), "local")
 			if p.SEO != nil {
 				return seo.Audit(base)
 			}

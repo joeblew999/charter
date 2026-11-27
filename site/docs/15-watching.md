@@ -19,12 +19,52 @@ charter-example, the last 7 days: 10,571 requests
 
 It is Cloudflare's own count of how each request ended. A request the Worker answered is well there whatever it answered; what this finds is the requests it never got to answer. It ends with an error when there are any, so a pipeline can run it.
 
-Two commands ask it for you:
+Nobody has to remember to ask. It is asked where it costs no time:
 
-| Command | What it adds |
+| When | What is asked |
 |---|---|
-| `go tool charter test --deployed` | After the tests, how the Worker did while they ran. A request Cloudflare ended fails the run, though every test passed |
-| `go tool charter deploy` | Before the new version goes out, how the one that is going did the last day |
+| `go tool charter deploy` | How the version that is going did the last day, before the new one goes out |
+| `go tool charter test --deployed` | First, how the Worker did the last hour. At the end, what Cloudflare has counted of the run so far: a request it ended fails the run, though every test passed |
+| Once a day | The last day, for every app, by a scheduled workflow (`.github/workflows/health.yml`): a day that was not well fails it, and GitHub tells you |
+
+Cloudflare takes up to a minute to count a burst of requests. A test run does not wait for that: it asks once, at once, and what is counted later is seen by the next deploy, the next test and the daily check. What goes wrong under real use does so over hours, which is why the daily check is where it is watched for, and why no deploy waits on any of this.
+
+## Three numbers
+
+Go on Workers lives within three limits, and an app drifts towards each a little at a time. charter says each where it is known anyway, keeps the last ones (`.charter/times.json`), and remarks when one has grown or is near its limit:
+
+| Number | Its limit | Said by |
+|---|---|---|
+| The size of what is deployed, gzipped | 10 MB (3 on the free plan) | `charter build` |
+| The CPU time the Worker takes to start | 1 second | `charter deploy`, from what wrangler reports |
+| The memory one Go runtime holds | 128 MB for all of them | `charter test`, from what the Worker says |
+
+```
+✓ build/app.wasm: 28.37 MB, 6.76 MB gzipped (Workers Free takes 3, Paid 10)
+· a Go runtime holds about 20 MB: 4 fit in the 80 MB the Worker gives them, so it answers that many at once in one instance
+```
+
+They are the numbers that say when a limit is coming, and the ones to measure a change of compiler or of design against.
+
+## Under load
+
+What a Go Worker does wrong under load it does only on Cloudflare, and only when requests come together. Before a release, or when something about what the Worker holds has changed:
+
+```sh
+go tool charter run load --deployed                          # 20 at once for 10 seconds, 10 streams held open
+go tool charter run load --deployed -at 50 -for 30s -streams 40
+go tool charter run load                                     # wrangler dev: how fast, with none of Cloudflare's limits
+```
+
+```
+https://charter-example.gedw99.workers.dev: 30 pages asked 20 at once for 10s, with 10 streams held open
+3,326 requests, 330 a second: half answered within 37ms, 99% within 503ms
+✓ every request was answered
+charter-example, while it was loaded: 3,222 requests
+✓ every one was answered: none went over its memory or CPU time, none threw
+```
+
+It only reads: the pages of the sitemap, and the streams they open. It waits until Cloudflare has counted what it sent, so what it says is of all of it; that takes about a minute, and is why it is no part of a deploy.
 
 ## What happened?
 
