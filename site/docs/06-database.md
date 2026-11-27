@@ -225,6 +225,41 @@ It deletes everything, so it is asked for twice: the second time with the Worker
 
 The seed still runs on your machine: a Worker started here, built with the seed, whose database binding is the deployed database. The deployed Worker never has the seed in it. What is safe only locally stays out: `api.SeedPerson` keeps the person and no token, because a token whose value is in your code is no secret. `app.SeedIsDeployed(ctx)` tells your own seed the same.
 
+## Reads near the reader
+
+A D1 database takes its writes in one place, its primary, and can keep a copy in each of [its regions](https://developers.cloudflare.com/d1/best-practices/read-replication/). A read answered by the copy nearest the reader spares them the trip to the primary. A copy may be a moment behind, so two things have to hold, and charter holds them for every app, with no line of the app's:
+
+- **The statements of one request agree with each other.** They share one [session](https://developers.cloudflare.com/d1/worker-api/d1-database/#withsession), so a later one never sees less than an earlier one did.
+- **A reader sees their own writes.** The answer to a request that changed the database gives a bookmark, the point the database was then at, and the reader's next request brings it back: its reads are at least that new. A browser carries it in a cookie (`d1`, for five minutes, not readable by scripts), so it survives the redirect after a form; a program carries it in a header (`X-D1-Bookmark`), which it sends back as it was given.
+
+Where a request's reads start:
+
+| The request | Its reads start |
+|---|---|
+| Says who it is (a session, a token), or signs someone in | At the primary. A session or a token that was just taken away, or a role that just changed, is never accepted by a copy that is behind. The rest of the request reads from there on, so it sees whatever its caller wrote before, bookmark or none |
+| Fetches what a feed just told it of | At the primary: a copy that is behind would say there is nothing new |
+| Brings a bookmark | At least where the bookmark says |
+| Anything else | At the nearest copy |
+| No request at all: a Cron Trigger, a queue's batch, an email, work left for after the answer | At the primary, each statement |
+
+What to know:
+
+- **A request that only reads is given nothing.** No cookie is set, so a page that could be cached still can.
+- **A read that must be the newest says so:** `cloud.Newest()` before it. It is the one line an app may need, after a write that someone else made and this reader was told of some other way.
+- **The bookmark is given as the answer's headers go.** A statement that runs after that (in a stream, or in work left for after the answer) is not in it.
+- **What is brought as a bookmark and is none costs nothing.** One that is malformed starts nothing; one D1 does not know is given up for the primary.
+- **`cloud.SQL`** is workers-go's own `database/sql` driver, which knows no session: what goes through it is answered by the primary.
+
+Who answered is said to a request that asks which runtime answered, as `charter run cold` does:
+
+```sh
+curl -sD - -o /dev/null -H 'x-go-runtime: ?' https://my-app.example.com/ | grep -i x-d1-served
+```
+
+```
+x-d1-served: DB WEUR replica, DB WEUR replica
+```
+
 ## By hand
 
 `go tool charter run db:status`, `db:execute "…"`, `db:export`: each for the local database, or the deployed one with `--deployed`. `db:reset` makes the local database again, and only that one; `db:seed` does too, and fills a deployed one only as [above](#a-deployed-database).

@@ -24,6 +24,13 @@ func Exec(DB, string, ...any) error                { return ErrNotCloudflare }
 func ExecRows(DB, string, ...any) (int64, error)   { return 0, ErrNotCloudflare }
 func Batch(DB, ...Statement) error                 { return ErrNotCloudflare }
 
+// A request's session, which only a Worker has (session.go).
+func Begin(Bookmarks)    {}
+func End()               {}
+func Newest()            {}
+func Written() Bookmarks { return nil }
+func Served() []string   { return nil }
+
 // DB is a D1 database.
 type DB struct{}
 

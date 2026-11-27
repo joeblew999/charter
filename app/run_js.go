@@ -11,6 +11,8 @@ import (
 
 	"github.com/syumai/workers-go"
 	"github.com/syumai/workers-go/cloudflare/fetch"
+
+	"github.com/joeblew999/charter/cloud"
 )
 
 // What this Go runtime has served, for deciding when it should serve no more.
@@ -80,7 +82,13 @@ func Serve(h http.Handler) http.Handler {
 				ended.Invoke()
 			}
 		}()
-		h.ServeHTTP(w, incoming(r.WithContext(ctx)))
+		// The request's statements on D1 share a session, from the bookmark it brought; its answer gives the reader
+		// the bookmark of what it wrote (bookmark.go, cloud/session.go).
+		cloud.Begin(brought(r))
+		defer cloud.End()
+		out := carrying(w, r, cloud.Written, cloud.Served)
+		h.ServeHTTP(out, incoming(r.WithContext(ctx)))
+		out.give()
 
 		// Reading the heap's state is not free: for the first request, then for one in eight.
 		if served++; served%8 != 1 {

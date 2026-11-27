@@ -78,6 +78,9 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   when someone asks for it. Times and numbers are kept as such and shown through Intl.
 - **A table is written down once**, in `db/schema.sql`. Migrations, the queries' Go and the API's row types come
   from it; none is hand-written.
+- **A reader sees their own writes, and no app says how.** A request's statements on D1 share a session; the answer
+  to a write gives a bookmark that the next request brings back (`cloud/session.go`, `app/bookmark.go`). Who someone
+  is, and what a feed told a reader of, are read at the primary (`cloud.Newest`). Nothing reads D1 around that.
 - **A feed is declared once** (`live.Feed`) and serves pages, API and SDK alike.
 - **The commands are Vite+'s verbs** (https://viteplus.dev/guide/), plus `deploy`. Anything else is a task of
   `charter run`.

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/app"
+	"github.com/joeblew999/charter/cloud"
 )
 
 // Log is a feed's source of truth: the table its items are written to, read by position.
@@ -117,6 +118,9 @@ func (f Feed[T]) Since(ctx context.Context, after string, limit int) ([]T, error
 		return nil, err
 	}
 	position, _ := strconv.ParseInt(after, 10, 64)
+	// A reader asks this because the feed just told them there is something new: a copy of the database that is
+	// behind would answer that there is not, and the item would be lost to them until the next one.
+	cloud.Newest()
 	items, err := feedLog.Since(ctx, position, limit)
 	slices.Reverse(items)
 	return items, err
@@ -196,7 +200,10 @@ func (f Feed[T]) handOver(ctx context.Context, header func(name, value string), 
 		log.Printf("live: %s: the log is not there: %v", f.Name, err)
 		return
 	}
-	// Where the stream starts: after the newest position its caller has, or from what is new.
+	// Where the stream starts: after the newest position its caller has, or from what is new. It is read where
+	// the database is newest: the hub carries on from where this ends, so what a copy that is behind left out
+	// would never reach the stream's reader.
+	cloud.Newest()
 	var last int64
 	if after := Newest(positions...); after != nil {
 		last = *after

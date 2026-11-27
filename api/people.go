@@ -298,6 +298,10 @@ func PeopleScheme(spec *huma.OpenAPI) {
 // into db/schema.sql: users, passkeys, tokens, ceremonies.
 func D1Accounts(binding string) func() (Accounts, error) {
 	return func() (Accounts, error) {
+		// Who someone is is read where it is newest: a session or a token that was just taken away, a role that
+		// just changed, a sign-in begun a moment ago, must not be answered by a copy of the database that is behind.
+		// The rest of the request then reads from there on, so it sees what its caller wrote before.
+		cloud.Newest()
 		db, err := cloud.Open(binding)
 		return d1Accounts{db}, err
 	}
