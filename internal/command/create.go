@@ -90,6 +90,9 @@ func Create(args []string) {
 			text = strings.ReplaceAll(text, `"https://github.com/joeblew999/charter"`, `"https://`+*module+`"`)
 			text = regexp.MustCompile(`(?m)^\s*Dir:\s*"example",\n`).ReplaceAllString(text, "")
 		case "wrangler.jsonc":
+			// The example's database and KV namespace are the example's: a new app's first deploy makes its own,
+			// and writes their ids here.
+			text = regexp.MustCompile(`,?\s*"(database_id|id)":\s*"[0-9a-f-]{32,36}"`).ReplaceAllString(text, "")
 			text = strings.ReplaceAll(text, `"../../node_modules/wrangler/config-schema.json"`, `"node_modules/wrangler/config-schema.json"`)
 		}
 		return os.WriteFile(to, []byte(text), 0o644)

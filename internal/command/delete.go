@@ -15,26 +15,26 @@ import (
 	"github.com/joeblew999/charter/internal/tools"
 )
 
-// charter run delete takes the deployed Worker away: the Worker, its secrets and what it kept in its Durable
-// Objects. Its data stays (the database, the bucket, the queue, the KV namespace), so go tool charter deploy brings
-// the same app back, with its secrets from fnox. With --data those go too, and nothing of the app is left on
-// Cloudflare.
+// charter run delete takes the app away from Cloudflare: the Worker, its secrets, what it kept in its Durable
+// Objects, and its database, bucket, queue and KV namespace. Nothing of it is left, and wrangler.jsonc no longer
+// names the ids of what is gone. With --keep-data only the Worker and its secrets go: its data stays, wrangler.jsonc
+// still names it by its ids, and go tool charter deploy brings the same app back, with its secrets from fnox.
 //
 // It deletes, so it is asked for twice: alone it says what there is and changes nothing; with the Worker's name it
 // goes ahead.
 //
-//	charter run delete [env]                       what there is
-//	charter run delete [env] my-worker             the Worker and its secrets
-//	charter run delete [env] my-worker --data      and its database, bucket, queue and KV namespace
+//	charter run delete [env]                          what there is
+//	charter run delete [env] my-worker                all of it
+//	charter run delete [env] my-worker --keep-data    the Worker and its secrets; its data stays
 //
 // A secret cannot be read back from Cloudflare. So while the Worker has one that fnox does not, delete stops: the
 // value would be gone for good.
 func deleteWorker(p *project.Project, args []string) {
 	env := takeEnv(p, &args)
 	args = slices.Clone(args)
-	data, lose := false, false
-	if i := slices.Index(args, "--data"); i >= 0 {
-		args, data = slices.Delete(args, i, i+1), true
+	data, lose := true, false
+	if i := slices.Index(args, "--keep-data"); i >= 0 {
+		args, data = slices.Delete(args, i, i+1), false
 	}
 	if i := slices.Index(args, "--lose-secrets"); i >= 0 {
 		args, lose = slices.Delete(args, i, i+1), true
@@ -44,7 +44,7 @@ func deleteWorker(p *project.Project, args []string) {
 		name += "-" + env
 	}
 	if len(args) > 1 {
-		check(errors.New("usage: charter run delete [env] [<worker>] [--data]"))
+		check(errors.New("usage: charter run delete [env] [<worker>] [--keep-data]"))
 	}
 	secrets, deployed := onWorker(p, env)
 	if !deployed {
@@ -55,12 +55,12 @@ func deleteWorker(p *project.Project, args []string) {
 			say("  %s", s)
 		}
 	}
-	resources, err := resourcesOf(p)
+	resources, err := resourcesOf(p, env)
 	check(err)
 	if data {
-		say("and its data:")
+		say("and its data (--keep-data leaves it):")
 	} else if len(resources) > 0 {
-		say("its data stays (--data deletes it too):")
+		say("its data stays:")
 	}
 	for _, r := range resources {
 		say("  %-8s %s", r.kind, r.name)
@@ -79,7 +79,7 @@ func deleteWorker(p *project.Project, args []string) {
 		say("  echo <value> | go tool charter run secrets:put %s%s     keeps one first (--lose-secrets deletes regardless)", envWord(env), only[0])
 	}
 	if len(args) != 1 || args[0] != name {
-		check(fmt.Errorf("nothing was changed. To delete it, name the Worker:\n  go tool charter run delete %s%s%s", envWord(env), name, map[bool]string{true: " --data"}[data]))
+		check(fmt.Errorf("nothing was changed. To delete it, name the Worker:\n  go tool charter run delete %s%s%s", envWord(env), name, map[bool]string{false: " --keep-data"}[data]))
 	}
 	if len(only) > 0 && !lose {
 		check(errors.New("nothing was changed: the Worker has secrets fnox does not"))
@@ -117,6 +117,19 @@ func deleteWorker(p *project.Project, args []string) {
 	if failed {
 		check(errors.New("not everything was deleted (a bucket must be empty first): what is left is named above"))
 	}
+	// What is gone is no longer named: the next deploy makes its own.
+	declared, err := declaredResources(p, env)
+	check(err)
+	var forget []map[string]any
+	for _, d := range declared {
+		if !d.ByName && d.Has != "" {
+			forget = append(forget, map[string]any{"op": "remove", "path": d.Pointer + "/" + d.Key})
+		}
+	}
+	check(patch(p, forget))
+	if len(forget) > 0 {
+		say("%s no longer names the ids of what is gone", project.Wrangler)
+	}
 }
 
 // consumedBy are the queues wrangler.jsonc makes the Worker a consumer of.
@@ -152,53 +165,35 @@ type resource struct {
 	remove     []string
 }
 
-// resourcesOf are the resources wrangler.jsonc names: what charter deploy had wrangler make.
-func resourcesOf(p *project.Project) ([]resource, error) {
-	b, err := os.ReadFile(filepath.Join(p.Root, project.Wrangler))
+// resourcesOf are the resources of the app on Cloudflare, each with the wrangler command that deletes it: what
+// wrangler.jsonc names, by the id the file has or the deployed Worker is bound to.
+func resourcesOf(p *project.Project, env string) ([]resource, error) {
+	declared, err := declaredResources(p, env)
 	if err != nil {
 		return nil, err
 	}
-	if b, err = hujson.Standardize(b); err != nil {
-		return nil, err
-	}
-	var c struct {
-		D1 []struct {
-			Name string `json:"database_name"`
-		} `json:"d1_databases"`
-		R2 []struct {
-			Name string `json:"bucket_name"`
-		} `json:"r2_buckets"`
-		KV []struct {
-			Binding string `json:"binding"`
-			ID      string `json:"id"`
-		} `json:"kv_namespaces"`
-		Queues struct {
-			Producers []struct {
-				Queue string `json:"queue"`
-			} `json:"producers"`
-		} `json:"queues"`
-	}
-	if err := json.Unmarshal(b, &c); err != nil {
-		return nil, err
-	}
-	var out []resource
-	for _, q := range c.Queues.Producers {
-		out = append(out, resource{"queue", q.Queue, []string{"queues", "delete", q.Queue}})
-	}
-	for _, db := range c.D1 {
-		out = append(out, resource{"database", db.Name, []string{"d1", "delete", db.Name, "--skip-confirmation"}})
-	}
-	for _, kv := range c.KV {
-		// A namespace wrangler made for a binding with no id is called after the Worker and the binding.
-		if kv.ID != "" {
-			out = append(out, resource{"KV", kv.Binding, []string{"kv", "namespace", "delete", "--namespace-id", kv.ID}})
-		} else {
-			title := p.Worker.Name + "-" + strings.ToLower(strings.ReplaceAll(kv.Binding, "_", "-"))
-			out = append(out, resource{"KV", title, []string{"kv", "namespace", "delete", title}})
+	deployed, _ := deployedBindings(p, env)
+	var queues, rest []resource
+	for _, d := range declared {
+		is := d.Has
+		for _, b := range deployed {
+			if b.Kind == d.Kind && b.Binding == d.Binding {
+				is = b.To // what it is bound to now is what there is to delete
+			}
+		}
+		if is == "" {
+			continue // never made
+		}
+		switch d.Kind {
+		case "queue":
+			queues = append(queues, resource{"queue", is, []string{"queues", "delete", is}})
+		case "d1":
+			rest = append(rest, resource{"database", is, []string{"d1", "delete", is, "--skip-confirmation"}})
+		case "kv_namespace":
+			rest = append(rest, resource{"KV", is, []string{"kv", "namespace", "delete", "--namespace-id", is}})
+		case "r2_bucket":
+			rest = append(rest, resource{"bucket", is, []string{"r2", "bucket", "delete", is}})
 		}
 	}
-	for _, bucket := range c.R2 {
-		out = append(out, resource{"bucket", bucket.Name, []string{"r2", "bucket", "delete", bucket.Name}})
-	}
-	return out, nil
+	return append(queues, rest...), nil
 }
