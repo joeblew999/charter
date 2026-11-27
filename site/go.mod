@@ -14,7 +14,7 @@ require (
 	github.com/a-h/parse v0.0.0-20250122154542-74294addb73e // indirect
 	github.com/a-h/templ v0.3.1020 // indirect
 	github.com/alecthomas/chroma/v2 v2.27.0 // indirect
-	github.com/chromedp/cdproto v0.160.1 // indirect
+	github.com/chromedp/cdproto v0.160.11 // indirect
 	github.com/chromedp/chromedp v0.24.0 // indirect
 	github.com/danielgtaylor/huma/v2 v2.41.0 // indirect
 	github.com/dlclark/regexp2/v2 v2.2.1 // indirect
@@ -22,7 +22,7 @@ require (
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.10.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.7 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.9 // indirect
 	github.com/go-json-experiment/json v0.0.0-20260213210345-44df1a37e875 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/go-webauthn/webauthn v0.18.2 // indirect
@@ -30,7 +30,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gsxhq/gsxui v0.0.0-20261124142639-b9ffdfaa8826 // indirect
+	github.com/gsxhq/gsxui v0.0.0-20261126121004-cef08eb4ec39 // indirect
 	github.com/gsxhq/vite v0.3.2 // indirect
 	github.com/jackielii/ctxkey v1.0.1 // indirect
 	github.com/jackielii/structpages/tools/lint v0.1.21 // indirect

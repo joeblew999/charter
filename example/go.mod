@@ -32,7 +32,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gsxhq/gsxui v0.0.0-20261124142639-b9ffdfaa8826 // indirect
+	github.com/gsxhq/gsxui v0.0.0-20261126121004-cef08eb4ec39 // indirect
 	github.com/gsxhq/vite v0.3.2 // indirect
 	github.com/jackielii/ctxkey v1.0.1 // indirect
 	github.com/jackielii/structpages/tools/lint v0.1.21 // indirect
