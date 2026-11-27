@@ -218,6 +218,7 @@ func running(p *project.Project, name string) string {
 // toolchain is check's part "tools": the app pins at least what its charter was tested with (fix: they are raised,
 // and installed), and what runs here is what is pinned.
 func toolchain(p *project.Project, fix bool) error {
+	changed := false
 	if tools.Mise() == "" {
 		return errors.New(tools.NoMise)
 	}
@@ -248,6 +249,7 @@ func toolchain(p *project.Project, fix bool) error {
 			if err := installTools(p); err != nil {
 				return err
 			}
+			changed = true
 		}
 	} else if exists(own) && filepath.Clean(libDir) != filepath.Clean(p.Root) {
 		// Not below what this charter is tested with.
@@ -273,7 +275,12 @@ func toolchain(p *project.Project, fix bool) error {
 			if err := installTools(p); err != nil {
 				return err
 			}
+			changed = true
 		}
+	}
+	// Tools changed by this run are installed, and run in the next shell: this one started before them.
+	if changed {
+		return nil
 	}
 	pins, err := effectivePins(p)
 	if err != nil {

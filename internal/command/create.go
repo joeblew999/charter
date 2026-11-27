@@ -124,7 +124,9 @@ func Create(args []string) {
 	}
 	if !version.Released() {
 		if head, err := exec.Command("git", "-C", tmp, "rev-parse", "HEAD").Output(); err == nil {
-			check(with("go", "get", "github.com/joeblew999/charter@"+strings.TrimSpace(string(head))))
+			// From GitHub itself: a commit pushed a moment ago is not in Go's module proxy or its checksum database yet.
+			direct := map[string]string{"GONOPROXY": library, "GONOSUMDB": library}
+			check(run.Run(dir, direct, tools.Mise(), "exec", "--", "go", "get", library+"@"+strings.TrimSpace(string(head))))
 		}
 	}
 	check(with("go", "mod", "tidy", "-e"))
