@@ -52,7 +52,7 @@ component adminPage(title intl.Msg, about intl.Msg, here string, children gsx.No
 		<head>
 			<app.Head title={title |> text} description={about |> text}/>
 		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
+		<body class="min-h-svh bg-background font-sans text-foreground antialiased" { app.Body()... }>
 			<main class="mx-auto flex max-w-2xl flex-col gap-6 p-4 pt-10">
 				<ui.Button variant="link" class="self-start px-0" href={intl.URL(ctx, "/")}>
 					<icon.ArrowLeft class="rtl:rotate-180"/>

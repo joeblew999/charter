@@ -1,6 +1,7 @@
 package app
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -120,5 +121,31 @@ func TestServedIsSaidWhenAsked(t *testing.T) {
 	}
 	if strings.Contains(res.Header.Get("Set-Cookie"), cloud.BookmarkCookie) {
 		t.Error("a read set the cookie")
+	}
+}
+
+// A boosted link whose answer is no page is sent there as a navigation, and none of it reaches the page's body; a
+// page, and the same answer asked for any other way, goes as it is.
+func TestABoostedLinkToNoPageIsANavigation(t *testing.T) {
+	file := func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Write([]byte("%PDF"))
+	}
+	boosted := httptest.NewRequest(http.MethodGet, "https://app.example/files/7?x=1", nil)
+	boosted.Header.Set("HX-Boosted", "true")
+	res := answered(boosted, nil, nil, file)
+	if body, _ := io.ReadAll(res.Body); res.Header.Get("HX-Redirect") != "/files/7?x=1" || len(body) != 0 {
+		t.Errorf("a boosted link to a file: HX-Redirect %q, body %q", res.Header.Get("HX-Redirect"), body)
+	}
+	plain := answered(httptest.NewRequest(http.MethodGet, "https://app.example/files/7", nil), nil, nil, file)
+	if body, _ := io.ReadAll(plain.Body); plain.Header.Get("HX-Redirect") != "" || string(body) != "%PDF" {
+		t.Errorf("the same file asked for plainly: HX-Redirect %q, body %q", plain.Header.Get("HX-Redirect"), body)
+	}
+	page := answered(boosted, nil, nil, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write([]byte("<body>page</body>"))
+	})
+	if page.Header.Get("HX-Redirect") != "" {
+		t.Errorf("a boosted link to a page: HX-Redirect %q", page.Header.Get("HX-Redirect"))
 	}
 }

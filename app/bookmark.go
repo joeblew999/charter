@@ -39,6 +39,7 @@ type carried struct {
 	written func() cloud.Bookmarks
 	served  func() []string
 	given   bool
+	sent    bool // answered with where to go, as a navigation: what the handler writes is left out
 }
 
 // give sets the answer's headers, once: when the first of them goes, or when the handler has returned having
@@ -49,6 +50,15 @@ func (c *carried) give() {
 	}
 	c.given = true
 	header := c.Header()
+	// A boosted link (Body) whose answer is no page (a download, JSON, a text file) is sent there as a
+	// navigation: htmx would put it in the page's body.
+	if c.request.Method == http.MethodGet && c.request.Header.Get("HX-Boosted") == "true" {
+		if kind := header.Get("Content-Type"); kind != "" && !strings.HasPrefix(kind, "text/html") && header.Get("HX-Redirect") == "" && header.Get("HX-Location") == "" {
+			header.Set("HX-Redirect", c.request.URL.RequestURI())
+			header.Del("Content-Length")
+			c.sent = true
+		}
+	}
 	if c.request.Header.Get("X-Go-Runtime") != "" {
 		if who := c.served(); len(who) > 0 {
 			header.Set(ServedHeader, strings.Join(who, ", "))
@@ -75,6 +85,9 @@ func (c *carried) WriteHeader(status int) {
 
 func (c *carried) Write(p []byte) (int, error) {
 	c.give()
+	if c.sent {
+		return len(p), nil // the reader is being sent to it as a navigation: its body goes nowhere
+	}
 	return c.ResponseWriter.Write(p)
 }
 

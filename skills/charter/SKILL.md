@@ -17,6 +17,7 @@ changing that part.
 | To change | Edit | Then |
 |---|---|---|
 | A page or its route | `pages/`: a type in the tree (`pages.Pages`) with a `Page` component, and `Props` that names what it needs as parameters (the store, from `app.App`'s `RequestArgs`) | the running `charter dev` reloads it |
+| Going from page to page | `{ app.Body()... }` on the layout's `<body>`, and `hx-preload.js` imported in `web/main.js`: a link to another page of the app keeps the document and is asked for on press. A `GET` must change nothing. A page whose script runs as its document loads says `FullLoad() bool` on its type; a link that changes something says `hx-boost="false"`; a link to a download or JSON needs nothing | in a browser test, a mark on `window` survives the link (`example/test/page_navigation_test.go`) |
 | A region htmx replaces | a component of its page (`component (p Home) Form(…)`), with `id={Home.Form \|> id}` and `hx-target={Home.Form \|> target}` | |
 | One of many that updates by itself (a row) | `id={Home.Item \|> key(id)}`, its control `hx-get={Home{} \|> url}` with `hx-target={Home.Item \|> keytarget(id)}`; `Props` takes a `structpages.RenderTarget`, asks `target.Is(p.Item)`, reads the row from `structpages.KeyOf(target)` and loads that alone | |
 | The link of the page being shown | `structpages.Within(ctx, Page{})` | |

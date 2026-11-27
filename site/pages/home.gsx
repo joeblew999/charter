@@ -17,7 +17,7 @@ component (p Home) Page() {
 		<head>
 			<app.Head title={locales.SiteTitle |> text} description={locales.SiteDescription |> text}/>
 		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
+		<body class="min-h-svh bg-background font-sans text-foreground antialiased" { app.Body()... }>
 			<header class="mx-auto flex max-w-4xl items-center gap-1 p-4">
 				<span class="font-semibold" translate="no">charter</span>
 				<span class="flex-1"></span>

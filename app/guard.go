@@ -31,6 +31,12 @@ func guard(next http.Handler, pn *structpages.PageNode) http.Handler {
 			return
 		}
 		wants := wanted(r)
+		// A page that must be a page load (its type has FullLoad): a boosted link to it is sent there as a
+		// navigation, which htmx does when told so (HX-Redirect).
+		if wants == wholePage && hasPage && fullLoad(pn) {
+			w.Header().Set("HX-Redirect", r.URL.RequestURI())
+			return
+		}
 		if wants == partOfAPage || fragment {
 			w.Header().Set("Cache-Control", "private, no-store")
 		}
@@ -45,6 +51,13 @@ func guard(next http.Handler, pn *structpages.PageNode) http.Handler {
 		}
 		http.Redirect(w, r, to, http.StatusSeeOther)
 	})
+}
+
+// fullLoad is whether a page says it must be a page load: one whose scripts run as a document loads, or whose
+// document is not the app's own.
+func fullLoad(pn *structpages.PageNode) bool {
+	own, ok := pn.Value.Interface().(interface{ FullLoad() bool })
+	return ok && own.FullLoad()
 }
 
 // landing is the page a fragment is part of, in the request's language.

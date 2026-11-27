@@ -153,6 +153,25 @@ A link or a form's target comes from the tree, never from a path written as a st
 
 `url` is structpages' own `URLFor`. charter mounts the tree once for each language, each told its prefix, so every address it gives is in the reader's language by itself: a page, a form's target, a stream. structpages' linter runs inside `charter check`, for the machine and for the Worker's build, and fails on a link to a page that is not there, a missing parameter, or a path written as a string.
 
+## A link shows the next page with no page load
+
+```gsx
+<body class="min-h-svh bg-background font-sans text-foreground antialiased" { app.Body()... }>
+```
+
+`app.Body()` on the layout's `<body>` is all of it. A link to another page of the app, and a form, then keeps the document: htmx asks for the next page and morphs its body into place of this one's (boost), so what is the same on both stays as it is. The page's title comes with it, a list that follows a feed opens its stream as it arrives, and Back shows the page that was there. With htmx's preload extension (`web/main.js`: `hx-preload.js`) the request starts when the link is pressed, before the click is done.
+
+What is asked for on a press is asked for before the reader has decided, so a `GET` must change nothing. One that does (a link that declines an offer, or chooses a language) is not boosted.
+
+What stays a page load, and how each says so:
+
+| What | How |
+|---|---|
+| A page whose script runs as its document loads (the sign-in screens) | Its type has `FullLoad() bool`: a link to it from anywhere is a page load, with nothing on the link |
+| A link whose following changes something, or the document itself (another language: `<html lang>` changes) | `hx-boost="false"` on the link, or `hx-boost:inherited="false"` on what holds several (the language list has it) |
+| A link whose answer is no page: a download, JSON, a text file | Nothing: charter sends the reader there as a page load |
+| A link to another site, one with `download`, one to a place on the same page | Nothing: htmx does not boost them |
+
 ## Which pages search engines get
 
 The tree's GET pages without parameters are in the sitemap, in every language. The pages of the docs are too.

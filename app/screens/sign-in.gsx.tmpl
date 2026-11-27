@@ -50,6 +50,9 @@ type SignInView struct {
 // Noindex keeps the page out of the sitemap and of search engines: it is a door, not something to find.
 func (SignInPage) Noindex() bool { return true }
 
+// FullLoad says a link to this page is a page load: its script runs as the document loads.
+func (SignInPage) FullLoad() bool { return true }
+
 func (SignInPage) Props(r *http.Request, caller api.Caller, auth *api.Auth) (SignInView, error) {
 	v := SignInView{Caller: caller, Return: intl.SafeReturn(r.URL.Query().Get("return"))}
 	if code := r.URL.Query().Get("invite"); code != "" {
@@ -313,6 +316,9 @@ type AccountView struct {
 // Noindex keeps the page out of the sitemap and of search engines: it is one person's.
 func (AccountPage) Noindex() bool { return true }
 
+// FullLoad says a link to this page is a page load: its script runs as the document loads.
+func (AccountPage) FullLoad() bool { return true }
+
 func (AccountPage) Props(r *http.Request, caller api.Caller, auth *api.Auth) (AccountView, error) {
 	tokens, err := auth.Tokens(r)
 	return AccountView{Caller: caller, Tokens: tokens, MayManage: caller.May(People{}.Needs()...)}, err
@@ -481,6 +487,9 @@ func (People) Needs() []string { return []string{"admin"} }
 
 // PeoplePage is the page.
 type PeoplePage struct{}
+
+// FullLoad says a link to this page is a page load, as the other pages of this screen are.
+func (PeoplePage) FullLoad() bool { return true }
 
 func (PeoplePage) Noindex() bool { return true }
 

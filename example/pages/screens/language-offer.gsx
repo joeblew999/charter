@@ -20,10 +20,10 @@ component LanguageOffer(attrs gsx.Attrs) {
 		<ui.Alert lang={s.Lang} dir="auto" { attrs... }>
 			<icon.Languages/>
 			<ui.AlertTitle>
-				<a href={s.Href} hreflang={s.Lang} class="underline underline-offset-4">{ locales.ScreensAlsoIn(s.Name).In(s.Lang) }</a>
+				<a href={s.Href} hreflang={s.Lang} class="underline underline-offset-4" hx-boost="false">{ locales.ScreensAlsoIn(s.Name).In(s.Lang) }</a>
 			</ui.AlertTitle>
 			<ui.AlertDescription>
-				<a href={intl.Decline(ctx)} rel="nofollow">{ locales.ScreensNoThanks.In(s.Lang) }</a>
+				<a href={intl.Decline(ctx)} rel="nofollow" hx-boost="false">{ locales.ScreensNoThanks.In(s.Lang) }</a>
 			</ui.AlertDescription>
 		</ui.Alert>
 	} }

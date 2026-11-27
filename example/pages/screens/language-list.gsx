@@ -15,7 +15,12 @@ import (
 //
 // From charter add screen:language-list: the app's own now, to change as it likes.
 component LanguageList(attrs gsx.Attrs) {
-	<nav aria-label={locales.ScreensLanguages} class={ "flex flex-wrap items-center gap-1" } { attrs... }>
+	<nav
+		aria-label={locales.ScreensLanguages}
+		class={ "flex flex-wrap items-center gap-1" }
+		hx-boost:inherited="false"
+		{ attrs... }
+	>
 		<icon.Languages class="me-1 size-4 text-muted-foreground"/>
 		{ for _, l := range intl.Links(ctx) {
 			<ui.Button

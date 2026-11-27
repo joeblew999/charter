@@ -465,6 +465,21 @@ func (a *App) entry() string {
 // HTML is <html>'s attributes: the page's language and direction (<html { HTML(ctx)... }>).
 func HTML(ctx context.Context) gsx.Attrs { return intl.HTML(ctx) }
 
+// Body is <body>'s attributes (<body class="…" { Body()... }>): a link to another page of the app, and a form, shows
+// the next page with no page load. The document stays and htmx puts the next page's body in place of this one's
+// (boost), morphed, so what is the same on both stays as it is: the header, an open stream, the reader's place.
+// The page's title comes with it. With htmx's preload extension (web/main.js) the request starts when the link is
+// pressed, before the click is done.
+//
+// It is how the swap of a boosted page is said, and of nothing else: an element with its own hx-get keeps its own
+// swap.
+//
+// What must be a page load says so: a page whose type has FullLoad() bool (the sign-in screens, whose scripts run
+// as a document loads), and a link with hx-boost="false" (the language list: <html lang> changes).
+func Body() gsx.Attrs {
+	return gsx.Attrs{{Key: "hx-boost:inherited", Value: "swap:outerMorph transition:true"}}
+}
+
 // head is what Head needs of the request.
 type head struct {
 	Name, Icon, Home, Lang, Page, Entry string

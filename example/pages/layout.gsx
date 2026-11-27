@@ -20,7 +20,7 @@ component Layout(title intl.Msg, description intl.Msg, children gsx.Node) {
 		<head>
 			<app.Head title={title |> text} description={description |> text}/>
 		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
+		<body class="min-h-svh bg-background font-sans text-foreground antialiased" { app.Body()... }>
 			<header class="mx-auto flex max-w-xl items-center gap-1 px-4 pt-4">
 				// The pages, the one being shown marked (current, by the tree).
 				<nav class="flex items-center gap-1">

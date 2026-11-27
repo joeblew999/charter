@@ -69,7 +69,7 @@ component DocsDocument(v DocsView) {
 		<head>
 			<app.Head title={v.Doc.Title + " · " + v.Docs.Name} description={v.Doc.Description}/>
 		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
+		<body class="min-h-svh bg-background font-sans text-foreground antialiased" { app.Body()... }>
 			<header class="mx-auto flex max-w-6xl flex-wrap items-center gap-3 p-4">
 				<a href={intl.URL(ctx, "/")} class="font-semibold" translate="no">{ v.Docs.Name }</a>
 				<ui.Badge variant="secondary">{ locales.ScreensDocs }</ui.Badge>
