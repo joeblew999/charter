@@ -27,7 +27,12 @@
       matchDepTypes: ["golang"],
       enabled: false,
     },
-    { matchManagers: ["gomod"], groupName: "go modules" },
+    // charter's own modules in one pull request, the apps' in another. An update of charter's must reach the go.mod
+    // and go.sum of example/ and site/, which use it through a local replace: its tidy does that (gomodTidyAll). In
+    // the same pull request as their own updates, Renovate tidies them with charter's go.mod not yet updated, and that
+    // result wins.
+    { matchManagers: ["gomod"], matchFileNames: ["go.mod"], groupName: "charter's go modules" },
+    { matchManagers: ["gomod"], matchFileNames: ["example/go.mod", "site/go.mod"], groupName: "the apps' go modules" },
     { matchManagers: ["npm"], groupName: "npm" },
     {
       // gsx's Vite plugin says which Vite it works with (its peer dependency): a new major waits for it.
