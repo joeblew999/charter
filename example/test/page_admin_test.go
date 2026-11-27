@@ -77,7 +77,7 @@ func TestTheAdminOverview(t *testing.T) {
 // name, never by value. A binding asked one small thing says it answers.
 func TestTheAdminSystemPage(t *testing.T) {
 	html := admin(t, at(screens.AdminSystem{}))
-	for _, want := range []string{">DB<", ">database<", ">KV<", ">kv<", ">BUCKET<", ">bucket<", ">QUEUE<", ">queue<", ">ADMIN_TOKEN<", ">APP_NAME<"} {
+	for _, want := range []string{`id="admin-memory"`, ">DB<", ">database<", ">KV<", ">kv<", ">BUCKET<", ">bucket<", ">QUEUE<", ">queue<", ">ADMIN_TOKEN<", ">APP_NAME<"} {
 		if !strings.Contains(html, want) {
 			t.Errorf("the system page lacks %q", want)
 		}

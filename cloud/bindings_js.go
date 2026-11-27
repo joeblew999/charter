@@ -122,3 +122,15 @@ func Probe(name string) (time.Duration, error) {
 	_, err := promise.Await(ask)
 	return time.Since(start), err
 }
+
+// Runtimes is how many Go runtimes this instance of the Worker has alive, the WebAssembly memory they hold between
+// them, and what they may hold (worker/go.mjs keeps them under it): bytes. ok false when the Worker's entry does
+// not say (one older than this).
+func Runtimes() (count int, held, budget int64, ok bool) {
+	memory := js.Global().Get("context").Get("binding").Get("memory")
+	if memory.Type() != js.TypeFunction {
+		return 0, 0, 0, false
+	}
+	m := memory.Invoke()
+	return m.Get("runtimes").Int(), int64(m.Get("held").Float()), int64(m.Get("budget").Float()), true
+}

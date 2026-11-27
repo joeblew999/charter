@@ -125,6 +125,8 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		const go = new Go();
 		const binding = warm ? { warm } : {};
 		binding.EmailMessage = EmailMessage;
+		// What the isolate's runtimes hold between them, for Go to say (cloud.Runtimes): an admin's page shows it.
+		binding.memory = () => ({ runtimes: alive.size, held: total(), budget: BUDGET });
 		const context = createRuntimeContext({ env, ctx, binding });
 		const runtime = { go, binding, context, started: false, served: 0, warm: Boolean(warm) };
 		alive.add(runtime);

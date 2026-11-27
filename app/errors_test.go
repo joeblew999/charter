@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -30,7 +31,7 @@ func TestFailed(t *testing.T) {
 	if w := ask(Redirect{To: "/bindings"}, true, bg); w.Code != 200 || w.Header().Get("HX-Location") != "/bindings" {
 		t.Errorf("a redirect for htmx: %d %q", w.Code, w.Header().Get("HX-Location"))
 	}
-	if w := ask(errors.New("the database's password is hunter2"), false, bg); w.Code != 500 || w.Body.String() != "Something went wrong.\n" {
+	if w := ask(errors.New("the database's password is hunter2"), false, bg); w.Code != 500 || !strings.HasPrefix(w.Body.String(), "Something went wrong. Reference: ") || strings.Contains(w.Body.String(), "hunter2") {
 		t.Errorf("a plain error: %d %q", w.Code, w.Body.String())
 	}
 	gone, cancel := context.WithCancel(bg)

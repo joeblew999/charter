@@ -301,6 +301,32 @@ func (AdminProbe) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Au
 
 component (p AdminSystem) Page(v api.System) {
 	<adminPage title={locales.ScreensAdminSystem} about={locales.ScreensAdminSystemIntro} here="system">
+		{ if v.Memory != nil {
+			<ui.Card>
+				<ui.CardHeader>
+					<ui.CardTitle>
+						<h2>{ locales.ScreensAdminMemory }</h2>
+					</ui.CardTitle>
+					<ui.CardDescription>{ locales.ScreensAdminMemoryIntro }</ui.CardDescription>
+				</ui.CardHeader>
+				<ui.CardContent>
+					<ul id="admin-memory" class="flex flex-col gap-2">
+						<adminRow>
+							<span class="flex-1">{ locales.ScreensAdminRuntimes }</span>
+							<span>{ v.Memory.Runtimes |> number }</span>
+						</adminRow>
+						<adminRow>
+							<span class="flex-1">{ locales.ScreensAdminHeld }</span>
+							<span>{ (v.Memory.Held / 1048576) |> number("style", "unit", "unit", "megabyte") }</span>
+						</adminRow>
+						<adminRow>
+							<span class="flex-1">{ locales.ScreensAdminBudget }</span>
+							<span>{ (v.Memory.Budget / 1048576) |> number("style", "unit", "unit", "megabyte") }</span>
+						</adminRow>
+					</ul>
+				</ui.CardContent>
+			</ui.Card>
+		} }
 		<ui.Card>
 			<ui.CardHeader>
 				<ui.CardTitle>

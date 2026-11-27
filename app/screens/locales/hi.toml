@@ -82,6 +82,11 @@ admin_bound = "जुड़ा है"
 admin_probe = "जाँचें"
 admin_tables = "तालिकाएँ, और हर एक में कितनी पंक्तियाँ हैं।"
 admin_migrations = "माइग्रेशन"
+admin_memory = "मेमोरी"
+admin_memory_intro = "Worker का यह इंस्टेंस अभी Go रनटाइम में कितना रखे हुए है। एक Worker के पास सब कुछ के लिए 128 MB है, और Cloudflare उससे अधिक लेने वाले को समाप्त कर देता है।"
+admin_runtimes = "सक्रिय Go रनटाइम"
+admin_held = "वे रखे हुए हैं"
+admin_budget = "वे रख सकते हैं"
 
 [gsxui]
 close = "बंद करें"

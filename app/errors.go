@@ -2,10 +2,16 @@ package app
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/jackielii/structpages"
 
@@ -121,9 +127,44 @@ func failed(w http.ResponseWriter, r *http.Request, err error) {
 		http.Error(w, known.message, known.status)
 		return
 	}
-	log.Printf("app: %s %s: %v", r.Method, r.URL.Path, err)
-	http.Error(w, "Something went wrong.", http.StatusInternalServerError)
+	// What went wrong is the app's to know, not the reader's: it is logged, with a reference the reader is given, so
+	// that "it said reference 8f3a…" finds this very request (go tool charter run logs --since 1d --find 8f3a…).
+	ref := Reference(r)
+	logFailure(r, err, ref)
+	w.Header().Set("X-Request-Id", ref)
+	http.Error(w, "Something went wrong. Reference: "+ref, http.StatusInternalServerError)
 }
+
+// Reference is what a request is known by, to quote and to find in the logs: Cloudflare's own id of it (the
+// Cf-Ray header), or on a machine that has none, one made here.
+func Reference(r *http.Request) string {
+	if ray := r.Header.Get("Cf-Ray"); ray != "" {
+		return ray
+	}
+	b := make([]byte, 8)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// logFailure writes one line for a request the app could not answer: JSON, which Workers Logs keeps field by field,
+// so a failure is found by its route, its reference or its words. It says what was asked and what went wrong, and
+// never what was sent: no body, no query, no header, nobody's name.
+func logFailure(r *http.Request, err error, ref string) {
+	line, _ := json.Marshal(struct {
+		Level     string `json:"level"`
+		Message   string `json:"message"`
+		Method    string `json:"method"`
+		Path      string `json:"path"`
+		Route     string `json:"route,omitempty"`
+		Status    int    `json:"status"`
+		Error     string `json:"error"`
+		Reference string `json:"reference"`
+	}{"error", "the app could not answer a request", r.Method, r.URL.Path, r.Pattern, http.StatusInternalServerError, err.Error(), ref})
+	fmt.Fprintln(failures, string(line))
+}
+
+// failures is where a failed request is logged: the Worker's standard error, which Cloudflare keeps.
+var failures io.Writer = os.Stderr
 
 // llms is /llms.txt as seo.Site takes it: the app's own LLMs, with the tree's addresses; else the docs'.
 func (a *App) llms() func(origin string) string {

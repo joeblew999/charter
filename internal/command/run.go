@@ -65,9 +65,7 @@ var tasks = []task{
 	}},
 	{"ui:theme", "the app's style and theme (gsxui's presets): charter run ui:theme shows it; charter run ui:theme <preset> switches to a file, a share code from https://ui.gsxhq.dev/theme, or a URL (--only theme|style)", uiTheme},
 	// The Worker.
-	{"logs", "the deployed Worker's live logs, until Ctrl-C (wrangler tail; an environment first: charter run logs staging)", func(p *project.Project, a []string) {
-		check(cloudflare(p, append([]string{"tail"}, envArgs(p, &a)...), a))
-	}},
+	{"logs", "the deployed Worker's logs: live until Ctrl-C (wrangler tail), or with --since 1h what Cloudflare kept, --errors for only what went wrong, --find <text> for a request's reference (an environment first: charter run logs staging)", logs},
 	{"people", "the app's own people (the sign-in screen): who signed up, and what each is (--deployed for the deployed Worker)", people},
 	{"people:invite", "a link that makes whoever signs up through it, once, within the hour, a role: charter run people:invite admin (--deployed for the deployed Worker). How an app gets its first admin", peopleInvite},
 	{"mail", "the domains that send email in the account (Cloudflare Email Sending)", mail},

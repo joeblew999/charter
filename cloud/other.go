@@ -29,3 +29,4 @@ type DB struct{}
 
 func Bindings() []Binding                 { return nil }
 func Probe(string) (time.Duration, error) { return 0, ErrNotCloudflare }
+func Runtimes() (int, int64, int64, bool) { return 0, 0, 0, false }

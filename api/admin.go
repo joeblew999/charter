@@ -110,6 +110,16 @@ func (a *Auth) CancelInvitation(r *http.Request, id string) error {
 type System struct {
 	Bindings []cloud.Binding `json:"bindings"`
 	Settings []cloud.Binding `json:"settings"`
+	// Memory is what this instance's Go runtimes hold: nil when the Worker's entry does not say.
+	Memory *Memory `json:"memory,omitempty"`
+}
+
+// Memory is the Go runtimes of one instance of the Worker: how many are alive, what they hold between them and
+// what they may, in bytes. A Worker has 128 MB for everything; Cloudflare ends one that takes more.
+type Memory struct {
+	Runtimes int   `json:"runtimes"`
+	Held     int64 `json:"held"`
+	Budget   int64 `json:"budget"`
 }
 
 // System is what the Worker is bound to, for whoever may manage people.
@@ -118,6 +128,9 @@ func (a *Auth) System(r *http.Request) (System, error) {
 		return System{}, err
 	}
 	s := System{Bindings: []cloud.Binding{}, Settings: []cloud.Binding{}}
+	if count, held, budget, ok := cloud.Runtimes(); ok {
+		s.Memory = &Memory{count, held, budget}
+	}
 	for _, b := range cloud.Bindings() {
 		if b.Kind == cloud.KindText {
 			s.Settings = append(s.Settings, b)

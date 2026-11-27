@@ -82,6 +82,11 @@ admin_bound = "バインド済み"
 admin_probe = "確認"
 admin_tables = "テーブルとそれぞれの行数。"
 admin_migrations = "マイグレーション"
+admin_memory = "メモリ"
+admin_memory_intro = "この Worker インスタンスが現在 Go ランタイムで保持している量。Worker が使えるのは全体で 128 MB で、超えると Cloudflare が終了させます。"
+admin_runtimes = "稼働中の Go ランタイム"
+admin_held = "保持量"
+admin_budget = "上限"
 
 [gsxui]
 close = "閉じる"

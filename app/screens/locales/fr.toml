@@ -82,6 +82,11 @@ admin_bound = "lié"
 admin_probe = "Vérifier"
 admin_tables = "Les tables et leur nombre de lignes."
 admin_migrations = "Migrations"
+admin_memory = "Mémoire"
+admin_memory_intro = "Ce que cette instance du Worker retient en ce moment dans ses runtimes Go. Un Worker dispose de 128 Mo pour tout, et Cloudflare arrête celui qui en prend plus."
+admin_runtimes = "Runtimes Go actifs"
+admin_held = "Ils retiennent"
+admin_budget = "Ils peuvent retenir"
 
 [gsxui]
 close = "Fermer"

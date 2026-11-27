@@ -117,6 +117,12 @@ admin_bound = "bound"
 admin_probe = "Check"
 admin_tables = "Tables, and how many rows each has."
 admin_migrations = "Migrations"
+# On the system page: how much memory the Worker's Go runtimes hold, of what they may.
+admin_memory = "Memory"
+admin_memory_intro = "What this instance of the Worker holds in Go runtimes now. A Worker has 128 MB for everything, and Cloudflare ends one that takes more."
+admin_runtimes = "Go runtimes alive"
+admin_held = "They hold"
+admin_budget = "They may hold"
 
 [gsxui]
 close = "Close"

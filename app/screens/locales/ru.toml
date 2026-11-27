@@ -82,6 +82,11 @@ admin_bound = "привязано"
 admin_probe = "Проверить"
 admin_tables = "Таблицы и число строк в каждой."
 admin_migrations = "Миграции"
+admin_memory = "Память"
+admin_memory_intro = "Сколько этот экземпляр Worker сейчас удерживает в средах выполнения Go. У Worker 128 МБ на всё, и Cloudflare завершает тот, что берёт больше."
+admin_runtimes = "Активные среды Go"
+admin_held = "Они удерживают"
+admin_budget = "Им разрешено"
 
 [gsxui]
 close = "Закрыть"

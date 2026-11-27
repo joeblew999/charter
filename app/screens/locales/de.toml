@@ -82,6 +82,11 @@ admin_bound = "gebunden"
 admin_probe = "Prüfen"
 admin_tables = "Tabellen und die Anzahl ihrer Zeilen."
 admin_migrations = "Migrationen"
+admin_memory = "Speicher"
+admin_memory_intro = "Was diese Instanz des Workers gerade in Go-Laufzeiten hält. Ein Worker hat 128 MB für alles; Cloudflare beendet einen, der mehr braucht."
+admin_runtimes = "Aktive Go-Laufzeiten"
+admin_held = "Sie belegen"
+admin_budget = "Sie dürfen belegen"
 
 [gsxui]
 close = "Schließen"

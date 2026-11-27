@@ -82,6 +82,11 @@ admin_bound = "已綁定"
 admin_probe = "檢查"
 admin_tables = "資料表及各自的列數。"
 admin_migrations = "遷移"
+admin_memory = "記憶體"
+admin_memory_intro = "此 Worker 執行個體目前在 Go 執行階段中佔用的記憶體。一個 Worker 總共只有 128 MB，超出時 Cloudflare 會將其終止。"
+admin_runtimes = "作用中的 Go 執行階段"
+admin_held = "已佔用"
+admin_budget = "可佔用"
 
 [gsxui]
 close = "關閉"

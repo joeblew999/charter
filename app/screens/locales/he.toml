@@ -82,6 +82,11 @@ admin_bound = "מקושר"
 admin_probe = "בדיקה"
 admin_tables = "הטבלאות ומספר השורות בכל אחת."
 admin_migrations = "מיגרציות"
+admin_memory = "זיכרון"
+admin_memory_intro = "מה שהמופע הזה של ה־Worker מחזיק כעת בסביבות ריצה של Go. ל־Worker יש 128 מ״ב לכול, ו־Cloudflare מסיים את מי שלוקח יותר."
+admin_runtimes = "סביבות ריצה פעילות של Go"
+admin_held = "הן מחזיקות"
+admin_budget = "מותר להן להחזיק"
 
 [gsxui]
 close = "סגירה"
