@@ -1,6 +1,6 @@
 # Watching a deployed Worker
 
-A deployed Worker fails in ways nothing on your machine shows. Cloudflare ends one that takes more than 128 MB of memory, or too much CPU time, and every request it was answering gets a 503: no code of the app runs, no test of its logic fails, and `charter dev` has no such limits. charter looks where that is recorded, so that you do not have to.
+A deployed Worker fails in ways nothing on your machine shows. Cloudflare ends one that takes more than [128 MB of memory](https://developers.cloudflare.com/workers/platform/limits/#memory), or [too much CPU time](https://developers.cloudflare.com/workers/platform/limits/#cpu-time), and every request it was answering gets a 503 ([all of Cloudflare's limits](#cloudflares-limits)): no code of the app runs, no test of its logic fails, and `charter dev` has no such limits. charter looks where that is recorded, so that you do not have to.
 
 ## Is it well?
 
@@ -35,9 +35,9 @@ Go on Workers lives within three limits, and an app drifts towards each a little
 
 | Number | Its limit | Said by |
 |---|---|---|
-| The size of what is deployed, uncompressed | 64 MiB, on every plan | `charter build` |
-| The CPU time the Worker takes to start | 1 second | `charter deploy`, from what wrangler reports |
-| The memory one Go runtime holds | 128 MB for all of them | `charter test`, from what the Worker says |
+| The size of what is deployed, uncompressed | [64 MiB](https://developers.cloudflare.com/workers/platform/limits/#worker-size), on every plan | `charter build` |
+| The CPU time the Worker takes to start | [1 second](https://developers.cloudflare.com/workers/platform/limits/#worker-startup-time) | `charter deploy`, from what wrangler reports |
+| The memory one Go runtime holds | [128 MB](https://developers.cloudflare.com/workers/platform/limits/#memory) for all of them | `charter test`, from what the Worker says |
 
 ```
 ✓ build/: 27.25 MiB of the 64.00 MiB a Worker may be, uncompressed
@@ -49,6 +49,39 @@ The size is all of `build/`: the Wasm, and the JavaScript wrangler bundles from 
 A number is remarked on when it is past 80% of its limit, or above what is usual here by more than it varies by itself: 10% for the size, which is the same for the same code; 50% for the start-up, which varies from deploy to deploy; 30% for a runtime's memory, which grows with what it has served.
 
 They are the numbers that say when a limit is coming, and the ones to measure a change of compiler or of design against.
+
+## Cloudflare's limits
+
+What Cloudflare allows a Worker, and what it charges, as its own pages said on 2026-11-27. They change: the links are the authority.
+
+| Limit | Workers Free | Workers Paid | Cloudflare's page |
+|---|---|---|---|
+| The Worker's size, uncompressed. There is no limit on its compressed size | 64 MiB | 64 MiB | [Worker size](https://developers.cloudflare.com/workers/platform/limits/#worker-size) |
+| CPU time to start (the module's top level) | 1 second | 1 second | [Worker startup time](https://developers.cloudflare.com/workers/platform/limits/#worker-startup-time) |
+| Memory, for each isolate, shared by every request it is answering | 128 MB | 128 MB | [Memory](https://developers.cloudflare.com/workers/platform/limits/#memory) |
+| CPU time for each request | 10 ms | 30 s by default, up to 5 minutes | [CPU time](https://developers.cloudflare.com/workers/platform/limits/#cpu-time) |
+| Requests | 100,000 a day | no limit | [Daily requests](https://developers.cloudflare.com/workers/platform/limits/#daily-requests) |
+
+What Workers Paid charges, beyond its $5 a month:
+
+| What is counted | Included each month | Then | Cloudflare's page |
+|---|---|---|---|
+| Requests to the Worker (requests for static assets are free) | 10 million | $0.30 a million | [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/#workers) |
+| CPU time while the Worker runs: not time spent waiting for D1, a fetch or KV, and not its start-up | 30 million ms | $0.02 a million ms | [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/#workers) |
+| A Durable Object's time while it is active, counted at 128 MB whatever it holds | 400,000 GB-s | $12.50 a million GB-s | [Durable Objects pricing](https://developers.cloudflare.com/durable-objects/platform/pricing/#compute-billing) |
+| Requests to a Durable Object | 1 million | $0.15 a million | [Durable Objects pricing](https://developers.cloudflare.com/durable-objects/platform/pricing/#compute-billing) |
+
+That a Worker's start-up is not billed is said on [Dynamic Workers' pricing](https://developers.cloudflare.com/dynamic-workers/pricing/#cpu-time), where it is the difference.
+
+What that means for a charter app, from the example over the 30 days to 2026-11-27:
+
+- **It is for Workers Paid.** A Go Worker takes more than Free's 10 ms of CPU for many of its requests: the example's median is 10 ms, its 99th percentile 166 ms.
+- **Size is not near its limit.** The example is 27.25 MiB of the 64. What size costs is time to start, which is not billed: it is the reader who waits for it.
+- **Memory is the limit a Go Worker meets first.** A runtime holds 13 MB or more of the isolate's 128 MB ([below](#memory)), and in the 7 days to 2026-11-27 the example had 123 requests (0.6%) ended over it.
+- **CPU time is what it pays for.** The example took 20 ms a request: 0.42 million ms for its 20,930 requests, well inside the 30 million included. Past what is included, 20 ms a request is $0.40 a million requests, beside the $0.30 for the requests themselves.
+- **The hub is billed by time.** A page's stream held open keeps the hub's Durable Object active, which is counted at 128 MB a second. The example's hub was active for 1,406 seconds: 180 GB-s of the 400,000 included.
+
+`go tool charter run health` says the CPU time and how requests ended. What the account has used this month, for every Worker on it, is on the Cloudflare dashboard's billing page.
 
 ## Under load
 
@@ -101,7 +134,7 @@ The line says what was asked and what went wrong. It never has what was sent: no
 
 ## Memory
 
-A Go runtime holds 13 MB or more for as long as it serves a request. So two things are built in:
+A Go runtime holds 13 MB or more for as long as it serves a request, of the [128 MB](https://developers.cloudflare.com/workers/platform/limits/#memory) an isolate has for every request it is answering. So two things are built in:
 
 - **Nothing long holds one.** A page's stream is held by the hub, in JavaScript ([live feeds](05-live.md)).
 - **The runtimes share a budget.** The Worker counts what all its Go runtimes hold and keeps the sum under it; a request that would take it over waits a moment for one to finish.

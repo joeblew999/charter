@@ -40,7 +40,7 @@ Write a note on [the home page](../) in one tab and it appears in another. Creat
 
 ## A page's stream holds no Go
 
-A Go runtime takes 13 MB or more of a Worker's 128 MB for as long as it serves a request, and a stream is a request that lasts minutes. Served by Go, a handful of open pages took a Worker over its memory, and Cloudflare ended it with every request it was answering (a 503 for each; `exceededMemory` in its analytics).
+A Go runtime takes 13 MB or more of a Worker's [128 MB](https://developers.cloudflare.com/workers/platform/limits/#memory) for as long as it serves a request, and a stream is a request that lasts minutes. Served by Go, a handful of open pages took a Worker over its memory, and Cloudflare ended it with every request it was answering (a 503 for each; `exceededMemory` in its analytics).
 
 So a page's stream is the hub's, a small Durable Object in JavaScript, and it says one thing: there is something after the position you have, ask for it.
 
