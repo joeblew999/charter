@@ -121,6 +121,16 @@ charter-example, GET /docs/ from 30 places (Globalping), the time from the conne
 
 The places are the probes of [Globalping](https://globalping.io), a public service: it is told the Worker's address and the page, and nothing else. Each asks once, then again. The same is then said for each continent, both rounds together: what a page waits for that is far from some of its readers, a database's primary above all, shows there and in no single number. Last, who answered the page's statements on D1, where the Worker says: the primary, or a copy near the reader ([reads near the reader](06-database.md#reads-near-the-reader)). Which answers were a first hit is counted, not guessed: the Worker says which runtime answered (the header `x-go-runtime`), and one that started as the instance did is a first hit. The time is from the connection made to the first byte, so it is what the Worker and Cloudflare take, without the reader's distance to Cloudflare. Without an account Globalping gives an address 250 probes an hour; this takes two for each place.
 
+### Every data centre, by country
+
+```sh
+go tool charter run cold -everywhere
+```
+
+Cloudflare runs a Worker in the data centre a request arrives at, and which one that is depends on the network the request comes from, not on a place on a map: two probes a city apart can reach different ones. So it is found by asking. One probe in every country Globalping has probes in asks for the page, once, and the answer's `cf-ray` header ends with the code of the data centre that answered. What each probe reached is kept as the map, in `.charter/colos.json`: the probe's country, city and network, the data centre, whether a new instance answered, how long it took, and who answered the page's statements on D1.
+
+It says how many of [the data centres Cloudflare lists](https://www.cloudflarestatus.com) were reached, then each one, with the countries that reached it and what a reader there waited. It costs one of Globalping's tests for each country, about 120 of the 250 an address has in an hour; with `GLOBALPING_TOKEN` set to a Globalping account's token, the tests are that account's.
+
 What it found on 2026-11-27, from 30 places each:
 
 | | A first hit, half under | A running instance, half under |

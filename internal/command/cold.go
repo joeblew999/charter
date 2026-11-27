@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -30,6 +31,7 @@ import (
 //	charter run cold                 the deployed Worker's front page, from 30 places
 //	charter run cold staging         an environment
 //	charter run cold -path /docs/ -from 50
+//	charter run cold -everywhere     one probe in every country: the map of which data centre each reaches (colos.go)
 //
 // It is for after a change to what the Worker loads or does as it starts, never part of a deploy. Without an
 // account Globalping gives an address 250 probes an hour, 50 a measurement: this takes two for each place.
@@ -38,9 +40,10 @@ func coldTask(p *project.Project, args []string) {
 	fs := flag.NewFlagSet("charter run cold", flag.ExitOnError)
 	from := fs.Int("from", 30, "how many places to ask from (50 at most)")
 	path := fs.String("path", "/", "the page to ask for")
+	all := fs.Bool("everywhere", false, "one probe in every country Globalping has probes in, once: which of Cloudflare's data centres each reaches, and what a reader there waits (the map, kept in .charter/colos.json)")
 	fs.Parse(args)
 	if fs.NArg() > 0 || *from < 1 || *from > 50 || !strings.HasPrefix(*path, "/") {
-		check(errors.New("usage: charter run cold [env] [-from 30] [-path /]"))
+		check(errors.New("usage: charter run cold [env] [-from 30] [-path /] [-everywhere]"))
 	}
 	base := p.URL
 	if env != "" {
@@ -50,11 +53,15 @@ func coldTask(p *project.Project, args []string) {
 	if base == "" || err != nil || at.Scheme != "https" {
 		check(errors.New(`charter.toml has no https address for it: url = "https://…" (go tool charter deploy writes it)`))
 	}
+	if *all {
+		check(everywhere(p, deployedName(p, env), at.Host, *path))
+		return
+	}
 	first, id, err := probed(at.Host, *path, []map[string]string{{"magic": "world"}}, *from)
 	check(err)
 	// The same probes again: an instance the first request started is there for the second, where Cloudflare
 	// sends it to the same one.
-	again, _, err := probed(at.Host, *path, id, *from)
+	again, _, err := probed(at.Host, *path, id, 0)
 	check(err)
 
 	say("%s, GET %s from %d places (Globalping), the time from the connection to the first byte:", deployedName(p, env), *path, len(first))
@@ -136,7 +143,8 @@ func quantile(sorted []float64, q float64) float64 {
 // probe is one place's answer, as Globalping gives it (its API's MeasurementResultItem, for an http measurement).
 type probe struct {
 	Probe struct {
-		Continent, Country, City string
+		Continent, Country, City, Network string
+		ASN                               int
 	}
 	Result struct {
 		Status     string
@@ -205,8 +213,9 @@ func probed(host, path string, locations any, limit int) ([]probe, string, error
 		"measurementOptions": map[string]any{"protocol": "HTTPS", "request": map[string]any{
 			"method": "GET", "path": path, "headers": map[string]string{"x-go-runtime": "?"}}},
 	}
-	// An earlier measurement's probes are all of them: Globalping takes no limit beside its id.
-	if _, same := locations.(string); !same {
+	// How many probes: for places that say none of their own. An earlier measurement's probes are all of them, and
+	// a place that says its own (the map's, one for each country) takes no other.
+	if limit > 0 {
 		ask["limit"] = limit
 	}
 	body, _ := json.Marshal(ask)
@@ -217,6 +226,10 @@ func probed(host, path string, locations any, limit int) ([]probe, string, error
 			return nil, err
 		}
 		req.Header.Set("User-Agent", "charter-cli")
+		// An account's token, when there is one: more tests an hour than an address gets without.
+		if token := os.Getenv("GLOBALPING_TOKEN"); token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
 		if body != nil {
 			req.Header.Set("Content-Type", "application/json")
 		}
