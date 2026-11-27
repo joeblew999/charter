@@ -10,6 +10,11 @@
   // (tried on example/ and site/). And it is run in every module that uses the one updated through a local replace
   // (example/ and site/ use charter's root module so), so their go.sum follow an update of the library's.
   postUpdateOptions: ["gomodTidyE", "gomodTidyAll"],
+  // Before tidying, Renovate runs go get -t on these, which needs every package they match to be there. In an app,
+  // pages/screens and ui are .gsx until charter generates their Go, so it asks only of locales, whose Go is
+  // committed (in charter's root module it matches nothing, which go only warns of); the tidy after it does the rest.
+  // Tried on all three modules: the go.mod and go.sum are what a tidy after generating gives.
+  goGetDirs: ["./locales/..."],
   // example/ and site/ build against the checkout beside them (go.mod's replace): their charter is this one.
   ignoreDeps: ["github.com/joeblew999/charter"],
   // The API's clients are written by Fern (go tool charter pack), go.mod and all: Fern decides what they depend on.
@@ -23,14 +28,6 @@
       enabled: false,
     },
     { matchManagers: ["gomod"], groupName: "go modules" },
-    {
-      // Before tidying, Renovate runs go get -t ./... , which needs every package to be there. In an app, pages/screens
-      // and ui are .gsx until charter generates their Go: it asks only of locales, whose Go is committed, and the tidy
-      // after it does the rest.
-      matchManagers: ["gomod"],
-      matchFileNames: ["example/go.mod", "site/go.mod"],
-      goGetDirs: ["./locales"],
-    },
     { matchManagers: ["npm"], groupName: "npm" },
     {
       // gsx's Vite plugin says which Vite it works with (its peer dependency): a new major waits for it.
