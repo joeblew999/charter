@@ -51,7 +51,7 @@ func Env(args []string) {
 					case !ok:
 						missing = true
 						fmt.Printf("✗ pins       mise.toml does not pin %s\n", short)
-					case got == want.Version:
+					case strings.TrimPrefix(got, "v") == strings.TrimPrefix(want.Version, "v"):
 						same = append(same, short+" "+got)
 						file = append(file, want.File)
 					default:

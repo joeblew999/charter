@@ -172,9 +172,10 @@ func raise(file string, want map[string]string) ([]string, error) {
 	return raised, os.WriteFile(file, []byte(strings.Join(lines, "\n")), 0o644)
 }
 
-// older reports whether version a is older than b: 1.27.1 than 1.27.4. Parts that are no numbers compare as text.
+// older reports whether version a is older than b: 1.27.1 than 1.27.4. A leading v is no part of it (a release's
+// tag, v1.50.0). Parts that are no numbers compare as text.
 func older(a, b string) bool {
-	as, bs := strings.Split(a, "."), strings.Split(b, ".")
+	as, bs := strings.Split(strings.TrimPrefix(a, "v"), "."), strings.Split(strings.TrimPrefix(b, "v"), ".")
 	for i := range max(len(as), len(bs)) {
 		var x, y string
 		if i < len(as) {
@@ -293,7 +294,7 @@ func toolchain(p *project.Project, fix bool) error {
 			differ = append(differ, name+": mise.toml does not pin it")
 			continue
 		}
-		if got := running(p, name); got != want.Version {
+		if got := running(p, name); strings.TrimPrefix(got, "v") != strings.TrimPrefix(want.Version, "v") {
 			differ = append(differ, fmt.Sprintf("%s %s runs here; %s pins %s", name, orNone(got, "(none)"), want.File, want.Version))
 		}
 	}

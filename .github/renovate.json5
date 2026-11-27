@@ -54,6 +54,12 @@
     },
     { matchUpdateTypes: ["minor", "patch", "digest"], automerge: true },
     { matchManagers: ["mise"], groupName: "tools" },
+    {
+      // A tool mise takes from GitHub releases (fnox) is tagged v1.50.0 there; mise.toml pins 1.50.0.
+      matchManagers: ["mise"],
+      matchDatasources: ["github-releases"],
+      extractVersion: "^v(?<version>.+)$",
+    },
     { matchManagers: ["github-actions"], groupName: "actions" },
   ],
 }

@@ -15,6 +15,7 @@ func TestOlder(t *testing.T) {
 	}{
 		{"1.27.1", "1.27.4", true}, {"1.27.4", "1.27.4", false}, {"1.27.10", "1.27.4", false},
 		{"24.22.3", "26.13.1", true}, {"1.28", "1.27.4", false}, {"1.27", "1.27.1", true},
+		{"1.48.0", "v1.50.0", true}, {"v1.50.0", "1.50.0", false}, {"1.50.0", "v1.50.0", false},
 	} {
 		if got := older(c.a, c.b); got != c.want {
 			t.Errorf("older(%s, %s) = %v", c.a, c.b, got)
