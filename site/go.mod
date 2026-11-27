@@ -64,7 +64,7 @@ require (
 	modernc.org/sqlite v1.63.0 // indirect
 )
 
-replace github.com/joeblew999/charter => ..
+replace github.com/joeblew999/charter => ../
 
 tool (
 	github.com/gsxhq/gsx/cmd/gsx
