@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/tailscale/hujson"
@@ -141,8 +142,13 @@ func patch(p *project.Project, operations []map[string]any) error {
 	if err := v.Patch(ops); err != nil {
 		return err
 	}
-	return os.WriteFile(path, v.Pack(), 0o644)
+	// Written as the rest of the file is: a space after each comma and colon.
+	out := addedKey.ReplaceAll(v.Pack(), []byte(`, "$1": "$2"`))
+	return os.WriteFile(path, out, 0o644)
 }
+
+// addedKey is a key as a JSON Patch adds one: with no space around it.
+var addedKey = regexp.MustCompile(`,"(database_id|id)":"([^"]*)"`)
 
 // recordResources writes into wrangler.jsonc the id of each resource the deployed Worker is bound to that the file
 // leaves unsaid: what wrangler made on this deploy. From then on the Worker is bound to that one, by its id.

@@ -16,15 +16,16 @@
   // MAIL_FROM is whom the email card writes as: an address on a domain of the account with Email Routing on. Whom
   // it writes to is the secret MAIL_TO (wrangler secret put MAIL_TO; .dev.vars locally).
   "vars": { "APP_NAME": "charter-example", "MAIL_FROM": "charter-example@ubuntusoftware.net" },
-  // No ids here: wrangler makes the database, the KV namespace, the bucket and the queue on the first deploy, under
-  // these names, and finds them again by name.
+  // The first deploy makes the database, the KV namespace, the bucket and the queue. charter deploy then writes the
+  // database's and the namespace's ids here: the Worker is bound to exactly those from then on. A bucket and a queue
+  // are what they are by name.
   // The log of messages. charter deploy applies migrations/ first.
-  "d1_databases": [{ "binding": "DB", "database_name": "charter-example", "migrations_dir": "db/migrations" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "charter-example", "migrations_dir": "db/migrations", "database_id": "2f1ba582-8c74-47f3-b617-3ec07d65f323" }],
   // One hub wakes every open page when a message is posted (charter's hub.mjs).
   "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }],
   // The Cloudflare page (/bindings): one binding of each kind, used through workers-go (package bindings).
-  "kv_namespaces": [{ "binding": "KV" }],
+  "kv_namespaces": [{ "binding": "KV", "id": "cfa697f605604bddbf81d57c8be01b04" }],
   "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "charter-example" }],
   "queues": {
     "producers": [{ "binding": "QUEUE", "queue": "charter-example" }],

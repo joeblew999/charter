@@ -47,15 +47,38 @@ go tool charter run secrets:put staging ADMIN_TOKEN --random
 
 Someone who clones the app has the file and not the values. charter tells them which are missing; nothing else stops.
 
-## Taking a Worker away
+## Resources
 
-```sh
-go tool charter run delete                    # what there is: the Worker, its secrets, its data. Changes nothing
-go tool charter run delete my-worker          # the Worker and its secrets; its data stays
-go tool charter run delete my-worker --data   # and its database, bucket, queue and KV namespace
+The Worker's database, KV namespace, bucket and queue are named in `wrangler.jsonc`, and the first deploy makes them. What a resource *is* is its id (a database, a KV namespace) or its name (a bucket and a queue, which Cloudflare knows by name and cannot rename).
+
+charter deploy writes the ids into `wrangler.jsonc` after it has made them, and you commit that:
+
+```jsonc
+"d1_databases": [{ "binding": "DB", "database_name": "my-app", "database_id": "c26412c3-…" }],
+"kv_namespaces": [{ "binding": "KV", "id": "a20e27f8…" }],
 ```
 
-It deletes, so it is asked for twice: the second time with the Worker's name. Without `--data`, `go tool charter deploy` brings the same app back: its data as it was, and its secrets from fnox, which deploy puts on a Worker that lacks them.
+From then on the Worker is bound to exactly that database and that namespace, whatever the Worker or the resource is later called. Rename the database in the file and it is the same database, with its rows.
+
+A bucket's or a queue's name is different: a changed name is a new, empty one, and the old one is left behind with what it holds. charter deploy stops and says so; `go tool charter deploy --new-resources` goes ahead on purpose.
+
+```sh
+go tool charter run resources    # what the file names, and what the deployed Worker is bound to
+```
+
+The ids are no secrets. They do tie the repository to the account it deploys to; `charter create` starts a new app without them.
+
+## Taking an app away
+
+```sh
+go tool charter run delete                         # what there is: the Worker, its secrets, its data. Changes nothing
+go tool charter run delete my-worker               # all of it
+go tool charter run delete my-worker --keep-data   # the Worker and its secrets; its data stays
+```
+
+It deletes, so it is asked for twice: the second time with the Worker's name. Deleting the app deletes all of it, and `wrangler.jsonc` no longer names the ids of what is gone, so the next deploy makes its own.
+
+With `--keep-data` the database, namespace, bucket and queue stay, and the file still names them: `go tool charter deploy` brings the same app back with the same data, and with its secrets from fnox, which deploy puts on a Worker that lacks them.
 
 Cloudflare never gives a secret back. So while the Worker has a secret that fnox does not, delete stops and names it.
 

@@ -55,6 +55,9 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
 - **A test leaves the Worker as it found it.** The same tests ask a deployed Worker: whoever a test signs up it
   deletes (`apptest`'s `SignUp` does), and a row it writes it takes away. The example's `test/main_test.go` fails a
   run that leaves more than the seed.
+- **A resource is its id.** `charter deploy` writes the database's and the KV namespace's ids into
+  `wrangler.jsonc` and stops on a renamed bucket or queue (a new, empty one). `charter run delete` takes the whole
+  app away, asked twice; nothing on Cloudflare is made or removed by hand.
 - **A secret is never fetched by hand.** An app's secrets are declared in its own `fnox.toml` (names and providers,
   never values; an environment is a profile). `charter run secrets:put` has fnox keep one and puts it on the Worker;
   `charter test --deployed` hands the tests the ones fnox has.

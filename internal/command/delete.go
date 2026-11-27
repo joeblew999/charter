@@ -188,9 +188,9 @@ func resourcesOf(p *project.Project, env string) ([]resource, error) {
 		case "queue":
 			queues = append(queues, resource{"queue", is, []string{"queues", "delete", is}})
 		case "d1":
-			rest = append(rest, resource{"database", is, []string{"d1", "delete", is, "--skip-confirmation"}})
+			rest = append(rest, resource{"database", strings.TrimPrefix(d.Label, "database ") + " (" + is + ")", []string{"d1", "delete", is, "--skip-confirmation"}})
 		case "kv_namespace":
-			rest = append(rest, resource{"KV", is, []string{"kv", "namespace", "delete", "--namespace-id", is}})
+			rest = append(rest, resource{"KV", d.Binding + " (" + is + ")", []string{"kv", "namespace", "delete", "--namespace-id", is}})
 		case "r2_bucket":
 			rest = append(rest, resource{"bucket", is, []string{"r2", "bucket", "delete", is}})
 		}
