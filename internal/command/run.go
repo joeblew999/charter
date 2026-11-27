@@ -72,8 +72,8 @@ var tasks = []task{
 	{"people:invite", "a link that makes whoever signs up through it, once, within the hour, a role: charter run people:invite admin (--deployed for the deployed Worker). How an app gets its first admin", peopleInvite},
 	{"mail", "the domains that send email in the account (Cloudflare Email Sending)", mail},
 	{"mail:enable", "onboard a domain to send email from, to anyone: charter run mail:enable mail.example.com (a subdomain keeps its records apart from the domain's own mail; needs Workers Paid)", mailEnable},
-	{"secrets", "the secrets the app names (.dev.vars.example), and which fnox has for the deployed Worker", secrets},
-	{"secrets:put", "a secret put on the deployed Worker and kept in fnox: charter run secrets:put ADMIN_TOKEN --random (a new random value), or the value fnox has, or one piped in", secretsPut},
+	{"secrets", "the secrets the app names (.dev.vars.example), and which fnox has for the deployed Worker, from the app's fnox.toml (an environment first: charter run secrets staging, its profile)", secrets},
+	{"secrets:put", "a secret declared in the app's fnox.toml, kept by fnox's provider and put on the deployed Worker: charter run secrets:put ADMIN_TOKEN --random (a new random value), or the value fnox has, or one piped in (an environment first: charter run secrets:put staging ADMIN_TOKEN --random)", secretsPut},
 	{"bench", "how long the Worker takes to answer, on wrangler dev: charter run bench /  /api/hello  (-n requests each)", bench},
 }
 

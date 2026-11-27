@@ -21,15 +21,31 @@ charter runs wrangler under fnox, which it brings itself. The token comes from y
 
 ## Secrets
 
-The Worker's secrets are named in `.dev.vars.example`, each with a throwaway value for `charter dev`. Their real values are kept in fnox, beside Cloudflare's credentials, each under charter's name and the Worker's: `ADMIN_TOKEN` of the Worker `my-app` is `CHARTER_MY_APP_ADMIN_TOKEN`.
+The Worker's secrets are named in `.dev.vars.example`, each with a throwaway value for `charter dev`. Their real values are fnox's to keep, declared in the app's own `fnox.toml`, which you commit:
 
-```sh
-go tool charter run secrets                         # which the app names, and which fnox has
-go tool charter run secrets:put ADMIN_TOKEN --random   # a new random value: kept in fnox, put on the deployed Worker
-go tool charter run secrets:put MAIL_TO             # the value fnox has, or one piped in
+```toml
+[secrets]
+ADMIN_TOKEN = { provider = "keychain", value = "CHARTER_MY_APP_ADMIN_TOKEN", if_missing = "ignore" }
 ```
 
-A value is never printed and never on a command line. `go tool charter test --deployed` hands the tests the ones fnox has.
+That is a name and where its value is kept, never the value. The provider is yours to choose: the keychain, a password manager, an encrypted file ([fnox's providers](https://fnox.jdx.dev)). So each app has its own secrets, and nothing of an app's is in your global config.
+
+```sh
+go tool charter run secrets                            # which the app names, and which fnox has
+go tool charter run secrets:put ADMIN_TOKEN --random   # a new random value: kept by fnox, put on the deployed Worker
+echo "$address" | go tool charter run secrets:put MAIL_TO   # a value of your own, piped in
+```
+
+A value is never printed and never on a command line. charter does not write one into `fnox.toml`: with no provider to keep it, it stops and says how to add one. `go tool charter test --deployed` hands the tests the secrets fnox has.
+
+An environment of `wrangler.jsonc` is a profile of `fnox.toml`, with the same names and its own values:
+
+```sh
+go tool charter run secrets staging
+go tool charter run secrets:put staging ADMIN_TOKEN --random
+```
+
+Someone who clones the app has the file and not the values. charter tells them which are missing; nothing else stops.
 
 ## Email
 

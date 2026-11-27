@@ -1,0 +1,4 @@
+[secrets]
+READ_TOKEN= { provider = "keychain", value = "CHARTER_CHARTER_EXAMPLE_READ_TOKEN", if_missing = "ignore" }
+WRITE_TOKEN= { provider = "keychain", value = "CHARTER_CHARTER_EXAMPLE_WRITE_TOKEN", if_missing = "ignore" }
+ADMIN_TOKEN= { provider = "keychain", value = "CHARTER_CHARTER_EXAMPLE_ADMIN_TOKEN", if_missing = "ignore" }

@@ -55,7 +55,8 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
 - **A test leaves the Worker as it found it.** The same tests ask a deployed Worker: whoever a test signs up it
   deletes (`apptest`'s `SignUp` does), and a row it writes it takes away. The example's `test/main_test.go` fails a
   run that leaves more than the seed.
-- **A secret is never fetched by hand.** `charter run secrets:put` keeps one in fnox and puts it on the Worker;
+- **A secret is never fetched by hand.** An app's secrets are declared in its own `fnox.toml` (names and providers,
+  never values; an environment is a profile). `charter run secrets:put` has fnox keep one and puts it on the Worker;
   `charter test --deployed` hands the tests the ones fnox has.
 - **A page uses what it shows, and nothing else.** No page calls every binding to fill cards: each thing
   Cloudflare gives does a job in the app, on a page of its own (`example/built`). A call to another site happens

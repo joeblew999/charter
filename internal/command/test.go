@@ -130,7 +130,7 @@ func try(p *project.Project, commands []string, base string) error {
 	env := map[string]string{"BASE": base, "TARGET": target(base)}
 	if target(base) == "deployed" {
 		// The deployed Worker's secrets, which a test needs to be who may do what (apptest.Secret): from fnox.
-		for name, value := range deployedSecrets(p) {
+		for name, value := range deployedSecrets(p, envOf(p, base)) {
 			env[name] = value
 		}
 	}
