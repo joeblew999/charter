@@ -109,7 +109,7 @@ func TestDev(t *testing.T) {
 		}
 	}
 
-	until("charter dev serves the page", "/", "<h1>Notes</h1>")
+	until("charter dev serves the page", "/", ">Notes</h1>")
 	if fresh {
 		until("a new local database is seeded", "/", "Grace, moderating")
 	}
@@ -123,7 +123,7 @@ func TestDev(t *testing.T) {
 	until("a gsx edit", "/", `class="flex flex-col gap-3"`)
 
 	edit("locales/de.toml", `heading = "Notizen"`, `heading = "Pinnwand"`)
-	until("a translation alone", "/de/", "<h1>Pinnwand</h1>")
+	until("a translation alone", "/de/", ">Pinnwand</h1>")
 
 	edit("wrangler.jsonc", `"APP_NAME": "charter-example"`, `"APP_NAME": "charter-example, renamed"`)
 	until("a variable in wrangler.jsonc", "/api/hello", "Greetings from charter-example, renamed")
@@ -180,9 +180,9 @@ func TestDev(t *testing.T) {
 			t.Fatalf("✗ a broken catalog never failed the build\n%s", log.String())
 		}
 	}
-	until("a broken catalog keeps the last page serving", "/de/", "<h1>Pinnwand</h1>")
+	until("a broken catalog keeps the last page serving", "/de/", ">Pinnwand</h1>")
 	os.WriteFile("locales/de.toml", []byte(strings.Replace(string(catalog), `heading = "Pinnwand"`, `heading = "Zettel"`, 1)), 0o644)
-	until("mending the catalog", "/de/", "<h1>Zettel</h1>")
+	until("mending the catalog", "/de/", ">Zettel</h1>")
 
 	// What is running is written down for the other commands, and for an agent: charter env says where.
 	env, _ := exec.Command("go", "tool", "charter", "env").CombinedOutput()

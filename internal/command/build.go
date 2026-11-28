@@ -223,19 +223,16 @@ func wasm(p *project.Project, limit int, again bool) error {
 	if p.Health != "" {
 		entry += fmt.Sprintf("await go.warm({ paths: [%q] });\n", p.Health)
 	}
-	fetch := "go.fetch"
-	if again {
-		// Under charter dev the Worker says which build it is (/healthz's X-Charter-Build), so that charter dev knows
-		// when the Worker answering is the one just built. It is said here and not in the Go, which a change to a
-		// page of the docs or to a translation leaves as it was: such a save builds no Wasm.
-		id := strconv.FormatInt(time.Now().UnixNano(), 36)
-		if err := os.WriteFile(filepath.Join(p.Root, "build", "id"), []byte(id), 0o644); err != nil {
-			return err
-		}
-		entry += fmt.Sprintf("\n// charter dev: which build this is.\nconst fetch = async (request, env, ctx) => {\n  const response = await go.fetch(request, env, ctx);\n  if (new URL(request.url).pathname !== %q) return response;\n  const headers = new Headers(response.headers);\n  headers.set(\"X-Charter-Build\", %q);\n  return new Response(response.body, { status: response.status, headers });\n};\n", p.HealthPath(), id)
-		fetch = "fetch"
+	// The Worker says which build it is, on every answer (X-Charter-Build). An answer Cloudflare's cache gives is
+	// the one a build drew, so it says that build: charter deploy and the tests read from it that nothing kept is
+	// of an earlier deploy, and charter dev that the Worker answering is the one just built. It is said here and
+	// not in the Go, which a change to a page of the docs or to a translation leaves as it was.
+	id := strconv.FormatInt(time.Now().UnixNano(), 36)
+	if err := os.WriteFile(filepath.Join(p.Root, "build", "id"), []byte(id), 0o644); err != nil {
+		return err
 	}
-	entry += "\n// Requests, Cron Triggers and queues, as workers-go's own entry has them, and email (charter/bindings).\nexport default { fetch: " + fetch + ", scheduled: go.scheduled, queue: go.queue, email: go.email };\n"
+	entry += fmt.Sprintf("\n// Which build this is.\nconst fetch = async (request, env, ctx) => {\n  const response = await go.fetch(request, env, ctx);\n  if (response.status === 101) return response;\n  const said = new Response(response.body, response);\n  said.headers.set(\"X-Charter-Build\", %q);\n  return said;\n};\n", id)
+	entry += "\n// Requests, Cron Triggers and queues, as workers-go's own entry has them, and email (charter/bindings).\nexport default { fetch, scheduled: go.scheduled, queue: go.queue, email: go.email };\n"
 	if err := os.WriteFile(filepath.Join(p.Root, "build", "worker.mjs"), []byte(entry), 0o644); err != nil {
 		return err
 	}

@@ -78,15 +78,15 @@ func Deploy(args []string) {
 		p.URL = address
 		say("charter.toml: url = %q. charter check --fix writes it into the specs", address)
 	}
-	// The pages that are the same for every reader are asked for once, so Cloudflare has them before a reader asks
-	// (kept.go): a deploy starts an empty cache.
+	// The pages that are the same for every reader are asked for, so Cloudflare has them before a reader asks, and
+	// each is seen to be of this build (kept.go): a deploy starts an empty cache, and fails when it has not.
 	switch {
 	case len(env) == 0:
-		keep(p.URL)
+		keep(p.URL, buildID(p))
 	case p.URLs[env[1]] != "":
-		keep(p.URLs[env[1]])
+		keep(p.URLs[env[1]], buildID(p))
 	default:
-		keep(deployedURL.FindString(said.String()))
+		keep(deployedURL.FindString(said.String()), buildID(p))
 	}
 	switch {
 	case len(env) == 0 && p.URL != "":

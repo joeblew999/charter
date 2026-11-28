@@ -264,7 +264,7 @@ func swapWorker(p *project.Project) error {
 	}
 }
 
-// buildID names the build charter build -dev made last, which the Worker says back on /healthz.
+// buildID names the build charter build made last, which the Worker says on every answer (X-Charter-Build).
 func buildID(p *project.Project) string {
 	b, _ := os.ReadFile(filepath.Join(p.Root, "build", "id"))
 	return strings.TrimSpace(string(b))

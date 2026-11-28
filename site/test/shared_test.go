@@ -99,6 +99,12 @@ func TestCloudflareAnswersAKeptPageItself(t *testing.T) {
 	if said != "HIT" {
 		t.Fatalf("%s was not answered from the cache in 10 tries: Cf-Cache-Status %q", path, said)
 	}
+	// What the cache gives is of the build that is deployed, not of one before it: every answer says its build, and
+	// the Worker itself (a reader with a cookie reaches it) says the same one.
+	fromCache, fromWorker := answered(t, path).Header.Get("X-Charter-Build"), answered(t, path, "Cookie", "session=someone").Header.Get("X-Charter-Build")
+	if fromCache == "" || fromCache != fromWorker {
+		t.Errorf("the kept page is of build %q and the Worker is build %q: a deploy did not empty the cache", fromCache, fromWorker)
+	}
 	if res := answered(t, path, "Cookie", "session=someone"); res.Header.Get("Cf-Cache-Status") == "HIT" || kept(res) {
 		t.Errorf("a reader with a session was given the kept page: Cf-Cache-Status %q, Cache-Control %q", res.Header.Get("Cf-Cache-Status"), res.Header.Get("Cache-Control"))
 	}

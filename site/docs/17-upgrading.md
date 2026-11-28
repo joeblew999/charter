@@ -17,6 +17,7 @@ Nothing of yours has to change.
 - **A shared page is one copy for every reader with no cookie.** It named eleven request headers it was drawn from, and Cloudflare kept a copy for each set of their values: a browser in another language, a page load and a link each got their own, drawn by the Worker. It names four now (`Vary: HX-Target, Cookie, Authorization, X-Forwarded-Proto`).
 - **A shared page does not read the browser's languages**, so it offers another language only to a reader who has chosen one.
 - **A reader with any cookie is answered by the Worker.** A copy was kept for each style and language cookie; there is one copy of a page now.
+- **Every answer says its build** (`X-Charter-Build`), and `charter deploy` fails when a page is answered by an older one: a deploy is seen to have emptied the cache.
 - **A first page in the first language gives no `locale` cookie.** No cookie says the same.
 
 ## 0.78
