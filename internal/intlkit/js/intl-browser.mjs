@@ -25,18 +25,9 @@ function browserZone() {
   }
 }
 
-// The browser tells the server its own zone, once and again when it changes (travel): from the next page on the
-// server renders in it (intl.Site), so the text doesn't change after it arrives. A chosen zone needs no report.
-// A zone id ("America/New_York") is all characters a cookie value may hold.
-//
-// Only a page that shows a time says so (redo): a cookie is part of what a shared cache keeps a page under, so a
-// reader of pages that show none (the docs) brings none, and is given the copy every such reader is.
-function report() {
-  if (!root.dataset.tz && !document.cookie.split("; ").includes("browser_tz=" + browserZone())) {
-    document.cookie = "browser_tz=" + browserZone() + "; path=/; max-age=31536000; samesite=lax" +
-      (location.protocol === "https:" ? "; secure" : "");
-  }
-}
+// The browser tells the server nothing of its zone: the server draws in its best guess (where the reader connects
+// from) and this puts it right in the page. A cookie every reader brought would be one a shared cache keeps every
+// reader's pages apart by.
 
 // viewerZone: the zone the viewer chose, if this browser knows it; else the browser's own.
 function viewerZone() {
@@ -65,7 +56,6 @@ function redo(el) {
   } else {
     if (!supports(lang)) return; // keep the server's text
     const prefs = { timeZone: viewerZone(), hourCycle: root.dataset.hc || undefined };
-    if (api === "since" || api === "DateTimeFormat") report();
     if (api === "since") {
       const at = Date.parse(el.getAttribute("datetime"));
       text = since(lang, at);

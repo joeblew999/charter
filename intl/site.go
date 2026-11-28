@@ -38,11 +38,10 @@ type Site struct {
 
 // The cookies Site reads and Preferences sets.
 const (
-	LocaleCookie          = "locale"        // the locale of the last page viewed
-	ChosenLocaleCookie    = "chosen_locale" // the locale the reader chose: from the language list, the offer, Decline
-	TimeZoneCookie        = "tz"            // the viewer's chosen IANA time zone
-	HourCycleCookie       = "hc"            // the viewer's chosen clock: "h12" or "h23"
-	BrowserTimeZoneCookie = "browser_tz"    // the browser's own zone, which intl-browser.mjs reports from the first page
+	LocaleCookie       = "locale"        // the locale of the last page viewed
+	ChosenLocaleCookie = "chosen_locale" // the locale the reader chose: from the language list, the offer, Decline
+	TimeZoneCookie     = "tz"            // the viewer's chosen IANA time zone
+	HourCycleCookie    = "hc"            // the viewer's chosen clock: "h12" or "h23"
 )
 
 // Handler resolves the request's locale from its URL prefix, strips the prefix, and puts Request in the context.
@@ -142,13 +141,12 @@ func (s Site) Handler(next http.Handler) http.Handler {
 		if c, err := r.Cookie(HourCycleCookie); err == nil && (c.Value == "h12" || c.Value == "h23") {
 			req.HourCycle = c.Value
 		}
-		// The zone: the one the reader chose; else the one their browser reported (from their second page view on);
-		// else Cloudflare's guess from their IP (right unless a VPN, a proxy or travel misleads it); else UTC.
+		// The zone: the one the reader chose; else Cloudflare's guess from where they connect (right unless a VPN, a
+		// proxy or travel misleads it), which their browser then puts right in the page (intl-browser.mjs); else UTC.
+		// The browser tells the server nothing: a cookie every reader brings is one a shared cache keeps every
+		// reader's pages apart by.
 		if c, err := r.Cookie(TimeZoneCookie); err == nil && ValidTimeZone(c.Value) {
 			d.ChosenZone = c.Value
-		}
-		if c, err := r.Cookie(BrowserTimeZoneCookie); err == nil && ValidTimeZone(c.Value) {
-			d.BrowserZone = c.Value
 		}
 		if s.ConnectionTimeZone != nil && ValidTimeZone(s.ConnectionTimeZone(r)) {
 			d.ConnectionZone = s.ConnectionTimeZone(r)
@@ -156,8 +154,6 @@ func (s Site) Handler(next http.Handler) http.Handler {
 		switch {
 		case d.ChosenZone != "":
 			req.TimeZone, req.TimeZoneChosen, d.ZoneFrom = d.ChosenZone, true, "chosen"
-		case d.BrowserZone != "":
-			req.TimeZone, d.ZoneFrom = d.BrowserZone, "browser"
 		case d.ConnectionZone != "":
 			req.TimeZone, d.ZoneFrom = d.ConnectionZone, "connection"
 		default:

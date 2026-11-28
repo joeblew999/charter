@@ -222,7 +222,7 @@ Everything else the Worker answers says `private`: the API, a page that is not s
 - **A copy is kept a day**, and for a week after that it is still given at once while the Worker draws a new one behind it.
 - **A shared page shows nothing it read for the request**: no row of a database, no time in the reader's zone, nothing of who asks. The docs, the theme editor and this site's front page are shared; the example's front page reads its database and is not.
 - **It gives no cookie**, so the language of the last page viewed is not remembered from a shared page. A language the reader chose is.
-- **A cookie is part of what a copy is kept under**, so a reader who brings one gets a copy of their own, drawn the first time. charter gives a reader none until they choose something (a style, a language, a time zone) or open a page that shows a time. A cookie your own script sets for every reader takes every reader out of the shared copy.
+- **A cookie is part of what a copy is kept under**, so a reader who brings one gets a copy of their own, drawn the first time. charter gives a reader none until they choose something (a style, a language, a time zone). A cookie your own script sets for every reader takes every reader out of the shared copy.
 
 Not checked before the app runs: that a page which says `Shared` really is the same for everyone. `charter test` asks each of charter's own; a test of yours asks yours.
 

@@ -46,7 +46,7 @@ func isShared(pn *structpages.PageNode) bool {
 // drawnFrom are the cookies a page is drawn from, and that say nothing of who reads it.
 var drawnFrom = map[string]bool{
 	intl.LocaleCookie: true, intl.ChosenLocaleCookie: true, intl.TimeZoneCookie: true, intl.HourCycleCookie: true,
-	intl.BrowserTimeZoneCookie: true, StyleCookie: true,
+	StyleCookie: true,
 }
 
 // anyone is whether a request brings nothing of a person.

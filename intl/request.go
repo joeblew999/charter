@@ -35,9 +35,8 @@ type Decision struct {
 	AcceptLanguage string // what the reader's browser asks for
 	LastViewed     string // the locale of the last page they viewed (the locale cookie); "" on a first visit
 	ChosenLanguage string // the locale they chose (the chosen_locale cookie, or this page view), "" for none
-	ZoneFrom       string // where TimeZone came from: "chosen", "browser", "connection" or "default" (UTC)
+	ZoneFrom       string // where TimeZone came from: "chosen", "connection" or "default" (UTC)
 	ChosenZone     string // the zone the reader chose (the tz cookie), "" for none
-	BrowserZone    string // the zone their browser reported (the browser_tz cookie), "" until it has
 	ConnectionZone string // the connection's guess (Cloudflare's, from the IP), "" for none
 }
 

@@ -186,7 +186,7 @@ func TestUnprefixed(t *testing.T) {
 	}
 }
 
-// TestZoneOrder: the zone the reader chose, else the one their browser reported, else the connection's guess, else
+// TestZoneOrder: the zone the reader chose, else the connection's guess, else
 // UTC; a cookie that isn't a zone is ignored.
 func TestZoneOrder(t *testing.T) {
 	h := site(t)
@@ -195,9 +195,8 @@ func TestZoneOrder(t *testing.T) {
 		want    string
 	}{
 		{nil, "Asia/Tokyo guessed"},
-		{[]*http.Cookie{{Name: intl.BrowserTimeZoneCookie, Value: "America/New_York"}}, "America/New_York guessed"},
-		{[]*http.Cookie{{Name: intl.BrowserTimeZoneCookie, Value: "America/New_York"}, {Name: intl.TimeZoneCookie, Value: "Europe/Berlin"}}, "Europe/Berlin chosen"},
-		{[]*http.Cookie{{Name: intl.BrowserTimeZoneCookie, Value: "<script>"}}, "Asia/Tokyo guessed"},
+		{[]*http.Cookie{{Name: intl.TimeZoneCookie, Value: "Europe/Berlin"}}, "Europe/Berlin chosen"},
+		{[]*http.Cookie{{Name: intl.TimeZoneCookie, Value: "<script>"}}, "Asia/Tokyo guessed"},
 	} {
 		if got := do(h, "/about", tc.cookies...).Body.String(); !strings.Contains(got, " "+tc.want+" ") {
 			t.Errorf("%v: %q, want the zone %q", tc.cookies, got, tc.want)
@@ -333,10 +332,9 @@ func TestDecision(t *testing.T) {
 	r.Header.Set("X-Zone", "Asia/Tokyo")
 	r.AddCookie(&http.Cookie{Name: intl.LocaleCookie, Value: "de"})
 	r.AddCookie(&http.Cookie{Name: intl.ChosenLocaleCookie, Value: "de"})
-	r.AddCookie(&http.Cookie{Name: intl.BrowserTimeZoneCookie, Value: "Asia/Bangkok"})
 	h.ServeHTTP(httptest.NewRecorder(), r)
-	want := intl.Decision{LanguageFrom: "url", AcceptLanguage: "de-AT", LastViewed: "de", ChosenLanguage: "de", ZoneFrom: "browser",
-		BrowserZone: "Asia/Bangkok", ConnectionZone: "Asia/Tokyo"}
+	want := intl.Decision{LanguageFrom: "url", AcceptLanguage: "de-AT", LastViewed: "de", ChosenLanguage: "de", ZoneFrom: "connection",
+		ConnectionZone: "Asia/Tokyo"}
 	if got != want {
 		t.Errorf("/de/about: %+v, want %+v", got, want)
 	}
