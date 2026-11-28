@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -164,6 +165,38 @@ type Server struct {
 	Dir     string            // where it runs; by default here
 	Env     map[string]string // more environment
 	Ready   string            // a URL that answers 2xx once it is up
+	// Fails are texts that fail the run when the server prints one, though body passed: what it says of itself
+	// that no request shows (a Go runtime of a Worker that ended, which the Worker replaces and answers on).
+	Fails []string
+}
+
+// said is what a server prints, passed on as it is, with the first line that has one of the texts kept.
+type said struct {
+	to    io.Writer
+	texts []string
+	mu    *sync.Mutex
+	rest  *[]byte
+	found *string
+}
+
+func (s said) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	*s.rest = append(*s.rest, p...)
+	for {
+		i := bytes.IndexByte(*s.rest, '\n')
+		if i < 0 {
+			break
+		}
+		line := string((*s.rest)[:i])
+		*s.rest = (*s.rest)[i+1:]
+		for _, text := range s.texts {
+			if *s.found == "" && strings.Contains(line, text) {
+				*s.found = strings.TrimSpace(line)
+			}
+		}
+	}
+	s.mu.Unlock()
+	return s.to.Write(p)
 }
 
 // With starts s, waits until its Ready URL answers (two minutes at most), runs body, and stops s and what it
@@ -172,7 +205,12 @@ func With(s Server, body func() error) error {
 	fmt.Printf("$ %s   (started%s)\n", strings.Join(s.Command, " "), map[bool]string{true: " in " + s.Dir, false: ""}[s.Dir != ""])
 	start := time.Now()
 	cmd := exec.Command(Bin(s.Command[0], s.Dir), s.Command[1:]...)
-	cmd.Dir, cmd.Env, cmd.Stdout, cmd.Stderr = s.Dir, Env(s.Env), os.Stdout, os.Stderr
+	var mu sync.Mutex
+	var rest [2][]byte
+	found := ""
+	cmd.Dir, cmd.Env = s.Dir, Env(s.Env)
+	cmd.Stdout = said{os.Stdout, s.Fails, &mu, &rest[0], &found}
+	cmd.Stderr = said{os.Stderr, s.Fails, &mu, &rest[1], &found}
 	group(cmd)
 	if err := cmd.Start(); err != nil {
 		return err
@@ -184,7 +222,15 @@ func With(s Server, body func() error) error {
 		return fmt.Errorf("%s: %w", s.Command[0], err)
 	}
 	fmt.Printf("took %s: %s answering at %s\n", Seconds(time.Since(start)), s.Command[0], s.Ready)
-	return body()
+	if err := body(); err != nil {
+		return err
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if found != "" {
+		return fmt.Errorf("%s said, while it ran: %s", filepath.Base(s.Command[0]), found)
+	}
+	return nil
 }
 
 func answers(url string, exited <-chan error) error {

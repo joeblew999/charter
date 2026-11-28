@@ -260,7 +260,9 @@ func servingWith(p *project.Project, how served, body func(base string, port int
 	if how.ip != "" {
 		command = append(command, "--ip", how.ip)
 	}
-	server := run.Server{Command: command, Dir: p.Root, Env: quiet, Ready: base + p.HealthPath()}
+	// A Go runtime that ends itself ("fatal error: …" is the Go runtime's own word) is replaced by the Worker, and
+	// every request is still answered: nothing a test asks shows it. So the run fails on the line itself.
+	server := run.Server{Command: command, Dir: p.Root, Env: quiet, Ready: base + p.HealthPath(), Fails: []string{"fatal error: "}}
 	return run.With(server, func() error { return body(base, ports[0]) })
 }
 

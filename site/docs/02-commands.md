@@ -132,6 +132,8 @@ Runs `go test` for plain logic, then starts the Worker on `wrangler dev` with a 
 
 The tests use the types too: a test names a page by its type and an element by its id from the tree, never by an address or a selector, so a renamed page fails the test at compile time and not by timing out.
 
+It also fails when a Go runtime of the Worker ended itself while the tests ran (Go's own `fatal error:`). The Worker starts another and every request is still answered, so nothing else would say.
+
 **What it does not:** what only shows at scale or far away: memory under many readers, a first hit on another continent. Those are [`run load` and `run cold`](16-watching.md), before a release.
 
 `--deployed` runs the same tests against the deployed Worker, and leaves it as it found it.

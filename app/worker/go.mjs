@@ -130,7 +130,8 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		// What the isolate's runtimes hold between them, for Go to say (cloud.Runtimes): an admin's page shows it.
 		binding.memory = () => ({ runtimes: alive.size, held: total(), budget: BUDGET });
 		const context = createRuntimeContext({ env, ctx, binding });
-		const runtime = { go, binding, context, started: false, served: 0, warm: Boolean(warm) };
+		// asked: it has been given a request or an event, which is when Cloudflare's clock runs for it.
+		const runtime = { go, binding, context, started: false, asked: !warm, served: 0, warm: Boolean(warm) };
 		alive.add(runtime);
 		runtime.isReady = new Promise(resolve => {
 			// The runtime's seed is the first random bytes it takes, before any of the program's code runs (the scheduler
@@ -151,11 +152,14 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 					new Uint8Array(go._inst.exports.mem.buffer, int64(sp + 8), int64(sp + 16)).forEach((_, i, bytes) => (bytes[i] = Math.random() * 256));
 				};
 				// Its clock: while the module loads Cloudflare's reads zero, and the runtime stops at a clock that does
-				// ("nanotime returning zero"). It gets one nanosecond there; the real time comes with the first request.
+				// ("nanotime returning zero"; and its collector's "stopTheWorld: broken CPU time accounting", which
+				// takes a zero for a time it was never told). It gets one nanosecond there; the real time comes with
+				// the first request or event it is given (runtimeFor), and not before: a runtime that has started
+				// still runs while the module loads, and a collection begun in its warm-up ends there.
 				const nanotime = gojs["runtime.nanotime1"];
 				gojs["runtime.nanotime1"] = sp => {
 					nanotime(sp);
-					if (runtime.started) return;
+					if (runtime.asked) return;
 					sp >>>= 0;
 					const view = new DataView(go._inst.exports.mem.buffer);
 					if (view.getUint32(sp + 8, true) === 0 && view.getUint32(sp + 12, true) === 0) view.setUint32(sp + 8, 1, true);
@@ -198,6 +202,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 			runtime = take();
 		}
 		if (runtime) {
+			runtime.asked = true;
 			runtime.context.env = env;
 			runtime.context.ctx = ctx;
 			return { runtime, kind: runtime.served ? "reused" : runtime.warm ? "warm" : "new" };

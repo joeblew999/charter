@@ -49,8 +49,17 @@ func Run(h http.Handler) {
 			}
 		}
 	}
+	warmed := binding.Get("warm").Type() == js.TypeObject
 	workers.ServeNonBlock(Serve(h))
 	workers.Ready()
+	if warmed {
+		// What the warm-up left is collected now, while nobody waits, and not in the first request. It is also what
+		// keeps true that Go's collector can run here: the module is still loading, Cloudflare's clock reads zero,
+		// and the collector ends the program at a zero (go.mjs gives it a nanosecond until its first request). A
+		// collection would otherwise happen here only in an app whose warm-up fills its heap, and end that app's
+		// first runtime with nothing to say why: the Worker starts another, and its first reader waits for it.
+		runtime.GC()
+	}
 	select {}
 }
 

@@ -142,6 +142,7 @@ What it found on 2026-11-27, from 30 places each:
 
 - **A second request is still a first hit, two times in three.** Cloudflare runs a Worker on many machines at a location, and each starts its own instance. So what counts is less how long an instance is kept than how many of them a reader's requests meet.
 - **Of a first hit, charter's part is the smaller.** The request itself took at most 87 ms and the module's start-up 142 to 224 ms of CPU, by Cloudflare's own counts; the rest is Cloudflare making the instance, before any code of the app runs.
+- **The runtime that starts with the Worker is the one that answers.** charter starts Go as the Worker's module loads and has it answer the warm-up's pages, so a first request finds it ready. Cloudflare's clock reads zero while a module loads, and Go's collector ends the program at a zero: charter gives Go a nanosecond until its first request, and collects what the warm-up left right there, on every start. `charter test` fails a run in which a Go runtime ended itself, which no request shows, since the Worker starts another and answers.
 - **A smaller Worker that starts sooner has a shorter first hit**: `site/` is half the example's size and 0.2 s sooner.
 - **A page that reads D1 waits for it**, 0.2 s and more, on a running instance too.
 
