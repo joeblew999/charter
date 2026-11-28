@@ -219,7 +219,7 @@ func wasm(p *project.Project, limit int, again bool) error {
 	if hasIntl(p) {
 		entry += "import { goIntl } from \"./intl-worker.mjs\";\n\n// The app's languages, for Go (charter's intl).\nglobalThis.goIntl = goIntl;\n"
 	}
-	entry += "\nexport { Hub } from \"./hub.mjs\";\n\nconst go = goWorker();\n"
+	entry += "\nexport { Hub } from \"./hub.mjs\";\n\nconst go = goWorker(undefined, " + strconv.FormatInt(wasmSize(p), 10) + ");\n"
 	if p.Health != "" {
 		entry += fmt.Sprintf("await go.warm({ paths: [%q] });\n", p.Health)
 	}
@@ -234,6 +234,12 @@ func wasm(p *project.Project, limit int, again bool) error {
 	entry += fmt.Sprintf("\n// Which build this is.\nconst fetch = async (request, env, ctx) => {\n  const response = await go.fetch(request, env, ctx);\n  if (response.status === 101) return response;\n  const said = new Response(response.body, response);\n  said.headers.set(\"X-Charter-Build\", %q);\n  return said;\n};\n", id)
 	entry += "\n// Requests, Cron Triggers and queues, as workers-go's own entry has them, and email (charter/bindings).\nexport default { fetch, scheduled: go.scheduled, queue: go.queue, email: go.email };\n"
 	if err := os.WriteFile(filepath.Join(p.Root, "build", "worker.mjs"), []byte(entry), 0o644); err != nil {
+		return err
+	}
+	// The entry of the Worker in front (charter deploy's wrangler.front.built.json): it keeps pages under this
+	// build's name, and gives only what this build drew.
+	inFront := fmt.Sprintf("// Written by charter build: the entry of the Worker in front (app/worker/front.mjs).\nimport { front } from \"./front.mjs\";\n\nexport default front(%q);\n", id)
+	if err := os.WriteFile(filepath.Join(p.Root, "build", "front-worker.mjs"), []byte(inFront), 0o644); err != nil {
 		return err
 	}
 	if hasIntl(p) {
@@ -343,4 +349,13 @@ func pushSchema(p *project.Project) error {
 	}
 	_, err = run.Output(p.Root, env, bin, "d1", "execute", binding, "--local", "--file", file)
 	return err
+}
+
+// wasmSize is the size of the Wasm just built, which the Worker's glue counts its runtimes' memory budget from.
+func wasmSize(p *project.Project) int64 {
+	info, err := os.Stat(filepath.Join(p.Root, "build", "app.wasm"))
+	if err != nil {
+		return 0
+	}
+	return info.Size()
 }

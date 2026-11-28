@@ -318,6 +318,7 @@ func putSecret(p *project.Project, fnox, env, name, value string) error {
 	if env != "" {
 		words = append(words, "--env", env)
 	}
+	words = aimed(p, words)
 	put := exec.Command(fnox, append([]string{"exec", "--", bin}, words...)...)
 	if os.Getenv("CLOUDFLARE_API_TOKEN") != "" {
 		put = exec.Command(bin, words...)

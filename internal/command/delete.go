@@ -90,7 +90,7 @@ func deleteWorker(p *project.Project, args []string) {
 		queues, err := consumedBy(p)
 		check(err)
 		for _, queue := range queues {
-			if err := cloudflareQuietly(p, "queues", "consumer", "remove", queue, name); err == nil {
+			if err := cloudflareQuietly(p, "queues", "consumer", "remove", queue, deployedName(p, env)); err == nil {
 				say("✓ %s no longer consumes the queue %s", name, queue)
 			}
 		}
@@ -98,8 +98,13 @@ func deleteWorker(p *project.Project, args []string) {
 		if env != "" {
 			words = append(words, "--env", env)
 		}
+		// The Worker in front first, which is bound to the Go Worker, and the namespace its kept pages are in.
+		_, _, _, pages := frontState(p, env)
+		if err := cloudflare(p, []string{"delete", "--force", "--config", frontConfig}, nil); err == nil && pages != "" {
+			check(cloudflare(p, []string{"kv", "namespace", "delete", "--namespace-id", pages}, nil))
+		}
 		check(cloudflare(p, words, nil))
-		say("✓ the Worker %s is deleted", name)
+		say("✓ the Worker %s is deleted: the one in front, with the pages it kept, and the Go Worker %s", name, deployedName(p, env))
 	}
 	if !data {
 		say("go tool charter deploy brings it back, with its data as it was and its secrets from fnox")

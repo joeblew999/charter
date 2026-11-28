@@ -132,6 +132,7 @@ func cloudflare(p *project.Project, words, rest []string) error {
 
 // cloudflareQuietly is cloudflare for a question: nothing is shown, and the error says whether wrangler answered.
 func cloudflareQuietly(p *project.Project, words ...string) error {
+	words = aimed(p, words)
 	bin, err := npm(p, "wrangler")
 	if err != nil {
 		return err
@@ -150,6 +151,7 @@ func cloudflareQuietly(p *project.Project, words ...string) error {
 
 // cloudflareOutput is cloudflare for an answer that is read: nothing is shown, and what wrangler said is returned.
 func cloudflareOutput(p *project.Project, words ...string) (string, error) {
+	words = aimed(p, words)
 	bin, err := npm(p, "wrangler")
 	if err != nil {
 		return "", err
@@ -171,7 +173,7 @@ func cloudflareTo(copy io.Writer, p *project.Project, words, rest []string) erro
 	if err != nil {
 		return err
 	}
-	args := append(words, rest...)
+	args := append(aimed(p, words), rest...)
 	if os.Getenv("CLOUDFLARE_API_TOKEN") == "" {
 		// The app's fnox (mise.toml): the token comes from where fnox keeps it.
 		fnox, err := credentials(p)

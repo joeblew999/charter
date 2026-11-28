@@ -133,14 +133,6 @@ func unwell(outcomes []outcome) (bad []outcome, total int64) {
 	return bad, total
 }
 
-// deployedName is the Worker's name on Cloudflare, for the Worker itself or an environment of it.
-func deployedName(p *project.Project, env string) string {
-	if env == "" {
-		return p.Worker.Name
-	}
-	return p.Worker.Name + "-" + env
-}
-
 // report says how the Worker did in a span, and gives the ends that are a fault.
 func report(worker, span string, outcomes []outcome, cpu50, cpu99 float64) []outcome {
 	bad, total := unwell(outcomes)

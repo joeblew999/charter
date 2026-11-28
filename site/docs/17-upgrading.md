@@ -10,6 +10,15 @@ What you wrote does not, when a release changes how something is written. This p
 
 charter is before 1.0: a release may change how an app is written, and says so here. This page starts at 0.63; it does not cover what changed before that.
 
+## 0.80
+
+Nothing of yours has to change. The next `go tool charter deploy` makes the app two Workers.
+
+- **A deployed app is two Workers**: the Go Worker (`<name>-go`, the app) and a small one in front at the app's address, which answers a page that is the same for every reader from KV ([two Workers](10-deploy.md#two-workers)). A reader in a data centre with no copy is answered without the Go being loaded.
+- **The first deploy moves the app's queue, cron and secrets to the Go Worker.** A secret fnox does not have cannot be moved: deploy names it, and you put it again (`run secrets:put`).
+- **What the Go runtimes may hold follows the size of the build**, and a request that finds no room waits. A large app that ended requests over memory under load no longer does.
+- **Health, logs and secrets are the Go Worker's**: in Cloudflare's dashboard the app's own logs are under `<name>-go`.
+
 ## 0.79
 
 Nothing of yours has to change.

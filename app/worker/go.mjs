@@ -80,12 +80,19 @@ const FOLLOW = "x-charter-follow";
 const MAX_WAITING = 4; // runtimes kept for the next request
 
 // Memory. A runtime of the standard compiler starts at some 13 MB of WebAssembly memory and grows as its heap does;
-// that memory never shrinks. BUDGET is what all the runtimes of the isolate may hold together: the rest of the
-// 128 MB is the module's compiled code and the JavaScript around it.
+// that memory never shrinks. The budget is what all the runtimes of the isolate may hold together: what is left
+// of the 128 MB after the module's compiled code and the JavaScript around it. The compiled code takes about twice
+// the Wasm's size, so the budget follows the size of the build (budgetFor), which charter build's entry gives.
+// Measured on 2026-11-28 with 40 requests at once, three times: a 31 MiB Wasm ended requests over memory with
+// 80 MB for its runtimes and answered every one with 56; an 18 MiB one answered every one with 80.
 const MB = 1048576;
-const BUDGET = 80 * MB;
+const budgetFor = size => Math.max(2 * NEW, Math.min(80 * MB, 118 * MB - 2 * size));
 const NEW = 14 * MB; // what a runtime that has just started holds
-const WAIT = 3000; // how long a request waits for a runtime to finish before it starts one over the budget, in ms
+// How long a request waits for a runtime to finish before it starts one over the budget, in ms. Long: one over the
+// budget can take the instance over its memory, which ends every request in it, and a wait ends none. Every
+// request of an app comes through its Worker in front, which gives them to fewer instances of this one than
+// Cloudflare spreads readers over, so more of them meet in one.
+const WAIT = 20000;
 const LOOK = 20; // how often it looks for one, in ms
 
 // workers-go's Go code calls this.
@@ -98,15 +105,27 @@ globalThis.tryCatch = fn => {
 };
 
 // goWorker is a Worker (its fetch) over the workers-go build beside this file (runtime.mjs).
-export function goWorker({ createRuntimeContext, loadModule } = build) {
+// size is the Wasm's, in bytes: what the budget for its runtimes is counted from (unknown: the least).
+export function goWorker({ createRuntimeContext, loadModule } = build, size = 64 * MB) {
+	const BUDGET = budgetFor(size);
 	const waiting = [];
 	const alive = new Set(); // every runtime that holds memory: waiting, or serving
 	let warmFailure = "";
 
 	// held is the WebAssembly memory a runtime holds: what the isolate is charged for it.
 	const held = runtime => runtime.go._inst?.exports?.mem?.buffer?.byteLength ?? NEW;
+	// One that is being started holds nothing yet and will: it is counted from the moment a request decides to
+	// start it. Without that, requests that arrive together each see room for one and all start one (seen on
+	// 2026-11-28: seven pages opened at once took an instance over its memory).
+	let starting = 0;
+	// What runtimes that were let go still hold: a runtime's memory goes when the engine collects it, which is
+	// later, and until then the isolate is charged for it. It is counted until the engine says it is gone.
+	let gone = 0;
+	const collected = new FinalizationRegistry(bytes => {
+		gone -= bytes;
+	});
 	const total = () => {
-		let sum = 0;
+		let sum = starting * NEW + gone;
 		for (const runtime of alive) sum += held(runtime);
 		return sum;
 	};
@@ -116,7 +135,12 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 	// finishing what a request left it to do after its answer (cloudflare.WaitUntil), and a request whose work
 	// is cut off is one the Workers runtime ends as hung.
 	function retire(runtime) {
-		alive.delete(runtime);
+		const memory = runtime.go._inst?.exports?.mem;
+		if (alive.delete(runtime) && memory) {
+			const bytes = memory.buffer.byteLength;
+			gone += bytes;
+			collected.register(memory, bytes);
+		}
 		const at = waiting.indexOf(runtime);
 		if (at >= 0) waiting.splice(at, 1);
 	}
@@ -185,7 +209,13 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 	}
 
 	async function start(env, ctx) {
-		const runtime = begin(await loadModule(), env, ctx);
+		starting++;
+		let runtime;
+		try {
+			runtime = begin(await loadModule(), env, ctx);
+		} finally {
+			starting--;
+		}
 		await runtime.isReady;
 		return runtime;
 	}
@@ -197,7 +227,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		let runtime = take();
 		// It looks again every few milliseconds, itself: a request may not be woken by another request's work (the
 		// Workers runtime ends one that waits for that, as hung).
-		for (let waited = 0; !runtime && alive.size > 0 && total() + NEW > BUDGET && waited < WAIT; waited += LOOK) {
+		for (let waited = 0; !runtime && alive.size + starting > 0 && total() + NEW > BUDGET && waited < WAIT; waited += LOOK) {
 			await new Promise(resolve => setTimeout(resolve, LOOK));
 			runtime = take();
 		}
@@ -209,6 +239,10 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 			runtime.context.env = env;
 			runtime.context.ctx = ctx;
 			return { runtime, kind: runtime.served ? "reused" : runtime.warm ? "warm" : "new" };
+		}
+		// Said in the Worker's logs when it is over the budget: what went before an instance that ran out of memory.
+		if (total() + NEW > BUDGET) {
+			console.log(JSON.stringify({ charter: "a Go runtime started over the budget", alive: alive.size, starting, held: Math.round(total() / MB), gone: Math.round(gone / MB), budget: Math.round(BUDGET / MB), each: [...alive].map(r => Math.round(held(r) / MB)) }));
 		}
 		return { runtime: await start(env, ctx), kind: "new" };
 	}
@@ -226,6 +260,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 	// Then what waits is cut back to the budget, the largest first: memory is for requests, before it is for the
 	// next one's start.
 	function done(runtime) {
+		if (held(runtime) > 40 * MB) console.log(JSON.stringify({ charter: "a Go runtime grew large", held: Math.round(held(runtime) / MB), full: Boolean(runtime.binding.full), served: runtime.served, alive: alive.size, total: Math.round(total() / MB) }));
 		if (runtime.go.exited || runtime.binding.full) retire(runtime);
 		else waiting.push(runtime);
 		while (waiting.length > 0 && (waiting.length > MAX_WAITING || total() > BUDGET)) {
@@ -394,7 +429,7 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		if (!request.headers.has("x-go-runtime")) return response;
 		const told = new Response(response.body, response);
 		// Who asks is told which runtime answered, and what the isolate's runtimes hold between them.
-		const memory = `${alive.size} runtimes, ${Math.round(total() / MB)} MB of ${BUDGET / MB}`;
+		const memory = `${alive.size} runtimes, ${Math.round(total() / MB)} MB of ${Math.round(BUDGET / MB)}${gone > 0 ? `, ${Math.round(gone / MB)} MB of it let go and not yet freed` : ""}`;
 		told.headers.set("x-go-runtime", warmFailure ? `${kind}; ${memory}; ${warmFailure}` : `${kind}; ${memory}`);
 		return told;
 	}

@@ -4,13 +4,28 @@
 go tool charter deploy
 ```
 
-That is the D1 migrations, then `wrangler deploy`.
+That is the D1 migrations, then `wrangler deploy` twice: a deployed app is two Workers.
+
+## Two Workers
+
+| | Name | What it is |
+|---|---|---|
+| The Go Worker | `<name>-go` | The app as `wrangler.jsonc` has it: every binding, its cron, its queue, its secrets. It has no address of its own |
+| The Worker in front | `<name>` | A few KB of JavaScript at the app's address, with the browser's files. It answers a page that is the same for every reader from KV and hands everything else to the Go Worker |
+
+You write one `wrangler.jsonc`, which is what `charter dev` runs, as one Worker. `charter deploy` writes the two configurations from it each time (`wrangler.go.built.json`, `wrangler.front.built.json`, not kept in git).
+
+Why two: a Worker that is not running where a request arrives is loaded there first, and that takes as long as it is large. Measured on 2026-11-28, a one-line answer from an 18 MiB Worker took 210 to 630 ms where it was not running and 25 ms where it was, whether or not Go was started. The Worker in front is small enough to be running anywhere in a few milliseconds, and KV is one copy for every data centre ([a shared page](04-pages.md#a-page-that-is-the-same-for-every-reader)).
+
+- **Health, logs and secrets are the Go Worker's**: that is where the app runs. `run health`, `run logs`, `run secrets` and `run secrets:put` mean it.
+- **An app deployed as one Worker becomes two on its next deploy.** The Worker of the app's name hands its queue and cron to the Go Worker and becomes the one in front. A secret that fnox does not have cannot be moved (Cloudflare never gives one back): deploy names it, and it has to be put again.
+- **Each of an app's requests comes through the Worker in front**, which gives them to fewer instances of the Go Worker than Cloudflare spreads readers over. The Go Worker keeps what its runtimes hold under a budget that follows the size of the build ([watching](16-watching.md)).
 
 ## With the commands
 
 | When | Command | What it does |
 |---|---|---|
-| You ship | `deploy` | applies the migrations, then deploys with wrangler; the first time it makes what `wrangler.jsonc` names and writes the ids there |
+| You ship | `deploy` | applies the migrations, then deploys the Go Worker and the Worker in front with wrangler; the first time it makes what `wrangler.jsonc` names and writes the ids there |
 | After it | `test --deployed` | the same tests, asked of the deployed Worker, which they leave as they found it |
 | A secret | `run secrets`, `run secrets:put NAME` | what is declared and what the Worker has; one kept by fnox and put on the Worker |
 | To see what is there | `run resources` | the database, KV namespace, bucket and queue the deployed Worker is bound to |
@@ -94,7 +109,7 @@ go tool charter run delete my-worker               # all of it
 go tool charter run delete my-worker --keep-data   # the Worker and its secrets; its data stays
 ```
 
-It deletes, so it is asked for twice: the second time with the Worker's name. Deleting the app deletes all of it, and `wrangler.jsonc` no longer names the ids of what is gone, so the next deploy makes its own.
+It deletes, so it is asked for twice: the second time with the Worker's name. Deleting the app deletes all of it (both Workers, and the pages the one in front kept), and `wrangler.jsonc` no longer names the ids of what is gone, so the next deploy makes its own.
 
 With `--keep-data` the database, namespace, bucket and queue stay, and the file still names them: `go tool charter deploy` brings the same app back with the same data, and with its secrets from fnox, which deploy puts on a Worker that lacks them.
 

@@ -99,11 +99,18 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
 - **Every answer says who may keep it.** Cloudflare's cache for the Worker is on (`wrangler.jsonc`'s `cache`) and is
   asked before the Worker runs. A page that is the same for every reader says so (`Shared() bool` on its type) and
   is kept; `app/shared.go` decides for each answer, once, and everything else says `private`, in Go and in
-  `worker/go.mjs`. Never a `Cache-Control` written in a page, never a cache of charter's own (KV, the Cache API):
-  the platform's. A shared page shows nothing it read for the request and gives no cookie.
+  `worker/go.mjs`. Never a `Cache-Control` written in a page, and never another cache: a kept page is in Cloudflare's
+  cache for the Worker and, behind it, in the Worker in front's KV, under the build's name. A shared page shows
+  nothing it read for the request and gives no cookie.
+- **A deployed app is two Workers, from one `wrangler.jsonc`.** The Go Worker (`<name>-go`) is the app; a few KB of
+  JavaScript in front (`<name>`, `worker/front.mjs`) has the address and answers a kept page from KV, since a Worker
+  takes as long to load where it is not running as it is large (`internal/command/split.go` has the measurement).
+  `charter dev` runs the one Worker. Nothing is added to the Worker in front that would make it large, and it
+  decides nothing about what may be kept: Go does.
 - **Nothing long holds a Go runtime.** A runtime takes 13 MB or more of a Worker's 128 MB while it serves, so a
   request that lasts (a page's stream) is the hub's, in JavaScript (`live.Feed`'s `Signal` and `Since`), and
-  `worker/go.mjs` keeps what the runtimes hold together under a budget. Cloudflare's analytics say `exceededMemory`
+  `worker/go.mjs` keeps what the runtimes hold together under a budget that follows the build's size (a request
+  with no room waits). Cloudflare's analytics say `exceededMemory`
   when this is broken; local dev has no such limit and never shows it.
 - **A deployed Worker is watched, and no deploy waits on it.** `charter run health` asks Cloudflare how requests
   ended; `deploy` and `test --deployed` say how it did before them; a workflow asks daily; `charter run load
@@ -141,6 +148,6 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
 - **Checks:** `go test ./...` at the top, then in `example/` and in `site/`: `go tool charter check && go tool charter test`, and
   `go tool charter test --deployed` after a deploy. Work is on `main`. CI is one Linux job per push.
 - **Needs the owner's OK:** anything on another owner's repository.
-- JavaScript only in `app/worker/` (the glue that runs Go, the hub's Durable Object), `internal/intlkit/js`,
+- JavaScript only in `app/worker/` (the glue that runs Go, the hub's Durable Object, the Worker in front), `internal/intlkit/js`,
   `internal/themes/js` (what connects gsxui's own theme editor to an app, and nothing that chooses or resolves a
   theme: that is gsxui's) and the apps' `web/`. Keep it logic-free.

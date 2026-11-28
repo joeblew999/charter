@@ -3,6 +3,7 @@ package test
 import (
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -104,6 +105,19 @@ func TestCloudflareAnswersAKeptPageItself(t *testing.T) {
 	fromCache, fromWorker := answered(t, path).Header.Get("X-Charter-Build"), answered(t, path, "Cookie", "session=someone").Header.Get("X-Charter-Build")
 	if fromCache == "" || fromCache != fromWorker {
 		t.Errorf("the kept page is of build %q and the Worker is build %q: a deploy did not empty the cache", fromCache, fromWorker)
+	}
+	// Where a data centre has no copy, the Worker in front answers from KV, with the Go not asked: a target no one
+	// has asked with before misses Cloudflare's cache, and is the page all the same (htmx's link to the whole body).
+	var behind *http.Response
+	for range 10 {
+		if behind = answered(t, path, "HX-Target", "body#"+strconv.FormatInt(time.Now().UnixNano(), 36)); behind.Header.Get("X-Charter-Kept") == "kv" {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	if behind.Header.Get("X-Charter-Kept") != "kv" || behind.Header.Get("X-Charter-Build") != fromWorker || !kept(behind) {
+		t.Errorf("a request that misses Cloudflare's cache was not answered from KV by this build: X-Charter-Kept %q, build %q (the Worker is %q), Cache-Control %q",
+			behind.Header.Get("X-Charter-Kept"), behind.Header.Get("X-Charter-Build"), fromWorker, behind.Header.Get("Cache-Control"))
 	}
 	if res := answered(t, path, "Cookie", "session=someone"); res.Header.Get("Cf-Cache-Status") == "HIT" || kept(res) {
 		t.Errorf("a reader with a session was given the kept page: Cf-Cache-Status %q, Cache-Control %q", res.Header.Get("Cf-Cache-Status"), res.Header.Get("Cache-Control"))

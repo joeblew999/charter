@@ -11,7 +11,8 @@ import (
 	"time"
 )
 
-// Deploy runs charter deploy [environment]: the D1 migrations, then wrangler deploy. An environment is one of
+// Deploy runs charter deploy [environment]: the D1 migrations, then wrangler deploy for the Go Worker and for the
+// Worker in front (split.go). An environment is one of
 // wrangler.jsonc's env (production, staging). More arguments are wrangler deploy's. Credentials are wrangler's
 // (cloudflare, in verbs.go, says where they come from).
 func Deploy(args []string) {
@@ -57,6 +58,13 @@ func Deploy(args []string) {
 	if outcomes, cpu50, cpu99, err := health(p, deployedName(p, envName), time.Now().Add(-24*time.Hour), time.Now()); err == nil && len(outcomes) > 0 {
 		report(deployedName(p, envName), "the last 24 hours, before this deploy", outcomes, cpu50, cpu99)
 	}
+	// The Worker of the app's name, when it is still the whole app (an app deployed before there were two): what
+	// it has that the Go Worker takes over.
+	whole, classes, leftSecrets, _ := frontState(p, envName)
+	if whole {
+		handOver(p, envName)
+	}
+	// The Go Worker first (split.go): the Worker in front hands it what it does not keep, so it is there before.
 	var said bytes.Buffer
 	check(cloudflareTo(&said, p, append([]string{"deploy"}, env...), args))
 	if first {
@@ -69,6 +77,10 @@ func Deploy(args []string) {
 	replicated(p, envName)
 	// Its secrets, where fnox has them and the Worker does not: a first deploy, or one after charter run delete.
 	pushSecrets(p, envName)
+	// Then the Worker in front, at the app's address: what charter build just wrote beside the Go, a few KB.
+	check(writeFront(p, envName, classes))
+	check(cloudflareTo(&said, p, []string{"deploy", "--config", frontConfig}, nil))
+	cleared(p, envName, leftSecrets)
 	// What next: the same tests that ask the local Worker ask the deployed one. An environment's address is kept in
 	// charter.toml's [urls] the first time wrangler says it, so charter test --env needs nothing typed.
 	// A new app's url is a placeholder until it has been deployed (charter create writes <name>.example.workers.dev):

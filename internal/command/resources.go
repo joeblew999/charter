@@ -28,12 +28,10 @@ import (
 // the binding's name, and what it is bound to (an id, or for a bucket and a queue the name).
 type bound struct{ Kind, Binding, To string }
 
-// deployedBindings are the bindings of the Worker's current deployment, ok false when it is not deployed.
-func deployedBindings(p *project.Project, env string) (bindings []bound, ok bool) {
-	flags := []string{}
-	if env != "" {
-		flags = []string{"--env", env}
-	}
+// deployedRaw are the bindings of a Worker's current deployment as Cloudflare lists them, ok false when it is not
+// deployed. flags say which Worker (an environment, or the Worker in front's configuration): the Go Worker's
+// without them.
+func deployedRaw(p *project.Project, flags ...string) (bindings []map[string]any, ok bool) {
 	out, err := cloudflareOutput(p, append([]string{"deployments", "status", "--json"}, flags...)...)
 	start := strings.Index(out, "{")
 	if err != nil || start < 0 {
@@ -59,7 +57,20 @@ func deployedBindings(p *project.Project, env string) (bindings []bound, ok bool
 	if json.Unmarshal([]byte(out[start:]), &version) != nil {
 		return nil, false
 	}
-	for _, b := range version.Resources.Bindings {
+	return version.Resources.Bindings, true
+}
+
+// deployedBindings are the bindings of the Go Worker's current deployment, ok false when it is not deployed.
+func deployedBindings(p *project.Project, env string) (bindings []bound, ok bool) {
+	flags := []string{}
+	if env != "" {
+		flags = []string{"--env", env}
+	}
+	raw, ok := deployedRaw(p, flags...)
+	if !ok {
+		return nil, false
+	}
+	for _, b := range raw {
 		kind, _ := b["type"].(string)
 		name, _ := b["name"].(string)
 		for _, key := range []string{"id", "database_id", "namespace_id", "bucket_name", "queue_name"} {
