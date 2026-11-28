@@ -236,13 +236,13 @@ func uiTheme(p *project.Project, a []string) {
 			check(errors.New("no gsxui.preset.json: the app has no gsxui yet (go tool gsxui init)"))
 		}
 		check(json.Unmarshal(b, &now))
-		say("style %s, radius %s, font %s (gsxui.preset.json; the colours are web/gsxui/theme.css)\n\nAnother style, of gsxui's %d (%s):\n  go tool charter run ui:theme --style lyra\nAnother theme: make one at https://ui.gsxhq.dev/theme, then\n  go tool charter run ui:theme '<its share code>'\n  go tool charter run ui:theme my-preset.json --only theme\nA reader chooses among gsxui's themes as the page runs with the theme-picker screen (go tool charter add screen:theme-picker).", now.Style, now.Radius, now.FontSans, len(themes.Styles), strings.Join(themes.Styles, ", "))
+		say("style %s, radius %s, font %s (gsxui.preset.json; the colours are web/gsxui/theme.css)\n\nAnother style, of gsxui's %d (%s):\n  go tool charter run ui:theme --style lyra\nAnother theme: make one at https://ui.gsxhq.dev/theme, then\n  go tool charter run ui:theme '<its share code>'\n  go tool charter run ui:theme my-preset.json --only theme\ngsxui's whole theme editor, in the app, for its readers: go tool charter add screen:theme.", now.Style, now.Radius, now.FontSans, len(themes.Styles), strings.Join(themes.Styles, ", "))
 		return
 	}
 	// --yes: gsxui asks before it rewrites; a command an agent or a script runs cannot answer.
 	check(run.Run(p.Root, nil, "go", append([]string{"tool", "gsxui", "apply", "--preset", preset, "--yes"}, flags...)...))
-	// The themes a reader chooses among are of the app's style and base colour: they follow.
-	if exists(filepath.Join(p.Root, "pages", "screens", "theme-picker.gsx")) {
+	// gsxui's theme editor in the app starts from the app's own preset: it follows.
+	if exists(filepath.Join(p.Root, "pages", "screens", "theme.gsx")) {
 		check(themes.Write(p.Root, false))
 	}
 	check(generate(p))

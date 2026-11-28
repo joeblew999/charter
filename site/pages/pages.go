@@ -12,6 +12,8 @@ import (
 type Pages struct {
 	home Home         `route:"GET /{$} Home"`
 	docs screens.Docs `route:"/docs Docs"`
+	// gsxui's theme editor, in the app: a reader chooses, and the app has it from then on.
+	theme screens.Theme `route:"/theme Theme"`
 }
 
 // Mount mounts the tree: what app.App's Pages is.

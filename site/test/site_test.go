@@ -9,6 +9,7 @@ import (
 
 	"github.com/joeblew999/charter/app/apptest"
 	"github.com/joeblew999/charter/site/pages"
+	"github.com/joeblew999/charter/site/pages/screens"
 )
 
 // charter's own site: a front page, and the docs, shown by the pages every charter app's docs get.
@@ -191,62 +192,103 @@ func TestTheDocsAreReadInOrder(t *testing.T) {
 	}
 }
 
-// A reader chooses among gsxui's themes as the page runs: the page takes the theme's colours at once, in the light
-// and in the dark, each its own; the choice is kept across a link and a page loaded anew; and the app's own theme
-// is one press away. The themes are gsxui's, resolved by gsxui (web/gsxui/themes.css): what is tested here is that
-// the page has them.
+// gsxui's theme editor is in the app, with gsxui's own controls, and the app's own front page is its live preview.
+// What a reader chooses there (a theme, a radius, a font: gsxui's preset) the preview shows at once; the browser
+// keeps it and every page of the app has it from then on, in the light and in the dark; the page's address carries
+// it to someone else; a style the app is not built in is said to be another's; and the app's own theme is one
+// press away. Everything that chooses and resolves is gsxui's: what is tested here is that the app has it.
 func TestAReaderChoosesATheme(t *testing.T) {
 	t.Parallel()
 	page := apptest.Browser(t)
 	page.Open(at(pages.Home{}))
-	page.Click(`main a[href$="/docs/"]`)
-	page.WaitText("#doc h1", "charter")
 	variable := func(name string) string {
 		return page.JS(`getComputedStyle(document.documentElement).getPropertyValue("--` + name + `").trim()`)
 	}
-	theme := func() string { return page.JS(`document.documentElement.getAttribute("data-theme") ?? ""`) }
-	dark := func() string { return page.JS(`String(document.documentElement.classList.contains("dark"))`) }
-	if dark() == "true" {
+	if page.JS(`String(document.documentElement.classList.contains("dark"))`) == "true" {
 		page.Click("[data-theme-toggle]")
 	}
 	own := variable("primary")
-	page.Click("[data-theme-picker]")
-	if n := page.JS(`String(document.querySelectorAll("[data-theme-choice]").length)`); n != "18" {
-		t.Fatalf("the list has %s choices, want the app's own and gsxui's 17", n)
+	page.Click(`header a[href$="` + at(screens.Theme{}) + `"]`)
+	page.WaitText("main h1", "Theme editor")
+	page.WaitText("[data-theme-preview-status]", "Live")
+	// In the preview: the app's own front page, as gsxui's preview script has dressed it.
+	previewed := func(name string) string {
+		return page.JS(`document.querySelector("[data-theme-preview-frame]").contentDocument.documentElement.style.getPropertyValue("--` + name + `").trim()`)
 	}
-	page.Click(`[data-theme-choice="blue"]`)
-	blue := variable("primary")
-	if theme() != "blue" || blue == own || blue == "" {
-		t.Fatalf("after choosing blue: data-theme %q, --primary %q (the app's own is %q)", theme(), blue, own)
+	preset := func() string { return page.JS(`new URL(location.href).searchParams.get("preset") ?? ""`) }
+	if title := page.JS(`document.querySelector("[data-theme-preview-frame]").contentDocument.title`); !strings.Contains(title, "charter") {
+		t.Errorf("the preview is %q, want the app's front page", title)
 	}
-	// The list marks the one in force, and only that one.
-	marked := func(name string) string {
-		return page.JS(`getComputedStyle(document.querySelector('[data-theme-choice="` + name + `"] [data-theme-chosen]')).visibility`)
+	start, plain := preset(), previewed("primary")
+	if !strings.HasPrefix(start, "gsxui:") || plain == "" {
+		t.Fatalf("the editor starts at %q, with --primary %q in the preview", start, plain)
 	}
-	if marked("blue") != "visible" || marked("rose") != "hidden" || marked("") != "hidden" {
-		t.Errorf("the mark: blue %s, rose %s, the app's own %s", marked("blue"), marked("rose"), marked(""))
+	// gsxui's own picker for each part: its list is opened, and a choice in it taken.
+	pick := func(part, choice string) {
+		t.Helper()
+		page.Click(`[data-theme-picker="` + part + `"] [data-theme-picker-trigger]`)
+		page.Click(`[data-theme-picker="` + part + `"] input[value="` + choice + `"]`)
 	}
-	// A theme has its dark: another primary, and the dark's own text on what the light had dark text on.
-	lightText := variable("secondary-foreground")
-	page.Click("[data-theme-toggle]")
-	if dark() != "true" || variable("primary") == blue || variable("secondary-foreground") == lightText {
-		t.Errorf("blue in the dark: dark %s, --primary %q (light: %q), --secondary-foreground %q (light: %q)", dark(), variable("primary"), blue, variable("secondary-foreground"), lightText)
+	changes := func(what string, read func() string, from string) string {
+		t.Helper()
+		for start := time.Now(); read() == from && time.Since(start) < 5*time.Second; {
+			time.Sleep(50 * time.Millisecond)
+		}
+		if read() == from {
+			t.Fatalf("%s is still %q", what, from)
+		}
+		return read()
 	}
-	page.Click("[data-theme-toggle]")
-	// Kept across a link, and across a page loaded anew.
-	page.Click("#docs-next")
-	page.WaitText("#doc h1", "Getting started")
-	if theme() != "blue" || variable("primary") != blue {
-		t.Errorf("after a link: data-theme %q, --primary %q", theme(), variable("primary"))
+	pick("theme", "blue")
+	blue := changes("the preview's --primary, after choosing the theme Blue", func() string { return previewed("primary") }, plain)
+	radius, font := previewed("radius"), previewed("font-sans")
+	pick("radius", "large")
+	changes("the preview's --radius, after choosing the radius Large", func() string { return previewed("radius") }, radius)
+	pick("fontSans", "inter")
+	if font := changes("the preview's --font-sans, after choosing Inter", func() string { return previewed("font-sans") }, font); !strings.Contains(font, "Inter") {
+		t.Errorf("the preview's body font is %q", font)
 	}
+	chosen := changes("the address's preset", preset, start)
+	// Every page of the app has it from then on, in the light and in the dark.
 	page.Open(at(pages.Home{}))
-	if theme() != "blue" || variable("primary") != blue {
-		t.Errorf("on a page loaded anew: data-theme %q, --primary %q", theme(), variable("primary"))
+	if got := variable("primary"); got != blue {
+		t.Errorf("on the front page, --primary is %q, want the chosen theme's %q", got, blue)
+	}
+	if !strings.Contains(variable("font-sans"), "Inter") {
+		t.Errorf("on the front page, the body font is %q", variable("font-sans"))
+	}
+	page.Click("[data-theme-toggle]")
+	if got := variable("primary"); got == blue || got == own || got == "" {
+		t.Errorf("the chosen theme in the dark: --primary %q (its light is %q, the app's own %q)", got, blue, own)
+	}
+	page.Click("[data-theme-toggle]")
+	// The editor comes back to what was chosen, and its address gives it to another browser.
+	page.Open(at(screens.Theme{}))
+	page.WaitText("[data-theme-preview-status]", "Live")
+	if got := preset(); got != chosen {
+		t.Errorf("the editor came back at %q, want what was chosen: %q", got, chosen)
+	}
+	other := apptest.Browser(t)
+	other.Open(at(screens.Theme{}) + "?preset=" + chosen)
+	other.WaitText("[data-theme-preview-status]", "Live")
+	other.Open(at(pages.Home{}))
+	if got := other.JS(`getComputedStyle(document.documentElement).getPropertyValue("--primary").trim()`); got != blue && other.JS(`String(document.documentElement.classList.contains("dark"))`) != "true" {
+		t.Errorf("another browser, given the address: --primary %q, want %q", got, blue)
+	}
+	// A style the app is not built in: the page says so, and where it is seen.
+	page.Click(`[data-theme-style="lyra"]`)
+	changes("the address's preset, after choosing the style Lyra", preset, chosen)
+	if hidden := page.JS(`String(document.querySelector("[data-charter-other-style]").hidden)`); hidden != "false" {
+		t.Error("the style Lyra was chosen in an app built in another, and the page does not say so")
+	}
+	if link := page.Attr("a[data-charter-gsxui]", "href"); !strings.HasPrefix(link, "https://ui.gsxhq.dev/theme?preset=gsxui") {
+		t.Errorf("the way to gsxui's own editor is %q", link)
 	}
 	// And the app's own again.
-	page.Click("[data-theme-picker]")
-	page.Click(`[data-theme-choice=""]`)
-	if theme() != "" || variable("primary") != own {
-		t.Errorf("after choosing the app's own: data-theme %q, --primary %q, want %q", theme(), variable("primary"), own)
+	page.Click("[data-charter-own]")
+	page.WaitText("[data-theme-preview-status]", "Live")
+	page.Open(at(pages.Home{}))
+	if got := variable("primary"); got != own {
+		t.Errorf("after choosing the app's own theme: --primary %q, want %q", got, own)
 	}
 }

@@ -34,7 +34,7 @@ component Layout(title intl.Msg, description intl.Msg, children gsx.Node) {
 				<screens.AdminLink/>
 				<screens.AccountLink/>
 				<screens.PreferencesDialog/>
-				<screens.ThemePicker/>
+				<screens.ThemeLink/>
 				<screens.ThemeToggle/>
 			</header>
 			<main class="mx-auto flex max-w-xl flex-col gap-6 p-4">

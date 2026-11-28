@@ -159,7 +159,7 @@ component DocsDocument(v DocsView) {
 								{ locales.ScreensDocsOnGithub(docsRepo(v.Docs.Repo)) }
 							</ui.Button>
 						} }
-						<ThemePicker/>
+						<ThemeLink/>
 						<ThemeToggle/>
 					</header>
 					<div class="mx-auto flex w-full max-w-6xl gap-10 px-4 py-8 md:px-8">

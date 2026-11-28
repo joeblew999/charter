@@ -59,32 +59,4 @@ func TestCode(t *testing.T) {
 	if _, err := Code("nova", "neutral", "teal-ish"); err == nil {
 		t.Error("a theme gsxui has not was given a code")
 	}
-	if got := Accents(); len(got) != 17 || got[0] != "amber" || got[16] != "yellow" {
-		t.Errorf("the accents: %v", got)
-	}
-}
-
-// Only what a theme changes is written, under the theme's name, for light and for dark.
-func TestChangedAndBlock(t *testing.T) {
-	plain := map[string]string{"background": "white", "primary": "black", "ring": "grey"}
-	blue := map[string]string{"background": "white", "primary": "blue", "ring": "grey", "sidebar-primary": "navy"}
-	var out strings.Builder
-	block(&out, `[data-theme="blue"]`, changed(plain, blue))
-	block(&out, `[data-theme="same"]`, changed(plain, plain))
-	if want := "\n[data-theme=\"blue\"] {\n  --primary: blue;\n  --sidebar-primary: navy;\n}\n"; out.String() != want {
-		t.Errorf("wrote %q, want %q", out.String(), want)
-	}
-}
-
-// What a theme changes in the light is set again in the dark, though the dark value is the plain theme's: both are
-// on the same element, and the light one would hold in the dark otherwise.
-func TestDarkSaysWhatLightSaid(t *testing.T) {
-	plainLight := map[string]string{"primary": "black", "secondary-foreground": "black"}
-	blueLight := map[string]string{"primary": "blue", "secondary-foreground": "navy"}
-	plainDark := map[string]string{"primary": "white", "secondary-foreground": "white"}
-	blueDark := map[string]string{"primary": "skyblue", "secondary-foreground": "white"}
-	got := dark(changed(plainLight, blueLight), plainDark, blueDark)
-	if len(got) != 2 || got[0] != [2]string{"primary", "skyblue"} || got[1] != [2]string{"secondary-foreground", "white"} {
-		t.Errorf("the dark block: %v", got)
-	}
 }

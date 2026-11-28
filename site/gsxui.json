@@ -6,6 +6,7 @@
   "managed": {
     "gsxui.preset.json": "591a4ec7a1047635544e03e128de02b7e4c617523afd19bf8d5d6e37022cf095",
     "ui/NOTICE.md": "3e5ae687ead64090db25c7a84d4ad85d3c99304cb5a03cb0509a129010f1536a",
+    "ui/alert.gsx": "1c2fba6629cb5983261e428bbcb718758f8e56755ac2857b676e103166efa619",
     "ui/badge.gsx": "55cd01e881376b31e8b688b25850953fc83c51a4c8153df3a3f4073ef0b41111",
     "ui/breadcrumb.gsx": "71d2263ffcea1cdbe85f98e21b05ce79e207e48d072a6b3b9dd6e219e8542d28",
     "ui/button.gsx": "e92692ccf3742ca74b0ec7c918e38a8e618c70fd514aa4f61dcb2a4b2b942423",

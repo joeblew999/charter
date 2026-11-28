@@ -1,16 +1,26 @@
 package app
 
-import (
-	"slices"
+import "strings"
 
-	"github.com/joeblew999/charter/internal/gsxuinames"
-)
+// gsxui's theme editor, as charter check --fix wrote it into the app (internal/themes): its markup, with gsxui's
+// catalogue of styles, base colours, themes, chart colours, menu accents, radii and fonts in it, and the app's own
+// preset. The app's generated Go hands them over as the program starts; the theme screen shows them.
+var themeEditor, themePreset string
 
-// Themes are the themes a reader may choose beside the app's own, as the page runs: gsxui's accents, by gsxui's
-// names and in its order (amber, blue … yellow). Each is in web/gsxui/themes.css, which charter check --fix writes
-// from gsxui itself for the app's style and base colour: <html data-theme="blue"> has one, light and dark alike.
-// The theme-picker screen lists them.
-//
-// A style (nova, lyra …) is not among them: gsxui compiles one into an app's components, and it is changed while
-// developing (charter run ui:theme).
-func Themes() []string { return slices.Clone(gsxuinames.Accents) }
+// SetThemeEditor is called by the Go charter check --fix writes beside the theme screen
+// (pages/screens/theme_editor.gen.go), and by nothing else.
+func SetThemeEditor(markup, preset string) { themeEditor, themePreset = markup, preset }
+
+// themePreviewPlaceholder is what the markup has where the address of the page the editor previews goes.
+const themePreviewPlaceholder = "/__charter/theme-preview-address"
+
+// ThemeEditor is gsxui's theme editor, trusted HTML: gsxui's own, rendered by gsxui's own Go when charter check
+// --fix ran. preview is the page of the app it shows changing as a reader chooses (the app's front page). Empty for
+// an app whose editor has not been written yet (go tool charter check --fix).
+func ThemeEditor(preview string) string {
+	return strings.ReplaceAll(themeEditor, themePreviewPlaceholder, preview)
+}
+
+// ThemePreset is the app's own preset (gsxui.preset.json), as JSON: where the editor starts for a reader who has
+// chosen nothing.
+func ThemePreset() string { return themePreset }

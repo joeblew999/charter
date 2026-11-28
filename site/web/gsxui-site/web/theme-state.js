@@ -1,0 +1,789 @@
+import { getNodeValue, parseTree } from "jsonc-parser";
+
+function clone(value) {
+  return structuredClone(value);
+}
+
+function cloneState(state) {
+  return {
+    resolved: clone(state.resolved),
+    selection: clone(state.selection),
+    previewResolved: state.previewResolved === null ? null : clone(state.previewResolved),
+    mode: state.mode,
+    page: state.page,
+  };
+}
+
+function assertStyle(style, schema) {
+  if (!schema.styles.includes(style)) {
+    throw new Error(`unsupported style ${String(style)}`);
+  }
+}
+
+function validatePreset(preset, schema, validators) {
+  if (!preset || typeof preset !== "object" || Array.isArray(preset)) {
+    throw new Error("preset must be an object");
+  }
+  if (preset.$schema !== schema.schema) {
+    throw new Error(`$schema must be ${schema.schema}`);
+  }
+  if (preset.schemaVersion !== schema.schemaVersion) {
+    throw new Error(`schemaVersion must be ${schema.schemaVersion}`);
+  }
+  assertStyle(preset.style, schema);
+  if (!validators.radius(preset.radius)) {
+    throw new Error("radius is not a supported CSS length");
+  }
+  if (!validators.fontFamily(preset.fontSans)) {
+    throw new Error("fontSans is not a valid CSS font-family list");
+  }
+  if (!validators.fontFamily(preset.fontHeading)) {
+    throw new Error("fontHeading is not a valid CSS font-family list");
+  }
+  if (!preset.theme || typeof preset.theme !== "object" || Array.isArray(preset.theme)) {
+    throw new Error("theme must be an object");
+  }
+  for (const mode of ["light", "dark"]) {
+    const values = preset.theme[mode];
+    if (!values || typeof values !== "object" || Array.isArray(values)) {
+      throw new Error(`theme.${mode} must be an object`);
+    }
+    const keys = Object.keys(values).sort();
+    const expected = [...schema.tokenNames].sort();
+    if (keys.length !== expected.length || keys.some((key, index) => key !== expected[index])) {
+      throw new Error(`theme.${mode} must contain every supported token exactly once`);
+    }
+    for (const name of schema.tokenNames) {
+      if (!validators.color(values[name])) {
+        throw new Error(`theme.${mode}.${name} is not a valid CSS color`);
+      }
+    }
+  }
+  return preset;
+}
+
+export function createThemeState(schema, preset = schema.defaults.nova) {
+  return replacePreset(
+    {
+      resolved: clone(preset),
+      selection: clone(schema.palette.defaultSelection),
+      previewResolved: null,
+      mode: "light",
+      page: "components",
+    },
+    preset,
+    schema,
+  );
+}
+
+function paletteResolution(schema, baseColor, theme) {
+  const resolution = schema.palette.resolved[baseColor]?.[theme];
+  if (!resolution) {
+    throw new Error(`unsupported palette selection ${baseColor}/${theme}`);
+  }
+  return resolution;
+}
+
+// accentOverrideTokens mirrors catalog.go's accentOverrideTokens: the two
+// tokens applyMenuAccent overwrites when bold, and so the two tokens
+// excluded from matchedPaletteSelection's base color/theme comparison
+// below (schema.palette.resolved is always baked at the "subtle" default,
+// so a bold preset's accent/accent-foreground never equal it on those two
+// keys alone, independent of which base color or theme actually matches).
+const accentOverrideTokens = new Set(["accent", "accent-foreground"]);
+
+// chartLayerTokens mirrors catalog.go's chartLayerTokens: the five tokens
+// applyChartColor overwrites, excluded from matchedPaletteSelection's base
+// color/theme comparison for the same reason as accentOverrideTokens —
+// schema.palette.resolved is always baked at the "neutral" chart default.
+const chartLayerTokens = new Set(["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"]);
+const baseThemeMatchExclusions = new Set([...accentOverrideTokens, ...chartLayerTokens]);
+
+function applyMenuAccent(values, accent) {
+  if (accent !== "bold") return;
+  values.accent = values.primary;
+  values["accent-foreground"] = values["primary-foreground"];
+}
+
+function chartColorResolution(schema, chartColor) {
+  const resolution = schema.palette.chartColors[chartColor];
+  if (!resolution) {
+    throw new Error(`unsupported palette chart color ${String(chartColor)}`);
+  }
+  return resolution;
+}
+
+// applyChartColor overlays ONLY the five chart-1..5 tokens from the named
+// hue, independent of base color/theme (mirrors catalog.go's identical
+// overlay in resolvePalette). Unlike applyMenuAccent's "subtle", which
+// depends on the current base color's own accent value, chart color's
+// baseline (schema.palette.chartColors) is a flat, self-contained table —
+// so, unlike selectMenuAccent below, selectChartColor never needs to
+// collapse a custom base color/theme to reapply it.
+function applyChartColor(preset, schema, chartColor) {
+  const resolution = chartColorResolution(schema, chartColor);
+  Object.assign(preset.theme.light, clone(resolution.light));
+  Object.assign(preset.theme.dark, clone(resolution.dark));
+}
+
+function applyPaletteTheme(preset, schema, baseColor, theme, chartColor, menuAccent) {
+  const resolution = paletteResolution(schema, baseColor, theme);
+  preset.theme.light = clone(resolution.light);
+  preset.theme.dark = clone(resolution.dark);
+  applyChartColor(preset, schema, chartColor);
+  applyMenuAccent(preset.theme.light, menuAccent);
+  applyMenuAccent(preset.theme.dark, menuAccent);
+}
+
+function themeSelectionForBase(state, baseColor, schema) {
+  const theme = state.selection.theme;
+  if (state.selection.baseColor === "custom" || !schema.palette.resolved[baseColor]?.[theme]) {
+    return baseColor;
+  }
+  return theme;
+}
+
+// resolvedBaseColorAndTheme collapses "custom" the same way every committing
+// palette reducer already does (see selectTheme/selectBaseColor below and
+// the pre-existing tests documenting this): an axis picker always operates
+// within the catalog model, so touching one axis while the others are
+// custom snaps them to a concrete baseline first.
+function resolvedBaseColorAndTheme(state) {
+  const baseColor = state.selection.baseColor === "custom" ? "neutral" : state.selection.baseColor;
+  const theme = state.selection.theme === "custom" ? baseColor : state.selection.theme;
+  return { baseColor, theme };
+}
+
+function matchedPaletteSelection(preset, schema) {
+  let baseColor = "custom";
+  let theme = "custom";
+  for (const [candidateBaseColor, themes] of Object.entries(schema.palette.resolved)) {
+    for (const [candidateTheme, resolved] of Object.entries(themes)) {
+      if (
+        themeValuesEqual(preset.theme.light, resolved.light, schema.tokenNames, baseThemeMatchExclusions) &&
+        themeValuesEqual(preset.theme.dark, resolved.dark, schema.tokenNames, baseThemeMatchExclusions)
+      ) {
+        baseColor = candidateBaseColor;
+        theme = candidateTheme;
+        break;
+      }
+    }
+    if (baseColor !== "custom") break;
+  }
+  const radius = schema.palette.radii.find((choice) => choice.value === preset.radius)?.name ?? "custom";
+  const menuAccent = matchMenuAccent(preset);
+  const chartColor = matchChartColor(preset, schema);
+  const fontSans = matchFont(preset.fontSans, schema);
+  const fontHeading = matchFont(preset.fontHeading, schema);
+  return { baseColor, theme, radius, chartColor, menuAccent, fontSans, fontHeading };
+}
+
+function themeValuesEqual(a, b, tokenNames, excluded = null) {
+  return tokenNames.every((name) => excluded?.has(name) || a[name] === b[name]);
+}
+
+function containsThemeValues(full, subset) {
+  return Object.entries(subset).every(([name, value]) => full[name] === value);
+}
+
+// matchMenuAccent has no "custom" outcome, unlike the other axes: bold is
+// defined structurally (accent/accent-foreground literally equal
+// primary/primary-foreground in both modes, applyMenuAccent's own
+// postcondition), so a preset is either bold or — by default — subtle.
+// Mirrors catalog.go's matchMenuAccent exactly.
+function matchMenuAccent(preset) {
+  const bold =
+    preset.theme.light.accent === preset.theme.light.primary &&
+    preset.theme.light["accent-foreground"] === preset.theme.light["primary-foreground"] &&
+    preset.theme.dark.accent === preset.theme.dark.primary &&
+    preset.theme.dark["accent-foreground"] === preset.theme.dark["primary-foreground"];
+  return bold ? "bold" : "subtle";
+}
+
+// matchChartColor mirrors catalog.go's matchChartColor: it looks for a hue
+// whose chart-1..5 values (light and dark) exactly match the preset's,
+// independent of which base color or theme also matches — this can and
+// does return "custom" even when base color/theme match a catalog
+// combination exactly.
+function matchChartColor(preset, schema) {
+  for (const [name, resolution] of Object.entries(schema.palette.chartColors)) {
+    if (
+      containsThemeValues(preset.theme.light, resolution.light) &&
+      containsThemeValues(preset.theme.dark, resolution.dark)
+    ) {
+      return name;
+    }
+  }
+  return "custom";
+}
+
+// matchFont mirrors catalog.go's matchFont: a catalog entry whose Stack
+// exactly equals the preset's fontSans/fontHeading value, or "custom" if
+// none matches (a foreign theme.css or raw JSON import named a font-family
+// gsxui hasn't curated).
+function matchFont(stack, schema) {
+  return schema.palette.fonts.find((choice) => choice.stack === stack)?.name ?? "custom";
+}
+
+export function replacePreset(state, preset, schema) {
+  const next = cloneState(state);
+  next.resolved = clone(preset);
+  next.selection = matchedPaletteSelection(next.resolved, schema);
+  next.previewResolved = null;
+  return next;
+}
+
+export function selectBaseColor(state, baseColor, schema) {
+  const next = cloneState(state);
+  const theme = themeSelectionForBase(state, baseColor, schema);
+  applyPaletteTheme(next.resolved, schema, baseColor, theme, state.selection.chartColor, state.selection.menuAccent);
+  next.selection.baseColor = baseColor;
+  next.selection.theme = theme;
+  next.previewResolved = null;
+  return next;
+}
+
+export function selectTheme(state, theme, schema) {
+  const next = cloneState(state);
+  const baseColor = state.selection.baseColor === "custom" ? "neutral" : state.selection.baseColor;
+  applyPaletteTheme(next.resolved, schema, baseColor, theme, state.selection.chartColor, state.selection.menuAccent);
+  next.selection.baseColor = baseColor;
+  next.selection.theme = theme;
+  next.previewResolved = null;
+  return next;
+}
+
+export function selectMenuAccent(state, menuAccent, schema) {
+  if (!schema.palette.menuAccents.some((choice) => choice.name === menuAccent)) {
+    throw new Error(`unsupported palette menu accent ${String(menuAccent)}`);
+  }
+  const next = cloneState(state);
+  const { baseColor, theme } = resolvedBaseColorAndTheme(state);
+  applyPaletteTheme(next.resolved, schema, baseColor, theme, state.selection.chartColor, menuAccent);
+  next.selection.baseColor = baseColor;
+  next.selection.theme = theme;
+  next.selection.menuAccent = menuAccent;
+  next.previewResolved = null;
+  return next;
+}
+
+export function selectChartColor(state, chartColor, schema) {
+  const next = cloneState(state);
+  applyChartColor(next.resolved, schema, chartColor);
+  next.selection.chartColor = chartColor;
+  next.previewResolved = null;
+  return next;
+}
+
+// fontChoice looks up a font catalog entry by name, throwing on an unknown
+// one — mirrors chartColorResolution's shape above.
+function fontChoice(schema, font) {
+  const choice = schema.palette.fonts.find((candidate) => candidate.name === font);
+  if (!choice) {
+    throw new Error(`unsupported palette font ${String(font)}`);
+  }
+  return choice;
+}
+
+// selectFont/selectFontHeading are the simplest palette reducers: unlike
+// selectChartColor/selectMenuAccent, the font axis never touches
+// resolved.theme.light/dark at all (Preset.FontSans/FontHeading are
+// top-level fields, not part of ThemeValues — see catalog.go's dossier
+// citation on Preset), so there is no overlay to apply and nothing else to
+// collapse from "custom" first. Shape mirrors selectRadius exactly.
+export function selectFont(state, font, schema) {
+  const choice = fontChoice(schema, font);
+  const next = cloneState(state);
+  next.resolved.fontSans = choice.stack;
+  next.selection.fontSans = font;
+  next.previewResolved = null;
+  return next;
+}
+
+export function selectFontHeading(state, font, schema) {
+  const choice = fontChoice(schema, font);
+  const next = cloneState(state);
+  next.resolved.fontHeading = choice.stack;
+  next.selection.fontHeading = font;
+  next.previewResolved = null;
+  return next;
+}
+
+export function selectRadius(state, radius, schema) {
+  const choice = schema.palette.radii.find((candidate) => candidate.name === radius);
+  if (!choice) {
+    throw new Error(`unsupported palette radius ${String(radius)}`);
+  }
+  const next = cloneState(state);
+  next.resolved.radius = choice.value;
+  next.selection.radius = radius;
+  next.previewResolved = null;
+  return next;
+}
+
+export function previewBaseColor(state, baseColor, schema) {
+  const next = cloneState(state);
+  const theme = themeSelectionForBase(state, baseColor, schema);
+  next.previewResolved = clone(next.resolved);
+  applyPaletteTheme(next.previewResolved, schema, baseColor, theme, state.selection.chartColor, state.selection.menuAccent);
+  return next;
+}
+
+export function previewTheme(state, theme, schema) {
+  const next = cloneState(state);
+  const baseColor = state.selection.baseColor === "custom" ? "neutral" : state.selection.baseColor;
+  next.previewResolved = clone(next.resolved);
+  applyPaletteTheme(next.previewResolved, schema, baseColor, theme, state.selection.chartColor, state.selection.menuAccent);
+  return next;
+}
+
+export function previewChartColor(state, chartColor, schema) {
+  const next = cloneState(state);
+  next.previewResolved = clone(next.resolved);
+  applyChartColor(next.previewResolved, schema, chartColor);
+  return next;
+}
+
+export function previewFont(state, font, schema) {
+  const choice = fontChoice(schema, font);
+  const next = cloneState(state);
+  next.previewResolved = clone(next.resolved);
+  next.previewResolved.fontSans = choice.stack;
+  return next;
+}
+
+export function previewFontHeading(state, font, schema) {
+  const choice = fontChoice(schema, font);
+  const next = cloneState(state);
+  next.previewResolved = clone(next.resolved);
+  next.previewResolved.fontHeading = choice.stack;
+  return next;
+}
+
+export function previewRadius(state, radius, schema) {
+  const choice = schema.palette.radii.find((candidate) => candidate.name === radius);
+  if (!choice) {
+    throw new Error(`unsupported palette radius ${String(radius)}`);
+  }
+  const next = cloneState(state);
+  next.previewResolved = clone(next.resolved);
+  next.previewResolved.radius = choice.value;
+  return next;
+}
+
+export function clearPalettePreview(state) {
+  const next = cloneState(state);
+  next.previewResolved = null;
+  return next;
+}
+
+export function previewPreset(state) {
+  return state.previewResolved ?? state.resolved;
+}
+
+export function selectStyle(state, style, schema) {
+  assertStyle(style, schema);
+  const next = cloneState(state);
+  next.resolved.style = style;
+  next.previewResolved = null;
+  return next;
+}
+
+export function selectMode(state, mode) {
+  if (mode !== "light" && mode !== "dark") {
+    throw new Error("mode must be light or dark");
+  }
+  const next = cloneState(state);
+  next.mode = mode;
+  return next;
+}
+
+// selectPage switches which preview page (the "Components" gallery vs the
+// "Product" realistic-surface gallery, site/stylepreview/gallery.gsx.src)
+// is visible in the iframe. Like mode, page is a client-only view toggle —
+// not part of the preset schema, so it rides outside undo/redo (see the
+// history block below) and is never encoded into a share code.
+export function selectPage(state, page) {
+  if (page !== "components" && page !== "product") {
+    throw new Error("page must be components or product");
+  }
+  const next = cloneState(state);
+  next.page = page;
+  return next;
+}
+
+export function resetThemeState(state, schema) {
+  assertStyle(state.resolved.style, schema);
+  return replacePreset(state, schema.defaults[state.resolved.style], schema);
+}
+
+// Undo/redo is a bounded stack of committed `resolved` presets (never
+// `previewResolved` — hover previews are never pushed, matching every
+// committing reducer above, which already only ever mutates `resolved`).
+// Mode (light/dark) and page (components/product) intentionally ride along
+// outside history: both are client-only view toggles, not part of the
+// preset schema, so undoing never flips them — only theme.gsx's calls
+// decide when a state change is a commit worth a history entry, by calling
+// pushHistory once per commit, at the
+// same granularity the editor already commits at (click-driven pickers,
+// style buttons, reset, and import-apply — there is no per-keystroke commit
+// path in this editor to begin with, so no separate debounce is needed).
+export const HISTORY_LIMIT = 50;
+
+export function createHistory(state) {
+  return { entries: [clone(state.resolved)], cursor: 0 };
+}
+
+export function pushHistory(history, state) {
+  const entries = history.entries.slice(0, history.cursor + 1);
+  entries.push(clone(state.resolved));
+  const overflow = entries.length - HISTORY_LIMIT;
+  const trimmed = overflow > 0 ? entries.slice(overflow) : entries;
+  return { entries: trimmed, cursor: trimmed.length - 1 };
+}
+
+export function canUndo(history) {
+  return history.cursor > 0;
+}
+
+export function canRedo(history) {
+  return history.cursor < history.entries.length - 1;
+}
+
+function travelHistory(history, state, schema, delta) {
+  const cursor = history.cursor + delta;
+  if (cursor < 0 || cursor >= history.entries.length) return { history, state };
+  const resolved = history.entries[cursor];
+  return { history: { ...history, cursor }, state: replacePreset(state, resolved, schema) };
+}
+
+export function undoHistory(history, state, schema) {
+  return travelHistory(history, state, schema, -1);
+}
+
+export function redoHistory(history, state, schema) {
+  return travelHistory(history, state, schema, 1);
+}
+
+function orderedPreset(preset, schema) {
+  const theme = {};
+  for (const mode of ["light", "dark"]) {
+    theme[mode] = {};
+    for (const name of schema.tokenNames) {
+      theme[mode][name] = preset.theme[mode][name];
+    }
+  }
+  return {
+    $schema: preset.$schema,
+    schemaVersion: preset.schemaVersion,
+    style: preset.style,
+    radius: preset.radius,
+    fontSans: preset.fontSans,
+    fontHeading: preset.fontHeading,
+    theme,
+  };
+}
+
+export function canonicalJSON(preset, schema) {
+  return `${JSON.stringify(orderedPreset(preset, schema), null, 2)}\n`;
+}
+
+export function themeCSS(preset, schema) {
+  const root = [
+    `  --radius: ${preset.radius};`,
+    `  --font-sans: ${preset.fontSans};`,
+    `  --font-heading: ${preset.fontHeading};`,
+    ...schema.tokenNames.map((name) => `  --${name}: ${preset.theme.light[name]};`),
+  ].join("\n");
+  const dark = schema.tokenNames
+    .map((name) => `  --${name}: ${preset.theme.dark[name]};`)
+    .join("\n");
+  return `:root {\n${root}\n}\n\n.dark {\n${dark}\n}\n`;
+}
+
+function base64URL(bytes) {
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+}
+
+function fromBase64URL(value) {
+  if (value.includes("=")) {
+    throw new Error("share code uses non-canonical padded base64");
+  }
+  const standard = value.replaceAll("-", "+").replaceAll("_", "/");
+  const binary = atob(standard.padEnd(Math.ceil(standard.length / 4) * 4, "="));
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+const base62Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const maxUint64 = (1n << 64n) - 1n;
+
+function encodeBase62(value) {
+  if (value === 0n) return "0";
+  let encoded = "";
+  while (value > 0n) {
+    encoded = base62Alphabet[Number(value % 62n)] + encoded;
+    value /= 62n;
+  }
+  return encoded;
+}
+
+function decodeBase62(value) {
+  if (value === "") throw new Error("compact payload is empty");
+  let decoded = 0n;
+  for (const character of value) {
+    const digit = base62Alphabet.indexOf(character);
+    if (digit === -1) throw new Error(`invalid compact base62 character ${character}`);
+    decoded = decoded * 62n + BigInt(digit);
+    if (decoded > maxUint64) throw new Error("compact base62 integer overflow");
+  }
+  if (encodeBase62(decoded) !== value) {
+    throw new Error("compact base62 spelling is not canonical");
+  }
+  return decoded;
+}
+
+function compactSelection(preset, schema) {
+  const selection = matchedPaletteSelection(preset, schema);
+  if (
+    selection.baseColor === "custom" ||
+    selection.theme === "custom" ||
+    selection.radius === "custom" ||
+    selection.chartColor === "custom" ||
+    selection.fontSans === "custom" ||
+    selection.fontHeading === "custom"
+  ) {
+    return null;
+  }
+  const compact = schema.transport.compact;
+  const indexes = {
+    style: compact.styles.indexOf(preset.style),
+    baseColor: compact.baseColors.indexOf(selection.baseColor),
+    theme: compact.themes.indexOf(selection.theme),
+    radius: compact.radii.indexOf(selection.radius),
+    menuAccent: compact.menuAccents.indexOf(selection.menuAccent),
+    // ChartColor reuses compact.themes for its index — see compact.go's
+    // identical reasoning (the same 24-hue catalogue, a disjoint token set).
+    chartColor: compact.themes.indexOf(selection.chartColor),
+    fontSans: compact.fonts.indexOf(selection.fontSans),
+    fontHeading: compact.fonts.indexOf(selection.fontHeading),
+  };
+  return Object.values(indexes).includes(-1) ? null : indexes;
+}
+
+function encodeFullShare(preset, schema) {
+  return `${schema.transport.fullPrefix}${base64URL(new TextEncoder().encode(canonicalJSON(preset, schema)))}`;
+}
+
+export function encodeShare(preset, schema) {
+  const selection = compactSelection(preset, schema);
+  if (!selection) return encodeFullShare(preset, schema);
+  const packed =
+    BigInt(selection.style) |
+    (BigInt(selection.baseColor) << 4n) |
+    (BigInt(selection.theme) << 8n) |
+    (BigInt(selection.radius) << 13n) |
+    (BigInt(selection.menuAccent) << 16n) |
+    (BigInt(selection.chartColor) << 18n) |
+    (BigInt(selection.fontSans) << 23n) |
+    (BigInt(selection.fontHeading) << 26n);
+  return `${schema.transport.compactPrefix}${encodeBase62(packed)}`;
+}
+
+function decodeCompactShare(code, schema, validators) {
+  const payload = code.slice(schema.transport.compactPrefix.length);
+  const packed = decodeBase62(payload);
+  if (packed >> 29n !== 0n) {
+    throw new Error("compact payload uses bits beyond the p1 schema");
+  }
+  const compact = schema.transport.compact;
+  const indexes = {
+    style: Number(packed & 0xfn),
+    baseColor: Number((packed >> 4n) & 0xfn),
+    theme: Number((packed >> 8n) & 0x1fn),
+    radius: Number((packed >> 13n) & 0x7n),
+    menuAccent: Number((packed >> 16n) & 0x3n),
+    chartColor: Number((packed >> 18n) & 0x1fn),
+    fontSans: Number((packed >> 23n) & 0x7n),
+    fontHeading: Number((packed >> 26n) & 0x7n),
+  };
+  for (const [name, index] of Object.entries(indexes)) {
+    const values =
+      name === "style"
+        ? compact.styles
+        : name === "baseColor"
+          ? compact.baseColors
+          : name === "theme"
+            ? compact.themes
+            : name === "radius"
+              ? compact.radii
+              : name === "menuAccent"
+                ? compact.menuAccents
+                : name === "chartColor"
+                  ? compact.themes
+                  : compact.fonts;
+    if (index >= values.length) throw new Error(`compact payload uses unused ${name} index`);
+  }
+
+  const style = compact.styles[indexes.style];
+  const baseColor = compact.baseColors[indexes.baseColor];
+  const theme = compact.themes[indexes.theme];
+  const radiusName = compact.radii[indexes.radius];
+  const menuAccent = compact.menuAccents[indexes.menuAccent];
+  const chartColor = compact.themes[indexes.chartColor];
+  const fontSansName = compact.fonts[indexes.fontSans];
+  const fontHeadingName = compact.fonts[indexes.fontHeading];
+  const resolved = schema.palette.resolved[baseColor]?.[theme];
+  if (!resolved) {
+    throw new Error(`compact payload has invalid base-color/theme combination ${baseColor}/${theme}`);
+  }
+  const radius = schema.palette.radii.find((choice) => choice.name === radiusName)?.value;
+  if (radius === undefined) {
+    throw new Error(`compact payload radius ${radiusName} is absent from the palette schema`);
+  }
+  const fontSans = schema.palette.fonts.find((choice) => choice.name === fontSansName)?.stack;
+  if (fontSans === undefined) {
+    throw new Error(`compact payload font sans ${fontSansName} is absent from the palette schema`);
+  }
+  const fontHeading = schema.palette.fonts.find((choice) => choice.name === fontHeadingName)?.stack;
+  if (fontHeading === undefined) {
+    throw new Error(`compact payload font heading ${fontHeadingName} is absent from the palette schema`);
+  }
+  const light = clone(resolved.light);
+  const dark = clone(resolved.dark);
+  const chartResolution = chartColorResolution(schema, chartColor);
+  Object.assign(light, chartResolution.light);
+  Object.assign(dark, chartResolution.dark);
+  applyMenuAccent(light, menuAccent);
+  applyMenuAccent(dark, menuAccent);
+  const preset = validatePreset(
+    {
+      $schema: schema.schema,
+      schemaVersion: schema.schemaVersion,
+      style,
+      radius,
+      fontSans,
+      fontHeading,
+      theme: { light, dark },
+    },
+    schema,
+    validators,
+  );
+  if (encodeShare(preset, schema) !== code) {
+    throw new Error("compact share code is not canonical");
+  }
+  return clone(preset);
+}
+
+function decodeFullShare(code, schema, validators) {
+  const payload = code.slice(schema.transport.fullPrefix.length);
+  const source = new TextDecoder("utf-8", { fatal: true }).decode(fromBase64URL(payload));
+  const preset = importPresetJSON(source, schema, validators);
+  if (encodeFullShare(preset, schema) !== code) {
+    throw new Error("share code is not canonical");
+  }
+  return preset;
+}
+
+export function decodeShare(code, schema, validators) {
+  if (code.startsWith(schema.transport.compactPrefix)) {
+    return decodeCompactShare(code, schema, validators);
+  }
+  if (code.startsWith(schema.transport.fullPrefix)) {
+    return decodeFullShare(code, schema, validators);
+  }
+  throw new Error("unsupported share transport");
+}
+
+export function loadShareFromURL(url, schema, validators) {
+  const code = new URL(url).searchParams.get("preset");
+  return code ? decodeShare(code, schema, validators) : null;
+}
+
+export function commandStrings(share) {
+  return {
+    init: `gsxui init --preset '${share}'`,
+    apply: `gsxui apply --preset '${share}'`,
+  };
+}
+
+function objectEntries(node, allowed, required, path) {
+  if (!node || node.type !== "object") {
+    throw new Error(`${path} must be an object`);
+  }
+  const entries = new Map();
+  for (const property of node.children ?? []) {
+    const [keyNode, valueNode] = property.children ?? [];
+    const key = keyNode?.value;
+    if (typeof key !== "string") {
+      throw new Error(`${path} contains an invalid property`);
+    }
+    if (entries.has(key)) {
+      throw new Error(`${path}.${key} is duplicated`);
+    }
+    if (!allowed.includes(key)) {
+      throw new Error(`${path}.${key} is unknown`);
+    }
+    entries.set(key, valueNode);
+  }
+  for (const key of required) {
+    if (!entries.has(key)) {
+      throw new Error(`${path}.${key} is required`);
+    }
+  }
+  return entries;
+}
+
+export function importPresetJSON(source, schema, validators) {
+  const errors = [];
+  const root = parseTree(source, errors, {
+    allowTrailingComma: false,
+    disallowComments: true,
+  });
+  if (!root || errors.length !== 0) {
+    const offset = errors[0]?.offset ?? 0;
+    throw new Error(`invalid preset JSON at offset ${offset}`);
+  }
+
+  const presetEntries = objectEntries(
+    root,
+    ["$schema", "schemaVersion", "style", "radius", "fontSans", "fontHeading", "theme"],
+    ["$schema", "schemaVersion", "style", "radius", "fontSans", "fontHeading", "theme"],
+    "preset",
+  );
+  const themeEntries = objectEntries(
+    presetEntries.get("theme"),
+    ["light", "dark"],
+    ["light", "dark"],
+    "preset.theme",
+  );
+  for (const mode of ["light", "dark"]) {
+    objectEntries(
+      themeEntries.get(mode),
+      schema.tokenNames,
+      schema.tokenNames,
+      `preset.theme.${mode}`,
+    );
+  }
+
+  return clone(validatePreset(getNodeValue(root), schema, validators));
+}
+
+export function importThemeCSS(state, source, schema, validators, parseCSS) {
+  const parsed = parseCSS(source, schema);
+  const candidate = clone(state.resolved);
+  if (parsed.radius) candidate.radius = parsed.radius;
+  if (parsed.fontSans) candidate.fontSans = parsed.fontSans;
+  if (parsed.fontHeading) candidate.fontHeading = parsed.fontHeading;
+  Object.assign(candidate.theme.light, parsed.light);
+  Object.assign(candidate.theme.dark, parsed.dark);
+  validatePreset(candidate, schema, validators);
+  return replacePreset(state, candidate, schema);
+}
+
+export function manualCopyState(copied, text) {
+  return copied ? { visible: false, text: "" } : { visible: true, text };
+}

@@ -151,7 +151,6 @@ ar screens.sign_up 86033f75a4c0 af21ddc4ae9d
 ar screens.sign_up_intro aeadee6ba7b2 08881eaf6071
 ar screens.signed_in_as 599a82d98089 e46b81447099
 ar screens.theme 19d8d295e681 38e265ee4d4c
-ar screens.theme_own 21b111cbfe6e b5fda2d21fb2
 ar screens.theme_pick fb92afc484e9 c7615f1b5cd8
 ar screens.time_zone b9fe1464783e 2d25557e7c23
 ar screens.time_zone_auto 2cc61310db9b cea94ac984e6
@@ -315,7 +314,6 @@ de screens.sign_up 86033f75a4c0 d7e7f57a7cd4
 de screens.sign_up_intro aeadee6ba7b2 7fafa3126bd1
 de screens.signed_in_as 599a82d98089 ffeaa9674508
 de screens.theme 19d8d295e681 c2880a59df92
-de screens.theme_own 21b111cbfe6e ef6691545d2c
 de screens.theme_pick fb92afc484e9 e5a262900824
 de screens.time_zone b9fe1464783e 00507b23a11b
 de screens.time_zone_auto 2cc61310db9b 8063a5755752
@@ -328,13 +326,14 @@ de screens.tokens_intro 1c6d96696955 a918f0304511
 de site.description 4678adbf73e2 770309db6d44
 de site.title a53f68bc82b2 b6d1b994b50b
 file pages/screens/admin.gsx c0fa6c7aead1
-file pages/screens/docs.gsx 78804bb73216
+file pages/screens/docs.gsx 63ef71db0ed0
 file pages/screens/language-list.gsx 1a157c0ef599
 file pages/screens/language-offer.gsx 5ec18f9cf405
 file pages/screens/preferences.gsx fa0123644365
 file pages/screens/sign-in.gsx 8e5a933ca9b7
 file pages/screens/theme-picker.gsx b4f5aab0bf1e
 file pages/screens/theme-toggle.gsx 3d8bf9b79d18
+file pages/screens/theme.gsx f0c59ae0d99c
 file text:gsxui.breadcrumb d6dc6b5ebe19
 file text:gsxui.displays_the_mobile_sidebar 2a174a65adee
 file text:gsxui.more d47d7cb0e4f8

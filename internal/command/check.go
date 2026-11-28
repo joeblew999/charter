@@ -27,8 +27,8 @@ import (
 //
 //	tools      Go, Node and fnox are the versions mise.toml pins, and it pins at least what charter was tested with
 //	           (with --fix: the pins are raised and installed)
-//	themes     for an app with the theme-picker screen: every theme gsxui has for its style and base colour is in
-//	           web/gsxui/themes.css, as gsxui resolves it now (with --fix: written)
+//	themes     for an app with the theme screen: gsxui's theme editor is in the app as gsxui has it now, its markup
+//	           and catalogue and its scripts (with --fix: written)
 //	generate   the messages, the components' Go and the browser's files, which everything after reads
 //	fmt        charter fmt --check (with --fix: charter fmt)
 //	lint       charter lint (with --fix: go mod tidy)
@@ -83,7 +83,7 @@ func Check(args []string) {
 			return intl.UpdateScreens(behind)
 		})
 	}
-	if exists(filepath.Join(p.Root, "pages", "screens", "theme-picker.gsx")) {
+	if exists(filepath.Join(p.Root, "pages", "screens", "theme.gsx")) {
 		t.part("themes", func() error { return themesWritten(p, *fix) })
 	}
 	t.part("generate", func() error { return generate(p) })
@@ -148,10 +148,10 @@ func bindingsTyped(p *project.Project) error {
 		strings.Join(named, "\n  "))
 }
 
-// themesWritten holds an app that lets its readers choose a theme (the theme-picker screen) to having every theme
-// gsxui has for its style and base colour: web/gsxui/themes.css, which gsxui itself resolves (internal/themes),
-// written when the app's preset or its gsxui has changed, and loaded by the page (web/main.js imports it). With
-// fix both are written; without, each that is behind is said.
+// themesWritten holds an app that has gsxui's theme editor (the theme screen) to having it as gsxui has it now:
+// the editor's markup and catalogue, rendered by gsxui's own Go, and its scripts (internal/themes), written when
+// the app's preset or its gsxui has changed, and loaded by the page (web/main.js imports what connects them).
+// With fix all of it is written; without, what is behind is said.
 func themesWritten(p *project.Project, fix bool) error {
 	if err := themes.Write(p.Root, !fix); err != nil {
 		return err
@@ -159,20 +159,20 @@ func themesWritten(p *project.Project, fix bool) error {
 	entry := filepath.Join(p.Root, "web", "main.js")
 	b, err := os.ReadFile(entry)
 	if err != nil {
-		return fmt.Errorf("the themes are loaded by the page's script, and web/main.js is not there: %w", err)
+		return fmt.Errorf("gsxui's theme editor is loaded by the page's script, and web/main.js is not there: %w", err)
 	}
-	const line, after = `import "./gsxui/themes.css";`, `import "./gsxui/index.css";`
+	const line, after = `import "./gsxui-site/charter.js";`, `import "./gsxui/index.css";`
 	if strings.Contains(string(b), line) {
 		return nil
 	}
 	if !fix {
-		return fmt.Errorf("web/main.js does not load gsxui's themes: add %s after %s (charter check --fix does)", line, after)
+		return fmt.Errorf("web/main.js does not load gsxui's theme editor: add %s after %s (charter check --fix does)", line, after)
 	}
 	if !strings.Contains(string(b), after) {
 		return fmt.Errorf("web/main.js has no %s to put %s after: add it where the app's CSS is loaded", after, line)
 	}
-	say("web/main.js: loads gsxui's themes (web/gsxui/themes.css)")
-	return os.WriteFile(entry, []byte(strings.Replace(string(b), after, after+"\n// gsxui's other themes, which a reader chooses among as the page runs (the theme-picker screen): charter check --fix\n// writes the file from gsxui itself.\n"+line, 1)), 0o644)
+	say("web/main.js: loads gsxui's theme editor (web/gsxui-site)")
+	return os.WriteFile(entry, []byte(strings.Replace(string(b), after, after+"\n// gsxui's theme editor (the theme screen), and a page of the app shown inside it as its live preview: charter check\n// --fix writes the folder from gsxui itself.\n"+line, 1)), 0o644)
 }
 
 // scopesDeclared fails where the app's Go makes a scope that it is not declaring: a scope is a value so that no

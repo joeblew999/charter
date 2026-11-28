@@ -45,9 +45,9 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   something a developer writes opens with its commands, what is checked before the app runs, and what is not.
 - **The look is gsxui's, all of it.** Its styles, its themes, its light and dark, by gsxui's own commands
   (`charter run ui:theme` is `gsxui apply`). charter has no colour, no theme setting and no stylesheet of its own:
-  the themes a reader chooses among as the page runs (`web/gsxui/themes.css`, the theme-picker screen) are each
-  resolved by gsxui itself (`internal/themes`), and what charter repeats of gsxui (the layout of a share code) a
-  test holds to gsxui's source.
+  what a reader chooses with is gsxui's own theme editor, its markup, catalogue and scripts written into the app
+  from gsxui (`internal/themes`, the theme screen), with the app as its preview by gsxui's own protocol. What
+  charter repeats of gsxui (the layout of a share code, for `--style`) a test holds to gsxui's source.
 - **What every app needs is a screen** (`app/screens`: the docs' pages, the theme switch, the language list and
   offer, the time zone dialog): a gsx template of gsxui components that `charter add screen:<name>` copies into an
   app, as gsxui copies a component, so it is built from the app's own components and theme. Change a screen in
@@ -119,5 +119,6 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
 - **Checks:** `go test ./...` at the top, then in `example/` and in `site/`: `go tool charter check && go tool charter test`, and
   `go tool charter test --deployed` after a deploy. Work is on `main`. CI is one Linux job per push.
 - **Needs the owner's OK:** anything on another owner's repository.
-- JavaScript only in `app/worker/` (the glue that runs Go, the hub's Durable Object), `internal/intlkit/js` and the
-  apps' `web/`. Keep it logic-free.
+- JavaScript only in `app/worker/` (the glue that runs Go, the hub's Durable Object), `internal/intlkit/js`,
+  `internal/themes/js` (what connects gsxui's own theme editor to an app, and nothing that chooses or resolves a
+  theme: that is gsxui's) and the apps' `web/`. Keep it logic-free.

@@ -34,6 +34,8 @@ type Pages struct {
 	home  Home         `route:"GET /{$} Home"`
 	built Built        `route:"/built Built"`
 	docs  screens.Docs `route:"/docs Docs"`
+	// gsxui's theme editor, in the app: a reader chooses, and the app has it from then on.
+	theme screens.Theme `route:"/theme Theme"`
 
 	// The app's own people: signing in with a passkey, and what is someone's own (charter's sign-in screen).
 	signIn  screens.SignIn  `route:"/sign-in SignIn"`

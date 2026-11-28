@@ -23,7 +23,7 @@ component (p Home) Page() {
 				<span class="flex-1"></span>
 				<ui.Button variant="ghost" size="sm" href={screens.DocsIndex{} |> url}>{ locales.HomeDocs }</ui.Button>
 				<ui.Button variant="ghost" size="sm" href={Repo} rel="noopener" id="github">{ locales.HomeGithub }</ui.Button>
-				<screens.ThemePicker/>
+				<screens.ThemeLink/>
 				<screens.ThemeToggle/>
 			</header>
 			<ui.Separator/>

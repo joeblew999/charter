@@ -1,26 +1,28 @@
-// Package themes writes every theme gsxui has for an app's style and base colour into one stylesheet, so that a
-// reader can choose among them as the page runs.
+// Package themes brings gsxui's theme editor (https://ui.gsxhq.dev/theme) into an app, as gsxui has it: its
+// markup, its scripts and its catalogue of styles, base colours, themes, chart colours, menu accents, radii and
+// fonts. Nothing of it is charter's: a reader of the app chooses with gsxui's own controls, the app's own pages
+// are the editor's live preview by gsxui's own preview protocol, and what is chosen is gsxui's preset, kept and
+// shared as gsxui's share code.
 //
-// gsxui's own design: a style (vega, nova, maia, lyra, mira, luma, sera, rhea) is compiled into the components,
-// one for an app, and is changed while developing (gsxui apply; charter run ui:theme). A theme changes CSS
-// variables only, and nothing else: so a theme can be changed in the browser, light and dark alike. gsxui installs
-// one theme (web/gsxui/theme.css). This asks gsxui itself for each of the others, the accents of its theme
-// editor (https://ui.gsxhq.dev/theme: amber, blue … yellow), and keeps what each changes:
+// gsxui has the editor as Go in its own module (site/pages: ThemeEditor, "the editor body without the site
+// shell") and as three scripts (web/theme.js, web/theme-state.js, web/theme-preview.js). Compiled into a Worker
+// the editor is 25 MiB and its preview of every component in every style 40, of the 64 a Worker may have. So it
+// is rendered here, once, on this machine, by a program that calls gsxui's ThemeEditor, and what comes out (the
+// markup, with the catalogue in it) is a file of the app; the scripts are copied beside it, as gsxui copies its
+// own into web/gsxui. The page that shows it is the theme screen.
 //
-//	[data-theme="blue"] { --primary: …; --sidebar-primary: …; … }
-//	.dark[data-theme="blue"], .dark [data-theme="blue"] { … }
+// What gsxui's design leaves to building: a style (vega, nova, maia, lyra, mira, luma, sera, rhea) is compiled into
+// an app's components, one for an app. In the app the editor shows the app's own style; another is seen in
+// gsxui's own editor, where the page sends a reader with their choice, and built with charter run ui:theme.
 //
-// Nothing here knows a colour. Each theme is resolved by gsxui's own code: gsxui apply, run on a copy of the
-// app's gsxui files under .charter/, with the theme's share code. A share code is how gsxui names a combination
-// of its choices (gsxui:p1:…), and what apply takes; its layout is gsxui's, and is repeated below because gsxui
-// has no command that makes one from names. A test holds the copy to gsxui's own source.
-//
-// The file is web/gsxui/themes.css, committed, and written by charter check --fix when the app's preset or its
-// gsxui has changed (its first line says from which); charter check fails while it is behind.
+// Written by charter check --fix when the app's preset, its gsxui or this package has changed (the generated Go
+// says from which); charter check fails while any of it is behind.
 package themes
 
 import (
+	"bytes"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -54,9 +56,6 @@ const (
 	radiusMedium = 2
 )
 
-// Accents are the themes a reader may choose beside the app's own: gsxui's accents, in gsxui's order.
-func Accents() []string { return slices.Clone(gsxuinames.Accents) }
-
 // Code is gsxui's share code for a style, a base colour and a theme.
 func Code(style, base, theme string) (string, error) {
 	s, b, t := slices.Index(Styles, style), slices.Index(Bases, base), slices.Index(all, theme)
@@ -74,227 +73,164 @@ func Code(style, base, theme string) (string, error) {
 	return prefix + code, nil
 }
 
-// File is the stylesheet, in an app.
-var File = filepath.Join("web", "gsxui", "themes.css")
+// Where gsxui's editor is in an app: its scripts as gsxui has them and what connects them to the app, and the
+// editor's markup with the Go that hands it to the theme screen.
+var (
+	scripts = filepath.Join("web", "gsxui-site")
+	markup  = filepath.Join("pages", "screens", "theme-editor.gen.html")
+	handed  = filepath.Join("pages", "screens", "theme_editor.gen.go")
+)
 
-// values are a theme's variables for light and for dark, as gsxui.preset.json has them.
-type values struct {
-	Light map[string]string `json:"light"`
-	Dark  map[string]string `json:"dark"`
-}
+// PreviewPlaceholder stands in the markup for the address of the page the editor previews, which the theme screen
+// knows when it is asked for (the app's front page, in the reader's language).
+const PreviewPlaceholder = "/__charter/theme-preview-address"
 
-type preset struct {
-	Style string `json:"style"`
-	Theme values `json:"theme"`
-}
-
-func read(file string) (preset, []byte, error) {
-	var p preset
-	b, err := os.ReadFile(file)
-	if err != nil {
-		return p, nil, err
-	}
-	return p, b, json.Unmarshal(b, &p)
-}
+//go:embed js/charter.js
+var connection string
 
 var keyed = regexp.MustCompile(`from ([0-9a-f]{16})\b`)
 
-// Write writes dir's web/gsxui/themes.css when it is not what the app's preset and its gsxui give; with check it
-// writes nothing and fails then. An app with no gsxui has none.
+// gsxuiScripts are the editor's scripts, in gsxui's web folder.
+var gsxuiScripts = []string{"theme.js", "theme-state.js", "theme-preview.js"}
+
+// Write writes gsxui's theme editor into the app in dir when what is there is not what the app's preset, its gsxui
+// and this package give; with check it writes nothing and fails then. An app with no gsxui has none.
 func Write(dir string, check bool) error {
-	app, raw, err := read(filepath.Join(dir, "gsxui.preset.json"))
+	preset, err := os.ReadFile(filepath.Join(dir, "gsxui.preset.json"))
 	if os.IsNotExist(err) {
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("gsxui.preset.json: %w", err)
+		return err
 	}
-	version, err := exec.Command("go", "list", "-C", dir, "-m", "-f", "{{.Version}}{{.Dir}}", "github.com/gsxhq/gsxui").Output()
+	out, err := exec.Command("go", "list", "-C", dir, "-m", "-f", "{{.Version}}\n{{.Dir}}", "github.com/gsxhq/gsxui").Output()
 	if err != nil {
 		return fmt.Errorf("the app's gsxui: %w", err)
 	}
-	key := fmt.Sprintf("%x", sha256.Sum256(append(version, raw...)))[:16]
-	file := filepath.Join(dir, File)
-	if old, err := os.ReadFile(file); err == nil {
-		if m := keyed.FindSubmatch(old); m != nil && string(m[1]) == key {
+	version, gsxui, _ := strings.Cut(strings.TrimSpace(string(out)), "\n")
+	key := fmt.Sprintf("%x", sha256.Sum256([]byte(version+"\x00"+string(preset)+"\x00"+connection)))[:16]
+	if old, err := os.ReadFile(filepath.Join(dir, handed)); err == nil {
+		if m := keyed.FindSubmatch(old); m != nil && string(m[1]) == key && present(dir) {
 			return nil
 		}
 	}
 	if check {
-		return fmt.Errorf("%s is not what the app's preset (gsxui.preset.json) and its gsxui give: charter check --fix writes it", filepath.ToSlash(File))
+		return fmt.Errorf("gsxui's theme editor in the app (%s, %s) is not what the app's preset and its gsxui give: charter check --fix writes it", filepath.ToSlash(scripts), filepath.ToSlash(markup))
 	}
-	css, err := resolve(dir, app, key)
+	// gsxui's scripts, as they are, and beside them what connects them to the app. gsxui's editor script imports
+	// gsxui's own runtime from ../ui/gsxui.js: here that is the app's (web/gsxui/gsxui.js), so there is one.
+	files := map[string]string{
+		filepath.Join(scripts, "charter.js"):     connection,
+		filepath.Join(scripts, "ui", "gsxui.js"): "// gsxui's editor imports gsxui's runtime from here: it is the app's own (web/gsxui/gsxui.js). Written by charter check --fix.\nexport * from \"../../gsxui/gsxui.js\";\n",
+	}
+	for _, name := range gsxuiScripts {
+		b, err := os.ReadFile(filepath.Join(gsxui, "web", name))
+		if err != nil {
+			return fmt.Errorf("gsxui's theme editor is no longer where it was (web/%s): %w", name, err)
+		}
+		files[filepath.Join(scripts, "web", name)] = string(b)
+	}
+	html, err := rendered(dir)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s: gsxui's %d themes for the app's style and base colour\n", filepath.ToSlash(File), len(Accents()))
-	return os.WriteFile(file, []byte(css), 0o644)
+	files[markup] = html
+	files[handed] = "// Code generated by charter check --fix from " + key + ": gsxui's theme editor (its markup, with its catalogue) and the\n" +
+		"// app's own preset, for the theme screen. DO NOT EDIT: change gsxui.preset.json (charter run ui:theme).\n\n" +
+		"package screens\n\nimport (\n\t_ \"embed\"\n\n\t\"github.com/joeblew999/charter/app\"\n)\n\n" +
+		"//go:embed theme-editor.gen.html\nvar themeEditorMarkup string\n\n" +
+		"func init() { app.SetThemeEditor(themeEditorMarkup, " + fmt.Sprintf("%q", compact(preset)) + ") }\n"
+	for rel, text := range files {
+		file := filepath.Join(dir, rel)
+		if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
+			return err
+		}
+	}
+	fmt.Printf("%s, %s: gsxui's theme editor, from gsxui %s\n", filepath.ToSlash(scripts), filepath.ToSlash(markup), version)
+	return needs(dir, gsxui)
 }
 
-// resolve asks gsxui for each theme and gives the stylesheet.
-func resolve(dir string, app preset, key string) (string, error) {
-	if !slices.Contains(Styles, app.Style) {
-		return "", fmt.Errorf("gsxui.preset.json: the style %q is none of gsxui's (%s)", app.Style, strings.Join(Styles, ", "))
+// present reports whether every file Write writes is there.
+func present(dir string) bool {
+	names := []string{markup, filepath.Join(scripts, "charter.js"), filepath.Join(scripts, "ui", "gsxui.js")}
+	for _, name := range gsxuiScripts {
+		names = append(names, filepath.Join(scripts, "web", name))
 	}
-	scratch := filepath.Join(dir, ".charter", "themes")
-	os.RemoveAll(scratch)
-	defer os.RemoveAll(scratch)
-	if err := copied(dir, scratch); err != nil {
-		return "", err
-	}
-	bin, err := exec.Command("go", "tool", "-C", dir, "-n", "gsxui").Output()
-	if err != nil {
-		return "", fmt.Errorf("the app's gsxui (go tool gsxui): %w", err)
-	}
-	apply := func(base, theme string) (values, error) {
-		code, err := Code(app.Style, base, theme)
-		if err != nil {
-			return values{}, err
-		}
-		cmd := exec.Command(strings.TrimSpace(string(bin)), "apply", "--only", "theme", "--preset", code, "--yes")
-		cmd.Dir = scratch
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return values{}, fmt.Errorf("gsxui apply --only theme --preset %s: %w\n%s", code, err, out)
-		}
-		got, _, err := read(filepath.Join(scratch, "gsxui.preset.json"))
-		return got.Theme, err
-	}
-	// The app's base colour: the one whose own theme has the app's page and its lines. An app with colours of its
-	// own has none of gsxui's, and takes the accents as they are on the first.
-	base, plain := Bases[0], values{}
-	for i, candidate := range Bases {
-		own, err := apply(candidate, candidate)
-		if err != nil {
-			return "", err
-		}
-		if i == 0 {
-			plain = own
-		}
-		if same(own, app.Theme, "background", "foreground", "border", "muted", "muted-foreground") {
-			base, plain = candidate, own
-			break
-		}
-	}
-	var out strings.Builder
-	fmt.Fprintf(&out, "/* Written by charter check --fix from %s: gsxui's own themes for this app's style (%s) and base colour (%s),\n", key, app.Style, base)
-	out.WriteString("   each resolved by gsxui apply, and of each only what it changes. Do not edit: change gsxui.preset.json\n")
-	out.WriteString("   (charter run ui:theme), and charter check --fix writes this again. <html data-theme=\"blue\"> has a theme;\n")
-	out.WriteString("   without one the page has the app's own (theme.css). */\n")
-	for _, accent := range Accents() {
-		themed, err := apply(base, accent)
-		if err != nil {
-			return "", err
-		}
-		light := changed(plain.Light, themed.Light)
-		block(&out, fmt.Sprintf(`[data-theme=%q]`, accent), light)
-		block(&out, fmt.Sprintf(`.dark[data-theme=%q], .dark [data-theme=%q]`, accent, accent), dark(light, plain.Dark, themed.Dark))
-	}
-	// Which choice is the one in force is said by the stylesheet too: whatever lists the themes marks nothing itself.
-	out.WriteString("\n/* The mark of the choice in force, in whatever lists them ([data-theme-choice], with a [data-theme-chosen] in it). */\n")
-	out.WriteString("[data-theme-chosen] { visibility: hidden; }\n")
-	out.WriteString(":root:not([data-theme]) [data-theme-choice=\"\"] [data-theme-chosen]")
-	for _, accent := range Accents() {
-		fmt.Fprintf(&out, ",\n:root[data-theme=%q] [data-theme-choice=%q] [data-theme-chosen]", accent, accent)
-	}
-	out.WriteString(" { visibility: visible; }\n")
-	return out.String(), nil
-}
-
-// same reports whether two themes have the same values for these variables, light and dark.
-func same(a, b values, names ...string) bool {
 	for _, name := range names {
-		if a.Light[name] != b.Light[name] || a.Dark[name] != b.Dark[name] {
+		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 			return false
 		}
 	}
 	return true
 }
 
-// changed are the variables a theme has otherwise than the plain one, by name.
-func changed(plain, themed map[string]string) [][2]string {
-	var out [][2]string
-	for _, name := range slices.Sorted(keys(themed)) {
-		if themed[name] != plain[name] {
-			out = append(out, [2]string{name, themed[name]})
-		}
+// compact is JSON on one line.
+func compact(raw []byte) string {
+	var out bytes.Buffer
+	if json.Compact(&out, raw) != nil {
+		return string(raw)
 	}
-	return out
+	return out.String()
 }
 
-// dark are the variables a theme has in the dark: what it changes there, and every one it changes in the light,
-// with its dark value, changed or not. The light ones are set on the same element, and would otherwise still hold
-// in the dark, where the plain theme's own were meant.
-func dark(light [][2]string, plain, themed map[string]string) [][2]string {
-	out := changed(plain, themed)
-	for _, v := range light {
-		if !slices.ContainsFunc(out, func(d [2]string) bool { return d[0] == v[0] }) {
-			if value, ok := themed[v[0]]; ok {
-				out = append(out, [2]string{v[0], value})
-			}
-		}
+// rendered is gsxui's theme editor as gsxui's own Go renders it: a program of the app's module, run on this
+// machine, that calls gsxui's ThemeEditor. The catalogue is in the markup, as gsxui puts it there for its script.
+func rendered(dir string) (string, error) {
+	program := filepath.Join(dir, ".charter", "themeeditor")
+	if err := os.MkdirAll(program, 0o755); err != nil {
+		return "", err
 	}
-	slices.SortFunc(out, func(a, b [2]string) int { return strings.Compare(a[0], b[0]) })
-	return out
+	defer os.RemoveAll(program)
+	main := "// Written by charter check --fix, each time it runs: gsxui's theme editor, rendered.\npackage main\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\t\"os\"\n\n\t\"github.com/gsxhq/gsxui/site/pages\"\n)\n\n" +
+		"func main() {\n\tif err := pages.ThemeEditor(" + fmt.Sprintf("%q", PreviewPlaceholder) + ").Render(context.Background(), os.Stdout); err != nil {\n\t\tfmt.Fprintln(os.Stderr, err)\n\t\tos.Exit(1)\n\t}\n}\n"
+	if err := os.WriteFile(filepath.Join(program, "main.go"), []byte(main), 0o644); err != nil {
+		return "", err
+	}
+	cmd := exec.Command("go", "run", "./.charter/themeeditor")
+	cmd.Dir = dir
+	var out, said bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &said
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("rendering gsxui's theme editor (github.com/gsxhq/gsxui/site/pages.ThemeEditor): %w\n%s", err, said.String())
+	}
+	if !strings.Contains(out.String(), "data-theme-schema") || !strings.Contains(out.String(), PreviewPlaceholder) {
+		return "", errors.New("gsxui's theme editor no longer has its catalogue or its preview where they were (data-theme-schema, data-theme-preview-frame): this charter does not know this gsxui")
+	}
+	return out.String(), nil
 }
 
-func keys(m map[string]string) func(yield func(string) bool) {
-	return func(yield func(string) bool) {
-		for k := range m {
-			if !yield(k) {
-				return
-			}
-		}
+// needs has the app's npm packages include what gsxui's editor scripts import, at the versions gsxui has them.
+func needs(dir, gsxui string) error {
+	var theirs, ours struct {
+		Dependencies    map[string]string `json:"dependencies"`
+		DevDependencies map[string]string `json:"devDependencies"`
 	}
-}
-
-func block(out *strings.Builder, selector string, variables [][2]string) {
-	if len(variables) == 0 {
-		return
-	}
-	fmt.Fprintf(out, "\n%s {\n", selector)
-	for _, v := range variables {
-		fmt.Fprintf(out, "  --%s: %s;\n", v[0], v[1])
-	}
-	out.WriteString("}\n")
-}
-
-// copied makes scratch a place gsxui apply can run in for the app in dir: its gsxui files, and its go.mod with
-// the modules it replaces by a folder beside it found from there too.
-func copied(dir, scratch string) error {
-	if err := os.MkdirAll(filepath.Join(scratch, "web", "gsxui"), 0o755); err != nil {
-		return err
-	}
-	files, _ := filepath.Glob(filepath.Join(dir, "web", "gsxui", "*.css"))
-	for _, name := range []string{"gsxui.json", "gsxui.preset.json", "go.sum"} {
-		files = append(files, filepath.Join(dir, name))
-	}
-	for _, file := range files {
-		b, err := os.ReadFile(file)
-		if err != nil {
-			return err
-		}
-		rel, _ := filepath.Rel(dir, file)
-		if err := os.WriteFile(filepath.Join(scratch, rel), b, 0o644); err != nil {
-			return err
-		}
-	}
-	mod, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+	b, err := os.ReadFile(filepath.Join(gsxui, "package.json"))
 	if err != nil {
 		return err
 	}
-	abs, err := filepath.Abs(dir)
-	if err != nil {
+	if err := json.Unmarshal(b, &theirs); err != nil {
 		return err
 	}
-	beside := regexp.MustCompile(`(?m)(=>\s*)(\.{1,2}(?:/\S*)?)\s*$`)
-	mod = beside.ReplaceAllFunc(mod, func(m []byte) []byte {
-		parts := beside.FindSubmatch(m)
-		return append(slices.Clone(parts[1]), filepath.Join(abs, string(parts[2]))...)
-	})
-	if err := os.WriteFile(filepath.Join(scratch, "go.mod"), mod, 0o644); err != nil {
+	if b, err = os.ReadFile(filepath.Join(dir, "package.json")); err != nil {
 		return err
 	}
-	if _, err := os.Stat(filepath.Join(scratch, "gsxui.json")); err != nil {
-		return errors.New("the app has no gsxui.json: go tool gsxui init")
+	if err := json.Unmarshal(b, &ours); err != nil {
+		return err
 	}
-	return nil
+	var missing []string
+	for _, name := range []string{"css-tree", "jsonc-parser"} {
+		if ours.Dependencies[name] == "" && ours.DevDependencies[name] == "" {
+			missing = append(missing, name+"@"+theirs.Dependencies[name])
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	fmt.Printf("package.json: %s, which gsxui's theme editor imports\n", strings.Join(missing, ", "))
+	cmd := exec.Command("npm", append([]string{"install", "--save", "--no-audit", "--no-fund"}, missing...)...)
+	cmd.Dir, cmd.Stdout, cmd.Stderr = dir, os.Stderr, os.Stderr
+	return cmd.Run()
 }

@@ -1,0 +1,177 @@
+const PREVIEW_MESSAGE = "gsxui:theme-preview:v1";
+const READY_MESSAGE = "gsxui:theme-preview-ready:v1";
+const APPLIED_MESSAGE = "gsxui:theme-preview-applied:v1";
+const ERROR_MESSAGE = "gsxui:theme-preview-error:v1";
+
+const previewDocument = document.querySelector("[data-theme-preview-tokens]");
+
+if (previewDocument) {
+  const root = document.documentElement;
+  const tokenNames = (previewDocument.dataset.themePreviewTokens ?? "")
+    .split(",")
+    .filter(Boolean);
+  const styleSections = new Map(
+    [...document.querySelectorAll("[data-theme-preview-style]")].map((section) => [
+      section.dataset.themePreviewStyle,
+      section,
+    ]),
+  );
+  // pageSections spans every style section (each style's Gallery renders
+  // both pages, site/stylepreview/gallery.gsx.src), so a page selection
+  // applies uniformly across all 8 styles at once — exactly like style
+  // selection itself is a pure visibility toggle over content that is
+  // already fully present in the DOM, not a re-render.
+  const pageNames = new Set(
+    [...document.querySelectorAll("[data-theme-preview-page]")].map(
+      (section) => section.dataset.themePreviewPage,
+    ),
+  );
+  let focusedStyle = "";
+
+  function fail(attempt, message) {
+    if (parent !== window) {
+      parent.postMessage(
+        { type: ERROR_MESSAGE, attempt, message },
+        location.origin,
+      );
+    }
+  }
+
+  function ready() {
+    if (parent !== window) {
+      parent.postMessage({ type: READY_MESSAGE }, location.origin);
+    }
+  }
+
+  function applied(attempt) {
+    if (parent !== window) {
+      parent.postMessage({ type: APPLIED_MESSAGE, attempt }, location.origin);
+    }
+  }
+
+  function exactTokenMap(value, path) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error(`${path} must be an object`);
+    }
+    const keys = Object.keys(value).sort();
+    const expected = [...tokenNames].sort();
+    if (keys.length !== expected.length || keys.some((key, index) => key !== expected[index])) {
+      throw new Error(`${path} must contain every supported token exactly once`);
+    }
+
+    const colorProbe = document.createElement("span").style;
+    for (const name of tokenNames) {
+      const candidate = value[name];
+      if (typeof candidate !== "string" || candidate.trim() === "") {
+        throw new Error(`${path}.${name} must be a non-empty CSS color`);
+      }
+      colorProbe.color = "";
+      colorProbe.color = candidate;
+      if (colorProbe.color === "") {
+        throw new Error(`${path}.${name} is not a valid CSS color`);
+      }
+    }
+    return value;
+  }
+
+  function validatedState(message) {
+    if (!message || message.type !== PREVIEW_MESSAGE) {
+      throw new Error("unsupported preview message");
+    }
+    if (typeof message.attempt !== "string" || message.attempt.length === 0) {
+      throw new Error("attempt must be a non-empty string");
+    }
+    if (message.mode !== "light" && message.mode !== "dark") {
+      throw new Error("mode must be light or dark");
+    }
+    const preset = message.preset;
+    if (!preset || typeof preset !== "object" || Array.isArray(preset)) {
+      throw new Error("preset must be an object");
+    }
+    if (!styleSections.has(preset.style)) {
+      throw new Error(`unsupported style ${String(preset.style)}`);
+    }
+    if (!pageNames.has(message.page)) {
+      throw new Error(`unsupported page ${String(message.page)}`);
+    }
+    if (typeof preset.radius !== "string" || preset.radius.trim() === "") {
+      throw new Error("radius must be a non-empty CSS length");
+    }
+    const radiusProbe = document.createElement("span").style;
+    radiusProbe.borderRadius = preset.radius;
+    if (radiusProbe.borderRadius === "") {
+      throw new Error("radius must be a valid CSS length");
+    }
+    const fontProbe = document.createElement("span").style;
+    for (const field of ["fontSans", "fontHeading"]) {
+      if (typeof preset[field] !== "string" || preset[field].trim() === "") {
+        throw new Error(`${field} must be a non-empty CSS font-family list`);
+      }
+      fontProbe.fontFamily = "";
+      fontProbe.fontFamily = preset[field];
+      if (fontProbe.fontFamily === "") {
+        throw new Error(`${field} must be a valid CSS font-family list`);
+      }
+    }
+    const theme = preset.theme;
+    if (!theme || typeof theme !== "object" || Array.isArray(theme)) {
+      throw new Error("preset.theme must be an object");
+    }
+    return {
+      attempt: message.attempt,
+      style: preset.style,
+      radius: preset.radius,
+      fontSans: preset.fontSans,
+      fontHeading: preset.fontHeading,
+      mode: message.mode,
+      page: message.page,
+      values: exactTokenMap(theme[message.mode], `preset.theme.${message.mode}`),
+    };
+  }
+
+  function applyState(state) {
+    const staged = document.createElement("span").style;
+    staged.setProperty("--radius", state.radius);
+    staged.setProperty("--font-sans", state.fontSans);
+    staged.setProperty("--font-heading", state.fontHeading);
+    for (const name of tokenNames) {
+      staged.setProperty(`--${name}`, state.values[name]);
+    }
+
+    // One style-attribute replacement prevents a partially updated token set
+    // from being observable between declarations.
+    root.setAttribute("style", staged.cssText);
+    root.classList.toggle("dark", state.mode === "dark");
+    for (const [style, section] of styleSections) {
+      section.hidden = style !== state.style;
+    }
+    for (const section of document.querySelectorAll("[data-theme-preview-page]")) {
+      section.hidden = section.dataset.themePreviewPage !== state.page;
+    }
+    if (focusedStyle !== state.style) {
+      styleSections.get(state.style)
+        ?.querySelector('[data-theme-preview-case="focus-visible"]')
+        ?.focus();
+      focusedStyle = state.style;
+    }
+  }
+
+  addEventListener("message", (event) => {
+    if (event.origin !== location.origin || event.source !== parent) {
+      return;
+    }
+    const attempt = event.data?.attempt;
+    try {
+      const state = validatedState(event.data);
+      applyState(state);
+      applied(state.attempt);
+    } catch (error) {
+      fail(
+        attempt,
+        error instanceof Error ? error.message : "invalid preview state",
+      );
+    }
+  });
+
+  ready();
+}

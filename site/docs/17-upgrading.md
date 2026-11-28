@@ -10,12 +10,18 @@ What you wrote does not, when a release changes how something is written. This p
 
 charter is before 1.0: a release may change how an app is written, and says so here. This page starts at 0.63; it does not cover what changed before that.
 
-## 0.70
+## 0.71
 
-Nothing to change in an app's code.
+Nothing to change in an app's code, unless it took 0.70's theme picker.
 
-- **The docs screen has a theme picker**, and brings the `theme-picker` screen with it. `check --fix` adds it, writes `web/gsxui/themes.css` (gsxui's 17 accents for the app's style and base colour, which takes some seconds the first time) and adds its import to `web/main.js`. Commit all three.
-- **To put the picker in your own header**: `<screens.ThemePicker/>` beside `<screens.ThemeToggle/>`.
+- **gsxui's theme editor is a screen** (`theme`), and the docs screen brings it. `check --fix` adds it, writes gsxui's editor into the app (`pages/screens/theme-editor.gen.html`, `pages/screens/theme_editor.gen.go`, `web/gsxui-site/`), adds two npm packages gsxui's scripts import (`css-tree`, `jsonc-parser`) and a line to `web/main.js`. Mount it, and commit all of it:
+
+  | In | Add |
+  |---|---|
+  | the page tree | ``theme screens.Theme `route:"/theme Theme"` `` |
+  | a header | `<screens.ThemeLink/>` beside `<screens.ThemeToggle/>` |
+
+- **0.70's `theme-picker` screen is gone**, with `web/gsxui/themes.css`: it was one of the editor's eight parts. In an app that has them, delete `pages/screens/theme-picker.gsx` and `web/gsxui/themes.css`, take `import "./gsxui/themes.css";` out of `web/main.js` and `screens.theme_own` out of the catalogs, and write `<screens.ThemeLink/>` where `<screens.ThemePicker/>` was. The compiler and `check` name each.
 - **`charter run ui:theme --style <name>`** switches to another of gsxui's eight styles and keeps the app's colours, radius and fonts.
 
 ## 0.69

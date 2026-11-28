@@ -10,6 +10,6 @@ import "charter/intl";
 // gsxui's behaviours and its CSS (Tailwind).
 import "./gsxui/index.js";
 import "./gsxui/index.css";
-// gsxui's other themes, which a reader chooses among as the page runs (the theme-picker screen): charter check --fix
-// writes the file from gsxui itself.
-import "./gsxui/themes.css";
+// gsxui's theme editor (the theme screen), and a page of the app shown inside it as its live preview: charter check
+// --fix writes the folder from gsxui itself.
+import "./gsxui-site/charter.js";
