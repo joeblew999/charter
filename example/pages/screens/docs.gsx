@@ -73,7 +73,7 @@ component DocsDocument(v DocsView) {
 		tools={ <DocsTools v={v}/> }
 		navigation={ <DocsList v={v}/> }
 		contents={ <DocsSections v={v}/> }
-		heading={ <DocsHere v={v}/> }
+		here={ <DocsHere v={v}/> }
 	>
 		// The page: what charter build wrote from docs/*.md, the app's own files. It is marked data-doc, which
 		// gsxui's own stylesheet for its docs styles (web/gsxui-site/site.css), with a section under each heading,

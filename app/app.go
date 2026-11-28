@@ -250,7 +250,7 @@ func (a *App) Handler() http.Handler {
 	for i, language := range languages {
 		mux := http.NewServeMux()
 		if a.API != nil {
-			mux.Handle("/", a.API)
+			mux.Handle("/", a.missing(a.API))
 		}
 		if a.Pages != nil {
 			tree, err := a.Pages(mux, append(a.Options(i == 0), structpages.WithURLPrefix(intl.Prefix(language)))...)

@@ -41,7 +41,6 @@ title = "How it's built"
 description = "What a Go app on Cloudflare Workers does with a bucket, a queue, a scheduled task, a key-value store, email, a rate limit and the cache: one page each."
 heading = "How it's built"
 intro = "Each thing Cloudflare gives the Worker does one job in this app. Open a page to see it work: nothing is used before then."
-back = "How it's built"
 sign_in = "Sign in to do this"
 # What Cloudflare says of the reader's own request, with no binding asked.
 facts = "This request"

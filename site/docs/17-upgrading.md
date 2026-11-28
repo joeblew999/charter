@@ -10,6 +10,15 @@ What you wrote does not, when a release changes how something is written. This p
 
 charter is before 1.0: a release may change how an app is written, and says so here. This page starts at 0.63; it does not cover what changed before that.
 
+## 0.77
+
+Your pages change where they wrote out what is now said once.
+
+- **A page's heading is the layout's**: `<screens.Layout … heading={…} about={…}>`. A page has no `<h1>` of its own, and no card whose title is the page's.
+- **What a page is made of is in the layout screen**: `screens.Panel` (a titled card), `screens.Rows` and `screens.Row` (a list and its lines), `screens.None`, `screens.Once`, `screens.Tabs`. charter's screens are made of them; yours can be, in place of a `ui.Card` with its header and content written out and a `<li>` with its classes.
+- **An error is a page of the app**, in its layout, for a reader who asked for a page; a program still gets its words.
+- **The account asks before it is deleted in gsxui's `Dialog`**, where it had the browser's own disclosure; the people's page has the admin's tabs.
+
 ## 0.76
 
 Two lines of yours change: what is around your pages is said once.

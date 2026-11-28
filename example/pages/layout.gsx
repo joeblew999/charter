@@ -13,8 +13,14 @@ import (
 // components. It has the header and the footer said below, once, for every page: these, the docs, the theme
 // editor, signing in and the admin's pages. app.Head is its whole <head> (the title and description as search
 // engines read them, the page in every language, the theme, and web/main.js as Vite built it).
-component Layout(title intl.Msg, description intl.Msg, children gsx.Node) {
-	<screens.Layout mode={screens.LayoutPage} title={title |> text} description={description |> text}>
+component Layout(title intl.Msg, description intl.Msg, heading intl.Msg, about intl.Msg, children gsx.Node) {
+	<screens.Layout
+		mode={screens.LayoutPage}
+		title={title |> text}
+		description={description |> text}
+		heading={heading |> text}
+		about={about |> text}
+	>
 		<screens.LanguageOffer/>
 		{ children }
 	</screens.Layout>

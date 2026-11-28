@@ -38,7 +38,7 @@ func TestSigningInOnThePage(t *testing.T) {
 	page.WaitText(el(pages.Home.List), body)
 
 	page.Open(at(screens.AccountPage{}))
-	page.WaitText("#signed-in", "Ada")
+	page.WaitText("#about", "Ada")
 	page.Click("#sign-out")
 	page.WaitText("#sign-in-to-write", "Sign in")
 	page.SignIn(at(screens.SignInPage{}))
@@ -57,7 +57,7 @@ func TestTheAccountPageNeedsSomeoneSignedIn(t *testing.T) {
 	}
 	page.Type("#sign-up-name", "Grace")
 	page.Click(`#sign-up button[type=submit]`)
-	page.WaitText("#signed-in", "Grace")
+	page.WaitText("#about", "Grace")
 	page.Leave(at(screens.SignInPage{}))
 	if path := page.Path(); path != at(screens.AccountPage{}) {
 		t.Errorf("after signing in, at %s", path)
@@ -289,7 +289,7 @@ func TestAnAccountIsDeletedWithWhatItWrote(t *testing.T) {
 	page.WaitText(el(pages.Home.List), body)
 
 	page.Open(at(screens.AccountPage{}))
-	page.Click(`#leave summary`)
+	page.Click(`#leave [aria-haspopup=dialog]`)
 	page.Click(`#leave button[type=submit]`)
 	page.WaitText("#sign-in-link", "Sign in")
 	if strings.Contains(apptest.Get(t, at(pages.Home{})), body) {
@@ -371,7 +371,7 @@ func TestAnInvitationSurvivesSigningIn(t *testing.T) {
 	}
 	link := at(screens.SignInPage{}) + "?invite=" + code[1]
 	page.Open(link)
-	page.WaitText("#invited", "admin")
+	page.WaitText("#heading", "admin")
 	page.SignIn(link)
 	page.WaitText("#role", "admin")
 	if path := page.Path(); path != at(screens.AccountPage{}) {

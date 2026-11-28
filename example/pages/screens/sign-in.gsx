@@ -1,6 +1,7 @@
 package screens
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -116,75 +117,80 @@ func (SignOut) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth)
 }
 
 component (p SignInPage) Page(v SignInView) {
-	<Layout mode={LayoutPage} title={locales.ScreensSignIn |> text} description={locales.ScreensSignUpIntro |> text}>
-		<div class="flex flex-col gap-6" hx-boost:inherited="false">
-			<ui.Card>
-				<ui.CardHeader>
-					<ui.CardTitle>
-						// Here by an invitation's link: the page says so first, and what it is to.
-						{ if v.Invite != "" {
-							<h1 id="invited">{ locales.ScreensInvited(v.InviteRole) }</h1>
-						} else {
-							<h1>{ locales.ScreensSignIn }</h1>
-						} }
-					</ui.CardTitle>
-					{ if v.Invite != "" && !v.Caller.SignedIn() {
-						<ui.CardDescription>{ locales.ScreensInvitedIntro }</ui.CardDescription>
-					} }
-				</ui.CardHeader>
-				<ui.CardContent class="flex flex-col gap-4">
-					{ if v.InviteGone {
-						<p id="invite-gone" role="alert" class="text-sm text-destructive">{ locales.ScreensInviteGone }</p>
-					} }
-					{ if v.Caller.SignedIn() {
-						<p id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</p>
-						// Here by an invitation's link, with an account already: it is theirs to accept.
-						{ if v.Invite != "" {
-							<form method="post" action={InviteAccept{} |> url} id="accept">
-								<input type="hidden" name="invite" value={v.Invite}/>
-								<ui.Button type="submit">{ locales.ScreensInviteAccept }</ui.Button>
-							</form>
-						} }
-						<div class="flex flex-wrap gap-2">
-							<ui.Button variant="outline" size="sm" href={AccountPage{} |> url} id="account">
-								{ locales.ScreensAccount }
-							</ui.Button>
-							<SignOutForm/>
-						</div>
+	// Here by an invitation's link: the page says so first, and what it is to.
+	<Layout
+		mode={LayoutPage}
+		title={locales.ScreensSignIn |> text}
+		description={locales.ScreensSignUpIntro |> text}
+		heading={signInHeading(ctx, v)}
+		about={signInAbout(ctx, v)}
+	>
+		<Panel hx-boost:inherited="false">
+			{ if v.InviteGone {
+				<p id="invite-gone" role="alert" class="text-sm text-destructive">{ locales.ScreensInviteGone }</p>
+			} }
+			{ if v.Caller.SignedIn() {
+				<p id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</p>
+				// Here by an invitation's link, with an account already: it is theirs to accept.
+				{ if v.Invite != "" {
+					<form method="post" action={InviteAccept{} |> url} id="accept">
+						<input type="hidden" name="invite" value={v.Invite}/>
+						<ui.Button type="submit">{ locales.ScreensInviteAccept }</ui.Button>
+					</form>
+				} }
+				<div class="flex flex-wrap gap-2">
+					<ui.Button variant="outline" size="sm" href={AccountPage{} |> url} id="account">
+						{ locales.ScreensAccount }
+					</ui.Button>
+					<SignOutForm/>
+				</div>
+			} else {
+				<div
+					id="sign-in"
+					class="flex flex-col gap-4"
+					data-return={v.Return}
+					data-invite={v.Invite}
+					data-accept={InviteAccept{} |> url}
+					data-account={AccountPage{} |> url}
+					data-in-begin={SignInBegin{} |> url}
+					data-in-finish={SignInFinish{} |> url}
+					data-up-begin={SignUpBegin{} |> url}
+					data-up-finish={SignUpFinish{} |> url}
+					data-failed={locales.ScreensSignInFailed |> text}
+				>
+					// By an invitation, the account to make comes first: signing in is for whoever has one.
+					{ if v.Invite != "" {
+						<signUpForm variant="default"/>
+						<ui.Separator/>
+						<p class="text-sm text-muted-foreground">{ locales.ScreensHaveAccount }</p>
+						<passkeyButton variant="outline"/>
 					} else {
-						<div
-							id="sign-in"
-							class="flex flex-col gap-4"
-							data-return={v.Return}
-							data-invite={v.Invite}
-							data-accept={InviteAccept{} |> url}
-							data-account={AccountPage{} |> url}
-							data-in-begin={SignInBegin{} |> url}
-							data-in-finish={SignInFinish{} |> url}
-							data-up-begin={SignUpBegin{} |> url}
-							data-up-finish={SignUpFinish{} |> url}
-							data-failed={locales.ScreensSignInFailed |> text}
-						>
-							// By an invitation, the account to make comes first: signing in is for whoever has one.
-							{ if v.Invite != "" {
-								<signUpForm variant="default"/>
-								<ui.Separator/>
-								<p class="text-sm text-muted-foreground">{ locales.ScreensHaveAccount }</p>
-								<passkeyButton variant="outline"/>
-							} else {
-								<passkeyButton variant="default"/>
-								<ui.Separator/>
-								<p class="text-sm text-muted-foreground">{ locales.ScreensSignUpIntro }</p>
-								<signUpForm variant="outline"/>
-							} }
-							<p id="sign-in-error" role="alert" class="text-sm text-destructive" hidden></p>
-						</div>
-						<signInScript/>
+						<passkeyButton variant="default"/>
+						<ui.Separator/>
+						<p class="text-sm text-muted-foreground">{ locales.ScreensSignUpIntro }</p>
+						<signUpForm variant="outline"/>
 					} }
-				</ui.CardContent>
-			</ui.Card>
-		</div>
+					<p id="sign-in-error" role="alert" class="text-sm text-destructive" hidden></p>
+				</div>
+				<signInScript/>
+			} }
+		</Panel>
 	</Layout>
+}
+
+// signInHeading is what the page is: signing in, or, by an invitation's link, what the invitation is to.
+func signInHeading(ctx context.Context, v SignInView) string {
+	if v.Invite != "" {
+		return intl.Text(ctx, locales.ScreensInvited(v.InviteRole))
+	}
+	return intl.Text(ctx, locales.ScreensSignIn)
+}
+
+func signInAbout(ctx context.Context, v SignInView) string {
+	if v.Invite != "" && !v.Caller.SignedIn() {
+		return intl.Text(ctx, locales.ScreensInvitedIntro)
+	}
+	return ""
 }
 
 // passkeyButton signs in with a passkey the device has.
@@ -368,100 +374,109 @@ func (AccountLeave) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.
 }
 
 component (p AccountPage) Page(v AccountView) {
-	<Layout mode={LayoutPage} title={locales.ScreensAccount |> text} description={locales.ScreensTokensIntro |> text}>
-		<div class="flex flex-col gap-6" hx-boost:inherited="false">
-			<ui.Card>
-				<ui.CardHeader>
-					<ui.CardTitle>
-						<h1>{ locales.ScreensAccount }</h1>
-					</ui.CardTitle>
-					<ui.CardDescription id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</ui.CardDescription>
-				</ui.CardHeader>
-				<ui.CardContent class="flex flex-wrap items-center gap-2">
-					// What they are, and with it what they may do.
-					<ui.Badge id="role" translate="no">{ v.Caller.Role }</ui.Badge>
-					{ for _, scope := range v.Caller.Scopes {
-						<ui.Badge variant="secondary" translate="no">{ scope.String() }</ui.Badge>
-					} }
-					<span class="flex-1"></span>
-					{ if v.MayManage {
-						<ui.Button variant="outline" size="sm" href={PeoplePage{} |> url} id="people-link">
-							{ locales.ScreensPeople }
-						</ui.Button>
-					} }
-					<SignOutForm/>
-				</ui.CardContent>
-			</ui.Card>
-			<p.Tokens v={v}/>
-			// Leaving: asked twice, the second time with what goes.
-			<details id="leave" class="rounded-md border px-3 py-2 text-sm">
-				<summary class="cursor-pointer text-muted-foreground">{ locales.ScreensAccountLeave }</summary>
-				<form method="post" action={AccountLeave{} |> url} class="flex flex-col items-start gap-3 pt-3">
-					<p>{ locales.ScreensAccountLeaveIntro }</p>
-					<ui.Button type="submit" variant="destructive" size="sm">{ locales.ScreensAccountLeaveConfirm }</ui.Button>
-				</form>
-			</details>
-		</div>
+	<Layout
+		mode={LayoutPage}
+		title={locales.ScreensAccount |> text}
+		description={locales.ScreensTokensIntro |> text}
+		heading={locales.ScreensAccount |> text}
+		about={locales.ScreensSignedInAs(v.Caller.Name()) |> text}
+	>
+		<Panel hx-boost:inherited="false">
+			<div class="flex flex-wrap items-center gap-2">
+				// What they are, and with it what they may do.
+				<ui.Badge id="role" translate="no">{ v.Caller.Role }</ui.Badge>
+				{ for _, scope := range v.Caller.Scopes {
+					<ui.Badge variant="secondary" translate="no">{ scope.String() }</ui.Badge>
+				} }
+				<span class="flex-1"></span>
+				{ if v.MayManage {
+					<ui.Button variant="outline" size="sm" href={PeoplePage{} |> url} id="people-link">
+						{ locales.ScreensPeople }
+					</ui.Button>
+				} }
+				<SignOutForm/>
+			</div>
+		</Panel>
+		<p.Tokens v={v}/>
+		// Leaving: asked twice, the second time with what goes, in gsxui's Dialog.
+		<Panel id="leave" about={locales.ScreensAccountLeaveIntro |> text} hx-boost:inherited="false">
+			<ui.Dialog>
+				<div>
+					<ui.Button
+						variant="outline"
+						size="sm"
+						data-gsxui-slot-dialog-trigger
+						aria-haspopup="dialog"
+						aria-expanded="false"
+					>
+						{ locales.ScreensAccountLeave }
+					</ui.Button>
+				</div>
+				<ui.DialogContent hideCloseButton={true}>
+					<ui.DialogHeader>
+						<ui.DialogTitle>{ locales.ScreensAccountLeave }</ui.DialogTitle>
+						<ui.DialogDescription>{ locales.ScreensAccountLeaveIntro }</ui.DialogDescription>
+					</ui.DialogHeader>
+					<form method="post" action={AccountLeave{} |> url}>
+						<ui.DialogFooter showCloseButton={false}>
+							<ui.Button variant="outline" type="button" data-gsxui-dialog-close data-gsxui-slot-dialog-footer-close>
+								{ locales.ScreensClose }
+							</ui.Button>
+							<ui.Button type="submit" variant="destructive">{ locales.ScreensAccountLeaveConfirm }</ui.Button>
+						</ui.DialogFooter>
+					</form>
+				</ui.DialogContent>
+			</ui.Dialog>
+		</Panel>
 	</Layout>
 }
 
 // Tokens is the tokens someone made for their programs, with the form that makes one: a region of the page that
 // changes by itself. A token is shown once, when it is made; the app keeps only what lets it know the token again.
 component (p AccountPage) Tokens(v AccountView) {
-	<ui.Card id={AccountPage.Tokens |> id}>
-		<ui.CardHeader>
-			<ui.CardTitle>
-				<h2>{ locales.ScreensTokens }</h2>
-			</ui.CardTitle>
-			<ui.CardDescription>{ locales.ScreensTokensIntro }</ui.CardDescription>
-		</ui.CardHeader>
-		<ui.CardContent class="flex flex-col gap-4">
-			{ if v.Made != "" {
-				<div class="flex flex-col gap-1">
-					<p class="text-sm font-medium">{ locales.ScreensTokenOnce }</p>
-					<code id="token-made" class="rounded-md bg-muted px-2 py-1 font-mono text-sm break-all" translate="no">{ v.Made }</code>
-				</div>
+	<Panel id={AccountPage.Tokens |> id} title={locales.ScreensTokens |> text} about={locales.ScreensTokensIntro |> text}>
+		{ if v.Made != "" {
+			<Once label={locales.ScreensTokenOnce |> text} value={v.Made} id="token-made"/>
+		} }
+		<form
+			class="flex flex-wrap gap-2"
+			hx-post={TokenCreate{} |> url}
+			hx-target={AccountPage.Tokens |> target}
+			hx-swap="outerHTML"
+		>
+			<ui.Input
+				name="name"
+				class="flex-1"
+				required
+				maxlength="60"
+				autocomplete="off"
+				dir="auto"
+				placeholder={locales.ScreensTokenName}
+				aria-label={locales.ScreensTokenName}
+			/>
+			<ui.Button type="submit">{ locales.ScreensTokenNew }</ui.Button>
+		</form>
+		<Rows>
+			{ for _, token := range v.Tokens {
+				<Row>
+					<span dir="auto" class="flex-1">{ token.Name }</span>
+					{ for _, scope := range token.Scopes {
+						<ui.Badge variant="secondary" translate="no">{ scope }</ui.Badge>
+					} }
+					<ui.Button
+						variant="ghost"
+						size="sm"
+						type="button"
+						hx-post={TokenRevoke{} |> url(map[string]any{"token": token.ID})}
+						hx-target={AccountPage.Tokens |> target}
+						hx-swap="outerHTML"
+					>
+						{ locales.ScreensTokenRevoke }
+					</ui.Button>
+				</Row>
 			} }
-			<form
-				class="flex flex-wrap gap-2"
-				hx-post={TokenCreate{} |> url}
-				hx-target={AccountPage.Tokens |> target}
-				hx-swap="outerHTML"
-			>
-				<ui.Input
-					name="name"
-					class="flex-1"
-					required
-					maxlength="60"
-					autocomplete="off"
-					dir="auto"
-					placeholder={locales.ScreensTokenName}
-					aria-label={locales.ScreensTokenName}
-				/>
-				<ui.Button type="submit">{ locales.ScreensTokenNew }</ui.Button>
-			</form>
-			<ul class="flex flex-col gap-2">
-				{ for _, token := range v.Tokens {
-					<li class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2">
-						<span dir="auto" class="flex-1">{ token.Name }</span>
-						{ for _, scope := range token.Scopes {
-							<ui.Badge variant="secondary" translate="no">{ scope }</ui.Badge>
-						} }
-						<ui.Button
-							variant="ghost"
-							size="sm"
-							type="button"
-							hx-post={TokenRevoke{} |> url(map[string]any{"token": token.ID})}
-							hx-target={AccountPage.Tokens |> target}
-							hx-swap="outerHTML"
-						>
-							{ locales.ScreensTokenRevoke }
-						</ui.Button>
-					</li>
-				} }
-			</ul>
-		</ui.CardContent>
-	</ui.Card>
+		</Rows>
+	</Panel>
 }
 
 // People is everyone who signed up, and what each is: for whoever may manage people. What a role may do is the
@@ -536,81 +551,78 @@ func (PeopleInvite) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.
 }
 
 component (p PeoplePage) Page(v PeopleView) {
-	<Layout mode={LayoutPage} title={locales.ScreensPeople |> text} description={locales.ScreensPeopleIntro |> text}>
-		<div class="flex flex-col gap-6" hx-boost:inherited="false">
-			<ui.Card>
-				<ui.CardHeader>
-					<ui.CardTitle>
-						<h1>{ locales.ScreensPeople }</h1>
-					</ui.CardTitle>
-					<ui.CardDescription>{ locales.ScreensPeopleIntro }</ui.CardDescription>
-				</ui.CardHeader>
-				<ui.CardContent>
-					<ul id="people" class="flex flex-col gap-2">
-						{ for _, person := range v.People {
-							<p.Person person={person} roles={v.Roles} mine={person.ID == v.Caller.Subject}/>
-						} }
-					</ul>
-				</ui.CardContent>
-			</ui.Card>
-			<p.Invite roles={v.Roles} link=""/>
-		</div>
+	<Layout
+		mode={LayoutPage}
+		title={locales.ScreensPeople |> text}
+		description={locales.ScreensPeopleIntro |> text}
+		heading={locales.ScreensPeople |> text}
+		about={locales.ScreensPeopleIntro |> text}
+		tabs={peopleTabs()}
+	>
+		<Panel hx-boost:inherited="false">
+			<Rows id="people">
+				{ for _, person := range v.People {
+					<p.Person person={person} roles={v.Roles} mine={person.ID == v.Caller.Subject}/>
+				} }
+			</Rows>
+		</Panel>
+		<p.Invite roles={v.Roles} link=""/>
 	</Layout>
+}
+
+// PeopleTabs is the way between the pages this one is one of, for an app that has them: the admin screen says it
+// (its own tabs), since who is what is an admin's to say. nil: the page stands by itself.
+var PeopleTabs func() gsx.Node
+
+func peopleTabs() gsx.Node {
+	if PeopleTabs == nil {
+		return nil
+	}
+	return PeopleTabs()
 }
 
 // Invite is the form that makes an invitation, and the link of one made a moment ago: a region of the page that
 // changes by itself.
 component (p PeoplePage) Invite(roles []string, link string) {
-	<ui.Card id={PeoplePage.Invite |> id}>
-		<ui.CardHeader>
-			<ui.CardTitle>
-				<h2>{ locales.ScreensInvite }</h2>
-			</ui.CardTitle>
-			<ui.CardDescription>{ locales.ScreensInviteIntro }</ui.CardDescription>
-		</ui.CardHeader>
-		<ui.CardContent class="flex flex-col gap-4">
-			{ if link != "" {
-				<div class="flex flex-col gap-1">
-					<p class="text-sm font-medium">{ locales.ScreensInviteOnce }</p>
-					<code id="invite-link" class="rounded-md bg-muted px-2 py-1 font-mono text-sm break-all" translate="no">{ link }</code>
-					// The device's own share sheet where it has one (a phone: Messages, Mail, AirDrop), else the
-					// clipboard, and the button says so.
-					<ui.Button
-						type="button"
-						variant="outline"
-						size="sm"
-						class="self-start"
-						id="invite-share"
-						data-link={link}
-						data-copied={locales.ScreensInviteCopied |> text}
-						hx-on:click=js`var b = this, link = b.dataset.link; if (navigator.share) { navigator.share({ url: link }).catch(function () {}); } else { navigator.clipboard.writeText(link).then(function () { b.lastElementChild.textContent = b.dataset.copied; }); }`
-					>
-						<icon.Share/>
-						<span>{ locales.ScreensInviteShare }</span>
-					</ui.Button>
-				</div>
-			} }
-			<form
-				class="flex flex-wrap gap-2"
-				hx-post={PeopleInvite{} |> url}
-				hx-target={PeoplePage.Invite |> target}
-				hx-swap="outerHTML"
-			>
-				<ui.NativeSelect name="role" aria-label={locales.ScreensRole}>
-					{ for _, role := range roles {
-						<ui.NativeSelectOption value={role}>{ role }</ui.NativeSelectOption>
-					} }
-				</ui.NativeSelect>
-				<ui.Button type="submit">{ locales.ScreensInviteNew }</ui.Button>
-			</form>
-		</ui.CardContent>
-	</ui.Card>
+	<Panel id={PeoplePage.Invite |> id} title={locales.ScreensInvite |> text} about={locales.ScreensInviteIntro |> text}>
+		{ if link != "" {
+			<Once label={locales.ScreensInviteOnce |> text} value={link} id="invite-link">
+				// The device's own share sheet where it has one (a phone: Messages, Mail, AirDrop), else the
+				// clipboard, and the button says so.
+				<ui.Button
+					type="button"
+					variant="outline"
+					size="sm"
+					id="invite-share"
+					data-link={link}
+					data-copied={locales.ScreensInviteCopied |> text}
+					hx-on:click=js`var b = this, link = b.dataset.link; if (navigator.share) { navigator.share({ url: link }).catch(function () {}); } else { navigator.clipboard.writeText(link).then(function () { b.lastElementChild.textContent = b.dataset.copied; }); }`
+				>
+					<icon.Share/>
+					<span>{ locales.ScreensInviteShare }</span>
+				</ui.Button>
+			</Once>
+		} }
+		<form
+			class="flex flex-wrap gap-2"
+			hx-post={PeopleInvite{} |> url}
+			hx-target={PeoplePage.Invite |> target}
+			hx-swap="outerHTML"
+		>
+			<ui.NativeSelect name="role" aria-label={locales.ScreensRole}>
+				{ for _, role := range roles {
+					<ui.NativeSelectOption value={role}>{ role }</ui.NativeSelectOption>
+				} }
+			</ui.NativeSelect>
+			<ui.Button type="submit">{ locales.ScreensInviteNew }</ui.Button>
+		</form>
+	</Panel>
 }
 
 // Person is one person and their role, which changes as it is chosen: the row asks for itself again (its id is
 // the component's, keyed by the person).
 component (p PeoplePage) Person(person api.Person, roles []string, mine bool) {
-	<li id={PeoplePage.Person |> key(person.ID)} class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2">
+	<Row id={PeoplePage.Person |> key(person.ID)}>
 		<span dir="auto" class="flex-1" translate="no">{ person.Name }</span>
 		<form
 			hx-post={RoleSet{} |> url(map[string]any{"person": person.ID})}
@@ -643,5 +655,5 @@ component (p PeoplePage) Person(person api.Person, roles []string, mine bool) {
 				<icon.Trash2/>
 			</ui.Button>
 		} }
-	</li>
+	</Row>
 }

@@ -45,37 +45,44 @@ component AdminLink(attrs gsx.Attrs) {
 	} }
 }
 
-// adminPage is the pages' frame: the pages' names with the one shown marked, and the page.
+// adminPage is one of the admin's pages: the way between them, the one shown marked, and the page.
 component adminPage(title intl.Msg, about intl.Msg, here string, children gsx.Node) {
-	<Layout mode={LayoutPage} title={title |> text} description={about |> text}>
-		<div class="flex flex-col gap-6">
-			<nav id="admin-nav" class="flex flex-wrap gap-1" aria-label={locales.ScreensAdmin}>
-				<adminTab href={AdminOverview{} |> url} name={locales.ScreensAdminOverview} here={here == "overview"}/>
-				<adminTab href={PeoplePage{} |> url} name={locales.ScreensPeople} here={false}/>
-				<adminTab href={AdminSystem{} |> url} name={locales.ScreensAdminSystem} here={here == "system"}/>
-				<adminTab href={AdminDatabase{} |> url} name={locales.ScreensAdminDatabase} here={here == "database"}/>
-			</nav>
-			<div class="flex flex-col gap-1">
-				<h1 class="text-xl font-semibold">{ title }</h1>
-				<p class="text-sm text-muted-foreground">{ about }</p>
-			</div>
-			{ children }
-		</div>
+	<Layout
+		mode={LayoutPage}
+		title={title |> text}
+		description={about |> text}
+		heading={title |> text}
+		about={about |> text}
+		tabs={ <AdminTabs here={here}/> }
+	>
+		{ children }
 	</Layout>
 }
 
-component adminTab(href string, name intl.Msg, here bool) {
-	{ if here {
-		<ui.Button variant="secondary" size="sm" href={href} aria-current="page">{ name }</ui.Button>
-	} else {
-		<ui.Button variant="ghost" size="sm" href={href}>{ name }</ui.Button>
-	} }
+// AdminTabs is the way between the admin's pages, with the one being shown marked. The people's page, which is the
+// sign-in screen's, has it too.
+component AdminTabs(here string) {
+	<Tabs
+		id="admin-nav"
+		aria-label={locales.ScreensAdmin}
+		tabs={
+			[]Tab{
+				{Href: adminURL(ctx, AdminOverview{}), Name: intl.Text(ctx, locales.ScreensAdminOverview), Here: here == "overview"},
+				{Href: adminURL(ctx, PeoplePage{}), Name: intl.Text(ctx, locales.ScreensPeople), Here: here == "people"},
+				{Href: adminURL(ctx, AdminSystem{}), Name: intl.Text(ctx, locales.ScreensAdminSystem), Here: here == "system"},
+				{Href: adminURL(ctx, AdminDatabase{}), Name: intl.Text(ctx, locales.ScreensAdminDatabase), Here: here == "database"},
+			}
+		}
+	/>
 }
 
-// adminRow is one line of a list: what it is, and what it is now.
-component adminRow(children gsx.Node) {
-	<li class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm">{ children }</li>
+// adminURL is a page's address, from the tree.
+func adminURL(ctx context.Context, page any) string {
+	to, _ := structpages.URLFor(ctx, page)
+	return to
 }
+
+func init() { PeopleTabs = func() gsx.Node { return AdminTabs("people") } }
 
 // AdminOverview is the app at a glance: what it is built from, who there is, the invitations that wait, and the
 // app's own facts.
@@ -147,110 +154,78 @@ func (InviteCancel) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.
 
 component (p AdminOverview) Page(v AdminOverviewView) {
 	<adminPage title={locales.ScreensAdminOverview} about={locales.ScreensAdminOverviewIntro} here="overview">
-		<ui.Card>
-			<ui.CardHeader>
-				<ui.CardTitle>
-					<h2 translate="no" dir="auto">{ v.App }</h2>
-				</ui.CardTitle>
-			</ui.CardHeader>
-			<ui.CardContent>
-				<ul id="admin-build" class="flex flex-col gap-2">
-					<adminRow>
-						<span class="flex-1" translate="no">charter</span>
-						<code translate="no">{ v.Charter }</code>
-					</adminRow>
-					<adminRow>
-						<span class="flex-1" translate="no">Go</span>
-						<code translate="no">{ v.Go }</code>
-					</adminRow>
-					{ if v.Revision != "" {
-						<adminRow>
-							<span class="flex-1">{ locales.ScreensAdminRevision }</span>
-							{ if v.Modified {
-								<ui.Badge variant="secondary">{ locales.ScreensAdminModified }</ui.Badge>
-							} }
-							<code translate="no">{ v.Revision[:min(len(v.Revision), 12)] }</code>
-						</adminRow>
-					} }
-					{ if !v.Committed.IsZero() {
-						<adminRow>
-							<span class="flex-1">{ locales.ScreensAdminCommitted }</span>
-							<span>{ v.Committed |> date("dateStyle", "medium", "timeStyle", "short") }</span>
-						</adminRow>
-					} }
-				</ul>
-			</ui.CardContent>
-		</ui.Card>
-		<ui.Card>
-			<ui.CardHeader>
-				<ui.CardTitle>
-					<h2>{ locales.ScreensPeople }</h2>
-				</ui.CardTitle>
-			</ui.CardHeader>
-			<ui.CardContent>
-				<ul id="admin-people" class="flex flex-col gap-2">
-					{ for _, role := range v.People {
-						<adminRow>
-							<span class="flex-1" translate="no">{ role.Role }</span>
-							<span data-role={role.Role}>{ role.Count |> number }</span>
-						</adminRow>
-					} }
-				</ul>
-			</ui.CardContent>
-		</ui.Card>
-		<ui.Card>
-			<ui.CardHeader>
-				<ui.CardTitle>
-					<h2>{ locales.ScreensAdminInvitations }</h2>
-				</ui.CardTitle>
-				<ui.CardDescription>{ locales.ScreensAdminInvitationsIntro }</ui.CardDescription>
-			</ui.CardHeader>
-			<ui.CardContent>
-				{ if len(v.Invitations) == 0 {
-					<p id="admin-invitations" class="text-sm text-muted-foreground">{ locales.ScreensAdminNone }</p>
-				} else {
-					<ul id="admin-invitations" class="flex flex-col gap-2">
-						{ for _, invitation := range v.Invitations {
-							<p.Invitation invitation={invitation}/>
+		<Panel title={v.App}>
+			<Rows id="admin-build">
+				<Row>
+					<span class="flex-1" translate="no">charter</span>
+					<code translate="no">{ v.Charter }</code>
+				</Row>
+				<Row>
+					<span class="flex-1" translate="no">Go</span>
+					<code translate="no">{ v.Go }</code>
+				</Row>
+				{ if v.Revision != "" {
+					<Row>
+						<span class="flex-1">{ locales.ScreensAdminRevision }</span>
+						{ if v.Modified {
+							<ui.Badge variant="secondary">{ locales.ScreensAdminModified }</ui.Badge>
 						} }
-					</ul>
+						<code translate="no">{ v.Revision[:min(len(v.Revision), 12)] }</code>
+					</Row>
 				} }
-			</ui.CardContent>
-		</ui.Card>
+				{ if !v.Committed.IsZero() {
+					<Row>
+						<span class="flex-1">{ locales.ScreensAdminCommitted }</span>
+						<span>{ v.Committed |> date("dateStyle", "medium", "timeStyle", "short") }</span>
+					</Row>
+				} }
+			</Rows>
+		</Panel>
+		<Panel title={locales.ScreensPeople |> text}>
+			<Rows id="admin-people">
+				{ for _, role := range v.People {
+					<Row>
+						<span class="flex-1" translate="no">{ role.Role }</span>
+						<span data-role={role.Role}>{ role.Count |> number }</span>
+					</Row>
+				} }
+			</Rows>
+		</Panel>
+		<Panel title={locales.ScreensAdminInvitations |> text} about={locales.ScreensAdminInvitationsIntro |> text}>
+			{ if len(v.Invitations) == 0 {
+				<None id="admin-invitations">{ locales.ScreensAdminNone }</None>
+			} else {
+				<Rows id="admin-invitations">
+					{ for _, invitation := range v.Invitations {
+						<p.Invitation invitation={invitation}/>
+					} }
+				</Rows>
+			} }
+		</Panel>
 		{ if len(v.Facts) > 0 {
-			<ui.Card>
-				<ui.CardHeader>
-					<ui.CardTitle>
-						<h2>{ locales.ScreensAdminFacts }</h2>
-					</ui.CardTitle>
-				</ui.CardHeader>
-				<ui.CardContent>
-					<ul id="admin-facts" class="flex flex-col gap-2">
-						{ for _, fact := range v.Facts {
-							<adminRow>
-								<span class="flex-1">{ fact.Label }</span>
-								{ if fact.Number != nil {
-									<span>{ *fact.Number |> number }</span>
-								} else if fact.Time != nil {
-									<span>{ *fact.Time |> date("dateStyle", "medium", "timeStyle", "short") }</span>
-								} else {
-									<span dir="auto">{ fact.Text }</span>
-								} }
-							</adminRow>
-						} }
-					</ul>
-				</ui.CardContent>
-			</ui.Card>
+			<Panel title={locales.ScreensAdminFacts |> text}>
+				<Rows id="admin-facts">
+					{ for _, fact := range v.Facts {
+						<Row>
+							<span class="flex-1">{ fact.Label }</span>
+							{ if fact.Number != nil {
+								<span>{ *fact.Number |> number }</span>
+							} else if fact.Time != nil {
+								<span>{ *fact.Time |> date("dateStyle", "medium", "timeStyle", "short") }</span>
+							} else {
+								<span dir="auto">{ fact.Text }</span>
+							} }
+						</Row>
+					} }
+				</Rows>
+			</Panel>
 		} }
 	</adminPage>
 }
 
 // Invitation is one invitation that waits: what it is to, until when, and the button that cancels it.
 component (p AdminOverview) Invitation(invitation api.Invitation) {
-	<li
-		id={AdminOverview.Invitation |> key(invitation.ID)}
-		class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm"
-	>
+	<Row id={AdminOverview.Invitation |> key(invitation.ID)}>
 		<ui.Badge translate="no">{ invitation.Role }</ui.Badge>
 		<span class="flex-1 text-muted-foreground">{ invitation.Expires |> date("dateStyle", "medium", "timeStyle", "short") }</span>
 		<ui.Button
@@ -263,7 +238,7 @@ component (p AdminOverview) Invitation(invitation api.Invitation) {
 		>
 			{ locales.ScreensAdminCancel }
 		</ui.Button>
-	</li>
+	</Row>
 }
 
 // AdminSystem is what the Worker is bound to, as it runs: its bindings, each with a button that asks it one small
@@ -292,76 +267,50 @@ func (AdminProbe) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Au
 component (p AdminSystem) Page(v api.System) {
 	<adminPage title={locales.ScreensAdminSystem} about={locales.ScreensAdminSystemIntro} here="system">
 		{ if v.Memory != nil {
-			<ui.Card>
-				<ui.CardHeader>
-					<ui.CardTitle>
-						<h2>{ locales.ScreensAdminMemory }</h2>
-					</ui.CardTitle>
-					<ui.CardDescription>{ locales.ScreensAdminMemoryIntro }</ui.CardDescription>
-				</ui.CardHeader>
-				<ui.CardContent>
-					<ul id="admin-memory" class="flex flex-col gap-2">
-						<adminRow>
-							<span class="flex-1">{ locales.ScreensAdminRuntimes }</span>
-							<span>{ v.Memory.Runtimes |> number }</span>
-						</adminRow>
-						<adminRow>
-							<span class="flex-1">{ locales.ScreensAdminHeld }</span>
-							<span>{ (v.Memory.Held / 1048576) |> number("style", "unit", "unit", "megabyte") }</span>
-						</adminRow>
-						<adminRow>
-							<span class="flex-1">{ locales.ScreensAdminBudget }</span>
-							<span>{ (v.Memory.Budget / 1048576) |> number("style", "unit", "unit", "megabyte") }</span>
-						</adminRow>
-					</ul>
-				</ui.CardContent>
-			</ui.Card>
+			<Panel title={locales.ScreensAdminMemory |> text} about={locales.ScreensAdminMemoryIntro |> text}>
+				<Rows id="admin-memory">
+					<Row>
+						<span class="flex-1">{ locales.ScreensAdminRuntimes }</span>
+						<span>{ v.Memory.Runtimes |> number }</span>
+					</Row>
+					<Row>
+						<span class="flex-1">{ locales.ScreensAdminHeld }</span>
+						<span>{ (v.Memory.Held / 1048576) |> number("style", "unit", "unit", "megabyte") }</span>
+					</Row>
+					<Row>
+						<span class="flex-1">{ locales.ScreensAdminBudget }</span>
+						<span>{ (v.Memory.Budget / 1048576) |> number("style", "unit", "unit", "megabyte") }</span>
+					</Row>
+				</Rows>
+			</Panel>
 		} }
-		<ui.Card>
-			<ui.CardHeader>
-				<ui.CardTitle>
-					<h2>{ locales.ScreensAdminBindings }</h2>
-				</ui.CardTitle>
-			</ui.CardHeader>
-			<ui.CardContent>
-				<ul id="admin-bindings" class="flex flex-col gap-2">
-					{ for _, binding := range v.Bindings {
-						<p.Binding binding={binding} probed={nil}/>
-					} }
-				</ul>
-			</ui.CardContent>
-		</ui.Card>
-		<ui.Card>
-			<ui.CardHeader>
-				<ui.CardTitle>
-					<h2>{ locales.ScreensAdminSettings }</h2>
-				</ui.CardTitle>
-				<ui.CardDescription>{ locales.ScreensAdminSettingsIntro }</ui.CardDescription>
-			</ui.CardHeader>
-			<ui.CardContent>
-				<ul id="admin-settings" class="flex flex-col gap-2">
-					{ for _, setting := range v.Settings {
-						<adminRow>
-							<code class="flex-1" translate="no">{ setting.Name }</code>
-							{ if setting.Set {
-								<ui.Badge variant="secondary">{ locales.ScreensAdminSet }</ui.Badge>
-							} else {
-								<ui.Badge variant="destructive">{ locales.ScreensAdminUnset }</ui.Badge>
-							} }
-						</adminRow>
-					} }
-				</ul>
-			</ui.CardContent>
-		</ui.Card>
+		<Panel title={locales.ScreensAdminBindings |> text}>
+			<Rows id="admin-bindings">
+				{ for _, binding := range v.Bindings {
+					<p.Binding binding={binding} probed={nil}/>
+				} }
+			</Rows>
+		</Panel>
+		<Panel title={locales.ScreensAdminSettings |> text} about={locales.ScreensAdminSettingsIntro |> text}>
+			<Rows id="admin-settings">
+				{ for _, setting := range v.Settings {
+					<Row>
+						<code class="flex-1" translate="no">{ setting.Name }</code>
+						{ if setting.Set {
+							<ui.Badge variant="secondary">{ locales.ScreensAdminSet }</ui.Badge>
+						} else {
+							<ui.Badge variant="destructive">{ locales.ScreensAdminUnset }</ui.Badge>
+						} }
+					</Row>
+				} }
+			</Rows>
+		</Panel>
 	</adminPage>
 }
 
 // Binding is one binding: its name, its kind, and once it was asked, how it answered.
 component (p AdminSystem) Binding(binding cloud.Binding, probed *api.Probed) {
-	<li
-		id={AdminSystem.Binding |> key(binding.Name)}
-		class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm"
-	>
+	<Row id={AdminSystem.Binding |> key(binding.Name)}>
 		<code translate="no">{ binding.Name }</code>
 		<span class="flex-1 text-muted-foreground" translate="no">{ binding.Kind }</span>
 		{ if probed != nil && probed.Asked && probed.OK {
@@ -386,7 +335,7 @@ component (p AdminSystem) Binding(binding cloud.Binding, probed *api.Probed) {
 				<ui.Button type="submit" variant="outline" size="sm">{ locales.ScreensAdminProbe }</ui.Button>
 			</form>
 		} }
-	</li>
+	</Row>
 }
 
 // AdminDatabase is what the Worker's databases hold: each table with how many rows it has, and the migrations
@@ -402,45 +351,30 @@ func (AdminDatabase) Props(r *http.Request, auth *api.Auth) ([]api.Database, err
 component (p AdminDatabase) Page(databases []api.Database) {
 	<adminPage title={locales.ScreensAdminDatabase} about={locales.ScreensAdminDatabaseIntro} here="database">
 		{ for _, db := range databases {
-			<ui.Card>
-				<ui.CardHeader>
-					<ui.CardTitle>
-						<h2 translate="no">{ db.Binding }</h2>
-					</ui.CardTitle>
-					<ui.CardDescription>{ locales.ScreensAdminTables }</ui.CardDescription>
-				</ui.CardHeader>
-				<ui.CardContent>
-					<ul data-tables={db.Binding} class="flex flex-col gap-2">
-						{ for _, table := range db.Tables {
-							<adminRow>
-								<code class="flex-1" translate="no">{ table.Name }</code>
-								<span data-table={table.Name}>{ table.Rows |> number }</span>
-							</adminRow>
-						} }
-					</ul>
-				</ui.CardContent>
-			</ui.Card>
-			<ui.Card>
-				<ui.CardHeader>
-					<ui.CardTitle>
-						<h2>{ locales.ScreensAdminMigrations }</h2>
-					</ui.CardTitle>
-				</ui.CardHeader>
-				<ui.CardContent>
-					{ if len(db.Migrations) == 0 {
-						<p class="text-sm text-muted-foreground">{ locales.ScreensAdminNone }</p>
-					} else {
-						<ul data-migrations={db.Binding} class="flex flex-col gap-2">
-							{ for _, migration := range db.Migrations {
-								<adminRow>
-									<code class="flex-1" translate="no">{ migration.Name }</code>
-									<span class="text-muted-foreground">{ migration.Applied |> date("dateStyle", "medium", "timeStyle", "short") }</span>
-								</adminRow>
-							} }
-						</ul>
+			<Panel title={db.Binding} about={locales.ScreensAdminTables |> text}>
+				<Rows data-tables={db.Binding}>
+					{ for _, table := range db.Tables {
+						<Row>
+							<code class="flex-1" translate="no">{ table.Name }</code>
+							<span data-table={table.Name}>{ table.Rows |> number }</span>
+						</Row>
 					} }
-				</ui.CardContent>
-			</ui.Card>
+				</Rows>
+			</Panel>
+			<Panel title={locales.ScreensAdminMigrations |> text}>
+				{ if len(db.Migrations) == 0 {
+					<None>{ locales.ScreensAdminNone }</None>
+				} else {
+					<Rows data-migrations={db.Binding}>
+						{ for _, migration := range db.Migrations {
+							<Row>
+								<code class="flex-1" translate="no">{ migration.Name }</code>
+								<span class="text-muted-foreground">{ migration.Applied |> date("dateStyle", "medium", "timeStyle", "short") }</span>
+							</Row>
+						} }
+					</Rows>
+				} }
+			</Panel>
 		} }
 	</adminPage>
 }

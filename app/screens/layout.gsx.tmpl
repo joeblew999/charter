@@ -8,6 +8,7 @@ import (
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/app/screens/locales"
 	"github.com/joeblew999/charter/intl"
+	"net/http"
 )
 
 // LayoutMode says what a page is for. A page names its mode and nothing else: no width, no header, no way back.
@@ -45,20 +46,23 @@ var Around struct {
 // room on a phone, its Separator. Nothing in a page can make the page wider than the window: every column here may
 // shrink (min-w-0), so what is too wide scrolls where it is.
 //
-// What a page may add, and only where it is the page's own:
+// What a page says of itself, each shown in one way on every page:
 //
+//   - heading, about: what the page is and a line about it, above everything in it. A page writes no heading of
+//     the first level of its own.
+//   - tabs: the pages it is one of (the admin's), above its heading: Tabs.
 //   - tools: before the app's own in the header (the docs' search).
 //   - navigation: a docs page's list of pages, as gsxui Sidebar groups (LayoutDocs).
 //   - contents: a docs page's own sections: at the other side on a wide window, and under a button at the top of
 //     the page where there is no side. Shown in both, so nothing in them has an id.
-//   - heading: where a docs page is among the others, in its header.
+//   - here: where a docs page is among the others, in its header.
 //
 // From charter add screen:layout: the app's own now, to change as it likes.
-component Layout(mode LayoutMode, title string, description string, tools gsx.Node, navigation gsx.Node, contents gsx.Node, heading gsx.Node, children gsx.Node) {
+component Layout(mode LayoutMode, title string, description string, heading string, about string, tabs gsx.Node, tools gsx.Node, navigation gsx.Node, contents gsx.Node, here gsx.Node, children gsx.Node) {
 	{{
 		bodyClass := "min-h-svh bg-background font-sans text-foreground antialiased"
 		containerClass := "mx-auto w-full max-w-6xl px-4"
-		mainClass := "min-w-0 flex-1 py-10"
+		mainClass := "flex min-w-0 flex-1 flex-col gap-6 py-10"
 		links, footer := Around.Links, Around.Footer
 		if mode == LayoutPage {
 			mainClass = "mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-6 py-10"
@@ -66,7 +70,7 @@ component Layout(mode LayoutMode, title string, description string, tools gsx.No
 		if mode == LayoutWorkspace {
 			bodyClass += " lg:flex lg:h-svh lg:flex-col lg:overflow-hidden"
 			containerClass = "w-full px-4"
-			mainClass = "min-w-0 flex-1 py-10 lg:min-h-0 lg:overflow-y-auto lg:py-4"
+			mainClass = "flex min-w-0 flex-1 flex-col gap-6 py-10 lg:min-h-0 lg:overflow-y-auto lg:py-4"
 		}
 	}}
 	<!DOCTYPE html>
@@ -104,8 +108,8 @@ component Layout(mode LayoutMode, title string, description string, tools gsx.No
 							<ui.SidebarTrigger data-layout-menu/>
 							<ui.Separator orientation="vertical" class="me-1 h-4"/>
 							<div class="min-w-0 flex-1">
-								{ if heading != nil {
-									{ heading }
+								{ if here != nil {
+									{ here }
 								} }
 							</div>
 							{ if links != nil {
@@ -175,6 +179,17 @@ component Layout(mode LayoutMode, title string, description string, tools gsx.No
 				</header>
 				<div class={"flex", containerClass, "lg:min-h-0 lg:flex-1": mode == LayoutWorkspace}>
 					<main data-layout-main class={mainClass}>
+						{ if tabs != nil {
+							{ tabs }
+						} }
+						{ if heading != "" {
+							<div class="flex flex-col gap-1">
+								<h1 id="heading" class="text-2xl font-semibold tracking-tight" dir="auto">{ heading }</h1>
+								{ if about != "" {
+									<p id="about" class="text-muted-foreground">{ about }</p>
+								} }
+							</div>
+						} }
 						{ children }
 					</main>
 				</div>
@@ -185,6 +200,91 @@ component Layout(mode LayoutMode, title string, description string, tools gsx.No
 		</body>
 	</html>
 }
+
+// What every page is made of, said once: a page puts these together and writes none of them out itself.
+
+// Panel is one thing on a page: gsxui's Card, with what it is (a heading of the second level) and a line about
+// it, and its parts one under the other. Extra attributes are the card's (an id, for a part that changes by itself).
+component Panel(title string, about string, children gsx.Node, attrs gsx.Attrs) {
+	<ui.Card { attrs... }>
+		{ if title != "" || about != "" {
+			<ui.CardHeader>
+				{ if title != "" {
+					<ui.CardTitle>
+						<h2 dir="auto">{ title }</h2>
+					</ui.CardTitle>
+				} }
+				{ if about != "" {
+					<ui.CardDescription>{ about }</ui.CardDescription>
+				} }
+			</ui.CardHeader>
+		} }
+		<ui.CardContent class="flex flex-col gap-4">
+			{ children }
+		</ui.CardContent>
+	</ui.Card>
+}
+
+// Rows is a list, and Row a line of it: what it is, then what it is now or what is done with it. Extra attributes
+// are the element's own (an id, a target).
+component Rows(children gsx.Node, attrs gsx.Attrs) {
+	<ul class="flex flex-col gap-2" { attrs... }>
+		{ children }
+	</ul>
+}
+
+component Row(children gsx.Node, attrs gsx.Attrs) {
+	<li class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm" { attrs... }>
+		{ children }
+	</li>
+}
+
+// None is what a list says when there is nothing in it.
+component None(children gsx.Node, attrs gsx.Attrs) {
+	<p class="text-sm text-muted-foreground" { attrs... }>
+		{ children }
+	</p>
+}
+
+// Once is something shown this once and never again (a token, an invitation's link): what it is, and itself, to
+// copy. Extra attributes are the value's (its id). What is done with it (a share button) is under it.
+component Once(label string, value string, children gsx.Node, attrs gsx.Attrs) {
+	<div class="flex flex-col items-start gap-2">
+		<p class="text-sm font-medium">{ label }</p>
+		<code class="rounded-md bg-muted px-2 py-1 font-mono text-sm break-all" translate="no" { attrs... }>{ value }</code>
+		{ children }
+	</div>
+}
+
+// Tab is one of the pages a page is one of, and Tabs the way between them, the one being shown marked.
+type Tab struct {
+	Href, Name string
+	Here       bool
+}
+
+component Tabs(tabs []Tab, attrs gsx.Attrs) {
+	<nav class="flex flex-wrap gap-1" { attrs... }>
+		{ for _, tab := range tabs {
+			{ if tab.Here {
+				<ui.Button variant="secondary" size="sm" href={tab.Href} aria-current="page">{ tab.Name }</ui.Button>
+			} else {
+				<ui.Button variant="ghost" size="sm" href={tab.Href}>{ tab.Name }</ui.Button>
+			} }
+		} }
+	</nav>
+}
+
+// Failed is the page an error is: a page the app does not have, one someone may not open, something that went
+// wrong. It is a page of the app like any other, in the same layout. charter answers with it (app.SetErrorPage).
+component Failed(status int, message string) {
+	<Layout mode={LayoutPage} title={message} description={message} heading={http.StatusText(status)} about={message}>
+		<div>
+			<ui.Button variant="outline" size="sm" href={intl.URL(ctx, "/")}>{ app.Name(ctx) }</ui.Button>
+		</div>
+	</Layout>
+}
+
+func init() { app.SetErrorPage(func(status int, message string) gsx.Node { return Failed(status, message) }) }
 
 // LayoutTools is what a header ends with: what the page adds of its own, then what the app's header always has.
 component LayoutTools(tools gsx.Node) {

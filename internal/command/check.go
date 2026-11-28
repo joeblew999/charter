@@ -94,7 +94,7 @@ func Check(args []string) {
 		if err != nil || len(own) == 0 {
 			return err
 		}
-		return fmt.Errorf("these write a document of their own, with its own header and widths:\n  %s\nput the page in <screens.Layout mode={screens.LayoutMarketing} …> (pages/screens/layout.gsx), which is the header, the widths and what a phone shows for every page", strings.Join(own, "\n  "))
+		return fmt.Errorf("these write out what every page has from one place (pages/screens/layout.gsx), so each would look its own way:\n  %s", strings.Join(own, "\n  "))
 	})
 	t.part("generate", func() error { return generate(p) })
 	t.part("fmt", func() error { return format(p, *fix) })

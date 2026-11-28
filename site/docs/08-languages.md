@@ -26,7 +26,7 @@ go tool charter run intl:translate
 Every page has a URL per language (`/built/`, `/de/built/`). Text in a page is a message from the catalog, never a literal:
 
 ```gsx
-<h1>{ locales.HomeHeading }</h1>
+<ui.Button variant="link" class="px-0" href={screens.SignInPage{} |> url}>{ locales.BuiltSignIn }</ui.Button>
 ```
 
 Numbers, dates and ages go through the runtime's Intl, in the reader's language and time zone:

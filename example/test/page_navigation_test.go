@@ -2,6 +2,8 @@ package test
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -174,5 +176,30 @@ func TestAPressedLinkIsAskedForOnce(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 	if n := askedFor(page, built); n != "1" {
 		t.Errorf("after the click %s was asked for %s times, want the once of the press", built, n)
+	}
+}
+
+// An address nothing answers, and a page someone may not open, are pages of the app for a reader: in its layout,
+// with its header, saying what happened. A program that asks is told in the API's own words.
+func TestAnErrorIsAPageOfTheApp(t *testing.T) {
+	t.Parallel()
+	page := apptest.Browser(t)
+	page.Open("/no-such-page")
+	page.WaitText("#heading", "Not Found")
+	if !page.Has("[data-layout-header] [data-layout-links] a") {
+		t.Error("the page for an address that is not there has no header of the app's")
+	}
+	page.Fits()
+	page.SignUp(at(screens.SignInPage{}), "Not An Admin")
+	page.Open(at(screens.AdminOverview{}))
+	page.WaitText("#heading", "Forbidden")
+	page.WaitText("#about", "admin")
+	res, err := http.Get(apptest.Base(t) + "/no-such-page")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if kind := res.Header.Get("Content-Type"); res.StatusCode != http.StatusNotFound || strings.Contains(kind, "text/html") {
+		t.Errorf("a program asking for an address that is not there got HTTP %d as %s", res.StatusCode, kind)
 	}
 }

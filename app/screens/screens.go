@@ -47,7 +47,7 @@ var Screens = &registry.Registry{
 				"    theme screens.Theme `route:\"/theme Theme\"`\n" +
 				"  <screens.ThemeLink/>          in the header, beside the theme toggle: the way there\n" +
 				"  (go tool charter check --fix then writes gsxui's editor into the app, and web/main.js loads it)"},
-		{Name: "sign-in", Gsxui: []string{"badge", "button", "card", "input", "native-select", "separator", "icon"}, Needs: []string{"layout", "theme-toggle"}, Schema: api.AccountsSchema,
+		{Name: "sign-in", Gsxui: []string{"badge", "button", "dialog", "input", "native-select", "separator", "icon"}, Needs: []string{"layout", "theme-toggle"}, Schema: api.AccountsSchema,
 			Use: "  the app's own people, signing in with a passkey; its routes in the page tree, and the app's Auth (api.NewAuth with api.People):\n" +
 				"    signIn  screens.SignIn  `route:\"/sign-in SignIn\"`\n" +
 				"    account screens.Account `route:\"/account Account\"`\n" +
@@ -58,7 +58,7 @@ var Screens = &registry.Registry{
 				"    admin screens.Admin `route:\"/admin Admin\"`\n" +
 				"  <screens.AdminLink/>          in the header: there for whoever may open it\n" +
 				"  (&app.App{Facts: []app.Fact{{Label: locales.Notes, Value: …}}, …}: lines of the app's own on its overview)"},
-		{Name: "layout", Gsxui: []string{"sidebar", "sheet", "separator", "icon"},
+		{Name: "layout", Gsxui: []string{"sidebar", "sheet", "separator", "button", "card", "icon"},
 			Use: "  the document around a page, of gsxui's Sidebar and Sheet: a centred page, a page of docs, or a workspace\n" +
 				"    <screens.Layout mode={screens.LayoutPage} title={…} description={…}>…</screens.Layout>\n" +
 				"  and, once, what every page has around it: screens.Around.Links, screens.Around.Tools, screens.Around.Footer = Links(), Tools(), Footer()"},

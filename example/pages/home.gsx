@@ -18,45 +18,41 @@ import (
 // list as its target) and morphs what comes into place. So a note added, one taken away, and several at once all
 // reach every open page, and a row a reader has opened stays open.
 component (p Home) Page(props HomeProps) {
-	<Layout title={locales.SiteTitle} description={locales.SiteDescription}>
+	<Layout
+		title={locales.SiteTitle}
+		description={locales.SiteDescription}
+		heading={locales.HomeHeading}
+		about={locales.HomeIntro}
+	>
 		// A line for everyone, when whoever may moderate has set one.
 		{ if props.Notice.Text != "" {
 			<ui.Alert id="notice">
 				<ui.AlertTitle dir="auto">{ props.Notice.Text }</ui.AlertTitle>
 			</ui.Alert>
 		} }
-		<ui.Card>
-			<ui.CardHeader>
-				<ui.CardTitle>
-					<h1>{ locales.HomeHeading }</h1>
-				</ui.CardTitle>
-				<ui.CardDescription>{ locales.HomeIntro }</ui.CardDescription>
-			</ui.CardHeader>
-			<ui.CardContent class="flex flex-col gap-4">
-				// Anyone reads; writing is for whoever is signed in.
-				{ if props.MayWrite {
-					<p.Form body="" refused={false}/>
-				} else {
-					<p id="sign-in-to-write" class="text-sm text-muted-foreground">
-						<ui.Button variant="link" class="px-0" href={screens.SignInPage{} |> url}>
-							{ locales.HomeSignInToWrite }
-						</ui.Button>
-					</p>
-				} }
-				// The stream is this element's; the list inside it asks for itself again when the stream says so.
-				<div { api.Notes.Stream()... }>
-					<ul
-						id={Home.List |> id}
-						class="flex flex-col gap-2"
-						hx-get={Home{} |> url}
-						hx-target={Home.List |> target}
-						{ live.Follows()... }
-					>
-						<p.List notes={props.Notes} reader={props.Caller}/>
-					</ul>
-				</div>
-			</ui.CardContent>
-		</ui.Card>
+		<screens.Panel>
+			// Anyone reads; writing is for whoever is signed in.
+			{ if props.MayWrite {
+				<p.Form body="" refused={false}/>
+			} else {
+				<p id="sign-in-to-write" class="text-sm text-muted-foreground">
+					<ui.Button variant="link" class="px-0" href={screens.SignInPage{} |> url}>
+						{ locales.HomeSignInToWrite }
+					</ui.Button>
+				</p>
+			} }
+			// The stream is this element's; the list inside it asks for itself again when the stream says so.
+			<div { api.Notes.Stream()... }>
+				<screens.Rows
+					id={Home.List |> id}
+					hx-get={Home{} |> url}
+					hx-target={Home.List |> target}
+					{ live.Follows()... }
+				>
+					<p.List notes={props.Notes} reader={props.Caller}/>
+				</screens.Rows>
+			</div>
+		</screens.Panel>
 	</Layout>
 }
 
@@ -107,10 +103,9 @@ component (p Home) List(notes []api.Note, reader charter.Caller) {
 // (hx-preserve), whatever this one says, and puts in only the rows that are new. A row asked for by itself, by its
 // own button, is not kept: it is the answer.
 component (p Home) Item(note api.Note, open Open, removable Removable, kept Kept) {
-	<li
+	<screens.Row
 		id={Home.Item |> key(strconv.FormatInt(note.ID, 10))}
-		class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2"
-		{ if kept {
+		{ if bool(kept) {
 			hx-preserve
 		} }
 	>
@@ -155,7 +150,7 @@ component (p Home) Item(note api.Note, open Open, removable Removable, kept Kept
 				{ note.Created() |> date("dateStyle", "full", "timeStyle", "long") }
 			</p>
 		} }
-	</li>
+	</screens.Row>
 }
 
 // itemQuery is what a row's button asks for: the row open when it is closed, closed when it is open.

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -12,7 +13,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
+	"github.com/gsxhq/gsx"
 	"github.com/jackielii/structpages"
 
 	"github.com/joeblew999/charter/intl"
@@ -124,7 +127,7 @@ func failed(w http.ResponseWriter, r *http.Request, err error) {
 	}
 	var known statusError
 	if errors.As(err, &known) {
-		http.Error(w, known.message, known.status)
+		say(w, r, known.status, known.message)
 		return
 	}
 	// What went wrong is the app's to know, not the reader's: it is logged, with a reference the reader is given, so
@@ -132,7 +135,30 @@ func failed(w http.ResponseWriter, r *http.Request, err error) {
 	ref := Reference(r)
 	logFailure(r, err, ref)
 	w.Header().Set("X-Request-Id", ref)
-	http.Error(w, "Something went wrong. Reference: "+ref, http.StatusInternalServerError)
+	say(w, r, http.StatusInternalServerError, "Something went wrong. Reference: "+ref)
+}
+
+// errorPage is the page an error is, which the app's layout screen gives (pages/screens/layout.gsx): the same
+// document every page of the app is in.
+var errorPage func(status int, message string) gsx.Node
+
+// SetErrorPage is called by the layout screen as the program starts, and by nothing else.
+func SetErrorPage(page func(status int, message string) gsx.Node) { errorPage = page }
+
+// say answers with an error: to a reader who asked for a page, the app's own page for one, in its layout; to
+// anything else (a part of a page, a form, a program), its words. A page that cannot be written is its words too.
+func say(w http.ResponseWriter, r *http.Request, status int, message string) {
+	if errorPage != nil && r.Method == http.MethodGet && wanted(r) != partOfAPage && strings.Contains(r.Header.Get("Accept"), "text/html") {
+		var page bytes.Buffer
+		if err := errorPage(status, message).Render(r.Context(), &page); err == nil {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("Cache-Control", "private, no-store")
+			w.WriteHeader(status)
+			_, _ = w.Write(page.Bytes())
+			return
+		}
+	}
+	http.Error(w, message, status)
 }
 
 // Reference is what a request is known by, to quote and to find in the logs: Cloudflare's own id of it (the
@@ -186,4 +212,39 @@ func (a *App) llms() func(origin string) string {
 			return path
 		})
 	}
+}
+
+// missing has an address that nothing answers be a page of the app for a reader who asked for a page: what is no
+// page is the API's to answer, and its "not found" is a document for a program. Anything else it says goes as it is.
+func (a *App) missing(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if errorPage == nil || a.tree == nil || r.Method != http.MethodGet || wanted(r) == partOfAPage || !strings.Contains(r.Header.Get("Accept"), "text/html") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		// The page is written with the tree's own addresses in it (the header's links).
+		next.ServeHTTP(&notFound{ResponseWriter: w, asked: r.WithContext(a.tree.PageContext(r.Context()))}, r)
+	})
+}
+
+type notFound struct {
+	http.ResponseWriter
+	asked *http.Request
+	said  bool
+}
+
+func (n *notFound) WriteHeader(status int) {
+	if status != http.StatusNotFound {
+		n.ResponseWriter.WriteHeader(status)
+		return
+	}
+	n.said = true
+	say(n.ResponseWriter, n.asked, http.StatusNotFound, "There is no page at this address.")
+}
+
+func (n *notFound) Write(b []byte) (int, error) {
+	if n.said {
+		return len(b), nil
+	}
+	return n.ResponseWriter.Write(b)
 }

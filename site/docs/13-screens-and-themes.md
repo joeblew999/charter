@@ -58,11 +58,26 @@ One document is around every page of an app: `screens.Layout`. Every page has th
 	screens.Around.Links, screens.Around.Tools, screens.Around.Footer = Links(), Tools(), Footer()
 ```
 
-A page then names its mode and nothing else. It writes no `<!DOCTYPE html>`, no header, no width and no way back: the app's name in the header is the way to the front page, on every page.
+A page then names its mode and says what it is. It writes no `<!DOCTYPE html>`, no header, no width, no heading of the first level and no way back: the app's name in the header is the way to the front page, on every page. This is the admin's pages' whole frame:
 
 ```gsx
-	<screens.Layout mode={screens.LayoutPage} title={title |> text} description={description |> text}>
+	<Layout mode={LayoutPage} title={title |> text} description={about |> text} heading={title |> text} about={about |> text} tabs={<AdminTabs here={here}/>}>
 ```
+
+`heading` and `about` are what the page is and a line about it, shown the same way above every page. `tabs` are the pages it is one of.
+
+### What a page is made of
+
+A page puts these together and writes none of them out itself. They are in the layout screen, so every page of the app and every screen of charter's looks the same, and a change to one is a change everywhere:
+
+| Part | What it is | Made of |
+|---|---|---|
+| `<screens.Panel title={…} about={…}>` | one thing on a page, with what it is and a line about it | gsxui's `Card` |
+| `<screens.Rows>`, `<screens.Row>` | a list, and a line of it: what it is, then what it is now or what is done with it | a list |
+| `<screens.None>` | what a list says when there is nothing in it | |
+| `<screens.Once label={…} value={…}>` | something shown this once (a token, an invitation's link) | |
+| `<screens.Tabs tabs={…}>` | the way between the pages a page is one of, the one shown marked | gsxui's `Button` |
+| `screens.Failed` | the page an error is (not there, not allowed, went wrong): a page of the app like any other | the layout |
 
 What moves in the layout is gsxui's own components, as `gsxui add` brings and updates them: its `Sidebar`, which is a drawer on a phone by itself, and its `Sheet` for what else has no room there.
 

@@ -19,10 +19,13 @@ import (
 
 // Page is the overview: each job and what does it, and what Cloudflare says of the reader's own request.
 component (p BuiltIndex) Page(f built.Facts) {
-	<Layout title={locales.BuiltTitle} description={locales.BuiltDescription}>
-		<h1 class="text-2xl font-semibold">{ locales.BuiltHeading }</h1>
-		<p class="text-muted-foreground">{ locales.BuiltIntro }</p>
-		<ul id="built" class="flex flex-col gap-2">
+	<Layout
+		title={locales.BuiltTitle}
+		description={locales.BuiltDescription}
+		heading={locales.BuiltHeading}
+		about={locales.BuiltIntro}
+	>
+		<screens.Rows id="built">
 			<BuiltLink
 				href={AttachmentsPage{} |> url}
 				title={locales.BuiltAttachmentsTitle}
@@ -59,66 +62,58 @@ component (p BuiltIndex) Page(f built.Facts) {
 				about={locales.BuiltOutsideAbout}
 				uses={[]string{"fetch", "TCP sockets"}}
 			/>
-		</ul>
-		<ui.Card>
-			<ui.CardHeader>
-				<ui.CardTitle>
-					<h2>{ locales.BuiltFacts }</h2>
-				</ui.CardTitle>
-			</ui.CardHeader>
-			<ui.CardContent>
-				<dl id="facts" class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-					<dt class="text-muted-foreground">{ locales.BuiltWorker }</dt>
-					<dd translate="no">{ f.Name }</dd>
-					{ if f.Country != "" {
-						<dt class="text-muted-foreground">{ locales.BuiltCountry }</dt>
-						<dd>{ f.Country |> intl("DisplayNames", "of", "type", "region") }</dd>
-					} }
-					{ if f.City != "" {
-						<dt class="text-muted-foreground">{ locales.BuiltCity }</dt>
-						<dd translate="no">{ f.City }</dd>
-					} }
-					{ if f.Timezone != "" {
-						<dt class="text-muted-foreground">{ locales.BuiltTimeZone }</dt>
-						<dd>{ f.Timezone |> zone }</dd>
-					} }
-					{ if f.Colo != "" {
-						<dt class="text-muted-foreground">{ locales.BuiltColo }</dt>
-						<dd translate="no">{ f.Colo }</dd>
-					} }
-				</dl>
-			</ui.CardContent>
-		</ui.Card>
+		</screens.Rows>
+		<screens.Panel title={locales.BuiltFacts |> text}>
+			<dl id="facts" class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+				<dt class="text-muted-foreground">{ locales.BuiltWorker }</dt>
+				<dd translate="no">{ f.Name }</dd>
+				{ if f.Country != "" {
+					<dt class="text-muted-foreground">{ locales.BuiltCountry }</dt>
+					<dd>{ f.Country |> intl("DisplayNames", "of", "type", "region") }</dd>
+				} }
+				{ if f.City != "" {
+					<dt class="text-muted-foreground">{ locales.BuiltCity }</dt>
+					<dd translate="no">{ f.City }</dd>
+				} }
+				{ if f.Timezone != "" {
+					<dt class="text-muted-foreground">{ locales.BuiltTimeZone }</dt>
+					<dd>{ f.Timezone |> zone }</dd>
+				} }
+				{ if f.Colo != "" {
+					<dt class="text-muted-foreground">{ locales.BuiltColo }</dt>
+					<dd translate="no">{ f.Colo }</dd>
+				} }
+			</dl>
+		</screens.Panel>
 	</Layout>
 }
 
 // BuiltLink is one job on the overview: its page, what it is, and what of Cloudflare's does it.
 component BuiltLink(href string, title intl.Msg, about intl.Msg, uses []string) {
-	<li>
-		<a href={href} class="flex flex-col gap-1 rounded-lg border p-3 hover:bg-muted">
+	<screens.Row>
+		<a href={href} class="flex flex-1 flex-col gap-1">
 			<span class="flex flex-wrap items-center gap-2">
 				<span class="font-medium">{ title }</span>
-				{ for _, name := range uses {
-					<ui.Badge variant="secondary" translate="no">{ name }</ui.Badge>
-				} }
+				<Uses names={uses}/>
 			</span>
-			<span class="text-sm text-muted-foreground">{ about }</span>
+			<span class="text-muted-foreground">{ about }</span>
 		</a>
-	</li>
+	</screens.Row>
 }
 
-// BuiltPage is the frame of each job's page: the way back, what the page is, and what of Cloudflare's it uses.
+// Uses names what of Cloudflare's does a job.
+component Uses(names []string) {
+	{ for _, name := range names {
+		<ui.Badge variant="secondary" translate="no">{ name }</ui.Badge>
+	} }
+}
+
+// BuiltPage is each job's page: what the page is, and what of Cloudflare's it uses. The way back to the others is
+// the header's, as on every page.
 component BuiltPage(title intl.Msg, about intl.Msg, uses []string, children gsx.Node) {
-	<Layout title={title} description={about}>
-		<ui.Button variant="link" class="self-start px-0" href={BuiltIndex{} |> url}>{ locales.BuiltBack }</ui.Button>
-		<div class="flex flex-col gap-2">
-			<h1 class="flex flex-wrap items-center gap-2 text-2xl font-semibold">
-				{ title }
-				{ for _, name := range uses {
-					<ui.Badge variant="secondary" translate="no">{ name }</ui.Badge>
-				} }
-			</h1>
-			<p class="text-muted-foreground">{ about }</p>
+	<Layout title={title} description={about} heading={title} about={about}>
+		<div class="flex flex-wrap items-center gap-2">
+			<Uses names={uses}/>
 		</div>
 		{ children }
 	</Layout>
@@ -155,11 +150,11 @@ component (p AttachmentsPage) Page(v AttachmentsView) {
 		} else {
 			<SignInFirst/>
 		} }
-		<ul id="files" class="flex flex-col gap-2">
+		<screens.Rows id="files">
 			{ for _, file := range v.Files {
 				<p.File file={file} removable={built.MayDetach(v.Caller, file)}/>
 			} }
-		</ul>
+		</screens.Rows>
 		{ if len(v.Files) == 0 {
 			<p class="text-sm text-muted-foreground">{ locales.BuiltAttachmentsEmpty }</p>
 		} }
@@ -169,9 +164,8 @@ component (p AttachmentsPage) Page(v AttachmentsView) {
 // File is one attached file: its name, which downloads it, how large it is, whose it is and when, each as Intl says
 // it. Whoever may take it away has the button for that.
 component (p AttachmentsPage) File(file built.Attachment, removable bool) {
-	<li
+	<screens.Row
 		id={AttachmentsPage.File |> key(strconv.FormatInt(file.ID, 10))}
-		class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2"
 	>
 		<a href={AttachedFile{} |> url(map[string]any{"file": file.ID})} class="flex-1 underline underline-offset-4" dir="auto" translate="no">{ file.Name }</a>
 		<span class="text-xs text-muted-foreground">{ file.Size |> number("style", "unit", "unit", "byte", "notation", "compact", "unitDisplay", "narrow") }</span>
@@ -190,7 +184,7 @@ component (p AttachmentsPage) File(file built.Attachment, removable bool) {
 				{ locales.BuiltDetach }
 			</ui.Button>
 		} }
-	</li>
+	</screens.Row>
 }
 
 // The activity: the list follows its feed from the newest row it shows, as the notes' list follows the notes.
@@ -209,15 +203,14 @@ component (p ActivityPage) Page(latest []built.Activity) {
 		uses={[]string{"Queues", "Cron Triggers", "D1", "Durable Objects"}}
 	>
 		<div { built.Feed.Stream()... }>
-			<ul
+			<screens.Rows
 				id={ActivityPage.Rows |> id}
-				class="flex flex-col gap-2"
 				hx-get={ActivityPage{} |> url}
 				hx-target={ActivityPage.Rows |> target}
 				{ live.Follows()... }
 			>
 				<p.Rows rows={latest}/>
-			</ul>
+			</screens.Rows>
 		</div>
 		{ if len(latest) == 0 {
 			<p class="text-sm text-muted-foreground">{ locales.BuiltActivityEmpty }</p>
@@ -228,7 +221,7 @@ component (p ActivityPage) Page(latest []built.Activity) {
 // Row is one thing that happened: a note someone wrote, or a day's count, said in the reader's language (the count
 // with its plural), and how long ago.
 component (p ActivityPage) Row(a built.Activity) {
-	<li data-kind={a.Kind} class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm">
+	<screens.Row data-kind={a.Kind}>
 		<span class="flex-1" dir="auto">
 			{ if a.Kind == built.Summary {
 				{ locales.BuiltSummary(a.Notes) }
@@ -237,22 +230,20 @@ component (p ActivityPage) Row(a built.Activity) {
 			} }
 		</span>
 		<span class="text-xs text-muted-foreground">{ a.At() |> since }</span>
-	</li>
+	</screens.Row>
 }
 
 component (p NoticePage) Page(v NoticeView) {
 	<BuiltPage title={locales.BuiltNoticeTitle} about={locales.BuiltNoticeAbout} uses={[]string{"KV"}}>
-		<ui.Card>
-			<ui.CardContent class="flex flex-col gap-2 pt-6">
-				{ if v.Notice.Text == "" {
-					<p id="notice-now" class="text-sm text-muted-foreground">{ locales.BuiltNoticeNone }</p>
-				} else {
-					<p id="notice-now" dir="auto">{ v.Notice.Text }</p>
-					<p class="text-xs text-muted-foreground">{ v.Notice.Set |> since }</p>
-				} }
-				<p class="text-xs text-muted-foreground">{ locales.BuiltNoticeDelay }</p>
-			</ui.CardContent>
-		</ui.Card>
+		<screens.Panel>
+			{ if v.Notice.Text == "" {
+				<p id="notice-now" class="text-sm text-muted-foreground">{ locales.BuiltNoticeNone }</p>
+			} else {
+				<p id="notice-now" dir="auto">{ v.Notice.Text }</p>
+				<p class="text-xs text-muted-foreground">{ v.Notice.Set |> since }</p>
+			} }
+			<p class="text-xs text-muted-foreground">{ locales.BuiltNoticeDelay }</p>
+		</screens.Panel>
 		{ if v.MaySet {
 			<form id="set-notice" method="post" action={NoticeSet{} |> url} class="flex flex-wrap gap-2">
 				<ui.Input
@@ -273,26 +264,24 @@ component (p NoticePage) Page(v NoticeView) {
 
 component (p MailPage) Page(v MailView) {
 	<BuiltPage title={locales.BuiltMailTitle} about={locales.BuiltMailAbout} uses={[]string{"Email"}}>
-		<ui.Card>
-			<ui.CardContent class="flex flex-col gap-2 pt-6 text-sm">
-				{ if v.Mail.Sent.IsZero() {
-					<p id="sent" class="text-muted-foreground">{ locales.BuiltMailNoneSent }</p>
-				} else {
-					<p id="sent">{ locales.BuiltMailSent(v.Mail.SentTo, intl.Since(v.Mail.Sent)) }</p>
-				} }
-				{ if v.Mail.Received.IsZero() {
-					<p id="received" class="text-muted-foreground">{ locales.BuiltMailNoneReceived }</p>
-				} else {
-					<p id="received">
-						{ locales.BuiltMailReceived(v.Mail.From, intl.Since(v.Mail.Received)) }
-						<span class="block text-muted-foreground" dir="auto" translate="no">{ v.Mail.Subject }</span>
-					</p>
-				} }
-				{ if !v.Mail.MayNotSendBefore.IsZero() {
-					<p class="text-xs text-muted-foreground">{ locales.BuiltMailWait(intl.Since(v.Mail.MayNotSendBefore)) }</p>
-				} }
-			</ui.CardContent>
-		</ui.Card>
+		<screens.Panel>
+			{ if v.Mail.Sent.IsZero() {
+				<p id="sent" class="text-muted-foreground">{ locales.BuiltMailNoneSent }</p>
+			} else {
+				<p id="sent">{ locales.BuiltMailSent(v.Mail.SentTo, intl.Since(v.Mail.Sent)) }</p>
+			} }
+			{ if v.Mail.Received.IsZero() {
+				<p id="received" class="text-muted-foreground">{ locales.BuiltMailNoneReceived }</p>
+			} else {
+				<p id="received">
+					{ locales.BuiltMailReceived(v.Mail.From, intl.Since(v.Mail.Received)) }
+					<span class="block text-muted-foreground" dir="auto" translate="no">{ v.Mail.Subject }</span>
+				</p>
+			} }
+			{ if !v.Mail.MayNotSendBefore.IsZero() {
+				<p class="text-xs text-muted-foreground">{ locales.BuiltMailWait(intl.Since(v.Mail.MayNotSendBefore)) }</p>
+			} }
+		</screens.Panel>
 		{ if v.MaySend {
 			<form method="post" action={MailSend{} |> url}>
 				<ui.Button type="submit" id="send-mail">{ locales.BuiltMailSend }</ui.Button>
@@ -309,24 +298,20 @@ component (p LimitsPage) Page(report built.Report, limit built.Limit) {
 		about={locales.BuiltLimitsAbout}
 		uses={[]string{"Rate Limiting", "Cache API"}}
 	>
-		<ui.Card>
-			<ui.CardContent class="flex flex-col gap-3 pt-6">
-				<p.Limit limit={limit}/>
-			</ui.CardContent>
-		</ui.Card>
-		<ui.Card>
-			<ui.CardContent class="flex flex-col gap-1 pt-6">
-				<p id="report" class="text-lg font-medium">{ locales.BuiltReport(report.Notes, report.Authors) }</p>
-				<p id="report-from" data-cached={strconv.FormatBool(report.FromCache)} class="text-sm text-muted-foreground">
-					{ if report.FromCache {
-						{ locales.BuiltReportCached(intl.Since(report.At)) }
-					} else {
-						{ locales.BuiltReportFresh }
-					} }
-				</p>
-				<p class="text-xs text-muted-foreground">{ locales.BuiltTook(intl.Duration(report.Took, "")) }</p>
-			</ui.CardContent>
-		</ui.Card>
+		<screens.Panel>
+			<p.Limit limit={limit}/>
+		</screens.Panel>
+		<screens.Panel>
+			<p id="report" class="text-lg font-medium">{ locales.BuiltReport(report.Notes, report.Authors) }</p>
+			<p id="report-from" data-cached={strconv.FormatBool(report.FromCache)} class="text-sm text-muted-foreground">
+				{ if report.FromCache {
+					{ locales.BuiltReportCached(intl.Since(report.At)) }
+				} else {
+					{ locales.BuiltReportFresh }
+				} }
+			</p>
+			<p class="text-xs text-muted-foreground">{ locales.BuiltTook(intl.Duration(report.Took, "")) }</p>
+		</screens.Panel>
 	</BuiltPage>
 }
 

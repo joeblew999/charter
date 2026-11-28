@@ -461,10 +461,17 @@ func Expect(dir string, names []string) error {
 	return os.WriteFile(filepath.Join(target, expected), []byte(head+")\n\n"+strings.TrimRight(body.String(), "\n")+"\n"), 0o644)
 }
 
-// OwnShells lists the app's templates that write a document of their own (<!DOCTYPE html>) where the app has
+// OwnShells lists the app's templates that write out what the layout screen has once (a document, a heading of the
+// first level, a card with its header) where the app has
 // charter's layout screen (pages/screens/layout.gsx), which is the one document around every page: file and line,
 // for charter check. A page in a shell of its own sets its own widths and header, and is the page that does not
 // fit a phone.
+var ownParts = []struct{ writes, use string }{
+	{"<!doctype html>", "put the page in <screens.Layout mode={screens.LayoutPage} …>"},
+	{"<h1", "a page's heading is heading={…} about={…} on screens.Layout"},
+	{"<ui.card", "one thing on a page is <screens.Panel title={…} about={…}>"},
+}
+
 func OwnShells(dir string) ([]string, error) {
 	layout := filepath.Join("pages", "screens", "layout.gsx")
 	if _, err := os.Stat(filepath.Join(dir, layout)); err != nil {
@@ -490,8 +497,11 @@ func OwnShells(dir string) ([]string, error) {
 			return err
 		}
 		for i, line := range bytes.Split(b, []byte("\n")) {
-			if bytes.Contains(bytes.ToLower(line), []byte("<!doctype html>")) {
-				found = append(found, fmt.Sprintf("%s:%d", filepath.ToSlash(rel), i+1))
+			low := bytes.ToLower(line)
+			for _, own := range ownParts {
+				if bytes.Contains(low, []byte(own.writes)) {
+					found = append(found, fmt.Sprintf("%s:%d writes %s: %s", filepath.ToSlash(rel), i+1, own.writes, own.use))
+				}
 			}
 		}
 		return nil

@@ -16,11 +16,11 @@ component (p Home) Page() {
 		mode={screens.LayoutMarketing}
 		title={locales.SiteTitle |> text}
 		description={locales.SiteDescription |> text}
+		heading={locales.HomeHeading |> text}
+		about={locales.HomeIntro |> text}
 	>
 		<div class="flex flex-col gap-10">
 			<section class="flex flex-col gap-4">
-				<h1 class="text-4xl font-semibold tracking-tight">{ locales.HomeHeading }</h1>
-				<p class="text-lg text-muted-foreground">{ locales.HomeIntro }</p>
 				<div class="flex flex-wrap gap-3">
 					<ui.Button href={screens.DocsIndex{} |> url}>{ locales.HomeDocs }</ui.Button>
 					<ui.Button variant="outline" href={Example} rel="noopener">{ locales.HomeExample }</ui.Button>
@@ -47,14 +47,7 @@ component (p Home) Page() {
 
 // Gives is one thing charter gives an app.
 component Gives(title intl.Msg, about intl.Msg) {
-	<ui.Card>
-		<ui.CardHeader>
-			<ui.CardTitle>
-				<h2>{ title }</h2>
-			</ui.CardTitle>
-			<ui.CardDescription>{ about }</ui.CardDescription>
-		</ui.CardHeader>
-	</ui.Card>
+	<screens.Panel title={title |> text} about={about |> text}/>
 }
 
 var _ gsx.Node
