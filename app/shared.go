@@ -26,8 +26,8 @@ import (
 //   - the answer gives no cookie.
 //
 // Cloudflare keeps a copy for each value of the request headers an answer names (Vary), compared as written, so a
-// kept page names only the three it is drawn from: Cookie (the readers with none, which is most, share the one
-// copy; one with a cookie finds none and reaches the Worker), HX-Target (htmx asking for a part of the page
+// kept page names only the four it is drawn from: Cookie and Authorization (the readers with neither, which is
+// most, share the one copy; one with either finds none and reaches the Worker), HX-Target (htmx asking for a part of the page
 // must not be given the page) and X-Forwarded-Proto (a request over http is sent to https, not given the page:
 // the scheme is not part of what Cloudflare keeps a copy under). Not the browser's languages, not how it was asked for: a page load, a link followed
 // in the app, curl and a crawler get the same copy.
@@ -69,5 +69,5 @@ func share(h http.Header, r *http.Request, status int) {
 		return // the page said something else itself (no-store)
 	}
 	h.Set("Cache-Control", sharedFor)
-	h.Set("Vary", "HX-Target, Cookie, X-Forwarded-Proto")
+	h.Set("Vary", "HX-Target, Cookie, Authorization, X-Forwarded-Proto")
 }

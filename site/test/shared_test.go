@@ -50,13 +50,13 @@ func TestAPageForEveryReaderMayBeKeptAndAReadersOwnMayNot(t *testing.T) {
 		if cookies := res.Header.Values("Set-Cookie"); len(cookies) > 0 {
 			t.Errorf("%s gives a cookie, and an answer with one is kept by no cache: %q", path, cookies)
 		}
-		// Cloudflare keeps a copy for each value of each header named here, as it is written: only these three.
-		if vary := res.Header.Get("Vary"); vary != "HX-Target, Cookie, X-Forwarded-Proto" {
+		// Cloudflare keeps a copy for each value of each header named here, as it is written: only these four.
+		if vary := res.Header.Get("Vary"); vary != "HX-Target, Cookie, Authorization, X-Forwarded-Proto" {
 			t.Errorf("%s says it was drawn from more, or less, than the cookies and what htmx asked for: Vary %q", path, vary)
 		}
 		// However it is asked for, it is the one copy: a browser's languages, a page load, a link in the app.
 		for _, how := range [][]string{{"Accept-Language", "de-CH,de;q=0.9"}, {"Sec-Fetch-Mode", "navigate", "Sec-Fetch-Dest", "document"}, {"HX-Request", "true", "HX-Target", "body", "HX-Boosted", "true"}} {
-			if res := answered(t, path, how...); !kept(res) || res.Header.Get("Vary") != "HX-Target, Cookie, X-Forwarded-Proto" {
+			if res := answered(t, path, how...); !kept(res) || res.Header.Get("Vary") != "HX-Target, Cookie, Authorization, X-Forwarded-Proto" {
 				t.Errorf("%s asked with %s: Cache-Control %q, Vary %q", path, how[0], res.Header.Get("Cache-Control"), res.Header.Get("Vary"))
 			}
 		}
