@@ -10,6 +10,14 @@ What you wrote does not, when a release changes how something is written. This p
 
 charter is before 1.0: a release may change how an app is written, and says so here. This page starts at 0.63; it does not cover what changed before that.
 
+## 0.70
+
+Nothing to change in an app's code.
+
+- **The docs screen has a theme picker**, and brings the `theme-picker` screen with it. `check --fix` adds it, writes `web/gsxui/themes.css` (gsxui's 17 accents for the app's style and base colour, which takes some seconds the first time) and adds its import to `web/main.js`. Commit all three.
+- **To put the picker in your own header**: `<screens.ThemePicker/>` beside `<screens.ThemeToggle/>`.
+- **`charter run ui:theme --style <name>`** switches to another of gsxui's eight styles and keeps the app's colours, radius and fonts.
+
 ## 0.69
 
 Nothing to change in an app's code. The docs screen is made of gsxui's `Sidebar`, `Breadcrumb`, `Sheet` and `Item`, which `check --fix` adds to `ui/` as it brings the screen up to date.

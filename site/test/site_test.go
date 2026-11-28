@@ -190,3 +190,63 @@ func TestTheDocsAreReadInOrder(t *testing.T) {
 		t.Errorf("the list marks %q as the page being read", here)
 	}
 }
+
+// A reader chooses among gsxui's themes as the page runs: the page takes the theme's colours at once, in the light
+// and in the dark, each its own; the choice is kept across a link and a page loaded anew; and the app's own theme
+// is one press away. The themes are gsxui's, resolved by gsxui (web/gsxui/themes.css): what is tested here is that
+// the page has them.
+func TestAReaderChoosesATheme(t *testing.T) {
+	t.Parallel()
+	page := apptest.Browser(t)
+	page.Open(at(pages.Home{}))
+	page.Click(`main a[href$="/docs/"]`)
+	page.WaitText("#doc h1", "charter")
+	variable := func(name string) string {
+		return page.JS(`getComputedStyle(document.documentElement).getPropertyValue("--` + name + `").trim()`)
+	}
+	theme := func() string { return page.JS(`document.documentElement.getAttribute("data-theme") ?? ""`) }
+	dark := func() string { return page.JS(`String(document.documentElement.classList.contains("dark"))`) }
+	if dark() == "true" {
+		page.Click("[data-theme-toggle]")
+	}
+	own := variable("primary")
+	page.Click("[data-theme-picker]")
+	if n := page.JS(`String(document.querySelectorAll("[data-theme-choice]").length)`); n != "18" {
+		t.Fatalf("the list has %s choices, want the app's own and gsxui's 17", n)
+	}
+	page.Click(`[data-theme-choice="blue"]`)
+	blue := variable("primary")
+	if theme() != "blue" || blue == own || blue == "" {
+		t.Fatalf("after choosing blue: data-theme %q, --primary %q (the app's own is %q)", theme(), blue, own)
+	}
+	// The list marks the one in force, and only that one.
+	marked := func(name string) string {
+		return page.JS(`getComputedStyle(document.querySelector('[data-theme-choice="` + name + `"] [data-theme-chosen]')).visibility`)
+	}
+	if marked("blue") != "visible" || marked("rose") != "hidden" || marked("") != "hidden" {
+		t.Errorf("the mark: blue %s, rose %s, the app's own %s", marked("blue"), marked("rose"), marked(""))
+	}
+	// A theme has its dark: another primary, and the dark's own text on what the light had dark text on.
+	lightText := variable("secondary-foreground")
+	page.Click("[data-theme-toggle]")
+	if dark() != "true" || variable("primary") == blue || variable("secondary-foreground") == lightText {
+		t.Errorf("blue in the dark: dark %s, --primary %q (light: %q), --secondary-foreground %q (light: %q)", dark(), variable("primary"), blue, variable("secondary-foreground"), lightText)
+	}
+	page.Click("[data-theme-toggle]")
+	// Kept across a link, and across a page loaded anew.
+	page.Click("#docs-next")
+	page.WaitText("#doc h1", "Getting started")
+	if theme() != "blue" || variable("primary") != blue {
+		t.Errorf("after a link: data-theme %q, --primary %q", theme(), variable("primary"))
+	}
+	page.Open(at(pages.Home{}))
+	if theme() != "blue" || variable("primary") != blue {
+		t.Errorf("on a page loaded anew: data-theme %q, --primary %q", theme(), variable("primary"))
+	}
+	// And the app's own again.
+	page.Click("[data-theme-picker]")
+	page.Click(`[data-theme-choice=""]`)
+	if theme() != "" || variable("primary") != own {
+		t.Errorf("after choosing the app's own: data-theme %q, --primary %q, want %q", theme(), variable("primary"), own)
+	}
+}

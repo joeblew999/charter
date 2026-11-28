@@ -41,6 +41,9 @@ var Screens = &registry.Registry{
 				"    preferences screens.Preferences `route:\"/preferences Preferences\"`"},
 		{Name: "theme-toggle", Gsxui: []string{"button", "icon"},
 			Use: "  <screens.ThemeToggle/>        in the header: light and dark, of the app's gsxui theme (charter run ui:theme)"},
+		{Name: "theme-picker", Gsxui: []string{"button", "popover", "icon"},
+			Use: "  <screens.ThemePicker/>        in the header, beside the theme toggle: gsxui's themes, chosen as the page runs\n" +
+				"    (web/main.js: import \"./gsxui/themes.css\", which charter check --fix writes from gsxui and adds there)"},
 		{Name: "sign-in", Gsxui: []string{"badge", "button", "card", "input", "native-select", "separator", "icon"}, Schema: api.AccountsSchema,
 			Use: "  the app's own people, signing in with a passkey; its routes in the page tree, and the app's Auth (api.NewAuth with api.People):\n" +
 				"    signIn  screens.SignIn  `route:\"/sign-in SignIn\"`\n" +
@@ -52,7 +55,7 @@ var Screens = &registry.Registry{
 				"    admin screens.Admin `route:\"/admin Admin\"`\n" +
 				"  <screens.AdminLink/>          in the header: there for whoever may open it\n" +
 				"  (&app.App{Facts: []app.Fact{{Label: locales.Notes, Value: …}}, …}: lines of the app's own on its overview)"},
-		{Name: "docs", Gsxui: []string{"badge", "button", "separator", "command", "kbd", "sheet", "sidebar", "breadcrumb", "item", "icon"}, Needs: []string{"theme-toggle"},
+		{Name: "docs", Gsxui: []string{"badge", "button", "separator", "command", "kbd", "sheet", "sidebar", "breadcrumb", "item", "icon"}, Needs: []string{"theme-toggle", "theme-picker"},
 			Use: "  the docs' pages (docs/*.md), in the page tree, with the docs named in the App:\n" +
 				"    docs screens.Docs `route:\"/docs Docs\"`\n" +
 				"    Docs: &app.Docs{Name: \"My App\", Pages: docs.Pages}"},

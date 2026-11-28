@@ -9,6 +9,7 @@ import (
 	"github.com/joeblew999/charter/internal/command/seo"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
+	"github.com/joeblew999/charter/internal/themes"
 	"io"
 	"net/http"
 	"os"
@@ -72,7 +73,7 @@ var tasks = []task{
 	{"ui:list", "the components charter add ui:<name> accepts", func(p *project.Project, a []string) {
 		check(run.Run(p.Root, nil, "go", append([]string{"tool", "gsxui", "list"}, a...)...))
 	}},
-	{"ui:theme", "the app's style and theme (gsxui's presets): charter run ui:theme shows it; charter run ui:theme <preset> switches to a file, a share code from https://ui.gsxhq.dev/theme, or a URL (--only theme|style)", uiTheme},
+	{"ui:theme", "the app's style and theme (gsxui's presets): charter run ui:theme shows it; charter run ui:theme --style lyra switches to another of gsxui's styles; charter run ui:theme <preset> to a file, a share code from https://ui.gsxhq.dev/theme, or a URL (--only theme|style)", uiTheme},
 	// The Worker.
 	{"logs", "the deployed Worker's logs: live until Ctrl-C (wrangler tail), or with --since 1h what Cloudflare kept, --errors for only what went wrong, --find <text> for a request's reference (an environment first: charter run logs staging)", logs},
 	{"people", "the app's own people (the sign-in screen): who signed up, and what each is (--deployed for the deployed Worker)", people},
@@ -201,6 +202,18 @@ func uiTheme(p *project.Project, a []string) {
 	var flags []string
 	for i := 0; i < len(a); i++ {
 		switch {
+		case a[i] == "--style" || a[i] == "-style":
+			// One of gsxui's styles by its name: its share code, of which gsxui takes the style alone, so the app's
+			// colours, radius and fonts stay as they are.
+			if i+1 >= len(a) {
+				check(fmt.Errorf("--style takes one of gsxui's styles: %s", strings.Join(themes.Styles, ", ")))
+			}
+			code, err := themes.Code(a[i+1], themes.Bases[0], themes.Bases[0])
+			if err != nil {
+				check(fmt.Errorf("gsxui has no style %q: %s", a[i+1], strings.Join(themes.Styles, ", ")))
+			}
+			preset, flags = code, append(flags, "--only", "style")
+			i++
 		case a[i] == "--only" || a[i] == "-only" || a[i] == "--preset" || a[i] == "-preset":
 			if i+1 < len(a) {
 				if strings.HasSuffix(a[i], "preset") {
@@ -223,10 +236,14 @@ func uiTheme(p *project.Project, a []string) {
 			check(errors.New("no gsxui.preset.json: the app has no gsxui yet (go tool gsxui init)"))
 		}
 		check(json.Unmarshal(b, &now))
-		say("style %s, radius %s, font %s (gsxui.preset.json; the colours are web/gsxui/theme.css)\n\nAnother: make one at https://ui.gsxhq.dev/theme, then\n  go tool charter run ui:theme '<its share code>'\n  go tool charter run ui:theme my-preset.json --only theme", now.Style, now.Radius, now.FontSans)
+		say("style %s, radius %s, font %s (gsxui.preset.json; the colours are web/gsxui/theme.css)\n\nAnother style, of gsxui's %d (%s):\n  go tool charter run ui:theme --style lyra\nAnother theme: make one at https://ui.gsxhq.dev/theme, then\n  go tool charter run ui:theme '<its share code>'\n  go tool charter run ui:theme my-preset.json --only theme\nA reader chooses among gsxui's themes as the page runs with the theme-picker screen (go tool charter add screen:theme-picker).", now.Style, now.Radius, now.FontSans, len(themes.Styles), strings.Join(themes.Styles, ", "))
 		return
 	}
 	// --yes: gsxui asks before it rewrites; a command an agent or a script runs cannot answer.
 	check(run.Run(p.Root, nil, "go", append([]string{"tool", "gsxui", "apply", "--preset", preset, "--yes"}, flags...)...))
+	// The themes a reader chooses among are of the app's style and base colour: they follow.
+	if exists(filepath.Join(p.Root, "pages", "screens", "theme-picker.gsx")) {
+		check(themes.Write(p.Root, false))
+	}
 	check(generate(p))
 }

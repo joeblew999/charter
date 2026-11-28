@@ -130,11 +130,14 @@ func _gsxrenderstyled(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer, dev bool) erro
 
 //line head.gsx:81:1
 // theme is the light or dark theme of the app's gsxui preset (web/gsxui/theme.css: the class dark on <html>), as
-// gsxui's own site does it. It runs before the first paint, so a page never shows in the wrong one: what the reader
-// chose (kept by the browser), else what their system asks for. Any element with data-theme-toggle switches it:
-// the theme-toggle screen is one.
+// gsxui's own site does it, and which of gsxui's themes the reader chose (web/gsxui/themes.css: data-theme on
+// <html>). It runs before the first paint, so a page never shows in the wrong one: what the reader chose (kept by
+// the browser), else what their system asks for, and the app's own theme. Any element with data-theme-toggle
+// switches light and dark (the theme-toggle screen is one); any with data-theme-choice="blue" chooses that theme,
+// and one with data-theme-choice="" the app's own (the theme-picker screen lists them). The two are apart: a
+// theme has its light and its dark.
 
-//line head.gsx:85:1
+//line head.gsx:88:1
 func theme() _gsxrt.Node {
 	return _gsxrt.Func(func(ctx _gsxctx.Context, _gsxw _gsxio.Writer) error {
 		_gsxgw := _gsxrt.W(_gsxw)
@@ -146,9 +149,9 @@ func _gsxrendertheme(ctx _gsxctx.Context, _gsxgw *_gsxrt.Writer) error {
 	if _gsxerr := _gsxgw.Err(); _gsxerr != nil {
 		return _gsxerr
 	}
-//line head.gsx:86:2
+//line head.gsx:89:2
 	_gsxgw.S("<script")
 	_gsxgw.Nonce(ctx)
-	_gsxgw.S(">\n(function () {\n\tvar root = document.documentElement;\n\ttry {\n\t\tvar chosen = localStorage.getItem(\"theme\");\n\t\tif (chosen === \"dark\" || (!chosen && matchMedia(\"(prefers-color-scheme: dark)\").matches)) root.classList.add(\"dark\");\n\t} catch (e) {}\n\tdocument.addEventListener(\"click\", function (event) {\n\t\tif (!event.target.closest || !event.target.closest(\"[data-theme-toggle]\")) return;\n\t\tvar dark = root.classList.toggle(\"dark\");\n\t\ttry { localStorage.setItem(\"theme\", dark ? \"dark\" : \"light\"); } catch (e) {}\n\t});\n})();\n</script>")
+	_gsxgw.S(">\n(function () {\n\tvar root = document.documentElement;\n\ttry {\n\t\tvar chosen = localStorage.getItem(\"theme\");\n\t\tif (chosen === \"dark\" || (!chosen && matchMedia(\"(prefers-color-scheme: dark)\").matches)) root.classList.add(\"dark\");\n\t\tvar named = localStorage.getItem(\"theme-name\");\n\t\tif (named) root.setAttribute(\"data-theme\", named);\n\t} catch (e) {}\n\tdocument.addEventListener(\"click\", function (event) {\n\t\tif (!event.target.closest) return;\n\t\tvar choice = event.target.closest(\"[data-theme-choice]\");\n\t\tif (choice) {\n\t\t\tvar name = choice.getAttribute(\"data-theme-choice\");\n\t\t\tif (name) root.setAttribute(\"data-theme\", name);\n\t\t\telse root.removeAttribute(\"data-theme\");\n\t\t\ttry {\n\t\t\t\tif (name) localStorage.setItem(\"theme-name\", name);\n\t\t\t\telse localStorage.removeItem(\"theme-name\");\n\t\t\t} catch (e) {}\n\t\t\treturn;\n\t\t}\n\t\tif (!event.target.closest(\"[data-theme-toggle]\")) return;\n\t\tvar dark = root.classList.toggle(\"dark\");\n\t\ttry { localStorage.setItem(\"theme\", dark ? \"dark\" : \"light\"); } catch (e) {}\n\t});\n})();\n</script>")
 	return _gsxgw.Err()
 }

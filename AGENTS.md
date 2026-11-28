@@ -43,6 +43,11 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   charter's docs is a line of the example, the site or the screens, never written for the page, and a command is
   one charter has: `go test ./...` fails otherwise (`internal/docsgen`, `cmd/charter`). Each page that is about
   something a developer writes opens with its commands, what is checked before the app runs, and what is not.
+- **The look is gsxui's, all of it.** Its styles, its themes, its light and dark, by gsxui's own commands
+  (`charter run ui:theme` is `gsxui apply`). charter has no colour, no theme setting and no stylesheet of its own:
+  the themes a reader chooses among as the page runs (`web/gsxui/themes.css`, the theme-picker screen) are each
+  resolved by gsxui itself (`internal/themes`), and what charter repeats of gsxui (the layout of a share code) a
+  test holds to gsxui's source.
 - **What every app needs is a screen** (`app/screens`: the docs' pages, the theme switch, the language list and
   offer, the time zone dialog): a gsx template of gsxui components that `charter add screen:<name>` copies into an
   app, as gsxui copies a component, so it is built from the app's own components and theme. Change a screen in

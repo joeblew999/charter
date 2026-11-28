@@ -62,3 +62,7 @@ docs_none = "Nothing found."
 # links to the page before it and the page after it.
 docs_previous = "Previous page"
 docs_next = "Next page"
+# The button that opens the list of gsxui's themes, as screen readers name it, and the first in the list: the
+# app's own theme.
+theme_pick = "Choose a theme"
+theme_own = "Default"

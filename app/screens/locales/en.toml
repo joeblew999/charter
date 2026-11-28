@@ -45,6 +45,10 @@ docs_next = "Next page"
 docs_search = "Search the docs"
 docs_none = "Nothing found."
 theme = "Switch between light and dark"
+# The button that opens the list of gsxui's themes, as screen readers name it, and the first in the list: the
+# app's own theme.
+theme_pick = "Choose a theme"
+theme_own = "Default"
 # The sign-in screen: signing in with a passkey, making an account, signing out, who is signed in ({name}), and what
 # the page says when the device or the browser did not go through with it.
 sign_in = "Sign in"

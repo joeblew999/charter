@@ -1,0 +1,90 @@
+package themes
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"testing"
+)
+
+// The layout of a share code here is gsxui's own, read from gsxui's source as the module cache has it: its lists
+// of styles, base colours and themes in their order, and where each sits in the number. When gsxui changes one,
+// this fails before a theme is asked for by the wrong code.
+func TestTheShareCodeIsGsxuis(t *testing.T) {
+	dir, err := exec.Command("go", "list", "-C", filepath.Join("..", "..", "example"), "-m", "-f", "{{.Dir}}", "github.com/gsxhq/gsxui").Output()
+	if err != nil {
+		t.Skipf("the example's gsxui is not here: %v", err)
+	}
+	b, err := os.ReadFile(filepath.Join(strings.TrimSpace(string(dir)), "internal", "preset", "compact.go"))
+	if err != nil {
+		t.Fatalf("gsxui's share code is no longer where it was (internal/preset/compact.go): %v", err)
+	}
+	source := string(b)
+	list := func(name string) []string {
+		m := regexp.MustCompile(`(?s)var ` + name + ` = \[\]\w+\{(.*?)\n\}`).FindStringSubmatch(source)
+		if m == nil {
+			t.Fatalf("gsxui's source has no %s", name)
+		}
+		var out []string
+		for _, item := range regexp.MustCompile(`"([a-z-]+)"|Style(\w+),`).FindAllStringSubmatch(m[1], -1) {
+			out = append(out, strings.ToLower(item[1]+item[2]))
+		}
+		return out
+	}
+	for name, ours := range map[string][]string{"compactStyles": Styles, "compactBaseColors": Bases, "compactThemes": all} {
+		if theirs := list(name); strings.Join(theirs, " ") != strings.Join(ours, " ") {
+			t.Errorf("%s is %v in gsxui, and %v here", name, theirs, ours)
+		}
+	}
+	for _, want := range []string{`compactSharePrefix = "gsxui:p1:"`, "compactStyleBits       = 4", "compactBaseColorBits   = 4", "compactThemeBits       = 5", `"medium",`, `base62Alphabet     = "` + alphabet + `"`} {
+		if !strings.Contains(source, want) {
+			t.Errorf("gsxui's source no longer has %q: the share code's layout has changed", want)
+		}
+	}
+}
+
+// A code is the choices' places packed into one number in base 62: nova, neutral and its own theme at gsxui's
+// default radius is the code gsxui itself gives for its default preset.
+func TestCode(t *testing.T) {
+	for _, c := range []struct{ style, base, theme, want string }{
+		{"nova", "neutral", "neutral", "gsxui:p1:4GG"},
+		{"nova", "neutral", "blue", "gsxui:p1:4nI"},
+	} {
+		if got, err := Code(c.style, c.base, c.theme); err != nil || got != c.want {
+			t.Errorf("Code(%s, %s, %s) = %q, %v; want %q", c.style, c.base, c.theme, got, err, c.want)
+		}
+	}
+	if _, err := Code("nova", "neutral", "teal-ish"); err == nil {
+		t.Error("a theme gsxui has not was given a code")
+	}
+	if got := Accents(); len(got) != 17 || got[0] != "amber" || got[16] != "yellow" {
+		t.Errorf("the accents: %v", got)
+	}
+}
+
+// Only what a theme changes is written, under the theme's name, for light and for dark.
+func TestChangedAndBlock(t *testing.T) {
+	plain := map[string]string{"background": "white", "primary": "black", "ring": "grey"}
+	blue := map[string]string{"background": "white", "primary": "blue", "ring": "grey", "sidebar-primary": "navy"}
+	var out strings.Builder
+	block(&out, `[data-theme="blue"]`, changed(plain, blue))
+	block(&out, `[data-theme="same"]`, changed(plain, plain))
+	if want := "\n[data-theme=\"blue\"] {\n  --primary: blue;\n  --sidebar-primary: navy;\n}\n"; out.String() != want {
+		t.Errorf("wrote %q, want %q", out.String(), want)
+	}
+}
+
+// What a theme changes in the light is set again in the dark, though the dark value is the plain theme's: both are
+// on the same element, and the light one would hold in the dark otherwise.
+func TestDarkSaysWhatLightSaid(t *testing.T) {
+	plainLight := map[string]string{"primary": "black", "secondary-foreground": "black"}
+	blueLight := map[string]string{"primary": "blue", "secondary-foreground": "navy"}
+	plainDark := map[string]string{"primary": "white", "secondary-foreground": "white"}
+	blueDark := map[string]string{"primary": "skyblue", "secondary-foreground": "white"}
+	got := dark(changed(plainLight, blueLight), plainDark, blueDark)
+	if len(got) != 2 || got[0] != [2]string{"primary", "skyblue"} || got[1] != [2]string{"secondary-foreground", "white"} {
+		t.Errorf("the dark block: %v", got)
+	}
+}

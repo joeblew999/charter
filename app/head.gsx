@@ -79,9 +79,12 @@ component styled(dev bool) {
 }
 
 // theme is the light or dark theme of the app's gsxui preset (web/gsxui/theme.css: the class dark on <html>), as
-// gsxui's own site does it. It runs before the first paint, so a page never shows in the wrong one: what the reader
-// chose (kept by the browser), else what their system asks for. Any element with data-theme-toggle switches it:
-// the theme-toggle screen is one.
+// gsxui's own site does it, and which of gsxui's themes the reader chose (web/gsxui/themes.css: data-theme on
+// <html>). It runs before the first paint, so a page never shows in the wrong one: what the reader chose (kept by
+// the browser), else what their system asks for, and the app's own theme. Any element with data-theme-toggle
+// switches light and dark (the theme-toggle screen is one); any with data-theme-choice="blue" chooses that theme,
+// and one with data-theme-choice="" the app's own (the theme-picker screen lists them). The two are apart: a
+// theme has its light and its dark.
 component theme() {
 	<script>
 		(function () {
@@ -89,9 +92,23 @@ component theme() {
 			try {
 				var chosen = localStorage.getItem("theme");
 				if (chosen === "dark" || (!chosen && matchMedia("(prefers-color-scheme: dark)").matches)) root.classList.add("dark");
+				var named = localStorage.getItem("theme-name");
+				if (named) root.setAttribute("data-theme", named);
 			} catch (e) {}
 			document.addEventListener("click", function (event) {
-				if (!event.target.closest || !event.target.closest("[data-theme-toggle]")) return;
+				if (!event.target.closest) return;
+				var choice = event.target.closest("[data-theme-choice]");
+				if (choice) {
+					var name = choice.getAttribute("data-theme-choice");
+					if (name) root.setAttribute("data-theme", name);
+					else root.removeAttribute("data-theme");
+					try {
+						if (name) localStorage.setItem("theme-name", name);
+						else localStorage.removeItem("theme-name");
+					} catch (e) {}
+					return;
+				}
+				if (!event.target.closest("[data-theme-toggle]")) return;
 				var dark = root.classList.toggle("dark");
 				try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch (e) {}
 			});
