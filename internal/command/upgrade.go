@@ -13,5 +13,13 @@ func Upgrade(args []string) {
 	check(run.Run(p.Root, nil, "go", "get", "-tool", library+"/cmd/charter@latest"))
 	check(run.Run(p.Root, nil, "go", "mod", "tidy"))
 	// What the new charter writes differently is written: the screens the app has not changed, the generated files.
-	check(run.Run(p.Root, nil, "go", "tool", "charter", "check", "--fix"))
+	if err := run.Run(p.Root, nil, "go", "tool", "charter", "check", "--fix"); err != nil {
+		// A release may change how an app is written: what it wrote for the release before no longer compiles, or
+		// no longer passes. The docs say what each release changed and what to write instead.
+		say("charter is upgraded, and the app does not pass its check yet. What each release changed in how an app is written, what to write instead, and what tells you: %s", upgrading)
+		check(err)
+	}
 }
+
+// upgrading is the page of charter's docs that says what each release changed in how an app is written.
+const upgrading = "https://charter.gedw99.workers.dev/docs/upgrading"

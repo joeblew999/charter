@@ -49,6 +49,10 @@ The docs follow what a developer does, in order. Each page opens with the comman
 
 - [Deploying](10-deploy.md), [the admin screen](15-admin.md), [watching a deployed Worker](16-watching.md).
 
+**Later**
+
+- [Upgrading](17-upgrading.md): what each release changed in how an app is written, what to write instead, and what tells you.
+
 **With an agent**
 
 - [For your coding agent](12-agents.md): the Claude Code plugins, and what a language model reads.

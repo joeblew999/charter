@@ -74,7 +74,7 @@ node = "26.13.1"
 `go tool charter check` holds the app to it:
 
 - **What runs is what is pinned.** A shell whose PATH mise has not set for this folder runs another Go or Node, and what it builds is not what CI builds: check fails and says what runs and what is pinned. An interactive shell with `mise activate` follows the folder by itself. A shell that does not run its hook (an editor's task, an agent's) gets it with `eval "$(mise hook-env)"`.
-- **At least what charter was tested with.** An app pins no less than charter's own `mise.toml`. After `go tool charter upgrade`, `check --fix` raises the app's pins and installs them; it never lowers one.
+- **At least what charter was tested with.** An app pins no less than charter's own `mise.toml`. After `go tool charter upgrade`, `check --fix` raises the app's pins and installs them; it never lowers one. What a release changed in how an app is written is on [the upgrading page](17-upgrading.md).
 
 go.mod's `go` line is something else: the oldest Go the module may be built with. Leave it where it is until you need something newer.
 
