@@ -35,6 +35,7 @@ The local Worker starts on a database of its own, made new, filled by the app's 
 ```go file=../example/test/page_home_test.go#TestANoteShowsOnEveryOpenPage
 // A note typed into one open page shows at once in another: the form, the feed, htmx's SSE swap.
 func TestANoteShowsOnEveryOpenPage(t *testing.T) {
+	t.Parallel()
 	writer := apptest.Browser(t)
 	reader := writer.Tab()
 	// Writing is for whoever is signed in; reading is anyone's.
@@ -53,6 +54,31 @@ func TestANoteShowsOnEveryOpenPage(t *testing.T) {
 ```
 
 `apptest.Browser` is Chrome on the Worker under test, so htmx, the feed and the scripts Vite built are part of what is tested. `el` asks the app's own tree for a component's selector (`test/tree_test.go`): a renamed component breaks the test when it is compiled, not when a selector quietly matches nothing.
+
+A browser is Chrome, and it is what the time goes on: of the example's suite, the tests that open one take nine tenths of it, about a second each, and the forty that do not take a few hundredths. So:
+
+- **A test that opens a browser says `t.Parallel()`** as its first line. They then run beside each other, and the suite takes a third of the time (the example's: 29 s to 11 s on a local Worker, 85 s to 22 s on the deployed one).
+- **A test finds its own rows.** Others write while it runs, so "the first row of the list" is not its note. It asks the tree for the row by the note's id (`row(note.ID)` in `test/tree_test.go`), and never counts what is on a page.
+- **A test waits for the thing, not for a while.** `WaitText` and its like ask until it is there. A `time.Sleep` that is long enough on your machine is too short on a deployed Worker that is starting.
+
+## What to test, and what not to
+
+A test is for what running the app shows and nothing else does.
+
+| Do not test | Because |
+|---|---|
+| That a link, an id or a target reaches its page | the tree and structpages-lint say so when the app is compiled and checked, and `charter test` follows every link |
+| That a statement names real columns, with the right types | sqlc checks it against the schema |
+| That a binding, a variable or a scope exists | it is a Go value: one that is not there does not compile |
+| That the API's spec matches the code | `charter check` compares them |
+| What charter's own screens do (the docs' pages, their search, their menu) | charter tests them once, on its own site |
+
+| Do test | Because |
+|---|---|
+| Who may do what, signed in as each role, on the page and through the API | whether a moderator should have a scope is your decision, and only a request shows it |
+| What a binding does: a file kept and given back, a queue's message consumed, an email sent | the name is checked; what Cloudflare does with it is not |
+| What a reader sees happen: a list that follows a feed in a second tab, a form refused in place, a menu that opens | it is behaviour in a browser |
+| The API through its generated SDK | a client is proven by calling the Worker, never only by compiling |
 
 ## The API, through its own SDK
 

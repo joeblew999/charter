@@ -40,6 +40,7 @@ func follow(p *apptest.Page, path string) {
 }
 
 func TestALinkShowsTheNextPageWithNoPageLoad(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.Open("/")
 	marked(page)
@@ -86,6 +87,7 @@ func TestALinkShowsTheNextPageWithNoPageLoad(t *testing.T) {
 // A page's list keeps itself current when the page was arrived at by a link, as when it was loaded: its stream is
 // opened as the page is put in place.
 func TestAPageArrivedAtByALinkIsLive(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.Open(at(pages.BuiltIndex{}))
 	marked(page)
@@ -102,6 +104,7 @@ func TestAPageArrivedAtByALinkIsLive(t *testing.T) {
 // What must be a page load is one: another language (<html lang> changes), and the sign-in screen, whose script
 // runs as its document loads.
 func TestWhatMustBeAPageLoadIsOne(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.Open("/")
 	marked(page)
@@ -138,6 +141,7 @@ func press(p *apptest.Page, selector string) {
 // The next page is asked for when its link is pressed, before the click is done, and the click uses that answer:
 // one request, not two. A link to another language is not asked for on a press: following one chooses the language.
 func TestAPressedLinkIsAskedForOnce(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.Open("/")
 	built := at(pages.BuiltIndex{})
@@ -145,8 +149,12 @@ func TestAPressedLinkIsAskedForOnce(t *testing.T) {
 
 	press(page, `footer a[hreflang=de]`)
 	press(page, link)
-	time.Sleep(time.Second)
-	if n := askedFor(page, built); n != "1" {
+	// Until the answer to the press is in: how long that is is the Worker's to say (a new instance takes a second).
+	n := askedFor(page, built)
+	for start := time.Now(); n == "0" && time.Since(start) < 20*time.Second; n = askedFor(page, built) {
+		time.Sleep(100 * time.Millisecond)
+	}
+	if n != "1" {
 		t.Fatalf("pressing the link asked for %s %s times, want once", built, n)
 	}
 	if n := askedFor(page, "/de/"); n != "0" {

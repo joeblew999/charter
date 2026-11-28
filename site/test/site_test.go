@@ -14,6 +14,7 @@ import (
 // A reader gets from the front page to the docs, through them by the list at the side, and from any page of them to
 // the repository and to that page's own file.
 func TestFromTheFrontPageThroughTheDocs(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.Open(at(pages.Home{}))
 	page.WaitText("h1", "Go apps on Cloudflare Workers")
@@ -68,10 +69,26 @@ func TestTheDocsForAgentsAndSearchEngines(t *testing.T) {
 	}
 }
 
+// The docs are searched by the titles of their pages and sections: the search opens, a few letters leave what
+// matches, and choosing one goes to it. It is the docs screen every app has, tested here once.
+func TestTheDocsAreSearched(t *testing.T) {
+	t.Parallel()
+	page := apptest.Browser(t)
+	page.Open(at(pages.Home{}))
+	page.Click(`main a[href$="/docs/"]`)
+	page.WaitText("#doc h1", "charter")
+	page.Click(`#docs-search`)
+	page.Type(`[data-gsxui-slot-command-input]`, "getting st")
+	page.WaitText(`[data-gsxui-slot-command-list]`, "Getting started")
+	page.Click(`[data-gsxui-slot-command-item]:not([hidden])`)
+	page.WaitText("#doc h1", "Getting started")
+}
+
 // On a phone the list of pages is a menu. A link in it shows its page with the menu closed, and the menu opens
 // again from there, under its button: a page reached by a link is as that page loaded would be, with nothing of
 // the page before left open over it.
 func TestTheDocsMenuOnAPhone(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.Phone()
 	page.Open(at(pages.Home{}))

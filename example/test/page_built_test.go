@@ -115,6 +115,7 @@ func TestAFileIsAttachedAndComesBack(t *testing.T) {
 // A note written is on the queue and done; the queue's consumer records it a moment later, and the open page shows
 // it without being asked again.
 func TestActivityFollowsTheQueueLive(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.Open(at(pages.ActivityPage{}))
 	writer := sdk(t, option.WithToken(apptest.Secret(t, env.WRITE_TOKEN)))

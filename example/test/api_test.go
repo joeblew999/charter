@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -39,24 +38,6 @@ func write(t *testing.T, as *client.Client, body string) *notes.Note {
 		}
 	})
 	return note
-}
-
-func TestTheSDKSaysHello(t *testing.T) {
-	hello, err := sdk(t).Meta.Hello(context.Background())
-	if err != nil || !strings.HasPrefix(hello.Message, "Hello from charter-example") {
-		t.Fatalf("hello: %+v, %v", hello, err)
-	}
-}
-
-// Reading is public; writing needs the write token.
-func TestWritingNeedsTheToken(t *testing.T) {
-	_, err := sdk(t).Notes.Create(context.Background(), &notes.CreateNotesRequest{Body: "refused"})
-	if err == nil || !strings.Contains(err.Error(), "401") {
-		t.Fatalf("a write without a token: %v, want 401", err)
-	}
-	if _, err := sdk(t).Notes.List(context.Background(), &notes.ListNotesRequest{}); err != nil {
-		t.Fatalf("a read without a token: %v", err)
-	}
 }
 
 // A note created through the SDK is in the list, and reaches a client that follows the stream: the feed.

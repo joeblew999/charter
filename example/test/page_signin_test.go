@@ -25,6 +25,7 @@ import (
 // Nobody is offered the way to sign in where the form would be; signed up, they have the form, their note is kept,
 // and the header says who they are. Signed out, they are nobody again, and their passkey signs them back in.
 func TestSigningInOnThePage(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.Open(at(pages.Home{}))
 	page.WaitText("#sign-in-to-write", "Sign in")
@@ -48,6 +49,7 @@ func TestSigningInOnThePage(t *testing.T) {
 // What is someone's own is nobody else's: the account page sends whoever is not signed in to sign in, and brings
 // them back to it afterwards.
 func TestTheAccountPageNeedsSomeoneSignedIn(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.Open(at(screens.AccountPage{}))
 	if path := page.Path(); path != at(screens.SignInPage{}) {
@@ -66,6 +68,7 @@ func TestTheAccountPageNeedsSomeoneSignedIn(t *testing.T) {
 // createNote. Someone signed in: both are let through. And the token that person makes on their account page is
 // them, through the API's own SDK.
 func TestThePageAndTheAPIAgreeOnWhoMayWrite(t *testing.T) {
+	t.Parallel()
 	base := apptest.Base(t)
 	form := func(client *http.Client) int {
 		res, err := client.PostForm(base+at(pages.PostNote{}), url.Values{"body": {"a note"}})
@@ -116,6 +119,7 @@ func TestThePageAndTheAPIAgreeOnWhoMayWrite(t *testing.T) {
 // the API (403); made a moderator by an admin, the same person may, through both. What they are changes at once:
 // in the session they have open, and for the token they made before.
 func TestRolesDecideWhoMayRemoveANote(t *testing.T) {
+	t.Parallel()
 	admin := sdk(t, option.WithToken(apptest.Secret(t, env.ADMIN_TOKEN)))
 	// Ada writes a note.
 	ada := apptest.Browser(t)
@@ -151,7 +155,7 @@ func TestRolesDecideWhoMayRemoveANote(t *testing.T) {
 	if note == 0 {
 		t.Fatalf("Ada's note is not in the list")
 	}
-	row := el(pages.Home.List) + ` li:first-child`
+	row := row(note)
 	mo.Open(at(pages.Home{}))
 	mo.WaitText(row, body)
 	if mo.Has(row + ` [data-remove]`) {
@@ -216,6 +220,7 @@ func TestRolesDecideWhoMayRemoveANote(t *testing.T) {
 // Who is what is an admin's to say, on a page: a member gets a 403 there; made an admin (by the operator's token,
 // which is how the first one is), they see everyone and give someone a role by choosing it.
 func TestAnAdminGivesRolesOnThePeoplePage(t *testing.T) {
+	t.Parallel()
 	operator := sdk(t, option.WithToken(apptest.Secret(t, env.ADMIN_TOKEN)))
 	boss := apptest.Browser(t)
 	name := "Boss " + time.Now().Format("150405.000000")
@@ -274,6 +279,7 @@ func TestAnAdminGivesRolesOnThePeoplePage(t *testing.T) {
 // Deleting an account is its person's to do, on their account page, asked twice. With it goes what they wrote:
 // the page no longer has their note, and they are nobody again.
 func TestAnAccountIsDeletedWithWhatItWrote(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.SignUp(at(screens.SignInPage{}), "Leaver")
 	page.Open(at(pages.Home{}))
@@ -295,6 +301,7 @@ func TestAnAccountIsDeletedWithWhatItWrote(t *testing.T) {
 // charter run people:invite admin makes the same thing), and how an admin brings in another on the people page.
 // Whoever may not manage people makes none.
 func TestAnInvitationMakesAnAdmin(t *testing.T) {
+	t.Parallel()
 	form := "application/x-www-form-urlencoded"
 	if res := as(t, env.WRITE_TOKEN, "POST", at(screens.PeopleInvite{}), form, strings.NewReader("role=admin")); res.StatusCode != http.StatusForbidden {
 		t.Errorf("a writer making an invitation: HTTP %d, want 403", res.StatusCode)
@@ -330,6 +337,7 @@ func TestAnInvitationMakesAnAdmin(t *testing.T) {
 
 // Someone who has an account already opens an invitation's link and accepts it: they are what it says, at once.
 func TestAnInvitationIsAcceptedBySomeoneSignedIn(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.SignUp(at(screens.SignInPage{}), "Here already")
 	res := as(t, env.ADMIN_TOKEN, "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=moderator"))
@@ -347,6 +355,7 @@ func TestAnInvitationIsAcceptedBySomeoneSignedIn(t *testing.T) {
 // The same link for someone who has an account and is signed out: the page says what the invitation is to, they
 // sign in with their passkey, and they are that, on their account page. A link that is spent says so.
 func TestAnInvitationSurvivesSigningIn(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.SignUp(at(screens.SignInPage{}), "Back again")
 	page.Open(at(screens.AccountPage{}))
@@ -391,6 +400,7 @@ func TestANameIsNotAnEmailAddress(t *testing.T) {
 // An admin makes an invitation on the people page and shares it: the button hands the link to the device's share
 // sheet, which the test stands in for.
 func TestAnInvitationIsShared(t *testing.T) {
+	t.Parallel()
 	res := as(t, env.ADMIN_TOKEN, "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=admin"))
 	html, _ := io.ReadAll(res.Body)
 	res.Body.Close()
@@ -414,6 +424,7 @@ func TestAnInvitationIsShared(t *testing.T) {
 // An admin takes a person away on the people page, with what they wrote; nobody else may, and the admin's own row
 // has no such button.
 func TestAnAdminRemovesAPerson(t *testing.T) {
+	t.Parallel()
 	page := apptest.Browser(t)
 	page.SignUp(at(screens.SignInPage{}), "To be removed")
 	page.Open(at(pages.Home{}))

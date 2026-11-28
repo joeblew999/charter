@@ -16,6 +16,7 @@ import (
 
 // A note typed into one open page shows at once in another: the form, the feed, htmx's SSE swap.
 func TestANoteShowsOnEveryOpenPage(t *testing.T) {
+	t.Parallel()
 	writer := apptest.Browser(t)
 	reader := writer.Tab()
 	// Writing is for whoever is signed in; reading is anyone's.
@@ -34,6 +35,7 @@ func TestANoteShowsOnEveryOpenPage(t *testing.T) {
 
 // A note made through the API, by its SDK, reaches the open page too: one feed behind both.
 func TestAnAPINoteShowsOnTheOpenPage(t *testing.T) {
+	t.Parallel()
 	home := apptest.Browser(t)
 	home.Open("/")
 	body := "from the SDK at " + time.Now().Format(time.RFC3339Nano)
@@ -44,6 +46,7 @@ func TestAnAPINoteShowsOnTheOpenPage(t *testing.T) {
 
 // Each language has its own address, and Arabic is laid out right to left.
 func TestTheLanguages(t *testing.T) {
+	t.Parallel()
 	home := apptest.Browser(t)
 	home.Open("/")
 	if lang, dir := home.Attr("html", "lang"), home.Attr("html", "dir"); lang != "en" || dir != "ltr" {
@@ -64,6 +67,7 @@ func TestTheLanguages(t *testing.T) {
 
 // What the form refuses comes back marked, in place: a 422, which htmx 4 swaps in.
 func TestTheFormRefusesAnEmptyNote(t *testing.T) {
+	t.Parallel()
 	home := apptest.Browser(t)
 	home.SignUp(at(screens.SignInPage{}), "Blank")
 	home.Open(at(pages.Home{}))
@@ -82,6 +86,7 @@ func TestTheFormRefusesAnEmptyNote(t *testing.T) {
 // A note's own button opens its row, and only its row: the row asks for itself (its id carries the note's), and the
 // answer says when the note was written. The header marks the page being shown.
 func TestANotesRowOpensByItself(t *testing.T) {
+	t.Parallel()
 	home := apptest.Browser(t)
 	home.SignUp(at(screens.SignInPage{}), "Opener")
 	home.Open(at(pages.Home{}))
@@ -89,9 +94,9 @@ func TestANotesRowOpensByItself(t *testing.T) {
 	home.Type(el(pages.Home.Form)+` input[name=body]`, body)
 	home.Click(el(pages.Home.Form) + ` button[type=submit]`)
 	home.WaitText(el(pages.Home.List), body)
-	first := el(pages.Home.List) + ` li:first-child`
+	first := rowWith(t, home, body)
 	if open := home.Attr(first+` button`, "aria-expanded"); open != "false" {
-		t.Fatalf("the newest row starts %q", open)
+		t.Fatalf("the note's row starts %q", open)
 	}
 	home.Click(first + ` button`)
 	home.WaitText(first+` p`, "20") // the year, in the full date

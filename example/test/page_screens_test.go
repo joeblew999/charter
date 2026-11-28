@@ -15,6 +15,7 @@ import (
 // The theme switch turns the page dark, and the page stays dark when it is loaded again: the reader's choice is
 // kept, and is there before the first paint.
 func TestTheThemeIsSwitchedAndKept(t *testing.T) {
+	t.Parallel()
 	home := apptest.Browser(t)
 	home.Open(at(pages.Home{}))
 	was := strings.Contains(home.Attr("html", "class"), "dark")
@@ -39,6 +40,7 @@ func TestTheThemeIsSwitchedAndKept(t *testing.T) {
 
 // The time zone and clock dialog opens from the header, and its form arrives from its route in the page tree.
 func TestTheTimeZoneDialog(t *testing.T) {
+	t.Parallel()
 	home := apptest.Browser(t)
 	home.Open(at(pages.Home{}))
 	home.Click(`header [aria-haspopup=dialog]`)

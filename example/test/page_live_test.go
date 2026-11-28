@@ -32,6 +32,7 @@ func settles(t *testing.T, who string, p *apptest.Page, stamp, want string) {
 }
 
 func TestTwoOpenPagesKeepUp(t *testing.T) {
+	t.Parallel()
 	writer := apptest.Browser(t)
 	reader := writer.Tab()
 	writer.SignUp(at(screens.SignInPage{}), "Writer")

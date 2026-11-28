@@ -54,7 +54,10 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   `dev`, `check`, `test` or `deploy`. What is left is a namespaced task of `charter run` (`intl:`, `seo:`, `db:`,
   `ui:`).
 - **Tests are of the pages and of the API**: pages in a real browser (`apptest.Browser`), the API through its own
-  SDK. Skills are Claude Code plugins: this repo is one and a marketplace (`.claude-plugin`, `skills/charter`) that also
+  SDK. A test is for what only running the app shows: never for what the compiler, `check` or the audit already
+  say (a link, an id, a column, a binding, a scope), and never in an app for what charter's own screens do,
+  which `site/test` tests once. A test that opens a browser says `t.Parallel()`, finds its own rows by their id
+  from the tree, and waits for a thing, not for a time. Skills are Claude Code plugins: this repo is one and a marketplace (`.claude-plugin`, `skills/charter`) that also
   lists gsx, gsxui and structpages from their owners' repos. Never copy a skill's files.
 - **Who may do what is said once, for pages and API alike.** One `api.Auth` and one `api.Caller`; a page's
   `Needs` and an operation's scopes are the same values, checked by the same code. A scope is a value
