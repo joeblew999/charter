@@ -24,7 +24,7 @@ type cmd struct {
 // The commands are Vite+'s (https://viteplus.dev/guide/), for a Go app on Workers: the same verbs, each driving the
 // tool that owns the job. What is no verb is a task of charter run. deploy is the one word of charter's own.
 var commands = []cmd{
-	{"create", "a new app from a template: charter create my-app [-from api|site|notes]", command.Create},
+	{"create", "a new app, copied from charter's example: charter create my-app [-module example.com/my-app]", command.Create},
 	{"install", "everything the app pins: npm's packages, Go's modules", command.Install},
 	{"dev", "the loop you work in, on the real runtime: a save rebuilds and reloads; every other command works beside it", command.Dev},
 	{"check", "everything that can be said without running the app: format, lint, the contract, the languages (--fix)", command.Check},

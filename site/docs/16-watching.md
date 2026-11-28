@@ -120,7 +120,7 @@ charter-example, GET /docs/ from 30 places (Globalping), the time from the conne
 · again from each: 23 met a new instance (half under 501 ms, 90% under 635 ms); 7 met a running one (half under 54 ms, 90% under 131 ms)
 ```
 
-The places are the probes of [Globalping](https://globalping.io), a public service: it is told the Worker's address and the page, and nothing else. Each asks once, then again. The same is then said for each continent, both rounds together: what a page waits for that is far from some of its readers, a database's primary above all, shows there and in no single number. Last, who answered the page's statements on D1, where the Worker says: the primary, or a copy near the reader, for new instances and for running ones apart ([reads near the reader](06-database.md#reads-near-the-reader)). Which answers were a first hit is counted, not guessed: the Worker says which runtime answered (the header `x-go-runtime`), and one that started as the instance did is a first hit. The time is from the connection made to the first byte, so it is what the Worker and Cloudflare take, without the reader's distance to Cloudflare. Without an account Globalping gives an address 250 probes an hour; this takes two for each place.
+The places are the probes of [Globalping](https://globalping.io), a public service: it is told the Worker's address and the page, and nothing else. Each asks once, then again. The same is then said for each continent, both rounds together: what a page waits for that is far from some of its readers, a database's primary above all, shows there and in no single number. Last, who answered the page's statements on D1, where the Worker says: the primary, or a copy near the reader, for new instances and for running ones apart ([reads near the reader](07-database.md#reads-near-the-reader)). Which answers were a first hit is counted, not guessed: the Worker says which runtime answered (the header `x-go-runtime`), and one that started as the instance did is a first hit. The time is from the connection made to the first byte, so it is what the Worker and Cloudflare take, without the reader's distance to Cloudflare. Without an account Globalping gives an address 250 probes an hour; this takes two for each place.
 
 ### Every data centre, by country
 
@@ -180,10 +180,10 @@ The line says what was asked and what went wrong. It never has what was sent: no
 
 A Go runtime holds 13 MB or more for as long as it serves a request, of the [128 MB](https://developers.cloudflare.com/workers/platform/limits/#memory) an isolate has for every request it is answering. So two things are built in:
 
-- **Nothing long holds one.** A page's stream is held by the hub, in JavaScript ([live feeds](05-live.md)).
+- **Nothing long holds one.** A page's stream is held by the hub, in JavaScript ([live feeds](06-live.md)).
 - **The runtimes share a budget.** The Worker counts what all its Go runtimes hold and keeps the sum under it; a request that would take it over waits a moment for one to finish.
 
-The [admin screen](14-admin.md)'s system page says how many Go runtimes this instance has alive, what they hold, and what they may. A request with the header `x-go-runtime` is told the same in the answer's.
+The [admin screen](15-admin.md)'s system page says how many Go runtimes this instance has alive, what they hold, and what they may. A request with the header `x-go-runtime` is told the same in the answer's.
 
 ## What charter leaves to Cloudflare
 

@@ -1,6 +1,6 @@
 # The admin screen
 
-What an admin sees of the system: the app at a glance, what the Worker is bound to, and what its databases hold. It is one of charter's [screens](12-screens-and-themes.md), for an app that has [people who sign in](13-sign-in.md).
+What an admin sees of the system: the app at a glance, what the Worker is bound to, and what its databases hold. It is one of charter's [screens](13-screens-and-themes.md), for an app that has [people who sign in](14-sign-in.md).
 
 ```sh
 go tool charter add screen:admin
@@ -21,7 +21,7 @@ The link goes in your header. It is there for whoever may open the pages, and fo
 | Page | Shows |
 |---|---|
 | Overview | The app's name; the charter and Go versions it was built with, and its own commit; how many people there are of each role; the invitations that still wait, each with a button that cancels it; the app's own facts |
-| People | The [people page](13-sign-in.md#the-first-admin-and-inviting-people): roles, invitations, removing a person |
+| People | The [people page](14-sign-in.md#the-first-admin-and-inviting-people): roles, invitations, removing a person |
 | System | Each binding the Worker has, and what kind it is; its variables and secrets, by name, with whether each is set |
 | Database | Each database's tables with how many rows they have, and the migrations that ran |
 
@@ -55,4 +55,4 @@ The pages are functions of `api.Auth`, which check the caller as the pages do: `
 ## What it does not do
 
 - **Logs and errors.** A Worker keeps none itself: `go tool charter run logs` follows them live.
-- **Anything on Cloudflare.** Deleting a resource and changing a secret are commands ([deploying](09-deploy.md)), each asked twice.
+- **Anything on Cloudflare.** Deleting a resource and changing a secret are commands ([deploying](10-deploy.md)), each asked twice.

@@ -15,7 +15,7 @@ Put `mise activate` in your shell's profile, once ([mise's guide](https://mise.j
 
 ## Working on it
 
-`dev` runs the app on the real runtime: workers-go on wrangler dev, with the bindings of `wrangler.jsonc`. The first time, it makes the local database and fills it with the app's [seed](06-database.md). Leave it running and run everything else beside it.
+`dev` runs the app on the real runtime: workers-go on wrangler dev, with the bindings of `wrangler.jsonc`. The first time, it makes the local database and fills it with the app's [seed](07-database.md). Leave it running and run everything else beside it.
 
 | You save | What happens | On the page after about |
 |---|---|---|
@@ -84,4 +84,4 @@ The first command that talks to Cloudflare says, in three steps, how to put your
 
 ## Every command
 
-The commands are [Vite+](https://viteplus.dev/guide/)'s verbs. `go tool charter` lists them, and `go tool charter run` lists the tasks that are no verb: `intl:translate`, `seo:audit`, `db:status`, `ui:list` and the rest.
+The commands are [Vite+](https://viteplus.dev/guide/)'s verbs. [The commands, and what each one proves](02-commands.md) goes through them in the order you meet them: what each does, what it checks of your code, and what it leaves for the next one. `go tool charter` lists them, and `go tool charter run` lists the tasks that are no verb: `intl:translate`, `seo:audit`, `db:status`, `ui:list` and the rest.

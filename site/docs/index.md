@@ -21,16 +21,17 @@ A charter app runs on Cloudflare and nowhere else. Locally that is `wrangler dev
 
 [The example](https://charter-example.gedw99.workers.dev) is one app that uses all of charter: its notes are the live feed, people sign in with a passkey and have roles, and each thing Cloudflare gives a Worker does one job in it, on a page of its own. Its source is [`example/`](https://github.com/joeblew999/charter/tree/main/example) in charter's repository, and it is what `charter create` copies.
 
-This site is a charter app too: [`site/`](https://github.com/joeblew999/charter/tree/main/site), a front page and these docs, which are Markdown files in its `docs/` folder. The pages that show them are charter's own, the same ones [your app's docs](10-docs.md) get.
+This site is a charter app too: [`site/`](https://github.com/joeblew999/charter/tree/main/site), a front page and these docs, which are Markdown files in its `docs/` folder. The pages that show them are charter's own, the same ones [your app's docs](11-docs.md) get.
 
 ## Where to go
 
 - [Getting started](01-getting-started.md): a new app in three commands.
-- [An app's layout](02-layout.md): what goes where, and what charter finds by itself.
-- [Pages](03-pages.md), [the API](04-api.md), [the live feed](05-live.md), [the database](06-database.md).
-- [Languages and search engines](07-languages.md).
-- [Tests](08-tests.md) and [deploying](09-deploy.md).
-- [Docs](10-docs.md): your app's own, from Markdown.
-- [Screens and themes](12-screens-and-themes.md): what charter gives every app's interface, in the app's own look.
-- [Signing in, and who may do what](13-sign-in.md): one caller and one rule for pages and API; passkeys.
-- [For your coding agent](11-agents.md): the Claude Code plugins, and what a language model reads.
+- [The commands, and what each one proves](02-commands.md): the developer's day, command by command, with what is type-checked at each step and what is not.
+- [An app's layout](03-layout.md): what goes where, and what charter finds by itself.
+- [Pages](04-pages.md), [the API](05-api.md), [the live feed](06-live.md), [the database](07-database.md).
+- [Languages and search engines](08-languages.md).
+- [Tests](09-tests.md) and [deploying](10-deploy.md).
+- [Docs](11-docs.md): your app's own, from Markdown.
+- [Screens and themes](13-screens-and-themes.md): what charter gives every app's interface, in the app's own look.
+- [Signing in, and who may do what](14-sign-in.md): one caller and one rule for pages and API; passkeys.
+- [For your coding agent](12-agents.md): the Claude Code plugins, and what a language model reads.

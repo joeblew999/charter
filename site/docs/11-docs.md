@@ -29,7 +29,7 @@ type Pages struct {
 }
 ```
 
-The pages are one of [charter's screens](12-screens-and-themes.md): the list at the side, the page, its sections, the theme switch, a link to the repository and one to the page's own file on GitHub. They are built from your app's own gsxui components, so they have its look. This site's docs are shown by the same screen.
+The pages are one of [charter's screens](13-screens-and-themes.md): the list at the side, the page, its sections, the theme switch, a link to the repository and one to the page's own file on GitHub. They are built from your app's own gsxui components, so they have its look. This site's docs are shown by the same screen.
 
 ## What comes with them
 

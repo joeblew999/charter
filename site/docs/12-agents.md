@@ -64,4 +64,4 @@ Any agent, with or without the plugins, can read these docs as Markdown:
 
 The skill is short on purpose: the rules, and which command follows which change. For how something works it points here. So the two never say different things: the docs are written once, as the Markdown of [`site/docs/`](https://github.com/joeblew999/charter/tree/main/site/docs).
 
-[Your own app's docs](10-docs.md) get the same three addresses.
+[Your own app's docs](11-docs.md) get the same three addresses.

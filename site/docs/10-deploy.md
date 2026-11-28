@@ -8,7 +8,7 @@ That is the D1 migrations, then `wrangler deploy`.
 
 ## The plan
 
-A charter app is for Workers Paid ($5 a month). Workers Free allows [10 ms of CPU time a request](https://developers.cloudflare.com/workers/platform/limits/#cpu-time), and a Go Worker takes that or more for many of its requests. What Cloudflare allows a Worker and what it charges, each with a link to Cloudflare's own page, is in [Cloudflare's limits](15-watching.md#cloudflares-limits).
+A charter app is for Workers Paid ($5 a month). Workers Free allows [10 ms of CPU time a request](https://developers.cloudflare.com/workers/platform/limits/#cpu-time), and a Go Worker takes that or more for many of its requests. What Cloudflare allows a Worker and what it charges, each with a link to Cloudflare's own page, is in [Cloudflare's limits](16-watching.md#cloudflares-limits).
 
 ## Nothing of your account in the repository
 

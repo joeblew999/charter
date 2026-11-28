@@ -28,7 +28,7 @@ go tool charter test             # the Worker on wrangler dev
 go tool charter test --deployed  # the deployed one: the same tests, and the audit
 ```
 
-The local Worker starts on a database of its own, made new, filled by the app's [seed](06-database.md#seeding) and thrown away: a test can count on the seed's people and notes, and changes nothing you have. The deployed Worker's database is real, which is why a test leaves it as it found it ([below](#a-test-leaves-the-worker-as-it-found-it)), and why a test that needs the seed's tokens runs only locally (`apptest.Local()`): a deployed database never has them.
+The local Worker starts on a database of its own, made new, filled by the app's [seed](07-database.md#seeding) and thrown away: a test can count on the seed's people and notes, and changes nothing you have. The deployed Worker's database is real, which is why a test leaves it as it found it ([below](#a-test-leaves-the-worker-as-it-found-it)), and why a test that needs the seed's tokens runs only locally (`apptest.Local()`): a deployed database never has them.
 
 ## A page, in a real browser
 
@@ -85,7 +85,7 @@ The example holds itself to this in `test/main_test.go`: a local Worker starts w
 
 ## Secrets a test needs
 
-A test that must be someone asks for a secret of the Worker by name: `apptest.Secret(t, "ADMIN_TOKEN")`. Locally that is the throwaway value in `.dev.vars`. For the deployed Worker, `go tool charter test --deployed` hands the tests each secret fnox has for it (see [deploying](09-deploy.md)); a test whose secret is missing is skipped, and charter says which.
+A test that must be someone asks for a secret of the Worker by name: `apptest.Secret(t, "ADMIN_TOKEN")`. Locally that is the throwaway value in `.dev.vars`. For the deployed Worker, `go tool charter test --deployed` hands the tests each secret fnox has for it (see [deploying](10-deploy.md)); a test whose secret is missing is skipped, and charter says which.
 
 ## What else `charter test` does
 

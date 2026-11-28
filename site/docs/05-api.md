@@ -32,7 +32,7 @@ An operation says how often one caller may call it. The Worker's Rate Limiting b
 go tool charter pack -prove
 ```
 
-Fern generates a client for each language `charter.toml` names. Each is proved in its own language, and then against the Worker itself: the program in `test/sdk/<language>/` is refused and let through as the contract says ([who may do what](13-sign-in.md)). It all runs in containers, so nothing of Rust or Python is on your machine. The Go client is committed in `sdk/go` (`charter pack -publish`), and this site's own tests use it as the client.
+Fern generates a client for each language `charter.toml` names. Each is proved in its own language, and then against the Worker itself: the program in `test/sdk/<language>/` is refused and let through as the contract says ([who may do what](14-sign-in.md)). It all runs in containers, so nothing of Rust or Python is on your machine. The Go client is committed in `sdk/go` (`charter pack -publish`), and this site's own tests use it as the client.
 
 ## MCP
 
