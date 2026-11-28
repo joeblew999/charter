@@ -93,6 +93,9 @@ func TestTheDocsAreSearched(t *testing.T) {
 func TestTheWorkersGoStartedWithIt(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, apptest.Base(t)+at(pages.Home{}), nil)
 	req.Header.Set("x-go-runtime", "?")
+	// The front page is kept by Cloudflare, which answers a reader with no cookie before the Worker runs: this
+	// asks as a reader with one, whom the Worker answers.
+	req.Header.Set("Cookie", "asked=runtime")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
