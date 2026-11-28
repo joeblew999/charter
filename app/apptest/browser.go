@@ -204,8 +204,8 @@ func (p *Page) Wide(width int) {
 }
 
 // Fits fails the test when the page being shown is wider than its window, or when something a reader presses in
-// its header (a link, a button) is partly outside it: what a layout is for, at whatever width the window is (Phone,
-// Wide). A table or a sample that is too wide scrolls where it is, and the page does not.
+// its header (a link, a button) is partly outside it, or when something that opens over the page (a menu) is seen
+// before it is opened: what a layout is for, at whatever width the window is (Phone, Wide). A table or a sample that is too wide scrolls where it is, and the page does not.
 func (p *Page) Fits() {
 	p.t.Helper()
 	if said := p.JS(`(() => {
@@ -214,8 +214,10 @@ func (p *Page) Fits() {
 			const r = e.getBoundingClientRect();
 			return r.width > 0 && (r.right > window.innerWidth + 1 || r.left < -1);
 		}).map((e) => (e.getAttribute("aria-label") || e.textContent || e.tagName).trim().slice(0, 40));
-		if (wider <= 0 && cut.length === 0) return "";
-		return location.pathname + " at " + window.innerWidth + " px: the page is " + Math.max(wider, 0) + " px wider than the window; cut off in the header: " + (cut.join(", ") || "nothing");
+		// What opens over the page (a menu, a popover) is shut until a reader opens it, and not seen while shut.
+		const shut = [...document.querySelectorAll("[popover]")].filter((e) => !e.matches(":popover-open") && e.checkVisibility()).length;
+		if (wider <= 0 && cut.length === 0 && shut === 0) return "";
+		return location.pathname + " at " + window.innerWidth + " px: the page is " + Math.max(wider, 0) + " px wider than the window; cut off in the header: " + (cut.join(", ") || "nothing") + "; shown while shut: " + shut + " of what opens over the page";
 	})()`); said != "" {
 		p.t.Error(said)
 	}

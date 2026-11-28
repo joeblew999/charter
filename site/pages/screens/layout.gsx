@@ -87,13 +87,16 @@ component Layout(mode LayoutMode, title string, description string, brand gsx.No
 									<icon.Menu class="size-4"/>
 									<span>{ locales.ScreensMenu }</span>
 								</ui.PopoverTrigger>
-								<ui.PopoverContent class="flex max-h-[calc(100svh-5rem)] w-56 flex-col gap-4 overflow-y-auto p-3">
-									{ if links != nil {
-										<div data-layout-menu-links class="flex flex-col items-start gap-1">{ links }</div>
-									} }
-									{ if navigation != nil {
-										<div>{ navigation }</div>
-									} }
+								// The popover itself has no class that says how it is displayed: one would show it shut.
+								<ui.PopoverContent class="max-h-[calc(100svh-5rem)] w-56 overflow-y-auto p-3">
+									<div class="flex flex-col gap-4">
+										{ if links != nil {
+											<div data-layout-menu-links class="flex flex-col items-start gap-1">{ links }</div>
+										} }
+										{ if navigation != nil {
+											<div>{ navigation }</div>
+										} }
+									</div>
 								</ui.PopoverContent>
 							</ui.Popover>
 						} }
