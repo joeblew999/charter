@@ -189,10 +189,35 @@ func (p *Page) Tab() *Page {
 // place of a list at the side.
 func (p *Page) Phone() {
 	p.t.Helper()
+	p.Wide(390)
+}
+
+// Wide makes the tab this many CSS pixels wide (and 800 high): a tablet's 768, a small laptop's 1024, a desk's
+// 1280. A layout shows and hides its parts by the window's width, and a test says at which it looks.
+func (p *Page) Wide(width int) {
+	p.t.Helper()
 	ctx, cancel := context.WithTimeout(p.ctx, wait)
 	defer cancel()
-	if _, err := chromedp.Run(ctx, chromedp.EmulateViewport(390, 800)); err != nil {
-		p.t.Fatalf("a phone's width: %v", err)
+	if _, err := chromedp.Run(ctx, chromedp.EmulateViewport(int64(width), 800)); err != nil {
+		p.t.Fatalf("a window %d px wide: %v", width, err)
+	}
+}
+
+// Fits fails the test when the page being shown is wider than its window, or when something a reader presses in
+// its header (a link, a button) is partly outside it: what a layout is for, at whatever width the window is (Phone,
+// Wide). A table or a sample that is too wide scrolls where it is, and the page does not.
+func (p *Page) Fits() {
+	p.t.Helper()
+	if said := p.JS(`(() => {
+		const wider = document.documentElement.scrollWidth - window.innerWidth;
+		const cut = [...document.querySelectorAll("header a, header button")].filter((e) => {
+			const r = e.getBoundingClientRect();
+			return r.width > 0 && (r.right > window.innerWidth + 1 || r.left < -1);
+		}).map((e) => (e.getAttribute("aria-label") || e.textContent || e.tagName).trim().slice(0, 40));
+		if (wider <= 0 && cut.length === 0) return "";
+		return location.pathname + " at " + window.innerWidth + " px: the page is " + Math.max(wider, 0) + " px wider than the window; cut off in the header: " + (cut.join(", ") || "nothing");
+	})()`); said != "" {
+		p.t.Error(said)
 	}
 }
 

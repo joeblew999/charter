@@ -115,13 +115,9 @@ func (SignOut) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth)
 }
 
 component (p SignInPage) Page(v SignInView) {
-	<!DOCTYPE html>
-	<html { app.HTML(ctx)... }>
-		<head>
-			<app.Head title={locales.ScreensSignIn |> text} description={locales.ScreensSignUpIntro |> text}/>
-		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
-			<main class="mx-auto flex max-w-sm flex-col gap-6 p-4 pt-16">
+	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
+	<Layout mode={LayoutMarketing} title={locales.ScreensSignIn |> text} description={locales.ScreensSignUpIntro |> text} brand={<LayoutBrand/>} tools={<ThemeToggle/>}>
+		<div class="mx-auto flex w-full max-w-sm flex-col gap-6" hx-boost:inherited="false">
 				<ui.Card>
 					<ui.CardHeader>
 						<ui.CardTitle>
@@ -185,9 +181,8 @@ component (p SignInPage) Page(v SignInView) {
 						} }
 					</ui.CardContent>
 				</ui.Card>
-			</main>
-		</body>
-	</html>
+		</div>
+	</Layout>
 }
 
 // passkeyButton signs in with a passkey the device has.
@@ -369,13 +364,9 @@ func (AccountLeave) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.
 }
 
 component (p AccountPage) Page(v AccountView) {
-	<!DOCTYPE html>
-	<html { app.HTML(ctx)... }>
-		<head>
-			<app.Head title={locales.ScreensAccount |> text} description={locales.ScreensTokensIntro |> text}/>
-		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
-			<main class="mx-auto flex max-w-xl flex-col gap-6 p-4 pt-10">
+	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
+	<Layout mode={LayoutMarketing} title={locales.ScreensAccount |> text} description={locales.ScreensTokensIntro |> text} brand={<LayoutBrand/>} tools={<ThemeToggle/>}>
+		<div class="mx-auto flex w-full max-w-xl flex-col gap-6" hx-boost:inherited="false">
 				<ui.Button variant="link" class="self-start px-0" href={intl.URL(ctx, "/")}>
 					<icon.ArrowLeft class="rtl:rotate-180"/>
 					<span translate="no">{ app.Name(ctx) }</span>
@@ -409,9 +400,8 @@ component (p AccountPage) Page(v AccountView) {
 						<ui.Button type="submit" variant="destructive" size="sm">{ locales.ScreensAccountLeaveConfirm }</ui.Button>
 					</form>
 				</details>
-			</main>
-		</body>
-	</html>
+		</div>
+	</Layout>
 }
 
 // Tokens is the tokens someone made for their programs, with the form that makes one: a region of the page that
@@ -541,13 +531,9 @@ func (PeopleInvite) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.
 }
 
 component (p PeoplePage) Page(v PeopleView) {
-	<!DOCTYPE html>
-	<html { app.HTML(ctx)... }>
-		<head>
-			<app.Head title={locales.ScreensPeople |> text} description={locales.ScreensPeopleIntro |> text}/>
-		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
-			<main class="mx-auto flex max-w-xl flex-col gap-6 p-4 pt-10">
+	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
+	<Layout mode={LayoutMarketing} title={locales.ScreensPeople |> text} description={locales.ScreensPeopleIntro |> text} brand={<LayoutBrand/>} tools={<ThemeToggle/>}>
+		<div class="mx-auto flex w-full max-w-xl flex-col gap-6" hx-boost:inherited="false">
 				<ui.Button variant="link" class="self-start px-0" href={AccountPage{} |> url}>
 					<icon.ArrowLeft class="rtl:rotate-180"/>
 					{ locales.ScreensAccount }
@@ -568,9 +554,8 @@ component (p PeoplePage) Page(v PeopleView) {
 					</ui.CardContent>
 				</ui.Card>
 				<p.Invite roles={v.Roles} link=""/>
-			</main>
-		</body>
-	</html>
+		</div>
+	</Layout>
 }
 
 // Invite is the form that makes an invitation, and the link of one made a moment ago: a region of the page that

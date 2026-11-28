@@ -32,43 +32,37 @@ type Theme struct{}
 func (Theme) FullLoad() bool { return true }
 
 component (p Theme) Page() {
-	<!DOCTYPE html>
-	<html { app.HTML(ctx)... }>
-		<head>
-			<app.Head title={locales.ScreensThemePick |> text} description={locales.ScreensThemePick |> text}/>
-		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased" { app.Body()... }>
-			<header class="mx-auto flex max-w-[96rem] items-center gap-2 px-4 pt-4">
-				<ui.Button variant="ghost" size="icon-sm" href={intl.URL(ctx, "/")} hx-boost="false" aria-label={locales.ScreensClose} title={locales.ScreensClose}>
-					<icon.ArrowLeft class="rtl:rotate-180"/>
-				</ui.Button>
-				<span class="flex-1"></span>
-				<ThemeToggle/>
-			</header>
-			// gsxui's editor is in English, as gsxui wrote it.
-			<main class="mx-auto max-w-[96rem] px-4" lang="en" dir="ltr">
-				{ if app.ThemeEditor("") == "" {
-					<ui.Alert class="my-10">
-						<ui.AlertDescription>gsxui's theme editor has not been written into this app yet: go tool charter check --fix</ui.AlertDescription>
-					</ui.Alert>
-				} else {
-					// The app's own preset: where the editor starts for a reader who has chosen nothing.
-					<script type="application/json" data-charter-preset>@{ json.RawMessage(app.ThemePreset()) }</script>
-					{ gsx.Raw(app.ThemeEditor(intl.URL(ctx, "/"))) }
-					<section class="flex flex-col gap-3 border-t py-8 text-sm">
-						<h2 class="text-sm font-medium tracking-wide text-muted-foreground uppercase">In this app</h2>
-						<p class="max-w-2xl text-muted-foreground">
-							What you choose here is kept by your browser, and every page of this app has it from now on, the style too. The preview is this app's own front page. The address of this page carries your choice (<code data-charter-code class="font-mono text-xs"></code>): send it, and whoever opens it has the same.
-						</p>
-						<div class="flex flex-wrap gap-2">
-							<ui.Button type="button" variant="outline" size="sm" data-charter-own>The app's own theme</ui.Button>
-							<ui.Button variant="outline" size="sm" href="https://ui.gsxhq.dev/theme" rel="noopener" data-charter-gsxui>Open in gsxui's editor</ui.Button>
-						</div>
-					</section>
-				} }
-			</main>
-		</body>
-	</html>
+	// gsxui's layout for a workspace: the window under the header, the editor's controls and its preview in it.
+	<Layout
+		mode={LayoutWorkspace}
+		title={locales.ScreensThemePick |> text}
+		description={locales.ScreensThemePick |> text}
+		brand={<LayoutBrand/>}
+		tools={<ThemeToggle/>}
+	>
+		// gsxui's editor is in English, as gsxui wrote it.
+		<div lang="en" dir="ltr">
+			{ if app.ThemeEditor("") == "" {
+				<ui.Alert class="my-10">
+					<ui.AlertDescription>gsxui's theme editor has not been written into this app yet: go tool charter check --fix</ui.AlertDescription>
+				</ui.Alert>
+			} else {
+				// The app's own preset: where the editor starts for a reader who has chosen nothing.
+				<script type="application/json" data-charter-preset>@{ json.RawMessage(app.ThemePreset()) }</script>
+				{ gsx.Raw(app.ThemeEditor(intl.URL(ctx, "/"))) }
+				<section class="flex flex-col gap-3 border-t py-8 text-sm">
+					<h2 class="text-sm font-medium tracking-wide text-muted-foreground uppercase">In this app</h2>
+					<p class="max-w-2xl text-muted-foreground">
+						What you choose here is kept by your browser, and every page of this app has it from now on, the style too. The preview is this app's own front page. The address of this page carries your choice (<code data-charter-code class="font-mono text-xs"></code>): send it, and whoever opens it has the same.
+					</p>
+					<div class="flex flex-wrap gap-2">
+						<ui.Button type="button" variant="outline" size="sm" data-charter-own>The app's own theme</ui.Button>
+						<ui.Button variant="outline" size="sm" href="https://ui.gsxhq.dev/theme" rel="noopener" data-charter-gsxui>Open in gsxui's editor</ui.Button>
+					</div>
+				</section>
+			} }
+		</div>
+	</Layout>
 }
 
 // ThemeLink is the way to the theme editor, for a header: beside the theme toggle. Extra attributes fall through

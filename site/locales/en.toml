@@ -65,4 +65,5 @@ docs_next = "Next page"
 # The button that opens the list of gsxui's themes, as screen readers name it, and the first in the list: the
 # app's own theme.
 theme_pick = "Choose a theme"
-close = "Close"
+# The button in a header that has the ways to the pages under it, where the window has no room for them.
+menu = "Menu"

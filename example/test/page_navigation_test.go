@@ -34,9 +34,15 @@ func arrives(t *testing.T, p *apptest.Page, path string) {
 	t.Fatalf("the page is at %s, want %s", p.Path(), path)
 }
 
+// shown is the link to path that the page shows: the header has each way to a page twice, in itself and under its
+// menu for a window with no room, and main may have one too.
+func shown(path string) string {
+	return fmt.Sprintf(`:is([data-layout-links], main) a[href=%q]`, path)
+}
+
 // follow clicks the link to path that the page shows.
 func follow(p *apptest.Page, path string) {
-	p.Click(fmt.Sprintf(`a[href=%q]`, path))
+	p.Click(shown(path))
 }
 
 func TestALinkShowsTheNextPageWithNoPageLoad(t *testing.T) {
@@ -66,22 +72,23 @@ func TestALinkShowsTheNextPageWithNoPageLoad(t *testing.T) {
 		t.Errorf("the header marks the page it is on as %q, want secondary", current)
 	}
 
-	// To a page of another document of the app (the docs' own layout), and on within it: still no page load.
-	docs := at(screens.DocsIndex{})
-	follow(page, docs)
-	arrives(t, page, docs)
-	if !sameDocument(page) {
-		t.Error("a link to the docs loaded a new document")
-	}
-	page.WaitText("main", "")
-
 	// Back shows the page that was there, in the same document.
 	page.JS(`(history.back(), "back")`)
-	arrives(t, page, built)
+	arrives(t, page, "/")
 	if !sameDocument(page) {
 		t.Error("Back loaded a new document")
 	}
 	page.WaitText("h1", "")
+
+	// A page of the docs is loaded as a document (the docs screen says so: gsxui's own script for its docs, which
+	// marks the section being read, starts as a document loads).
+	docs := at(screens.DocsIndex{})
+	follow(page, docs)
+	arrives(t, page, docs)
+	page.WaitText("#doc h1", "")
+	if sameDocument(page) {
+		t.Error("a link to the docs kept the document: the docs load as one")
+	}
 }
 
 // A page's list keeps itself current when the page was arrived at by a link, as when it was loaded: its stream is
@@ -145,7 +152,7 @@ func TestAPressedLinkIsAskedForOnce(t *testing.T) {
 	page := apptest.Browser(t)
 	page.Open("/")
 	built := at(pages.BuiltIndex{})
-	link := fmt.Sprintf(`a[href=%q]`, built)
+	link := shown(built)
 
 	press(page, `footer a[hreflang=de]`)
 	press(page, link)

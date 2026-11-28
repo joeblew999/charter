@@ -43,6 +43,8 @@ docs_next = "Next page"
 # The button that switches between the light and the dark theme, as screen readers name it.
 # The docs' search: its button and field, and what it says when no page or section matches.
 docs_search = "Search the docs"
+# The button in a header that has the ways to the pages under it, where the window has no room for them.
+menu = "Menu"
 docs_none = "Nothing found."
 theme = "Switch between light and dark"
 # The way to gsxui's theme editor, as screen readers name it, and the title of its page.

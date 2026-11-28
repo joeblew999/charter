@@ -134,6 +134,10 @@ func Write(dir string) (int, error) {
 				}
 				if id, ok := n.AttributeString("id"); ok && (n.Level == 2 || n.Level == 3) {
 					p.Headings = append(p.Headings, [3]string{string(id.([]byte)), title, fmt.Sprint(n.Level)})
+					// As gsxui's own docs mark a heading (its docHeading): what its script that follows the
+					// reader down the page looks for.
+					n.SetAttributeString("data-doc-heading", []byte(""))
+					n.SetAttributeString("tabindex", []byte("-1"))
 					n.SetAttributeString("class", []byte(HeadingClass))
 				}
 			case *ast.List:

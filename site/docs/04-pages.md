@@ -173,7 +173,7 @@ Those are three lines of the example: a link to a page, a form's target, and one
 ## A link shows the next page with no page load
 
 ```gsx
-<body class="min-h-svh bg-background font-sans text-foreground antialiased" { app.Body()... }>
+<body data-layout={string(mode)} class={bodyClass} { app.Body()... }>
 ```
 
 `app.Body()` on the layout's `<body>` is all of it. A link to another page of the app, and a form, then keeps the document: htmx asks for the next page and puts its body in place of this one's (boost). The scripts, the stylesheet and the theme stay; everything in the body is the next page's, as if it had loaded, so nothing a reader opened on one page (a menu, a dialog) is left open over the next. The page's title comes with it, a list that follows a feed opens its stream as it arrives, and Back shows the page that was there. With htmx's preload extension (`web/main.js`: `hx-preload.js`) the request starts when the link is pressed, before the click is done.
@@ -184,7 +184,7 @@ What stays a page load, and how each says so:
 
 | What | How |
 |---|---|
-| A page whose script runs as its document loads (the sign-in screens) | Its type has `FullLoad() bool`: a link to it from anywhere is a page load, with nothing on the link |
+| A page whose script runs as its document loads (the sign-in screens, the theme editor, a page of the docs) | Its type has `FullLoad() bool`: a link to it from anywhere is a page load, with nothing on the link |
 | A link whose following changes something, or the document itself (another language: `<html lang>` changes) | `hx-boost="false"` on the link, or `hx-boost:inherited="false"` on what holds several (the language list has it) |
 | A link whose answer is no page: a download, JSON, a text file | Nothing: charter sends the reader there as a page load |
 | A link to another site, one with `download`, one to a place on the same page | Nothing: htmx does not boost them |
@@ -198,7 +198,7 @@ The tree's GET pages without parameters are in the sitemap, in every language. T
 ```gsx
 <html { app.HTML(ctx)... }>
 	<head>
-		<app.Head title={title |> text} description={description |> text}/>
+		<app.Head title={title} description={description}/>
 	</head>
 ```
 

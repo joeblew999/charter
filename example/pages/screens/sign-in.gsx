@@ -116,81 +116,82 @@ func (SignOut) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth)
 }
 
 component (p SignInPage) Page(v SignInView) {
-	<!DOCTYPE html>
-	<html { app.HTML(ctx)... }>
-		<head>
-			<app.Head title={locales.ScreensSignIn |> text} description={locales.ScreensSignUpIntro |> text}/>
-		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
-			<main class="mx-auto flex max-w-sm flex-col gap-6 p-4 pt-16">
-				<ui.Card>
-					<ui.CardHeader>
-						<ui.CardTitle>
-							// Here by an invitation's link: the page says so first, and what it is to.
-							{ if v.Invite != "" {
-								<h1 id="invited">{ locales.ScreensInvited(v.InviteRole) }</h1>
-							} else {
-								<h1>{ locales.ScreensSignIn }</h1>
-							} }
-						</ui.CardTitle>
-						{ if v.Invite != "" && !v.Caller.SignedIn() {
-							<ui.CardDescription>{ locales.ScreensInvitedIntro }</ui.CardDescription>
-						} }
-					</ui.CardHeader>
-					<ui.CardContent class="flex flex-col gap-4">
-						{ if v.InviteGone {
-							<p id="invite-gone" role="alert" class="text-sm text-destructive">{ locales.ScreensInviteGone }</p>
-						} }
-						{ if v.Caller.SignedIn() {
-							<p id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</p>
-							// Here by an invitation's link, with an account already: it is theirs to accept.
-							{ if v.Invite != "" {
-								<form method="post" action={InviteAccept{} |> url} id="accept">
-									<input type="hidden" name="invite" value={v.Invite}/>
-									<ui.Button type="submit">{ locales.ScreensInviteAccept }</ui.Button>
-								</form>
-							} }
-							<div class="flex flex-wrap gap-2">
-								<ui.Button variant="outline" size="sm" href={AccountPage{} |> url} id="account">
-									{ locales.ScreensAccount }
-								</ui.Button>
-								<SignOutForm/>
-							</div>
+	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
+	<Layout
+		mode={LayoutMarketing}
+		title={locales.ScreensSignIn |> text}
+		description={locales.ScreensSignUpIntro |> text}
+		brand={ <LayoutBrand/> }
+		tools={ <ThemeToggle/> }
+	>
+		<div class="mx-auto flex w-full max-w-sm flex-col gap-6" hx-boost:inherited="false">
+			<ui.Card>
+				<ui.CardHeader>
+					<ui.CardTitle>
+						// Here by an invitation's link: the page says so first, and what it is to.
+						{ if v.Invite != "" {
+							<h1 id="invited">{ locales.ScreensInvited(v.InviteRole) }</h1>
 						} else {
-							<div
-								id="sign-in"
-								class="flex flex-col gap-4"
-								data-return={v.Return}
-								data-invite={v.Invite}
-								data-accept={InviteAccept{} |> url}
-								data-account={AccountPage{} |> url}
-								data-in-begin={SignInBegin{} |> url}
-								data-in-finish={SignInFinish{} |> url}
-								data-up-begin={SignUpBegin{} |> url}
-								data-up-finish={SignUpFinish{} |> url}
-								data-failed={locales.ScreensSignInFailed |> text}
-							>
-								// By an invitation, the account to make comes first: signing in is for whoever has one.
-								{ if v.Invite != "" {
-									<signUpForm variant="default"/>
-									<ui.Separator/>
-									<p class="text-sm text-muted-foreground">{ locales.ScreensHaveAccount }</p>
-									<passkeyButton variant="outline"/>
-								} else {
-									<passkeyButton variant="default"/>
-									<ui.Separator/>
-									<p class="text-sm text-muted-foreground">{ locales.ScreensSignUpIntro }</p>
-									<signUpForm variant="outline"/>
-								} }
-								<p id="sign-in-error" role="alert" class="text-sm text-destructive" hidden></p>
-							</div>
-							<signInScript/>
+							<h1>{ locales.ScreensSignIn }</h1>
 						} }
-					</ui.CardContent>
-				</ui.Card>
-			</main>
-		</body>
-	</html>
+					</ui.CardTitle>
+					{ if v.Invite != "" && !v.Caller.SignedIn() {
+						<ui.CardDescription>{ locales.ScreensInvitedIntro }</ui.CardDescription>
+					} }
+				</ui.CardHeader>
+				<ui.CardContent class="flex flex-col gap-4">
+					{ if v.InviteGone {
+						<p id="invite-gone" role="alert" class="text-sm text-destructive">{ locales.ScreensInviteGone }</p>
+					} }
+					{ if v.Caller.SignedIn() {
+						<p id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</p>
+						// Here by an invitation's link, with an account already: it is theirs to accept.
+						{ if v.Invite != "" {
+							<form method="post" action={InviteAccept{} |> url} id="accept">
+								<input type="hidden" name="invite" value={v.Invite}/>
+								<ui.Button type="submit">{ locales.ScreensInviteAccept }</ui.Button>
+							</form>
+						} }
+						<div class="flex flex-wrap gap-2">
+							<ui.Button variant="outline" size="sm" href={AccountPage{} |> url} id="account">
+								{ locales.ScreensAccount }
+							</ui.Button>
+							<SignOutForm/>
+						</div>
+					} else {
+						<div
+							id="sign-in"
+							class="flex flex-col gap-4"
+							data-return={v.Return}
+							data-invite={v.Invite}
+							data-accept={InviteAccept{} |> url}
+							data-account={AccountPage{} |> url}
+							data-in-begin={SignInBegin{} |> url}
+							data-in-finish={SignInFinish{} |> url}
+							data-up-begin={SignUpBegin{} |> url}
+							data-up-finish={SignUpFinish{} |> url}
+							data-failed={locales.ScreensSignInFailed |> text}
+						>
+							// By an invitation, the account to make comes first: signing in is for whoever has one.
+							{ if v.Invite != "" {
+								<signUpForm variant="default"/>
+								<ui.Separator/>
+								<p class="text-sm text-muted-foreground">{ locales.ScreensHaveAccount }</p>
+								<passkeyButton variant="outline"/>
+							} else {
+								<passkeyButton variant="default"/>
+								<ui.Separator/>
+								<p class="text-sm text-muted-foreground">{ locales.ScreensSignUpIntro }</p>
+								<signUpForm variant="outline"/>
+							} }
+							<p id="sign-in-error" role="alert" class="text-sm text-destructive" hidden></p>
+						</div>
+						<signInScript/>
+					} }
+				</ui.CardContent>
+			</ui.Card>
+		</div>
+	</Layout>
 }
 
 // passkeyButton signs in with a passkey the device has.
@@ -374,51 +375,52 @@ func (AccountLeave) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.
 }
 
 component (p AccountPage) Page(v AccountView) {
-	<!DOCTYPE html>
-	<html { app.HTML(ctx)... }>
-		<head>
-			<app.Head title={locales.ScreensAccount |> text} description={locales.ScreensTokensIntro |> text}/>
-		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
-			<main class="mx-auto flex max-w-xl flex-col gap-6 p-4 pt-10">
-				<ui.Button variant="link" class="self-start px-0" href={intl.URL(ctx, "/")}>
-					<icon.ArrowLeft class="rtl:rotate-180"/>
-					<span translate="no">{ app.Name(ctx) }</span>
-				</ui.Button>
-				<ui.Card>
-					<ui.CardHeader>
-						<ui.CardTitle>
-							<h1>{ locales.ScreensAccount }</h1>
-						</ui.CardTitle>
-						<ui.CardDescription id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</ui.CardDescription>
-					</ui.CardHeader>
-					<ui.CardContent class="flex flex-wrap items-center gap-2">
-						// What they are, and with it what they may do.
-						<ui.Badge id="role" translate="no">{ v.Caller.Role }</ui.Badge>
-						{ for _, scope := range v.Caller.Scopes {
-							<ui.Badge variant="secondary" translate="no">{ scope.String() }</ui.Badge>
-						} }
-						<span class="flex-1"></span>
-						{ if v.MayManage {
-							<ui.Button variant="outline" size="sm" href={PeoplePage{} |> url} id="people-link">
-								{ locales.ScreensPeople }
-							</ui.Button>
-						} }
-						<SignOutForm/>
-					</ui.CardContent>
-				</ui.Card>
-				<p.Tokens v={v}/>
-				// Leaving: asked twice, the second time with what goes.
-				<details id="leave" class="rounded-md border px-3 py-2 text-sm">
-					<summary class="cursor-pointer text-muted-foreground">{ locales.ScreensAccountLeave }</summary>
-					<form method="post" action={AccountLeave{} |> url} class="flex flex-col items-start gap-3 pt-3">
-						<p>{ locales.ScreensAccountLeaveIntro }</p>
-						<ui.Button type="submit" variant="destructive" size="sm">{ locales.ScreensAccountLeaveConfirm }</ui.Button>
-					</form>
-				</details>
-			</main>
-		</body>
-	</html>
+	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
+	<Layout
+		mode={LayoutMarketing}
+		title={locales.ScreensAccount |> text}
+		description={locales.ScreensTokensIntro |> text}
+		brand={ <LayoutBrand/> }
+		tools={ <ThemeToggle/> }
+	>
+		<div class="mx-auto flex w-full max-w-xl flex-col gap-6" hx-boost:inherited="false">
+			<ui.Button variant="link" class="self-start px-0" href={intl.URL(ctx, "/")}>
+				<icon.ArrowLeft class="rtl:rotate-180"/>
+				<span translate="no">{ app.Name(ctx) }</span>
+			</ui.Button>
+			<ui.Card>
+				<ui.CardHeader>
+					<ui.CardTitle>
+						<h1>{ locales.ScreensAccount }</h1>
+					</ui.CardTitle>
+					<ui.CardDescription id="signed-in">{ locales.ScreensSignedInAs(v.Caller.Name()) }</ui.CardDescription>
+				</ui.CardHeader>
+				<ui.CardContent class="flex flex-wrap items-center gap-2">
+					// What they are, and with it what they may do.
+					<ui.Badge id="role" translate="no">{ v.Caller.Role }</ui.Badge>
+					{ for _, scope := range v.Caller.Scopes {
+						<ui.Badge variant="secondary" translate="no">{ scope.String() }</ui.Badge>
+					} }
+					<span class="flex-1"></span>
+					{ if v.MayManage {
+						<ui.Button variant="outline" size="sm" href={PeoplePage{} |> url} id="people-link">
+							{ locales.ScreensPeople }
+						</ui.Button>
+					} }
+					<SignOutForm/>
+				</ui.CardContent>
+			</ui.Card>
+			<p.Tokens v={v}/>
+			// Leaving: asked twice, the second time with what goes.
+			<details id="leave" class="rounded-md border px-3 py-2 text-sm">
+				<summary class="cursor-pointer text-muted-foreground">{ locales.ScreensAccountLeave }</summary>
+				<form method="post" action={AccountLeave{} |> url} class="flex flex-col items-start gap-3 pt-3">
+					<p>{ locales.ScreensAccountLeaveIntro }</p>
+					<ui.Button type="submit" variant="destructive" size="sm">{ locales.ScreensAccountLeaveConfirm }</ui.Button>
+				</form>
+			</details>
+		</div>
+	</Layout>
 }
 
 // Tokens is the tokens someone made for their programs, with the form that makes one: a region of the page that
@@ -552,36 +554,37 @@ func (PeopleInvite) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.
 }
 
 component (p PeoplePage) Page(v PeopleView) {
-	<!DOCTYPE html>
-	<html { app.HTML(ctx)... }>
-		<head>
-			<app.Head title={locales.ScreensPeople |> text} description={locales.ScreensPeopleIntro |> text}/>
-		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased">
-			<main class="mx-auto flex max-w-xl flex-col gap-6 p-4 pt-10">
-				<ui.Button variant="link" class="self-start px-0" href={AccountPage{} |> url}>
-					<icon.ArrowLeft class="rtl:rotate-180"/>
-					{ locales.ScreensAccount }
-				</ui.Button>
-				<ui.Card>
-					<ui.CardHeader>
-						<ui.CardTitle>
-							<h1>{ locales.ScreensPeople }</h1>
-						</ui.CardTitle>
-						<ui.CardDescription>{ locales.ScreensPeopleIntro }</ui.CardDescription>
-					</ui.CardHeader>
-					<ui.CardContent>
-						<ul id="people" class="flex flex-col gap-2">
-							{ for _, person := range v.People {
-								<p.Person person={person} roles={v.Roles} mine={person.ID == v.Caller.Subject}/>
-							} }
-						</ul>
-					</ui.CardContent>
-				</ui.Card>
-				<p.Invite roles={v.Roles} link=""/>
-			</main>
-		</body>
-	</html>
+	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
+	<Layout
+		mode={LayoutMarketing}
+		title={locales.ScreensPeople |> text}
+		description={locales.ScreensPeopleIntro |> text}
+		brand={ <LayoutBrand/> }
+		tools={ <ThemeToggle/> }
+	>
+		<div class="mx-auto flex w-full max-w-xl flex-col gap-6" hx-boost:inherited="false">
+			<ui.Button variant="link" class="self-start px-0" href={AccountPage{} |> url}>
+				<icon.ArrowLeft class="rtl:rotate-180"/>
+				{ locales.ScreensAccount }
+			</ui.Button>
+			<ui.Card>
+				<ui.CardHeader>
+					<ui.CardTitle>
+						<h1>{ locales.ScreensPeople }</h1>
+					</ui.CardTitle>
+					<ui.CardDescription>{ locales.ScreensPeopleIntro }</ui.CardDescription>
+				</ui.CardHeader>
+				<ui.CardContent>
+					<ul id="people" class="flex flex-col gap-2">
+						{ for _, person := range v.People {
+							<p.Person person={person} roles={v.Roles} mine={person.ID == v.Caller.Subject}/>
+						} }
+					</ul>
+				</ui.CardContent>
+			</ui.Card>
+			<p.Invite roles={v.Roles} link=""/>
+		</div>
+	</Layout>
 }
 
 // Invite is the form that makes an invitation, and the link of one made a moment ago: a region of the page that

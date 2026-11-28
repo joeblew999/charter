@@ -88,6 +88,14 @@ func Check(args []string) {
 	if exists(filepath.Join(p.Root, "pages", "screens", "theme.gsx")) {
 		t.part("themes", func() error { return themesWritten(p, *fix) })
 	}
+	// One document around every page: gsxui's own site's shell, as charter's layout screen has it.
+	t.part("layout", func() error {
+		own, err := themes.OwnShells(p.Root)
+		if err != nil || len(own) == 0 {
+			return err
+		}
+		return fmt.Errorf("these write a document of their own, with its own header and widths:\n  %s\nput the page in <screens.Layout mode={screens.LayoutMarketing} …> (pages/screens/layout.gsx), which is the header, the widths and what a phone shows for every page", strings.Join(own, "\n  "))
+	})
 	t.part("generate", func() error { return generate(p) })
 	t.part("fmt", func() error { return format(p, *fix) })
 	if *fix {

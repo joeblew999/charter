@@ -460,3 +460,41 @@ func Expect(dir string, names []string) error {
 	}
 	return os.WriteFile(filepath.Join(target, expected), []byte(head+")\n\n"+strings.TrimRight(body.String(), "\n")+"\n"), 0o644)
 }
+
+// OwnShells lists the app's templates that write a document of their own (<!DOCTYPE html>) where the app has
+// charter's layout screen (pages/screens/layout.gsx), which is the one document around every page: file and line,
+// for charter check. A page in a shell of its own sets its own widths and header, and is the page that does not
+// fit a phone.
+func OwnShells(dir string) ([]string, error) {
+	layout := filepath.Join("pages", "screens", "layout.gsx")
+	if _, err := os.Stat(filepath.Join(dir, layout)); err != nil {
+		return nil, nil
+	}
+	var found []string
+	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(dir, p)
+		if d.IsDir() {
+			if rel != "." && (strings.HasPrefix(d.Name(), ".") || d.Name() == "node_modules" || d.Name() == "ui" || d.Name() == "build" || d.Name() == "dist") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(rel, ".gsx") || rel == layout {
+			return nil
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		for i, line := range bytes.Split(b, []byte("\n")) {
+			if bytes.Contains(bytes.ToLower(line), []byte("<!doctype html>")) {
+				found = append(found, fmt.Sprintf("%s:%d", filepath.ToSlash(rel), i+1))
+			}
+		}
+		return nil
+	})
+	return found, err
+}

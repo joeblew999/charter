@@ -61,243 +61,188 @@ component (p DocsPage) Page(v DocsView) {
 	<DocsDocument v={v}/>
 }
 
-// DocsDocument is the page: the docs' pages at the side in their groups, the page itself, its sections, the pages
-// before and after it, and where it comes from.
+// A page of the docs is loaded as a document, never put in place of another by a link: what marks the section being
+// read as the page scrolls (gsxui's own script for its docs) starts as its document loads.
+func (DocsIndex) FullLoad() bool { return true }
+func (DocsPage) FullLoad() bool  { return true }
+
+// DocsDocument is the page, in gsxui's own layout for a page of docs (Layout, LayoutDocs): the docs' pages at one
+// side in their groups, the page itself at a width that reads well, its sections at the other side, and under it
+// the pages before and after it and where it comes from. Where the window has no room the sections go, and then
+// the pages, which are under the header's menu.
 // The docs are written in one language (English), which the article says; what is around them is in the reader's.
 component DocsDocument(v DocsView) {
-	<!DOCTYPE html>
-	<html { app.HTML(ctx)... }>
-		<head>
-			<app.Head title={v.Doc.Title + " · " + v.Docs.Name} description={v.Doc.Description}/>
-		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased" { app.Body()... }>
-			// Everything here is a gsxui component: its Sidebar is the list of pages (at the side, sliding in over
-			// the page on a phone, folded away by its button or Cmd-B), and what is beside it is the Sidebar's
-			// inset. Only the page itself is not: it is the HTML charter build made of the Markdown.
-			<ui.SidebarProvider open={true}>
-				<ui.Sidebar open={true} side={docsSide(ctx)}>
-					<ui.SidebarHeader>
-						<ui.SidebarMenu>
-							<ui.SidebarMenuItem>
-								<ui.SidebarMenuButton size="lg" href={intl.URL(ctx, "/")}>
-									<span class="font-semibold" translate="no">{ v.Docs.Name }</span>
-									<ui.Badge variant="secondary">{ locales.ScreensDocs }</ui.Badge>
-								</ui.SidebarMenuButton>
-							</ui.SidebarMenuItem>
-						</ui.SidebarMenu>
-					</ui.SidebarHeader>
-					<ui.SidebarContent>
-						<DocsList v={v}/>
-					</ui.SidebarContent>
-					<ui.SidebarRail/>
-				</ui.Sidebar>
-				<ui.SidebarInset>
-					// What stays at the top as the page is read: the way to the list of pages, where the page is among
-					// them, the search, and on a narrow window the page's own sections.
-					<header
-						class="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/80"
-					>
-						<ui.SidebarTrigger id="docs-menu"/>
-						<ui.Separator orientation="vertical" class="me-1 h-4"/>
-						<ui.Breadcrumb class="min-w-0">
-							<ui.BreadcrumbList class="flex-nowrap">
-								{ if v.Doc.Group != "" {
-									<ui.BreadcrumbItem class="hidden md:inline-flex">
-										<span lang="en" dir="ltr">{ v.Doc.Group }</span>
-									</ui.BreadcrumbItem>
-									<ui.BreadcrumbSeparator class="hidden md:block"/>
-								} }
-								<ui.BreadcrumbItem class="min-w-0">
-									<ui.BreadcrumbPage id="docs-here" lang="en" dir="ltr" class="truncate">
-										{ v.Doc.Title }
-									</ui.BreadcrumbPage>
-								</ui.BreadcrumbItem>
-							</ui.BreadcrumbList>
-						</ui.Breadcrumb>
-						<span class="flex-1"></span>
-						// Search, as gsxui's own docs have it: every page and every section of one, by its title. Cmd-K
-						// (Ctrl-K) opens it.
-						<ui.CommandDialog
-							title={locales.ScreensDocsSearch |> text}
-							description={locales.ScreensDocsSearch |> text}
-							trigger={
-								<ui.DialogTrigger
-									id="docs-search"
-									aria-label={locales.ScreensDocsSearch}
-									class="inline-flex h-8 items-center gap-2 rounded-lg border bg-muted/50 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted sm:w-56"
-								>
-									<icon.Search class="size-4"/>
-									<span class="hidden flex-1 text-start sm:inline">{ locales.ScreensDocsSearch }</span>
-									<ui.Kbd class="hidden sm:inline-flex">⌘K</ui.Kbd>
-								</ui.DialogTrigger>
-							}
-						>
-							<ui.CommandInput placeholder={locales.ScreensDocsSearch |> text}/>
-							<ui.CommandList>
-								<ui.CommandEmpty>{ locales.ScreensDocsNone }</ui.CommandEmpty>
-								{ for _, page := range v.Docs.Pages {
-									<ui.CommandGroup heading={page.Title} lang="en" dir="ltr">
-										<ui.CommandItem data-href={docsURL(ctx, page)}>{ page.Title }</ui.CommandItem>
-										{ for _, h := range page.Headings {
-											<ui.CommandItem data-href=f`@{docsURL(ctx, page)}#@{h.ID}` value={page.Title + " " + h.Title}>
-												{ h.Title }
-											</ui.CommandItem>
+	<Layout
+		mode={LayoutDocs}
+		title={v.Doc.Title + " · " + v.Docs.Name}
+		description={v.Doc.Description}
+		brand={ <DocsBrand v={v}/> }
+		links={ <DocsLinks v={v}/> }
+		tools={ <DocsTools v={v}/> }
+		navigation={ <DocsList v={v}/> }
+		contents={ <DocsSections v={v}/> }
+	>
+		// The page: what charter build wrote from docs/*.md, the app's own files. It is marked data-doc, which
+		// gsxui's own stylesheet for its docs styles (web/gsxui-site/site.css), with a section under each heading,
+		// and a table as gsxui's Table.
+		<article id="doc" data-doc="docs" lang="en" dir="ltr" class="flex min-w-0 flex-col gap-10">
+			{ for _, section := range v.Doc.Sections {
+				<section class="flex min-w-0 flex-col gap-3">
+					{ for _, part := range section.Parts {
+						{ if part.Head == nil {
+							{ gsx.Raw(part.HTML) }
+						} else {
+							<ui.Table>
+								<ui.TableHeader>
+									<ui.TableRow>
+										{ for _, cell := range part.Head {
+											<ui.TableHead>{ gsx.Raw(cell) }</ui.TableHead>
 										} }
-									</ui.CommandGroup>
-								} }
-							</ui.CommandList>
-						</ui.CommandDialog>
-						{ if v.Docs.Repo != "" {
-							<ui.Button
-								variant="ghost"
-								size="sm"
-								class="hidden sm:inline-flex"
-								href={v.Docs.Repo}
-								rel="noopener"
-								id="docs-repo"
-							>
-								{ locales.ScreensDocsOnGithub(docsRepo(v.Docs.Repo)) }
-							</ui.Button>
-						} }
-						<ThemeLink/>
-						<ThemeToggle/>
-					</header>
-					<div class="mx-auto flex w-full max-w-6xl gap-10 px-4 py-8 md:px-8">
-						<div class="min-w-0 flex-1">
-							{ if len(v.Doc.Headings) > 0 {
-								// The page's sections where there is no room for them at the side: they come down from the
-								// top, and go when one is chosen (gsxui closes a dialog from anything in it marked
-								// data-gsxui-dialog-close; the link is then followed).
-								<ui.Sheet>
-									<ui.SheetTrigger
-										id="docs-sections"
-										class="mb-6 inline-flex h-8 items-center gap-1 rounded-md border px-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground xl:hidden"
-									>
-										{ locales.ScreensDocsOnThisPage }
-										<icon.ChevronDown class="size-4"/>
-									</ui.SheetTrigger>
-									<ui.SheetContent side="top" id="docs-sections-list" class="max-h-[80svh] gap-0 overflow-y-auto p-2">
-										<ui.SheetTitle class="px-2 pt-2">{ locales.ScreensDocsOnThisPage }</ui.SheetTitle>
-										<DocsSections v={v} closes/>
-									</ui.SheetContent>
-								</ui.Sheet>
-							} }
-							// The page: HTML that charter build wrote from docs/*.md, the app's own files.
-							// A page as gsxui's own docs are: data-doc, which gsxui's stylesheet for its docs styles
-							// (web/gsxui-site/site.css), a section under each heading, and a table as gsxui's Table.
-							<article id="doc" data-doc="docs" lang="en" dir="ltr" class="flex max-w-3xl min-w-0 flex-col gap-10">
-								{ for _, section := range v.Doc.Sections {
-									<section class="flex min-w-0 flex-col gap-4">
-										{ for _, part := range section.Parts {
-											{ if part.Head == nil {
-												{ gsx.Raw(part.HTML) }
-											} else {
-												<ui.Table>
-													<ui.TableHeader>
-														<ui.TableRow>
-															{ for _, cell := range part.Head {
-																<ui.TableHead>{ gsx.Raw(cell) }</ui.TableHead>
-															} }
-														</ui.TableRow>
-													</ui.TableHeader>
-													<ui.TableBody>
-														{ for _, row := range part.Rows {
-															<ui.TableRow>
-																{ for _, cell := range row {
-																	<ui.TableCell class="align-top whitespace-normal">{ gsx.Raw(cell) }</ui.TableCell>
-																} }
-															</ui.TableRow>
-														} }
-													</ui.TableBody>
-												</ui.Table>
+									</ui.TableRow>
+								</ui.TableHeader>
+								<ui.TableBody>
+									{ for _, row := range part.Rows {
+										<ui.TableRow>
+											{ for _, cell := range row {
+												<ui.TableCell class="align-top whitespace-normal">{ gsx.Raw(cell) }</ui.TableCell>
 											} }
-										} }
-									</section>
-								} }
-							</article>
-							<DocsAround v={v}/>
-							{ if v.Docs.Edit(v.Doc) != "" {
-								<ui.Button
-									variant="link"
-									size="sm"
-									class="mt-2 px-0 text-muted-foreground"
-									href={v.Docs.Edit(v.Doc)}
-									rel="noopener"
-									id="docs-edit"
-								>
-									{ locales.ScreensDocsEdit }
-								</ui.Button>
-							} }
-						</div>
-						{ if len(v.Doc.Headings) > 0 {
-							// The page's sections at the other side: a gsxui Sidebar that does not fold, staying in view.
-							<ui.Sidebar
-								collapsible="none"
-								id="docs-toc"
-								class="sticky top-20 hidden h-auto max-h-[calc(100svh-6rem)] w-56 shrink-0 self-start overflow-y-auto bg-transparent xl:flex"
-							>
-								<ui.SidebarGroup>
-									<ui.SidebarGroupLabel>{ locales.ScreensDocsOnThisPage }</ui.SidebarGroupLabel>
-									<ui.SidebarGroupContent>
-										<DocsSections v={v}/>
-									</ui.SidebarGroupContent>
-								</ui.SidebarGroup>
-							</ui.Sidebar>
+										</ui.TableRow>
+									} }
+								</ui.TableBody>
+							</ui.Table>
 						} }
-					</div>
-				</ui.SidebarInset>
-			</ui.SidebarProvider>
-		</body>
-	</html>
+					} }
+				</section>
+			} }
+		</article>
+		<DocsAround v={v}/>
+		{ if v.Docs.Edit(v.Doc) != "" {
+			<ui.Button
+				variant="link"
+				size="sm"
+				class="mt-2 px-0 text-muted-foreground"
+				href={v.Docs.Edit(v.Doc)}
+				rel="noopener"
+				id="docs-edit"
+			>
+				{ locales.ScreensDocsEdit }
+			</ui.Button>
+		} }
+	</Layout>
 }
 
-// DocsList is the docs' pages, the one being read marked, in the groups the docs' front page lists them in
-// (app.Docs.Groups): gsxui's Sidebar groups and menus. The Sidebar renders it twice, once for the side and once
-// for what slides in on a phone, so nothing in it has an id.
-component DocsList(v DocsView) {
-	{ for _, group := range v.Docs.Groups() {
-		<ui.SidebarGroup>
-			{ if group.Name != "" {
-				<ui.SidebarGroupLabel lang="en" dir="ltr">{ group.Name }</ui.SidebarGroupLabel>
-			} }
-			<ui.SidebarGroupContent>
-				<ui.SidebarMenu>
-					{ for _, other := range group.Pages {
-						<ui.SidebarMenuItem>
-							<ui.SidebarMenuButton
-								href={docsURL(ctx, other)}
-								isActive={other.Slug == v.Doc.Slug}
-								class="h-auto py-1.5 whitespace-normal"
-							>
-								<span lang="en" dir="ltr">{ other.Title }</span>
-							</ui.SidebarMenuButton>
-						</ui.SidebarMenuItem>
-					} }
-				</ui.SidebarMenu>
-			</ui.SidebarGroupContent>
-		</ui.SidebarGroup>
+// DocsBrand is what the docs' header begins with: the docs' name, the way to the app's front page, and that these
+// are its docs.
+component DocsBrand(v DocsView) {
+	<a href={intl.URL(ctx, "/")} class="flex items-center gap-2 font-semibold">
+		<span translate="no">{ v.Docs.Name }</span>
+		<ui.Badge variant="secondary">{ locales.ScreensDocs }</ui.Badge>
+	</a>
+}
+
+// DocsLinks is the way to the repository, for docs that name one: in the header where there is room, under its
+// menu where there is not. The layout shows it in both, so nothing in it has an id.
+component DocsLinks(v DocsView) {
+	{ if v.Docs.Repo != "" {
+		<ui.Button variant="ghost" size="sm" href={v.Docs.Repo} rel="noopener" data-docs-repo>
+			{ locales.ScreensDocsOnGithub(docsRepo(v.Docs.Repo)) }
+		</ui.Button>
 	} }
 }
 
-// DocsSections is the sections of the page being read, each a link to it, as a gsxui Sidebar menu: at the side,
-// and in what comes down from the top where there is no side, which closes as one is chosen (closes).
-component DocsSections(v DocsView, closes bool) {
-	<ui.SidebarMenu lang="en" dir="ltr">
-		{ for _, h := range v.Doc.Headings {
-			<ui.SidebarMenuItem>
-				<ui.SidebarMenuButton
-					size="sm"
-					href={"#" + h.ID}
-					class={ "h-auto py-1 whitespace-normal text-muted-foreground", docsDepth(h.Depth) }
-					{ if closes {
-						data-gsxui-dialog-close
+// DocsTools is what the docs' header always has: the search, the way to the theme editor, and light or dark.
+// The search is as gsxui's own docs have it: every page and every section of one, by its title. Cmd-K (Ctrl-K)
+// opens it.
+component DocsTools(v DocsView) {
+	<ui.CommandDialog
+		title={locales.ScreensDocsSearch |> text}
+		description={locales.ScreensDocsSearch |> text}
+		trigger={
+			<ui.DialogTrigger
+				id="docs-search"
+				aria-label={locales.ScreensDocsSearch}
+				class="inline-flex h-8 items-center gap-2 rounded-lg border bg-muted/50 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted sm:w-56"
+			>
+				<icon.Search class="size-4"/>
+				<span class="hidden flex-1 text-start sm:inline">{ locales.ScreensDocsSearch }</span>
+				<ui.Kbd class="hidden sm:inline-flex">⌘K</ui.Kbd>
+			</ui.DialogTrigger>
+		}
+	>
+		<ui.CommandInput placeholder={locales.ScreensDocsSearch |> text}/>
+		<ui.CommandList>
+			<ui.CommandEmpty>{ locales.ScreensDocsNone }</ui.CommandEmpty>
+			{ for _, page := range v.Docs.Pages {
+				<ui.CommandGroup heading={page.Title} lang="en" dir="ltr">
+					<ui.CommandItem data-href={docsURL(ctx, page)}>{ page.Title }</ui.CommandItem>
+					{ for _, h := range page.Headings {
+						<ui.CommandItem data-href=f`@{docsURL(ctx, page)}#@{h.ID}` value={page.Title + " " + h.Title}>
+							{ h.Title }
+						</ui.CommandItem>
 					} }
-				>
-					<span>{ h.Title }</span>
-				</ui.SidebarMenuButton>
-			</ui.SidebarMenuItem>
+				</ui.CommandGroup>
+			} }
+		</ui.CommandList>
+	</ui.CommandDialog>
+	<ThemeLink/>
+	<ThemeToggle/>
+}
+
+// DocsList is the docs' pages, the one being read marked, in the groups the docs' front page lists them in
+// (app.Docs.Groups), as gsxui's own docs list theirs. The layout shows it at the side and under the header's menu,
+// so nothing in it has an id. Its links load the page they lead to, as every way to a page of the docs does.
+component DocsList(v DocsView) {
+	<div data-docs-list class="flex flex-col gap-4 text-sm" hx-boost:inherited="false">
+		{ for _, group := range v.Docs.Groups() {
+			<div class="flex flex-col gap-1">
+				{ if group.Name != "" {
+					<h3 class="px-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase" lang="en" dir="ltr">
+						{ group.Name }
+					</h3>
+				} }
+				{ for _, other := range group.Pages {
+					<a
+						href={docsURL(ctx, other)}
+						lang="en"
+						dir="ltr"
+						class={
+							"rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
+							"bg-accent text-accent-foreground": other.Slug == v.Doc.Slug
+						}
+						{ if other.Slug == v.Doc.Slug {
+							aria-current="page"
+						} }
+					>
+						{ other.Title }
+					</a>
+				} }
+			</div>
 		} }
-	</ui.SidebarMenu>
+	</div>
+}
+
+// DocsSections is the sections of the page being read, each a link to it, as gsxui's own docs list theirs: the one
+// being read is marked as the page scrolls, by gsxui's own script (web/gsxui-site/web/site.js).
+component DocsSections(v DocsView) {
+	{ if len(v.Doc.Headings) > 0 {
+		<nav id="docs-toc" aria-label={locales.ScreensDocsOnThisPage} class="flex flex-col gap-3 text-sm">
+			<div class="font-medium">{ locales.ScreensDocsOnThisPage }</div>
+			<div class="flex flex-col gap-2" lang="en" dir="ltr">
+				{ for _, h := range v.Doc.Headings {
+					<a
+						data-site-toc-link
+						href={"#" + h.ID}
+						class={
+							"text-muted-foreground transition-colors hover:text-foreground data-[active]:font-medium data-[active]:text-foreground",
+							"ps-3": h.Depth == 3
+						}
+					>
+						{ h.Title }
+					</a>
+				} }
+			</div>
+		</nav>
+	} }
 }
 
 // DocsAround is the way to the page before the one being read and to the one after it, at its foot, each a gsxui
@@ -307,7 +252,8 @@ component DocsAround(v DocsView) {
 		<nav
 			id="docs-around"
 			aria-label={locales.ScreensDocs}
-			class="mt-10 grid max-w-3xl gap-3 border-t pt-6 sm:grid-cols-2"
+			class="mt-10 grid gap-3 border-t pt-6 sm:grid-cols-2"
+			hx-boost:inherited="false"
 		>
 			{ if docsBefore(v) != nil {
 				<a id="docs-previous" href={docsURL(ctx, *docsBefore(v))} class="rounded-lg">
@@ -346,29 +292,12 @@ func docsAfter(v DocsView) *app.Doc {
 	return after
 }
 
-// docsSide is the side the list of pages is at: where a line starts, in the reader's language. gsxui's Sidebar
-// takes a side of the window, not of the text.
-func docsSide(ctx context.Context) string {
-	if intl.Current(ctx).Dir() == "rtl" {
-		return "right"
-	}
-	return "left"
-}
-
 // docsURL is a docs page's address, from the tree, in the reader's language.
 func docsURL(ctx context.Context, d app.Doc) (string, error) {
 	if d.Slug == "" {
 		return structpages.URLFor(ctx, DocsIndex{})
 	}
 	return structpages.URLFor(ctx, DocsPage{}, "slug", d.Slug)
-}
-
-// docsDepth indents a section under a section.
-func docsDepth(depth int) string {
-	if depth > 2 {
-		return "ps-3"
-	}
-	return ""
 }
 
 // docsRepo is the repository's name as a reader knows it: owner/name.

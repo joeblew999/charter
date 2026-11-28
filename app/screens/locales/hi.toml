@@ -20,6 +20,7 @@ docs_edit = "इस पेज को GitHub पर संपादित कर�
 docs_previous = "पिछला पृष्ठ"
 docs_next = "अगला पृष्ठ"
 docs_search = "दस्तावेज़ों में खोजें"
+menu = "मेनू"
 docs_none = "कुछ नहीं मिला।"
 theme = "लाइट और डार्क के बीच बदलें"
 theme_pick = "थीम चुनें"

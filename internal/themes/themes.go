@@ -89,8 +89,9 @@ var connection string
 
 var keyed = regexp.MustCompile(`from ([0-9a-f]{16})\b`)
 
-// gsxuiScripts are the editor's scripts, in gsxui's web folder.
-var gsxuiScripts = []string{"theme.js", "theme-state.js", "theme-preview.js"}
+// gsxuiScripts are the editor's scripts and gsxui's own site's (site.js: what marks the section of a docs page being
+// read as it scrolls), in gsxui's web folder.
+var gsxuiScripts = []string{"theme.js", "theme-state.js", "theme-preview.js", "site.js"}
 
 // Write writes gsxui's theme editor into the app in dir when what is there is not what the app's preset, its gsxui
 // and this package give; with check it writes nothing and fails then. An app with no gsxui has none.

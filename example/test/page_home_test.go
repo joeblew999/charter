@@ -115,3 +115,29 @@ func TestANotesRowOpensByItself(t *testing.T) {
 		t.Errorf("the header does not mark the page being shown: %q", here)
 	}
 }
+
+// The app's own pages fit their window on a phone, a tablet, a small laptop and a desk, signed in and not: nothing
+// is wider than the window and nothing in the header is cut off. On a phone the ways to the pages are under the
+// header's menu, and lead where they say.
+func TestThePagesFitTheirWindow(t *testing.T) {
+	t.Parallel()
+	page := apptest.Browser(t)
+	fits := func() {
+		for _, width := range []int{360, 390, 768, 1024, 1280} {
+			page.Wide(width)
+			for _, path := range []string{at(pages.Home{}), at(pages.BuiltIndex{})} {
+				page.Open(path)
+				page.Fits()
+			}
+		}
+	}
+	fits()
+	page.SignUp(at(screens.SignInPage{}), "Fits")
+	fits()
+	page.Phone()
+	page.Open(at(pages.Home{}))
+	page.Click("[data-layout-menu] button")
+	page.Click(`[data-layout-menu-links] a[href="` + at(pages.BuiltIndex{}) + `"]`)
+	page.WaitText("h1", "How it's built")
+	page.Fits()
+}

@@ -1,14 +1,14 @@
 # intl.sum: the source text each translation was made from (charter build writes it: commit it, don't edit it).
-file pages/screens/docs.gsx bf640ddbdd0f
+file pages/screens/docs.gsx 13af785a2990
+file pages/screens/layout.gsx 4d28422dd3d4
 file pages/screens/theme-picker.gsx 57acfe22a670
 file pages/screens/theme-toggle.gsx 6415a9941641
-file pages/screens/theme.gsx 18c581703e60
+file pages/screens/theme.gsx af0d9ab093fb
 file text:gsxui.breadcrumb d6dc6b5ebe19
 file text:gsxui.displays_the_mobile_sidebar 2a174a65adee
 file text:gsxui.more d47d7cb0e4f8
 file text:gsxui.sidebar f7efa7bc1fc5
 file text:gsxui.toggle_sidebar 1d4c17db52f7
-file text:screens.close 7d9eb7acb13e
 file text:screens.docs 7af023c43013
 file text:screens.docs_edit 073fd1036ab1
 file text:screens.docs_menu 99af6606ff9d
@@ -18,6 +18,7 @@ file text:screens.docs_on_github 3b16422e27b3
 file text:screens.docs_on_this_page b5658fc8edda
 file text:screens.docs_previous 1208ec01f223
 file text:screens.docs_search 3c1004b71f0f
+file text:screens.menu 99af6606ff9d
 file text:screens.theme 19d8d295e681
 file text:screens.theme_own 21b111cbfe6e
 file text:screens.theme_pick fb92afc484e9

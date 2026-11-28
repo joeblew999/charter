@@ -46,13 +46,9 @@ component AdminLink(attrs gsx.Attrs) {
 
 // adminPage is the pages' frame: the way back, the pages' names with the one shown marked, and the page.
 component adminPage(title intl.Msg, about intl.Msg, here string, children gsx.Node) {
-	<!DOCTYPE html>
-	<html { app.HTML(ctx)... }>
-		<head>
-			<app.Head title={title |> text} description={about |> text}/>
-		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased" { app.Body()... }>
-			<main class="mx-auto flex max-w-2xl flex-col gap-6 p-4 pt-10">
+	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
+	<Layout mode={LayoutMarketing} title={title |> text} description={about |> text} brand={<LayoutBrand/>} tools={<ThemeToggle/>}>
+		<div class="mx-auto flex w-full max-w-2xl flex-col gap-6">
 				<ui.Button variant="link" class="self-start px-0" href={intl.URL(ctx, "/")}>
 					<icon.ArrowLeft class="rtl:rotate-180"/>
 					<span translate="no">{ app.Name(ctx) }</span>
@@ -68,9 +64,8 @@ component adminPage(title intl.Msg, about intl.Msg, here string, children gsx.No
 					<p class="text-sm text-muted-foreground">{ about }</p>
 				</div>
 				{ children }
-			</main>
-		</body>
-	</html>
+		</div>
+	</Layout>
 }
 
 component adminTab(href string, name intl.Msg, here bool) {

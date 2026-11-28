@@ -41,13 +41,13 @@ var Screens = &registry.Registry{
 				"    preferences screens.Preferences `route:\"/preferences Preferences\"`"},
 		{Name: "theme-toggle", Gsxui: []string{"button", "icon"},
 			Use: "  <screens.ThemeToggle/>        in the header: light and dark, of the app's gsxui theme (charter run ui:theme)"},
-		{Name: "theme", Gsxui: []string{"alert", "button", "popover", "icon"}, Needs: []string{"theme-toggle"},
+		{Name: "theme", Gsxui: []string{"alert", "button", "popover", "icon"}, Needs: []string{"layout", "theme-toggle"},
 			Use: "  gsxui's theme editor, in the app: a reader chooses a style, light or dark, a base colour, a theme, a chart\n" +
 				"  colour, a menu accent, a radius and fonts, and the app has it from then on. In the page tree:\n" +
 				"    theme screens.Theme `route:\"/theme Theme\"`\n" +
 				"  <screens.ThemeLink/>          in the header, beside the theme toggle: the way there\n" +
 				"  (go tool charter check --fix then writes gsxui's editor into the app, and web/main.js loads it)"},
-		{Name: "sign-in", Gsxui: []string{"badge", "button", "card", "input", "native-select", "separator", "icon"}, Schema: api.AccountsSchema,
+		{Name: "sign-in", Gsxui: []string{"badge", "button", "card", "input", "native-select", "separator", "icon"}, Needs: []string{"layout", "theme-toggle"}, Schema: api.AccountsSchema,
 			Use: "  the app's own people, signing in with a passkey; its routes in the page tree, and the app's Auth (api.NewAuth with api.People):\n" +
 				"    signIn  screens.SignIn  `route:\"/sign-in SignIn\"`\n" +
 				"    account screens.Account `route:\"/account Account\"`\n" +
@@ -58,7 +58,10 @@ var Screens = &registry.Registry{
 				"    admin screens.Admin `route:\"/admin Admin\"`\n" +
 				"  <screens.AdminLink/>          in the header: there for whoever may open it\n" +
 				"  (&app.App{Facts: []app.Fact{{Label: locales.Notes, Value: …}}, …}: lines of the app's own on its overview)"},
-		{Name: "docs", Gsxui: []string{"badge", "button", "separator", "command", "kbd", "sheet", "sidebar", "breadcrumb", "item", "table", "icon"}, Needs: []string{"theme-toggle", "theme"},
+		{Name: "layout", Gsxui: []string{"popover", "icon"},
+			Use: "  the document around a page, as gsxui's own site has it: a centred page, a page of docs, or a workspace\n" +
+				"    <screens.Layout mode={screens.LayoutMarketing} title={…} description={…} brand={<screens.LayoutBrand/>} links={…} tools={…}>…</screens.Layout>"},
+		{Name: "docs", Gsxui: []string{"badge", "button", "command", "kbd", "item", "table", "icon"}, Needs: []string{"layout", "theme-toggle", "theme"},
 			Use: "  the docs' pages (docs/*.md), in the page tree, with the docs named in the App:\n" +
 				"    docs screens.Docs `route:\"/docs Docs\"`\n" +
 				"    Docs: &app.Docs{Name: \"My App\", Pages: docs.Pages}"},

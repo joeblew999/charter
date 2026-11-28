@@ -22,7 +22,7 @@ func TestWrite(t *testing.T) {
 	b, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.json"))
 	code := string(b)
 	for _, want := range []string{`"Title": "Start"`, `"Slug": "pages"`, `"Description": "How pages work."`, `"Description": "What it is. See the pages."`, `"ID": "routes"`,
-		`href=\"pages#routes\"`, `href=\"./\"`, `id=\"routes\" class=\"scroll-mt-20\"\u003eRoutes\u003c/h2`, `\u003cpre\u003e\u003ccode\u003e`, `span class=\"ts-number\"\u003e1\u003c/span`} {
+		`href=\"pages#routes\"`, `href=\"./\"`, `id=\"routes\" data-doc-heading=\"\" tabindex=\"-1\" class=\"scroll-mt-20\"\u003eRoutes\u003c/h2`, `\u003cpre\u003e\u003ccode\u003e`, `span class=\"ts-number\"\u003e1\u003c/span`} {
 		if !strings.Contains(code, want) {
 			t.Errorf("no %s in:\n%s", want, code)
 		}
@@ -272,9 +272,9 @@ func TestAPageIsSectionsAndTables(t *testing.T) {
 		t.Errorf("the table: %+v", table)
 	}
 	for part, want := range map[string]string{
-		s[1].Parts[0].HTML: `<ul class="` + ListClass + `">`,
+		s[1].Parts[0].HTML:       `<ul class="` + ListClass + `">`,
 		s[1].Parts[0].HTML + " ": `class="` + LinkClass + `"`,
-		s[2].Parts[0].HTML: `<ol class="` + OrderedClass + `">`,
+		s[2].Parts[0].HTML:       `<ol class="` + OrderedClass + `">`,
 	} {
 		if !strings.Contains(part, want) {
 			t.Errorf("no %s in %s", want, part)

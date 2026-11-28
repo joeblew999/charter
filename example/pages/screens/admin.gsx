@@ -47,31 +47,32 @@ component AdminLink(attrs gsx.Attrs) {
 
 // adminPage is the pages' frame: the way back, the pages' names with the one shown marked, and the page.
 component adminPage(title intl.Msg, about intl.Msg, here string, children gsx.Node) {
-	<!DOCTYPE html>
-	<html { app.HTML(ctx)... }>
-		<head>
-			<app.Head title={title |> text} description={about |> text}/>
-		</head>
-		<body class="min-h-svh bg-background font-sans text-foreground antialiased" { app.Body()... }>
-			<main class="mx-auto flex max-w-2xl flex-col gap-6 p-4 pt-10">
-				<ui.Button variant="link" class="self-start px-0" href={intl.URL(ctx, "/")}>
-					<icon.ArrowLeft class="rtl:rotate-180"/>
-					<span translate="no">{ app.Name(ctx) }</span>
-				</ui.Button>
-				<nav id="admin-nav" class="flex flex-wrap gap-1" aria-label={locales.ScreensAdmin}>
-					<adminTab href={AdminOverview{} |> url} name={locales.ScreensAdminOverview} here={here == "overview"}/>
-					<adminTab href={PeoplePage{} |> url} name={locales.ScreensPeople} here={false}/>
-					<adminTab href={AdminSystem{} |> url} name={locales.ScreensAdminSystem} here={here == "system"}/>
-					<adminTab href={AdminDatabase{} |> url} name={locales.ScreensAdminDatabase} here={here == "database"}/>
-				</nav>
-				<div class="flex flex-col gap-1">
-					<h1 class="text-xl font-semibold">{ title }</h1>
-					<p class="text-sm text-muted-foreground">{ about }</p>
-				</div>
-				{ children }
-			</main>
-		</body>
-	</html>
+	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
+	<Layout
+		mode={LayoutMarketing}
+		title={title |> text}
+		description={about |> text}
+		brand={ <LayoutBrand/> }
+		tools={ <ThemeToggle/> }
+	>
+		<div class="mx-auto flex w-full max-w-2xl flex-col gap-6">
+			<ui.Button variant="link" class="self-start px-0" href={intl.URL(ctx, "/")}>
+				<icon.ArrowLeft class="rtl:rotate-180"/>
+				<span translate="no">{ app.Name(ctx) }</span>
+			</ui.Button>
+			<nav id="admin-nav" class="flex flex-wrap gap-1" aria-label={locales.ScreensAdmin}>
+				<adminTab href={AdminOverview{} |> url} name={locales.ScreensAdminOverview} here={here == "overview"}/>
+				<adminTab href={PeoplePage{} |> url} name={locales.ScreensPeople} here={false}/>
+				<adminTab href={AdminSystem{} |> url} name={locales.ScreensAdminSystem} here={here == "system"}/>
+				<adminTab href={AdminDatabase{} |> url} name={locales.ScreensAdminDatabase} here={here == "database"}/>
+			</nav>
+			<div class="flex flex-col gap-1">
+				<h1 class="text-xl font-semibold">{ title }</h1>
+				<p class="text-sm text-muted-foreground">{ about }</p>
+			</div>
+			{ children }
+		</div>
+	</Layout>
 }
 
 component adminTab(href string, name intl.Msg, here bool) {

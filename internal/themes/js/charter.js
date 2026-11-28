@@ -5,6 +5,10 @@
 //
 // A reader's choice is kept by the browser as gsxui's share code and as the theme's CSS (gsxui's themeCSS), which
 // app.Head puts on every page before its first paint.
+// gsxui's own site's script, as it is: on a page of docs it marks, in the list of the page's sections, the one
+// being read as the page scrolls.
+import "./web/site.js";
+
 const KEPT = "gsxui-preset";
 const KEPT_CSS = "gsxui-preset-css";
 

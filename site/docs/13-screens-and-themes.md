@@ -46,6 +46,32 @@ A copy you have not changed follows charter: `check` says when charter writes it
 
 A screen's text follows the same way, message by message and in every language: one you have as charter wrote it takes charter's new wording, and one you worded yourself keeps yours. `locales/intl.sum` records which is which (its `file text:…` lines), so you never mark anything.
 
+## The layout
+
+```sh
+go tool charter add screen:layout
+```
+
+One document is around every page of an app: `screens.Layout`. It is gsxui's own site's shell, taken from gsxui's source, with the widths and breakpoints gsxui gives it. A page names its mode and hands over what goes where; it writes no `<!DOCTYPE html>`, no header and no width.
+
+| Mode | For | What it is |
+|---|---|---|
+| `LayoutMarketing` | a front page, a page of the app | a header, the page centred under it, a footer |
+| `LayoutDocs` | a page to read | the pages at one side, an article of a readable width, its sections at the other |
+| `LayoutWorkspace` | the theme editor | the whole window under the header, no footer |
+
+| A page hands over | Where it is shown |
+|---|---|
+| `brand` | at the start of the header (`<screens.LayoutBrand/>` is the app's name, linked to the front page) |
+| `links` | in the header where there is room; under its "Menu" where there is not. Shown in both, so nothing in them has an id |
+| `tools` | in the header, always: the theme switch, who is signed in |
+| `navigation`, `contents` | a docs page's sides; below the widths gsxui hides them at, `navigation` is under the menu |
+| `footer` | under the page |
+
+What is checked: `check` fails a page that writes a document of its own. A browser test opens each page at a phone's, a tablet's, a laptop's and a desk's width and fails one that is wider than its window, or has something in its header cut off (`page.Wide(390)`, `page.Fits()`).
+
+What is not: how a page looks at a width. And inside its part of the layout a page still places its own elements, with Tailwind's classes.
+
 ## Themes
 
 The look is gsxui's, all of it, and so is the way to change it: [gsxui's theme editor](https://ui.gsxhq.dev/theme). charter adds no colour, no setting and no control of its own. What the editor makes is a preset:
