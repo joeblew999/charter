@@ -3,7 +3,6 @@
 package cloud
 
 import (
-	"database/sql"
 	"net/http"
 	"time"
 )
@@ -18,7 +17,6 @@ func Allow(string, string) (bool, error)           { return true, ErrNotCloudfla
 func HTTPClient() *http.Client                     { return &http.Client{} }
 func StaticAssets(string) http.Handler             { return http.NotFoundHandler() }
 func Open(string) (DB, error)                      { return DB{}, ErrNotCloudflare }
-func SQL(string) (*sql.DB, error)                  { return nil, ErrNotCloudflare }
 func Query[T any](DB, string, ...any) ([]T, error) { return nil, ErrNotCloudflare }
 func Exec(DB, string, ...any) error                { return ErrNotCloudflare }
 func ExecRows(DB, string, ...any) (int64, error)   { return 0, ErrNotCloudflare }

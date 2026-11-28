@@ -3,13 +3,11 @@
 package cloud
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"syscall/js"
 
 	"github.com/syumai/workers-go/cloudflare"
-	workersd1 "github.com/syumai/workers-go/cloudflare/d1"
 
 	"github.com/joeblew999/charter/internal/promise"
 )
@@ -253,17 +251,4 @@ func errUnwrapped(err error) error {
 		return inner.Unwrap()
 	}
 	return err
-}
-
-// SQL is the database bound as name for database/sql, through workers-go's own driver
-// (github.com/syumai/workers-go/cloudflare/d1): for code written the workers-go way. The caller closes it.
-//
-// It is outside the request's session: workers-go's driver calls the binding itself, so every statement through it
-// is answered by the primary, replicas or not, and its writes give the reader no bookmark.
-func SQL(name string) (*sql.DB, error) {
-	connector, err := workersd1.OpenConnector(name)
-	if err != nil {
-		return nil, fmt.Errorf("d1: %s: %w", name, err)
-	}
-	return sql.OpenDB(connector), nil
 }

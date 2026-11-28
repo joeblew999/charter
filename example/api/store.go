@@ -54,14 +54,18 @@ func (s d1) Remove(_ context.Context, id int64) error {
 	return db.ForgetNote(s.db, id)
 }
 
+// RemoveBy takes away everything someone wrote, and what was recorded of each note in one batch: one call to the
+// database for all of them, and all of it happens or none.
 func (s d1) RemoveBy(_ context.Context, authorID string) error {
 	gone, err := db.RemoveNotesBy(s.db, authorID)
-	for _, note := range gone {
-		if err == nil {
-			err = db.ForgetNote(s.db, note.ID)
-		}
+	if err != nil {
+		return err
 	}
-	return err
+	forget := make([]cloud.Statement, len(gone))
+	for i, note := range gone {
+		forget[i] = db.ForgetNoteStmt(note.ID)
+	}
+	return cloud.Batch(s.db, forget...)
 }
 
 func (s d1) Get(_ context.Context, id int64) (Note, error) {

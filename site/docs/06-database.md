@@ -104,6 +104,32 @@ INSERT INTO notes (body) VALUES (?) RETURNING *;
 
 Select whole rows, and a new column needs no change here.
 
+### Every statement is checked
+
+sqlc works out each query against `db/schema.sql`: a column that is not there, an argument or a result of the wrong type, fails `charter check`, and the Go that calls the function with the wrong types does not compile. So what is checked is every statement, as long as every statement is a query. `charter check` holds an app to that (its part `statements`):
+
+- **No statement is written in Go.** A call that hands the database SQL as text (`cloud.Query`, `cloud.One`, `cloud.Exec`, `cloud.ExecRows`, `cloud.Stmt`, a `cloud.Statement{…}` written out) outside `db/queries.gen.go` fails the check, with the file and the line. Those functions are what the generated code is made of, not something to call.
+- **Several statements in one transaction** are `cloud.Batch` of the `…Stmt` function charter writes beside each query that returns no rows:
+
+  ```go
+  forget := make([]cloud.Statement, len(gone))
+  for i, note := range gone {
+  	forget[i] = db.ForgetNoteStmt(note.ID)
+  }
+  return cloud.Batch(s.db, forget...)
+  ```
+
+- **Nothing reaches D1 around charter.** workers-go's `database/sql` driver (`workers-go/cloudflare/d1`) is checked by nothing and is in no request's session, so its reads are the primary's and its writes give no bookmark ([reads near the reader](#reads-near-the-reader)). Importing it fails the check.
+
+charter holds itself to the same. The statements of its sign-in (the tables `users`, `passkeys`, `tokens`, `ceremonies`) are a `queries.sql` of its own, written as Go by the same generator, and a test fails charter if any statement in its library is written in Go. An app owns its copy of those tables, in its own `db/schema.sql`, and may add to them; `charter check` runs charter's statements against the app's schema, so a column of theirs that was dropped, renamed or retyped is said there:
+
+```
+✗ statements: db/schema.sql no longer has the tables of the sign-in screen (users, passkeys, tokens, ceremonies) as charter reads and writes them:
+  queries.sql:8:30: column "role" does not exist
+```
+
+What is not checked this way, and cannot be: the admin screen asks a database what tables it has and how many rows each holds, which is SQLite's own catalogue and no table of a schema; and inside `cloud`, Go calls Cloudflare's D1 by name, which only running on a Worker proves, as the tests do.
+
 ## One definition
 
 A column's comment becomes its tag in Go, so the row is also what the API serves.
@@ -251,7 +277,7 @@ What to know:
 - **A read that must be the newest says so:** `cloud.Newest()` before it. It is the one line an app may need, after a write that someone else made and this reader was told of some other way.
 - **The bookmark is given as the answer's headers go.** A statement that runs after that (in a stream, or in work left for after the answer) is not in it.
 - **What is brought as a bookmark and is none costs nothing.** One that is malformed starts nothing; one D1 does not know is given up for the primary.
-- **`cloud.SQL`** is workers-go's own `database/sql` driver, which knows no session: what goes through it is answered by the primary.
+- **Nothing reads D1 another way.** workers-go's own `database/sql` driver knows no session: what went through it would be answered by the primary and give no bookmark. `charter check` fails an app that imports it.
 
 Who answered is said to a request that asks which runtime answered, as `charter run cold` does:
 

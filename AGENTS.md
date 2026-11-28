@@ -78,6 +78,10 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   when someone asks for it. Times and numbers are kept as such and shown through Intl.
 - **A table is written down once**, in `db/schema.sql`. Migrations, the queries' Go and the API's row types come
   from it; none is hand-written.
+- **No statement is written in Go**, in an app or in charter. Each is a query of a `queries.sql`, checked by sqlc
+  against its schema and written as a function (`internal/dbcode`); charter's own, for the sign-in's tables, are
+  `internal/accounts`. `charter check` fails an app that hands `cloud` SQL as text or reaches D1 around it, and an
+  app whose schema no longer fits charter's statements; a test fails charter for the same.
 - **A reader sees their own writes, and no app says how.** A request's statements on D1 share a session; the answer
   to a request that read or wrote gives a bookmark that the next request brings back, so a reader never sees the
   database earlier than they have seen it (`cloud/session.go`, `app/bookmark.go`). Who someone

@@ -11,6 +11,7 @@ import (
 
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/cloud"
+	"github.com/joeblew999/charter/internal/accounts"
 )
 
 // What an admin sees of the system: who there is, what the Worker is built from and bound to, and what its
@@ -203,6 +204,9 @@ func (a *Auth) Databases(r *http.Request) ([]Database, error) {
 			return nil, err
 		}
 		d := Database{Binding: b.Name, Tables: []Table{}, Migrations: []Migration{}}
+		// The three statements here are the only ones charter writes in Go, and cannot be otherwise: they ask what
+		// tables a database has (SQLite's own catalogue), count one by a name read from there, and read wrangler's
+		// record of its migrations. None is a table of a schema, so there is nothing to type them against.
 		tables, err := cloud.Query[struct {
 			Name string `json:"name"`
 		}](db, "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name <> 'd1_migrations' ORDER BY name")
@@ -236,22 +240,16 @@ func (a *Auth) Databases(r *http.Request) ([]Database, error) {
 }
 
 // invitations are the invitations a store of started sign-ins holds, from its rows.
-func invitations(rows []startedRow) []Invitation {
+func invitations(rows []accounts.CeremoniesRow) []Invitation {
 	out := []Invitation{}
 	for _, row := range rows {
-		expires, _ := time.Parse("2006-01-02 15:04:05", row.Expires)
+		expires, _ := time.Parse("2006-01-02 15:04:05", row.ExpiresAt)
 		out = append(out, Invitation{ID: strings.TrimPrefix(row.ID, invitePrefix), Role: row.Data, Expires: expires})
 	}
 	return out
 }
 
-type startedRow struct {
-	ID      string `json:"id"`
-	Data    string `json:"data"`
-	Expires string `json:"expires_at"`
-}
-
 func (a d1Accounts) Invitations(context.Context) ([]Invitation, error) {
-	rows, err := cloud.Query[startedRow](a.db, "SELECT id, data, expires_at FROM ceremonies WHERE id LIKE ? AND expires_at > CURRENT_TIMESTAMP ORDER BY expires_at", invitePrefix+"%")
+	rows, err := accounts.StartedLike(a.db, invitePrefix+"%")
 	return invitations(rows), err
 }

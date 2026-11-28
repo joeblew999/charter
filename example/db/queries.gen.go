@@ -144,6 +144,11 @@ func ForgetNote(db cloud.DB, noteID int64) error {
 	return cloud.Exec(db, qForgetNote, noteID)
 }
 
+// ForgetNoteStmt is ForgetNote as a statement of a cloud.Batch.
+func ForgetNoteStmt(noteID int64) cloud.Statement {
+	return cloud.Stmt(qForgetNote, noteID)
+}
+
 const qActivityBefore = "SELECT id, kind, note_id, author, notes, created_at FROM activity WHERE id < ? ORDER BY id DESC LIMIT ?"
 
 // ActivityBefore is what happened before a position, newest first.

@@ -14,6 +14,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/joeblew999/charter/internal/accounts"
+
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/cloud"
 )
@@ -330,16 +332,6 @@ func SeedPerson(ctx context.Context, accounts Accounts, who Person, token string
 
 type d1Accounts struct{ db cloud.DB }
 
-type personRow struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Role   string `json:"role"`
-	Scopes string `json:"scopes"`
-	Kind   string `json:"kind"`
-}
-
-func (r personRow) person() Person { return Person{ID: r.ID, Name: r.Name, Role: r.Role} }
-
 // stamp is a time as SQLite's CURRENT_TIMESTAMP writes it, so the two compare as text.
 func stamp(t time.Time) string { return t.UTC().Format("2006-01-02 15:04:05") }
 
@@ -350,31 +342,33 @@ func none(err error) error {
 	return err
 }
 
+// Every statement below is one of internal/accounts' queries.sql, typed against the tables as an app's are.
+
 func (a d1Accounts) ByToken(_ context.Context, hash string) (Person, string, []string, error) {
-	row, err := cloud.One[personRow](a.db, "SELECT users.id, users.name, users.role, tokens.scopes, tokens.kind FROM tokens JOIN users ON users.id = tokens.user_id WHERE tokens.hash = ? AND (tokens.expires_at IS NULL OR tokens.expires_at > CURRENT_TIMESTAMP)", hash)
-	return row.person(), row.Kind, strings.Fields(row.Scopes), none(err)
+	row, err := accounts.PersonByToken(a.db, hash)
+	return Person{ID: row.ID, Name: row.Name, Role: row.Role}, row.Kind, strings.Fields(row.Scopes), none(err)
 }
 
 func (a d1Accounts) Person(_ context.Context, id string) (Person, error) {
-	row, err := cloud.One[personRow](a.db, "SELECT id, name, role FROM users WHERE id = ?", id)
-	return row.person(), none(err)
+	row, err := accounts.Person(a.db, id)
+	return Person{ID: row.ID, Name: row.Name, Role: row.Role}, none(err)
 }
 
 func (a d1Accounts) Create(_ context.Context, p Person) error {
-	return cloud.Exec(a.db, "INSERT INTO users (id, name, role) VALUES (?, ?, ?)", p.ID, p.Name, p.Role)
+	return accounts.CreatePerson(a.db, p.ID, p.Name, p.Role)
 }
 
 func (a d1Accounts) Everyone(context.Context) ([]Person, error) {
-	rows, err := cloud.Query[personRow](a.db, "SELECT id, name, role FROM users ORDER BY created_at, id LIMIT 500")
+	rows, err := accounts.Everyone(a.db)
 	out := make([]Person, len(rows))
 	for i, row := range rows {
-		out[i] = row.person()
+		out[i] = Person{ID: row.ID, Name: row.Name, Role: row.Role}
 	}
 	return out, err
 }
 
 func (a d1Accounts) SetRole(_ context.Context, id, role string) error {
-	n, err := cloud.ExecRows(a.db, "UPDATE users SET role = ? WHERE id = ?", role, id)
+	n, err := accounts.SetRole(a.db, role, id)
 	if err == nil && n == 0 {
 		return ErrNoAccount
 	}
@@ -383,109 +377,59 @@ func (a d1Accounts) SetRole(_ context.Context, id, role string) error {
 
 func (a d1Accounts) Remove(_ context.Context, id string) error {
 	// One batch: all of it goes, or none.
-	return cloud.Batch(a.db,
-		cloud.Statement{Query: "DELETE FROM tokens WHERE user_id = ?", Args: []any{id}},
-		cloud.Statement{Query: "DELETE FROM passkeys WHERE user_id = ?", Args: []any{id}},
-		cloud.Statement{Query: "DELETE FROM users WHERE id = ?", Args: []any{id}})
+	return cloud.Batch(a.db, accounts.RemoveTokensOfStmt(id), accounts.RemovePasskeysOfStmt(id), accounts.RemovePersonStmt(id))
 }
 
 func (a d1Accounts) Passkeys(_ context.Context, userID string) ([]string, error) {
-	rows, err := cloud.Query[struct {
-		Credential string `json:"credential"`
-	}](a.db, "SELECT credential FROM passkeys WHERE user_id = ?", userID)
-	out := make([]string, len(rows))
-	for i, row := range rows {
-		out[i] = row.Credential
-	}
-	return out, err
+	return accounts.Passkeys(a.db, userID)
 }
 
 func (a d1Accounts) AddPasskey(_ context.Context, userID, id, credential string) error {
-	return cloud.Exec(a.db, "INSERT INTO passkeys (id, user_id, credential) VALUES (?, ?, ?) ON CONFLICT (id) DO UPDATE SET credential = excluded.credential", id, userID, credential)
+	return accounts.AddPasskey(a.db, id, userID, credential)
 }
 
 func (a d1Accounts) Issue(_ context.Context, userID, kind, name, hash string, scopes []string, expires time.Time) error {
-	var until any
+	var until *string
 	if !expires.IsZero() {
-		until = stamp(expires)
+		at := stamp(expires)
+		until = &at
 	}
-	return cloud.Exec(a.db, "INSERT INTO tokens (hash, user_id, kind, name, scopes, expires_at) VALUES (?, ?, ?, ?, ?, ?)", hash, userID, kind, name, strings.Join(scopes, " "), until)
+	return accounts.IssueToken(a.db, hash, userID, kind, name, strings.Join(scopes, " "), until)
 }
 
 func (a d1Accounts) Tokens(_ context.Context, userID string) ([]IssuedToken, error) {
-	rows, err := cloud.Query[struct {
-		ID      int64  `json:"id"`
-		Name    string `json:"name"`
-		Scopes  string `json:"scopes"`
-		Created string `json:"created_at"`
-	}](a.db, "SELECT id, name, scopes, created_at FROM tokens WHERE user_id = ? AND kind = ? ORDER BY id DESC", userID, TokenScheme)
+	rows, err := accounts.Tokens(a.db, userID, TokenScheme)
 	out := make([]IssuedToken, len(rows))
 	for i, row := range rows {
-		out[i] = IssuedToken{ID: row.ID, Name: row.Name, Scopes: strings.Fields(row.Scopes), Created: row.Created}
+		out[i] = IssuedToken{ID: row.ID, Name: row.Name, Scopes: strings.Fields(row.Scopes), Created: row.CreatedAt}
 	}
 	return out, err
 }
 
 func (a d1Accounts) Revoke(_ context.Context, userID string, id int64, hash string) error {
-	return cloud.Exec(a.db, "DELETE FROM tokens WHERE user_id = ? AND (id = ? OR hash = ?)", userID, id, hash)
+	return accounts.RevokeToken(a.db, userID, id, hash)
 }
 
 func (a d1Accounts) Begin(_ context.Context, id, data string, expires time.Time) error {
 	// What was started and never finished goes as the next one starts.
-	return cloud.Batch(a.db,
-		cloud.Stmt("DELETE FROM ceremonies WHERE expires_at < CURRENT_TIMESTAMP"),
-		cloud.Stmt("INSERT INTO ceremonies (id, data, expires_at) VALUES (?, ?, ?)", id, data, stamp(expires)))
+	return cloud.Batch(a.db, accounts.ForgetStartedStmt(), accounts.StartStmt(id, data, stamp(expires)))
 }
 
 func (a d1Accounts) Look(_ context.Context, id string) (string, error) {
-	row, err := cloud.One[struct {
-		Data string `json:"data"`
-	}](a.db, "SELECT data FROM ceremonies WHERE id = ? AND expires_at > CURRENT_TIMESTAMP", id)
-	return row.Data, none(err)
+	data, err := accounts.Started(a.db, id)
+	return data, none(err)
 }
 
 func (a d1Accounts) Take(_ context.Context, id string) (string, error) {
-	row, err := cloud.One[struct {
-		Data string `json:"data"`
-	}](a.db, "DELETE FROM ceremonies WHERE id = ? AND expires_at > CURRENT_TIMESTAMP RETURNING data", id)
-	return row.Data, none(err)
+	data, err := accounts.Finish(a.db, id)
+	return data, none(err)
 }
 
 // AccountsSchema is the tables D1Accounts keeps People in, as charter add screen:sign-in writes them into
-// db/schema.sql (the one place a table is written down; charter writes the migration from there).
-const AccountsSchema = `-- The app's own users (charter's sign-in screen, package api): who signed up and what they are (their role), the
--- passkeys they sign in with, the sessions and tokens they hold (never the token: its SHA-256), and sign-ins that were started.
-CREATE TABLE users (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  role TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE passkeys (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users (id),
-  credential TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE tokens (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  hash TEXT NOT NULL UNIQUE,
-  user_id TEXT NOT NULL REFERENCES users (id),
-  kind TEXT NOT NULL,
-  name TEXT NOT NULL DEFAULT '',
-  scopes TEXT NOT NULL,
-  expires_at TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE ceremonies (
-  id TEXT PRIMARY KEY,
-  data TEXT NOT NULL,
-  expires_at TEXT NOT NULL
-);
-`
+// db/schema.sql (the one place a table is written down; charter writes the migration from there). The statements
+// on them are internal/accounts' queries.sql, written as Go by the generator an app's queries are written by, and
+// charter check holds an app's own schema to them.
+var AccountsSchema = accounts.Schema
 
 // Everyone is the app's people, for whoever may manage them (People's Manage scope): a person signed in, or a
 // program with a token that has it.

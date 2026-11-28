@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/joeblew999/charter/internal/accounts"
 	"github.com/joeblew999/charter/internal/command/intl"
 	"github.com/joeblew999/charter/internal/dbcode"
 	"github.com/joeblew999/charter/internal/docsgen"
@@ -26,6 +27,9 @@ import (
 //	generate   the messages, the components' Go and the browser's files, which everything after reads
 //	fmt        charter fmt --check (with --fix: charter fmt)
 //	lint       charter lint (with --fix: go mod tidy)
+//	statements no statement on the database is written in Go: each is in db/queries.sql, checked against
+//	           db/schema.sql and written as a function. And the schema still has the sign-in screen's tables as
+//	           charter reads and writes them
 //	contract   the committed specs, Fern's settings and the queries' Go are what the contract gives (with --fix: they
 //	           are written), and each rate limit the contract declares is in wrangler.jsonc
 //	languages  every language complete, plural forms, unused messages, gsxui's own text, right-to-left set up
@@ -84,6 +88,9 @@ func Check(args []string) {
 		}
 	}
 	t.part("lint", func() error { return lint(p) })
+	if exists(filepath.Join(p.Root, "db", "schema.sql")) {
+		t.part("statements", func() error { return statementsTyped(p) })
+	}
 	if p.Spec != "" {
 		t.part("contract", func() error {
 			if err := spec(p, !*fix); err != nil {
@@ -112,6 +119,25 @@ func Check(args []string) {
 		})
 	}
 	t.done()
+}
+
+// statementsTyped fails where the app's Go gives the database a statement as text, or reaches it around charter:
+// what sqlc has not checked against db/schema.sql is found on a Worker, by whoever runs into it. And it fails an
+// app whose schema no longer has the tables of charter's sign-in as charter's own statements need them
+// (internal/accounts): the app owns its copy of them, and may add to it.
+func statementsTyped(p *project.Project) error {
+	written, err := dbcode.HandWritten(p.Root)
+	if err != nil {
+		return err
+	}
+	if len(written) > 0 {
+		return fmt.Errorf("these give the database a statement written in Go, which nothing checks against db/schema.sql:\n  %s\nwrite it in db/queries.sql (-- name: Something :one, :many, :exec or :execrows) and call the function charter check --fix writes for it in db/queries.gen.go; for several in one transaction, cloud.Batch of their …Stmt functions",
+			strings.Join(written, "\n  "))
+	}
+	if exists(filepath.Join(p.Root, "pages", "screens", "sign-in.gsx")) {
+		return dbcode.Fits(p.Root, "the sign-in screen (users, passkeys, tokens, ceremonies)", accounts.Schema, accounts.Queries)
+	}
+	return nil
 }
 
 // limitsDeclared fails when the contract declares a rate limit (x-rate-limit on an operation of the spec) that

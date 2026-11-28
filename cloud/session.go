@@ -32,7 +32,8 @@ import (
 // session to share: each starts at the primary.
 //
 // This is what workers-go lacks, and so charter's: its d1 package (v0.36.0, a database/sql driver) calls the binding
-// itself and knows no session and no bookmark, so SQL, which is that driver, reads the primary always. When
+// itself and knows no session and no bookmark, so a statement through it reads the primary always, gives its
+// reader no bookmark, and is checked by nothing: charter check fails an app that imports it. When
 // workers-go has sessions, this is to be built on them.
 //
 // The idea and its cases are Void's (voidzero-dev/void, runtime/db/session.ts), which leaves the carrying to each
