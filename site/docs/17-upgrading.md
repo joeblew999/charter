@@ -14,7 +14,7 @@ charter is before 1.0: a release may change how an app is written, and says so h
 
 Nothing of yours has to change.
 
-- **A shared page is one copy for every reader with no cookie.** It named eleven request headers it was drawn from, and Cloudflare kept a copy for each set of their values: a browser in another language, a page load and a link each got their own, drawn by the Worker. It names two now (`Vary: HX-Target, Cookie`).
+- **A shared page is one copy for every reader with no cookie.** It named eleven request headers it was drawn from, and Cloudflare kept a copy for each set of their values: a browser in another language, a page load and a link each got their own, drawn by the Worker. It names three now (`Vary: HX-Target, Cookie, X-Forwarded-Proto`).
 - **A shared page does not read the browser's languages**, so it offers another language only to a reader who has chosen one.
 - **A first page in the first language gives no `locale` cookie.** No cookie says the same.
 

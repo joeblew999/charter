@@ -28,9 +28,10 @@ import (
 //   - the answer gives no cookie.
 //
 // Cloudflare keeps a copy for each value of the request headers an answer names (Vary), compared as written, so a
-// kept page names only the two it is drawn from: Cookie (a reader with none, which is most, shares one copy; a
-// reader with a style or a language of their own gets theirs) and HX-Target (htmx asking for a part of the page
-// must not be given the page). Not the browser's languages, not how it was asked for: a page load, a link followed
+// kept page names only the three it is drawn from: Cookie (a reader with none, which is most, shares one copy; a
+// reader with a style or a language of their own gets theirs), HX-Target (htmx asking for a part of the page
+// must not be given the page) and X-Forwarded-Proto (a request over http is sent to https, not given the page:
+// the scheme is not part of what Cloudflare keeps a copy under). Not the browser's languages, not how it was asked for: a page load, a link followed
 // in the app, curl and a crawler get the same copy.
 //
 // Everything else the Worker answers says private (bookmark.go's give, worker/go.mjs): with its cache on, Cloudflare
@@ -83,5 +84,5 @@ func share(h http.Header, r *http.Request, status int) {
 		return // the page said something else itself (no-store)
 	}
 	h.Set("Cache-Control", sharedFor)
-	h.Set("Vary", "HX-Target, Cookie")
+	h.Set("Vary", "HX-Target, Cookie, X-Forwarded-Proto")
 }
