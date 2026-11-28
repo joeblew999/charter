@@ -3,3 +3,5 @@ export * from "./gsxui.js";
 import "./command.js";
 import "./dialog.js";
 import "./popover.js";
+import "./sidebar.js";
+import "./tooltip.js";

@@ -81,6 +81,8 @@ docs  screens.Docs `route:"/docs Docs"`
 
 That is the example's: its name, the pages charter build wrote from `docs/`, and where its repository is, for the links to a page's own file. `Summary` is a line about the app. The route is the docs screen's (`go tool charter add screen:docs`).
 
+Everything around a page is a gsxui component, so it has your app's theme and gsxui's own behaviour, and none of it is charter's own markup. The page itself is the one thing that is not: it is the HTML charter build makes of your Markdown, styled to match.
+
 The pages are one of [charter's screens](13-screens-and-themes.md): the list at the side, the page, its sections, the theme switch, a link to the repository and one to the page's own file on GitHub. They are built from your app's own gsxui components, so they have its look. This site's docs are shown by the same screen.
 
 ## What comes with them
@@ -96,10 +98,10 @@ While `charter dev` runs, saving a Markdown file reloads the page.
 
 ## What the pages have
 
-- The list of pages at the side, in groups, staying in view as the page is read.
-- The page's own sections at the other side.
-- At the foot of each page, the page before it and the page after it: the docs read from one end to the other.
-- On a phone, a bar that stays at the top: the list of pages slides in from it, and the page's sections come down from it.
+- The list of pages at the side, in groups: gsxui's `Sidebar`. Its button, or Cmd-B (Ctrl-B), folds it away; on a phone it slides in over the page.
+- Where the page is among the others, at the top, which stays as the page is read: gsxui's `Breadcrumb`.
+- The page's own sections at the other side (a second `Sidebar`), and on a narrow window under "On this page", which comes down from the top and goes when a section is chosen (a `Sheet`).
+- At the foot of each page, the page before it and the page after it, each a gsxui `Item`: the docs read from one end to the other.
 - Search by the titles of pages and their sections. Cmd-K (Ctrl-K) opens it.
 - Code marked up by what each word is, in the colours of your app's theme, light and dark.
 - The theme switch, the repository, and "edit this page".

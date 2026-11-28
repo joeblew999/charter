@@ -52,7 +52,7 @@ var Screens = &registry.Registry{
 				"    admin screens.Admin `route:\"/admin Admin\"`\n" +
 				"  <screens.AdminLink/>          in the header: there for whoever may open it\n" +
 				"  (&app.App{Facts: []app.Fact{{Label: locales.Notes, Value: …}}, …}: lines of the app's own on its overview)"},
-		{Name: "docs", Gsxui: []string{"badge", "button", "separator", "command", "kbd", "sheet", "icon"}, Needs: []string{"theme-toggle"},
+		{Name: "docs", Gsxui: []string{"badge", "button", "separator", "command", "kbd", "sheet", "sidebar", "breadcrumb", "item", "icon"}, Needs: []string{"theme-toggle"},
 			Use: "  the docs' pages (docs/*.md), in the page tree, with the docs named in the App:\n" +
 				"    docs screens.Docs `route:\"/docs Docs\"`\n" +
 				"    Docs: &app.Docs{Name: \"My App\", Pages: docs.Pages}"},

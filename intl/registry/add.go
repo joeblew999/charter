@@ -150,26 +150,34 @@ func (r *Registry) Add(c config.Config, names []string, o Options) (int, error) 
 		}
 		fmt.Println("added its tables to db/schema.sql (charter check --fix writes the migration)")
 	}
-	texts, err := r.addText(c, p, picked)
-	if err != nil {
+	// Their text, written into the catalogs and compiled, with what was copied recorded: twice. Once before the
+	// gsxui components they are made of are added, since gsxui add generates the app's Go, which compiles only when
+	// the copies are the ones written above (one written for an older release of this library may no longer
+	// compile against this one) and the messages they show are there. And once after, since what the new gsxui
+	// components write themselves ([gsxui]) is known only when they are there.
+	worded := func() error {
+		texts, err := r.addText(c, p, picked)
+		if err != nil {
+			return err
+		}
+		if p, err = catalog.Read(c); err != nil {
+			return err
+		}
+		for rel, h := range copied {
+			p.SetCopied(rel, h)
+		}
+		for key, h := range texts {
+			p.SetCopied(textRecord+key, h)
+		}
+		return p.Generate(os.Stderr)
+	}
+	if err := worded(); err != nil {
 		return 1, err
 	}
-	if p, err = catalog.Read(c); err != nil {
-		return 1, err
-	}
-	for rel, h := range copied {
-		p.SetCopied(rel, h)
-	}
-	for key, h := range texts {
-		p.SetCopied(textRecord+key, h)
-	}
-	if err := p.Generate(os.Stderr); err != nil {
-		return 1, err
-	}
-	// The gsxui components they are made of, last: gsxui add generates the app's Go, which compiles only when the
-	// copies are the ones written above (one written for an older release of this library may no longer compile
-	// against this one) and the messages they show are there.
 	if err := gsxuiAdd(c.Root, gsxui, picked); err != nil {
+		return 1, err
+	}
+	if err := worded(); err != nil {
 		return 1, err
 	}
 	if err := setup.GsxuiRenderer(c.Root, gsxui, os.Stderr); err != nil {

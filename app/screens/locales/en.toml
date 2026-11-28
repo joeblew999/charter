@@ -37,9 +37,7 @@ docs = "Docs"
 docs_on_github = "{repository} on GitHub"
 docs_on_this_page = "On this page"
 docs_edit = "Edit this page on GitHub"
-# The docs on a phone: the button that opens the list of pages. And at the foot of a page, the labels above the
-# links to the page before it and the page after it.
-docs_menu = "Menu"
+# At the foot of a page of the docs, the labels above the links to the page before it and the page after it.
 docs_previous = "Previous page"
 docs_next = "Next page"
 # The button that switches between the light and the dark theme, as screen readers name it.

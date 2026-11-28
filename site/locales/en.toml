@@ -33,6 +33,14 @@ tests = "Pages in a real browser, the API through its own SDK, on wrangler dev a
 close = "Close"
 # The command list's name, as screen readers hear it.
 suggestions = "Suggestions"
+displays_the_mobile_sidebar = "Displays the mobile sidebar."
+# Breadcrumb's "…" for levels left out.
+more = "More"
+sidebar = "Sidebar"
+# The sidebar's toggle button, its label, and the description screen readers hear for it on phones.
+toggle_sidebar = "Toggle Sidebar"
+# Breadcrumb's and pagination's names as landmarks, and what screen readers call a carousel and each of its slides.
+breadcrumb = "breadcrumb"
 
 # charter's screens: the language list, the offer of the page in the reader's language, the time zone and clock dialog.
 [screens]
@@ -52,6 +60,5 @@ docs_search = "Search the docs"
 docs_none = "Nothing found."
 # The docs on a phone: the button that opens the list of pages. And at the foot of a page, the labels above the
 # links to the page before it and the page after it.
-docs_menu = "Menu"
 docs_previous = "Previous page"
 docs_next = "Next page"

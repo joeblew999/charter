@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -24,13 +25,13 @@ func TestFromTheFrontPageThroughTheDocs(t *testing.T) {
 	}
 	page.Click(`main a[href$="/docs/"]`)
 	page.WaitText("#doc h1", "charter")
-	page.Click(`#docs-nav a[href$="/docs/getting-started"]`)
+	page.Click(`[data-gsxui-slot-sidebar-desktop] a[href$="/docs/getting-started"]`)
 	page.WaitText("#doc h1", "Getting started")
 	page.WaitText("#doc pre", "go tool charter dev")
 	if repo, edit := page.Attr("#docs-repo", "href"), page.Attr("#docs-edit", "href"); repo != pages.Repo || edit != pages.Repo+"/edit/main/site/docs/01-getting-started.md" {
 		t.Errorf("repository %q, edit %q", repo, edit)
 	}
-	page.Click(`#docs-nav a[href$="/docs/agents"]`)
+	page.Click(`[data-gsxui-slot-sidebar-desktop] a[href$="/docs/agents"]`)
 	page.WaitText("#doc h1", "For your coding agent")
 	page.WaitText("#doc", "/plugin marketplace add joeblew999/charter")
 }
@@ -115,22 +116,26 @@ func TestTheDocsOnAPhone(t *testing.T) {
 	page.Open(at(pages.Home{}))
 	page.Click(`main a[href$="/docs/"]`)
 	page.WaitText("#doc h1", "charter")
-	open := func(id string) string { return page.JS(`String(document.querySelector("#` + id + `").open)`) }
-	if got := open("docs-menu-pages"); got != "false" {
+	// The list of pages and the page's sections are each a dialog of gsxui's: whether one is open.
+	const list = "[data-gsxui-slot-sidebar-mobile-content]"
+	open := func(selector string) string {
+		return page.JS(fmt.Sprintf(`String(document.querySelector(%q).open)`, selector))
+	}
+	if got := open(list); got != "false" {
 		t.Fatalf("before it is opened, the list of pages is open: %s", got)
 	}
 	page.Click("#docs-menu")
-	page.WaitText("#docs-menu-pages", "Ship and watch")
-	if got := open("docs-menu-pages"); got != "true" {
+	page.WaitText(list, "Ship and watch")
+	if got := open(list); got != "true" {
 		t.Fatalf("opened, the list of pages is open: %s", got)
 	}
-	page.Click(`#docs-menu-pages a[href$="/docs/getting-started"]`)
+	page.Click(list + ` a[href$="/docs/getting-started"]`)
 	page.WaitText("#doc h1", "Getting started")
-	if got := open("docs-menu-pages"); got != "false" {
+	if got := open(list); got != "false" {
 		t.Errorf("after a link in it was followed, the list of pages is open: %s", got)
 	}
 	page.Click("#docs-menu")
-	if got := open("docs-menu-pages"); got != "true" {
+	if got := open(list); got != "true" {
 		t.Errorf("opened again on the next page, the list of pages is open: %s", got)
 	}
 	// The sections of the page, from a page loaded anew: chosen, the list is gone and the page is at the section.
@@ -138,15 +143,15 @@ func TestTheDocsOnAPhone(t *testing.T) {
 	page.Click(`main a[href$="/docs/"]`)
 	page.WaitText("#doc h1", "charter")
 	page.Click("#docs-sections")
-	if got := open("docs-sections-list"); got != "true" {
+	if got := open("#docs-sections-list"); got != "true" {
 		t.Fatalf("opened, the page's sections are open: %s", got)
 	}
 	page.Click(`#docs-sections-list a[href="#where-to-go"]`)
 	// It goes as gsxui's sheets go, sliding away: until it has.
-	for start := time.Now(); open("docs-sections-list") == "true" && time.Since(start) < 5*time.Second; {
+	for start := time.Now(); open("#docs-sections-list") == "true" && time.Since(start) < 5*time.Second; {
 		time.Sleep(50 * time.Millisecond)
 	}
-	if got := open("docs-sections-list"); got != "false" {
+	if got := open("#docs-sections-list"); got != "false" {
 		t.Errorf("after a section was chosen, the sections are open: %s", got)
 	}
 	if hash := page.JS(`location.hash`); hash != "#where-to-go" {
@@ -167,7 +172,7 @@ func TestTheDocsAreReadInOrder(t *testing.T) {
 	page.Click(`main a[href$="/docs/"]`)
 	page.WaitText("#doc h1", "charter")
 	for _, group := range []string{"Start", "Write", "Prove", "Ship and watch", "Reference"} {
-		page.WaitText("#docs-nav", group)
+		page.WaitText("[data-gsxui-slot-sidebar-desktop]", group)
 	}
 	if page.Has("#docs-previous") {
 		t.Error("the first page has a page before it")
@@ -177,9 +182,11 @@ func TestTheDocsAreReadInOrder(t *testing.T) {
 	page.WaitText("#doc h1", "Getting started")
 	page.WaitText("#docs-previous", "charter")
 	page.WaitText("#docs-next", "The commands")
+	// Where the page is among the others is said at the top: its group, and itself.
+	page.WaitText("#docs-here", "Getting started")
 	page.Click("#docs-next")
 	page.WaitText("#doc h1", "The commands, and what each one proves")
-	if here := page.Attr(`#docs-nav a[aria-current="page"]`, "href"); !strings.HasSuffix(here, "/docs/commands") {
+	if here := page.Attr(`[data-gsxui-slot-sidebar-desktop] a[aria-current="page"]`, "href"); !strings.HasSuffix(here, "/docs/commands") {
 		t.Errorf("the list marks %q as the page being read", here)
 	}
 }

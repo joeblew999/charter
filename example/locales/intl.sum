@@ -57,8 +57,13 @@ ar built.wrote 838a2f8368e3 5061339c25d7
 ar docs.nav 7af023c43013 e3b066ec52ba
 ar facts.notes 8a7525b1492f cee9f2b0adc8
 ar facts.writers 94b7b29eaf62 9f9764e30fbb
+ar gsxui.breadcrumb d6dc6b5ebe19 2e2fdd81f485
 ar gsxui.close 7d9eb7acb13e ca90c297b099
+ar gsxui.displays_the_mobile_sidebar 2a174a65adee c2316f9321f7
+ar gsxui.more d47d7cb0e4f8 478c486f3efe
+ar gsxui.sidebar f7efa7bc1fc5 f4c1b46fbc0e
 ar gsxui.suggestions 16c1d601fc66 7cc69d912c83
+ar gsxui.toggle_sidebar 1d4c17db52f7 6381a9ac0bd9
 ar home.heading 8a7525b1492f cee9f2b0adc8
 ar home.intro 66000b571077 63c017805507
 ar home.label d8da2c49df39 a2bc8b7eea3a
@@ -106,7 +111,6 @@ ar screens.also_in 5d73b6d757bd 61d515b16a6b
 ar screens.close 7d9eb7acb13e ca90c297b099
 ar screens.docs 7af023c43013 9d66d0084b75
 ar screens.docs_edit 073fd1036ab1 635bfc3b2cdc
-ar screens.docs_menu 99af6606ff9d 6c197eab0340
 ar screens.docs_next c08ac736a5e2 56ed8bb2532c
 ar screens.docs_none eb1fa11281bc 79aa9470eab3
 ar screens.docs_on_github 3b16422e27b3 855669af4317
@@ -215,8 +219,13 @@ de built.wrote 838a2f8368e3 ab80df1cf45f
 de docs.nav 7af023c43013 c2ec0b49f5bf
 de facts.notes 8a7525b1492f 7800bd538c37
 de facts.writers 94b7b29eaf62 2eea903e0838
+de gsxui.breadcrumb d6dc6b5ebe19 9edabd175f0e
 de gsxui.close 7d9eb7acb13e b808f6e97075
+de gsxui.displays_the_mobile_sidebar 2a174a65adee 78b23bb3fb35
+de gsxui.more d47d7cb0e4f8 80dc77bcf4ca
+de gsxui.sidebar f7efa7bc1fc5 9cf6d125dfc3
 de gsxui.suggestions 16c1d601fc66 4238ec18355e
+de gsxui.toggle_sidebar 1d4c17db52f7 6ea7ed17fd40
 de home.heading 8a7525b1492f 7800bd538c37
 de home.intro 66000b571077 e41641a84cd0
 de home.label d8da2c49df39 74b487d9d223
@@ -264,7 +273,6 @@ de screens.also_in 5d73b6d757bd fc700d9aa96c
 de screens.close 7d9eb7acb13e b808f6e97075
 de screens.docs 7af023c43013 2a9d508bdc77
 de screens.docs_edit 073fd1036ab1 ecf1c6aaf9d5
-de screens.docs_menu 99af6606ff9d a314bd0b56a3
 de screens.docs_next c08ac736a5e2 85cd976e06fc
 de screens.docs_none eb1fa11281bc c4323e663a41
 de screens.docs_on_github 3b16422e27b3 1e8007a07709
@@ -316,12 +324,17 @@ de screens.tokens_intro 1c6d96696955 a918f0304511
 de site.description 4678adbf73e2 770309db6d44
 de site.title a53f68bc82b2 b6d1b994b50b
 file pages/screens/admin.gsx c0fa6c7aead1
-file pages/screens/docs.gsx 99abcedf3510
+file pages/screens/docs.gsx 66eb7ef7227b
 file pages/screens/language-list.gsx 1a157c0ef599
 file pages/screens/language-offer.gsx 5ec18f9cf405
 file pages/screens/preferences.gsx fa0123644365
 file pages/screens/sign-in.gsx 8e5a933ca9b7
 file pages/screens/theme-toggle.gsx 3d8bf9b79d18
+file text:gsxui.breadcrumb d6dc6b5ebe19
+file text:gsxui.displays_the_mobile_sidebar 2a174a65adee
+file text:gsxui.more d47d7cb0e4f8
+file text:gsxui.sidebar f7efa7bc1fc5
+file text:gsxui.toggle_sidebar 1d4c17db52f7
 file text:screens.account 7e1b0d5641f2
 file text:screens.account_leave 21d5294717e2
 file text:screens.account_leave_confirm 0c3d8950a137

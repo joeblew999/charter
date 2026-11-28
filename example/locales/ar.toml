@@ -81,6 +81,11 @@ nav = "التوثيق"
 [gsxui]
 close = "إغلاق"
 suggestions = "اقتراحات"
+displays_the_mobile_sidebar = "يعرض الشريط الجانبي على الأجهزة المحمولة."
+more = "المزيد"
+sidebar = "الشريط الجانبي"
+toggle_sidebar = "تبديل الشريط الجانبي"
+breadcrumb = "مسار التنقل"
 
 [screens]
 languages = "اللغات"
@@ -168,6 +173,5 @@ admin_memory_intro = "ما تحتفظ به هذه النسخة من العامل
 admin_runtimes = "بيئات تشغيل Go النشطة"
 admin_held = "تحتفظ بـ"
 admin_budget = "يُسمح لها بـ"
-docs_menu = "القائمة"
 docs_previous = "الصفحة السابقة"
 docs_next = "الصفحة التالية"

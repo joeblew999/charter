@@ -10,6 +10,14 @@ What you wrote does not, when a release changes how something is written. This p
 
 charter is before 1.0: a release may change how an app is written, and says so here. This page starts at 0.63; it does not cover what changed before that.
 
+## 0.69
+
+Nothing to change in an app's code. The docs screen is made of gsxui's `Sidebar`, `Breadcrumb`, `Sheet` and `Item`, which `check --fix` adds to `ui/` as it brings the screen up to date.
+
+- **A message is gone.** An app whose docs screen was brought up to date by 0.68 has `screens.docs_menu` in its catalogs, which nothing uses now: `check` says so, and the line is to be taken out of each `locales/*.toml`.
+- **A docs screen you changed** is yours and is left as it is: `go tool charter add screen:docs -diff` shows what charter's is now.
+- **The groups and the order of the docs are their front page's** (since 0.68): a line of `docs/index.md` that is only bold names a group, and the list under it its pages ([groups, and the order](11-docs.md#groups-and-the-order)). With no such lines the pages are in their files' order, as before.
+
 ## 0.65
 
 Nothing to change in an app's code. Three things behave differently.
