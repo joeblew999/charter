@@ -215,7 +215,7 @@ func (p *Page) Fits() {
 			return r.width > 0 && (r.right > window.innerWidth + 1 || r.left < -1);
 		}).map((e) => (e.getAttribute("aria-label") || e.textContent || e.tagName).trim().slice(0, 40));
 		// What opens over the page (a menu, a popover) is shut until a reader opens it, and not seen while shut.
-		const shut = [...document.querySelectorAll("[popover]")].filter((e) => !e.matches(":popover-open") && e.checkVisibility()).length;
+		const shut = [...document.querySelectorAll("[popover], dialog")].filter((e) => !(e.matches("dialog") ? e.open : e.matches(":popover-open")) && e.checkVisibility()).length;
 		if (wider <= 0 && cut.length === 0 && shut === 0) return "";
 		return location.pathname + " at " + window.innerWidth + " px: the page is " + Math.max(wider, 0) + " px wider than the window; cut off in the header: " + (cut.join(", ") || "nothing") + "; shown while shut: " + shut + " of what opens over the page";
 	})()`); said != "" {

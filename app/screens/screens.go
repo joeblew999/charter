@@ -58,10 +58,10 @@ var Screens = &registry.Registry{
 				"    admin screens.Admin `route:\"/admin Admin\"`\n" +
 				"  <screens.AdminLink/>          in the header: there for whoever may open it\n" +
 				"  (&app.App{Facts: []app.Fact{{Label: locales.Notes, Value: …}}, …}: lines of the app's own on its overview)"},
-		{Name: "layout", Gsxui: []string{"popover", "icon"},
-			Use: "  the document around a page, as gsxui's own site has it: a centred page, a page of docs, or a workspace\n" +
+		{Name: "layout", Gsxui: []string{"sidebar", "sheet", "separator", "icon"},
+			Use: "  the document around a page, of gsxui's Sidebar and Sheet: a centred page, a page of docs, or a workspace\n" +
 				"    <screens.Layout mode={screens.LayoutMarketing} title={…} description={…} brand={<screens.LayoutBrand/>} links={…} tools={…}>…</screens.Layout>"},
-		{Name: "docs", Gsxui: []string{"badge", "button", "command", "kbd", "item", "table", "icon"}, Needs: []string{"layout", "theme-toggle", "theme"},
+		{Name: "docs", Gsxui: []string{"badge", "button", "command", "kbd", "item", "table", "breadcrumb", "sidebar", "icon"}, Needs: []string{"layout", "theme-toggle", "theme"},
 			Use: "  the docs' pages (docs/*.md), in the page tree, with the docs named in the App:\n" +
 				"    docs screens.Docs `route:\"/docs Docs\"`\n" +
 				"    Docs: &app.Docs{Name: \"My App\", Pages: docs.Pages}"},

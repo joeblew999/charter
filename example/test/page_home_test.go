@@ -58,7 +58,7 @@ func TestTheLanguages(t *testing.T) {
 		t.Errorf("Arabic: lang %q dir %q at %s", lang, dir, path)
 	}
 	// The link to the other page keeps the language.
-	home.Click(`header nav a[href$="/built/"]`)
+	home.Click(`[data-layout-links] a[href$="/built/"]`)
 	home.WaitText("h1", "كيف بُني")
 	if path := home.Path(); path != "/ar/built/" {
 		t.Errorf("the next page from Arabic is at %s", path)
@@ -111,14 +111,14 @@ func TestANotesRowOpensByItself(t *testing.T) {
 	if open := home.Attr(first+` button`, "aria-expanded"); open != "true" || !strings.Contains(home.Text(first+` p`), "20") {
 		t.Errorf("after the list changed, the row the reader had open is open: %q", open)
 	}
-	if here := home.Attr(`header nav a[href="`+at(pages.Home{})+`"]`, "data-variant"); here != "secondary" {
+	if here := home.Attr(`[data-layout-links] a[href="`+at(pages.Home{})+`"]`, "data-variant"); here != "secondary" {
 		t.Errorf("the header does not mark the page being shown: %q", here)
 	}
 }
 
 // The app's own pages fit their window on a phone, a tablet, a small laptop and a desk, signed in and not: nothing
-// is wider than the window and nothing in the header is cut off. On a phone the ways to the pages are under the
-// header's menu, and lead where they say.
+// is wider than the window and nothing in the header is cut off. On a phone the ways to the pages are in a drawer,
+// from the header's menu button, and lead where they say.
 func TestThePagesFitTheirWindow(t *testing.T) {
 	t.Parallel()
 	page := apptest.Browser(t)
@@ -136,7 +136,7 @@ func TestThePagesFitTheirWindow(t *testing.T) {
 	fits()
 	page.Phone()
 	page.Open(at(pages.Home{}))
-	page.Click("[data-layout-menu] button")
+	page.Click("[data-layout-menu]")
 	page.Click(`[data-layout-menu-links] a[href="` + at(pages.BuiltIndex{}) + `"]`)
 	page.WaitText("h1", "How it's built")
 	page.Fits()

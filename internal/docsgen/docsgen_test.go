@@ -22,7 +22,7 @@ func TestWrite(t *testing.T) {
 	b, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.json"))
 	code := string(b)
 	for _, want := range []string{`"Title": "Start"`, `"Slug": "pages"`, `"Description": "How pages work."`, `"Description": "What it is. See the pages."`, `"ID": "routes"`,
-		`href=\"pages#routes\"`, `href=\"./\"`, `id=\"routes\" data-doc-heading=\"\" tabindex=\"-1\" class=\"scroll-mt-20\"\u003eRoutes\u003c/h2`, `\u003cpre\u003e\u003ccode\u003e`, `span class=\"ts-number\"\u003e1\u003c/span`} {
+		`href=\"pages#routes\"`, `href=\"./\"`, `id=\"routes\" class=\"scroll-mt-20\"\u003eRoutes\u003c/h2`, `\u003cpre\u003e\u003ccode\u003e`, `span class=\"ts-number\"\u003e1\u003c/span`} {
 		if !strings.Contains(code, want) {
 			t.Errorf("no %s in:\n%s", want, code)
 		}

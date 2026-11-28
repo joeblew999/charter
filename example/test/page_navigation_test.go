@@ -34,8 +34,8 @@ func arrives(t *testing.T, p *apptest.Page, path string) {
 	t.Fatalf("the page is at %s, want %s", p.Path(), path)
 }
 
-// shown is the link to path that the page shows: the header has each way to a page twice, in itself and under its
-// menu for a window with no room, and main may have one too.
+// shown is the link to path that the page shows: the header has each way to a page twice, in itself and in its
+// menu's drawer for a window with no room, and main may have one too.
 func shown(path string) string {
 	return fmt.Sprintf(`:is([data-layout-links], main) a[href=%q]`, path)
 }
@@ -68,7 +68,7 @@ func TestALinkShowsTheNextPageWithNoPageLoad(t *testing.T) {
 	if title == home || title == "" {
 		t.Errorf("the title after the link is %q, as on the page before", title)
 	}
-	if current := page.JS(fmt.Sprintf(`document.querySelector('header a[href=%q]')?.dataset.variant ?? ""`, built)); current != "secondary" {
+	if current := page.JS(fmt.Sprintf(`document.querySelector('[data-layout-links] a[href=%q]')?.dataset.variant ?? ""`, built)); current != "secondary" {
 		t.Errorf("the header marks the page it is on as %q, want secondary", current)
 	}
 
@@ -80,14 +80,13 @@ func TestALinkShowsTheNextPageWithNoPageLoad(t *testing.T) {
 	}
 	page.WaitText("h1", "")
 
-	// A page of the docs is loaded as a document (the docs screen says so: gsxui's own script for its docs, which
-	// marks the section being read, starts as a document loads).
+	// To a page of another layout of the app (the docs'), still no page load.
 	docs := at(screens.DocsIndex{})
 	follow(page, docs)
 	arrives(t, page, docs)
 	page.WaitText("#doc h1", "")
-	if sameDocument(page) {
-		t.Error("a link to the docs kept the document: the docs load as one")
+	if !sameDocument(page) {
+		t.Error("a link to the docs loaded a new document")
 	}
 }
 

@@ -10,18 +10,24 @@ What you wrote does not, when a release changes how something is written. This p
 
 charter is before 1.0: a release may change how an app is written, and says so here. This page starts at 0.63; it does not cover what changed before that.
 
+## 0.75
+
+Nothing to change in an app's code, unless it took 0.74.
+
+- **The layout is of gsxui's components**: its `Sidebar` for a page of docs (a drawer on a phone) and its `Sheet` for the header's links on a phone and for "On this page". 0.74 had copied the shell of gsxui's own website instead, which on a phone had the pages in a small popover and no "On this page"; that is gone. `check --fix` writes the screens again.
+- **A page of the docs is put in place by a link again**, with no page load.
+
 ## 0.74
 
 A page of yours that writes its own `<!DOCTYPE html>` moves into the layout.
 
-- **One document around every page: the `layout` screen**, which is gsxui's own site's shell, with its three modes (a centred page, a page of docs, a workspace), its widths and what it shows at each window's width. `check --fix` adds it and moves charter's screens onto it. Your own pages move by hand, and `check` names each that has not:
+- **One document around every page: the `layout` screen**, with three modes (a centred page, a page of docs, a workspace). `check --fix` adds it and moves charter's screens onto it. Your own pages move by hand, and `check` names each that has not:
 
   | Was | Is |
   |---|---|
   | `<!DOCTYPE html>`, `<html>`, `<head>`, `<body>`, a `<header>` and a `<main>` with widths of your own | `<screens.Layout mode={screens.LayoutMarketing} title={…} description={…} brand={<screens.LayoutBrand/>} links={…} tools={…} footer={…}>` around the page |
 
-  `links` are the ways to your pages: in the header where there is room, under its menu where there is not, so nothing in them has an id. `tools` are what the header always has.
-- **The docs are laid out as gsxui's own docs are**: the pages at one side, the article, its sections at the other with the one being read marked; on a narrow window the pages are under the header's menu. The sidebar that folded away is gone. A page of the docs loads as a document.
+  `links` are the ways to your pages: in the header where there is room, in a drawer where there is not, so nothing in them has an id. `tools` are what the header always has.
 - **`apptest`'s `Page` has `Wide(width)` and `Fits()`**: a test that no page is wider than its window, at a phone's width and a desk's.
 
 ## 0.73

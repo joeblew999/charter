@@ -43,7 +43,7 @@ func TestTheTimeZoneDialog(t *testing.T) {
 	t.Parallel()
 	home := apptest.Browser(t)
 	home.Open(at(pages.Home{}))
-	home.Click(`header [aria-haspopup=dialog]`)
+	home.Click(`header [aria-haspopup=dialog]:not([data-layout-menu])`)
 	home.WaitText("#preferences", "Time zone")
 	if action := home.Attr("#preferences form", "action"); !strings.HasSuffix(action, at(screens.PreferencesSave{})) {
 		t.Errorf("the form goes to %q", action)

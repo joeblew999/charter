@@ -52,23 +52,26 @@ A screen's text follows the same way, message by message and in every language: 
 go tool charter add screen:layout
 ```
 
-One document is around every page of an app: `screens.Layout`. It is gsxui's own site's shell, taken from gsxui's source, with the widths and breakpoints gsxui gives it. A page names its mode and hands over what goes where; it writes no `<!DOCTYPE html>`, no header and no width.
+One document is around every page of an app: `screens.Layout`. What moves in it is gsxui's own components, as `gsxui add` brings and updates them: its `Sidebar`, which is a drawer on a phone by itself, and its `Sheet` for what else has no room there. A page names its mode and hands over what goes where; it writes no `<!DOCTYPE html>`, no header and no width.
 
 | Mode | For | What it is |
 |---|---|---|
 | `LayoutMarketing` | a front page, a page of the app | a header, the page centred under it, a footer |
-| `LayoutDocs` | a page to read | the pages at one side, an article of a readable width, its sections at the other |
+| `LayoutDocs` | a page to read | gsxui's `Sidebar` with the pages, the page beside it, its sections at the other side |
 | `LayoutWorkspace` | the theme editor | the whole window under the header, no footer |
 
-| A page hands over | Where it is shown |
-|---|---|
-| `brand` | at the start of the header (`<screens.LayoutBrand/>` is the app's name, linked to the front page) |
-| `links` | in the header where there is room; under its "Menu" where there is not. Shown in both, so nothing in them has an id |
-| `tools` | in the header, always: the theme switch, who is signed in |
-| `navigation`, `contents` | a docs page's sides; below the widths gsxui hides them at, `navigation` is under the menu |
-| `footer` | under the page |
+| A page hands over | On a wide window | On a phone |
+|---|---|---|
+| `brand` | at the start of the header (`<screens.LayoutBrand/>` is the app's name, linked to the front page) | the same |
+| `links` | in the header | in a drawer, from the header's menu button |
+| `tools` | in the header | in the header |
+| `navigation` | in the `Sidebar`, which its button or Cmd-B folds away | the `Sidebar` slides in over the page |
+| `contents` | at the other side, staying in view | under "On this page" at the top of the page |
+| `footer` | under the page | under the page |
 
-What is checked: `check` fails a page that writes a document of its own. A browser test opens each page at a phone's, a tablet's, a laptop's and a desk's width and fails one that is wider than its window, or has something in its header cut off (`page.Wide(390)`, `page.Fits()`).
+`links` and `contents` are shown in two places, so nothing in them has an id.
+
+What is checked: `check` fails a page that writes a document of its own. A browser test opens each page at a phone's, a tablet's, a laptop's and a desk's width and fails one that is wider than its window, has something in its header cut off, or shows a menu before it is opened (`page.Wide(390)`, `page.Fits()`).
 
 What is not: how a page looks at a width. And inside its part of the layout a page still places its own elements, with Tailwind's classes.
 

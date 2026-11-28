@@ -26,13 +26,13 @@ func TestFromTheFrontPageThroughTheDocs(t *testing.T) {
 	}
 	page.Click(`main a[href$="/docs/"]`)
 	page.WaitText("#doc h1", "charter")
-	page.Click(`[data-layout-navigation] a[href$="/docs/getting-started"]`)
+	page.Click(`[data-gsxui-slot-sidebar-desktop] a[href$="/docs/getting-started"]`)
 	page.WaitText("#doc h1", "Getting started")
 	page.WaitText("#doc pre", "go tool charter dev")
 	if repo, edit := page.Attr("[data-layout-links] a[data-docs-repo]", "href"), page.Attr("#docs-edit", "href"); repo != pages.Repo || edit != pages.Repo+"/edit/main/site/docs/01-getting-started.md" {
 		t.Errorf("repository %q, edit %q", repo, edit)
 	}
-	page.Click(`[data-layout-navigation] a[href$="/docs/agents"]`)
+	page.Click(`[data-gsxui-slot-sidebar-desktop] a[href$="/docs/agents"]`)
 	page.WaitText("#doc h1", "For your coding agent")
 	page.WaitText("#doc", "/plugin marketplace add joeblew999/charter")
 }
@@ -107,9 +107,9 @@ func TestTheWorkersGoStartedWithIt(t *testing.T) {
 	}
 }
 
-// On a phone there is no room for the list of pages at the side: it is under the header's menu, as gsxui's own
-// docs have theirs, in the groups the docs' front page has. A link in it shows its page with the menu shut, and it
-// opens again from there. The page's own sections are for a wide window, and are not shown.
+// On a phone there is no room for the list of pages at the side: it slides in from a bar that stays at the top,
+// in the groups the docs' front page has. A link in it shows its page with the list gone, and the list opens again
+// from there. The page's own sections come down from the same bar, and go when one is chosen.
 func TestTheDocsOnAPhone(t *testing.T) {
 	t.Parallel()
 	page := apptest.Browser(t)
@@ -117,38 +117,56 @@ func TestTheDocsOnAPhone(t *testing.T) {
 	page.Open(at(pages.Home{}))
 	page.Click(`main a[href$="/docs/"]`)
 	page.WaitText("#doc h1", "charter")
-	const menu, list = "[data-layout-menu] button", "[data-layout-menu] [data-docs-list]"
-	open := func() string { return page.JS(`String(!!document.querySelector("[data-layout-menu] :popover-open"))`) }
-	shown := func(selector string) string {
-		return page.JS(fmt.Sprintf(`String(!!document.querySelector(%q)?.checkVisibility())`, selector))
+	// The list of pages and the page's sections are each a dialog of gsxui's: whether one is open.
+	const list = "[data-gsxui-slot-sidebar-mobile-content]"
+	open := func(selector string) string {
+		return page.JS(fmt.Sprintf(`String(document.querySelector(%q).open)`, selector))
 	}
-	if got := open(); got != "false" {
-		t.Fatalf("before it is opened, the menu is open: %s", got)
+	if got := open(list); got != "false" {
+		t.Fatalf("before it is opened, the list of pages is open: %s", got)
 	}
-	if shown("[data-layout-navigation]") != "false" || shown("#docs-toc") != "false" {
-		t.Error("on a phone, the list of pages or the page's sections are at the side")
-	}
-	page.Click(menu)
+	page.Click("[data-layout-menu]")
 	page.WaitText(list, "Ship and watch")
-	if got := open(); got != "true" {
-		t.Fatalf("opened, the menu is open: %s", got)
+	if got := open(list); got != "true" {
+		t.Fatalf("opened, the list of pages is open: %s", got)
 	}
 	page.Click(list + ` a[href$="/docs/getting-started"]`)
 	page.WaitText("#doc h1", "Getting started")
-	if got := open(); got != "false" {
-		t.Errorf("after a link in it was followed, the menu is open: %s", got)
+	if got := open(list); got != "false" {
+		t.Errorf("after a link in it was followed, the list of pages is open: %s", got)
 	}
-	page.Click(menu)
-	page.WaitText(list, "Ship and watch")
-	if got := open(); got != "true" {
-		t.Errorf("opened again on the next page, the menu is open: %s", got)
+	page.Click("[data-layout-menu]")
+	if got := open(list); got != "true" {
+		t.Errorf("opened again on the next page, the list of pages is open: %s", got)
 	}
+	// The sections of the page, from a page loaded anew: chosen, the list is gone and the page is at the section.
+	page.Open(at(pages.Home{}))
+	page.Click(`main a[href$="/docs/"]`)
+	page.WaitText("#doc h1", "charter")
+	page.Click("[data-layout-contents-button]")
+	if got := open("[data-layout-contents-sheet]"); got != "true" {
+		t.Fatalf("opened, the page's sections are open: %s", got)
+	}
+	page.Click(`[data-layout-contents-sheet] a[href="#where-to-go"]`)
+	// It goes as gsxui's sheets go, sliding away: until it has.
+	for start := time.Now(); open("[data-layout-contents-sheet]") == "true" && time.Since(start) < 5*time.Second; {
+		time.Sleep(50 * time.Millisecond)
+	}
+	if got := open("[data-layout-contents-sheet]"); got != "false" {
+		t.Errorf("after a section was chosen, the sections are open: %s", got)
+	}
+	if hash := page.JS(`location.hash`); hash != "#where-to-go" {
+		t.Errorf("choosing a section went to %q", hash)
+	}
+	// Nothing on a page is wider than a phone: a table or a sample that is scrolls by itself.
+	page.Fits()
 }
 
-// No page is wider than its window, and nothing in a header is cut off, on a phone, a tablet, a small laptop and a
-// desk: the layout every page is in (charter's layout screen, which is gsxui's own site's shell) shows and hides its
-// parts by the width, and what is too wide in a page, a table or a sample, scrolls where it is. At a desk's width a
-// docs page has its pages at one side and its sections at the other, the one being read marked.
+// No page is wider than its window, nothing in a header is cut off, and nothing that opens over the page is seen
+// before it is opened, on a phone, a tablet, a small laptop and a desk: the layout every page is in (charter's
+// layout screen, of gsxui's Sidebar and Sheet) shows and hides its parts by the width, and what is too wide in a
+// page, a table or a sample, scrolls where it is. At a desk's width a docs page has its pages at one side and its
+// sections at the other.
 func TestEveryPageFitsItsWindow(t *testing.T) {
 	t.Parallel()
 	page := apptest.Browser(t)
@@ -162,14 +180,8 @@ func TestEveryPageFitsItsWindow(t *testing.T) {
 	}
 	page.Wide(1280)
 	page.Open(docs + "commands")
-	page.WaitText("[data-layout-navigation]", "Ship and watch")
-	page.WaitText("#docs-toc", "What is checked")
-	for start := time.Now(); !page.Has("#docs-toc a[data-active]") && time.Since(start) < 5*time.Second; {
-		time.Sleep(50 * time.Millisecond)
-	}
-	if !page.Has("#docs-toc a[data-active]") {
-		t.Error("no section of the page is marked as the one being read")
-	}
+	page.WaitText("[data-gsxui-slot-sidebar-desktop]", "Ship and watch")
+	page.WaitText("[data-layout-contents]", "What is checked")
 }
 
 // The list at the side is in the groups the docs' front page names, and the docs are read from one end to the
@@ -181,7 +193,7 @@ func TestTheDocsAreReadInOrder(t *testing.T) {
 	page.Click(`main a[href$="/docs/"]`)
 	page.WaitText("#doc h1", "charter")
 	for _, group := range []string{"Start", "Write", "Prove", "Ship and watch", "Reference"} {
-		page.WaitText("[data-layout-navigation]", group)
+		page.WaitText("[data-gsxui-slot-sidebar-desktop]", group)
 	}
 	if page.Has("#docs-previous") {
 		t.Error("the first page has a page before it")
@@ -191,9 +203,11 @@ func TestTheDocsAreReadInOrder(t *testing.T) {
 	page.WaitText("#doc h1", "Getting started")
 	page.WaitText("#docs-previous", "charter")
 	page.WaitText("#docs-next", "The commands")
+	// Where the page is among the others is said at the top: its group, and itself.
+	page.WaitText("#docs-here", "Getting started")
 	page.Click("#docs-next")
 	page.WaitText("#doc h1", "The commands, and what each one proves")
-	if here := page.Attr(`[data-layout-navigation] a[aria-current="page"]`, "href"); !strings.HasSuffix(here, "/docs/commands") {
+	if here := page.Attr(`[data-gsxui-slot-sidebar-desktop] a[aria-current="page"]`, "href"); !strings.HasSuffix(here, "/docs/commands") {
 		t.Errorf("the list marks %q as the page being read", here)
 	}
 }

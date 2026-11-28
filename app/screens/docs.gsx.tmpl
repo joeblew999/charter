@@ -60,15 +60,10 @@ component (p DocsPage) Page(v DocsView) {
 	<DocsDocument v={v}/>
 }
 
-// A page of the docs is loaded as a document, never put in place of another by a link: what marks the section being
-// read as the page scrolls (gsxui's own script for its docs) starts as its document loads.
-func (DocsIndex) FullLoad() bool { return true }
-func (DocsPage) FullLoad() bool  { return true }
-
-// DocsDocument is the page, in gsxui's own layout for a page of docs (Layout, LayoutDocs): the docs' pages at one
-// side in their groups, the page itself at a width that reads well, its sections at the other side, and under it
-// the pages before and after it and where it comes from. Where the window has no room the sections go, and then
-// the pages, which are under the header's menu.
+// DocsDocument is the page, in the layout for a page of docs (Layout, LayoutDocs), which is gsxui's Sidebar: the
+// docs' pages at the side in their groups (a drawer on a phone), where the page is among them at the top, the page
+// itself, its sections at the other side (under a button at the top of the page on a narrow window), and under it
+// the pages before and after it and where it comes from.
 // The docs are written in one language (English), which the article says; what is around them is in the reader's.
 component DocsDocument(v DocsView) {
 	<Layout
@@ -80,11 +75,12 @@ component DocsDocument(v DocsView) {
 		tools={<DocsTools v={v}/>}
 		navigation={<DocsList v={v}/>}
 		contents={<DocsSections v={v}/>}
+		heading={<DocsHere v={v}/>}
 	>
 		// The page: what charter build wrote from docs/*.md, the app's own files. It is marked data-doc, which
 		// gsxui's own stylesheet for its docs styles (web/gsxui-site/site.css), with a section under each heading,
 		// and a table as gsxui's Table.
-		<article id="doc" data-doc="docs" lang="en" dir="ltr" class="flex min-w-0 flex-col gap-10">
+		<article id="doc" data-doc="docs" lang="en" dir="ltr" class="flex max-w-3xl min-w-0 flex-col gap-10">
 			{ for _, section := range v.Doc.Sections {
 				<section class="flex min-w-0 flex-col gap-3">
 					{ for _, part := range section.Parts {
@@ -103,7 +99,7 @@ component DocsDocument(v DocsView) {
 									{ for _, row := range part.Rows {
 										<ui.TableRow>
 											{ for _, cell := range row {
-												<ui.TableCell class="align-top whitespace-normal">{ gsx.Raw(cell) }</ui.TableCell>
+												<ui.TableCell class="min-w-40 align-top whitespace-normal">{ gsx.Raw(cell) }</ui.TableCell>
 											} }
 										</ui.TableRow>
 									} }
@@ -123,13 +119,31 @@ component DocsDocument(v DocsView) {
 	</Layout>
 }
 
-// DocsBrand is what the docs' header begins with: the docs' name, the way to the app's front page, and that these
+// DocsBrand is what the list of pages begins with: the docs' name, the way to the app's front page, and that these
 // are its docs.
 component DocsBrand(v DocsView) {
-	<a href={intl.URL(ctx, "/")} class="flex items-center gap-2 font-semibold">
-		<span translate="no">{ v.Docs.Name }</span>
+	<ui.SidebarMenuButton size="lg" href={intl.URL(ctx, "/")}>
+		<span class="font-semibold" translate="no">{ v.Docs.Name }</span>
 		<ui.Badge variant="secondary">{ locales.ScreensDocs }</ui.Badge>
-	</a>
+	</ui.SidebarMenuButton>
+}
+
+// DocsHere is where the page is among the others, at the top, which stays as the page is read: its group, and
+// itself. gsxui's Breadcrumb.
+component DocsHere(v DocsView) {
+	<ui.Breadcrumb class="min-w-0">
+		<ui.BreadcrumbList class="flex-nowrap">
+			{ if v.Doc.Group != "" {
+				<ui.BreadcrumbItem class="hidden md:inline-flex">
+					<span lang="en" dir="ltr">{ v.Doc.Group }</span>
+				</ui.BreadcrumbItem>
+				<ui.BreadcrumbSeparator class="hidden md:block"/>
+			} }
+			<ui.BreadcrumbItem class="min-w-0">
+				<ui.BreadcrumbPage id="docs-here" lang="en" dir="ltr" class="truncate">{ v.Doc.Title }</ui.BreadcrumbPage>
+			</ui.BreadcrumbItem>
+		</ui.BreadcrumbList>
+	</ui.Breadcrumb>
 }
 
 // DocsLinks is the way to the repository, for docs that name one: in the header where there is room, under its
@@ -179,65 +193,48 @@ component DocsTools(v DocsView) {
 }
 
 // DocsList is the docs' pages, the one being read marked, in the groups the docs' front page lists them in
-// (app.Docs.Groups), as gsxui's own docs list theirs. The layout shows it at the side and under the header's menu,
-// so nothing in it has an id. Its links load the page they lead to, as every way to a page of the docs does.
+// (app.Docs.Groups): gsxui's Sidebar groups and menus. The Sidebar shows it twice, at the side and in what slides
+// in on a phone, so nothing in it has an id.
 component DocsList(v DocsView) {
-	<div data-docs-list class="flex flex-col gap-4 text-sm" hx-boost:inherited="false">
-		{ for _, group := range v.Docs.Groups() {
-			<div class="flex flex-col gap-1">
-				{ if group.Name != "" {
-					<h3 class="px-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase" lang="en" dir="ltr">{ group.Name }</h3>
-				} }
-				{ for _, other := range group.Pages {
-					<a
-						href={docsURL(ctx, other)}
-						lang="en"
-						dir="ltr"
-						class={
-							"rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
-							"bg-accent text-accent-foreground": other.Slug == v.Doc.Slug
-						}
-						{ if other.Slug == v.Doc.Slug {
-							aria-current="page"
-						} }
-					>
-						{ other.Title }
-					</a>
-				} }
-			</div>
-		} }
-	</div>
+	{ for _, group := range v.Docs.Groups() {
+		<ui.SidebarGroup>
+			{ if group.Name != "" {
+				<ui.SidebarGroupLabel lang="en" dir="ltr">{ group.Name }</ui.SidebarGroupLabel>
+			} }
+			<ui.SidebarGroupContent>
+				<ui.SidebarMenu>
+					{ for _, other := range group.Pages {
+						<ui.SidebarMenuItem>
+							<ui.SidebarMenuButton href={docsURL(ctx, other)} isActive={other.Slug == v.Doc.Slug} class="h-auto py-1.5 whitespace-normal">
+								<span lang="en" dir="ltr">{ other.Title }</span>
+							</ui.SidebarMenuButton>
+						</ui.SidebarMenuItem>
+					} }
+				</ui.SidebarMenu>
+			</ui.SidebarGroupContent>
+		</ui.SidebarGroup>
+	} }
 }
 
-// DocsSections is the sections of the page being read, each a link to it, as gsxui's own docs list theirs: the one
-// being read is marked as the page scrolls, by gsxui's own script (web/gsxui-site/web/site.js).
+// DocsSections is the sections of the page being read, each a link to it, as a gsxui Sidebar menu. The layout
+// shows it at the side and under a button at the top of the page, so nothing in it has an id.
 component DocsSections(v DocsView) {
-	{ if len(v.Doc.Headings) > 0 {
-		<nav id="docs-toc" aria-label={locales.ScreensDocsOnThisPage} class="flex flex-col gap-3 text-sm">
-			<div class="font-medium">{ locales.ScreensDocsOnThisPage }</div>
-			<div class="flex flex-col gap-2" lang="en" dir="ltr">
-				{ for _, h := range v.Doc.Headings {
-					<a
-						data-site-toc-link
-						href={"#" + h.ID}
-						class={
-							"text-muted-foreground transition-colors hover:text-foreground data-[active]:font-medium data-[active]:text-foreground",
-							"ps-3": h.Depth == 3
-						}
-					>
-						{ h.Title }
-					</a>
-				} }
-			</div>
-		</nav>
-	} }
+	<ui.SidebarMenu data-docs-sections lang="en" dir="ltr">
+		{ for _, h := range v.Doc.Headings {
+			<ui.SidebarMenuItem>
+				<ui.SidebarMenuButton size="sm" href={"#" + h.ID} class={"h-auto py-1 whitespace-normal text-muted-foreground", "ps-5": h.Depth > 2}>
+					<span>{ h.Title }</span>
+				</ui.SidebarMenuButton>
+			</ui.SidebarMenuItem>
+		} }
+	</ui.SidebarMenu>
 }
 
 // DocsAround is the way to the page before the one being read and to the one after it, at its foot, each a gsxui
 // Item: the docs read from one end to the other without going back to the list.
 component DocsAround(v DocsView) {
 	{ if docsBefore(v) != nil || docsAfter(v) != nil {
-		<nav id="docs-around" aria-label={locales.ScreensDocs} class="mt-10 grid gap-3 border-t pt-6 sm:grid-cols-2" hx-boost:inherited="false">
+		<nav id="docs-around" aria-label={locales.ScreensDocs} class="mt-10 grid gap-3 border-t pt-6 sm:grid-cols-2">
 			{ if docsBefore(v) != nil {
 				<a id="docs-previous" href={docsURL(ctx, *docsBefore(v))} class="rounded-lg">
 					<ui.Item variant="outline" class="hover:bg-muted">

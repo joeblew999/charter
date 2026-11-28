@@ -54,9 +54,10 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   gsxui's own `apply`, and pages take them from `ui/styles`, which renders the reader's (`app.Style`). Never
   import `ui` itself in a page. What charter repeats of gsxui (the layout of a share code, for `--style`) a test
   holds to gsxui's source.
-- **One document around every page**: the layout screen (`app/screens/layout.gsx.tmpl`), which is gsxui's own
-  site's shell (its `site/pages/layout.gsx`): three modes a page names, never a width, a header or a
-  `<!DOCTYPE html>` of a page's own (`charter check` fails one). What is in a header twice (in it, and under its
+- **One document around every page**: the layout screen (`app/screens/layout.gsx.tmpl`), made of gsxui's
+  components (`Sidebar`, `Sheet`), never of markup copied from gsxui's website: what `gsxui add` brings is what
+  follows gsxui. Three modes a page names, never a width, a header or a `<!DOCTYPE html>` of a page's own
+  (`charter check` fails one). What is in a header twice (in it, and under its
   menu on a narrow window) has no id. A test opens every page at a phone's, a tablet's and a desk's width and
   fails one that is wider than its window (`apptest`'s `Fits`).
 - **What every app needs is a screen** (`app/screens`: the docs' pages, the theme switch, the language list and

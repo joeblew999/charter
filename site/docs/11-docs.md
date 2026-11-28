@@ -109,8 +109,10 @@ While `charter dev` runs, saving a Markdown file reloads the page.
 
 ## What the pages have
 
-- gsxui's own layout for a page of docs (the [layout screen](13-screens-and-themes.md#the-layout)): the list of pages at one side, in groups; the page, at a width that reads well; its own sections at the other side, the one being read marked as the page scrolls.
-- On a window with no room for the sections, they go; with none for the list of pages, it is under "Menu" in the header.
+- The list of pages at the side, in groups: gsxui's `Sidebar` (the [layout screen](13-screens-and-themes.md#the-layout)). Its button, or Cmd-B (Ctrl-B), folds it away; on a phone it slides in over the page.
+- Where the page is among the others, at the top, which stays as the page is read: gsxui's `Breadcrumb`.
+- The page's own sections at the other side, and on a narrow window under "On this page", which comes down from the top and goes when a section is chosen (a `Sheet`).
+- A table too wide for a phone scrolls sideways in its place, its columns at a width that reads.
 - At the foot of each page, the page before it and the page after it, each a gsxui `Item`: the docs read from one end to the other.
 - Search by the titles of pages and their sections. Cmd-K (Ctrl-K) opens it.
 - Code marked up by what each word is, in the colours gsxui's own site gives code, light and dark.

@@ -184,7 +184,7 @@ What stays a page load, and how each says so:
 
 | What | How |
 |---|---|
-| A page whose script runs as its document loads (the sign-in screens, the theme editor, a page of the docs) | Its type has `FullLoad() bool`: a link to it from anywhere is a page load, with nothing on the link |
+| A page whose script runs as its document loads (the sign-in screens, the theme editor) | Its type has `FullLoad() bool`: a link to it from anywhere is a page load, with nothing on the link |
 | A link whose following changes something, or the document itself (another language: `<html lang>` changes) | `hx-boost="false"` on the link, or `hx-boost:inherited="false"` on what holds several (the language list has it) |
 | A link whose answer is no page: a download, JSON, a text file | Nothing: charter sends the reader there as a page load |
 | A link to another site, one with `download`, one to a place on the same page | Nothing: htmx does not boost them |
