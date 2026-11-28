@@ -100,11 +100,16 @@ func TestANotesRowOpensByItself(t *testing.T) {
 	}
 	home.Click(first + ` button`)
 	home.WaitText(first+` p`, "20") // the year, in the full date
-	if open := home.Attr(first+` button`, "aria-expanded"); open != "true" {
-		t.Errorf("the row did not open: %q", open)
-	}
 	if !strings.Contains(home.Text(first), body) {
 		t.Errorf("the opened row is another note: %q", home.Text(first))
+	}
+	// It stays open when the list changes around it: someone else writes a note, the list asks for itself again
+	// and says which rows this reader has open, and what comes back has this one open still.
+	other := "written beside an open row at " + time.Now().Format(time.RFC3339Nano)
+	write(t, sdk(t, option.WithToken(apptest.Secret(t, env.WRITE_TOKEN))), other)
+	home.WaitText(el(pages.Home.List), other)
+	if open := home.Attr(first+` button`, "aria-expanded"); open != "true" || !strings.Contains(home.Text(first+` p`), "20") {
+		t.Errorf("after the list changed, the row the reader had open is open: %q", open)
 	}
 	if here := home.Attr(`header nav a[href="`+at(pages.Home{})+`"]`, "data-variant"); here != "secondary" {
 		t.Errorf("the header does not mark the page being shown: %q", here)

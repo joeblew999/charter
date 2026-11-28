@@ -12,7 +12,7 @@ func TestHomeProps(t *testing.T) {
 	store := &notes{}
 	store.Create(context.Background(), "first", "u1", "Ada")
 	store.Create(context.Background(), "second", "u1", "Ada")
-	props, _, _, _, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
+	props, _, _, _, _, _, _, err := Home{}.Props(httptest.NewRequest("GET", "/", nil), store, writer, page{})
 	if err != nil || len(props.Notes) != 2 || props.Notes[0].Body != "second" {
 		t.Fatalf("%+v %v", props, err)
 	}

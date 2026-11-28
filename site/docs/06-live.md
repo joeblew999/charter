@@ -86,7 +86,7 @@ Why it is told that something changed, and never what:
 
 - **Added, taken away or altered, it is one thing.** The page shows what the log has, so nothing is shown twice or left behind.
 - **Changes that come together end right.** The last request is the one that counts: however many arrive at once, the page ends as the log is.
-- **What the reader was doing stays.** What comes is morphed into place: a row they have opened stays open, and each row is matched by its id.
+- **What the reader was doing stays, when the page says so.** What comes is the list as the Worker has it, which knows nothing of what a reader did to a row since: a row they opened would be shut by it. So a row of a list that is asked for again is marked to be kept (`hx-preserve`, which the example's `List` gives each `Item`): htmx leaves the row the page has as it is, and puts in only the rows that are new. A row asked for by itself, by its own button, is not marked: it is the answer.
 - **It reads what is newest.** The request says so (the header `X-D1-Newest`), so it is answered by the database's primary: a copy that is behind would show the page as it was before the change it was just told of ([reads near the reader](07-database.md#reads-near-the-reader)).
 
 The stream is on an element of its own, around the list: htmx opens a stream on that element's trigger, and what is replaced is inside it, so the stream stays open across every change.

@@ -81,31 +81,31 @@ A page that shows something of the caller declares them, as it declares the stor
 // list asks for itself when its stream says the notes changed (its target is Home's List): then the newest notes
 // are read, and structpages renders List with them, for this reader. Anything else is the page. Each component
 // takes its share of the results by their types.
-func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, []api.Note, charter.Caller, api.Note, Open, Removable, error) {
+func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, target structpages.RenderTarget) (HomeProps, []api.Note, charter.Caller, api.Note, Open, Removable, Kept, error) {
 	if target.Is(p.Item) {
 		id, err := strconv.ParseInt(structpages.KeyOf(target), 10, 64)
 		if err != nil {
-			return HomeProps{}, nil, caller, api.Note{}, false, false, app.NotFound("no such note")
+			return HomeProps{}, nil, caller, api.Note{}, false, false, false, app.NotFound("no such note")
 		}
 		note, err := store.Get(r.Context(), id)
 		if err != nil {
-			return HomeProps{}, nil, caller, api.Note{}, false, false, app.NotFound("no such note")
+			return HomeProps{}, nil, caller, api.Note{}, false, false, false, app.NotFound("no such note")
 		}
-		return HomeProps{}, nil, caller, note, r.URL.Query().Get("open") != "", Removable(api.MayRemove(caller, note)), nil
+		return HomeProps{}, nil, caller, note, r.URL.Query().Get("open") != "", Removable(api.MayRemove(caller, note)), false, nil
 	}
 	notes, err := store.Before(r.Context(), math.MaxInt64, shown)
 	if err != nil {
-		return HomeProps{}, nil, caller, api.Note{}, false, false, err
+		return HomeProps{}, nil, caller, api.Note{}, false, false, false, err
 	}
 	if target.Is(p.List) {
-		return HomeProps{}, notes, caller, api.Note{}, false, false, nil
+		return HomeProps{}, notes, caller, api.Note{}, false, false, false, nil
 	}
 	props := HomeProps{Notes: notes, MayWrite: caller.May(PostNote{}.Needs()...), Caller: caller}
 	// One read of KV, for every reader: what it is for.
 	if props.Notice, err = built.NoticeNow(r.Context()); err != nil {
-		return HomeProps{}, nil, caller, api.Note{}, false, false, err
+		return HomeProps{}, nil, caller, api.Note{}, false, false, false, err
 	}
-	return props, notes, caller, api.Note{}, false, false, nil
+	return props, notes, caller, api.Note{}, false, false, false, nil
 }
 ```
 

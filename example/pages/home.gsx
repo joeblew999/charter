@@ -89,10 +89,12 @@ component (p Home) Form(body string, refused bool) {
 	</form>
 }
 
-// List is the notes of the list, each with what the reader may do with it.
+// List is the notes of the list, each with what the reader may do with it. A row of it that the page has already
+// is kept as the page has it (Item's kept): the list is asked for again whenever the notes change, and a row the
+// reader has opened meanwhile, which the Worker knows nothing of, must not be shut by that.
 component (p Home) List(notes []api.Note, reader charter.Caller) {
 	{ for _, note := range notes {
-		<p.Item note={note} open={false} removable={Removable(api.MayRemove(reader, note))}/>
+		<p.Item note={note} open={false} removable={Removable(api.MayRemove(reader, note))} kept={true}/>
 	} }
 }
 
@@ -100,10 +102,17 @@ component (p Home) List(notes []api.Note, reader charter.Caller) {
 // id is the component's, keyed by the note, so a button's target is this row and no other, and Home's Props knows
 // which note is wanted (structpages.KeyOf). It says who wrote it; open, also when, in full. Whoever may take it
 // away (its writer, a moderator) has the button for that.
-component (p Home) Item(note api.Note, open Open, removable Removable) {
+//
+// kept says the row is one of a list that is being asked for again: htmx then leaves the row the page has as it is
+// (hx-preserve), whatever this one says, and puts in only the rows that are new. A row asked for by itself, by its
+// own button, is not kept: it is the answer.
+component (p Home) Item(note api.Note, open Open, removable Removable, kept Kept) {
 	<li
 		id={Home.Item |> key(strconv.FormatInt(note.ID, 10))}
 		class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2"
+		{ if kept {
+			hx-preserve
+		} }
 	>
 		<span class="flex flex-1 flex-col">
 			<span dir="auto">{ note.Body }</span>
