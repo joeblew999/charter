@@ -1,6 +1,7 @@
 package themes
 
 import (
+	"go/format"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -58,5 +59,43 @@ func TestCode(t *testing.T) {
 	}
 	if _, err := Code("nova", "neutral", "teal-ish"); err == nil {
 		t.Error("a theme gsxui has not was given a code")
+	}
+}
+
+// What ui/styles has for a component: the same name and parameters, rendering the reader's style of it; and one
+// that takes a type of its own package stays the app's own.
+func TestChooser(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "thing.gsx")
+	text := "package ui\n\ntype ThingConfig struct{}\n\ncomponent Thing(variant string, at time.Time, children gsx.Node, attrs gsx.Attrs) {\n}\n\ncomponent Own(config ThingConfig) {\n}\n\ncomponent hidden() {\n}\n\nfunc Axis(key string) gsx.Node {\n}\n\nfunc Width() string {\n}\n"
+	if err := os.WriteFile(source, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := chooser(dir, "example.com/app", []string{source}, []string{"lyra", "maia"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"package ui\n",
+		`own "example.com/app/ui"`,
+		`"example.com/app/ui/styles/lyra"`,
+		`"time"`,
+		"type ThingConfig = own.ThingConfig\n",
+		"func Thing(variant string, at time.Time, children gsx.Node, attrs gsx.Attrs) gsx.Node {",
+		"\t\tcase \"maia\":\n\t\t\treturn maia.Thing(variant, at, children, attrs).Render(ctx, w)\n",
+		"\t\treturn own.Thing(variant, at, children, attrs).Render(ctx, w)\n",
+		"var Own = own.Own\n",
+		"func Axis(key string) gsx.Node {",
+		"var Width = own.Width\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("ui/styles lacks %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "hidden") {
+		t.Errorf("ui/styles has a component of ui's that nothing outside it can name:\n%s", got)
+	}
+	if _, err := format.Source([]byte(got)); err != nil {
+		t.Errorf("ui/styles is not Go: %v\n%s", err, got)
 	}
 }

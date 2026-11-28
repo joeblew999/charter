@@ -1,0 +1,21 @@
+// Written by charter check --fix: gsxui's mira of ui/separator.gsx, as gsxui apply writes it. Do not edit: a reader who
+// chooses mira in the theme editor is shown it.
+
+package mira
+
+import "github.com/gsxhq/gsx"
+
+// Separator is the shadcn/ui Separator. orientation: "" (default,
+// "horizontal") | "vertical" — stamped onto data-orientation, and also
+// drives the slot axis's own orientation dimension below, resolved to
+// concrete utilities at generation time. Radix's decorative prop (its
+// default true) is not ported — see docs/jsx-parity.md.
+component Separator(orientation string, attrs gsx.Attrs) {
+	<div
+		role="none"
+		data-orientation={orientation |> default("horizontal")}
+		class={ "bg-border shrink-0", switch orientation { case "vertical": "h-full w-px" default: "h-px w-full" } }
+		{ attrs... }
+		data-gsxui-slot-separator
+	></div>
+}

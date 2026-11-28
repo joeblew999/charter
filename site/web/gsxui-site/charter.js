@@ -1,12 +1,23 @@
 // What connects gsxui's theme editor to the app it is shown in. Everything that chooses, resolves and names a
 // theme is gsxui's own, beside this file as gsxui has it (web/theme.js, web/theme-state.js, web/theme-preview.js);
-// this only says where the editor starts, keeps what a reader chose, and lets a page of the app be the editor's
-// live preview. charter check --fix writes it here, as it writes gsxui's three: do not edit.
+// this only says where the editor starts, keeps what a reader chose (and tells the Worker the style, which is
+// markup), and lets a page of the app be the editor's live preview. charter check --fix writes it here, as it writes gsxui's three: do not edit.
 //
 // A reader's choice is kept by the browser as gsxui's share code and as the theme's CSS (gsxui's themeCSS), which
 // app.Head puts on every page before its first paint.
 const KEPT = "gsxui-preset";
 const KEPT_CSS = "gsxui-preset-css";
+
+// A style is not CSS: gsxui has it in each component's markup, and the app has its components in every style
+// (ui/styles). So the Worker is told which the reader chose, in a cookie (app.StyleCookie), and answers every page
+// in it. No cookie is the app's own style.
+const STYLE = "gsxui-style";
+const styleNow = () => document.cookie.split("; ").find((c) => c.startsWith(STYLE + "="))?.slice(STYLE.length + 1) ?? "";
+function setStyle(style) {
+  if (style === styleNow()) return false;
+  document.cookie = style ? `${STYLE}=${style}; Path=/; Max-Age=31536000; SameSite=Lax` : `${STYLE}=; Path=/; Max-Age=0; SameSite=Lax`;
+  return true;
+}
 
 // A page of the app shown inside the editor is its preview: gsxui's preview script takes each theme the editor
 // sends and puts it on the page. It looks for what gsxui's own preview page has (the names of the theme's
@@ -56,12 +67,14 @@ async function editor(element) {
       }
     } catch {}
     document.dispatchEvent(new CustomEvent("charter:preset"));
-    // What the page says of the choice: its code, where gsxui's own editor shows it in every style, and, for a
-    // style the app is not built in, how the app is built in it.
+    // Another style is other markup: the page in the preview is asked for again, and comes back in it. gsxui's
+    // editor sends it the rest of the theme as it loads.
+    if (setStyle(preset.style === own.style ? "" : preset.style)) {
+      document.querySelector("[data-theme-preview-frame]")?.contentWindow?.location.reload();
+    }
+    // What the page says of the choice: its code, and where gsxui's own editor shows it on every component.
     for (const at of document.querySelectorAll("[data-charter-code]")) at.textContent = code;
-    for (const at of document.querySelectorAll("[data-charter-style]")) at.textContent = preset.style;
     for (const link of document.querySelectorAll("[data-charter-gsxui]")) link.href = "https://ui.gsxhq.dev/theme?preset=" + encodeURIComponent(code);
-    for (const note of document.querySelectorAll("[data-charter-other-style]")) note.hidden = preset.style === own.style;
     for (const button of document.querySelectorAll("[data-charter-own]")) button.disabled = code === ownCode;
   };
   const at = new URL(location.href);
@@ -86,8 +99,12 @@ async function editor(element) {
       localStorage.removeItem(KEPT);
       localStorage.removeItem(KEPT_CSS);
     } catch {}
+    setStyle("");
     location.assign(location.pathname);
   });
+  // gsxui's editor previews two pages of its own (its components, a product page). Here the preview is the app's
+  // front page, one page: the two buttons that choose between gsxui's have nothing to choose.
+  for (const tab of document.querySelectorAll("[data-theme-page-tab]")) tab.parentElement.hidden = true;
   await import("./web/theme.js");
 }
 

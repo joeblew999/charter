@@ -325,15 +325,15 @@ de screens.tokens 71ef74d05e87 ff0df073477b
 de screens.tokens_intro 1c6d96696955 a918f0304511
 de site.description 4678adbf73e2 770309db6d44
 de site.title a53f68bc82b2 b6d1b994b50b
-file pages/screens/admin.gsx c0fa6c7aead1
-file pages/screens/docs.gsx 63ef71db0ed0
-file pages/screens/language-list.gsx 1a157c0ef599
-file pages/screens/language-offer.gsx 5ec18f9cf405
-file pages/screens/preferences.gsx fa0123644365
-file pages/screens/sign-in.gsx 8e5a933ca9b7
+file pages/screens/admin.gsx 2002ee7c5ddc
+file pages/screens/docs.gsx f6b60b383e5a
+file pages/screens/language-list.gsx 54de7beabd97
+file pages/screens/language-offer.gsx 6270716acc96
+file pages/screens/preferences.gsx e966a5ffd3ce
+file pages/screens/sign-in.gsx 404b5e438d3e
 file pages/screens/theme-picker.gsx b4f5aab0bf1e
-file pages/screens/theme-toggle.gsx 3d8bf9b79d18
-file pages/screens/theme.gsx f0c59ae0d99c
+file pages/screens/theme-toggle.gsx 87729672375c
+file pages/screens/theme.gsx 7286197c16b8
 file text:gsxui.breadcrumb d6dc6b5ebe19
 file text:gsxui.displays_the_mobile_sidebar 2a174a65adee
 file text:gsxui.more d47d7cb0e4f8

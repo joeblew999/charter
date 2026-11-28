@@ -46,8 +46,11 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
 - **The look is gsxui's, all of it.** Its styles, its themes, its light and dark, by gsxui's own commands
   (`charter run ui:theme` is `gsxui apply`). charter has no colour, no theme setting and no stylesheet of its own:
   what a reader chooses with is gsxui's own theme editor, its markup, catalogue and scripts written into the app
-  from gsxui (`internal/themes`, the theme screen), with the app as its preview by gsxui's own protocol. What
-  charter repeats of gsxui (the layout of a share code, for `--style`) a test holds to gsxui's source.
+  from gsxui (`internal/themes`, the theme screen), with the app as its preview by gsxui's own protocol. A style
+  is markup, so an app has its components in all eight: its own in `ui`, the others in `ui/styles/<style>` by
+  gsxui's own `apply`, and pages take them from `ui/styles`, which renders the reader's (`app.Style`). Never
+  import `ui` itself in a page. What charter repeats of gsxui (the layout of a share code, for `--style`) a test
+  holds to gsxui's source.
 - **What every app needs is a screen** (`app/screens`: the docs' pages, the theme switch, the language list and
   offer, the time zone dialog): a gsx template of gsxui components that `charter add screen:<name>` copies into an
   app, as gsxui copies a component, so it is built from the app's own components and theme. Change a screen in

@@ -241,6 +241,8 @@ func uiTheme(p *project.Project, a []string) {
 	}
 	// --yes: gsxui asks before it rewrites; a command an agent or a script runs cannot answer.
 	check(run.Run(p.Root, nil, "go", append([]string{"tool", "gsxui", "apply", "--preset", preset, "--yes"}, flags...)...))
+	// The app's components in gsxui's other styles are every style but the app's own: they follow.
+	check(themes.WriteStyles(p.Root, false))
 	// gsxui's theme editor in the app starts from the app's own preset: it follows.
 	if exists(filepath.Join(p.Root, "pages", "screens", "theme.gsx")) {
 		check(themes.Write(p.Root, false))

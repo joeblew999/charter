@@ -52,7 +52,7 @@ The look is gsxui's, all of it, and so is the way to change it: [gsxui's theme e
 
 | Part of a preset | gsxui has | Changed |
 |---|---|---|
-| Style: how the components are drawn | 8: Vega, Nova, Maia, Lyra, Mira, Luma, Sera, Rhea | while developing: it is compiled into the components |
+| Style: how the components are drawn | 8: Vega, Nova, Maia, Lyra, Mira, Luma, Sera, Rhea | by a reader, and while developing |
 | Mode | Light, Dark | by a reader, or their system |
 | Base color | 7 | by a reader, and while developing |
 | Theme | the base color's own, and 17 accents | by a reader, and while developing |
@@ -73,7 +73,7 @@ go tool charter add screen:theme
 
 What a reader chooses:
 
-- **is kept by their browser**, and every page of the app has it from then on, before its first paint, in the light and in the dark;
+- **is kept by their browser**, and every page of the app has it from then on, before its first paint, in the light and in the dark, in the style they chose;
 - **is in the page's address** (`/theme?preset=gsxui:p1:ZJC4`): send the address and whoever opens it has the same, in this app or in another made with charter, and in gsxui's own editor;
 - **is undone** by "The app's own theme".
 
@@ -83,7 +83,30 @@ Why it is written into the app and not compiled into it: gsxui's editor is 25 Mi
 
 ### A style
 
-A style is the one part a reader cannot have in your app: gsxui compiles one into the components' own markup, so an app has one and not eight. Choose another in the editor and your app's pages stay as they are; the page says so, sends the reader to gsxui's own editor with their choice, where every component is shown in it, and gives the command that builds your app in it.
+A style is the one part of a preset that is not CSS. gsxui has it in each component's own markup: a button in Lyra has other classes than a button in Nova, and a card other elements. So the app has its components in every one of gsxui's styles, and the Worker answers each reader in theirs:
+
+| Where | What | Written by |
+|---|---|---|
+| `ui/` | the components in the app's own style | `gsxui add`, `gsxui apply`: yours to change |
+| `ui/styles/<style>/` | the same components in each of the other seven | `charter check --fix`, by running gsxui's own `apply` in a copy of the app |
+| `ui/styles/` | a package named `ui` with every component, each rendering the reader's style of it | `charter check --fix` |
+
+A page takes its components from the third, where it would take them from `ui`:
+
+```go
+	ui "github.com/joeblew999/charter/site/ui/styles"
+```
+
+`<ui.Button>` in a page is then the reader's style of the button. `check` fails a page that imports `ui` itself, which would be the app's own style whatever was chosen.
+
+The editor tells the Worker the style in a cookie (`gsxui-style`), since the Worker needs it to write the markup; the rest of a preset stays in the browser. Choosing a style in the editor asks for the previewed page again, and it comes back in that style.
+
+What this costs, and what it does not do:
+
+- **Size.** Seven more styles of the example's 19 components are 3 MiB of its Worker (measured: 28.1 MiB with one style, 31.2 with eight, of the [64 a Worker may have](16-watching.md#cloudflares-limits)).
+- **A component you change in `ui/` is changed in the app's own style only.** The other seven are gsxui's, written again whenever gsxui or the app's components change. A reader who chose another style sees gsxui's.
+- **A component that takes a type of its own package** (a chart's `ChartConfig`, a calendar's locale) is the app's own style whatever is chosen: another package's component cannot be handed it.
+- **`charter add ui:<name>`, not `gsxui add` alone**, once a page uses the component: charter has `ui/styles` declare it first, then writes it in every style.
 
 ### While developing
 
@@ -94,7 +117,7 @@ go tool charter run ui:theme 'gsxui:p1:ZJC4'            # a whole preset: a shar
 go tool charter run ui:theme my-preset.json --only theme
 ```
 
-Each is `gsxui apply`. It writes `gsxui.preset.json` and `web/gsxui/theme.css`, and for another style every component again in that style: the site went to Lyra and back to Nova in nine seconds each way, and came back byte for byte. That is the app's own theme: what every reader has who has chosen nothing. The pages follow at once under `charter dev`.
+Each is `gsxui apply`. It writes `gsxui.preset.json` and `web/gsxui/theme.css`, and for another style every component in `ui/` again in that style; charter then writes `ui/styles` again, which is every style but the app's own. That is the app's own theme: what every reader has who has chosen nothing. The pages follow at once under `charter dev`.
 
 So the docs and the example have one theme by having one preset: apply the same share code to each.
 
@@ -104,6 +127,6 @@ So the docs and the example have one theme by having one preset: apply the same 
 
 ### What is checked, and what is not
 
-A browser test drives the editor in the app: it chooses a theme, a radius and a font with gsxui's own controls, sees the preview change, finds the choice on another page in the light and in the dark, hands the address to a second browser, chooses a style the app is not built in, and goes back to the app's own. The share code charter makes for `--style` is in gsxui's format, which a test holds to gsxui's own source.
+A browser test drives the editor in the app: it chooses a theme, a radius and a font with gsxui's own controls, sees the preview change, finds the choice on another page in the light and in the dark, hands the address to a second browser, chooses another style and finds the app's pages drawn in it, and goes back to the app's own. The share code charter makes for `--style` is in gsxui's format, which a test holds to gsxui's own source.
 
-Not checked by anything: how a preset looks. That a colour has enough contrast on another is gsxui's work, and seen in a browser. And the editor is in English, as gsxui wrote it.
+Not checked by anything: how a preset looks, and how each page of yours looks in each of the eight styles: the test tells Lyra from Nova by one button. That a colour has enough contrast on another is gsxui's work, and seen in a browser. The editor is in English, as gsxui wrote it. And the two buttons with which gsxui's editor chooses between its own two preview pages are not shown: here the preview is your app's front page.

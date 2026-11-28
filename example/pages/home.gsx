@@ -9,8 +9,8 @@ import (
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/locales"
 	"github.com/joeblew999/charter/example/pages/screens"
-	"github.com/joeblew999/charter/example/ui"
 	"github.com/joeblew999/charter/example/ui/icon"
+	ui "github.com/joeblew999/charter/example/ui/styles"
 )
 
 // Page is the home page: the form, and the newest notes, newest first. The list keeps itself current: its stream

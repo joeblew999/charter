@@ -67,6 +67,8 @@ func Check(args []string) {
 			return fmt.Errorf("these samples of the docs are not what their files say (charter check --fix writes them again):\n  %s", strings.Join(differ, "\n  "))
 		})
 	}
+	// Before the screens, which take their components from it.
+	t.part("styles", func() error { return themes.WriteStyles(p.Root, !*fix) })
 	if hasIntl(p) && exists(filepath.Join(p.Root, "pages", "screens")) {
 		// charter's screens the app has and has not changed follow charter, as its library code does. Before anything
 		// is generated from them: a screen written for an older charter may not compile against this one, and saying
@@ -155,6 +157,11 @@ func bindingsTyped(p *project.Project) error {
 func themesWritten(p *project.Project, fix bool) error {
 	if err := themes.Write(p.Root, !fix); err != nil {
 		return err
+	}
+	if direct, err := themes.Unstyled(p.Root); err != nil {
+		return err
+	} else if len(direct) > 0 {
+		return fmt.Errorf("these take their components from ui itself, which is the app's own style whatever a reader chose in the theme editor:\n  %s\nimport ui %q instead: the same components, each in the reader's style", strings.Join(direct, "\n  "), themes.StylesImport(p.Root))
 	}
 	entry := filepath.Join(p.Root, "web", "main.js")
 	b, err := os.ReadFile(entry)

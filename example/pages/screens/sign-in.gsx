@@ -9,8 +9,8 @@ import (
 	"github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/example/locales"
-	"github.com/joeblew999/charter/example/ui"
 	"github.com/joeblew999/charter/example/ui/icon"
+	ui "github.com/joeblew999/charter/example/ui/styles"
 	"github.com/joeblew999/charter/intl"
 )
 

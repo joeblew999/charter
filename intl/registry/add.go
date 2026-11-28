@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"github.com/joeblew999/charter/internal/themes"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -225,9 +226,16 @@ func gsxuiAdd(root, dir string, comps []Component) error {
 		return nil
 	}
 	// gsxui is the app's own tool (go.mod), at the version the app pins.
+	// A screen that is already written uses them through ui/styles: it declares them first, and has them after.
+	if err := themes.Expect(root, missing); err != nil {
+		return err
+	}
 	cmd := exec.Command("go", append([]string{"tool", "gsxui", "add"}, missing...)...)
 	cmd.Dir, cmd.Stdout, cmd.Stderr = root, os.Stdout, os.Stderr
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return themes.WriteStyles(root, false)
 }
 
 // textRecord begins intl.sum's record of a message's source text as the registry shipped it: text:screens.name.

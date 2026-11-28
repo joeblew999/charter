@@ -275,20 +275,45 @@ func TestAReaderChoosesATheme(t *testing.T) {
 	if got := other.JS(`getComputedStyle(document.documentElement).getPropertyValue("--primary").trim()`); got != blue && other.JS(`String(document.documentElement.classList.contains("dark"))`) != "true" {
 		t.Errorf("another browser, given the address: --primary %q, want %q", got, blue)
 	}
-	// A style the app is not built in: the page says so, and where it is seen.
+	// A style is the components' own markup, where the rest is CSS: choosing Lyra, the preview is asked for again
+	// and its button is Lyra's, and every page of the app is from then on.
+	button := `document.querySelector("main a[data-variant]").className`
+	drawn := func() string {
+		return page.JS(`document.querySelector("[data-theme-preview-frame]").contentDocument?.querySelector("main a[data-variant]")?.className ?? ""`)
+	}
+	nova := drawn()
+	if nova == "" {
+		t.Fatal("the preview has no button on the front page to tell a style by")
+	}
 	page.Click(`[data-theme-style="lyra"]`)
 	changes("the address's preset, after choosing the style Lyra", preset, chosen)
-	if hidden := page.JS(`String(document.querySelector("[data-charter-other-style]").hidden)`); hidden != "false" {
-		t.Error("the style Lyra was chosen in an app built in another, and the page does not say so")
+	lyra := changes("the button in the preview, after choosing the style Lyra", func() string {
+		if now := drawn(); now != "" {
+			return now
+		}
+		return nova // the preview is between two pages
+	}, nova)
+	page.WaitText("[data-theme-preview-status]", "Live")
+	if got := previewed("primary"); got != blue {
+		t.Errorf("in the preview in Lyra, --primary is %q, want the chosen theme's still: %q", got, blue)
 	}
-	if link := page.Attr("a[data-charter-gsxui]", "href"); !strings.HasPrefix(link, "https://ui.gsxhq.dev/theme?preset=gsxui") {
-		t.Errorf("the way to gsxui's own editor is %q", link)
+	page.Open(at(pages.Home{}))
+	if got := page.JS(button); got != lyra {
+		t.Errorf("on the front page after choosing Lyra, the button is drawn %q, want Lyra's %q", got, lyra)
 	}
+	if link := page.Attr(`header a[href$="`+at(screens.Theme{})+`"]`, "class"); link == "" {
+		t.Error("the header has no way back to the theme editor")
+	}
+	page.Open(at(screens.Theme{}))
+	page.WaitText("[data-theme-preview-status]", "Live")
 	// And the app's own again.
 	page.Click("[data-charter-own]")
 	page.WaitText("[data-theme-preview-status]", "Live")
 	page.Open(at(pages.Home{}))
 	if got := variable("primary"); got != own {
 		t.Errorf("after choosing the app's own theme: --primary %q, want %q", got, own)
+	}
+	if got := page.JS(button); got != nova {
+		t.Errorf("after choosing the app's own theme, the button is drawn %q, want the app's own style's %q", got, nova)
 	}
 }

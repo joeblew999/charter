@@ -3,8 +3,8 @@ package screens
 import (
 	"github.com/gsxhq/gsx"
 	"github.com/joeblew999/charter/example/locales"
-	"github.com/joeblew999/charter/example/ui"
 	"github.com/joeblew999/charter/example/ui/icon"
+	ui "github.com/joeblew999/charter/example/ui/styles"
 	"github.com/joeblew999/charter/intl"
 )
 

@@ -16,9 +16,9 @@ func TestSource(t *testing.T) {
 		want  string
 	}{
 		{registry.Paths{Catalogs: "example.com/app/locales", Gsxui: "example.com/app/ui"},
-			"import (\n\t\"example.com/app/locales\"\n\t\"example.com/app/ui\"\n\t\"example.com/app/ui/icon\"\n\t\"github.com/gsxhq/gsx\"\n\t\"github.com/joeblew999/charter/intl\"\n)\n"},
+			"import (\n\t\"example.com/app/locales\"\n\t\"example.com/app/ui/icon\"\n\tui \"example.com/app/ui/styles\"\n\t\"github.com/gsxhq/gsx\"\n\t\"github.com/joeblew999/charter/intl\"\n)\n"},
 		{registry.Paths{Catalogs: "zzz.example/app/messages", Gsxui: "zzz.example/app/components"},
-			"import (\n\t\"github.com/gsxhq/gsx\"\n\t\"github.com/joeblew999/charter/intl\"\n\t\"zzz.example/app/components\"\n\t\"zzz.example/app/components/icon\"\n\tlocales \"zzz.example/app/messages\"\n)\n"},
+			"import (\n\t\"github.com/gsxhq/gsx\"\n\t\"github.com/joeblew999/charter/intl\"\n\t\"zzz.example/app/components/icon\"\n\tui \"zzz.example/app/components/styles\"\n\tlocales \"zzz.example/app/messages\"\n)\n"},
 	} {
 		s, _ := Screens.Find("language-list")
 		b, err := Screens.Source(s, tc.paths)

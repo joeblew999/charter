@@ -10,8 +10,8 @@ import (
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/intl"
 	"github.com/joeblew999/charter/site/locales"
-	"github.com/joeblew999/charter/site/ui"
 	"github.com/joeblew999/charter/site/ui/icon"
+	ui "github.com/joeblew999/charter/site/ui/styles"
 )
 
 // Docs is the app's docs as a group of pages: /docs/ is docs/index.md, /docs/<name> every other Markdown file of

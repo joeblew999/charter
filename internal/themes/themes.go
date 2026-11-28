@@ -11,9 +11,8 @@
 // markup, with the catalogue in it) is a file of the app; the scripts are copied beside it, as gsxui copies its
 // own into web/gsxui. The page that shows it is the theme screen.
 //
-// What gsxui's design leaves to building: a style (vega, nova, maia, lyra, mira, luma, sera, rhea) is compiled into
-// an app's components, one for an app. In the app the editor shows the app's own style; another is seen in
-// gsxui's own editor, where the page sends a reader with their choice, and built with charter run ui:theme.
+// A style (vega, nova, maia, lyra, mira, luma, sera, rhea) is the one part of a preset that is markup and not CSS:
+// the app has its components in each (styles.go), and the editor tells the Worker which a reader chose.
 //
 // Written by charter check --fix when the app's preset, its gsxui or this package has changed (the generated Go
 // says from which); charter check fails while any of it is behind.

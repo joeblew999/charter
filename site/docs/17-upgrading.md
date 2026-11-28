@@ -10,6 +10,20 @@ What you wrote does not, when a release changes how something is written. This p
 
 charter is before 1.0: a release may change how an app is written, and says so here. This page starts at 0.63; it does not cover what changed before that.
 
+## 0.72
+
+One line to change in each page that uses gsxui's components.
+
+- **A reader chooses a style too.** The app has its components in every one of gsxui's eight styles: `check --fix` writes the other seven into `ui/styles/<style>/` with gsxui's own `apply`, and `ui/styles` itself, a package named `ui` that renders the reader's. Commit all of it. In each `.gsx` of yours that imports the components, take them from there:
+
+  | Was | Is |
+  |---|---|
+  | `"example.com/app/ui"` | `ui "example.com/app/ui/styles"` |
+
+  `check` names each file that still has the first. charter's screens are changed by `check --fix`. Nothing else in a page changes: `<ui.Button>` stays `<ui.Button>`.
+- **`charter add ui:<name>`** writes a new component in every style. `gsxui add` alone fails once a page uses the component.
+- **A page's answer varies by cookie** (`Vary: Cookie`): the style is in one.
+
 ## 0.71
 
 Nothing to change in an app's code, unless it took 0.70's theme picker.

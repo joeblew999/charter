@@ -3,8 +3,8 @@ package screens
 import (
 	"github.com/gsxhq/gsx"
 	"github.com/joeblew999/charter/example/locales"
-	"github.com/joeblew999/charter/example/ui"
 	"github.com/joeblew999/charter/example/ui/icon"
+	ui "github.com/joeblew999/charter/example/ui/styles"
 )
 
 // ThemeToggle switches the page between the light and the dark theme of the app's gsxui preset (web/gsxui/theme.css),

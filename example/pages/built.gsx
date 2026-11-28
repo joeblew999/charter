@@ -8,7 +8,7 @@ import (
 	"github.com/joeblew999/charter/example/built"
 	"github.com/joeblew999/charter/example/locales"
 	"github.com/joeblew999/charter/example/pages/screens"
-	"github.com/joeblew999/charter/example/ui"
+	ui "github.com/joeblew999/charter/example/ui/styles"
 	"github.com/joeblew999/charter/intl"
 	"github.com/joeblew999/charter/live"
 )

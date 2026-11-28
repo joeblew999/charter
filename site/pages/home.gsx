@@ -7,7 +7,7 @@ import (
 	"github.com/joeblew999/charter/intl"
 	"github.com/joeblew999/charter/site/locales"
 	"github.com/joeblew999/charter/site/pages/screens"
-	"github.com/joeblew999/charter/site/ui"
+	ui "github.com/joeblew999/charter/site/ui/styles"
 )
 
 // Page is the front page: what charter is, where to read, see and get it, and what it gives an app.

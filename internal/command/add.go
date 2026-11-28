@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/joeblew999/charter/internal/command/intl"
 	"github.com/joeblew999/charter/internal/run"
+	"github.com/joeblew999/charter/internal/themes"
 	"slices"
 	"strings"
 )
@@ -49,7 +50,13 @@ func Add(args []string) {
 			}
 		case typed && kind == "ui":
 			// gsxui add's own flags pass through: -diff, -overwrite.
+			// A page may use it already, through ui/styles, which declares it first and has it in every style after.
+			check(themes.Expect(p.Root, []string{name}))
 			check(run.Run(p.Root, nil, "go", append(append([]string{"tool", "gsxui", "add"}, flags...), name)...))
+			if !slices.Contains(flags, "-diff") && !slices.Contains(flags, "--diff") {
+				check(themes.WriteStyles(p.Root, false))
+				check(generate(p))
+			}
 		case typed && kind == "screen":
 			screens = append(screens, name)
 		case typed && kind == "d1":

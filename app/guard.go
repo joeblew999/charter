@@ -25,7 +25,7 @@ func guard(next http.Handler, pn *structpages.PageNode) http.Handler {
 		return next // what a page calls, a stream, a download
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		addVary(w.Header(), "HX-Request", "HX-Target", "HX-Request-Type", "HX-Boosted", "Sec-Fetch-Mode", "Sec-Fetch-Dest")
+		addVary(w.Header(), "HX-Request", "HX-Target", "HX-Request-Type", "HX-Boosted", "Sec-Fetch-Mode", "Sec-Fetch-Dest", "Cookie")
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			next.ServeHTTP(w, r)
 			return

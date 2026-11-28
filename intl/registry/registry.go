@@ -104,7 +104,11 @@ func (r *Registry) Source(c Component, p Paths) ([]byte, error) {
 			if path.Base(p.Catalogs) != "locales" {
 				spec = "locales " + spec
 			}
-		case imp == gsxuiImport || strings.HasPrefix(imp, gsxuiImport+"/"):
+		case imp == gsxuiImport:
+			// The components are taken from ui/styles, a package named ui with each of them rendering in the
+			// gsxui style the reader chose (internal/themes); what is beside them (icons, their words) is ui's own.
+			spec = "ui " + strconv.Quote(p.Gsxui+"/styles")
+		case strings.HasPrefix(imp, gsxuiImport+"/"):
 			spec = strconv.Quote(p.Gsxui + strings.TrimPrefix(imp, gsxuiImport))
 		}
 		imports = append(imports, spec)
