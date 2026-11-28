@@ -35,7 +35,7 @@ type request struct {
 	brought  Bookmarks           // what the request brought: where its sessions start
 	newest   bool                // Newest was called: they start at the primary
 	sessions map[string]*session // by the binding's name
-	wrote    Bookmarks           // after each statement that changed a database: where that database then was
+	reached  Bookmarks           // after each statement: where the database it ran on then was, as this request saw it
 	served   []string            // who answered each statement
 }
 
@@ -49,7 +49,7 @@ type session struct {
 // Begin starts a request: its statements share a session for each database, which starts at what the request
 // brought. app.Serve calls it; an app never does.
 func Begin(brought Bookmarks) {
-	serving = &request{brought: brought, sessions: map[string]*session{}, wrote: Bookmarks{}}
+	serving = &request{brought: brought, sessions: map[string]*session{}, reached: Bookmarks{}}
 }
 
 // End ends the request Begin started.
@@ -79,13 +79,14 @@ func Brought() Bookmarks {
 	return serving.brought
 }
 
-// Written is where each database was after the request changed it: what the response gives the reader to bring
-// back, so that their next request sees what this one wrote. Empty for a request that only read.
-func Written() Bookmarks {
+// Reached is where each database was as the request last saw it, read or written: what the response gives the
+// reader to bring back, so that their next request sees nothing older than this one did. Empty for a request that
+// ran no statement.
+func Reached() Bookmarks {
 	if serving == nil {
 		return nil
 	}
-	return serving.wrote.Join(nil)
+	return serving.reached.Join(nil)
 }
 
 // Served is who answered each of the request's statements, in order: "DB APAC primary", "DB WEUR replica".
@@ -152,19 +153,17 @@ func awaited(s *session, call func(session js.Value) js.Value) (result js.Value,
 	return promise.Await(call(s.value))
 }
 
-// noted keeps what a statement's answer says for the request: who answered, and where the database is if it
-// changed. result is a statement's (D1Result) or a batch's (an array of them).
+// noted keeps what a statement's answer says for the request: who answered, and where the database then was.
+// result is a statement's (D1Result) or a batch's (an array of them).
 func (db DB) noted(s *session, result js.Value) {
 	if serving == nil {
 		return
 	}
-	changed := false
 	note := func(one js.Value) {
 		meta := one.Get("meta")
 		if meta.Type() != js.TypeObject {
 			return
 		}
-		changed = changed || meta.Get("changed_db").Truthy()
 		// Under wrangler dev there is one database and no region.
 		who := "local"
 		if region := meta.Get("served_by_region"); region.Type() == js.TypeString {
@@ -182,11 +181,9 @@ func (db DB) noted(s *session, result js.Value) {
 	} else if result.Type() == js.TypeObject {
 		note(result)
 	}
-	if !changed {
-		return
-	}
+	// After a read as after a write: a reader who was shown the database at one point is never shown it earlier.
 	if bookmark := s.value.Call("getBookmark"); bookmark.Type() == js.TypeString {
-		serving.wrote[db.name] = Newer(serving.wrote[db.name], bookmark.String())
+		serving.reached[db.name] = Newer(serving.reached[db.name], bookmark.String())
 	}
 }
 

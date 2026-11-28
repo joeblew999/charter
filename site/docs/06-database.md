@@ -230,7 +230,7 @@ The seed still runs on your machine: a Worker started here, built with the seed,
 A D1 database takes its writes in one place, its primary, and can keep a copy in each of [its regions](https://developers.cloudflare.com/d1/best-practices/read-replication/). A read answered by the copy nearest the reader spares them the trip to the primary. A copy may be a moment behind, so two things have to hold, and charter holds them for every app, with no line of the app's:
 
 - **The statements of one request agree with each other.** They share one [session](https://developers.cloudflare.com/d1/worker-api/d1-database/#withsession), so a later one never sees less than an earlier one did.
-- **A reader sees their own writes.** The answer to a request that changed the database gives a bookmark, the point the database was then at, and the reader's next request brings it back: its reads are at least that new. A browser carries it in a cookie (`d1`, for five minutes, not readable by scripts), so it survives the redirect after a form; a program carries it in a header (`X-D1-Bookmark`), which it sends back as it was given.
+- **A reader sees their own writes, and never the database earlier than they have seen it.** The answer to a request that read or changed the database gives a bookmark, the point the database was at as that request saw it, and the reader's next request brings it back: its reads are at least that new. So what someone wrote is there on the next page, and so is what they were shown: a note that arrived in a live list is not gone a moment later because another copy answered. A browser carries it in a cookie (`d1`, for five minutes, not readable by scripts), so it survives the redirect after a form; a program carries it in a header (`X-D1-Bookmark`), which it sends back as it was given.
 
 `go tool charter deploy` turns the copies on for every database the Worker is bound to (D1's read replication, which wrangler has no setting for): a new app has them from its first deploy, an older one from its next. It costs nothing more: D1 bills the rows a statement reads and writes, with copies or without.
 
@@ -247,7 +247,7 @@ Where a request's reads start:
 
 What to know:
 
-- **A request that only reads is given nothing.** No cookie is set, so a page that could be cached still can.
+- **A request is given a bookmark only when it saw something new.** One that ran no statement is given nothing, and so is one whose reader already holds where the database is: a page that touches no database sets no cookie.
 - **A read that must be the newest says so:** `cloud.Newest()` before it. It is the one line an app may need, after a write that someone else made and this reader was told of some other way.
 - **The bookmark is given as the answer's headers go.** A statement that runs after that (in a stream, or in work left for after the answer) is not in it.
 - **What is brought as a bookmark and is none costs nothing.** One that is malformed starts nothing; one D1 does not know is given up for the primary.

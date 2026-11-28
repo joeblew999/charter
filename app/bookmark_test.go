@@ -33,16 +33,37 @@ func cookieOf(res *http.Response) *http.Cookie {
 	return nil
 }
 
-// A request that only read is given nothing: no cookie, no header, so its answer can be cached as before.
-func TestAReadGivesNoBookmark(t *testing.T) {
+// A request that ran no statement is given nothing, and so is one that saw the database where its reader already
+// knew it to be: no cookie, no header.
+func TestNothingNewGivesNoBookmark(t *testing.T) {
+	page := func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("page")) }
 	r := httptest.NewRequest(http.MethodGet, "https://app.example/", nil)
-	r.AddCookie(&http.Cookie{Name: cloud.BookmarkCookie, Value: "DB=" + olderBookmark})
-	res := answered(r, nil, []string{"DB WEUR replica"}, func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("page")) })
-	if cookieOf(res) != nil || res.Header.Get(cloud.BookmarkHeader) != "" {
-		t.Errorf("a read was given a bookmark: %v", res.Header)
+	r.AddCookie(&http.Cookie{Name: cloud.BookmarkCookie, Value: "DB=" + newerBookmark})
+	for name, reached := range map[string]cloud.Bookmarks{"no statement": nil, "the same place": {"DB": newerBookmark}, "a copy behind": {"DB": olderBookmark}} {
+		res := answered(r, reached, []string{"DB WEUR replica"}, page)
+		if cookieOf(res) != nil || res.Header.Get(cloud.BookmarkHeader) != "" {
+			t.Errorf("%s: a bookmark was given: %v", name, res.Header)
+		}
+		if res.Header.Get(ServedHeader) != "" {
+			t.Errorf("%s: who answered was said unasked: %q", name, res.Header.Get(ServedHeader))
+		}
 	}
-	if res.Header.Get(ServedHeader) != "" {
-		t.Errorf("who answered was said unasked: %q", res.Header.Get(ServedHeader))
+}
+
+// A request that only read is given where the database was when it read: the reader's next request, answered by
+// a copy that is behind this one, waits for it, and never shows the database earlier than this answer did.
+func TestAReadGivesItsBookmark(t *testing.T) {
+	page := func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("page")) }
+	first := answered(httptest.NewRequest(http.MethodGet, "https://app.example/", nil), cloud.Bookmarks{"DB": olderBookmark}, nil, page)
+	if c := cookieOf(first); c == nil || c.Value != "DB="+olderBookmark || first.Header.Get(cloud.BookmarkHeader) != "DB="+olderBookmark {
+		t.Fatalf("a first read: cookie %+v, header %q", cookieOf(first), first.Header.Get(cloud.BookmarkHeader))
+	}
+	// The database has moved on since: the reader is given where it is now.
+	r := httptest.NewRequest(http.MethodGet, "https://app.example/", nil)
+	r.AddCookie(cookieOf(first))
+	later := answered(r, cloud.Bookmarks{"DB": newerBookmark}, nil, page)
+	if c := cookieOf(later); c == nil || c.Value != "DB="+newerBookmark {
+		t.Errorf("a read of a database that moved on: cookie %+v", c)
 	}
 }
 
@@ -75,12 +96,13 @@ func TestAWriteGivesItsBookmark(t *testing.T) {
 }
 
 // Of two answers that cross, neither sets the reader back: what is given is never older than what was brought.
+// With two databases, the one that moved on is given beside the one the reader keeps.
 func TestTheNewerBookmarkIsKept(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "https://app.example/notes", nil)
 	r.AddCookie(&http.Cookie{Name: cloud.BookmarkCookie, Value: "DB=" + newerBookmark})
-	res := answered(r, cloud.Bookmarks{"DB": olderBookmark}, nil, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
-	if c := cookieOf(res); c == nil || c.Value != "DB="+newerBookmark {
-		t.Errorf("cookie %+v, want the newer bookmark kept", c)
+	res := answered(r, cloud.Bookmarks{"DB": olderBookmark, "LOG": olderBookmark}, nil, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
+	if c := cookieOf(res); c == nil || c.Value != "DB="+newerBookmark+"&LOG="+olderBookmark {
+		t.Errorf("cookie %+v, want DB's newer bookmark kept and LOG's given", c)
 	}
 }
 

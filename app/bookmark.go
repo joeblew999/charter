@@ -7,13 +7,14 @@ import (
 	"github.com/joeblew999/charter/cloud"
 )
 
-// A reader sees their own writes, with nothing for an app to write: what cloud's sessions need of a request and of
-// its answer (cloud/session.go says why and when).
+// A reader sees their own writes, and never the database earlier than they have seen it, with nothing for an app to
+// write: what cloud's sessions need of a request and of its answer (cloud/session.go says why and when).
 //
 // The request brings the bookmark its reader was given: a header for a program, a cookie for a browser. The answer
-// gives one only when the request changed a database, so a page that is only read sets no cookie and can be cached
-// as before. It is given as the headers go, which is before a handler's body: a statement that runs after that (a
-// stream's, or work left for after the answer) is not in it.
+// gives where the databases were as the request saw them, read or written, when that is later than what was
+// brought: so a request that ran no statement is given nothing, and neither is one that saw nothing new. It is given
+// as the headers go, which is before a handler's body: a statement that runs after that (a stream's, or work left
+// for after the answer) is not in it.
 
 // ServedHeader says, to a request that asks which runtime answered (the header x-go-runtime), who answered each of
 // its statements on D1: "DB APAC primary, DB WEUR replica".
@@ -28,15 +29,15 @@ func brought(r *http.Request) cloud.Bookmarks {
 	return found
 }
 
-// carrying is w giving the request's reader, as the headers go, the bookmark of what the request wrote.
-func carrying(w http.ResponseWriter, r *http.Request, written func() cloud.Bookmarks, served func() []string) *carried {
-	return &carried{ResponseWriter: w, request: r, written: written, served: served}
+// carrying is w giving the request's reader, as the headers go, the bookmark of where the request reached.
+func carrying(w http.ResponseWriter, r *http.Request, reached func() cloud.Bookmarks, served func() []string) *carried {
+	return &carried{ResponseWriter: w, request: r, reached: reached, served: served}
 }
 
 type carried struct {
 	http.ResponseWriter
 	request *http.Request
-	written func() cloud.Bookmarks
+	reached func() cloud.Bookmarks
 	served  func() []string
 	given   bool
 	sent    bool // answered with where to go, as a navigation: what the handler writes is left out
@@ -64,12 +65,13 @@ func (c *carried) give() {
 			header.Set(ServedHeader, strings.Join(who, ", "))
 		}
 	}
-	written := c.written()
-	if len(written) == 0 {
+	// Never older than what the request brought: of two answers that cross, neither sets the reader back. And
+	// only what is later than that: a reader who holds where the database is, is told nothing.
+	had := brought(c.request)
+	value := c.reached().Join(had).String()
+	if value == had.String() {
 		return
 	}
-	// Never older than what the request brought: of two answers that cross, neither sets the reader back.
-	value := written.Join(brought(c.request)).String()
 	header.Set(cloud.BookmarkHeader, value)
 	secure := c.request.TLS != nil || c.request.URL.Scheme == "https" || c.request.Header.Get("X-Forwarded-Proto") == "https"
 	// Not for a script to read, and sent with a link followed here from elsewhere (Lax), which a redirect after a

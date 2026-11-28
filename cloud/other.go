@@ -28,7 +28,7 @@ func Batch(DB, ...Statement) error                 { return ErrNotCloudflare }
 func Begin(Bookmarks)    {}
 func End()               {}
 func Newest()            {}
-func Written() Bookmarks { return nil }
+func Reached() Bookmarks { return nil }
 func Brought() Bookmarks { return nil }
 func Served() []string   { return nil }
 

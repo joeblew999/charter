@@ -90,7 +90,7 @@ func Serve(h http.Handler) http.Handler {
 		if r.Header.Get(cloud.NewestHeader) != "" {
 			cloud.Newest()
 		}
-		out := carrying(w, r, cloud.Written, cloud.Served)
+		out := carrying(w, r, cloud.Reached, cloud.Served)
 		h.ServeHTTP(out, incoming(r.WithContext(ctx)))
 		out.give()
 

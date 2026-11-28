@@ -13,8 +13,9 @@ import (
 	"github.com/joeblew999/charter/cloud"
 )
 
-// A reader sees their own writes, though reads may be answered by a copy of the database that is behind the one
-// that takes the writes: the answer to a write gives a bookmark, and the next request brings it back. The app has
+// A reader sees their own writes, and never the database earlier than they have seen it, though reads may be
+// answered by a copy of the database that is behind the one that takes the writes: the answer to a request that
+// read or wrote gives a bookmark, and the next request brings it back. The app has
 // no line about any of it (cloud/session.go). These ask a real Worker, with plain HTTP, since it is the headers
 // that are tested.
 
@@ -54,7 +55,7 @@ func bookmarkCookie(res *http.Response) *http.Cookie {
 var aBookmark = regexp.MustCompile(`^DB=[0-9a-f]{8}(-[0-9a-f]{8}){2}-[0-9a-f]{32}$`)
 
 // A write is answered with the bookmark of what it wrote, as a header and as a cookie; the request that brings it
-// back reads the note; a request that only read is given none.
+// back reads the note, and is never given an older one.
 func TestAWriteGivesABookmarkAndTheNextRequestSeesIt(t *testing.T) {
 	writer := "Bearer " + apptest.Secret(t, "WRITE_TOKEN")
 	res, body := asked(t, http.MethodPost, "/api/notes", `{"body":"read your own write"}`, "Authorization", writer)
@@ -79,28 +80,48 @@ func TestAWriteGivesABookmarkAndTheNextRequestSeesIt(t *testing.T) {
 		t.Fatalf("the write's cookie: %+v, want %s with the same bookmark", c, cloud.BookmarkCookie)
 	}
 
-	// A program brings the header back, a browser the cookie: each reads the note, and is given nothing new.
+	// A program brings the header back, a browser the cookie: each reads the note, and is given nothing unless the
+	// database has moved on since, and then where it is now.
 	for name, carry := range map[string][]string{"header": {cloud.BookmarkHeader, given}, "cookie": {"Cookie", c.Name + "=" + c.Value}} {
 		res, body := asked(t, http.MethodGet, "/api/notes", "", carry...)
 		if res.StatusCode != http.StatusOK || !strings.Contains(body, "read your own write") {
 			t.Errorf("with the %s: %s: %s", name, res.Status, body)
 		}
-		if res.Header.Get(cloud.BookmarkHeader) != "" || bookmarkCookie(res) != nil {
-			t.Errorf("with the %s: a read was given a bookmark", name)
+		if again := res.Header.Get(cloud.BookmarkHeader); again != "" && again <= given {
+			t.Errorf("with the %s: given %q, which is no later than the %q brought", name, again, given)
 		}
 	}
 }
 
-// A request that only reads sets no cookie, on a page or on the API: what could be cached before still can be.
-func TestAReadSetsNoCookie(t *testing.T) {
+// A request that only read is given where the database was when it read, on a page and on the API: the reader's
+// next request, answered by a copy that is behind, waits for it, so nothing they were shown is gone again. Brought
+// back, it is answered with nothing, or with where the database has moved on to.
+func TestAReadGivesItsBookmark(t *testing.T) {
 	for _, path := range []string{"/", "/api/notes"} {
 		res, _ := asked(t, http.MethodGet, path, "")
 		if res.StatusCode != http.StatusOK {
 			t.Fatalf("GET %s: %s", path, res.Status)
 		}
-		if bookmarkCookie(res) != nil || res.Header.Get(cloud.BookmarkHeader) != "" {
-			t.Errorf("GET %s was given a bookmark", path)
+		given := res.Header.Get(cloud.BookmarkHeader)
+		c := bookmarkCookie(res)
+		if !aBookmark.MatchString(given) || c == nil || c.Value != given {
+			t.Fatalf("GET %s: %s is %q and the cookie %+v, want DB=<a bookmark> in both", path, cloud.BookmarkHeader, given, c)
 		}
+		again, _ := asked(t, http.MethodGet, path, "", "Cookie", c.Name+"="+c.Value)
+		if later := again.Header.Get(cloud.BookmarkHeader); later != "" && later <= given {
+			t.Errorf("GET %s with its bookmark: given %q, which is no later than the %q brought", path, later, given)
+		}
+	}
+}
+
+// A page that reads no database is given nothing: no cookie, no header.
+func TestAPageWithoutADatabaseSetsNoCookie(t *testing.T) {
+	res, _ := asked(t, http.MethodGet, "/docs/", "")
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("GET /docs/: %s", res.Status)
+	}
+	if bookmarkCookie(res) != nil || res.Header.Get(cloud.BookmarkHeader) != "" {
+		t.Errorf("GET /docs/ was given a bookmark: %q", res.Header.Get(cloud.BookmarkHeader))
 	}
 }
 

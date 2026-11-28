@@ -23,7 +23,8 @@ import (
 //     just told them of;
 //   - at the primary too for a call to the API that brought no bookmark: a program that writes and then reads is
 //     right without knowing any of this, and one that brings back the bookmark it was given reads near itself;
-//   - else at the bookmark the request brought, which a response gave this reader after their own write (a cookie
+//   - else at the bookmark the request brought, which a response gave this reader: where the database was as
+//     their last request saw it, after their own write or after a read (a cookie
 //     for a browser, so it survives a redirect; a header for a program);
 //   - else anywhere: the nearest copy.
 //
