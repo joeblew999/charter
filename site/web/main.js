@@ -10,6 +10,8 @@ import "charter/intl";
 // gsxui's behaviours and its CSS (Tailwind).
 import "./gsxui/index.js";
 import "./gsxui/index.css";
+// How gsxui's own docs look, for the docs' pages: gsxui's stylesheet, which charter check --fix writes from gsxui.
+import "./gsxui-site/site.css";
 // gsxui's theme editor (the theme screen), and a page of the app shown inside it as its live preview: charter check
 // --fix writes the folder from gsxui itself.
 import "./gsxui-site/charter.js";

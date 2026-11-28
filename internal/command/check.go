@@ -168,18 +168,28 @@ func themesWritten(p *project.Project, fix bool) error {
 	if err != nil {
 		return fmt.Errorf("gsxui's theme editor is loaded by the page's script, and web/main.js is not there: %w", err)
 	}
-	const line, after = `import "./gsxui-site/charter.js";`, `import "./gsxui/index.css";`
-	if strings.Contains(string(b), line) {
+	const after = `import "./gsxui/index.css";`
+	text := string(b)
+	for _, load := range []struct{ line, why string }{
+		{`import "./gsxui-site/site.css";`, "// How gsxui's own docs look, for the docs' pages: gsxui's stylesheet, which charter check --fix writes from gsxui."},
+		{`import "./gsxui-site/charter.js";`, "// gsxui's theme editor (the theme screen), and a page of the app shown inside it as its live preview: charter check\n// --fix writes the folder from gsxui itself."},
+	} {
+		if strings.Contains(text, load.line) {
+			continue
+		}
+		if !fix {
+			return fmt.Errorf("web/main.js does not load what charter writes from gsxui (web/gsxui-site): add %s after %s (charter check --fix does)", load.line, after)
+		}
+		if !strings.Contains(text, after) {
+			return fmt.Errorf("web/main.js has no %s to put %s after: add it where the app's CSS is loaded", after, load.line)
+		}
+		say("web/main.js: %s", load.line)
+		text = strings.Replace(text, after, after+"\n"+load.why+"\n"+load.line, 1)
+	}
+	if text == string(b) {
 		return nil
 	}
-	if !fix {
-		return fmt.Errorf("web/main.js does not load gsxui's theme editor: add %s after %s (charter check --fix does)", line, after)
-	}
-	if !strings.Contains(string(b), after) {
-		return fmt.Errorf("web/main.js has no %s to put %s after: add it where the app's CSS is loaded", after, line)
-	}
-	say("web/main.js: loads gsxui's theme editor (web/gsxui-site)")
-	return os.WriteFile(entry, []byte(strings.Replace(string(b), after, after+"\n// gsxui's theme editor (the theme screen), and a page of the app shown inside it as its live preview: charter check\n// --fix writes the folder from gsxui itself.\n"+line, 1)), 0o644)
+	return os.WriteFile(entry, []byte(text), 0o644)
 }
 
 // scopesDeclared fails where the app's Go makes a scope that it is not declaring: a scope is a value so that no

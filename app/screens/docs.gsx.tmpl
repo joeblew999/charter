@@ -166,7 +166,38 @@ component DocsDocument(v DocsView) {
 								</ui.Sheet>
 							} }
 							// The page: HTML that charter build wrote from docs/*.md, the app's own files.
-							<article id="doc" lang="en" dir="ltr" class={docsProse}>{ gsx.Raw(v.Doc.HTML) }</article>
+							// A page as gsxui's own docs are: data-doc, which gsxui's stylesheet for its docs styles
+							// (web/gsxui-site/site.css), a section under each heading, and a table as gsxui's Table.
+							<article id="doc" data-doc="docs" lang="en" dir="ltr" class="flex max-w-3xl min-w-0 flex-col gap-10">
+								{ for _, section := range v.Doc.Sections {
+									<section class="flex min-w-0 flex-col gap-4">
+										{ for _, part := range section.Parts {
+											{ if part.Head == nil {
+												{ gsx.Raw(part.HTML) }
+											} else {
+												<ui.Table>
+													<ui.TableHeader>
+														<ui.TableRow>
+															{ for _, cell := range part.Head {
+																<ui.TableHead>{ gsx.Raw(cell) }</ui.TableHead>
+															} }
+														</ui.TableRow>
+													</ui.TableHeader>
+													<ui.TableBody>
+														{ for _, row := range part.Rows {
+															<ui.TableRow>
+																{ for _, cell := range row {
+																	<ui.TableCell class="align-top whitespace-normal">{ gsx.Raw(cell) }</ui.TableCell>
+																} }
+															</ui.TableRow>
+														} }
+													</ui.TableBody>
+												</ui.Table>
+											} }
+										} }
+									</section>
+								} }
+							</article>
 							<DocsAround v={v}/>
 							{ if v.Docs.Edit(v.Doc) != "" {
 								<ui.Button variant="link" size="sm" class="mt-2 px-0 text-muted-foreground" href={v.Docs.Edit(v.Doc)} rel="noopener" id="docs-edit">
@@ -309,28 +340,7 @@ func docsRepo(url string) string {
 	return strings.TrimPrefix(strings.TrimPrefix(strings.TrimRight(url, "/"), "https://"), "github.com/")
 }
 
-// docsProse styles the HTML the Markdown became: Tailwind classes on the elements inside the article, in the app's
-// gsxui tokens, since the HTML itself carries none.
-const docsProse = "flex max-w-3xl min-w-0 flex-col gap-4 leading-7 " +
-	// Nothing in a page is wider than the page: a table or a sample that is scrolls by itself, on a phone too.
-	"[&>*]:min-w-0 [&>*]:max-w-full [&_table]:block [&_table]:overflow-x-auto " +
-	"[&_h1]:text-3xl [&_h1]:font-semibold [&_h1]:tracking-tight " +
-	"[&_h2]:mt-6 [&_h2]:scroll-mt-20 [&_h2]:border-b [&_h2]:pb-2 [&_h2]:text-xl [&_h2]:font-semibold " +
-	"[&_h3]:mt-2 [&_h3]:scroll-mt-20 [&_h3]:text-lg [&_h3]:font-medium " +
-	"[&_a]:underline [&_a]:underline-offset-4 " +
-	"[&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:ps-6 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:ps-6 " +
-	"[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm " +
-	"[&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:bg-muted [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0 " +
-	"[&_table]:w-full [&_table]:text-sm [&_th]:border-b [&_th]:px-3 [&_th]:py-2 [&_th]:text-start [&_th]:font-medium " +
-	"[&_td]:border-b [&_td]:px-3 [&_td]:py-2 [&_td]:align-top " +
-	// A sample taken from a file says which, above the code.
-	"[&_figure]:flex [&_figure]:flex-col [&_figure]:gap-1 [&_figcaption]:font-mono [&_figcaption]:text-xs [&_figcaption]:text-muted-foreground " +
-	// Code, by what each word is (the classes charter build gives it), in the theme's own colours: so it follows
-	// the app's theme, light and dark.
-	"[&_pre_.k]:font-medium [&_pre_.kd]:font-medium [&_pre_.kn]:font-medium [&_pre_.kr]:font-medium [&_pre_.kc]:font-medium " +
-	"[&_pre_.k]:text-chart-1 [&_pre_.kd]:text-chart-1 [&_pre_.kn]:text-chart-1 [&_pre_.kr]:text-chart-1 [&_pre_.kc]:text-chart-1 [&_pre_.kt]:text-chart-1 " +
-	"[&_pre_.s]:text-chart-2 [&_pre_.s1]:text-chart-2 [&_pre_.s2]:text-chart-2 [&_pre_.sb]:text-chart-2 [&_pre_.se]:text-chart-2 " +
-	"[&_pre_.m]:text-chart-4 [&_pre_.mi]:text-chart-4 [&_pre_.mf]:text-chart-4 " +
-	"[&_pre_.nf]:text-chart-3 [&_pre_.nb]:text-chart-3 [&_pre_.nt]:text-chart-3 [&_pre_.na]:text-chart-3 " +
-	// A comment is set apart by its slant alone: a paler colour on the code's own background is too faint to read.
-	"[&_pre_.c]:italic [&_pre_.c1]:italic [&_pre_.cm]:italic"
+// docsClasses are the classes the HTML a page's Markdown became has on a list, a link, a heading and a sample's
+// caption: the ones gsxui's own doc pages give those (charter build writes them, internal/docsgen). They are
+// written here so that Tailwind, which reads the app's templates and not its data, has them.
+const docsClasses = "list-disc list-decimal space-y-2 ps-6 scroll-mt-20 font-medium underline decoration-foreground/30 hover:decoration-foreground flex flex-col gap-1 font-mono text-xs text-muted-foreground"

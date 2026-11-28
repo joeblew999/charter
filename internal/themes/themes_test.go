@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/joeblew999/charter/internal/docsgen"
 )
 
 // The layout of a share code here is gsxui's own, read from gsxui's source as the module cache has it: its lists
@@ -97,5 +99,34 @@ func TestChooser(t *testing.T) {
 	}
 	if _, err := format.Source([]byte(got)); err != nil {
 		t.Errorf("ui/styles is not Go: %v\n%s", err, got)
+	}
+}
+
+// How a docs page looks is gsxui's own stylesheet for its site's docs, taken as it is: it styles a container marked
+// data-doc, and colours the words of a sample under every name charter build gives one (docsgen.Names). When gsxui
+// renames one, this fails before a page is shown with its code uncoloured.
+func TestTheDocsLookIsGsxuis(t *testing.T) {
+	dir, err := exec.Command("go", "list", "-C", filepath.Join("..", "..", "example"), "-m", "-f", "{{.Dir}}", "github.com/gsxhq/gsxui").Output()
+	if err != nil {
+		t.Skipf("the example's gsxui is not here: %v", err)
+	}
+	sheet, err := docsSheet(strings.TrimSpace(string(dir)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"[data-doc] h2", "[data-doc] pre", "[data-doc] :not(pre) > code", `@reference "../gsxui/index.css";`} {
+		if !strings.Contains(sheet, want) {
+			t.Errorf("gsxui's stylesheet for its docs has no %q", want)
+		}
+	}
+	for _, name := range docsgen.Names {
+		if !regexp.MustCompile(`code \.` + name + `[,\s{]`).MatchString(sheet) {
+			t.Errorf("charter build names a word of a sample %s, which gsxui's stylesheet does not colour", name)
+		}
+	}
+	for _, not := range []string{"--site-logo", "@source", "@fontsource"} {
+		if strings.Contains(sheet, not) {
+			t.Errorf("what is gsxui's site's alone is in the app's stylesheet: %s", not)
+		}
 	}
 }

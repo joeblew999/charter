@@ -85,6 +85,17 @@ Everything around a page is a gsxui component, so it has your app's theme and gs
 
 The pages are one of [charter's screens](13-screens-and-themes.md): the list at the side, the page, its sections, the theme switch, a link to the repository and one to the page's own file on GitHub. They are built from your app's own gsxui components, so they have its look. This site's docs are shown by the same screen.
 
+How a page of Markdown looks is gsxui's too, as gsxui's own docs are, and nothing of it is charter's:
+
+| Part of a page | Looks as it does by |
+|---|---|
+| Headings, paragraphs, links, code | gsxui's own stylesheet for its site's docs, which `check --fix` writes from gsxui into `web/gsxui-site/site.css`. A page is marked `data-doc`, as gsxui's doc pages are |
+| A table | gsxui's `Table` component, in the reader's style |
+| A list, a sample's caption | the classes gsxui's own doc pages give them |
+| The colours of code | gsxui's stylesheet. charter marks each word by what it is under the names gsxui's site uses; a test fails when gsxui stops colouring one |
+
+So when gsxui changes how its docs look, yours follow with the next `check --fix`.
+
 ## What comes with them
 
 | Address | What it is |
@@ -103,7 +114,7 @@ While `charter dev` runs, saving a Markdown file reloads the page.
 - The page's own sections at the other side (a second `Sidebar`), and on a narrow window under "On this page", which comes down from the top and goes when a section is chosen (a `Sheet`).
 - At the foot of each page, the page before it and the page after it, each a gsxui `Item`: the docs read from one end to the other.
 - Search by the titles of pages and their sections. Cmd-K (Ctrl-K) opens it.
-- Code marked up by what each word is, in the colours of your app's theme, light and dark.
+- Code marked up by what each word is, in the colours gsxui's own site gives code, light and dark.
 - The theme switch, the repository, and "edit this page".
 
 ## Code taken from a real file

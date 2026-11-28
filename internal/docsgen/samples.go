@@ -167,6 +167,6 @@ func captioned(markdown string) string {
 		for strings.HasPrefix(path, "../") {
 			path = strings.TrimPrefix(path, "../")
 		}
-		return "<figure><figcaption>" + path + "</figcaption>\n\n```" + m[1] + "\n" + m[3] + "```\n\n</figure>"
+		return "<figure class=\"" + FigureClass + "\"><figcaption class=\"" + CaptionClass + "\">" + path + "</figcaption>\n\n```" + m[1] + "\n" + m[3] + "```\n\n</figure>"
 	})
 }

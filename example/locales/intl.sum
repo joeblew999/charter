@@ -326,7 +326,7 @@ de screens.tokens_intro 1c6d96696955 a918f0304511
 de site.description 4678adbf73e2 770309db6d44
 de site.title a53f68bc82b2 b6d1b994b50b
 file pages/screens/admin.gsx 2002ee7c5ddc
-file pages/screens/docs.gsx f6b60b383e5a
+file pages/screens/docs.gsx 2f458715f129
 file pages/screens/language-list.gsx 54de7beabd97
 file pages/screens/language-offer.gsx 6270716acc96
 file pages/screens/preferences.gsx e966a5ffd3ce

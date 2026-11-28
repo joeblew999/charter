@@ -128,6 +128,11 @@ func Write(dir string, check bool) error {
 		}
 		files[filepath.Join(scripts, "web", name)] = string(b)
 	}
+	sheet, err := docsSheet(gsxui)
+	if err != nil {
+		return err
+	}
+	files[filepath.Join(scripts, siteSheet)] = sheet
 	html, err := rendered(dir)
 	if err != nil {
 		return err
@@ -153,7 +158,7 @@ func Write(dir string, check bool) error {
 
 // present reports whether every file Write writes is there.
 func present(dir string) bool {
-	names := []string{markup, filepath.Join(scripts, "charter.js"), filepath.Join(scripts, "ui", "gsxui.js")}
+	names := []string{markup, filepath.Join(scripts, "charter.js"), filepath.Join(scripts, "ui", "gsxui.js"), filepath.Join(scripts, siteSheet)}
 	for _, name := range gsxuiScripts {
 		names = append(names, filepath.Join(scripts, "web", name))
 	}
@@ -163,6 +168,34 @@ func present(dir string) bool {
 		}
 	}
 	return true
+}
+
+// siteSheet is gsxui's own stylesheet for its site's docs, in the app.
+const siteSheet = "site.css"
+
+// What of gsxui's web/site.css is an app's: where its doc pages' look begins, and where what colours their code
+// begins, which runs to the file's end. Between the two and before them is what is gsxui's site's alone (its
+// fonts, its logo, where Tailwind reads its own templates).
+const (
+	proseStart = "@layer base {\n  /* Doc prose"
+	codeStart  = "/* Syntax highlighting for docs code blocks."
+)
+
+// docsSheet is how gsxui's own site's docs look, taken from gsxui's stylesheet for its site (web/site.css) as it
+// is: the rules for a container marked data-doc (headings, paragraphs, links, code) and the colours of a sample's
+// words. A docs page of the app is such a container (the docs screen), so it looks as gsxui's docs do, in the
+// app's theme. Nothing in it is charter's but the first line, which lets Tailwind read gsxui's own names in it.
+func docsSheet(gsxui string) (string, error) {
+	b, err := os.ReadFile(filepath.Join(gsxui, "web", "site.css"))
+	if err != nil {
+		return "", fmt.Errorf("gsxui's stylesheet for its site is no longer where it was (web/site.css): %w", err)
+	}
+	text := string(b)
+	prose, code := strings.Index(text, proseStart), strings.Index(text, codeStart)
+	if prose < 0 || code < prose {
+		return "", errors.New("gsxui's stylesheet for its site (web/site.css) no longer has its docs' look where it was (\"Doc prose\", \"Syntax highlighting for docs code blocks\"): this charter does not know this gsxui")
+	}
+	return "/* gsxui's own stylesheet for its site's docs (web/site.css in gsxui), from where its doc pages' look begins: written\n   by charter check --fix, not to be edited. A docs page of the app is marked data-doc, as gsxui's are. */\n@reference \"../gsxui/index.css\";\n\n" + text[prose:], nil
 }
 
 // compact is JSON on one line.

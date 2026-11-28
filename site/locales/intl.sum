@@ -1,5 +1,5 @@
 # intl.sum: the source text each translation was made from (charter build writes it: commit it, don't edit it).
-file pages/screens/docs.gsx fad364de691a
+file pages/screens/docs.gsx bf640ddbdd0f
 file pages/screens/theme-picker.gsx 57acfe22a670
 file pages/screens/theme-toggle.gsx 6415a9941641
 file pages/screens/theme.gsx 18c581703e60

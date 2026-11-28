@@ -8,7 +8,6 @@
 package docsgen
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -18,14 +17,14 @@ import (
 	"strconv"
 	"strings"
 
-	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/yuin/goldmark"
-	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 )
 
 var ordered = regexp.MustCompile(`^\d+[-_]`)
@@ -40,8 +39,9 @@ func slug(file string) string {
 }
 
 type page struct {
-	Slug, Title, Description, HTML, Markdown, Source, Group string
-	Headings                                                [][3]string // id, title, depth
+	Slug, Title, Description, Markdown, Source, Group string
+	Sections                                          []section
+	Headings                                          [][3]string // id, title, depth
 }
 
 // Write writes dir's docs/docs.built.go from its docs/*.md, and reports how many pages; none when there is no docs
@@ -61,10 +61,11 @@ func Write(dir string) (int, error) {
 		}
 		return strings.Compare(a, b)
 	})
-	// Code is marked up by what each word is (chroma's classes, no colours): the docs screen gives them the app's
-	// theme's colours, in light and in dark.
-	md := goldmark.New(goldmark.WithExtensions(extension.GFM, highlighting.NewHighlighting(highlighting.WithFormatOptions(chromahtml.WithClasses(true)))),
-		goldmark.WithParserOptions(parser.WithAutoHeadingID()), goldmark.WithRendererOptions(html.WithUnsafe()))
+	// Code is marked up by what each word is, under the names gsxui's own site gives them (look.go): gsxui's
+	// stylesheet colours them, in light and in dark.
+	md := goldmark.New(goldmark.WithExtensions(extension.GFM),
+		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
+		goldmark.WithRendererOptions(html.WithUnsafe(), renderer.WithNodeRenderers(util.Prioritized(code{}, 100))))
 	// What a person wrote (docs/*.md), then what charter writes of the app itself (reference.go).
 	type source struct {
 		slug, from string
@@ -133,12 +134,20 @@ func Write(dir string) (int, error) {
 				}
 				if id, ok := n.AttributeString("id"); ok && (n.Level == 2 || n.Level == 3) {
 					p.Headings = append(p.Headings, [3]string{string(id.([]byte)), title, fmt.Sprint(n.Level)})
+					n.SetAttributeString("class", []byte(HeadingClass))
+				}
+			case *ast.List:
+				if n.IsOrdered() {
+					n.SetAttributeString("class", []byte(OrderedClass))
+				} else {
+					n.SetAttributeString("class", []byte(ListClass))
 				}
 			case *ast.Paragraph:
 				if p.Description == "" && n.Parent() == doc {
 					p.Description = short(plain(n, source))
 				}
 			case *ast.Link:
+				n.SetAttributeString("class", []byte(LinkClass))
 				// A link to another page's file is a link to its address, from this page's.
 				if dest := string(n.Destination); strings.HasSuffix(strings.SplitN(dest, "#", 2)[0], ".md") && !strings.Contains(dest, "://") {
 					target, anchor, _ := strings.Cut(dest, "#")
@@ -157,11 +166,11 @@ func Write(dir string) (int, error) {
 		if p.Title == "" {
 			return 0, fmt.Errorf("%s has no heading (# Title): a page is named by its first", p.Source)
 		}
-		var out bytes.Buffer
-		if err := md.Renderer().Render(&out, source, doc); err != nil {
+		sections, err := sectioned(md, source, doc)
+		if err != nil {
 			return 0, fmt.Errorf("%s: %w", p.Source, err)
 		}
-		p.HTML, p.Markdown = out.String(), string(written)
+		p.Sections, p.Markdown = sections, string(written)
 		pages = append(pages, p)
 	}
 	// The pages are data (docs.built.json), which the Go only names: on a Worker charter build puts it beside the Wasm,
@@ -171,12 +180,13 @@ func Write(dir string) (int, error) {
 		Depth     int
 	}
 	type doc struct {
-		Slug, Title, Description, HTML, Markdown, Source, Group string
-		Headings                                                []heading
+		Slug, Title, Description, Markdown, Source, Group string
+		Sections                                          []section
+		Headings                                          []heading
 	}
 	docs := make([]doc, len(pages))
 	for i, p := range pages {
-		docs[i] = doc{Slug: p.Slug, Title: p.Title, Description: p.Description, HTML: p.HTML, Markdown: p.Markdown, Source: p.Source, Group: p.Group, Headings: []heading{}}
+		docs[i] = doc{Slug: p.Slug, Title: p.Title, Description: p.Description, Sections: p.Sections, Markdown: p.Markdown, Source: p.Source, Group: p.Group, Headings: []heading{}}
 		for _, h := range p.Headings {
 			depth, _ := strconv.Atoi(h[2])
 			docs[i].Headings = append(docs[i].Headings, heading{h[0], h[1], depth})

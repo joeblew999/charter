@@ -22,7 +22,7 @@ func TestWrite(t *testing.T) {
 	b, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.json"))
 	code := string(b)
 	for _, want := range []string{`"Title": "Start"`, `"Slug": "pages"`, `"Description": "How pages work."`, `"Description": "What it is. See the pages."`, `"ID": "routes"`,
-		`href=\"pages#routes\"`, `href=\"./\"`, `routes\"\u003eRoutes\u003c/h2`, `pre class=\"chroma\"`, `span class=\"mi\"\u003e1\u003c/span`} {
+		`href=\"pages#routes\"`, `href=\"./\"`, `id=\"routes\" class=\"scroll-mt-20\"\u003eRoutes\u003c/h2`, `\u003cpre\u003e\u003ccode\u003e`, `span class=\"ts-number\"\u003e1\u003c/span`} {
 		if !strings.Contains(code, want) {
 			t.Errorf("no %s in:\n%s", want, code)
 		}
@@ -67,7 +67,7 @@ func TestSamples(t *testing.T) {
 	if _, err := Write(dir); err != nil {
 		t.Fatal(err)
 	}
-	if built, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.json")); !strings.Contains(string(built), "figcaption\\u003epages/pages.go") {
+	if built, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.json")); !strings.Contains(string(built), "\\u003epages/pages.go\\u003c/figcaption") {
 		t.Errorf("the page does not say which file the code is from:\n%s", built)
 	}
 	os.WriteFile(page, []byte("# Start\n\n```go file=pages/pages.go#Gone\n```\n"), 0o644)
@@ -107,7 +107,10 @@ func TestReference(t *testing.T) {
 		t.Fatalf("with an API, a database and bindings: %d pages, %v", n, err)
 	}
 	built, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.json"))
-	var pages []struct{ Slug, Title, Markdown, HTML, Source string }
+	var pages []struct {
+		Slug, Title, Markdown, Source string
+		Sections                      json.RawMessage
+	}
 	if err := json.Unmarshal(built, &pages); err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +147,7 @@ func TestReference(t *testing.T) {
 	// A link to a part of the page names an id the page has.
 	api := pages[by["reference-api"]]
 	for _, id := range []string{"get-apinotesid", "delete-apinotesid", "note"} {
-		if !strings.Contains(api.HTML, `id="`+id+`"`) {
+		if !strings.Contains(string(api.Sections), `id=\"`+id+`\"`) {
 			t.Errorf("the API's page links to #%s and has no such part", id)
 		}
 	}
@@ -243,5 +246,38 @@ func TestGroups(t *testing.T) {
 	}
 	if want := "=, pages=Write, api=Write, start=Start, other=, reference-bindings=Reference"; strings.Join(got, ", ") != want {
 		t.Errorf("the pages and their groups:\n%s\nwant:\n%s", strings.Join(got, ", "), want)
+	}
+}
+
+// A page is laid out as gsxui's own doc pages are: a section from each heading of the second level, and a table as
+// data, for gsxui's Table. A list and a link have the classes gsxui's doc pages give them.
+func TestAPageIsSectionsAndTables(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "docs"), 0o755)
+	os.WriteFile(filepath.Join(dir, "docs", "index.md"), []byte("# Start\n\nFirst.\n\n## One\n\n- a [link](https://example.com)\n\n| What | Where |\n|---|---|\n| a `page` | `pages/` |\n\nAfter.\n\n## Two\n\n1. first\n"), 0o644)
+	if _, err := Write(dir); err != nil {
+		t.Fatal(err)
+	}
+	var pages []struct{ Sections []section }
+	b, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.json"))
+	if err := json.Unmarshal(b, &pages); err != nil || len(pages) != 1 {
+		t.Fatal(err, len(pages))
+	}
+	s := pages[0].Sections
+	if len(s) != 3 || len(s[1].Parts) != 3 {
+		t.Fatalf("want 3 sections, the second of 3 parts (a list, a table, a paragraph): %+v", s)
+	}
+	table := s[1].Parts[1]
+	if len(table.Head) != 2 || table.Head[0] != "What" || len(table.Rows) != 1 || table.Rows[0][0] != "a <code>page</code>" {
+		t.Errorf("the table: %+v", table)
+	}
+	for part, want := range map[string]string{
+		s[1].Parts[0].HTML: `<ul class="` + ListClass + `">`,
+		s[1].Parts[0].HTML + " ": `class="` + LinkClass + `"`,
+		s[2].Parts[0].HTML: `<ol class="` + OrderedClass + `">`,
+	} {
+		if !strings.Contains(part, want) {
+			t.Errorf("no %s in %s", want, part)
+		}
 	}
 }

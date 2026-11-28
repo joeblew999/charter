@@ -10,6 +10,13 @@ What you wrote does not, when a release changes how something is written. This p
 
 charter is before 1.0: a release may change how an app is written, and says so here. This page starts at 0.63; it does not cover what changed before that.
 
+## 0.73
+
+Nothing to change in an app's code.
+
+- **A docs page looks as gsxui's own docs do**, by gsxui's own stylesheet for them (`web/gsxui-site/site.css`, which `check --fix` writes and adds to `web/main.js`) and gsxui's `Table`, which `check --fix` adds. charter's own styling of a page is gone. Commit what `check --fix` writes.
+- **`app.Doc` has `Sections`** where it had `HTML`: a page's parts under each heading, a table as its head and rows. Only a docs screen you changed yourself reads it; `check` says which.
+
 ## 0.72
 
 One line to change in each page that uses gsxui's components.

@@ -37,8 +37,10 @@ type Doc struct {
 	Slug string
 	// Title is the page's first heading, and Description its first paragraph, as a search result shows them.
 	Title, Description string
-	// HTML is the page: trusted, written by charter build from the app's own Markdown, which Markdown is.
-	HTML, Markdown string
+	// Sections are the page: one from each heading of the second level to the next, as gsxui's own doc pages are
+	// laid out. Markdown is the page as it was written.
+	Sections []DocSection
+	Markdown string
 	// Headings are the page's sections, for a table of contents.
 	Headings []DocHeading
 	// Source is the file, from the app's folder: docs/03-pages.md.
@@ -47,6 +49,20 @@ type Doc struct {
 	// the list that links to it), "" for a page it lists in none. What charter writes of the app itself is in
 	// "Reference".
 	Group string
+}
+
+// DocSection is a part of a page under one heading.
+type DocSection struct {
+	Parts []DocPart
+}
+
+// DocPart is a run of a page's HTML, or a table of it: its head and its rows, each cell's HTML. All of it is
+// trusted: written by charter build from the app's own Markdown, which Markdown is. A table is data so that the
+// docs screen shows it with gsxui's own Table.
+type DocPart struct {
+	HTML string
+	Head []string
+	Rows [][]string
 }
 
 // DocGroup is pages of the docs under one name, as the list at the side shows them.

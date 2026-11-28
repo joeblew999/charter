@@ -1,10 +1,12 @@
 package screens
 
 import (
+	"io/fs"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/joeblew999/charter/internal/docsgen"
 	"github.com/joeblew999/charter/intl/registry"
 )
 
@@ -77,5 +79,27 @@ func TestKeys(t *testing.T) {
 	}
 	if !slices.Contains(Screens.Languages(), "ar") || Screens.Languages()[0] != "en" {
 		t.Errorf("Languages() = %v", Screens.Languages())
+	}
+}
+
+// The classes charter build writes into a docs page's HTML (a list's, a link's: gsxui's own doc pages', in
+// internal/docsgen) are in the docs screen's text too, which is where Tailwind reads them from.
+func TestTheDocsScreenHasTheClassesOfAPage(t *testing.T) {
+	b, err := fs.ReadFile(Screens.Files, "docs.gsx.tmpl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, declared, ok := strings.Cut(string(b), "const docsClasses = ")
+	if !ok {
+		t.Fatal("the docs screen no longer says the classes of a page (docsClasses)")
+	}
+	declared, _, _ = strings.Cut(declared, "\n")
+	has := strings.Fields(strings.Trim(declared, `"`))
+	for _, classes := range docsgen.Classes {
+		for _, class := range strings.Fields(classes) {
+			if !slices.Contains(has, class) {
+				t.Errorf("charter build gives a docs page the class %s, which the docs screen does not have for Tailwind", class)
+			}
+		}
 	}
 }

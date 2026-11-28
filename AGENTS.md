@@ -44,7 +44,10 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   one charter has: `go test ./...` fails otherwise (`internal/docsgen`, `cmd/charter`). Each page that is about
   something a developer writes opens with its commands, what is checked before the app runs, and what is not.
 - **The look is gsxui's, all of it.** Its styles, its themes, its light and dark, by gsxui's own commands
-  (`charter run ui:theme` is `gsxui apply`). charter has no colour, no theme setting and no stylesheet of its own:
+  (`charter run ui:theme` is `gsxui apply`). charter has no colour, no theme setting, no stylesheet and no rule
+  that styles an element from outside it (`[&_h2]:…`) of its own. A page lays itself out with Tailwind's classes
+  on its own elements, as gsxui's site does; what a docs page's Markdown becomes is styled by gsxui's own
+  stylesheet for its docs and shown with gsxui's `Table` (`internal/docsgen/look.go`):
   what a reader chooses with is gsxui's own theme editor, its markup, catalogue and scripts written into the app
   from gsxui (`internal/themes`, the theme screen), with the app as its preview by gsxui's own protocol. A style
   is markup, so an app has its components in all eight: its own in `ui`, the others in `ui/styles/<style>` by
