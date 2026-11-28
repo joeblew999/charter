@@ -193,6 +193,38 @@ What stays a page load, and how each says so:
 
 The tree's GET pages without parameters are in the sitemap, in every language. The pages of the docs are too.
 
+## A page that is the same for every reader
+
+A page that shows every reader the same thing says so on its type, and Cloudflare keeps it:
+
+```go
+func (DocsIndex) Shared() bool { return true }
+```
+
+Cloudflare's [cache for the Worker](https://developers.cloudflare.com/workers/cache/) is asked before the Worker runs. A page it has is answered from the nearest of Cloudflare's places with no Worker started and no Go, so a reader's first hit, which otherwise waits for both, is as quick as any other. It is on in `wrangler.jsonc`:
+
+```jsonc
+  "cache": { "enabled": true },
+```
+
+charter decides, as each answer goes, whether it may be kept, and only all of this makes it so:
+
+| | |
+|---|---|
+| The page | Its type says `Shared`, and it answered 200 to a GET for a page. A part of a page is never kept |
+| The request | Brought nothing of a person: no `Authorization`, and no cookie but the ones a page is drawn from (the language, the time zone and clock, the style). With a session, a database bookmark or any cookie of your own, the answer is that reader's |
+| The answer | Gives no cookie, and read no database |
+
+Everything else the Worker answers says `private`: the API, a page that is not shared, an error, a stream. That matters, since with its cache on Cloudflare keeps an answer that says nothing for two hours.
+
+- **A reader with another style or language gets their own copy.** The page says which request headers it was drawn from (`Vary`), and Cloudflare keeps a copy for each set of them.
+- **A deploy starts an empty cache**, so what is kept is never of older code. `charter deploy` then asks for every page of the sitemap once, so the cache has them before a reader comes.
+- **A copy is kept a day**, and for a week after that it is still given at once while the Worker draws a new one behind it.
+- **A shared page shows nothing it read for the request**: no row of a database, no time in the reader's zone, nothing of who asks. The docs, the theme editor and this site's front page are shared; the example's front page reads its database and is not.
+- **It gives no cookie**, so the language of the last page viewed is not remembered from a shared page. A language the reader chose is.
+
+Not checked before the app runs: that a page which says `Shared` really is the same for everyone. `charter test` asks each of charter's own; a test of yours asks yours.
+
 ## The head
 
 ```gsx

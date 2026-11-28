@@ -192,7 +192,7 @@ export class Hub extends DurableObject {
 			cancel: () => this.gone(reader),
 		});
 		request.signal?.addEventListener("abort", () => reader && this.gone(reader), { once: true });
-		return new Response(body, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
+		return new Response(body, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-store" } });
 	}
 
 	async fetch(request) {

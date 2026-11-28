@@ -25,6 +25,10 @@ type Site struct {
 	// IsPage reports whether path (without its locale prefix) is a page people read; only a page view remembers
 	// its locale. nil: every path.
 	IsPage func(path string) bool
+	// IsShared reports whether the page at path (without its locale prefix) is the same for every reader, and
+	// kept by a shared cache: such a page gives no cookie, so the locale of the last page viewed is not
+	// remembered from it. nil: none is.
+	IsShared func(path string) bool
 	// ConnectionTimeZone is the server's guess of the viewer's IANA time zone (Cloudflare's request.cf.timezone).
 	// nil: none, "UTC".
 	ConnectionTimeZone func(*http.Request) string
@@ -117,11 +121,17 @@ func (s Site) Handler(next http.Handler) http.Handler {
 		var wanted *Locale
 		if page {
 			wanted = chosen
-			if wanted == nil {
+			if wanted == nil && len(shipped) > 1 {
+				// With one language there is none to offer, and the page is not drawn from what the browser asks
+				// for: a shared cache keeps a copy for each value of a header a page varies by, as it is written.
 				w.Header().Add("Vary", "Accept-Language")
 				wanted = preferred(r.Header.Get("Accept-Language"))
 			}
-			keep(w, r, LocaleCookie, loc)
+			// A page every reader is given the same gives no cookie: an answer with one is kept by no cache. It
+			// remembers its locale only beside a choice, which is a cookie already.
+			if s.IsShared == nil || !s.IsShared(path) || len(w.Header().Values("Set-Cookie")) > 0 {
+				keep(w, r, LocaleCookie, loc)
+			}
 		}
 		w.Header().Set("Content-Language", loc.ID())
 		if !Complete(loc.ID()) {

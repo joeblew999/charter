@@ -10,6 +10,15 @@ What you wrote does not, when a release changes how something is written. This p
 
 charter is before 1.0: a release may change how an app is written, and says so here. This page starts at 0.63; it does not cover what changed before that.
 
+## 0.78
+
+Nothing of yours has to change. One line in `wrangler.jsonc` turns on what is new, and `charter create` writes it for a new app.
+
+- **Cloudflare keeps the pages that are the same for every reader**, and answers with them before the Worker runs: add `"cache": { "enabled": true }` to `wrangler.jsonc`. The docs and the theme editor are kept from then on. A page of yours is when its type has `Shared() bool` ([a shared page](04-pages.md#a-page-that-is-the-same-for-every-reader)).
+- **Every answer says who may keep it.** What says nothing is `private` now, the API too. An answer of yours that sets its own `Cache-Control` keeps it.
+- **A shared page gives no cookie**: the language of the last page viewed is no longer remembered from the docs. A language the reader chose still is.
+- **An app with one language no longer varies by the browser's languages** (`Vary: Accept-Language`): there is none to offer.
+
 ## 0.77
 
 Your pages change where they wrote out what is now said once.

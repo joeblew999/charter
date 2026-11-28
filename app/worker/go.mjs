@@ -268,9 +268,20 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 		return run(env, ctx, "handleQueueMessageBatch", batch, "a batch from a queue (queues.ConsumeNonBlock, before app.Run)");
 	}
 
-	// fetch is the Worker's: a WebSocket upgrade is carried by websocket.mjs (which gives it to Go
+	// fetch is the Worker's. Whatever answers, the answer says who may keep it: Cloudflare's cache for the Worker
+	// (wrangler.jsonc's "cache") is asked before the Worker runs, and keeps an answer that says nothing for two
+	// hours, for every reader. Go says so for its own (app's shared.go); this is for what is answered here.
+	async function fetch(request, env, ctx) {
+		const response = await answer(request, env, ctx);
+		if (response.status === 101 || response.headers.has("cache-control")) return response;
+		const kept = new Response(response.body, response);
+		kept.headers.set("cache-control", "private");
+		return kept;
+	}
+
+	// answer: a WebSocket upgrade is carried by websocket.mjs (which gives it to Go
 	// as plain HTTP), everything else goes to Go as it is.
-	function fetch(request, env, ctx) {
+	function answer(request, env, ctx) {
 		// Only websocket.mjs may say where a request came from this way: a client's own header of that name goes.
 		if (request.headers.has(CF_HEADER)) {
 			request = new Request(request);

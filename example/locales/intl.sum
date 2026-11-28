@@ -326,7 +326,7 @@ de screens.tokens_intro 1c6d96696955 a918f0304511
 de site.description 4678adbf73e2 770309db6d44
 de site.title a53f68bc82b2 b6d1b994b50b
 file pages/screens/admin.gsx a45b90b0d84c
-file pages/screens/docs.gsx ac26d3d09f00
+file pages/screens/docs.gsx f9978dcbc694
 file pages/screens/language-list.gsx 54de7beabd97
 file pages/screens/language-offer.gsx 6270716acc96
 file pages/screens/layout.gsx 4780ddf9ee4d
@@ -334,7 +334,7 @@ file pages/screens/preferences.gsx e966a5ffd3ce
 file pages/screens/sign-in.gsx efa610359006
 file pages/screens/theme-picker.gsx b4f5aab0bf1e
 file pages/screens/theme-toggle.gsx 87729672375c
-file pages/screens/theme.gsx 85095d2050dd
+file pages/screens/theme.gsx bf9986ea9468
 file text:gsxui.breadcrumb d6dc6b5ebe19
 file text:gsxui.displays_the_mobile_sidebar 2a174a65adee
 file text:gsxui.more d47d7cb0e4f8

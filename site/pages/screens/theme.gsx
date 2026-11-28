@@ -32,6 +32,9 @@ type Theme struct{}
 // starts as its document loads.
 func (Theme) FullLoad() bool { return true }
 
+// Shared says the page is the same for every reader: Cloudflare keeps it.
+func (Theme) Shared() bool { return true }
+
 component (p Theme) Page() {
 	// gsxui's layout for a workspace: the window under the header, the editor's controls and its preview in it.
 	<Layout

@@ -78,6 +78,16 @@ func Deploy(args []string) {
 		p.URL = address
 		say("charter.toml: url = %q. charter check --fix writes it into the specs", address)
 	}
+	// The pages that are the same for every reader are asked for once, so Cloudflare has them before a reader asks
+	// (kept.go): a deploy starts an empty cache.
+	switch {
+	case len(env) == 0:
+		keep(p.URL)
+	case p.URLs[env[1]] != "":
+		keep(p.URLs[env[1]])
+	default:
+		keep(deployedURL.FindString(said.String()))
+	}
 	switch {
 	case len(env) == 0 && p.URL != "":
 		say("deployed. To test it: go tool charter test --deployed   (%s)", p.URL)

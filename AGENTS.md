@@ -96,6 +96,11 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
 - **A test leaves the Worker as it found it.** The same tests ask a deployed Worker: whoever a test signs up it
   deletes (`apptest`'s `SignUp` does), and a row it writes it takes away. The example's `test/main_test.go` fails a
   run that leaves more than the seed.
+- **Every answer says who may keep it.** Cloudflare's cache for the Worker is on (`wrangler.jsonc`'s `cache`) and is
+  asked before the Worker runs. A page that is the same for every reader says so (`Shared() bool` on its type) and
+  is kept; `app/shared.go` decides for each answer, once, and everything else says `private`, in Go and in
+  `worker/go.mjs`. Never a `Cache-Control` written in a page, never a cache of charter's own (KV, the Cache API):
+  the platform's. A shared page shows nothing it read for the request and gives no cookie.
 - **Nothing long holds a Go runtime.** A runtime takes 13 MB or more of a Worker's 128 MB while it serves, so a
   request that lasts (a page's stream) is the hub's, in JavaScript (`live.Feed`'s `Signal` and `Since`), and
   `worker/go.mjs` keeps what the runtimes hold together under a budget. Cloudflare's analytics say `exceededMemory`

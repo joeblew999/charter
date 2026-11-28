@@ -65,12 +65,21 @@ func (c *carried) give() {
 			header.Set(ServedHeader, strings.Join(who, ", "))
 		}
 	}
+	// An answer that does not say who may keep it is its reader's: Cloudflare's cache, asked before the Worker,
+	// keeps one that says nothing (shared.go).
+	if header.Get("Cache-Control") == "" {
+		header.Set("Cache-Control", "private")
+	}
 	// Never older than what the request brought: of two answers that cross, neither sets the reader back. And
 	// only what is later than that: a reader who holds where the database is, is told nothing.
 	had := brought(c.request)
 	value := c.reached().Join(had).String()
 	if value == had.String() {
 		return
+	}
+	// It read or wrote the database for this request: it is this reader's, whatever the page said.
+	if strings.HasPrefix(header.Get("Cache-Control"), "public") {
+		header.Set("Cache-Control", "private")
 	}
 	header.Set(cloud.BookmarkHeader, value)
 	secure := c.request.TLS != nil || c.request.URL.Scheme == "https" || c.request.Header.Get("X-Forwarded-Proto") == "https"

@@ -32,6 +32,11 @@ type DocsIndex struct{}
 // DocsPage is every other page of the docs.
 type DocsPage struct{}
 
+// Shared says a page of the docs is the same for every reader: Cloudflare keeps it, and answers a reader with it
+// before the Worker runs.
+func (DocsIndex) Shared() bool { return true }
+func (DocsPage) Shared() bool  { return true }
+
 // DocsView is what a page of the docs shows: the page, and the docs it is one of.
 type DocsView struct {
 	Docs *app.Docs

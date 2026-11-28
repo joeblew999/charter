@@ -111,6 +111,7 @@ type App struct {
 	err    error
 	pages  []string        // the sitemap: the pages without parameters search engines may index, each a path without a language
 	routes map[string]bool // the tree's pages, by the pattern the mux has them under: whether search engines may index them
+	shared map[string]bool // those of them that are the same for every reader (shared.go)
 	site   intl.Site
 	tree   *structpages.StructPages
 }
@@ -292,6 +293,10 @@ func (a *App) Handler() http.Handler {
 		mux.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), key{}, page{a, r, &sync.Map{}})))
 	})
 	a.site.IsPage = isPage
+	a.site.IsShared = func(path string) bool {
+		_, pattern := routes.Handler(&http.Request{Method: http.MethodGet, URL: &url.URL{Path: path}, Host: "page"})
+		return a.shared[pattern]
+	}
 	h = a.site.Handler(h)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// A path that touches no binding: what gsx dev probes after each rebuild, what a Go runtime answers as it
@@ -361,10 +366,14 @@ func indexed(pn *structpages.PageNode) (path string, ok bool) {
 }
 
 // whole sends a page with its length, not in chunks: htmx's history restore wants that on Workers.
-func whole(next http.Handler) http.Handler {
+// shared: the page is the same for every reader, and is marked for Cloudflare to keep when this answer is (shared.go).
+func whole(next http.Handler, shared bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b := &buffered{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(b, r)
+		if shared {
+			share(w.Header(), r, b.status)
+		}
 		w.Header().Set("Content-Length", strconv.Itoa(b.body.Len()))
 		w.WriteHeader(b.status)
 		w.Write(b.body.Bytes())
@@ -404,6 +413,12 @@ func (a *App) Options(collect bool) []structpages.Option {
 				}
 				n, says := pn.Value.Interface().(interface{ Noindex() bool })
 				a.routes[pattern] = !says || !n.Noindex()
+				if isShared(pn) {
+					if a.shared == nil {
+						a.shared = map[string]bool{}
+					}
+					a.shared[pattern] = true
+				}
 			}
 		}
 		// A fragment's address opened as a document goes to the page it is part of (guard.go).
@@ -412,7 +427,7 @@ func (a *App) Options(collect bool) []structpages.Option {
 		next = a.allowed(next, pn)
 		// A page goes out whole; an action or a stream writes as it goes.
 		if isPage {
-			return whole(next)
+			return whole(next, isShared(pn))
 		}
 		return next
 	}

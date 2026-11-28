@@ -7,6 +7,9 @@
   "compatibility_date": "2026-09-25",
   // Workers Logs: what the Worker printed and how each request ended, kept by Cloudflare for a week.
   "observability": { "enabled": true },
+  // Cloudflare's cache for the Worker, asked before the Worker runs: a page that says it is the same for every reader
+  // (its type's Shared) is answered from it, with no Worker started. A deploy starts an empty one.
+  "cache": { "enabled": true },
   "compatibility_flags": ["enable_request_signal"],
   // charter build writes dist/ (Vite) and build/ (the Wasm, and the JavaScript that runs it). Under charter dev the
   // Worker stays running across builds: charter writes into watch_dir when there is a new one, and wrangler takes it.

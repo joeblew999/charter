@@ -24,6 +24,9 @@ func Mount(mux structpages.Mux, options ...structpages.Option) (*structpages.Str
 // Home is the front page.
 type Home struct{}
 
+// Shared says the front page is the same for every reader: Cloudflare keeps it.
+func (Home) Shared() bool { return true }
+
 // Where the site points: the repository, and the example running.
 const (
 	Repo    = "https://github.com/joeblew999/charter"
