@@ -185,6 +185,17 @@ func (p *Page) Tab() *Page {
 	return &Page{p.t, ctx}
 }
 
+// Phone makes the tab as wide as a phone held upright (390 by 800), for what a page shows only there: a menu in
+// place of a list at the side.
+func (p *Page) Phone() {
+	p.t.Helper()
+	ctx, cancel := context.WithTimeout(p.ctx, wait)
+	defer cancel()
+	if _, err := chromedp.Run(ctx, chromedp.EmulateViewport(390, 800)); err != nil {
+		p.t.Fatalf("a phone's width: %v", err)
+	}
+}
+
 // JS evaluates an expression in the page and gives its value as text: for what a test cannot do as a reader does,
 // such as standing in for the device's share sheet.
 func (p *Page) JS(expression string) string {

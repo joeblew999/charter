@@ -310,10 +310,10 @@ de screens.tokens_intro 1c6d96696955 a918f0304511
 de site.description 4678adbf73e2 770309db6d44
 de site.title a53f68bc82b2 b6d1b994b50b
 file pages/screens/admin.gsx c0fa6c7aead1
-file pages/screens/docs.gsx e7c50620aa27
+file pages/screens/docs.gsx e69ccd8cf17f
 file pages/screens/language-list.gsx 1a157c0ef599
 file pages/screens/language-offer.gsx 5ec18f9cf405
-file pages/screens/preferences.gsx 724682d890df
+file pages/screens/preferences.gsx fa0123644365
 file pages/screens/sign-in.gsx 8e5a933ca9b7
 file pages/screens/theme-toggle.gsx 3d8bf9b79d18
 file text:screens.account 7e1b0d5641f2

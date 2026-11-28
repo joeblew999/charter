@@ -76,12 +76,13 @@ component DocsDocument(v DocsView) {
 				// The list of pages, where there is no room for it at the side.
 				<ui.Popover class="md:hidden">
 					<ui.PopoverTrigger
+						id="docs-menu"
 						aria-label={locales.ScreensDocs}
 						class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
 					>
 						<icon.Menu class="size-4"/>
 					</ui.PopoverTrigger>
-					<ui.PopoverContent class="max-h-[calc(100svh-5rem)] w-64 overflow-y-auto p-2">
+					<ui.PopoverContent id="docs-menu-pages" class="max-h-[calc(100svh-5rem)] w-64 overflow-y-auto p-2">
 						<nav aria-label={locales.ScreensDocs} class="flex flex-col gap-1">
 							<DocsList v={v}/>
 						</nav>

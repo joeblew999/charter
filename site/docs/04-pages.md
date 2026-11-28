@@ -159,7 +159,7 @@ A link or a form's target comes from the tree, never from a path written as a st
 <body class="min-h-svh bg-background font-sans text-foreground antialiased" { app.Body()... }>
 ```
 
-`app.Body()` on the layout's `<body>` is all of it. A link to another page of the app, and a form, then keeps the document: htmx asks for the next page and morphs its body into place of this one's (boost), so what is the same on both stays as it is. The page's title comes with it, a list that follows a feed opens its stream as it arrives, and Back shows the page that was there. With htmx's preload extension (`web/main.js`: `hx-preload.js`) the request starts when the link is pressed, before the click is done.
+`app.Body()` on the layout's `<body>` is all of it. A link to another page of the app, and a form, then keeps the document: htmx asks for the next page and puts its body in place of this one's (boost). The scripts, the stylesheet and the theme stay; everything in the body is the next page's, as if it had loaded, so nothing a reader opened on one page (a menu, a dialog) is left open over the next. The page's title comes with it, a list that follows a feed opens its stream as it arrives, and Back shows the page that was there. With htmx's preload extension (`web/main.js`: `hx-preload.js`) the request starts when the link is pressed, before the click is done.
 
 What is asked for on a press is asked for before the reader has decided, so a `GET` must change nothing. One that does (a link that declines an offer, or chooses a language) is not boosted.
 

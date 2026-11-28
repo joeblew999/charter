@@ -36,8 +36,8 @@ func (PreferencesSave) ServeHTTP(w http.ResponseWriter, r *http.Request, site in
 }
 
 // PreferencesDialog is a header button and the time zone and clock dialog it opens. The dialog's form loads when it
-// opens (PreferencesFields), swapped in with innerHTML: inside a boosted nav, an inherited outerMorph would replace
-// the target itself.
+// opens (PreferencesFields), swapped in with innerHTML, said here so that it is what happens whatever swap is
+// inherited from around it.
 component PreferencesDialog() {
 	<ui.Dialog>
 		<ui.Button

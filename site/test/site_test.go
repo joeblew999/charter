@@ -67,3 +67,34 @@ func TestTheDocsForAgentsAndSearchEngines(t *testing.T) {
 		}
 	}
 }
+
+// On a phone the list of pages is a menu. A link in it shows its page with the menu closed, and the menu opens
+// again from there, under its button: a page reached by a link is as that page loaded would be, with nothing of
+// the page before left open over it.
+func TestTheDocsMenuOnAPhone(t *testing.T) {
+	page := apptest.Browser(t)
+	page.Phone()
+	page.Open(at(pages.Home{}))
+	page.Click(`main a[href$="/docs/"]`)
+	page.WaitText("#doc h1", "charter")
+	// Whether the menu is open, and how far below the top of the window it is: "true 52".
+	menu := func() string {
+		return page.JS(`(() => { const m = document.querySelector("#docs-menu-pages"); return m.matches(":popover-open") + " " + Math.round(m.getBoundingClientRect().top) })()`)
+	}
+	if got := menu(); got != "false 0" {
+		t.Fatalf("before it is opened, the menu is %q", got)
+	}
+	page.Click("#docs-menu")
+	if got := menu(); !strings.HasPrefix(got, "true ") || got == "true 0" {
+		t.Fatalf("opened, the menu is %q: want it open, below its button", got)
+	}
+	page.Click(`#docs-menu-pages a[href$="/docs/getting-started"]`)
+	page.WaitText("#doc h1", "Getting started")
+	if got := menu(); got != "false 0" {
+		t.Errorf("after a link in it was followed, the menu is %q: want it closed", got)
+	}
+	page.Click("#docs-menu")
+	if got := menu(); !strings.HasPrefix(got, "true ") || got == "true 0" {
+		t.Errorf("opened again on the next page, the menu is %q: want it open, below its button", got)
+	}
+}
