@@ -143,7 +143,8 @@ component Layout(mode LayoutMode, title string, description string, brand gsx.No
 	</html>
 }
 
-// LayoutBrand is the app's name (app.App's Name) as the way to its front page: what a header begins with.
+// LayoutBrand is the app's name (app.App's Name) as the way to its front page: what a header begins with. On one
+// line: a name with no room is cut short, and the header stays its height.
 component LayoutBrand() {
-	<a href={intl.URL(ctx, "/")} class="flex items-center font-semibold" translate="no">{ app.Name(ctx) }</a>
+	<a href={intl.URL(ctx, "/")} class="min-w-0 truncate font-semibold" translate="no">{ app.Name(ctx) }</a>
 }
