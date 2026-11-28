@@ -55,16 +55,16 @@ func (Redirect) Error() string { return "redirect" }
 // Auth is who may do what: api.Auth, which is what checks the API's operations too. Allow is nil when the request's
 // caller has the scopes; else an error with the status 401 (nobody is signed in) or 403 (someone who may not).
 type Auth interface {
-	Allow(r *http.Request, needs ...string) error
+	Allow(r *http.Request, needs ...Scope) error
 }
 
 // allowed checks what a route needs of its caller before it runs: the scopes its type's Needs method lists, and
 // those of every group above it in the tree. A route with no Needs, under none, is everyone's.
 func (a *App) allowed(next http.Handler, pn *structpages.PageNode) http.Handler {
-	var needs []string
+	var needs []Scope
 	found := false
 	for node := pn; node != nil; node = node.Parent {
-		if n, ok := node.Value.Interface().(interface{ Needs() []string }); ok {
+		if n, ok := node.Value.Interface().(interface{ Needs() []Scope }); ok {
 			found = true
 			needs = append(needs, n.Needs()...)
 		}

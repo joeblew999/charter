@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 	"time"
 
@@ -365,7 +364,7 @@ func (a *Auth) NewToken(r *http.Request, name string, scopes ...string) (string,
 		return "", app.Status(http.StatusUnprocessableEntity, "a token needs a name, of at most 60 characters")
 	}
 	// With no scopes of its own, a token may do what its maker may, whatever that becomes.
-	if slices.ContainsFunc(scopes, func(s string) bool { return !slices.Contains(who.Scopes, s) }) {
+	if !who.May(scopesOfWords(scopes)...) {
 		return "", app.Status(http.StatusForbidden, "a token may do what you may, or less")
 	}
 	token, hash := newToken()

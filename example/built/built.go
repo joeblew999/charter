@@ -18,6 +18,7 @@ import (
 
 	charter "github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/app"
+	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/db"
 	"github.com/joeblew999/charter/example/env"
 	"github.com/joeblew999/charter/live"
@@ -116,5 +117,5 @@ func stamp(s string) time.Time {
 // MayDetach is the rule for taking a file away, as api.MayRemove is for a note: whoever attached it, and whoever may
 // moderate.
 func MayDetach(who charter.Caller, a Attachment) bool {
-	return who.May("moderate") || (who.Subject != "" && who.Subject == a.AuthorID)
+	return who.May(api.Moderate) || (who.Subject != "" && who.Subject == a.AuthorID)
 }

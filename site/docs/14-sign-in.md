@@ -6,7 +6,7 @@ An app has one answer to "who is asking, and may they?", for its pages and for i
 
 ```go file=../example/api/handlers.go#Auth
 // Auth is that, for the whole app: the API's operations are checked by it (API), and so are the pages (main.go
-// gives it to app.App). So a page that needs "write" and the operation that needs "write" ask the same thing of
+// gives it to app.App). So a page that needs Write and the operation that needs Write ask the same thing of
 // the same caller.
 var Auth = charter.NewAuth(cloud.Var, Trusted...)
 ```
@@ -24,15 +24,32 @@ The API's operations are checked by it, and so are the pages: `main.go` gives th
 
 ## Saying what is needed
 
-An operation says it in the contract. A page, or a group of pages, says it with a method, in the same words:
+What someone may do is a scope. Each is declared once, as a value, where the app says who may do what:
+
+```go file=../example/api/handlers.go#Read
+// What someone may do: each scope is declared here, once, and named everywhere else (a page's Needs, an
+// operation's Security, Caller.May). A scope is a value, not a word, so one that is misspelt does not compile.
+// charter.Admin is charter's own: whoever has it says who is what, and sees the admin screen.
+var (
+	Read     = charter.NewScope("read")
+	Write    = charter.NewScope("write")
+	Moderate = charter.NewScope("moderate")
+)
+```
+
+An operation says what it needs in the contract. A page, or a group of pages, says it with a method. Both name the same value:
 
 ```go
 // api/contract.go
-Security: charter.Needs("write"),
+Security: charter.Needs(Write),
 
 // pages/pages.go
-func (PostNote) Needs() []string { return []string{"write"} }
+func (PostNote) Needs() []charter.Scope { return []charter.Scope{api.Write} }
 ```
+
+A scope is a value and not a word so that it cannot be written as one. `Needs: "wrtie"` would compile, name a scope no role grants, and shut everyone out of the page with nothing to say why. As it is, a scope that is not declared is a name that does not exist, and the compiler says so. `charter check` fails an app that makes one anywhere but in its declaration (its part `scopes`).
+
+`charter.Admin` is charter's own scope: whoever has it says who is what and sees the admin screen. Your roles grant it to whom they will.
 
 `Needs` on a group of the tree covers every route under it. A group that returns `nil` needs someone signed in, whoever they are.
 
@@ -78,7 +95,7 @@ func (p Home) Props(r *http.Request, store api.Store, caller charter.Caller, tar
 }
 ```
 
-In a component, `caller.May("write")` decides what to show: the form, or the way to sign in. Hiding a button protects nothing; the check on the route does.
+In a component, `caller.May(api.Write)` decides what to show: the form, or the way to sign in. Hiding a button protects nothing; the check on the route does.
 
 ## Roles
 
@@ -87,12 +104,14 @@ What people may be is said once, as names and what each may do. A person has one
 ```go file=../example/api/handlers.go#Roles
 // Roles are what the app's people may be, and what each may do. Someone who signs up is a member. A moderator
 // may also take anyone's note away; an admin may also say who is what.
-var Roles = map[string][]string{
-	"member":    {"read", "write"},
-	"moderator": {"read", "write", "moderate"},
-	"admin":     {"read", "write", "moderate", "admin"},
+var Roles = map[string][]charter.Scope{
+	"member":    {Read, Write},
+	"moderator": {Read, Write, Moderate},
+	"admin":     {Read, Write, Moderate, charter.Admin},
 }
 ```
+
+The role someone who signs up gets (`Role: "member"`) must be one of these: an app whose `Role` is none of its `Roles` does not start, which `charter check` finds as it writes the specs.
 
 A role changes for everyone who has it when you change it here, and a person's changes at their next request: in the session they have open, and for the tokens they made before.
 
@@ -102,7 +121,7 @@ A rule that is about more than a scope is a function, asked by the page and by t
 // MayRemove is the rule for taking a note away, said once: whoever wrote it may, and so may whoever may moderate.
 // The page asks it to show the button, the page's route and the API's deleteNote ask it before they act.
 func MayRemove(who charter.Caller, note Note) bool {
-	return who.May("moderate") || (who.SignedIn() && who.Subject != "" && who.Subject == note.AuthorID)
+	return who.May(Moderate) || (who.SignedIn() && who.Subject != "" && who.Subject == note.AuthorID)
 }
 ```
 

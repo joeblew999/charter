@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/joeblew999/charter/cloud"
 	"net/http"
 	"net/http/httptest"
@@ -137,18 +138,18 @@ func TestPeopleAreOneCallerByCookieAndByToken(t *testing.T) {
 	accounts := newFakeAccounts()
 	ada := Person{ID: "u1", Name: "Ada", Role: "member"}
 	accounts.Create(t.Context(), ada)
-	roles := map[string][]string{"reader": {"read"}, "member": {"read", "write"}, "admin": {"read", "write", "admin"}}
+	roles := map[string][]Scope{"reader": {read}, "member": {read, write}, "admin": {read, write, Admin}}
 	auth := NewAuth(nil, People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil }, Roles: roles, Role: "member"},
-		Token{Secret: cloud.BoundVariable("ADMIN_TOKEN"), Scopes: []string{"admin"}})
+		Token{Secret: cloud.BoundVariable("ADMIN_TOKEN"), Scopes: []Scope{Admin}})
 
 	session, hash := newToken()
 	accounts.Issue(t.Context(), ada.ID, SessionScheme, "", hash, nil, time.Time{})
 	page := httptest.NewRequest("GET", "/", nil)
 	page.AddCookie(&http.Cookie{Name: SessionCookie, Value: session})
-	if c, _ := auth.Caller(page); c.Scheme != SessionScheme || c.Person != "Ada" || !c.May("write") {
+	if c, _ := auth.Caller(page); c.Scheme != SessionScheme || c.Person != "Ada" || !c.May(write) {
 		t.Fatalf("the session's caller: %+v", c)
 	}
-	if err := auth.Allow(page, "write"); err != nil {
+	if err := auth.Allow(page, write); err != nil {
 		t.Errorf("someone signed in who may write: %v", err)
 	}
 
@@ -159,10 +160,10 @@ func TestPeopleAreOneCallerByCookieAndByToken(t *testing.T) {
 	program := httptest.NewRequest("GET", "/", nil)
 	program.Header.Set("Authorization", "Bearer "+made)
 	c, _ := auth.Caller(program)
-	if c.Scheme != TokenScheme || c.Subject != "u1" || !c.May("read") || c.May("write") {
+	if c.Scheme != TokenScheme || c.Subject != "u1" || !c.May(read) || c.May(write) {
 		t.Errorf("the token's caller: %+v", c)
 	}
-	if err := auth.Allow(program, "write"); err == nil {
+	if err := auth.Allow(program, write); err == nil {
 		t.Error("a token made to read may write")
 	}
 	if _, err := auth.NewToken(page, "too much", "admin"); err == nil {
@@ -186,7 +187,7 @@ func TestPeopleAreOneCallerByCookieAndByToken(t *testing.T) {
 		t.Error("a member changed a role")
 	}
 	accounts.SetRole(t.Context(), ada.ID, "reader")
-	if err := auth.Allow(httptestWith(session), "write"); err == nil {
+	if err := auth.Allow(httptestWith(session), write); err == nil {
 		t.Error("someone made a reader still writes, in the session they had")
 	}
 	accounts.SetRole(t.Context(), ada.ID, "admin")
@@ -223,7 +224,7 @@ func TestLeavingTakesTheAccountAndWhatIsTheirs(t *testing.T) {
 	accounts.Create(t.Context(), ada)
 	var left []string
 	auth := NewAuth(nil, People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil },
-		Roles: map[string][]string{"member": {"read", "write"}}, Role: "member",
+		Roles: map[string][]Scope{"member": {read, write}}, Role: "member",
 		Leaving: func(_ context.Context, who Person) error { left = append(left, who.ID); return nil }})
 	session, hash := newToken()
 	accounts.Issue(t.Context(), ada.ID, SessionScheme, "", hash, nil, time.Time{})
@@ -259,8 +260,8 @@ func TestAnInvitationGivesItsRoleOnce(t *testing.T) {
 	accounts := newFakeAccounts()
 	auth := NewAuth(func(name string) string { return map[string]string{"ADMIN_TOKEN": "operator"}[name] },
 		People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil },
-			Roles: map[string][]string{"member": {"read"}, "admin": {"read", "admin"}}, Role: "member"},
-		Token{Secret: cloud.BoundVariable("ADMIN_TOKEN"), Scopes: []string{"admin"}})
+			Roles: map[string][]Scope{"member": {read}, "admin": {read, Admin}}, Role: "member"},
+		Token{Secret: cloud.BoundVariable("ADMIN_TOKEN"), Scopes: []Scope{Admin}})
 	operator := httptest.NewRequest("POST", "/", nil)
 	operator.Header.Set("Authorization", "Bearer operator")
 	if _, err := auth.Invite(httptest.NewRequest("POST", "/", nil), "admin"); err == nil {
@@ -301,8 +302,8 @@ func TestTheOverviewIsForWhoeverManagesPeople(t *testing.T) {
 	accounts.Create(t.Context(), Person{ID: "u2", Name: "Lin", Role: "member"})
 	auth := NewAuth(func(name string) string { return map[string]string{"ADMIN_TOKEN": "operator"}[name] },
 		People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil },
-			Roles: map[string][]string{"member": {"read"}, "admin": {"read", "admin"}}, Role: "member"},
-		Token{Secret: cloud.BoundVariable("ADMIN_TOKEN"), Scopes: []string{"admin"}})
+			Roles: map[string][]Scope{"member": {read}, "admin": {read, Admin}}, Role: "member"},
+		Token{Secret: cloud.BoundVariable("ADMIN_TOKEN"), Scopes: []Scope{Admin}})
 	if _, err := auth.Overview(httptest.NewRequest("GET", "/", nil)); err == nil {
 		t.Error("nobody was shown the overview")
 	}
@@ -330,5 +331,33 @@ func TestTheOverviewIsForWhoeverManagesPeople(t *testing.T) {
 	}
 	if err := auth.CancelInvitation(operator, o.Invitations[0].ID); err == nil {
 		t.Error("an invitation was cancelled twice")
+	}
+}
+
+// People whose Role is none of its Roles stops the program as it starts, with the role and the roles there are:
+// whoever signs up would be given a role that grants nothing, and nothing would say so.
+func TestARoleThatIsNoneStopsTheApp(t *testing.T) {
+	defer func() {
+		said, _ := recover().(string)
+		if !strings.Contains(said, `"membr"`) || !strings.Contains(said, "admin, member") {
+			t.Errorf("NewAuth said %q", said)
+		}
+	}()
+	NewAuth(nil, People{Name: "Notes", Roles: map[string][]Scope{"member": {read}, "admin": {read, Admin}}, Role: "membr"})
+	t.Error("NewAuth made an Auth of it")
+}
+
+// A scope is its word wherever it is written out, and two of the same word are the same scope: what a token's row
+// says someone may do is compared with what a page declares it needs.
+func TestAScopeIsItsWord(t *testing.T) {
+	who := Caller{Scheme: TokenScheme, Scopes: scopesOfWords([]string{"read", "write"})}
+	if !who.May(read, write) || who.May(Admin) || !who.May() {
+		t.Errorf("May: read and write %v, admin %v, nothing %v", who.May(read, write), who.May(Admin), who.May())
+	}
+	if b, _ := json.Marshal([]Scope{read, Admin}); string(b) != `["read","admin"]` {
+		t.Errorf("as JSON: %s", b)
+	}
+	if got := Needs(write, Admin)[0][Name]; strings.Join(got, " ") != "write admin" {
+		t.Errorf("an operation's Security: %v", got)
 	}
 }

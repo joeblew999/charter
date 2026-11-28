@@ -9,6 +9,7 @@ import (
 
 	charter "github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/app"
+	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/built"
 	"github.com/joeblew999/charter/example/db"
 	"github.com/joeblew999/charter/example/env"
@@ -69,7 +70,7 @@ func (AttachmentsPage) Props(r *http.Request, caller charter.Caller) (Attachment
 // AttachFile is the form's target: it keeps the file and goes back to the page.
 type AttachFile struct{}
 
-func (AttachFile) Needs() []string { return []string{"write"} }
+func (AttachFile) Needs() []charter.Scope { return []charter.Scope{api.Write} }
 
 func (AttachFile) ServeHTTP(w http.ResponseWriter, r *http.Request, caller charter.Caller) error {
 	r.Body = http.MaxBytesReader(w, r.Body, built.MaxFile+64<<10)
@@ -118,7 +119,7 @@ func (AttachedFile) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // DetachFile is a file's remove button: it answers with nothing, which is what the row becomes.
 type DetachFile struct{}
 
-func (DetachFile) Needs() []string { return []string{"write"} }
+func (DetachFile) Needs() []charter.Scope { return []charter.Scope{api.Write} }
 
 func (DetachFile) ServeHTTP(w http.ResponseWriter, r *http.Request, caller charter.Caller) error {
 	id, err := strconv.ParseInt(r.PathValue("file"), 10, 64)
@@ -156,7 +157,7 @@ func (NoticePage) Props(r *http.Request, caller charter.Caller) (NoticeView, err
 type NoticeSet struct{}
 
 // Needs is whoever may moderate: what everyone sees is theirs to say.
-func (NoticeSet) Needs() []string { return []string{"moderate"} }
+func (NoticeSet) Needs() []charter.Scope { return []charter.Scope{api.Moderate} }
 
 func (NoticeSet) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	if _, err := built.SetNotice(r.Context(), r.PostFormValue("notice")); err != nil {
@@ -186,7 +187,7 @@ func (MailPage) Props(r *http.Request, caller charter.Caller) (MailView, error) 
 // MailSend sends one, and goes back to the page.
 type MailSend struct{}
 
-func (MailSend) Needs() []string { return []string{"write"} }
+func (MailSend) Needs() []charter.Scope { return []charter.Scope{api.Write} }
 
 func (MailSend) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	if err := built.SendMail(r.Context()); err != nil {

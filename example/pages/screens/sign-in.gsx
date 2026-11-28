@@ -304,7 +304,7 @@ type Account struct {
 }
 
 // Needs is what every route here needs: someone signed in.
-func (Account) Needs() []string { return nil }
+func (Account) Needs() []api.Scope { return nil }
 
 // AccountPage is the page.
 type AccountPage struct{}
@@ -396,7 +396,7 @@ component (p AccountPage) Page(v AccountView) {
 						// What they are, and with it what they may do.
 						<ui.Badge id="role" translate="no">{ v.Caller.Role }</ui.Badge>
 						{ for _, scope := range v.Caller.Scopes {
-							<ui.Badge variant="secondary" translate="no">{ scope }</ui.Badge>
+							<ui.Badge variant="secondary" translate="no">{ scope.String() }</ui.Badge>
 						} }
 						<span class="flex-1"></span>
 						{ if v.MayManage {
@@ -489,8 +489,8 @@ type People struct {
 	remove PersonRemove `route:"POST /{person}/remove PersonRemove"`
 }
 
-// Needs is what every route here needs: the scope that manages people. Someone signed in without it gets a 403.
-func (People) Needs() []string { return []string{"admin"} }
+// Needs is what every route here needs: the scope of whoever runs the app. Someone signed in without it gets a 403.
+func (People) Needs() []api.Scope { return []api.Scope{api.Admin} }
 
 // PeoplePage is the page.
 type PeoplePage struct{}

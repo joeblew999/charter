@@ -88,7 +88,7 @@ type App struct {
 	// are checked by (api.Auth). A page, or a group of the tree, says what it needs as an operation of the contract
 	// does, with a method on its type:
 	//
-	//	func (Account) Needs() []string { return []string{"write"} }   // nil: anyone who is signed in
+	//	func (Account) Needs() []app.Scope { return []app.Scope{api.Write} }   // nil: anyone who is signed in
 	//
 	// and every route at or under it is checked before it runs. nil: an app where every page is everyone's.
 	Auth Auth

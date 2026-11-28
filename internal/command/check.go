@@ -13,6 +13,7 @@ import (
 	"github.com/joeblew999/charter/internal/envcode"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
+	"github.com/joeblew999/charter/internal/scopecode"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,6 +33,7 @@ import (
 //	           db/schema.sql and written as a function. And the schema still has the sign-in screen's tables as
 //	           charter reads and writes them
 //	bindings   no binding, variable or secret is named as text: each is its value in env, written from wrangler.jsonc
+//	scopes     a scope is declared once, as a package's variable, and named everywhere else
 //	contract   the committed specs, Fern's settings and the queries' Go are what the contract gives (with --fix: they
 //	           are written), and each rate limit the contract declares is in wrangler.jsonc
 //	languages  every language complete, plural forms, unused messages, gsxui's own text, right-to-left set up
@@ -62,13 +64,10 @@ func Check(args []string) {
 			return fmt.Errorf("these samples of the docs are not what their files say (charter check --fix writes them again):\n  %s", strings.Join(differ, "\n  "))
 		})
 	}
-	t.part("generate", func() error { return generate(p) })
-	t.part("fmt", func() error { return format(p, *fix) })
-	if *fix {
-		t.part("tidy", func() error { return run.Run(p.Root, nil, "go", "mod", "tidy") })
-	}
 	if hasIntl(p) && exists(filepath.Join(p.Root, "pages", "screens")) {
-		// charter's screens the app has and has not changed follow charter, as its library code does.
+		// charter's screens the app has and has not changed follow charter, as its library code does. Before anything
+		// is generated from them: a screen written for an older charter may not compile against this one, and saying
+		// it is behind is what helps, not the compiler's error.
 		t.part("screens", func() error {
 			behind, err := intl.ScreensBehind()
 			if err != nil || len(behind) == 0 {
@@ -80,6 +79,11 @@ func Check(args []string) {
 			say("screens brought up to date: %s", strings.Join(behind, ", "))
 			return intl.UpdateScreens(behind)
 		})
+	}
+	t.part("generate", func() error { return generate(p) })
+	t.part("fmt", func() error { return format(p, *fix) })
+	if *fix {
+		t.part("tidy", func() error { return run.Run(p.Root, nil, "go", "mod", "tidy") })
 	}
 	if *fix && exists(filepath.Join(p.Root, "gsxui.json")) {
 		t.part("components", func() error { return componentsRecorded(p) })
@@ -94,6 +98,7 @@ func Check(args []string) {
 		t.part("statements", func() error { return statementsTyped(p) })
 	}
 	t.part("bindings", func() error { return bindingsTyped(p) })
+	t.part("scopes", func() error { return scopesDeclared(p) })
 	if p.Spec != "" {
 		t.part("contract", func() error {
 			if err := spec(p, !*fix); err != nil {
@@ -135,6 +140,17 @@ func bindingsTyped(p *project.Project) error {
 	}
 	return fmt.Errorf("these name a binding, a variable or a secret as text, which compiles whatever it says:\n  %s\nuse its value in env, which charter writes from wrangler.jsonc, .dev.vars.example and fnox.toml: env.DB.Open(), env.KV.Open(), env.WRITE_LIMIT.Allow(key), env.APP_NAME.Value(). One that is not there is not declared: declare it (charter add d1:DB, or the file)",
 		strings.Join(named, "\n  "))
+}
+
+// scopesDeclared fails where the app's Go makes a scope that it is not declaring: a scope is a value so that no
+// word is written where one is needed, and NewScope outside a declaration is the word written by hand again.
+func scopesDeclared(p *project.Project) error {
+	made, err := scopecode.Lint(p.Root)
+	if err != nil || len(made) == 0 {
+		return err
+	}
+	return fmt.Errorf("these make a scope where it is used, from a word that compiles whatever it says:\n  %s\ndeclare each scope once, as a package's variable, and name it: var Write = charter.NewScope(\"write\"), then Needs() []charter.Scope { return []charter.Scope{api.Write} }",
+		strings.Join(made, "\n  "))
 }
 
 // statementsTyped fails where the app's Go gives the database a statement as text, or reaches it around charter:

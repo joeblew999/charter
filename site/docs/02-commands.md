@@ -14,6 +14,7 @@ Not everything is checked by a compiler. Where it is not, this page says so, and
 | A link, an element's id, a swap's target | the page tree (Go structs) | structpages: `url`, `id`, `target` take a page's type, never a string; structpages-lint checks each against the tree | on save for a type that is gone; in `check` for the rest |
 | A table | `db/schema.sql` | charter writes the migration from it | on save, under `dev` |
 | A statement on the database | `db/queries.sql` | sqlc checks its columns and types against the schema; charter writes it as a Go function | on save, under `dev` |
+| Who may do what | a scope, declared once as a Go value (`var Write = charter.NewScope("write")`) | the compiler: a page's `Needs`, an operation's `Security` and `caller.May` take the value, never a word | on save, under `dev` |
 | A binding, a variable, a secret's name | `wrangler.jsonc` (a secret's name: `.dev.vars.example`, `fnox.toml`) | charter writes each as a Go value of its kind (`env.DB`, `env.KV`, `env.APP_NAME`); the compiler refuses one that is not declared, or of another kind | on save, under `dev` |
 | The API | Go types (`api/contract.go`) | Huma writes the OpenAPI spec from the types; `check` compares it with the committed one | in `check` |
 | A client of the API, in any language | nothing: it is generated | Fern writes it from the spec; it is proven by calling the Worker | in `test` and `pack --prove` |
@@ -31,7 +32,7 @@ These are strings or behaviour, and a wrong one compiles. Each is found by `char
 | What | Why it is not checked | What finds a mistake |
 |---|---|---|
 | That a binding is there on the deployed Worker, and a secret has a value | The name is checked; what Cloudflare has under it is not Go's to know | `deploy` makes what `wrangler.jsonc` names; `charter run resources` and `charter run secrets` say what the Worker has; `test --deployed` |
-| A scope: `Needs() []string{"write"}` | A scope is a word. Pages and API use the same words and the same code checks them, but a misspelt one compiles and nobody is ever allowed | `test`, signed in as each role |
+| That a role grants what you meant it to | A scope is checked; whether a moderator should have it is your decision | `test`, signed in as each role |
 | What a page's `Props` asks for | structpages hands it over by its type when the page is asked for | `test`: the page answers with an error |
 | An htmx attribute written by hand: `hx-swap="innerMorph"` | It is text for htmx. What charter gives for the hard cases (`live.Follows()`, `app.Body()`) is Go | `test`, in a real browser |
 | JavaScript: `web/`, and the glue that runs Go | charter has no TypeScript. It is kept small and free of logic | `test`, in a real browser and on the Worker |
@@ -105,6 +106,7 @@ Everything that can be said without running the app. It starts nothing, so it is
 | `lint` | `go vet`, twice: for your machine and for the Worker's build. Then structpages-lint: every link, id and target against the page tree, and any internal address written as a string |
 | `statements` | no statement on the database is written in Go: each is a query in `db/queries.sql`, checked by sqlc ([the database](07-database.md#every-statement-is-checked)). And your schema still has the sign-in screen's tables as charter uses them |
 | `bindings` | no binding, variable or secret is named as text (`kv.NewNamespace("KV")`, `cloudflare.Getenv("X")`): each is its value in `env`, which only exists for what is declared |
+| `scopes` | a scope is made only where it is declared, as a package's variable: never from a word where it is used |
 | `contract` | the committed OpenAPI and AsyncAPI specs and the queries' Go are what the code gives now, and each rate limit the contract declares is bound |
 | `languages` | every language is complete, plural forms are right, no message is unused |
 | `screens` | charter's screens that you have not changed are charter's current ones |

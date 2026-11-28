@@ -105,7 +105,7 @@ func (k *keyCache) oidc(ctx context.Context, issuer, audience, token string) (Ca
 	if len(scopes) == 0 {
 		scopes = claims.Scp
 	}
-	return Caller{Scheme: oIDCName, Email: claims.Email, Subject: std.Subject, Scopes: scopes}, nil
+	return Caller{Scheme: oIDCName, Email: claims.Email, Subject: std.Subject, Scopes: scopesOfWords(scopes)}, nil
 }
 
 // verify checks token's signature against the issuer's keys at jwks, then its claims: iss, aud,

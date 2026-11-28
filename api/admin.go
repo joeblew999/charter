@@ -15,7 +15,7 @@ import (
 )
 
 // What an admin sees of the system: who there is, what the Worker is built from and bound to, and what its
-// databases hold. Each is for whoever may manage people (People's Manage scope), asked of the Worker as it runs, so
+// databases hold. Each is for whoever may manage people (the scope Admin), asked of the Worker as it runs, so
 // a page and a program are told the same thing. Nothing here changes anything, and no secret's value is ever given.
 
 // Overview is the app at a glance.

@@ -80,7 +80,7 @@ func TestHomeProps(t *testing.T) {
 
 // Who a test's request comes from: someone signed in who may write, or nobody.
 var (
-	writer = charter.Caller{Scheme: charter.SessionScheme, Subject: "u1", Person: "Ada", Scopes: []string{"read", "write"}}
+	writer = charter.Caller{Scheme: charter.SessionScheme, Subject: "u1", Person: "Ada", Scopes: []charter.Scope{api.Read, api.Write}}
 	nobody = charter.Caller{}
 )
 
@@ -88,7 +88,7 @@ var (
 // rule the Worker's Auth has (Caller.May), so a test of who may do what is a test of the pages' own Needs.
 type as charter.Caller
 
-func (c as) Allow(_ *http.Request, needs ...string) error {
+func (c as) Allow(_ *http.Request, needs ...charter.Scope) error {
 	switch who := charter.Caller(c); {
 	case !who.SignedIn():
 		return app.Status(http.StatusUnauthorized, "sign in to do this")
@@ -243,7 +243,7 @@ func TestWritingNeedsSomeoneSignedIn(t *testing.T) {
 	if code := post(nobody); code != http.StatusUnauthorized || len(store.all) != 0 {
 		t.Errorf("nobody posting: HTTP %d, %d kept", code, len(store.all))
 	}
-	reader := charter.Caller{Scheme: charter.SessionScheme, Subject: "u2", Person: "Bo", Scopes: []string{"read"}}
+	reader := charter.Caller{Scheme: charter.SessionScheme, Subject: "u2", Person: "Bo", Scopes: []charter.Scope{api.Read}}
 	if code := post(reader); code != http.StatusForbidden || len(store.all) != 0 {
 		t.Errorf("someone who may only read, posting: HTTP %d, %d kept", code, len(store.all))
 	}
@@ -260,8 +260,8 @@ func TestWritingNeedsSomeoneSignedIn(t *testing.T) {
 func TestWhoMayRemoveANote(t *testing.T) {
 	store := &notes{}
 	note, _ := store.Create(context.Background(), "Ada's note", "u1", "Ada")
-	other := charter.Caller{Scheme: charter.SessionScheme, Subject: "u2", Person: "Bo", Role: "member", Scopes: []string{"read", "write"}}
-	moderator := charter.Caller{Scheme: charter.SessionScheme, Subject: "u3", Person: "Mo", Role: "moderator", Scopes: []string{"read", "write", "moderate"}}
+	other := charter.Caller{Scheme: charter.SessionScheme, Subject: "u2", Person: "Bo", Role: "member", Scopes: []charter.Scope{api.Read, api.Write}}
+	moderator := charter.Caller{Scheme: charter.SessionScheme, Subject: "u3", Person: "Mo", Role: "moderator", Scopes: api.Roles["moderator"]}
 	button := func(who charter.Caller) bool {
 		rec := httptest.NewRecorder()
 		serve(t, store, who).ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))

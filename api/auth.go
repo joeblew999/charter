@@ -37,6 +37,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/cloud"
 )
 
@@ -70,15 +71,15 @@ type Trusted interface{ trusted() }
 // Token is one secret and the scopes it grants.
 type Token struct {
 	Secret cloud.Variable // the Worker's secret that holds the token (the app's env.ADMIN_TOKEN)
-	Scopes []string       // what it may do, e.g. read; write
+	Scopes []Scope        // what it may do, e.g. Read, Write
 }
 
 // Access trusts Cloudflare Access for the application in ACCESS_TEAM_DOMAIN and ACCESS_AUD: a
 // person who logged in gets People, a machine with a service token Machines. Which people and which
 // tokens Access lets through is Access's policy, set in Cloudflare (cf zero-trust access).
 type Access struct {
-	People   []string
-	Machines []string
+	People   []Scope
+	Machines []Scope
 }
 
 // OIDC trusts the OpenID Connect issuer in OIDC_ISSUER, for tokens whose audience is OIDC_AUDIENCE.
@@ -103,14 +104,14 @@ func (Issued) trusted() {}
 
 // Caller is who a request comes from, once its credentials are verified, and what it may do.
 type Caller struct {
-	Scheme  string   // what vouched for it: Name (a token), "access", oIDCName, or an Issued's Scheme
-	Person  string   // one of the app's own users (People): what they called themselves
-	Role    string   // their role, for one of the app's own users
-	Email   string   // a person: from Access, or from an OIDC token that has it
-	Machine string   // an Access service token's Client ID (the JWT's common_name)
-	Subject string   // the token's sub: a user's id at the issuer
-	Token   string   // a bearer token: the secret that holds it, e.g. WRITE_TOKEN
-	Scopes  []string // what it may do
+	Scheme  string  // what vouched for it: Name (a token), "access", oIDCName, or an Issued's Scheme
+	Person  string  // one of the app's own users (People): what they called themselves
+	Role    string  // their role, for one of the app's own users
+	Email   string  // a person: from Access, or from an OIDC token that has it
+	Machine string  // an Access service token's Client ID (the JWT's common_name)
+	Subject string  // the token's sub: a user's id at the issuer
+	Token   string  // a bearer token: the secret that holds it, e.g. WRITE_TOKEN
+	Scopes  []Scope // what it may do
 }
 
 // Name is the caller as a log line or an error message would name it.
@@ -138,8 +139,8 @@ func CallerOf(ctx context.Context) (Caller, bool) {
 
 // Scheme declares bearer tokens in the specs (config.OpenAPI), and the scopes an operation needs
 // when it says nothing (none given: such operations are public). An operation that needs other
-// scopes says so: Security: Needs("write").
-func Scheme(spec *huma.OpenAPI, scopes ...string) {
+// scopes says so: Security: Needs(Write).
+func Scheme(spec *huma.OpenAPI, scopes ...Scope) {
 	declare(spec, Name, &huma.SecurityScheme{Type: "http", Scheme: "bearer"})
 	if len(scopes) > 0 {
 		spec.Security = expand(spec, Needs(scopes...))
@@ -196,9 +197,30 @@ func declare(spec *huma.OpenAPI, name string, scheme *huma.SecurityScheme) {
 	}
 }
 
+// Scope is one thing a caller may do, as a value an app declares once (app.Scope says why it is no string):
+//
+//	var Write = charter.NewScope("write")
+type Scope = app.Scope
+
+// NewScope declares a scope: once, as a package's variable.
+func NewScope(word string) Scope { return app.NewScope(word) }
+
+// Admin is the scope of whoever runs the app: it lets someone see everyone and say who is what (Auth.Everyone,
+// Auth.SetRole), and opens charter's admin and people screens. An app's roles grant it to whom they will.
+var Admin = app.NewScope("admin")
+
+// scopesOfWords are scopes read from where they are kept as words: a token's row, a JWT's claim, the specs.
+func scopesOfWords(words []string) []Scope {
+	scopes := make([]Scope, len(words))
+	for i, word := range words {
+		scopes[i] = app.NewScope(word)
+	}
+	return scopes
+}
+
 // Needs is an operation's Security: all of these scopes, by any scheme the API declares.
-func Needs(scopes ...string) []map[string][]string {
-	return []map[string][]string{{Name: append([]string{}, scopes...)}}
+func Needs(scopes ...Scope) []map[string][]string {
+	return []map[string][]string{{Name: app.Words(scopes)}}
 }
 
 // ours are the schemes this package declares, in the order an operation's Security lists them.
@@ -301,7 +323,7 @@ func AuthMiddleware(api huma.API, setting func(name string) string, trusted ...T
 		for _, alternative := range security {
 			needs := scopesIn(alternative)
 			for _, c := range callers {
-				if !slices.ContainsFunc(needs, func(scope string) bool { return !slices.Contains(c.Scopes, scope) }) {
+				if c.May(scopesOfWords(needs)...) {
 					next(huma.WithValue(ctx, callerKey{}, c))
 					return
 				}
@@ -407,7 +429,7 @@ func (g gate) identify(ctx context.Context, header func(string) string) ([]Calle
 	}
 	for _, issued := range g.issued {
 		if scopes, ok := issued.Check(token); ok {
-			return append(callers, Caller{Scheme: issued.Scheme, Subject: issued.Scheme + " client", Scopes: scopes}), nil
+			return append(callers, Caller{Scheme: issued.Scheme, Subject: issued.Scheme + " client", Scopes: scopesOfWords(scopes)}), nil
 		}
 	}
 	return nil, errUnknownToken

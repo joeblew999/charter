@@ -39,10 +39,10 @@ func things(trusted ...Trusted) API {
 				huma.Register(api, huma.Operation{OperationID: "listThings", Method: "GET", Path: "/api/things", Security: []map[string][]string{}}, read)
 			}},
 			{Method: "POST", Path: "/api/things", OperationID: "createThing", Register: func(api huma.API) {
-				huma.Register(api, huma.Operation{OperationID: "createThing", Method: "POST", Path: "/api/things", Security: Needs("write")}, read)
+				huma.Register(api, huma.Operation{OperationID: "createThing", Method: "POST", Path: "/api/things", Security: Needs(write)}, read)
 			}},
 			{Method: "GET", Path: "/api/things/live", OperationID: "liveThings", Register: func(api huma.API) {
-				huma.Register(api, StreamOperation(huma.Operation{OperationID: "liveThings", Method: "GET", Path: "/api/things/live", Security: Needs("write")}, Channel{Name: "liveThings", Payload: serveThing{}}), read)
+				huma.Register(api, StreamOperation(huma.Operation{OperationID: "liveThings", Method: "GET", Path: "/api/things/live", Security: Needs(write)}, Channel{Name: "liveThings", Payload: serveThing{}}), read)
 			}},
 		},
 	}
@@ -61,7 +61,7 @@ func serveGet(t *testing.T, h http.Handler, method, target string, headers ...st
 
 // Every standard route, from what the project gave.
 func TestTheStandardRoutes(t *testing.T) {
-	h := things(Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"write"}}).Handler()
+	h := things(Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []Scope{write}}).Handler()
 	var spec struct {
 		Servers []struct{ URL string } `json:"servers"`
 		Paths   map[string]any         `json:"paths"`
@@ -92,7 +92,7 @@ func TestTheStandardRoutes(t *testing.T) {
 // Calls are checked by the contract's security, with the challenge; a token comes as ?access_token=
 // on a channel only.
 func TestCallsAreCheckedAndTheChannelTakesItsTokenInTheQuery(t *testing.T) {
-	h := things(Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"write"}}).Handler()
+	h := things(Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []Scope{write}}).Handler()
 	if rec := serveGet(t, h, "POST", "https://things.example/api/things"); rec.Code != 401 || !strings.Contains(rec.Header().Get("WWW-Authenticate"), "resource_metadata=") {
 		t.Errorf("a write without credentials: %d %q", rec.Code, rec.Header().Get("WWW-Authenticate"))
 	}

@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -38,31 +39,23 @@ type People struct {
 	// person has one role. Role is the one someone who signs up gets. Changing what a role may do changes it for
 	// everyone who has it, at their next request.
 	//
-	//	Roles: map[string][]string{"member": {"read", "write"}, "moderator": {"read", "write", "moderate"}},
+	//	Roles: map[string][]api.Scope{"member": {Read, Write}, "moderator": {Read, Write, Moderate}, "admin": {Read, Write, Moderate, api.Admin}},
 	//	Role:  "member",
-	Roles map[string][]string
+	//
+	// Whoever's role has api.Admin sees everyone and says who is what (Auth.Everyone, Auth.SetRole).
+	Roles map[string][]Scope
 	Role  string
-	// Manage is the scope that lets someone see everyone and change their roles (Auth.Everyone, Auth.SetRole).
-	// Empty: "admin".
-	Manage string
 	// Leaving is what the app does when someone deletes their account (Auth.Leave), before the account goes: its
 	// own rows that are theirs, such as what they wrote. An error keeps the account.
 	Leaving func(ctx context.Context, who Person) error
 }
 
 // scopes are what a role may do; a role that is no longer one of them is the one new people get.
-func (p People) scopes(role string) []string {
+func (p People) scopes(role string) []Scope {
 	if s, ok := p.Roles[role]; ok {
 		return s
 	}
 	return p.Roles[p.Role]
-}
-
-func (p People) manage() string {
-	if p.Manage != "" {
-		return p.Manage
-	}
-	return "admin"
 }
 
 func (People) trusted() {}
@@ -185,14 +178,14 @@ func (g gate) person(ctx context.Context, bearerToken, cookies string) (Caller, 
 	// does that much of it.
 	scopes := g.people.scopes(who.Role)
 	if len(narrowed) > 0 {
-		scopes = slices.DeleteFunc(slices.Clone(narrowed), func(s string) bool { return !slices.Contains(scopes, s) })
+		scopes = slices.DeleteFunc(scopesOfWords(narrowed), func(s Scope) bool { return !slices.Contains(scopes, s) })
 	}
 	return Caller{Scheme: kind, Subject: who.ID, Person: who.Name, Role: who.Role, Scopes: scopes}, true, nil
 }
 
 // May reports whether the caller has every one of these scopes. No one (a Caller that is nobody) has none.
-func (c Caller) May(scopes ...string) bool {
-	return !slices.ContainsFunc(scopes, func(s string) bool { return !slices.Contains(c.Scopes, s) })
+func (c Caller) May(scopes ...Scope) bool {
+	return !slices.ContainsFunc(scopes, func(s Scope) bool { return !slices.Contains(c.Scopes, s) })
 }
 
 // SignedIn reports whether the caller is someone: a person, a program with a token, a machine.
@@ -201,8 +194,8 @@ func (c Caller) SignedIn() bool { return c.Scheme != "" }
 // Auth is who may do what, for the whole app: the API's operations (Middleware) and its pages alike. An app has
 // one, made from the ways in it trusts, and gives it to both:
 //
-//	var Auth = api.NewAuth(cloud.Var, api.People{Name: "Notes", Accounts: api.D1Accounts(env.DB), Scopes: []string{"read", "write"}},
-//		api.Token{Secret: env.WRITE_TOKEN, Scopes: []string{"read", "write"}})
+//	var Auth = api.NewAuth(cloud.Var, api.People{Name: "Notes", Accounts: api.D1Accounts(env.DB), Roles: Roles, Role: "member"},
+//		api.Token{Secret: env.WRITE_TOKEN, Scopes: []api.Scope{Read, Write}})
 //
 //	(&app.App{Auth: Auth, Args: []any{Auth}, RequestArgs: []any{Auth.Caller}, …}).Run()
 //
@@ -215,8 +208,22 @@ type Auth struct {
 }
 
 // NewAuth is the app's Auth: setting looks a secret or variable up, trusted are the ways in.
+//
+// It stops the program, as it starts, for People whose Role is not one of its Roles: the role someone who signs
+// up gets would grant nothing, and say nothing. An app's Auth is a package's variable, so that is when charter
+// check writes the specs, and not on a Worker.
 func NewAuth(setting func(name string) string, trusted ...Trusted) *Auth {
 	g := newGate(setting, trusted)
+	if p := g.people; p != nil && len(p.Roles) > 0 {
+		if _, ok := p.Roles[p.Role]; !ok {
+			names := make([]string, 0, len(p.Roles))
+			for name := range p.Roles {
+				names = append(names, name)
+			}
+			slices.Sort(names)
+			panic(fmt.Sprintf("api: People's Role is %q, the role someone who signs up gets, and its Roles are %s", p.Role, strings.Join(names, ", ")))
+		}
+	}
 	return &Auth{g: g, people: g.people}
 }
 
@@ -276,7 +283,7 @@ func Current(ctx context.Context) Caller {
 // Allow is the check a page's Needs gets, the one an operation's Security gets: nil when the request's caller has
 // the scopes, an error with status 401 when it is nobody (which app.App turns into the way to sign in), 403 when
 // it is someone who may not.
-func (a *Auth) Allow(r *http.Request, needs ...string) error {
+func (a *Auth) Allow(r *http.Request, needs ...Scope) error {
 	c, _ := a.Caller(r)
 	switch {
 	case c.May(needs...) && (len(needs) > 0 || c.SignedIn()):
@@ -284,7 +291,7 @@ func (a *Auth) Allow(r *http.Request, needs ...string) error {
 	case !c.SignedIn():
 		return app.Status(http.StatusUnauthorized, "sign in to do this")
 	}
-	return app.Status(http.StatusForbidden, c.Name()+" may not do this: it needs "+strings.Join(needs, " and "))
+	return app.Status(http.StatusForbidden, c.Name()+" may not do this: it needs "+strings.Join(app.Words(needs), " and "))
 }
 
 // PeopleScheme says in the specs that a bearer token may be one of the app's own: a token someone signed in to
@@ -431,7 +438,7 @@ func (a d1Accounts) Take(_ context.Context, id string) (string, error) {
 // charter check holds an app's own schema to them.
 var AccountsSchema = accounts.Schema
 
-// Everyone is the app's people, for whoever may manage them (People's Manage scope): a person signed in, or a
+// Everyone is the app's people, for whoever may manage them (the scope Admin): a person signed in, or a
 // program with a token that has it.
 func (a *Auth) Everyone(r *http.Request) ([]Person, error) {
 	accounts, err := a.managing(r)
@@ -501,7 +508,7 @@ func (a *Auth) managing(r *http.Request) (Accounts, error) {
 	if a.people == nil {
 		return nil, errors.New("api: the app's Auth has no People")
 	}
-	if err := a.Allow(r, a.people.manage()); err != nil {
+	if err := a.Allow(r, Admin); err != nil {
 		return nil, err
 	}
 	return a.people.Accounts()

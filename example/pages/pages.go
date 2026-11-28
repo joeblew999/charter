@@ -128,8 +128,8 @@ func current(ctx context.Context, page any) (string, error) {
 type PostNote struct{}
 
 // Needs is what writing a note needs, on the page as through the API: the contract's createNote says the same
-// (charter.Needs("write")). Whoever is not signed in is sent to sign in.
-func (PostNote) Needs() []string { return []string{"write"} }
+// (charter.Needs(api.Write)). Whoever is not signed in is sent to sign in.
+func (PostNote) Needs() []charter.Scope { return []charter.Scope{api.Write} }
 
 // The longest note the form takes.
 const maxBody = 500
@@ -153,7 +153,7 @@ func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Stor
 type RemoveNote struct{}
 
 // Needs is what it needs before the rule is asked: someone who may write.
-func (RemoveNote) Needs() []string { return []string{"write"} }
+func (RemoveNote) Needs() []charter.Scope { return []charter.Scope{api.Write} }
 
 func (RemoveNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Store, caller charter.Caller) error {
 	id, err := strconv.ParseInt(r.PathValue("note"), 10, 64)

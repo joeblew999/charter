@@ -185,7 +185,7 @@ func Routes(env Env) []charter.Route {
 			huma.Register(api, huma.Operation{
 				OperationID: "createNote", Method: http.MethodPost, Path: "/api/notes",
 				Summary: "Create a note", Tags: []string{"notes"},
-				Security:   charter.Needs("write"),
+				Security:   charter.Needs(Write),
 				Extensions: sdk("notes", "create", charter.Limited(WriteLimit, nil)),
 			}, env.create)
 		}},
@@ -195,7 +195,7 @@ func Routes(env Env) []charter.Route {
 			huma.Register(api, huma.Operation{
 				OperationID: "deleteNote", Method: http.MethodDelete, Path: "/api/notes/{id}",
 				Summary: "Remove a note: your own, or anyone's if you may moderate", Tags: []string{"notes"},
-				Security: charter.Needs("write"), Errors: []int{http.StatusForbidden, http.StatusNotFound},
+				Security: charter.Needs(Write), Errors: []int{http.StatusForbidden, http.StatusNotFound},
 				Extensions: sdk("notes", "delete", nil),
 			}, env.remove)
 		}},
@@ -204,14 +204,14 @@ func Routes(env Env) []charter.Route {
 			huma.Register(api, huma.Operation{
 				OperationID: "listPeople", Method: http.MethodGet, Path: "/api/people",
 				Summary: "Everyone who signed up, and their role", Tags: []string{"people"},
-				Security: charter.Needs("admin"), Extensions: sdk("people", "list", nil),
+				Security: charter.Needs(charter.Admin), Extensions: sdk("people", "list", nil),
 			}, env.people)
 		}},
 		{Method: http.MethodPut, Path: "/api/people/{id}/role", OperationID: "setRole", Register: func(api huma.API) {
 			huma.Register(api, huma.Operation{
 				OperationID: "setRole", Method: http.MethodPut, Path: "/api/people/{id}/role",
 				Summary: "Make someone a member, a moderator or an admin", Tags: []string{"people"},
-				Security: charter.Needs("admin"), Errors: []int{http.StatusNotFound, http.StatusUnprocessableEntity},
+				Security: charter.Needs(charter.Admin), Errors: []int{http.StatusNotFound, http.StatusUnprocessableEntity},
 				Extensions: sdk("people", "setRole", nil),
 			}, env.setRole)
 		}},

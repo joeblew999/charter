@@ -31,6 +31,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/cloud"
 )
 
@@ -41,7 +42,7 @@ const extension = "x-rate-limit"
 // may make in how long (the app's env.WRITE_LIMIT, written from wrangler.jsonc, where the limit is said once).
 type Limit struct {
 	Binding cloud.RateLimit
-	Scope   string // Declare: every operation that needs this scope
+	Scope   Scope // Declare: every operation that needs this scope
 }
 
 // MarshalJSON is the limit as the specs have it (x-rate-limit): the binding's name, the calls and the seconds.
@@ -51,7 +52,7 @@ func (l Limit) MarshalJSON() ([]byte, error) {
 		Limit   int    `json:"limit"`
 		Period  int    `json:"period"`
 		Scope   string `json:"scope,omitempty"`
-	}{l.Binding.Name(), l.Binding.Calls(), l.Binding.Seconds(), l.Scope})
+	}{l.Binding.Name(), l.Binding.Calls(), l.Binding.Seconds(), l.Scope.String()})
 }
 
 // UnmarshalJSON reads a limit as the specs have it.
@@ -65,7 +66,7 @@ func (l *Limit) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &in); err != nil {
 		return err
 	}
-	*l = Limit{Binding: cloud.BoundRateLimit(in.Binding, in.Limit, in.Period), Scope: in.Scope}
+	*l = Limit{Binding: cloud.BoundRateLimit(in.Binding, in.Limit, in.Period), Scope: app.NewScope(in.Scope)}
 	return nil
 }
 
@@ -90,7 +91,7 @@ func DeclareLimits(spec *huma.OpenAPI, perScope ...Limit) {
 				security = spec.Security
 			}
 			for _, l := range perScope {
-				if needs(security, l.Scope) {
+				if needs(security, l.Scope.String()) {
 					limit, ok = l, true
 					break
 				}

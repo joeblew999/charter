@@ -67,7 +67,7 @@ var OnLeave func(ctx context.Context, who charter.Person) error
 // MayRemove is the rule for taking a note away, said once: whoever wrote it may, and so may whoever may moderate.
 // The page asks it to show the button, the page's route and the API's deleteNote ask it before they act.
 func MayRemove(who charter.Caller, note Note) bool {
-	return who.May("moderate") || (who.SignedIn() && who.Subject != "" && who.Subject == note.AuthorID)
+	return who.May(Moderate) || (who.SignedIn() && who.Subject != "" && who.Subject == note.AuthorID)
 }
 
 // Remove takes a note away for whoever is asking, if they may: what the API's deleteNote and the page's button
@@ -100,12 +100,21 @@ func removed(ctx context.Context) {
 // (package built's activity page, whose rows of them go too). nil: nothing.
 var OnRemove func(ctx context.Context)
 
+// What someone may do: each scope is declared here, once, and named everywhere else (a page's Needs, an
+// operation's Security, Caller.May). A scope is a value, not a word, so one that is misspelt does not compile.
+// charter.Admin is charter's own: whoever has it says who is what, and sees the admin screen.
+var (
+	Read     = charter.NewScope("read")
+	Write    = charter.NewScope("write")
+	Moderate = charter.NewScope("moderate")
+)
+
 // Roles are what the app's people may be, and what each may do. Someone who signs up is a member. A moderator
 // may also take anyone's note away; an admin may also say who is what.
-var Roles = map[string][]string{
-	"member":    {"read", "write"},
-	"moderator": {"read", "write", "moderate"},
-	"admin":     {"read", "write", "moderate", "admin"},
+var Roles = map[string][]charter.Scope{
+	"member":    {Read, Write},
+	"moderator": {Read, Write, Moderate},
+	"admin":     {Read, Write, Moderate, charter.Admin},
 }
 
 // Trusted is who may do what (reads are public, writing needs write, removing someone else's note moderate,
@@ -122,14 +131,14 @@ var Roles = map[string][]string{
 var Trusted = []charter.Trusted{
 	charter.People{Name: "Notes", Accounts: charter.D1Accounts(env.DB), Roles: Roles, Role: "member", Leaving: Leaving},
 	charter.Token{Secret: env.ADMIN_TOKEN, Scopes: Roles["admin"]},
-	charter.Token{Secret: env.WRITE_TOKEN, Scopes: []string{"read", "write"}},
-	charter.Token{Secret: env.READ_TOKEN, Scopes: []string{"read"}},
-	charter.Access{People: []string{"read", "write"}, Machines: []string{"read"}},
+	charter.Token{Secret: env.WRITE_TOKEN, Scopes: []charter.Scope{Read, Write}},
+	charter.Token{Secret: env.READ_TOKEN, Scopes: []charter.Scope{Read}},
+	charter.Access{People: []charter.Scope{Read, Write}, Machines: []charter.Scope{Read}},
 	charter.OIDC{},
 }
 
 // Auth is that, for the whole app: the API's operations are checked by it (API), and so are the pages (main.go
-// gives it to app.App). So a page that needs "write" and the operation that needs "write" ask the same thing of
+// gives it to app.App). So a page that needs Write and the operation that needs Write ask the same thing of
 // the same caller.
 var Auth = charter.NewAuth(cloud.Var, Trusted...)
 

@@ -30,13 +30,13 @@ type authOut struct{ Body string }
 // The handlers answer with who called.
 func authTestAPI(t *testing.T, settings map[string]string, trusted ...Trusted) humatest.TestAPI {
 	_, api := humatest.New(t)
-	Scheme(api.OpenAPI(), "read")
+	Scheme(api.OpenAPI(), read)
 	AccessScheme(api.OpenAPI(), "notes-test")
 	OIDCScheme(api.OpenAPI())
 	if trusted == nil {
 		trusted = []Trusted{
-			Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"read", "write"}},
-			Token{Secret: cloud.BoundVariable("READ_TOKEN"), Scopes: []string{"read"}},
+			Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []Scope{read, write}},
+			Token{Secret: cloud.BoundVariable("READ_TOKEN"), Scopes: []Scope{read}},
 		}
 	}
 	api.UseMiddleware(AuthMiddleware(api, func(name string) string { return settings[name] }, trusted...))
@@ -46,7 +46,7 @@ func authTestAPI(t *testing.T, settings map[string]string, trusted ...Trusted) h
 	}
 	huma.Register(api, huma.Operation{OperationID: "hello", Method: http.MethodGet, Path: "/hello", Security: []map[string][]string{}}, handler)
 	huma.Register(api, huma.Operation{OperationID: "list", Method: http.MethodGet, Path: "/notes"}, handler)
-	huma.Register(api, huma.Operation{OperationID: "create", Method: http.MethodPost, Path: "/notes", Security: Needs("write")}, handler)
+	huma.Register(api, huma.Operation{OperationID: "create", Method: http.MethodPost, Path: "/notes", Security: Needs(write)}, handler)
 	return api
 }
 
@@ -146,7 +146,7 @@ func TestIssuedTokens(t *testing.T) {
 		}
 		return nil, false
 	}}
-	api := authTestAPI(t, map[string]string{"WRITE_TOKEN": "w"}, Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"read", "write"}}, issued)
+	api := authTestAPI(t, map[string]string{"WRITE_TOKEN": "w"}, Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []Scope{read, write}}, issued)
 	for _, c := range []struct {
 		method, token string
 		want          int
@@ -176,8 +176,8 @@ func TestAccessAndOIDC(t *testing.T) {
 		"WRITE_TOKEN": "w", AccessTeam: issuer.URL, AccessAUD: "app-aud", OIDCIssuer: issuer.URL, OIDCAudience: "https://notes.test",
 	}
 	api := authTestAPI(t, settings,
-		Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"read", "write"}},
-		Access{People: []string{"read"}, Machines: []string{"read", "write"}},
+		Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []Scope{read, write}},
+		Access{People: []Scope{read}, Machines: []Scope{read, write}},
 		OIDC{},
 	)
 	access := func(token string) string { return AccessHeader + ": " + token }
@@ -206,7 +206,7 @@ func TestAccessAndOIDC(t *testing.T) {
 		}
 	}
 	// Unset, Access and OIDC trust no one: the same tokens are no credentials, or unknown ones.
-	bare := authTestAPI(t, map[string]string{"WRITE_TOKEN": "w"}, Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"read"}}, Access{People: []string{"read"}}, OIDC{})
+	bare := authTestAPI(t, map[string]string{"WRITE_TOKEN": "w"}, Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []Scope{read}}, Access{People: []Scope{read}}, OIDC{})
 	for _, header := range []string{access(person), oidc(issuer.OIDC("https://notes.test", "user-1", "read"))} {
 		if resp := bare.Do("GET", "/notes", header); resp.Code != 401 {
 			t.Errorf("without the settings, %s...: %d, want 401", header[:30], resp.Code)
@@ -326,3 +326,9 @@ func TestDiscovery(t *testing.T) {
 		}
 	}
 }
+
+// The scopes these tests grant and need, declared once as an app's are.
+var (
+	read  = NewScope("read")
+	write = NewScope("write")
+)

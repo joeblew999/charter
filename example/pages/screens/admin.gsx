@@ -32,8 +32,8 @@ type Admin struct {
 	database AdminDatabase `route:"GET /database AdminDatabase"`
 }
 
-// Needs is what every route here needs: the scope that manages people. Someone signed in without it gets a 403.
-func (Admin) Needs() []string { return []string{"admin"} }
+// Needs is what every route here needs: the scope of whoever runs the app. Someone signed in without it gets a 403.
+func (Admin) Needs() []api.Scope { return []api.Scope{api.Admin} }
 
 // AdminLink is the way to the admin pages, for a header: there for whoever may open them.
 component AdminLink(attrs gsx.Attrs) {

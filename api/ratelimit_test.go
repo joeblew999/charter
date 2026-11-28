@@ -16,7 +16,7 @@ import (
 type ratelimitOut struct{ Body string }
 
 var (
-	writes = Limit{Binding: cloud.BoundRateLimit("WRITE_LIMIT", 2, 60), Scope: "write"}
+	writes = Limit{Binding: cloud.BoundRateLimit("WRITE_LIMIT", 2, 60), Scope: write}
 	hellos = Limit{Binding: cloud.BoundRateLimit("HELLO_LIMIT", 3, 10)}
 )
 
@@ -28,14 +28,14 @@ func ratelimitTestAPI(t *testing.T, now *time.Time) humatest.TestAPI {
 	Scheme(api.OpenAPI())
 	DeclareLimits(api.OpenAPI(), writes)
 	api.UseMiddleware(AuthMiddleware(api, settings{"WRITE_TOKEN": "w", "OTHER_TOKEN": "o"}.Get,
-		Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"write"}},
-		Token{Secret: cloud.BoundVariable("OTHER_TOKEN"), Scopes: []string{"write"}}))
+		Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []Scope{write}},
+		Token{Secret: cloud.BoundVariable("OTHER_TOKEN"), Scopes: []Scope{write}}))
 	memory := &MemoryLimiter{now: func() time.Time { return *now }}
 	api.UseMiddleware(LimitMiddleware(api, memory.Allow))
 	handler := func(context.Context, *struct{}) (*ratelimitOut, error) { return &ratelimitOut{Body: "ok"}, nil }
 	huma.Register(api, huma.Operation{OperationID: "hello", Method: http.MethodGet, Path: "/hello", Extensions: Limited(hellos, nil)}, handler)
 	huma.Register(api, huma.Operation{OperationID: "list", Method: http.MethodGet, Path: "/notes"}, handler)
-	huma.Register(api, huma.Operation{OperationID: "create", Method: http.MethodPost, Path: "/notes", Security: Needs("write")}, handler)
+	huma.Register(api, huma.Operation{OperationID: "create", Method: http.MethodPost, Path: "/notes", Security: Needs(write)}, handler)
 	return api
 }
 

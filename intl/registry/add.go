@@ -25,9 +25,9 @@ type Options struct {
 	Overwrite bool   // replace copies the app changed
 }
 
-// Add copies the components named into the app c is: it runs gsxui add for the gsxui components they are made of
-// that the app doesn't have yet, writes each into o.Dir with its imports pointing at the app's packages, formatted by
-// the app's gsx fmt, and its browser files into o.Assets, and writes their text, already translated, into the
+// Add copies the components named into the app c is: it writes each into o.Dir with its imports pointing at the app's packages, formatted by
+// the app's gsx fmt, and its browser files into o.Assets, runs gsxui add for the gsxui components they are made of that the app doesn't
+// have yet, and writes their text, already translated, into the
 // catalogs: Table's messages, and [gsxui] for what the app's gsxui components write and the catalogs lack. A copy the app changed since add wrote it
 // is left alone: o.Diff shows the difference, o.Overwrite replaces it. Its result is the command's exit code: 1 when
 // o.Diff found a difference or a changed copy was kept.
@@ -48,11 +48,6 @@ func (r *Registry) Add(c config.Config, names []string, o Options) (int, error) 
 	gsxui := cmp.Or(c.Gsxui, setup.DetectGsxui(c.Root))
 	if gsxui == "" {
 		return 1, errors.New("these components are made of gsxui components: set gsxui up first (gsxui init; https://ui.gsxhq.dev)")
-	}
-	if !o.Diff {
-		if err := gsxuiAdd(c.Root, gsxui, picked); err != nil {
-			return 1, err
-		}
 	}
 	catalogs, err := catalog.PackagePath(c.CatalogDir())
 	if err != nil {
@@ -135,6 +130,12 @@ func (r *Registry) Add(c config.Config, names []string, o Options) (int, error) 
 		fmt.Printf("%s's components and the app's copies are the same\n", r.Command)
 		return 0, nil
 	}
+	// The gsxui components they are made of, after the copies are written: gsxui add generates the app's Go, and a
+	// copy written for an older release of this library may no longer compile against this one, which would stop it
+	// before the copy that does was there.
+	if err := gsxuiAdd(c.Root, gsxui, picked); err != nil {
+		return 1, err
+	}
 	// The tables a component keeps what it knows in go where every table is written down: db/schema.sql. charter
 	// writes the migration from there.
 	for _, comp := range picked {
@@ -204,7 +205,10 @@ func gsxuiAdd(root, dir string, comps []Component) error {
 	var missing []string
 	for _, c := range comps {
 		for _, g := range c.Gsxui {
-			if _, err := os.Stat(filepath.Join(root, dir, g+".gsx")); err != nil && !slices.Contains(missing, g) {
+			// A component is a file (button.gsx) or a folder of them (icon/).
+			_, file := os.Stat(filepath.Join(root, dir, g+".gsx"))
+			_, folder := os.Stat(filepath.Join(root, dir, g))
+			if file != nil && folder != nil && !slices.Contains(missing, g) {
 				missing = append(missing, g)
 			}
 		}
