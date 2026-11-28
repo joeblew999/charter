@@ -212,19 +212,18 @@ charter decides, as each answer goes, whether it may be kept, and only all of th
 | | |
 |---|---|
 | The page | Its type says `Shared`, and it answered 200 to a GET for a page. A part of a page is never kept |
-| The request | Brought nothing of a person: no `Authorization`, and no cookie but the ones a page is drawn from (the language, the time zone and clock, the style). With a session, a database bookmark or any cookie of your own, the answer is that reader's |
+| The request | Brought no cookie and no `Authorization`. A reader who has chosen a style or a language, or signed in, is answered by the Worker |
 | The answer | Gives no cookie, and read no database |
 
 Everything else the Worker answers says `private`: the API, a page that is not shared, an error, a stream. That matters, since with its cache on Cloudflare keeps an answer that says nothing for two hours.
 
 - **There is one copy of a page for every reader who brings no cookie**, however they ask: a page load, a link followed in the app, a crawler, any browser in any language. Cloudflare keeps a copy for each value of the request headers an answer names (`Vary`), compared as written, so a shared page names only `Cookie`, `HX-Target` (htmx asking for a part of the page is not given the page) and `X-Forwarded-Proto` (a request over http is sent to https).
 - **It is not drawn from the browser's languages.** In an app with several, a shared page offers another language only to a reader who has chosen one; every reader has the language list.
-- **It is the same with a token.** A program that asks for a shared page with `Authorization` is given the kept one.
 - **A deploy starts an empty cache**, so what is kept is never of older code. `charter deploy` then asks for every page of the sitemap, so the cache has them before a reader comes.
 - **A copy is kept a day**, and for a week after that it is still given at once while the Worker draws a new one behind it.
 - **A shared page shows nothing it read for the request**: no row of a database, no time in the reader's zone, nothing of who asks. The docs, the theme editor and this site's front page are shared; the example's front page reads its database and is not.
 - **It gives no cookie**, so the language of the last page viewed is not remembered from a shared page. A language the reader chose is.
-- **A cookie is part of what a copy is kept under**, so a reader who brings one gets a copy of their own, drawn the first time. charter gives a reader none until they choose something (a style, a language, a time zone), sign in, read a page in another language than the first, or read a page that reads the database (its bookmark, for five minutes). A cookie your own script sets for every reader takes every reader out of the shared copy.
+- **A reader with a cookie is answered by the Worker**, as before there was a cache. charter gives a reader none until they choose something (a style, a language, a time zone), sign in, read a page in another language than the first, or read a page that reads the database (its bookmark, for five minutes). A cookie your own script sets for every reader takes every reader out of the cache.
 
 Not checked before the app runs: that a page which says `Shared` really is the same for everyone. `charter test` asks each of charter's own; a test of yours asks yours.
 

@@ -7,7 +7,6 @@ import (
 	"github.com/jackielii/structpages"
 
 	"github.com/joeblew999/charter/cloud"
-	"github.com/joeblew999/charter/intl"
 )
 
 // A page that is the same for every reader says so, and Cloudflare keeps it: its type has Shared() bool.
@@ -22,14 +21,13 @@ import (
 // What may be kept is decided here, once, as the page goes out, and only all of this makes it so:
 //
 //   - its type says Shared, and it answered 200 to a GET for a page (a part of a page is never kept);
-//   - the request brought nothing of a person: no Authorization, and no cookie but the ones a page is drawn from
-//     (the language, the time zone and clock, gsxui's style). A session, a bookmark of the database, any cookie of
-//     the app's own: the answer is that reader's;
+//   - the request brought no cookie and no Authorization: a reader who has chosen a style or a language, or
+//     signed in, is answered by the Worker;
 //   - the answer gives no cookie.
 //
 // Cloudflare keeps a copy for each value of the request headers an answer names (Vary), compared as written, so a
-// kept page names only the three it is drawn from: Cookie (a reader with none, which is most, shares one copy; a
-// reader with a style or a language of their own gets theirs), HX-Target (htmx asking for a part of the page
+// kept page names only the three it is drawn from: Cookie (the readers with none, which is most, share the one
+// copy; one with a cookie finds none and reaches the Worker), HX-Target (htmx asking for a part of the page
 // must not be given the page) and X-Forwarded-Proto (a request over http is sent to https, not given the page:
 // the scheme is not part of what Cloudflare keeps a copy under). Not the browser's languages, not how it was asked for: a page load, a link followed
 // in the app, curl and a crawler get the same copy.
@@ -47,26 +45,13 @@ func isShared(pn *structpages.PageNode) bool {
 	return ok && own.Shared()
 }
 
-// drawnFrom are the cookies a page is drawn from, and that say nothing of who reads it.
-var drawnFrom = map[string]bool{
-	intl.LocaleCookie: true, intl.ChosenLocaleCookie: true, intl.TimeZoneCookie: true, intl.HourCycleCookie: true,
-	StyleCookie: true,
-}
-
-// anyone is whether a request brings nothing of a person.
+// anyone is whether a request brings nothing of a reader: no cookie and no token. One that does is answered by
+// the Worker, for them.
 func anyone(r *http.Request) bool {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		return false
 	}
-	if r.Header.Get("Authorization") != "" || r.Header.Get(cloud.NewestHeader) != "" {
-		return false
-	}
-	for _, c := range r.Cookies() {
-		if !drawnFrom[c.Name] {
-			return false
-		}
-	}
-	return true
+	return r.Header.Get("Cookie") == "" && r.Header.Get("Authorization") == "" && r.Header.Get(cloud.NewestHeader) == ""
 }
 
 // share marks an answer that every reader may be given, when it is one (the rules above). It is called when the

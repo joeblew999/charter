@@ -60,12 +60,8 @@ func TestAPageForEveryReaderMayBeKeptAndAReadersOwnMayNot(t *testing.T) {
 				t.Errorf("%s asked with %s: Cache-Control %q, Vary %q", path, how[0], res.Header.Get("Cache-Control"), res.Header.Get("Vary"))
 			}
 		}
-		// A reader's style and language are cookies a page is drawn from: theirs is kept too, apart.
-		if res := answered(t, path, "Cookie", "locale=en; gsxui-style=maia"); !kept(res) {
-			t.Errorf("%s in a reader's style: Cache-Control %q", path, res.Header.Get("Cache-Control"))
-		}
-		// Whoever brings something of a person gets an answer of their own.
-		for _, theirs := range [][]string{{"Cookie", "session=someone"}, {"Cookie", "d1=DB=1"}, {"Cookie", "anything=else"}} {
+		// Whoever brings a cookie or a token is answered by the Worker, and that answer is theirs.
+		for _, theirs := range [][]string{{"Cookie", "session=someone"}, {"Cookie", "gsxui-style=maia"}, {"Authorization", "Bearer someone"}} {
 			if res := answered(t, path, theirs...); kept(res) {
 				t.Errorf("%s asked with %s: Cache-Control %q", path, theirs[0], res.Header.Get("Cache-Control"))
 			}
