@@ -75,6 +75,8 @@ func share(h http.Header, r *http.Request, status int) {
 		return // the page said something else itself (no-store)
 	}
 	h.Set("Cache-Control", sharedFor)
-	// What else the page was drawn from: the scheme its own links to itself have.
-	addVary(h, "X-Forwarded-Proto")
+	// What else the answer was drawn from: that the request brought no token (a cache gives a kept answer to any
+	// request whose headers named here are as they were, so one with a token is not given this), and the scheme the
+	// page's own links to itself have.
+	addVary(h, "Authorization", cloud.NewestHeader, "X-Forwarded-Proto")
 }

@@ -17,6 +17,7 @@ Nothing of yours has to change. One line in `wrangler.jsonc` turns on what is ne
 - **Cloudflare keeps the pages that are the same for every reader**, and answers with them before the Worker runs: add `"cache": { "enabled": true }` to `wrangler.jsonc`. The docs and the theme editor are kept from then on. A page of yours is when its type has `Shared() bool` ([a shared page](04-pages.md#a-page-that-is-the-same-for-every-reader)).
 - **Every answer says who may keep it.** What says nothing is `private` now, the API too. An answer of yours that sets its own `Cache-Control` keeps it.
 - **A shared page gives no cookie**: the language of the last page viewed is no longer remembered from the docs. A language the reader chose still is.
+- **The browser reports its time zone only from a page that shows a time**, where every page did: a reader of pages that show none brings no cookie, and is given the kept copy.
 - **An app with one language no longer varies by the browser's languages** (`Vary: Accept-Language`): there is none to offer.
 
 ## 0.77
