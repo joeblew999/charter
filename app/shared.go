@@ -27,8 +27,11 @@ import (
 //     the app's own: the answer is that reader's;
 //   - the answer gives no cookie.
 //
-// Cloudflare keeps one copy for each set of the request headers the page says it was drawn from (Vary: the cookies,
-// the browser's languages, what htmx asked for), so a reader with another style or language gets their own.
+// Cloudflare keeps a copy for each value of the request headers an answer names (Vary), compared as written, so a
+// kept page names only the two it is drawn from: Cookie (a reader with none, which is most, shares one copy; a
+// reader with a style or a language of their own gets theirs) and HX-Target (htmx asking for a part of the page
+// must not be given the page). Not the browser's languages, not how it was asked for: a page load, a link followed
+// in the app, curl and a crawler get the same copy.
 //
 // Everything else the Worker answers says private (bookmark.go's give, worker/go.mjs): with its cache on, Cloudflare
 // keeps an answer that says nothing for two hours.
@@ -71,12 +74,14 @@ func share(h http.Header, r *http.Request, status int) {
 	if status != http.StatusOK || !anyone(r) || wanted(r) == partOfAPage || len(h.Values("Set-Cookie")) > 0 {
 		return
 	}
+	// A target that is not the whole page, from something that is not htmx: kept, it would be what htmx is given
+	// when it asks for that part.
+	if target, _, _ := strings.Cut(r.Header.Get("HX-Target"), "#"); target != "" && target != "body" {
+		return
+	}
 	if kept := h.Get("Cache-Control"); kept != "" && !strings.EqualFold(kept, "private") {
 		return // the page said something else itself (no-store)
 	}
 	h.Set("Cache-Control", sharedFor)
-	// What else the answer was drawn from: that the request brought no token (a cache gives a kept answer to any
-	// request whose headers named here are as they were, so one with a token is not given this), and the scheme the
-	// page's own links to itself have.
-	addVary(h, "Authorization", cloud.NewestHeader, "X-Forwarded-Proto")
+	h.Set("Vary", "HX-Target, Cookie")
 }

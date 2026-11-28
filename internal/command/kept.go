@@ -11,11 +11,10 @@ import (
 
 // A page that is the same for every reader is answered by Cloudflare's cache for the Worker, before the Worker runs
 // (app's shared.go). A deploy starts an empty cache, so the first reader of each page would wait for the Worker to
-// start and draw it. keep asks for every page of the sitemap as a browser does that has no cookie, so the cache has
-// them when a reader comes: once as a page load and once as a link followed in the app (htmx's boosted link), which
-// are two copies to the cache, since a page says it is drawn from those headers (app's guard). It fails nothing: a
-// page not kept is drawn for its reader, as before. An app in several languages also keeps a copy for each value
-// of Accept-Language, as browsers write it: those are filled by the first reader who brings each.
+// start and draw it. keep asks for every page of the sitemap as a reader with no cookie does, so the cache has them
+// when one comes: once as a page and once as a link followed in the app (htmx's boosted link names its target), the
+// two copies the cache keeps of a page (shared.go's Vary). It fails nothing: a page not kept is drawn for its
+// reader, as before.
 func keep(address string) {
 	if address == "" {
 		return
@@ -77,9 +76,8 @@ func keep(address string) {
 
 var sitemapPage = regexp.MustCompile(`<loc>([^<]+)</loc>`)
 
-// What a browser sends of the headers a page is drawn from (guard's Vary): loading a page, and following a link in
-// the app, as htmx 4 asks for one (read from a browser on 2026-11-28).
+// The two ways a kept page is asked for: with no target, and by htmx 4's boosted link, whose target is the body.
 var (
-	asLoad = map[string]string{"Accept": "text/html", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document"}
-	asLink = map[string]string{"Accept": "text/html", "HX-Request": "true", "HX-Target": "body", "HX-Request-Type": "full", "HX-Boosted": "true", "Sec-Fetch-Mode": "same-origin", "Sec-Fetch-Dest": "empty"}
+	asLoad = map[string]string{"Accept": "text/html"}
+	asLink = map[string]string{"Accept": "text/html", "HX-Request": "true", "HX-Target": "body"}
 )

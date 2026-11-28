@@ -117,18 +117,24 @@ func (s Site) Handler(next http.Handler) http.Handler {
 		}
 		// The language the reader wants, which Suggested offers on a page in another: the one they chose, else the
 		// one their browser asks for first.
+		shared := s.IsShared != nil && s.IsShared(path)
 		var wanted *Locale
 		if page {
 			wanted = chosen
-			if wanted == nil && len(shipped) > 1 {
-				// With one language there is none to offer, and the page is not drawn from what the browser asks
-				// for: a shared cache keeps a copy for each value of a header a page varies by, as it is written.
+			if wanted == nil && len(shipped) > 1 && !shared {
+				// With one language there is none to offer. A page every reader is given the same is not drawn
+				// from what the browser asks for either: a cache keeps a copy for each value of a header a page
+				// varies by, as it is written, and browsers write this one in hundreds of ways. Its reader has
+				// the language list, and an offer once they have chosen.
 				w.Header().Add("Vary", "Accept-Language")
 				wanted = preferred(r.Header.Get("Accept-Language"))
 			}
 			// A page every reader is given the same gives no cookie: an answer with one is kept by no cache. It
 			// remembers its locale only beside a choice, which is a cookie already.
-			if s.IsShared == nil || !s.IsShared(path) || len(w.Header().Values("Set-Cookie")) > 0 {
+			// Nor does a first page in the default language: no cookie says the same, and a cookie a reader
+			// brings is one a cache keeps their pages apart by.
+			last, _ := r.Cookie(LocaleCookie)
+			if given := len(w.Header().Values("Set-Cookie")) > 0; given || (!shared && (loc != def || last != nil)) {
 				keep(w, r, LocaleCookie, loc)
 			}
 		}
