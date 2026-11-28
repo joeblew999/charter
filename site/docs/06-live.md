@@ -5,7 +5,7 @@ A feed is declared once and serves everything that shows it.
 ```go file=../example/api/handlers.go#Notes
 // Notes is the feed of notes, declared once: the table is the log, the Durable Object HUB wakes whoever follows.
 // The page's live list, the API's stream and its WebSocket channel are all this.
-var Notes = live.Feed[Note]{Binding: "HUB", Name: "notes", Log: func() (live.Log[Note], error) { return open() }}
+var Notes = live.Feed[Note]{Binding: env.HUB, Name: "notes", Log: func() (live.Log[Note], error) { return open() }}
 ```
 
 The log, a D1 table, is the truth. The hub, a Durable Object, only wakes whoever follows. So no item is lost or sent twice, across reconnects and deploys alike.

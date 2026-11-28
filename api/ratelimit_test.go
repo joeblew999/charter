@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"github.com/joeblew999/charter/cloud"
 	"net/http"
 	"strings"
 	"testing"
@@ -15,8 +16,8 @@ import (
 type ratelimitOut struct{ Body string }
 
 var (
-	writes = Limit{Binding: "WRITE_LIMIT", Limit: 2, Period: 60, Scope: "write"}
-	hellos = Limit{Binding: "HELLO_LIMIT", Limit: 3, Period: 10}
+	writes = Limit{Binding: cloud.BoundRateLimit("WRITE_LIMIT", 2, 60), Scope: "write"}
+	hellos = Limit{Binding: cloud.BoundRateLimit("HELLO_LIMIT", 3, 10)}
 )
 
 // An API with a public hello limited per IP (its own limit), a list with no limit, and a create
@@ -27,8 +28,8 @@ func ratelimitTestAPI(t *testing.T, now *time.Time) humatest.TestAPI {
 	Scheme(api.OpenAPI())
 	DeclareLimits(api.OpenAPI(), writes)
 	api.UseMiddleware(AuthMiddleware(api, settings{"WRITE_TOKEN": "w", "OTHER_TOKEN": "o"}.Get,
-		Token{Secret: "WRITE_TOKEN", Scopes: []string{"write"}},
-		Token{Secret: "OTHER_TOKEN", Scopes: []string{"write"}}))
+		Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"write"}},
+		Token{Secret: cloud.BoundVariable("OTHER_TOKEN"), Scopes: []string{"write"}}))
 	memory := &MemoryLimiter{now: func() time.Time { return *now }}
 	api.UseMiddleware(LimitMiddleware(api, memory.Allow))
 	handler := func(context.Context, *struct{}) (*ratelimitOut, error) { return &ratelimitOut{Body: "ok"}, nil }

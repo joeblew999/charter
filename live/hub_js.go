@@ -10,6 +10,7 @@ import (
 
 	"github.com/syumai/workers-go/cloudflare"
 
+	"github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/internal/promise"
 )
 
@@ -19,10 +20,10 @@ import (
 // each name is its own object, with its own subscribers.
 //
 // Open it per request: a binding belongs to the request's environment.
-func DurableObject[T any](binding, name string) (Hub[T], error) {
-	namespace := cloudflare.GetBinding(binding)
+func DurableObject[T any](binding cloud.Object, name string) (Hub[T], error) {
+	namespace := cloudflare.GetBinding(binding.Name())
 	if !namespace.Truthy() {
-		return nil, fmt.Errorf("%s is not bound (charter.toml's [[durable_objects]])", binding)
+		return nil, fmt.Errorf("%s is not bound (wrangler.jsonc's durable_objects)", binding.Name())
 	}
 	return durableObject[T]{name: name, stub: namespace.Call("get", namespace.Call("idFromName", name))}, nil
 }

@@ -14,10 +14,13 @@ Not everything is checked by a compiler. Where it is not, this page says so, and
 | A link, an element's id, a swap's target | the page tree (Go structs) | structpages: `url`, `id`, `target` take a page's type, never a string; structpages-lint checks each against the tree | on save for a type that is gone; in `check` for the rest |
 | A table | `db/schema.sql` | charter writes the migration from it | on save, under `dev` |
 | A statement on the database | `db/queries.sql` | sqlc checks its columns and types against the schema; charter writes it as a Go function | on save, under `dev` |
+| A binding, a variable, a secret's name | `wrangler.jsonc` (a secret's name: `.dev.vars.example`, `fnox.toml`) | charter writes each as a Go value of its kind (`env.DB`, `env.KV`, `env.APP_NAME`); the compiler refuses one that is not declared, or of another kind | on save, under `dev` |
 | The API | Go types (`api/contract.go`) | Huma writes the OpenAPI spec from the types; `check` compares it with the committed one | in `check` |
 | A client of the API, in any language | nothing: it is generated | Fern writes it from the spec; it is proven by calling the Worker | in `test` and `pack --prove` |
 | Text, in every language | `locales/*.toml` | charter writes each message as a Go name, so a page that uses one that is gone does not compile | on save; `check` for a language that is incomplete |
 | A live feed | `live.Feed[Note]` | the Go compiler: a feed is of one type, for pages, API and SDK | on save |
+
+The same holds for what Cloudflare gives the Worker. Take a bucket out of `wrangler.jsonc` and every line that used it stops compiling, because `env.BUCKET` is gone. Hand a KV namespace to something that takes a database and it does not compile either.
 
 So one change, a column renamed in `db/schema.sql`, is followed through by machines: the migration is written, every query that used the column fails, the Go that used the row no longer compiles, the API's spec changes and `check` says the committed one is stale, and the generated clients change with it.
 
@@ -27,8 +30,7 @@ These are strings or behaviour, and a wrong one compiles. Each is found by `char
 
 | What | Why it is not checked | What finds a mistake |
 |---|---|---|
-| A binding's name: `cloud.Open("DB")` | It is a name in `wrangler.jsonc`, and Go has only the string | `test`: the call fails with "DB is not bound" |
-| A variable's or a secret's name: `cloudflare.Getenv("MAIL_FROM")` | The same | `test`, for what the tests reach; `charter run secrets` lists what is declared and what the Worker has |
+| That a binding is there on the deployed Worker, and a secret has a value | The name is checked; what Cloudflare has under it is not Go's to know | `deploy` makes what `wrangler.jsonc` names; `charter run resources` and `charter run secrets` say what the Worker has; `test --deployed` |
 | A scope: `Needs() []string{"write"}` | A scope is a word. Pages and API use the same words and the same code checks them, but a misspelt one compiles and nobody is ever allowed | `test`, signed in as each role |
 | What a page's `Props` asks for | structpages hands it over by its type when the page is asked for | `test`: the page answers with an error |
 | An htmx attribute written by hand: `hx-swap="innerMorph"` | It is text for htmx. What charter gives for the hard cases (`live.Follows()`, `app.Body()`) is Go | `test`, in a real browser |
@@ -65,6 +67,7 @@ Each save runs the generator that owns the file, then the Go compiler:
 | `db/schema.sql` | the migration, and the local database follows | every query, again, against the new schema |
 | `db/queries.sql` | `db/queries.gen.go`: a function and a row type for each query | sqlc: columns and types; then the compiler, on every caller |
 | `locales/*.toml` | the messages as Go names | the compiler, on every page that uses one |
+| `wrangler.jsonc`, `.dev.vars.example`, `fnox.toml` | `env/env.built.go`: each binding, variable and secret's name as a typed value | the compiler, on every line that uses one |
 
 A mistake shows in the browser in gsx's overlay within a second or two, and the last page that worked stays up.
 
@@ -83,7 +86,7 @@ go tool charter add d1:DB
 
 Brings something more into the app: a screen of charter's, a gsxui component, a language, a Cloudflare resource with its binding, a Go module or an npm package.
 
-**What it proves:** what it adds arrives in the checked form. A screen is a `.gsx` file in your app, built from your own components, so it is compiled as your pages are. `screen:sign-in` writes its tables into your `db/schema.sql`, and from then on `check` holds your schema to the statements charter runs on them. `d1:DB` writes the binding into `wrangler.jsonc`, so the name your Go uses exists.
+**What it proves:** what it adds arrives in the checked form. A screen is a `.gsx` file in your app, built from your own components, so it is compiled as your pages are. `screen:sign-in` writes its tables into your `db/schema.sql`, and from then on `check` holds your schema to the statements charter runs on them. `d1:DB` writes the binding into `wrangler.jsonc`, and with that `env.DB` exists for your Go to use.
 
 ## `check`
 
@@ -101,6 +104,7 @@ Everything that can be said without running the app. It starts nothing, so it is
 | `fmt` | Go and gsx files are formatted |
 | `lint` | `go vet`, twice: for your machine and for the Worker's build. Then structpages-lint: every link, id and target against the page tree, and any internal address written as a string |
 | `statements` | no statement on the database is written in Go: each is a query in `db/queries.sql`, checked by sqlc ([the database](07-database.md#every-statement-is-checked)). And your schema still has the sign-in screen's tables as charter uses them |
+| `bindings` | no binding, variable or secret is named as text (`kv.NewNamespace("KV")`, `cloudflare.Getenv("X")`): each is its value in `env`, which only exists for what is declared |
 | `contract` | the committed OpenAPI and AsyncAPI specs and the queries' Go are what the code gives now, and each rate limit the contract declares is bound |
 | `languages` | every language is complete, plural forms are right, no message is unused |
 | `screens` | charter's screens that you have not changed are charter's current ones |
@@ -120,7 +124,7 @@ go tool charter test --deployed
 
 Runs `go test` for plain logic, then starts the Worker on `wrangler dev` with a new database filled by [the seed](07-database.md#seeding), and tests it from outside: the pages in a real browser, the API through its own generated SDK, and the site as a search engine reads it.
 
-**What it proves:** what types cannot. That the bindings exist and answer, that a signed-in member may do what a member may and no more, that a page asks for what it is given, that a list updates in a second tab, that the JavaScript and Go meet. And it proves the generated clients against a running Worker, not only that they compile.
+**What it proves:** what types cannot. That the bindings answer, that a signed-in member may do what a member may and no more, that a page asks for what it is given, that a list updates in a second tab, that the JavaScript and Go meet. And it proves the generated clients against a running Worker, not only that they compile.
 
 The tests use the types too: a test names a page by its type and an element by its id from the tree, never by an address or a selector, so a renamed page fails the test at compile time and not by timing out.
 

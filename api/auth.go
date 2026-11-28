@@ -36,6 +36,8 @@ import (
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/joeblew999/charter/cloud"
 )
 
 // The security schemes' names in the specs.
@@ -67,8 +69,8 @@ type Trusted interface{ trusted() }
 
 // Token is one secret and the scopes it grants.
 type Token struct {
-	Secret string   // the Worker's secret (the environment variable) that holds the token
-	Scopes []string // what it may do, e.g. read; write
+	Secret cloud.Variable // the Worker's secret that holds the token (the app's env.ADMIN_TOKEN)
+	Scopes []string       // what it may do, e.g. read; write
 }
 
 // Access trusts Cloudflare Access for the application in ACCESS_TEAM_DOMAIN and ACCESS_AUD: a
@@ -417,10 +419,10 @@ func scopesOf(token string, setting func(string) string, tokens []Token) (Caller
 	c := Caller{Scheme: Name}
 	known := false
 	for _, t := range tokens {
-		want := setting(t.Secret)
+		want := setting(t.Secret.Name())
 		if want != "" && token != "" && subtle.ConstantTimeCompare([]byte(token), []byte(want)) == 1 {
 			if !known {
-				c.Token = t.Secret
+				c.Token = t.Secret.Name()
 			}
 			known = true
 			c.Scopes = append(c.Scopes, t.Scopes...)

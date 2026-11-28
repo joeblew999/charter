@@ -7,6 +7,7 @@ import (
 	"github.com/joeblew999/charter/internal/command/intl"
 	"github.com/joeblew999/charter/internal/dbcode"
 	"github.com/joeblew999/charter/internal/docsgen"
+	"github.com/joeblew999/charter/internal/envcode"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
 	"os"
@@ -36,7 +37,7 @@ const devBuilt = "CHARTER_DEV_BUILT"
 // main.go embeds).
 func Build(args []string) {
 	fs := flag.NewFlagSet("charter build", flag.ExitOnError)
-	only := fs.String("only", "", `"generate": stop once the Go that go test and go vet need is written; "messages": the languages alone, as charter dev compiles them on a change to a catalog; "db": the schema alone, "docs": the docs alone, likewise`)
+	only := fs.String("only", "", `"generate": stop once the Go that go test and go vet need is written; "messages": the languages alone, as charter dev compiles them on a change to a catalog; "db": the schema alone, "docs": the docs alone, "env": what the Worker is bound to alone, likewise`)
 	dev := fs.Bool("dev", false, "the Wasm only: what charter dev runs on each save, after gsx has regenerated")
 	limit := fs.Int("limit", 0, "fail when build/ is more than this many bytes, uncompressed as Cloudflare counts it (default: charter.toml's [build] limit, or Cloudflare's 64 MiB)")
 	fs.Parse(args)
@@ -71,6 +72,11 @@ func Build(args []string) {
 		check(pushSchema(p))
 		return
 	}
+	if *only == "env" {
+		// As charter dev does on a change to wrangler.jsonc, .dev.vars.example or fnox.toml.
+		check(envcode.Write(p.Root))
+		return
+	}
 	if *only == "messages" {
 		if hasIntl(p) {
 			intl.Main([]string{"gen"})
@@ -86,6 +92,10 @@ func Build(args []string) {
 
 // generate writes what the app's own Go needs before it compiles: the messages, the components' Go, Vite's output.
 func generate(p *project.Project) error {
+	// What the Worker is bound to, as Go (env/env.built.go): the app's Go names its bindings by it.
+	if err := envcode.Write(p.Root); err != nil {
+		return err
+	}
 	// The docs (docs/*.md) as Go, before anything compiles it.
 	if _, err := docsgen.Write(p.Root); err != nil {
 		return err

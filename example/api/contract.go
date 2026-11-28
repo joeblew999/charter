@@ -16,6 +16,7 @@ import (
 
 	charter "github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/example/db"
+	"github.com/joeblew999/charter/example/env"
 )
 
 // What the specs say about the API as a whole.
@@ -28,7 +29,7 @@ const (
 
 // WriteLimit is how often one caller may create notes: the Worker's WRITE_LIMIT binding, which
 // charter.toml binds from the spec. Over it: 429.
-var WriteLimit = charter.Limit{Binding: "WRITE_LIMIT", Limit: 100, Period: 60}
+var WriteLimit = charter.Limit{Binding: env.WRITE_LIMIT}
 
 // END is what a planned stream end returns: SSE `event: close` with `data: "[end-of-stream]"`,
 // Fern's terminator for watch. Fern matches the terminator as a substring of each event's data, so

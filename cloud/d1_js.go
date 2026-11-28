@@ -17,8 +17,8 @@ import (
 // next request's.
 type DB struct{ name string }
 
-// Open is the database bound as name (wrangler.jsonc's d1_databases).
-func Open(name string) (DB, error) {
+// open is the database bound as name (Database.Open).
+func open(name string) (DB, error) {
 	if !cloudflare.GetBinding(name).Truthy() {
 		return DB{}, fmt.Errorf("%s is not bound (wrangler.jsonc's d1_databases)", name)
 	}

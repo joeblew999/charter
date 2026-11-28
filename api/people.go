@@ -32,7 +32,7 @@ import (
 type People struct {
 	// Name is what the app is called where a passkey is kept (the browser's and the device's own lists).
 	Name string
-	// Accounts opens where users, passkeys and tokens are kept, for a request: D1Accounts("DB").
+	// Accounts opens where users, passkeys and tokens are kept, for a request: D1Accounts(env.DB).
 	Accounts func() (Accounts, error)
 	// Roles are what people may be, each a name and the scopes it has: who may do what is said here once, and a
 	// person has one role. Role is the one someone who signs up gets. Changing what a role may do changes it for
@@ -201,8 +201,8 @@ func (c Caller) SignedIn() bool { return c.Scheme != "" }
 // Auth is who may do what, for the whole app: the API's operations (Middleware) and its pages alike. An app has
 // one, made from the ways in it trusts, and gives it to both:
 //
-//	var Auth = api.NewAuth(cloud.Var, api.People{Name: "Notes", Accounts: api.D1Accounts("DB"), Scopes: []string{"read", "write"}},
-//		api.Token{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}})
+//	var Auth = api.NewAuth(cloud.Var, api.People{Name: "Notes", Accounts: api.D1Accounts(env.DB), Scopes: []string{"read", "write"}},
+//		api.Token{Secret: env.WRITE_TOKEN, Scopes: []string{"read", "write"}})
 //
 //	(&app.App{Auth: Auth, Args: []any{Auth}, RequestArgs: []any{Auth.Caller}, …}).Run()
 //
@@ -296,15 +296,15 @@ func PeopleScheme(spec *huma.OpenAPI) {
 	}
 }
 
-// D1Accounts keeps People in the D1 database bound as binding, in the tables charter add screen:sign-in writes
+// D1Accounts keeps People in a D1 database (the app's env.DB), in the tables charter add screen:sign-in writes
 // into db/schema.sql: users, passkeys, tokens, ceremonies.
-func D1Accounts(binding string) func() (Accounts, error) {
+func D1Accounts(binding cloud.Database) func() (Accounts, error) {
 	return func() (Accounts, error) {
 		// Who someone is is read where it is newest: a session or a token that was just taken away, a role that
 		// just changed, a sign-in begun a moment ago, must not be answered by a copy of the database that is behind.
 		// The rest of the request then reads from there on, so it sees what its caller wrote before.
 		cloud.Newest()
-		db, err := cloud.Open(binding)
+		db, err := binding.Open()
 		return d1Accounts{db}, err
 	}
 }

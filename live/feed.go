@@ -28,14 +28,15 @@ type Log[T Item] interface {
 // the API's stream for SDK clients (Events) and its WebSocket channel (Lines). The log (a D1 table) is the truth; the
 // hub (a Durable Object) only wakes followers, so no item is lost or sent twice, across reconnects and deploys alike.
 //
-//	var Notes = live.Feed[Note]{Binding: "HUB", Name: "notes", Log: func() (live.Log[Note], error) { return openStore() }}
+//	var Notes = live.Feed[Note]{Binding: env.HUB, Name: "notes", Log: func() (live.Log[Note], error) { return openStore() }}
 //
 //	note, err := store.Create(ctx, body)   // the write goes to the log
 //	Notes.Publish(ctx, note)               // then every follower is woken
 type Feed[T Item] struct {
-	// Binding is the Durable Object namespace of the hub (wrangler.jsonc's durable_objects), Name the object in it:
-	// one object per feed.
-	Binding, Name string
+	// Binding is the Durable Object namespace of the hub (wrangler.jsonc's durable_objects: the app's env.HUB),
+	// Name the object in it: one object per feed.
+	Binding cloud.Object
+	Name    string
 	// Log opens the log. It is called per request: a binding belongs to the request's environment.
 	Log func() (Log[T], error)
 	// Hub replaces the Durable Object, for a test: a Memory.
@@ -169,7 +170,7 @@ func Follows() gsx.Attrs {
 // Signal is the address of a page's stream of this feed: what Stream connects to. It says when the page was
 // rendered, so a change between that and the stream's opening is told at once.
 func (f Feed[T]) Signal() string {
-	return SignalPath + url.PathEscape(f.Binding) + "/" + url.PathEscape(f.Name) + "?at=" + strconv.FormatInt(time.Now().UnixMilli(), 10)
+	return SignalPath + url.PathEscape(f.Binding.Name()) + "/" + url.PathEscape(f.Name) + "?at=" + strconv.FormatInt(time.Now().UnixMilli(), 10)
 }
 
 // FollowHeader is the header of an answer whose stream the hub carries on (worker/go.mjs joins it): what Events
@@ -275,7 +276,7 @@ func (f Feed[T]) handOver(ctx context.Context, header func(name, value string), 
 			break
 		}
 	}
-	follow := url.Values{"binding": {f.Binding}, "name": {f.Name}, "after": {strconv.FormatInt(last, 10)}, "as": {as}}
+	follow := url.Values{"binding": {f.Binding.Name()}, "name": {f.Name}, "after": {strconv.FormatInt(last, 10)}, "as": {as}}
 	if seconds > 0 {
 		follow.Set("seconds", strconv.Itoa(seconds))
 		follow.Set("end", end)

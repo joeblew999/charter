@@ -18,8 +18,8 @@ import (
 
 	charter "github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/app"
-	"github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/example/db"
+	"github.com/joeblew999/charter/example/env"
 	"github.com/joeblew999/charter/live"
 )
 
@@ -43,7 +43,7 @@ func (a Activity) At() time.Time { return stamp(a.CreatedAt) }
 func (a Activity) Position() int64 { return a.ID }
 
 // Feed is the activity, followed live: the table is the log, the Durable Object HUB wakes whoever has the page open.
-var Feed = live.Feed[Activity]{Binding: "HUB", Name: "activity", Log: func() (live.Log[Activity], error) { return openLog() }}
+var Feed = live.Feed[Activity]{Binding: env.HUB, Name: "activity", Log: func() (live.Log[Activity], error) { return openLog() }}
 
 // Attachment is a file someone attached: what the database knows of it. The file itself is in the bucket.
 type Attachment struct{ db.AttachmentsRow }
@@ -88,12 +88,6 @@ type Limit struct {
 	Allowed bool
 }
 
-// The write limit as wrangler.jsonc has it (ratelimits): the two say the same.
-const (
-	LimitCalls   = 100
-	LimitSeconds = 60
-)
-
 // Outside is what another site answered, and how long it took.
 type Outside struct {
 	Asked  string
@@ -110,7 +104,7 @@ type Facts struct {
 // FactsOf is the request's.
 func FactsOf(r *http.Request) Facts {
 	cf := app.CFOf(r)
-	return Facts{Name: cloud.Var("APP_NAME"), Country: cf.Country, City: cf.City, Timezone: cf.Timezone, Colo: cf.Colo}
+	return Facts{Name: env.APP_NAME.Value(), Country: cf.Country, City: cf.City, Timezone: cf.Timezone, Colo: cf.Colo}
 }
 
 // stamp is a time as D1's CURRENT_TIMESTAMP wrote it.

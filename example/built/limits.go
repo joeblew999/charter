@@ -12,8 +12,8 @@ import (
 	"github.com/syumai/workers-go/cloudflare/cache"
 
 	"github.com/joeblew999/charter/app"
-	"github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/example/db"
+	"github.com/joeblew999/charter/example/env"
 )
 
 // A rate limit, and the Cache API: the two ways a Worker does less.
@@ -22,8 +22,8 @@ import (
 // The limit is the one the API's createNote is under (WRITE_LIMIT); Cloudflare says yes or no, never how many are
 // left.
 func UseLimit(key string) (Limit, error) {
-	ok, err := cloud.Allow("WRITE_LIMIT", key)
-	return Limit{Calls: LimitCalls, Seconds: LimitSeconds, Asked: true, Allowed: ok}, err
+	ok, err := env.WRITE_LIMIT.Allow(key)
+	return Limit{Calls: env.WRITE_LIMIT.Calls(), Seconds: env.WRITE_LIMIT.Seconds(), Asked: true, Allowed: ok}, err
 }
 
 // ReportNow is the notes in numbers. Working it out takes a query; the answer is kept in the cache for a minute,
@@ -40,7 +40,7 @@ func ReportNow(r *http.Request) (Report, error) {
 			return report, nil
 		}
 	}
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	if err != nil {
 		return Report{}, err
 	}

@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/joeblew999/charter/cloud"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -34,8 +35,8 @@ func authTestAPI(t *testing.T, settings map[string]string, trusted ...Trusted) h
 	OIDCScheme(api.OpenAPI())
 	if trusted == nil {
 		trusted = []Trusted{
-			Token{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}},
-			Token{Secret: "READ_TOKEN", Scopes: []string{"read"}},
+			Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"read", "write"}},
+			Token{Secret: cloud.BoundVariable("READ_TOKEN"), Scopes: []string{"read"}},
 		}
 	}
 	api.UseMiddleware(AuthMiddleware(api, func(name string) string { return settings[name] }, trusted...))
@@ -114,7 +115,7 @@ func TestWellKnown(t *testing.T) {
 		t.Errorf("an unknown document: %d, want 404", code)
 	}
 	// An API that issues no tokens is no authorization server.
-	bare := WellKnown(api, nil, Token{Secret: "WRITE_TOKEN"})
+	bare := WellKnown(api, nil, Token{Secret: cloud.BoundVariable("WRITE_TOKEN")})
 	rec := httptest.NewRecorder()
 	bare.ServeHTTP(rec, httptest.NewRequest("GET", "https://api.example"+serverPath, nil))
 	if rec.Code != 404 {
@@ -145,7 +146,7 @@ func TestIssuedTokens(t *testing.T) {
 		}
 		return nil, false
 	}}
-	api := authTestAPI(t, map[string]string{"WRITE_TOKEN": "w"}, Token{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}}, issued)
+	api := authTestAPI(t, map[string]string{"WRITE_TOKEN": "w"}, Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"read", "write"}}, issued)
 	for _, c := range []struct {
 		method, token string
 		want          int
@@ -175,7 +176,7 @@ func TestAccessAndOIDC(t *testing.T) {
 		"WRITE_TOKEN": "w", AccessTeam: issuer.URL, AccessAUD: "app-aud", OIDCIssuer: issuer.URL, OIDCAudience: "https://notes.test",
 	}
 	api := authTestAPI(t, settings,
-		Token{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}},
+		Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"read", "write"}},
 		Access{People: []string{"read"}, Machines: []string{"read", "write"}},
 		OIDC{},
 	)
@@ -205,7 +206,7 @@ func TestAccessAndOIDC(t *testing.T) {
 		}
 	}
 	// Unset, Access and OIDC trust no one: the same tokens are no credentials, or unknown ones.
-	bare := authTestAPI(t, map[string]string{"WRITE_TOKEN": "w"}, Token{Secret: "WRITE_TOKEN", Scopes: []string{"read"}}, Access{People: []string{"read"}}, OIDC{})
+	bare := authTestAPI(t, map[string]string{"WRITE_TOKEN": "w"}, Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"read"}}, Access{People: []string{"read"}}, OIDC{})
 	for _, header := range []string{access(person), oidc(issuer.OIDC("https://notes.test", "user-1", "read"))} {
 		if resp := bare.Do("GET", "/notes", header); resp.Code != 401 {
 			t.Errorf("without the settings, %s...: %d, want 401", header[:30], resp.Code)

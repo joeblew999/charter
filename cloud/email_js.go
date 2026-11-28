@@ -6,7 +6,7 @@
 // for a Worker.
 //
 //	// wrangler.jsonc: "send_email": [{ "name": "MAIL" }]
-//	err := SendEmail("MAIL", "app@example.com", "you@example.com", raw)   // raw: an RFC 5322 message
+//	err := env.MAIL.Send("app@example.com", "you@example.com", raw)   // raw: an RFC 5322 message
 //
 //	ConsumeEmail(func(ctx context.Context, m *EmailMessage) error {
 //		raw, err := m.Raw()
@@ -34,9 +34,8 @@ var (
 	binding = runtime.Get("binding")
 )
 
-// SendEmail sends raw, a whole message as RFC 5322 has it (headers, a blank line, the body), from one address to another
-// through the send_email binding called name. Cloudflare delivers only to addresses the binding allows.
-func SendEmail(name, from, to string, raw []byte) error {
+// sendEmail sends raw through the send_email binding called name (Mailer.Send).
+func sendEmail(name, from, to string, raw []byte) error {
 	sender := runtime.Get("env").Get(name)
 	if sender.IsUndefined() {
 		return fmt.Errorf("email: no send_email binding called %s in wrangler.jsonc", name)

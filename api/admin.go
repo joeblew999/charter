@@ -199,7 +199,9 @@ func (a *Auth) Databases(r *http.Request) ([]Database, error) {
 		if b.Kind != cloud.KindDatabase {
 			continue
 		}
-		db, err := cloud.Open(b.Name)
+		// A name the Worker itself gave, as it runs: the one place a binding is made from a name that is not written
+		// in wrangler.jsonc's own words.
+		db, err := cloud.BoundDatabase(b.Name).Open()
 		if err != nil {
 			return nil, err
 		}

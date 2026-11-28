@@ -19,6 +19,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/joeblew999/charter/cloud"
 )
 
 // Base is the Worker's address (charter's BASE), without a trailing slash. A test run without one (go test ./...,
@@ -58,10 +60,12 @@ func Get(t testing.TB, path string, headers ...string) string {
 	return string(b)
 }
 
-// Secret is a secret of the Worker for a test that needs one (a token): the environment's, or for a local Worker
-// the throwaway value in the app's .dev.vars. A deployed Worker's secret that the environment lacks skips the test.
-func Secret(t testing.TB, name string) string {
+// Secret is a secret of the Worker for a test that needs one (a token, by its value in the app's env:
+// apptest.Secret(t, env.WRITE_TOKEN)): the environment's, or for a local Worker the throwaway value in the app's
+// .dev.vars. A deployed Worker's secret that the environment lacks skips the test.
+func Secret(t testing.TB, secret cloud.Variable) string {
 	t.Helper()
+	name := secret.Name()
 	if v := os.Getenv(name); v != "" {
 		return v
 	}

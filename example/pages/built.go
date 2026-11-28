@@ -11,6 +11,7 @@ import (
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/example/built"
 	"github.com/joeblew999/charter/example/db"
+	"github.com/joeblew999/charter/example/env"
 )
 
 // Built is the pages that show what the app is built with (package built): an overview that asks nothing of any
@@ -203,7 +204,7 @@ type LimitsPage struct{}
 
 func (LimitsPage) Props(r *http.Request) (built.Report, built.Limit, error) {
 	report, err := built.ReportNow(r)
-	return report, built.Limit{Calls: built.LimitCalls, Seconds: built.LimitSeconds}, err
+	return report, built.Limit{Calls: env.WRITE_LIMIT.Calls(), Seconds: env.WRITE_LIMIT.Seconds()}, err
 }
 
 // LimitUse makes one call against the limit, as the reader, and answers with whether it was within it.

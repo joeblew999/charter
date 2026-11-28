@@ -7,8 +7,8 @@
 //
 // One hub carries one type of item. A second feed is a second hub, with its own name:
 //
-//	notes, err := DurableObject[Note]("HUB", "notes")       // on Cloudflare (hub_js.go)
-//	devices, err := DurableObject[Device]("HUB", "devices") // the same class, another object
+//	notes, err := DurableObject[Note](env.HUB, "notes")       // on Cloudflare (hub_js.go)
+//	devices, err := DurableObject[Device](env.HUB, "devices") // the same class, another object
 //	var local Memory[Device]                                // natively and in tests
 package live
 

@@ -14,8 +14,8 @@ import (
 
 	charter "github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/app"
-	"github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/example/db"
+	"github.com/joeblew999/charter/example/env"
 )
 
 // R2: a file attached to a note. The bucket keeps the file; the database keeps what is known of it (its name, its
@@ -23,7 +23,7 @@ import (
 
 // Attachments are the files attached, newest first.
 func Attachments(context.Context) ([]Attachment, error) {
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	if err != nil {
 		return nil, err
 	}
@@ -40,11 +40,11 @@ func Attach(_ context.Context, by charter.Caller, name, kind string, note int64,
 	if len(file) == 0 || len(file) > MaxFile {
 		return Attachment{}, app.Status(http.StatusRequestEntityTooLarge, "a file of up to 1 MB")
 	}
-	bucket, err := r2.NewBucket("BUCKET")
+	bucket, err := env.BUCKET.Open()
 	if err != nil {
 		return Attachment{}, err
 	}
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	if err != nil {
 		return Attachment{}, err
 	}
@@ -58,7 +58,7 @@ func Attach(_ context.Context, by charter.Caller, name, kind string, note int64,
 
 // File is an attachment and what the bucket has of it.
 func File(_ context.Context, id int64) (Attachment, io.ReadCloser, error) {
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	if err != nil {
 		return Attachment{}, nil, err
 	}
@@ -66,7 +66,7 @@ func File(_ context.Context, id int64) (Attachment, io.ReadCloser, error) {
 	if err != nil {
 		return Attachment{}, nil, app.NotFound("no such file")
 	}
-	bucket, err := r2.NewBucket("BUCKET")
+	bucket, err := env.BUCKET.Open()
 	if err != nil {
 		return Attachment{}, nil, err
 	}
@@ -79,7 +79,7 @@ func File(_ context.Context, id int64) (Attachment, io.ReadCloser, error) {
 
 // Detach takes a file away, for whoever attached it, or whoever may moderate.
 func Detach(_ context.Context, by charter.Caller, id int64) error {
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func Detach(_ context.Context, by charter.Caller, id int64) error {
 	if !MayDetach(by, Attachment{row}) {
 		return app.Status(http.StatusForbidden, "it is someone else's file")
 	}
-	bucket, err := r2.NewBucket("BUCKET")
+	bucket, err := env.BUCKET.Open()
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func Detach(_ context.Context, by charter.Caller, id int64) error {
 
 // forget takes away the files someone attached, from the bucket and from the table: what goes with their account.
 func forget(_ context.Context, who charter.Person) error {
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func forget(_ context.Context, who charter.Person) error {
 	if err != nil || len(rows) == 0 {
 		return err
 	}
-	bucket, err := r2.NewBucket("BUCKET")
+	bucket, err := env.BUCKET.Open()
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func NotesBy(_ context.Context, who charter.Caller) ([]db.NotesRow, error) {
 	if who.Subject == "" {
 		return nil, nil
 	}
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	if err != nil {
 		return nil, err
 	}

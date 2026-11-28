@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -29,17 +30,43 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/joeblew999/charter/cloud"
 )
 
 // extension is where an operation's limit is in the specs.
 const extension = "x-rate-limit"
 
-// Limit is one Rate Limiting binding: at most Limit calls per caller in each Period.
+// Limit is a limit on calls: the Worker's Rate Limiting binding that counts, which says how many calls a caller
+// may make in how long (the app's env.WRITE_LIMIT, written from wrangler.jsonc, where the limit is said once).
 type Limit struct {
-	Binding string `json:"binding"`         // the Worker's binding that counts, e.g. WRITE_LIMIT
-	Limit   int    `json:"limit"`           // calls per caller in a period
-	Period  int    `json:"period"`          // seconds: 10 or 60, all the binding takes
-	Scope   string `json:"scope,omitempty"` // Declare: every operation that needs this scope
+	Binding cloud.RateLimit
+	Scope   string // Declare: every operation that needs this scope
+}
+
+// MarshalJSON is the limit as the specs have it (x-rate-limit): the binding's name, the calls and the seconds.
+func (l Limit) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Binding string `json:"binding"`
+		Limit   int    `json:"limit"`
+		Period  int    `json:"period"`
+		Scope   string `json:"scope,omitempty"`
+	}{l.Binding.Name(), l.Binding.Calls(), l.Binding.Seconds(), l.Scope})
+}
+
+// UnmarshalJSON reads a limit as the specs have it.
+func (l *Limit) UnmarshalJSON(b []byte) error {
+	var in struct {
+		Binding string `json:"binding"`
+		Limit   int    `json:"limit"`
+		Period  int    `json:"period"`
+		Scope   string `json:"scope"`
+	}
+	if err := json.Unmarshal(b, &in); err != nil {
+		return err
+	}
+	*l = Limit{Binding: cloud.BoundRateLimit(in.Binding, in.Limit, in.Period), Scope: in.Scope}
+	return nil
 }
 
 // Limited is an operation's own limit, for its Extensions (with Fern's, if it has them):
@@ -112,7 +139,7 @@ func tooMany(spec *huma.OpenAPI, limit Limit) *huma.Response {
 		t = t.Elem()
 	}
 	return &huma.Response{
-		Description: fmt.Sprintf("Too Many Requests: more than %d calls in %d s by this caller", limit.Limit, limit.Period),
+		Description: fmt.Sprintf("Too Many Requests: more than %d calls in %d s by this caller", limit.Binding.Calls(), limit.Binding.Seconds()),
 		Headers: map[string]*huma.Param{"Retry-After": {
 			Description: "Seconds to wait before calling again",
 			Schema:      &huma.Schema{Type: huma.TypeInteger},
@@ -124,7 +151,7 @@ func tooMany(spec *huma.OpenAPI, limit Limit) *huma.Response {
 // limitOf is the limit an operation's Extensions hold.
 func limitOf(op *huma.Operation) (Limit, bool) {
 	limit, ok := op.Extensions[extension].(Limit)
-	return limit, ok && limit.Binding != ""
+	return limit, ok && limit.Binding.Name() != ""
 }
 
 // Limiter says whether key may make one more call under limit. allow (the Worker's binding, or
@@ -148,14 +175,14 @@ func LimitMiddleware(api huma.API, limiter Limiter) func(huma.Context, func(huma
 		allowed, err := limiter(ctx.Context(), limit, countedAs(ctx))
 		if err != nil {
 			// Fail open: a missing or failing binding never takes the API down.
-			if _, seen := warned.LoadOrStore(limit.Binding+err.Error(), true); !seen {
-				log.Printf("ratelimit: %s: %v; calls are not limited", limit.Binding, err)
+			if _, seen := warned.LoadOrStore(limit.Binding.Name()+err.Error(), true); !seen {
+				log.Printf("ratelimit: %s: %v; calls are not limited", limit.Binding.Name(), err)
 			}
 			allowed = true
 		}
 		if !allowed {
-			ctx.SetHeader("Retry-After", strconv.Itoa(limit.Period))
-			huma.WriteErr(api, ctx, http.StatusTooManyRequests, fmt.Sprintf("too many calls: at most %d in %d s; retry after %d s", limit.Limit, limit.Period, limit.Period))
+			ctx.SetHeader("Retry-After", strconv.Itoa(limit.Binding.Seconds()))
+			huma.WriteErr(api, ctx, http.StatusTooManyRequests, fmt.Sprintf("too many calls: at most %d in %d s; retry after %d s", limit.Binding.Calls(), limit.Binding.Seconds(), limit.Binding.Seconds()))
 			return
 		}
 		next(ctx)
@@ -217,7 +244,7 @@ func (m *MemoryLimiter) Allow(_ context.Context, limit Limit, key string) (bool,
 	if m.windows == nil {
 		m.windows = map[string]window{}
 	}
-	id := limit.Binding + "\x00" + key
+	id := limit.Binding.Name() + "\x00" + key
 	w := m.windows[id]
 	if !now.Before(w.end) {
 		// Drop the windows that have ended, so the map holds only current callers.
@@ -226,10 +253,10 @@ func (m *MemoryLimiter) Allow(_ context.Context, limit Limit, key string) (bool,
 				delete(m.windows, k)
 			}
 		}
-		period := time.Duration(limit.Period) * time.Second
+		period := time.Duration(limit.Binding.Seconds()) * time.Second
 		w = window{end: now.Truncate(period).Add(period)}
 	}
 	w.count++
 	m.windows[id] = w
-	return w.count <= limit.Limit, nil
+	return w.count <= limit.Binding.Calls(), nil
 }

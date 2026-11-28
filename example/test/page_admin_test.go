@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/joeblew999/charter/app/apptest"
+	"github.com/joeblew999/charter/cloud"
+	"github.com/joeblew999/charter/example/env"
 	"github.com/joeblew999/charter/example/pages"
 	"github.com/joeblew999/charter/example/pages/screens"
 )
@@ -18,17 +20,17 @@ import (
 // admin is a page of the admin screen as the operator sees it.
 func admin(t *testing.T, path string) string {
 	t.Helper()
-	return apptest.Get(t, path, "Authorization", "Bearer "+apptest.Secret(t, "ADMIN_TOKEN"))
+	return apptest.Get(t, path, "Authorization", "Bearer "+apptest.Secret(t, env.ADMIN_TOKEN))
 }
 
 // Nobody is sent to sign in; someone who may write and not manage is refused; the header offers the way in only to
 // whoever may take it.
 func TestTheAdminPagesAreForAdmins(t *testing.T) {
 	for _, path := range []string{at(screens.AdminOverview{}), at(screens.AdminSystem{}), at(screens.AdminDatabase{})} {
-		if res := as(t, "", "GET", path, "", nil); res.StatusCode != http.StatusSeeOther || !strings.Contains(res.Header.Get("Location"), "sign-in") {
+		if res := as(t, cloud.Variable{}, "GET", path, "", nil); res.StatusCode != http.StatusSeeOther || !strings.Contains(res.Header.Get("Location"), "sign-in") {
 			t.Errorf("nobody opening %s: HTTP %d to %q, want a redirect to sign in", path, res.StatusCode, res.Header.Get("Location"))
 		}
-		if res := as(t, "WRITE_TOKEN", "GET", path, "", nil); res.StatusCode != http.StatusForbidden {
+		if res := as(t, env.WRITE_TOKEN, "GET", path, "", nil); res.StatusCode != http.StatusForbidden {
 			t.Errorf("a writer opening %s: HTTP %d, want 403", path, res.StatusCode)
 		}
 	}
@@ -49,7 +51,7 @@ func TestTheAdminOverview(t *testing.T) {
 			t.Errorf("the overview lacks %q", want)
 		}
 	}
-	res := as(t, "ADMIN_TOKEN", "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=moderator"))
+	res := as(t, env.ADMIN_TOKEN, "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=moderator"))
 	made, _ := io.ReadAll(res.Body)
 	res.Body.Close()
 	code := regexp.MustCompile(`/__charter/invite\?code=([A-Za-z0-9_-]+)`).FindStringSubmatch(string(made))
@@ -65,7 +67,7 @@ func TestTheAdminOverview(t *testing.T) {
 		t.Error("the overview shows an invitation's code, which is the invitation")
 	}
 	// The newest ends last: it is the last listed.
-	if res := as(t, "ADMIN_TOKEN", "POST", cancel[len(cancel)-1][1], "", nil); res.StatusCode != http.StatusOK {
+	if res := as(t, env.ADMIN_TOKEN, "POST", cancel[len(cancel)-1][1], "", nil); res.StatusCode != http.StatusOK {
 		t.Fatalf("cancelling the invitation: HTTP %d", res.StatusCode)
 	}
 	if !strings.Contains(apptest.Get(t, at(screens.SignInPage{})+"?invite="+code[1]), `id="invite-gone"`) {
@@ -82,11 +84,11 @@ func TestTheAdminSystemPage(t *testing.T) {
 			t.Errorf("the system page lacks %q", want)
 		}
 	}
-	if secret := apptest.Secret(t, "ADMIN_TOKEN"); strings.Contains(html, secret) {
+	if secret := apptest.Secret(t, env.ADMIN_TOKEN); strings.Contains(html, secret) {
 		t.Error("the system page shows a secret's value")
 	}
 	for _, binding := range []string{"DB", "KV", "BUCKET"} {
-		res := as(t, "ADMIN_TOKEN", "POST", at(screens.AdminProbe{}, "binding", binding), "application/x-www-form-urlencoded", strings.NewReader("kind=database"))
+		res := as(t, env.ADMIN_TOKEN, "POST", at(screens.AdminProbe{}, "binding", binding), "application/x-www-form-urlencoded", strings.NewReader("kind=database"))
 		row, _ := io.ReadAll(res.Body)
 		res.Body.Close()
 		if res.StatusCode != http.StatusOK || !strings.Contains(string(row), `data-probed="ok"`) {
@@ -94,13 +96,13 @@ func TestTheAdminSystemPage(t *testing.T) {
 		}
 	}
 	// A queue takes only messages: it is bound, and is not asked.
-	res := as(t, "ADMIN_TOKEN", "POST", at(screens.AdminProbe{}, "binding", "QUEUE"), "application/x-www-form-urlencoded", strings.NewReader("kind=queue"))
+	res := as(t, env.ADMIN_TOKEN, "POST", at(screens.AdminProbe{}, "binding", "QUEUE"), "application/x-www-form-urlencoded", strings.NewReader("kind=queue"))
 	row, _ := io.ReadAll(res.Body)
 	res.Body.Close()
 	if !strings.Contains(string(row), `data-probed="bound"`) {
 		t.Errorf("asking the queue: HTTP %d\n%s", res.StatusCode, row)
 	}
-	if res := as(t, "ADMIN_TOKEN", "POST", at(screens.AdminProbe{}, "binding", "ADMIN_TOKEN"), "", nil); res.StatusCode != http.StatusNotFound {
+	if res := as(t, env.ADMIN_TOKEN, "POST", at(screens.AdminProbe{}, "binding", "ADMIN_TOKEN"), "", nil); res.StatusCode != http.StatusNotFound {
 		t.Errorf("asking a secret as if it were a binding: HTTP %d, want 404", res.StatusCode)
 	}
 }

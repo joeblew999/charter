@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"github.com/joeblew999/charter/cloud"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -138,7 +139,7 @@ func TestPeopleAreOneCallerByCookieAndByToken(t *testing.T) {
 	accounts.Create(t.Context(), ada)
 	roles := map[string][]string{"reader": {"read"}, "member": {"read", "write"}, "admin": {"read", "write", "admin"}}
 	auth := NewAuth(nil, People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil }, Roles: roles, Role: "member"},
-		Token{Secret: "ADMIN_TOKEN", Scopes: []string{"admin"}})
+		Token{Secret: cloud.BoundVariable("ADMIN_TOKEN"), Scopes: []string{"admin"}})
 
 	session, hash := newToken()
 	accounts.Issue(t.Context(), ada.ID, SessionScheme, "", hash, nil, time.Time{})
@@ -259,7 +260,7 @@ func TestAnInvitationGivesItsRoleOnce(t *testing.T) {
 	auth := NewAuth(func(name string) string { return map[string]string{"ADMIN_TOKEN": "operator"}[name] },
 		People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil },
 			Roles: map[string][]string{"member": {"read"}, "admin": {"read", "admin"}}, Role: "member"},
-		Token{Secret: "ADMIN_TOKEN", Scopes: []string{"admin"}})
+		Token{Secret: cloud.BoundVariable("ADMIN_TOKEN"), Scopes: []string{"admin"}})
 	operator := httptest.NewRequest("POST", "/", nil)
 	operator.Header.Set("Authorization", "Bearer operator")
 	if _, err := auth.Invite(httptest.NewRequest("POST", "/", nil), "admin"); err == nil {
@@ -301,7 +302,7 @@ func TestTheOverviewIsForWhoeverManagesPeople(t *testing.T) {
 	auth := NewAuth(func(name string) string { return map[string]string{"ADMIN_TOKEN": "operator"}[name] },
 		People{Name: "Notes", Accounts: func() (Accounts, error) { return accounts, nil },
 			Roles: map[string][]string{"member": {"read"}, "admin": {"read", "admin"}}, Role: "member"},
-		Token{Secret: "ADMIN_TOKEN", Scopes: []string{"admin"}})
+		Token{Secret: cloud.BoundVariable("ADMIN_TOKEN"), Scopes: []string{"admin"}})
 	if _, err := auth.Overview(httptest.NewRequest("GET", "/", nil)); err == nil {
 		t.Error("nobody was shown the overview")
 	}

@@ -8,9 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/syumai/workers-go/cloudflare"
-
 	"github.com/joeblew999/charter/cloud"
+	"github.com/joeblew999/charter/example/env"
 )
 
 // Email, out through the send_email binding MAIL and in from Email Routing (workers-go has no email package yet:
@@ -29,7 +28,7 @@ func MailNow(context.Context) (Mail, error) {
 	at, rest, _ := strings.Cut(text(ns, "mail:received"), "\n")
 	m.Received, _ = time.Parse(time.RFC3339, at)
 	m.From, m.Subject, _ = strings.Cut(rest, "\n")
-	if !m.Sent.IsZero() && cloudflare.Getenv("MAIL_UNLIMITED") == "" {
+	if !m.Sent.IsZero() && env.MAIL_UNLIMITED.Value() == "" {
 		m.MayNotSendBefore = m.Sent.Add(time.Hour)
 	}
 	return m, nil
@@ -47,10 +46,10 @@ func SendMail(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	from, to := cloudflare.Getenv("MAIL_FROM"), cloudflare.Getenv("MAIL_TO")
-	raw := "From: " + from + "\r\nTo: " + to + "\r\nSubject: Hello from " + cloudflare.Getenv("APP_NAME") + "\r\nMessage-ID: <" +
+	from, to := env.MAIL_FROM.Value(), env.MAIL_TO.Value()
+	raw := "From: " + from + "\r\nTo: " + to + "\r\nSubject: Hello from " + env.APP_NAME.Value() + "\r\nMessage-ID: <" +
 		strconv.FormatInt(time.Now().UnixNano(), 36) + "@" + from[strings.LastIndex(from, "@")+1:] + ">\r\nMIME-Version: 1.0\r\nContent-Type: text/plain\r\n\r\nSent from a Go Worker.\r\n"
-	if err := cloud.SendEmail("MAIL", from, to, []byte(raw)); err != nil {
+	if err := env.MAIL.Send(from, to, []byte(raw)); err != nil {
 		return err
 	}
 	return ns.PutString("mail:sent", time.Now().UTC().Format(time.RFC3339)+"\n"+short(to), nil)

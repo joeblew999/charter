@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/app/apptest"
+	"github.com/joeblew999/charter/cloud"
+	"github.com/joeblew999/charter/example/env"
 	"github.com/joeblew999/charter/example/pages"
 	"github.com/joeblew999/charter/example/pages/screens"
 	notes "github.com/joeblew999/charter/example/sdk/go"
@@ -114,7 +116,7 @@ func TestThePageAndTheAPIAgreeOnWhoMayWrite(t *testing.T) {
 // the API (403); made a moderator by an admin, the same person may, through both. What they are changes at once:
 // in the session they have open, and for the token they made before.
 func TestRolesDecideWhoMayRemoveANote(t *testing.T) {
-	admin := sdk(t, option.WithToken(apptest.Secret(t, "ADMIN_TOKEN")))
+	admin := sdk(t, option.WithToken(apptest.Secret(t, env.ADMIN_TOKEN)))
 	// Ada writes a note.
 	ada := apptest.Browser(t)
 	ada.SignUp(at(screens.SignInPage{}), "Ada the writer")
@@ -214,7 +216,7 @@ func TestRolesDecideWhoMayRemoveANote(t *testing.T) {
 // Who is what is an admin's to say, on a page: a member gets a 403 there; made an admin (by the operator's token,
 // which is how the first one is), they see everyone and give someone a role by choosing it.
 func TestAnAdminGivesRolesOnThePeoplePage(t *testing.T) {
-	operator := sdk(t, option.WithToken(apptest.Secret(t, "ADMIN_TOKEN")))
+	operator := sdk(t, option.WithToken(apptest.Secret(t, env.ADMIN_TOKEN)))
 	boss := apptest.Browser(t)
 	name := "Boss " + time.Now().Format("150405.000000")
 	boss.SignUp(at(screens.SignInPage{}), name)
@@ -294,10 +296,10 @@ func TestAnAccountIsDeletedWithWhatItWrote(t *testing.T) {
 // Whoever may not manage people makes none.
 func TestAnInvitationMakesAnAdmin(t *testing.T) {
 	form := "application/x-www-form-urlencoded"
-	if res := as(t, "WRITE_TOKEN", "POST", at(screens.PeopleInvite{}), form, strings.NewReader("role=admin")); res.StatusCode != http.StatusForbidden {
+	if res := as(t, env.WRITE_TOKEN, "POST", at(screens.PeopleInvite{}), form, strings.NewReader("role=admin")); res.StatusCode != http.StatusForbidden {
 		t.Errorf("a writer making an invitation: HTTP %d, want 403", res.StatusCode)
 	}
-	res := as(t, "ADMIN_TOKEN", "POST", at(screens.PeopleInvite{}), form, strings.NewReader("role=admin"))
+	res := as(t, env.ADMIN_TOKEN, "POST", at(screens.PeopleInvite{}), form, strings.NewReader("role=admin"))
 	html, _ := io.ReadAll(res.Body)
 	res.Body.Close()
 	link := regexp.MustCompile(`/__charter/invite\?code=([A-Za-z0-9_-]+)`).FindStringSubmatch(string(html))
@@ -305,7 +307,7 @@ func TestAnInvitationMakesAnAdmin(t *testing.T) {
 		t.Fatalf("making an invitation: HTTP %d\n%s", res.StatusCode, html)
 	}
 	// The link leads to the sign-in page, with its code.
-	door := as(t, "", "GET", link[0], "", nil)
+	door := as(t, cloud.Variable{}, "GET", link[0], "", nil)
 	door.Body.Close()
 	signIn := at(screens.SignInPage{}) + "?invite=" + link[1]
 	if to := door.Header.Get("Location"); door.StatusCode != http.StatusSeeOther || to != signIn {
@@ -319,7 +321,7 @@ func TestAnInvitationMakesAnAdmin(t *testing.T) {
 		t.Error("someone invited as an admin has no way to the people page")
 	}
 	// Once: the same link makes nobody else anything.
-	again := as(t, "", "POST", at(screens.SignUpBegin{}), "application/json", strings.NewReader(`{"name":"Second","invite":"`+link[1]+`"}`))
+	again := as(t, cloud.Variable{}, "POST", at(screens.SignUpBegin{}), "application/json", strings.NewReader(`{"name":"Second","invite":"`+link[1]+`"}`))
 	again.Body.Close()
 	if again.StatusCode != http.StatusUnprocessableEntity {
 		t.Errorf("signing up with an invitation that was used: HTTP %d, want 422", again.StatusCode)
@@ -330,7 +332,7 @@ func TestAnInvitationMakesAnAdmin(t *testing.T) {
 func TestAnInvitationIsAcceptedBySomeoneSignedIn(t *testing.T) {
 	page := apptest.Browser(t)
 	page.SignUp(at(screens.SignInPage{}), "Here already")
-	res := as(t, "ADMIN_TOKEN", "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=moderator"))
+	res := as(t, env.ADMIN_TOKEN, "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=moderator"))
 	html, _ := io.ReadAll(res.Body)
 	res.Body.Close()
 	link := regexp.MustCompile(`/__charter/invite\?code=[A-Za-z0-9_-]+`).FindString(string(html))
@@ -351,7 +353,7 @@ func TestAnInvitationSurvivesSigningIn(t *testing.T) {
 	page.Click("#sign-out")
 	page.WaitText("#sign-in-link", "Sign in")
 
-	res := as(t, "ADMIN_TOKEN", "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=admin"))
+	res := as(t, env.ADMIN_TOKEN, "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=admin"))
 	html, _ := io.ReadAll(res.Body)
 	res.Body.Close()
 	code := regexp.MustCompile(`/__charter/invite\?code=([A-Za-z0-9_-]+)`).FindStringSubmatch(string(html))
@@ -375,7 +377,7 @@ func TestAnInvitationSurvivesSigningIn(t *testing.T) {
 // The name someone gives is shown to everyone beside what they write, so an email address is refused as one: the
 // field says what it is for, and the Worker does not take an address whoever typed it.
 func TestANameIsNotAnEmailAddress(t *testing.T) {
-	res := as(t, "", "POST", at(screens.SignUpBegin{}), "application/json", strings.NewReader(`{"name":"someone@example.com"}`))
+	res := as(t, cloud.Variable{}, "POST", at(screens.SignUpBegin{}), "application/json", strings.NewReader(`{"name":"someone@example.com"}`))
 	res.Body.Close()
 	if res.StatusCode != http.StatusUnprocessableEntity {
 		t.Errorf("signing up with an email address as the name: HTTP %d, want 422", res.StatusCode)
@@ -389,7 +391,7 @@ func TestANameIsNotAnEmailAddress(t *testing.T) {
 // An admin makes an invitation on the people page and shares it: the button hands the link to the device's share
 // sheet, which the test stands in for.
 func TestAnInvitationIsShared(t *testing.T) {
-	res := as(t, "ADMIN_TOKEN", "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=admin"))
+	res := as(t, env.ADMIN_TOKEN, "POST", at(screens.PeopleInvite{}), "application/x-www-form-urlencoded", strings.NewReader("role=admin"))
 	html, _ := io.ReadAll(res.Body)
 	res.Body.Close()
 	code := regexp.MustCompile(`/__charter/invite\?code=([A-Za-z0-9_-]+)`).FindStringSubmatch(string(html))
@@ -420,7 +422,7 @@ func TestAnAdminRemovesAPerson(t *testing.T) {
 	page.Click(el(pages.Home.Form) + ` button[type=submit]`)
 	page.WaitText(el(pages.Home.List), body)
 
-	people, err := sdk(t, option.WithToken(apptest.Secret(t, "ADMIN_TOKEN"))).People.List(t.Context())
+	people, err := sdk(t, option.WithToken(apptest.Secret(t, env.ADMIN_TOKEN))).People.List(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,13 +436,13 @@ func TestAnAdminRemovesAPerson(t *testing.T) {
 		t.Fatal("the person who signed up is not among the people")
 	}
 	remove := at(screens.PersonRemove{}, "person", id)
-	if res := as(t, "WRITE_TOKEN", "POST", remove, "", nil); res.StatusCode != http.StatusForbidden {
+	if res := as(t, env.WRITE_TOKEN, "POST", remove, "", nil); res.StatusCode != http.StatusForbidden {
 		t.Errorf("a writer removing a person: HTTP %d, want 403", res.StatusCode)
 	}
-	if res := as(t, "ADMIN_TOKEN", "POST", remove, "", nil); res.StatusCode != http.StatusOK {
+	if res := as(t, env.ADMIN_TOKEN, "POST", remove, "", nil); res.StatusCode != http.StatusOK {
 		t.Fatalf("an admin removing a person: HTTP %d", res.StatusCode)
 	}
-	html := apptest.Get(t, at(screens.PeoplePage{}), "Authorization", "Bearer "+apptest.Secret(t, "ADMIN_TOKEN"))
+	html := apptest.Get(t, at(screens.PeoplePage{}), "Authorization", "Bearer "+apptest.Secret(t, env.ADMIN_TOKEN))
 	if strings.Contains(html, "To be removed") {
 		t.Error("the person is still on the people page")
 	}

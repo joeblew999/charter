@@ -10,6 +10,7 @@ import (
 	"github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/built"
+	"github.com/joeblew999/charter/example/env"
 )
 
 // The seed: what fills the local database (go tool charter run db:seed; charter dev and charter test, on a database
@@ -17,7 +18,7 @@ import (
 // functions; this file only says so to charter. It is built only for seeding (the build tag), in a Worker started
 // on this machine: a Worker that is deployed has none of it.
 func init() {
-	app.Seed("DB", func(ctx context.Context, conn cloud.DB) error {
+	app.Seed(env.DB, func(ctx context.Context, conn cloud.DB) error {
 		// What the app does with each note written, it does for a seeded one: here at once, where a request would
 		// leave it to the queue, so the activity page has the seed's notes on it when the seed is done.
 		queued := api.OnPost

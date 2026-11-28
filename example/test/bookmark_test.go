@@ -11,6 +11,7 @@ import (
 
 	"github.com/joeblew999/charter/app/apptest"
 	"github.com/joeblew999/charter/cloud"
+	"github.com/joeblew999/charter/example/env"
 )
 
 // A reader sees their own writes, and never the database earlier than they have seen it, though reads may be
@@ -57,7 +58,7 @@ var aBookmark = regexp.MustCompile(`^DB=[0-9a-f]{8}(-[0-9a-f]{8}){2}-[0-9a-f]{32
 // A write is answered with the bookmark of what it wrote, as a header and as a cookie; the request that brings it
 // back reads the note, and is never given an older one.
 func TestAWriteGivesABookmarkAndTheNextRequestSeesIt(t *testing.T) {
-	writer := "Bearer " + apptest.Secret(t, "WRITE_TOKEN")
+	writer := "Bearer " + apptest.Secret(t, env.WRITE_TOKEN)
 	res, body := asked(t, http.MethodPost, "/api/notes", `{"body":"read your own write"}`, "Authorization", writer)
 	if res.StatusCode/100 != 2 {
 		t.Fatalf("writing a note: %s: %s", res.Status, body)
@@ -69,7 +70,7 @@ func TestAWriteGivesABookmarkAndTheNextRequestSeesIt(t *testing.T) {
 		t.Fatalf("the note written: %s", body)
 	}
 	t.Cleanup(func() {
-		asked(t, http.MethodDelete, "/api/notes/"+strconv.FormatInt(note.ID, 10), "", "Authorization", "Bearer "+apptest.Secret(t, "ADMIN_TOKEN"))
+		asked(t, http.MethodDelete, "/api/notes/"+strconv.FormatInt(note.ID, 10), "", "Authorization", "Bearer "+apptest.Secret(t, env.ADMIN_TOKEN))
 	})
 	given := res.Header.Get(cloud.BookmarkHeader)
 	if !aBookmark.MatchString(given) {
@@ -167,7 +168,7 @@ func TestACallerIsIdentifiedAtThePrimary(t *testing.T) {
 	if apptest.Local() {
 		t.Skip("one database and no primary under wrangler dev")
 	}
-	res, _ := asked(t, http.MethodGet, "/api/people", "", "Authorization", "Bearer "+apptest.Secret(t, "ADMIN_TOKEN"), "x-go-runtime", "?")
+	res, _ := asked(t, http.MethodGet, "/api/people", "", "Authorization", "Bearer "+apptest.Secret(t, env.ADMIN_TOKEN), "x-go-runtime", "?")
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("GET /api/people: %s", res.Status)
 	}

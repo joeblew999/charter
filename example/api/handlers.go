@@ -12,6 +12,7 @@ import (
 	charter "github.com/joeblew999/charter/api"
 	"github.com/joeblew999/charter/app"
 	"github.com/joeblew999/charter/cloud"
+	"github.com/joeblew999/charter/example/env"
 	"github.com/joeblew999/charter/live"
 )
 
@@ -22,7 +23,7 @@ type Env struct {
 
 // Notes is the feed of notes, declared once: the table is the log, the Durable Object HUB wakes whoever follows.
 // The page's live list, the API's stream and its WebSocket channel are all this.
-var Notes = live.Feed[Note]{Binding: "HUB", Name: "notes", Log: func() (live.Log[Note], error) { return open() }}
+var Notes = live.Feed[Note]{Binding: env.HUB, Name: "notes", Log: func() (live.Log[Note], error) { return open() }}
 
 // Post writes a note to the store, as whoever is asking, and wakes every follower: what the API's createNote and
 // the page's form both do.
@@ -119,10 +120,10 @@ var Roles = map[string][]string{
 //
 // An unset secret or setting trusts no one.
 var Trusted = []charter.Trusted{
-	charter.People{Name: "Notes", Accounts: charter.D1Accounts("DB"), Roles: Roles, Role: "member", Leaving: Leaving},
-	charter.Token{Secret: "ADMIN_TOKEN", Scopes: Roles["admin"]},
-	charter.Token{Secret: "WRITE_TOKEN", Scopes: []string{"read", "write"}},
-	charter.Token{Secret: "READ_TOKEN", Scopes: []string{"read"}},
+	charter.People{Name: "Notes", Accounts: charter.D1Accounts(env.DB), Roles: Roles, Role: "member", Leaving: Leaving},
+	charter.Token{Secret: env.ADMIN_TOKEN, Scopes: Roles["admin"]},
+	charter.Token{Secret: env.WRITE_TOKEN, Scopes: []string{"read", "write"}},
+	charter.Token{Secret: env.READ_TOKEN, Scopes: []string{"read"}},
 	charter.Access{People: []string{"read", "write"}, Machines: []string{"read"}},
 	charter.OIDC{},
 }

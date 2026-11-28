@@ -16,12 +16,12 @@ import (
 // OnWorkers reports whether the code runs as a Worker.
 const OnWorkers = true
 
-// Var is the Worker's variable called name (a text binding), "" without one.
+// Var is the Worker's variable or secret called name, "" without one: the function an api.Auth reads its settings
+// with (api.NewAuth(cloud.Var, …)). An app reads one of its own by its value in env: env.APP_NAME.Value().
 func Var(name string) string { return cloudflare.Getenv(name) }
 
-// Allow asks the Rate Limiting binding called name whether key may make one more call. Its counter is local to the
-// Cloudflare location, so it answers without a network round trip.
-func Allow(name, key string) (bool, error) {
+// allow asks the Rate Limiting binding called name whether key may make one more call (RateLimit.Allow).
+func allow(name, key string) (bool, error) {
 	b := cloudflare.GetBinding(name)
 	if !b.Truthy() {
 		return true, fmt.Errorf("%w: %s", ErrNoBinding, name)

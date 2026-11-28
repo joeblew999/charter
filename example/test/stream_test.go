@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/app/apptest"
+	"github.com/joeblew999/charter/example/env"
 	"github.com/joeblew999/charter/example/sdk/go/option"
 )
 
@@ -60,7 +61,7 @@ func streamed(t *testing.T, wanted int, headers ...string) []string {
 // an id alone, which the page says if it must connect again before anything changes.
 func TestAStreamOpensWithWhenThePageWas(t *testing.T) {
 	// A change now, so that the hub knows of one; then a page "rendered" a minute after it.
-	writer := sdk(t, option.WithToken(apptest.Secret(t, "WRITE_TOKEN")))
+	writer := sdk(t, option.WithToken(apptest.Secret(t, env.WRITE_TOKEN)))
 	write(t, writer, "a change the hub knows of")
 	later := strconv.FormatInt(time.Now().Add(time.Minute).UnixMilli(), 10)
 	lines := streamed(t, 1, "Last-Event-ID", later)

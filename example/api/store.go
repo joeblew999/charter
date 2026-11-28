@@ -6,6 +6,7 @@ import (
 
 	"github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/example/db"
+	"github.com/joeblew999/charter/example/env"
 )
 
 // Store is the notes: what a page's Props and the handlers ask for. On a Worker it is D1 (the table of
@@ -35,7 +36,7 @@ func OpenStore(*http.Request) (Store, error) { return open() }
 func StoreOn(conn cloud.DB) Store { return d1{conn} }
 
 func open() (Store, error) {
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	return d1{conn}, err
 }
 
@@ -87,7 +88,7 @@ func (s d1) Latest(context.Context) (int64, error) { return db.NewestNote(s.db) 
 
 // Report is how many notes there are, and by how many people: what the admin screen's overview says of the app.
 func Report(context.Context) (db.NotesReportRow, error) {
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	if err != nil {
 		return db.NotesReportRow{}, err
 	}

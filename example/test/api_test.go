@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/app/apptest"
+	"github.com/joeblew999/charter/example/env"
 	notes "github.com/joeblew999/charter/example/sdk/go"
 	"github.com/joeblew999/charter/example/sdk/go/client"
 	"github.com/joeblew999/charter/example/sdk/go/option"
@@ -32,7 +33,7 @@ func write(t *testing.T, as *client.Client, body string) *notes.Note {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		operator := sdk(t, option.WithToken(apptest.Secret(t, "ADMIN_TOKEN")))
+		operator := sdk(t, option.WithToken(apptest.Secret(t, env.ADMIN_TOKEN)))
 		if err := operator.Notes.Delete(context.Background(), &notes.DeleteNotesRequest{ID: note.ID}); err != nil {
 			t.Errorf("the note this test wrote (%d) was not taken away: %v", note.ID, err)
 		}
@@ -60,7 +61,7 @@ func TestWritingNeedsTheToken(t *testing.T) {
 
 // A note created through the SDK is in the list, and reaches a client that follows the stream: the feed.
 func TestTheSDKFollowsTheFeed(t *testing.T) {
-	writer := sdk(t, option.WithToken(apptest.Secret(t, "WRITE_TOKEN")))
+	writer := sdk(t, option.WithToken(apptest.Secret(t, env.WRITE_TOKEN)))
 	first := write(t, writer, "before the stream")
 	seconds, after := 20, strconv.FormatInt(int64(first.ID), 10)
 	stream, err := sdk(t).Notes.Watch(context.Background(), &notes.WatchNotesRequest{Seconds: &seconds, After: &after})

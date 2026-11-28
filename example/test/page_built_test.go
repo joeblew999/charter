@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/app/apptest"
+	"github.com/joeblew999/charter/cloud"
+	"github.com/joeblew999/charter/example/env"
 	"github.com/joeblew999/charter/example/pages"
 	"github.com/joeblew999/charter/example/sdk/go/option"
 )
@@ -18,13 +20,13 @@ import (
 
 // as is a request by a program with one of the Worker's own tokens: what a form's target accepts as it accepts a
 // session, since who may do what is one rule.
-func as(t *testing.T, secret, method, path, contentType string, body io.Reader) *http.Response {
+func as(t *testing.T, secret cloud.Variable, method, path, contentType string, body io.Reader) *http.Response {
 	t.Helper()
 	req, err := http.NewRequest(method, apptest.Base(t)+path, body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if secret != "" {
+	if secret != (cloud.Variable{}) {
 		req.Header.Set("Authorization", "Bearer "+apptest.Secret(t, secret))
 	}
 	if contentType != "" {
@@ -77,12 +79,12 @@ func TestAFileIsAttachedAndComesBack(t *testing.T) {
 	part.Write(content)
 	form.WriteField("note", "0")
 	form.Close()
-	res := as(t, "WRITE_TOKEN", "POST", at(pages.AttachFile{}), form.FormDataContentType(), &body)
+	res := as(t, env.WRITE_TOKEN, "POST", at(pages.AttachFile{}), form.FormDataContentType(), &body)
 	res.Body.Close()
 	if res.StatusCode != http.StatusSeeOther {
 		t.Fatalf("attaching: HTTP %d", res.StatusCode)
 	}
-	if res := as(t, "", "POST", at(pages.AttachFile{}), form.FormDataContentType(), strings.NewReader("")); res.StatusCode != http.StatusSeeOther || !strings.Contains(res.Header.Get("Location"), "sign-in") {
+	if res := as(t, cloud.Variable{}, "POST", at(pages.AttachFile{}), form.FormDataContentType(), strings.NewReader("")); res.StatusCode != http.StatusSeeOther || !strings.Contains(res.Header.Get("Location"), "sign-in") {
 		t.Errorf("nobody attaching: HTTP %d to %q, want the way to sign in", res.StatusCode, res.Header.Get("Location"))
 	}
 	html := apptest.Get(t, at(pages.AttachmentsPage{}))
@@ -99,10 +101,10 @@ func TestAFileIsAttachedAndComesBack(t *testing.T) {
 		t.Errorf("the file came back as %q", got)
 	}
 	remove := href + "/remove"
-	if res := as(t, "READ_TOKEN", "POST", remove, "", nil); res.StatusCode != http.StatusForbidden {
+	if res := as(t, env.READ_TOKEN, "POST", remove, "", nil); res.StatusCode != http.StatusForbidden {
 		t.Errorf("a reader removing the file: HTTP %d, want 403", res.StatusCode)
 	}
-	if res := as(t, "ADMIN_TOKEN", "POST", remove, "", nil); res.StatusCode != http.StatusOK {
+	if res := as(t, env.ADMIN_TOKEN, "POST", remove, "", nil); res.StatusCode != http.StatusOK {
 		t.Errorf("a moderator removing the file: HTTP %d", res.StatusCode)
 	}
 	if res, err := http.Get(apptest.Base(t) + href); err != nil || res.StatusCode != http.StatusNotFound {
@@ -115,7 +117,7 @@ func TestAFileIsAttachedAndComesBack(t *testing.T) {
 func TestActivityFollowsTheQueueLive(t *testing.T) {
 	page := apptest.Browser(t)
 	page.Open(at(pages.ActivityPage{}))
-	writer := sdk(t, option.WithToken(apptest.Secret(t, "WRITE_TOKEN")))
+	writer := sdk(t, option.WithToken(apptest.Secret(t, env.WRITE_TOKEN)))
 	write(t, writer, "for the activity page")
 	page.WaitText(el(pages.ActivityPage.Rows)+` li:first-child`, "wrote a note")
 }
@@ -142,14 +144,14 @@ func TestTheDaysCountFromTheCronTrigger(t *testing.T) {
 func TestANoticeForEveryone(t *testing.T) {
 	line := "a notice, " + time.Now().Format("150405.000000")
 	form := "notice=" + strings.ReplaceAll(line, " ", "+")
-	if res := as(t, "WRITE_TOKEN", "POST", at(pages.NoticeSet{}), "application/x-www-form-urlencoded", strings.NewReader(form)); res.StatusCode != http.StatusForbidden {
+	if res := as(t, env.WRITE_TOKEN, "POST", at(pages.NoticeSet{}), "application/x-www-form-urlencoded", strings.NewReader(form)); res.StatusCode != http.StatusForbidden {
 		t.Errorf("a writer who may not moderate setting the notice: HTTP %d, want 403", res.StatusCode)
 	}
-	if res := as(t, "ADMIN_TOKEN", "POST", at(pages.NoticeSet{}), "application/x-www-form-urlencoded", strings.NewReader(form)); res.StatusCode != http.StatusSeeOther {
+	if res := as(t, env.ADMIN_TOKEN, "POST", at(pages.NoticeSet{}), "application/x-www-form-urlencoded", strings.NewReader(form)); res.StatusCode != http.StatusSeeOther {
 		t.Fatalf("setting the notice: HTTP %d", res.StatusCode)
 	}
 	t.Cleanup(func() {
-		as(t, "ADMIN_TOKEN", "POST", at(pages.NoticeSet{}), "application/x-www-form-urlencoded", strings.NewReader("notice=")).Body.Close()
+		as(t, env.ADMIN_TOKEN, "POST", at(pages.NoticeSet{}), "application/x-www-form-urlencoded", strings.NewReader("notice=")).Body.Close()
 	})
 	soon(t, "the notice on the notes page", at(pages.Home{}), line)
 	soon(t, "the notice on its own page", at(pages.NoticePage{}), line)
@@ -160,7 +162,7 @@ func TestMailOutAndIn(t *testing.T) {
 	if !apptest.Local() {
 		t.Skip("a local Worker keeps what it sends and can be handed a message; a deployed one sends real email, one an hour")
 	}
-	if res := as(t, "WRITE_TOKEN", "POST", at(pages.MailSend{}), "", nil); res.StatusCode != http.StatusSeeOther {
+	if res := as(t, env.WRITE_TOKEN, "POST", at(pages.MailSend{}), "", nil); res.StatusCode != http.StatusSeeOther {
 		t.Fatalf("sending: HTTP %d", res.StatusCode)
 	}
 	// The address is a part of the sentence that Intl sets apart, so the two are looked for apart.
@@ -188,7 +190,7 @@ func TestTheCacheAndTheLimit(t *testing.T) {
 		t.Fatalf("the page has no report, or no limit:\n%s", first)
 	}
 	soon(t, "the report from the cache", at(pages.LimitsPage{}), `data-cached="true"`)
-	res := as(t, "", "POST", at(pages.LimitUse{}), "", nil)
+	res := as(t, cloud.Variable{}, "POST", at(pages.LimitUse{}), "", nil)
 	said, _ := io.ReadAll(res.Body)
 	res.Body.Close()
 	if res.StatusCode != 200 || !strings.Contains(string(said), `data-allowed="true"`) {
@@ -202,7 +204,7 @@ func TestAnotherSiteIsAskedOnlyWhenAsked(t *testing.T) {
 	if page := apptest.Get(t, at(pages.OutsidePage{})); strings.Contains(page, `id="outside-said"`) {
 		t.Errorf("the page asked another site to be shown")
 	}
-	res := as(t, "", "POST", at(pages.OutsideFetch{}), "", nil)
+	res := as(t, cloud.Variable{}, "POST", at(pages.OutsideFetch{}), "", nil)
 	said, _ := io.ReadAll(res.Body)
 	res.Body.Close()
 	if res.StatusCode != 200 || !strings.Contains(string(said), "example.com") || !strings.Contains(string(said), `data-failed="false"`) {

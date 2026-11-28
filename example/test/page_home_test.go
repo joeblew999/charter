@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/app/apptest"
+	"github.com/joeblew999/charter/example/env"
 	"github.com/joeblew999/charter/example/pages"
 	"github.com/joeblew999/charter/example/pages/screens"
 	"github.com/joeblew999/charter/example/sdk/go/option"
@@ -36,7 +37,7 @@ func TestAnAPINoteShowsOnTheOpenPage(t *testing.T) {
 	home := apptest.Browser(t)
 	home.Open("/")
 	body := "from the SDK at " + time.Now().Format(time.RFC3339Nano)
-	writer := sdk(t, option.WithToken(apptest.Secret(t, "WRITE_TOKEN")))
+	writer := sdk(t, option.WithToken(apptest.Secret(t, env.WRITE_TOKEN)))
 	write(t, writer, body)
 	home.WaitText(el(pages.Home.List), body)
 }

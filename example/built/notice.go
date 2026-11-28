@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/syumai/workers-go/cloudflare/kv"
+
+	"github.com/joeblew999/charter/example/env"
 )
 
 // KV: a line for everyone, shown on the notes page. It is read on every visit and written rarely, by whoever may
@@ -15,7 +17,7 @@ import (
 // store is for, and what it is not for: KV keeps answering with a value for a while after it has changed, so nothing
 // that must be read back at once belongs in it (the notes, and who may do what, are in the database).
 
-func store() (*kv.Namespace, error) { return kv.NewNamespace("KV") }
+func store() (*kv.Namespace, error) { return env.KV.Open() }
 
 // text is what KV has under key, "" when it has nothing: workers-go gives a missing key as the text "<null>".
 func text(ns *kv.Namespace, key string) string {

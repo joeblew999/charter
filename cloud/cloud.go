@@ -1,11 +1,13 @@
 // Package cloud is what Cloudflare gives a Go Worker that workers-go does not, or gives differently: for everything
 // else, import workers-go's own packages (github.com/syumai/workers-go/cloudflare/…).
 //
-//	Var("APP_ENV")                         a variable of the Worker
-//	Allow("WRITES", key)                   a Rate Limiting binding
+//	Database, KV, Bucket, Queue, Object,   what the Worker is bound to, as typed values: an app's are written
+//	RateLimit, Mailer, Variable            from wrangler.jsonc into env/env.gen.go (names.go)
+//	env.DB.Open(), env.WRITES.Allow(key)   a database for the queries; a Rate Limiting binding asked
+//	env.MAIL.Send, ConsumeEmail            email out and in (email_js.go)
+//	env.APP_NAME.Value()                   a variable of the Worker
 //	HTTPClient()                           an http.Client over the Worker's fetch
-//	SendEmail, ConsumeEmail                email out and in (email_js.go)
-//	Open("DB"), Query, One, Exec, Batch    D1 as typed rows and batches (d1.go)
+//	Batch, and what queries.gen.go calls   D1 as typed rows and batches (d1.go)
 //
 // A Worker runs on Cloudflare: on wrangler dev locally, deployed remotely. Nothing here runs anywhere else. The
 // package still compiles for the machine it is written on (other.go), so editors, go vet and the program that

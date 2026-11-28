@@ -60,14 +60,21 @@ changing that part.
 
 - **Nothing runs off Cloudflare.** No stand-ins: a test of anything that touches a binding is in `test/` and asks the
   Worker. Plain logic is an ordinary `go test`.
-- **Bindings are workers-go's**, imported and called directly (`workers-go/cloudflare/kv`, `r2`, `queues`, `d1`,
+- **A binding is its value in `env`, never its name as text.** charter writes `env/env.built.go` from
+  `wrangler.jsonc` (and the secrets' names from `.dev.vars.example` and `fnox.toml`): `env.DB.Open()` (D1, for the
+  queries), `env.KV.Open()` (`*kv.Namespace`), `env.BUCKET.Open()` (`*r2.Bucket`), `env.QUEUE.Open()`
+  (`*queues.Producer`), `env.WRITE_LIMIT.Allow(key)`, `env.MAIL.Send(from, to, raw)`, `env.APP_NAME.Value()`,
+  `live.Feed[T]{Binding: env.HUB}`, `api.Token{Secret: env.ADMIN_TOKEN}`, `api.Limit{Binding: env.WRITE_LIMIT}`.
+  To use a new one, declare it (`charter add d1:DB`, or the file) and it is there. `kv.NewNamespace("KV")`,
+  `cloudflare.Getenv("X")` and `cloud.Var("X")` fail `charter check`.
+- **What a binding gives is workers-go's**, imported and used directly (`workers-go/cloudflare/kv`, `r2`, `queues`,
   `cron`, `cache`, `fetch`, `sockets`), in a file that builds only for a Worker (`//go:build js && wasm`). charter's
-  `cloud` has what workers-go lacks: `cloud.Open`/`Query`/`Batch` (D1 as typed rows), `cloud.Allow`, `cloud.Var`,
-  `cloud.SendEmail`, `cloud.ConsumeEmail`. Register what is no request before the app runs:
-  `cron.ScheduleTaskNonBlock`, `queues.ConsumeNonBlock`, `cloud.ConsumeEmail`.
+  `cloud` has what workers-go lacks: the typed names, D1 as typed rows and batches, `cloud.ConsumeEmail`. Register
+  what is no request before the app runs: `cron.ScheduleTaskNonBlock`, `queues.ConsumeNonBlock`,
+  `cloud.ConsumeEmail`.
 - **Memory between requests is a cache, never state**: any request may start a new Go runtime.
 - **D1 has no interactive transactions**: single statements with `RETURNING`, or `cloud.Batch` of the `…Stmt` functions written beside the queries (`cloud.Batch(conn, db.AStmt(id), db.BStmt(id))`).
-- Never hand-write what a command generates: `db/migrations/`, `*.gen.go`, `*.x.go`, `fern/`, `sdk/`, `build/`, `dist/`.
+- Never hand-write what a command generates: `db/migrations/`, `*.gen.go`, `*.built.go` (`env/`, the messages), `*.x.go`, `fern/`, `sdk/`, `build/`, `dist/`.
 - Not in git: `.dev.vars` (made from `.dev.vars.example`), and what is built each time (`*.x.go`,
   `*.built.go`, `.charter/`, `build/`, `dist/`). In git, and held to its source by `check`: `*.gen.go`,
   `db/migrations/`, `fern/`, `sdk/go/`.

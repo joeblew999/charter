@@ -16,6 +16,7 @@ import (
 	"github.com/joeblew999/charter/cloud"
 	"github.com/joeblew999/charter/example/api"
 	"github.com/joeblew999/charter/example/db"
+	"github.com/joeblew999/charter/example/env"
 )
 
 // What happened, kept by the app itself. Three things of Cloudflare's each do their part:
@@ -46,7 +47,7 @@ type written struct {
 // queue puts a note on the queue, after the answer has left: the writer's request does not wait for it.
 func queue(_ context.Context, note api.Note) {
 	cloudflare.WaitUntil(func() {
-		producer, err := queues.NewProducer("QUEUE")
+		producer, err := env.QUEUE.Open()
 		if err == nil {
 			// As text: the queue's own JSON takes JavaScript values, which a Go struct is not.
 			message, _ := json.Marshal(written{note.ID, note.Author})
@@ -60,7 +61,7 @@ func queue(_ context.Context, note api.Note) {
 
 // consume records each note the queue hands over.
 func consume(batch *queues.MessageBatch) error {
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	if err != nil {
 		return err
 	}
@@ -89,7 +90,7 @@ func consume(batch *queues.MessageBatch) error {
 
 // summarise is the Cron Trigger's task: how many notes the last day had.
 func summarise(ctx context.Context) error {
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	if err != nil {
 		return err
 	}
@@ -112,7 +113,7 @@ func Record(ctx context.Context, conn cloud.DB, kind string, note int64, author 
 
 // Recent is what happened, newest first, and the position of the newest: where a page's stream starts.
 func Recent(_ context.Context, limit int) ([]Activity, int64, error) {
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -132,7 +133,7 @@ func Recent(_ context.Context, limit int) ([]Activity, int64, error) {
 type activityLog struct{ db cloud.DB }
 
 func openLog() (activityLog, error) {
-	conn, err := cloud.Open("DB")
+	conn, err := env.DB.Open()
 	return activityLog{conn}, err
 }
 

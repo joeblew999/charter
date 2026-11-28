@@ -15,6 +15,11 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   before designing anything.
 - **workers-go is used the workers-go way:** everything it has is imported and called directly. charter adds only
   what it lacks (`cloud`), and says so where it is defined.
+- **A binding's name is written once, in `wrangler.jsonc`**, a variable's there too, a secret's in
+  `.dev.vars.example` and `fnox.toml`. In Go each is a value of its kind's type (`cloud/names.go`), written by
+  charter into the app's `env/env.built.go` (`internal/envcode`): `env.DB.Open()`, `env.KV.Open()`,
+  `env.WRITE_LIMIT.Allow(key)`, `env.APP_NAME.Value()`. Nothing in an app names one as text, and nothing in
+  charter takes one as text: `charter check` fails an app that does (its part `bindings`).
 - **mise is all a developer installs.** `mise.toml` pins Go, Node and fnox (`mise.lock` says what each download
   must be), `go.mod` and `package-lock.json` pin the rest, and Renovate keeps all of them current
   (`.github/renovate.json5`). CI installs the same with `.github/actions/tools`. `charter check` fails where other

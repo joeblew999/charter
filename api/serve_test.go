@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"github.com/joeblew999/charter/cloud"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -60,7 +61,7 @@ func serveGet(t *testing.T, h http.Handler, method, target string, headers ...st
 
 // Every standard route, from what the project gave.
 func TestTheStandardRoutes(t *testing.T) {
-	h := things(Token{Secret: "WRITE_TOKEN", Scopes: []string{"write"}}).Handler()
+	h := things(Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"write"}}).Handler()
 	var spec struct {
 		Servers []struct{ URL string } `json:"servers"`
 		Paths   map[string]any         `json:"paths"`
@@ -91,7 +92,7 @@ func TestTheStandardRoutes(t *testing.T) {
 // Calls are checked by the contract's security, with the challenge; a token comes as ?access_token=
 // on a channel only.
 func TestCallsAreCheckedAndTheChannelTakesItsTokenInTheQuery(t *testing.T) {
-	h := things(Token{Secret: "WRITE_TOKEN", Scopes: []string{"write"}}).Handler()
+	h := things(Token{Secret: cloud.BoundVariable("WRITE_TOKEN"), Scopes: []string{"write"}}).Handler()
 	if rec := serveGet(t, h, "POST", "https://things.example/api/things"); rec.Code != 401 || !strings.Contains(rec.Header().Get("WWW-Authenticate"), "resource_metadata=") {
 		t.Errorf("a write without credentials: %d %q", rec.Code, rec.Header().Get("WWW-Authenticate"))
 	}

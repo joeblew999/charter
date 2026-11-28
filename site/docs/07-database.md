@@ -196,7 +196,7 @@ func Seed(ctx context.Context, store Store, accounts charter.Accounts) error {
 // functions; this file only says so to charter. It is built only for seeding (the build tag), in a Worker started
 // on this machine: a Worker that is deployed has none of it.
 func init() {
-	app.Seed("DB", func(ctx context.Context, conn cloud.DB) error {
+	app.Seed(env.DB, func(ctx context.Context, conn cloud.DB) error {
 		// What the app does with each note written, it does for a seeded one: here at once, where a request would
 		// leave it to the queue, so the activity page has the seed's notes on it when the seed is done.
 		queued := api.OnPost

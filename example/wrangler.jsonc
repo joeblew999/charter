@@ -17,8 +17,9 @@
   // Vite's output, served before the Worker runs.
   "assets": { "directory": "dist" },
   // MAIL_FROM is whom the email card writes as: an address on a domain of the account with Email Routing on. Whom
-  // it writes to is the secret MAIL_TO (wrangler secret put MAIL_TO; .dev.vars locally).
-  "vars": { "APP_NAME": "charter-example", "MAIL_FROM": "charter-example@ubuntusoftware.net" },
+  // it writes to is the secret MAIL_TO (wrangler secret put MAIL_TO; .dev.vars locally). MAIL_UNLIMITED, when it is
+  // anything, lets the card send more than one message an hour: for an environment that is no one's public page.
+  "vars": { "APP_NAME": "charter-example", "MAIL_FROM": "charter-example@ubuntusoftware.net", "MAIL_UNLIMITED": "" },
   // The first deploy makes the database, the KV namespace, the bucket and the queue. charter deploy then writes the
   // database's and the namespace's ids here: the Worker is bound to exactly those from then on. A bucket and a queue
   // are what they are by name.

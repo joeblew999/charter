@@ -10,6 +10,7 @@ import (
 	"github.com/joeblew999/charter/internal/command/intl"
 	"github.com/joeblew999/charter/internal/dbcode"
 	"github.com/joeblew999/charter/internal/docsgen"
+	"github.com/joeblew999/charter/internal/envcode"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
 	"os"
@@ -30,6 +31,7 @@ import (
 //	statements no statement on the database is written in Go: each is in db/queries.sql, checked against
 //	           db/schema.sql and written as a function. And the schema still has the sign-in screen's tables as
 //	           charter reads and writes them
+//	bindings   no binding, variable or secret is named as text: each is its value in env, written from wrangler.jsonc
 //	contract   the committed specs, Fern's settings and the queries' Go are what the contract gives (with --fix: they
 //	           are written), and each rate limit the contract declares is in wrangler.jsonc
 //	languages  every language complete, plural forms, unused messages, gsxui's own text, right-to-left set up
@@ -91,6 +93,7 @@ func Check(args []string) {
 	if exists(filepath.Join(p.Root, "db", "schema.sql")) {
 		t.part("statements", func() error { return statementsTyped(p) })
 	}
+	t.part("bindings", func() error { return bindingsTyped(p) })
 	if p.Spec != "" {
 		t.part("contract", func() error {
 			if err := spec(p, !*fix); err != nil {
@@ -119,6 +122,19 @@ func Check(args []string) {
 		})
 	}
 	t.done()
+}
+
+// bindingsTyped fails where the app's Go names a binding, a variable or a secret as text: a name that compiles
+// whatever it says, and fails on a Worker when nothing of that name is bound, or something of another kind is.
+// Each is a value in env (env/env.built.go, written from wrangler.jsonc, .dev.vars.example and fnox.toml by
+// generate, before this), of its kind's type.
+func bindingsTyped(p *project.Project) error {
+	named, err := envcode.Lint(p.Root)
+	if err != nil || len(named) == 0 {
+		return err
+	}
+	return fmt.Errorf("these name a binding, a variable or a secret as text, which compiles whatever it says:\n  %s\nuse its value in env, which charter writes from wrangler.jsonc, .dev.vars.example and fnox.toml: env.DB.Open(), env.KV.Open(), env.WRITE_LIMIT.Allow(key), env.APP_NAME.Value(). One that is not there is not declared: declare it (charter add d1:DB, or the file)",
+		strings.Join(named, "\n  "))
 }
 
 // statementsTyped fails where the app's Go gives the database a statement as text, or reaches it around charter:

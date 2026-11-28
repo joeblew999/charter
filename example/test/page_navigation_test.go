@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/charter/app/apptest"
+	"github.com/joeblew999/charter/example/env"
 	"github.com/joeblew999/charter/example/pages"
 	"github.com/joeblew999/charter/example/pages/screens"
 	"github.com/joeblew999/charter/example/sdk/go/option"
@@ -94,7 +95,7 @@ func TestAPageArrivedAtByALinkIsLive(t *testing.T) {
 		t.Fatal("the link home loaded a new document")
 	}
 	body := "after a link at " + time.Now().Format(time.RFC3339Nano)
-	write(t, sdk(t, option.WithToken(apptest.Secret(t, "WRITE_TOKEN"))), body)
+	write(t, sdk(t, option.WithToken(apptest.Secret(t, env.WRITE_TOKEN))), body)
 	page.WaitText(el(pages.Home.List), body)
 }
 

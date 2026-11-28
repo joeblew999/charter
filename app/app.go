@@ -123,13 +123,13 @@ type App struct {
 //
 //	//go:build seed
 //
-//	func init() { app.Seed("DB", func(ctx context.Context, conn cloud.DB) error { … }) }
-func Seed(binding string, fill func(ctx context.Context, db cloud.DB) error) {
+//	func init() { app.Seed(env.DB, func(ctx context.Context, conn cloud.DB) error { … }) }
+func Seed(binding cloud.Database, fill func(ctx context.Context, db cloud.DB) error) {
 	seeds = append(seeds, seed{binding, fill})
 }
 
 type seed struct {
-	binding string
+	binding cloud.Database
 	fill    func(ctx context.Context, db cloud.DB) error
 }
 
@@ -168,7 +168,7 @@ func seeded(w http.ResponseWriter, r *http.Request) {
 		ctx = context.WithValue(ctx, seedDeployed{}, true)
 	}
 	for _, s := range seeds {
-		db, err := cloud.Open(s.binding)
+		db, err := s.binding.Open()
 		if err == nil {
 			err = s.fill(ctx, db)
 		}

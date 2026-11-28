@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/joeblew999/charter/internal/envcode"
 	"github.com/joeblew999/charter/internal/project"
 	"github.com/joeblew999/charter/internal/run"
 	intlconfig "github.com/joeblew999/charter/intl/config"
@@ -29,7 +30,7 @@ import (
 // dev panel, with the Worker's log.
 //
 // What gsx does not watch, charter does, ten times a second: the catalogs (locales/*.toml, charter.toml), the docs
-// (docs/*.md) and the database (db/*.sql). Each is written as Go again, which gsx then builds; when one fails, the
+// (docs/*.md), the database (db/*.sql) and what the Worker is bound to (wrangler.jsonc, .dev.vars.example, fnox.toml). Each is written as Go again, which gsx then builds; when one fails, the
 // build fails with what is wrong, so that shows in the overlay too.
 //
 // Everything else a developer or an agent runs meanwhile, in another terminal, reaches the open page by itself.
@@ -69,6 +70,13 @@ func Dev(args []string) {
 	}
 	go watch(p, "database", "db", func() []string {
 		return []string{filepath.Join(p.Root, "db", "schema.sql"), filepath.Join(p.Root, "db", "queries.sql"), filepath.Join(p.Root, "db", "seed.sql")}
+	})
+	go watch(p, "bindings", "env", func() []string {
+		files := make([]string, len(envcode.Sources))
+		for i, name := range envcode.Sources {
+			files[i] = filepath.Join(p.Root, name)
+		}
+		return files
 	})
 	go watch(p, "docs", "docs", func() []string {
 		files, _ := filepath.Glob(filepath.Join(p.Root, "docs", "*.md"))
