@@ -1,5 +1,19 @@
 # Languages and search engines
 
+## With the commands
+
+| When | Command | What it does for your languages |
+|---|---|---|
+| You want a language | `add locale:de` | its catalog, `locales/de.toml` |
+| You save a catalog | `dev`, running | the messages are written as Go names and the open page has the new text in about 1.3 s |
+| You want it translated | `run intl:status`, `intl:translate`, `intl:todo` | what is missing or stale in each language, and a translation of it |
+| Before a push | `check` | every language complete, plural forms right, no message unused |
+| Before a push | `test` | the audit: each page's language, its links to its other languages, the sitemap |
+
+**Checked before the app runs:** that a message a page shows exists and is given its arguments (it is a Go name); that every language has every message, with the plural forms that language has.
+
+**Not checked by anything:** whether a translation says the right thing. A message whose source changed is marked stale until someone confirms or retranslates it (`run intl:confirm`).
+
 ## Languages
 
 The languages are the catalogs in `locales/`: `en.toml` is the source, and each other file is a translation.
@@ -18,10 +32,12 @@ Every page has a URL per language (`/built/`, `/de/built/`). Text in a page is a
 Numbers, dates and ages go through the runtime's Intl, in the reader's language and time zone:
 
 ```gsx
-{ s.Visits |> number }
-{ note.Created() |> since }
-{ t |> date("dateStyle", "medium", "timeStyle", "short") }
+<span class="text-xs text-muted-foreground">{ note.Created() |> since }</span>
+{ note.Created() |> date("dateStyle", "full", "timeStyle", "long") }
+<dd>{ f.Timezone |> zone }</dd>
 ```
+
+An age ("3 minutes ago"), a full date and time, and a time zone by its name, as the example's pages write them. `number` takes Intl's own options the same way.
 
 `charter check` fails while a language is incomplete. A right-to-left language is laid out right to left; `check --fix` rewrites gsxui's components for it once.
 

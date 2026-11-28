@@ -1,5 +1,18 @@
 # Screens and themes
 
+## With the commands
+
+| When | Command | What it does |
+|---|---|---|
+| You want a screen | `add screen:sign-in`, `screen:docs`, `screen:admin`, … | copies it into `pages/screens/`, with the gsxui components it is made of |
+| You want a component | `add ui:dialog`; `run ui:list` | gsxui's component, in `ui/` |
+| You want another look | `run ui:theme` | shows the theme; with a preset, switches to it |
+| Before a push | `check` | fails when charter's screens have moved on and your unchanged copies have not; `--fix` brings them up to date |
+
+**Checked before the app runs:** a screen is a `.gsx` file of your app, so it is compiled against your own components and your own messages, as your pages are.
+
+**Not checked:** a screen you have changed is yours. charter no longer updates it and says so, and `add screen:<name> -diff` shows how it differs. How anything looks is seen in a browser.
+
 ## The interface is gsxui's
 
 Every visual piece is a [gsxui](https://ui.gsxhq.dev) component, copied into the app's `ui/` folder, where it is the app's own.

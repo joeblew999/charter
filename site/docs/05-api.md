@@ -2,6 +2,20 @@
 
 The API is written once, as a contract in Go (`api/contract.go`). Its OpenAPI and AsyncAPI documents, its MCP tools and its SDKs come from that.
 
+## With the commands
+
+| When | Command | What it does for your API |
+|---|---|---|
+| You change `api/contract.go` | `dev`, running | it compiles, and the running Worker serves the operation |
+| Before a push | `check --fix` | writes `fern/openapi.json` and `fern/asyncapi.json` from the Go types; `check` fails while the committed ones are behind |
+| Before a push | `test` | the API called through its own generated Go SDK, on a real Worker |
+| Before a release | `pack --prove` | a client in each language, written by Fern from the spec, proven by calling the Worker |
+| Nothing | | the docs' page of the API is written from the spec: [the example's](https://charter-example.gedw99.workers.dev/docs/reference-api) |
+
+**Checked before the app runs:** what an operation takes and answers (Huma writes the spec from the Go types, never the other way); the scopes it needs (values); its limit, whose binding, calls and seconds are `wrangler.jsonc`'s, said once.
+
+**Not checked until it runs:** what a handler does with a request. And nothing checks that a change is safe for clients already out there: the API's row is the table's row, so a column you rename is a field renamed for every client. `check` shows the spec changed; whether that is acceptable is yours to decide.
+
 ## An operation
 
 ```go
@@ -9,7 +23,7 @@ The API is written once, as a contract in Go (`api/contract.go`). Its OpenAPI an
 	huma.Register(api, huma.Operation{
 		OperationID: "createNote", Method: http.MethodPost, Path: "/api/notes",
 		Summary:  "Create a note", Tags: []string{"notes"},
-		Security: charter.Needs("write"),
+		Security: charter.Needs(Write),
 	}, env.create)
 }},
 ```

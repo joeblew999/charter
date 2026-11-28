@@ -6,6 +6,20 @@ go tool charter deploy
 
 That is the D1 migrations, then `wrangler deploy`.
 
+## With the commands
+
+| When | Command | What it does |
+|---|---|---|
+| You ship | `deploy` | applies the migrations, then deploys with wrangler; the first time it makes what `wrangler.jsonc` names and writes the ids there |
+| After it | `test --deployed` | the same tests, asked of the deployed Worker, which they leave as they found it |
+| A secret | `run secrets`, `run secrets:put NAME` | what is declared and what the Worker has; one kept by fnox and put on the Worker |
+| To see what is there | `run resources` | the database, KV namespace, bucket and queue the deployed Worker is bound to |
+| To take it away | `run delete` | the Worker and its secrets; its data only when you say so |
+
+**Checked before it is deployed:** everything `check` says of the code; that the deployed database gets the schema that code was checked against, before the code; that a resource is the one it was (its id), so a renamed bucket stops the deploy and does not make an empty one.
+
+**Not checked by a deploy:** that the app works there, and that each secret it names has a value on the Worker. `test --deployed` and `run secrets` say. A deploy waits on neither: it tells you how the Worker did in the day before.
+
 ## The plan
 
 A charter app is for Workers Paid ($5 a month). Workers Free allows [10 ms of CPU time a request](https://developers.cloudflare.com/workers/platform/limits/#cpu-time), and a Go Worker takes that or more for many of its requests. What Cloudflare allows a Worker and what it charges, each with a link to Cloudflare's own page, is in [Cloudflare's limits](16-watching.md#cloudflares-limits).

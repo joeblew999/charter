@@ -76,6 +76,22 @@ CREATE TABLE ceremonies (
 
 What the example's database has, every table, column and statement, is [a page of its docs](https://charter-example.gedw99.workers.dev/docs/reference-database) that charter writes from this file. Your app gets the same.
 
+## With the commands
+
+| When | Command | What it does for your database |
+|---|---|---|
+| You save `db/schema.sql` | `dev`, running | writes the migration, brings the local database to it keeping its rows, and checks every query again |
+| You save `db/queries.sql` | `dev`, running | sqlc checks each statement against the schema; charter writes it as a Go function in `db/queries.gen.go` |
+| Before a push | `check` | fails while the schema is ahead of the migrations, where a statement is written in Go, and where the sign-in screen's tables no longer fit |
+| Before a push | `check --fix` | writes the migration (`--drop` for one that loses data) |
+| You ship | `deploy` | applies the migrations that have not run, before the code that needs them |
+| By hand | `run db:status`, `db:seed`, `db:reset`, `db:execute`, `db:export` | the local database, or the deployed one with `--deployed` |
+| Nothing | | the docs' page of the database is written from these two files: [the example's](https://charter-example.gedw99.workers.dev/docs/reference-database) |
+
+**Checked before the app runs:** every column a statement names and its type; the arguments and rows of its Go function; the API's row, which is the same type; that the migrations are what the schema says.
+
+**Not checked until it runs:** what a statement means. A `WHERE` on the wrong column compiles, and so does a query that reads every row. What a deployed database holds is not known to any check.
+
 ## Changing it
 
 Edit the schema and save. Nobody writes a migration.
@@ -90,7 +106,7 @@ Edit the schema and save. Nobody writes a migration.
 A column added at the end becomes `ALTER TABLE … ADD COLUMN`. Anything else about a table makes the table again and copies its rows. A renamed column says what it was:
 
 ```sql
-title TEXT NOT NULL, -- was: name
+role TEXT NOT NULL, -- was: scopes
 ```
 
 A change that would lose data is refused until you ask for it: `charter check --fix --drop`.
@@ -101,7 +117,7 @@ A change that would lose data is refused until you ask for it: `charter check --
 
 ```sql
 -- name: CreateNote :one
-INSERT INTO notes (body) VALUES (?) RETURNING *;
+INSERT INTO notes (body, author_id, author) VALUES (?, ?, ?) RETURNING *;
 ```
 
 Select whole rows, and a new column needs no change here.

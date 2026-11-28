@@ -11,6 +11,20 @@ docs/
 
 A page's first heading is its title and its first paragraph its description. The number in a file's name is its place in the list, and is not in its address. A link to another page is written to its file (`[the start](index.md)`), so it works on GitHub too.
 
+## With the commands
+
+| When | Command | What it does for your docs |
+|---|---|---|
+| You want docs | `add screen:docs` | the pages that show them, in your app's own components |
+| You save `docs/*.md` | `dev`, running | the page is rebuilt and shown in about 1.3 s; no Go is compiled |
+| You save the API's spec, `db/*.sql` or `wrangler.jsonc` | `dev`, running | the pages charter writes of the app follow |
+| Before a push | `check` | a code sample taken from a file is what the file says (`--fix` writes it again) |
+| Before a push | `test` | every link a page has to the app is followed, and one that leads nowhere fails |
+
+**Checked:** code that names its file; links; and the pages charter writes, which are read from the source and cannot differ from it.
+
+**Not checked by anything:** what a page says in words. When the code a paragraph describes changes, nothing can tell. So keep prose for what does not change with every commit (what the app is for, why it is built as it is), and take facts from files: a sample by its file's name, a table or an operation from the page charter writes.
+
 ## What you write, and what charter writes
 
 You write what only you know: what the app is for, and how to use it.
@@ -38,18 +52,17 @@ charter's own site has none of the first two, and says so: it has no API and no 
 ```go
 // main.go
 Docs: &app.Docs{
-	Name:    "My App",
-	Summary: "What it is, in a sentence.",
-	Pages:   docs.Pages, // built from docs/ by charter build
-	Repo:    "https://github.com/me/my-app",
+	Name:    "charter-example",
+	Pages:   docs.Pages,
+	Repo:    "https://github.com/joeblew999/charter",
+	Dir:     "example",
 },
 
 // pages/pages.go
-type Pages struct {
-	…
-	docs screens.Docs `route:"/docs Docs"` // go tool charter add screen:docs
-}
+docs  screens.Docs `route:"/docs Docs"`
 ```
+
+That is the example's: its name, the pages charter build wrote from `docs/`, and where its repository is, for the links to a page's own file. `Summary` is a line about the app. The route is the docs screen's (`go tool charter add screen:docs`).
 
 The pages are one of [charter's screens](13-screens-and-themes.md): the list at the side, the page, its sections, the theme switch, a link to the repository and one to the page's own file on GitHub. They are built from your app's own gsxui components, so they have its look. This site's docs are shown by the same screen.
 

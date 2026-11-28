@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -153,5 +155,59 @@ func TestReference(t *testing.T) {
 	write("docs/05-reference-api.md", "# My own\n")
 	if _, err := Write(dir); err == nil || !strings.Contains(err.Error(), "reference-api") {
 		t.Errorf("a file at the same place: %v", err)
+	}
+}
+
+// The code charter's own docs show is code that exists: every line of a sample typed into a page (one that does
+// not name its file, which Samples holds to the file) is a line of the example, of the site or of charter's
+// screens, where it is compiled and tested. A sample that was true when it was written and is not any more fails
+// here, with the line. A line that only names a file (// main.go) or stands for what is left out (…) is not code.
+func TestCharterDocsShowRealCode(t *testing.T) {
+	root := filepath.Join("..", "..")
+	real := map[string]bool{}
+	for _, dir := range []string{"example", "site", filepath.Join("app", "screens")} {
+		filepath.WalkDir(filepath.Join(root, dir), func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			name := d.Name()
+			if d.IsDir() {
+				if strings.HasPrefix(name, ".") || name == "node_modules" || name == "build" || name == "dist" || name == "sdk" || name == "docs" {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if !slices.Contains([]string{".go", ".gsx", ".sql", ".tmpl"}, filepath.Ext(name)) || strings.HasSuffix(name, ".x.go") {
+				return nil
+			}
+			b, _ := os.ReadFile(path)
+			for _, line := range strings.Split(string(b), "\n") {
+				real[strings.Join(strings.Fields(line), " ")] = true
+			}
+			return nil
+		})
+	}
+	pages, _ := filepath.Glob(filepath.Join(root, "site", "docs", "*.md"))
+	if len(pages) == 0 || len(real) < 1000 {
+		t.Fatalf("%d pages and %d lines of code: this is not charter's repository", len(pages), len(real))
+	}
+	names := regexp.MustCompile(`^// [\w./-]+\.(go|gsx|sql|jsonc)$`)
+	for _, page := range pages {
+		b, _ := os.ReadFile(page)
+		typed := false
+		for i, line := range strings.Split(string(b), "\n") {
+			switch {
+			case strings.HasPrefix(line, "```"):
+				typed = slices.Contains([]string{"```go", "```gsx", "```sql"}, line)
+				continue
+			case !typed:
+				continue
+			}
+			code := strings.Join(strings.Fields(line), " ") // gofmt lines things up by what is around them
+			if code == "" || code == "…" || names.MatchString(code) || real[code] {
+				continue
+			}
+			t.Errorf("%s:%d shows code that is nowhere in the example, the site or the screens:\n\t%s", filepath.Base(page), i+1, code)
+		}
 	}
 }

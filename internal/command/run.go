@@ -28,6 +28,15 @@ type task struct {
 
 // tasks are what charter run has for every app: what is no verb of its own. An app adds its own in charter.toml's
 // [run.tasks].
+// TaskNames are the tasks charter run has of its own: what the docs may tell a reader to run.
+func TaskNames() []string {
+	names := make([]string, len(tasks))
+	for i, t := range tasks {
+		names[i] = t.name
+	}
+	return names
+}
+
 var tasks = []task{
 	// The languages (intl).
 	{"intl:status", "per language: translated, inherited, stale, missing; with languages named (de fr), their catalogs checked", func(_ *project.Project, a []string) {

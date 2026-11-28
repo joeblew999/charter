@@ -2,6 +2,20 @@
 
 An app has one answer to "who is asking, and may they?", for its pages and for its API alike.
 
+## With the commands
+
+| When | Command | What it does |
+|---|---|---|
+| You want people to sign in | `add screen:sign-in` | the sign-in, account and people pages, and their tables in `db/schema.sql` |
+| The first admin | `run people:invite admin` | a link that makes whoever signs up through it an admin, once, within the hour |
+| To see who there is | `run people` | everyone who signed up, and what each is |
+| Before a push | `check` | a scope is made only where it is declared; your schema still has the sign-in's tables as charter uses them; the role new people get is one of your roles |
+| Before a push | `test` | signing up and in with a passkey in a real browser, as each role, on the pages and through the API |
+
+**Checked before the app runs:** every scope a page, an operation or a rule names (a scope is a value: a misspelt one does not compile); the tables charter's sign-in reads and writes.
+
+**Not checked until it runs:** that a role grants what you meant it to, which is your decision and what the tests of each role are for. A role's name is still a word (`"moderator"`): only the one new people get is checked, when the app starts.
+
 ## One caller
 
 ```go file=../example/api/handlers.go#Auth
@@ -176,7 +190,7 @@ Someone signed in has a session: a token the app issued, kept by their browser a
 At the foot of the account page someone can delete their account: asked twice, the second time with what goes. Their passkeys, sessions and tokens go with it, and so does what your app keeps of theirs, which you say once:
 
 ```go
-charter.People{…, Leaving: func(ctx context.Context, who charter.Person) error { … }}
+charter.People{Name: "Notes", Accounts: charter.D1Accounts(env.DB), Roles: Roles, Role: "member", Leaving: Leaving},
 ```
 
 The example takes away the notes they wrote, what the activity page recorded of those, and the files they attached. Only the person can do this, signed in on the page: a program with one of their tokens cannot.

@@ -83,7 +83,7 @@ A test is for what running the app shows and nothing else does.
 ## The API, through its own SDK
 
 ```go
-note, err := sdk(t, option.WithToken(token)).Notes.Create(ctx, &notes.CreateNotesRequest{Body: "hi"})
+note, err := as.Notes.Create(t.Context(), &notes.CreateNotesRequest{Body: body})
 ```
 
 The client is the one in `sdk/go`, generated from the contract: the same one another repository would import.

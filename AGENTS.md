@@ -39,7 +39,10 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   are pages charter writes from the spec, the schema and `wrangler.jsonc` (`internal/docsgen/reference.go`),
   shown as the pages of `docs/*.md` are. A person writes what an app is for. charter's own docs explain charter
   and point at the example's written pages for what an app has: they never say this site has what only the
-  example has. A link in any page is followed by `charter test`, which fails on one that leads nowhere.
+  example has. A link in any page is followed by `charter test`, which fails on one that leads nowhere. Code in
+  charter's docs is a line of the example, the site or the screens, never written for the page, and a command is
+  one charter has: `go test ./...` fails otherwise (`internal/docsgen`, `cmd/charter`). Each page that is about
+  something a developer writes opens with its commands, what is checked before the app runs, and what is not.
 - **What every app needs is a screen** (`app/screens`: the docs' pages, the theme switch, the language list and
   offer, the time zone dialog): a gsx template of gsxui components that `charter add screen:<name>` copies into an
   app, as gsxui copies a component, so it is built from the app's own components and theme. Change a screen in

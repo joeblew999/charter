@@ -2,6 +2,19 @@
 
 Pages are a [structpages](https://jackielii.github.io/structpages/) tree, rendered with [gsx](https://gsxhq.github.io) and built from [gsxui](https://ui.gsxhq.dev) components. The tree is the one source of routes, links, element ids and the sitemap.
 
+## With the commands
+
+| When | Command | What it does for your pages |
+|---|---|---|
+| You save a `.gsx` or `.go` file | `dev`, running | gsx writes the template's Go, the compiler checks it, and the page in your browser is the new one in about 1.5 s |
+| You need a component | `add ui:dialog` | gsxui's component, copied into `ui/`, where it is yours |
+| Before a push | `check` | structpages-lint holds every link, id and target to the tree; `go vet` runs for your machine and for the Worker's build |
+| Before a push | `test` | the pages in a real browser on a real Worker, and every link followed |
+
+**Checked before the app runs:** every value a template shows and every prop it passes (a template is Go); every link, element id and swap target (each takes a page's type, never a string); what a page needs of its caller (a scope is a value); every text it shows (a message is a Go name).
+
+**Not checked until it runs:** that a page's `Props` is handed what it asks for (structpages matches it by type when the page is asked for); an htmx attribute written by hand; anything that happens in the browser. `test` is what finds these.
+
 ## The tree
 
 Every route is a field, with its route in the field's tag.
@@ -146,10 +159,12 @@ func (PostNote) ServeHTTP(w http.ResponseWriter, r *http.Request, store api.Stor
 A link or a form's target comes from the tree, never from a path written as a string.
 
 ```gsx
-<a href={Bindings{} |> url}>…</a>
-<form hx-post={PostNote{} |> url}>…</form>
-<a href={Note{} |> url(map[string]any{"id": note.ID})}>…</a>
+<ui.Button variant={current(ctx, Built{})} size="sm" href={BuiltIndex{} |> url}>
+hx-post={PostNote{} |> url}
+hx-post={RemoveNote{} |> url(map[string]any{"note": note.ID})}
 ```
+
+Those are three lines of the example: a link to a page, a form's target, and one with a value in its address.
 
 `url` is structpages' own `URLFor`. charter mounts the tree once for each language, each told its prefix, so every address it gives is in the reader's language by itself: a page, a form's target, a stream. structpages' linter runs inside `charter check`, for the machine and for the Worker's build, and fails on a link to a page that is not there, a missing parameter, or a path written as a string.
 
@@ -181,7 +196,7 @@ The tree's GET pages without parameters are in the sitemap, in every language. T
 ```gsx
 <html { app.HTML(ctx)... }>
 	<head>
-		<app.Head title={title} description={description}/>
+		<app.Head title={title |> text} description={description |> text}/>
 	</head>
 ```
 

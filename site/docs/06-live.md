@@ -19,6 +19,18 @@ if err := store.Remove(ctx, id); err != nil {
 Notes.Changed(ctx)
 ```
 
+## With the commands
+
+| When | Command | What it does for a feed |
+|---|---|---|
+| You declare a feed | `dev`, running | it compiles: a `live.Feed[Note]` is of one type, for the page, the API and the SDK |
+| Before a push | `test` | a note written in one browser tab appears in another, and one taken away goes from both |
+| Before a release | `run load --deployed` | many readers' streams held open at once, and whether Cloudflare ended any request |
+
+**Checked before the app runs:** the item's type everywhere the feed goes; the hub it wakes (`env.HUB`, a Durable Object namespace: any other kind of binding does not compile).
+
+**Not checked until it runs:** that an item arrives, once, in order, across a reconnect and a deploy. That is the two-tab test and the stream's tests. What many open pages cost in memory shows only on Cloudflare: `run load`.
+
 ## Writing
 
 ```go file=../example/api/handlers.go#Post
