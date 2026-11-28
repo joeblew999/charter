@@ -36,7 +36,7 @@ func (r repo) audit(args []string) {
 	case rep.OK:
 		fmt.Printf("✓ robots.txt and all %d sitemap URLs pass (fetched as Googlebot: 200, indexable, self-canonical, lang, "+
 			"title, description, one h1, reciprocal hreflang with x-default, icon, Open Graph; a missing page is 404, "+
-			"http moves to https, the home page names the site)\n", rep.URLs)
+			"http moves to https, the home page names the site; and every link they have to this site leads somewhere)\n", rep.URLs)
 	default:
 		for _, p := range rep.Problems {
 			fmt.Println("✗ " + p)
@@ -56,7 +56,7 @@ func Audit(base string) error {
 		return err
 	}
 	if len(problems) == 0 {
-		fmt.Printf("✓ robots.txt and all %d sitemap URLs pass (fetched as Googlebot)\n", urls)
+		fmt.Printf("✓ robots.txt and all %d sitemap URLs pass (fetched as Googlebot), and every link they have to this site leads somewhere\n", urls)
 		return nil
 	}
 	for _, p := range problems {

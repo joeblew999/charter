@@ -34,6 +34,7 @@ These are strings or behaviour, and a wrong one compiles. Each is found by `char
 | That a binding is there on the deployed Worker, and a secret has a value | The name is checked; what Cloudflare has under it is not Go's to know | `deploy` makes what `wrangler.jsonc` names; `charter run resources` and `charter run secrets` say what the Worker has; `test --deployed` |
 | That a role grants what you meant it to | A scope is checked; whether a moderator should have it is your decision | `test`, signed in as each role |
 | What a page's `Props` asks for | structpages hands it over by its type when the page is asked for | `test`: the page answers with an error |
+| A link in a page of the docs, or in any page's text | It is text. A link in a template is from the page tree and checked by `check`; one written in Markdown is not | `test`: the audit follows every link to the site itself and fails on one that leads nowhere |
 | An htmx attribute written by hand: `hx-swap="innerMorph"` | It is text for htmx. What charter gives for the hard cases (`live.Follows()`, `app.Body()`) is Go | `test`, in a real browser |
 | JavaScript: `web/`, and the glue that runs Go | charter has no TypeScript. It is kept small and free of logic | `test`, in a real browser and on the Worker |
 | Go calling Cloudflare inside charter's `cloud` package | Go on Workers calls JavaScript by name | charter's own tests, on a Worker |
@@ -124,7 +125,7 @@ go tool charter test
 go tool charter test --deployed
 ```
 
-Runs `go test` for plain logic, then starts the Worker on `wrangler dev` with a new database filled by [the seed](07-database.md#seeding), and tests it from outside: the pages in a real browser, the API through its own generated SDK, and the site as a search engine reads it.
+Runs `go test` for plain logic, then starts the Worker on `wrangler dev` with a new database filled by [the seed](07-database.md#seeding), and tests it from outside: the pages in a real browser, the API through its own generated SDK, and the site as a search engine reads it, which includes following every link to the site itself.
 
 **What it proves:** what types cannot. That the bindings answer, that a signed-in member may do what a member may and no more, that a page asks for what it is given, that a list updates in a second tab, that the JavaScript and Go meet. And it proves the generated clients against a running Worker, not only that they compile.
 

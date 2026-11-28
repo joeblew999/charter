@@ -111,4 +111,4 @@ An environment of `wrangler.jsonc` is deployed with `go tool charter deploy stag
 
 ## Everything Cloudflare gives a Worker
 
-workers-go's own packages work as its docs say (the example's package `built` uses each for one job, with a page that shows it): KV, R2, Queues, D1, Cron Triggers, the Cache API, Durable Objects, sockets and fetch. charter adds what it lacks: D1 as typed rows, rate limits and email. [The bindings page](../bindings) uses each one, with a test for each card.
+workers-go's own packages work as its docs say (the example's package `built` uses each for one job, with a page that shows it): KV, R2, Queues, D1, Cron Triggers, the Cache API, Durable Objects, sockets and fetch. charter adds what it lacks: D1 as typed rows, rate limits and email. [The example's pages for what it is built with](https://charter-example.gedw99.workers.dev/built/) use each one, each on a page of its own, with a test for each.

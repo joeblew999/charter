@@ -35,7 +35,7 @@ charter serves `robots.txt`, a sitemap in every language, the canonical address 
 go tool charter run seo:audit
 ```
 
-The audit reads the live site as a search engine does and fails on anything that would keep a page out of the index or look wrong in a result. `charter test` runs it on every push.
+The audit reads the live site as a search engine does and fails on anything that would keep a page out of the index or look wrong in a result. It also follows every link a page has to the site itself, from the docs' pages as from any other, and fails on one that leads nowhere: an address that answers 404, or a `#part` the page it names does not have. `charter test` runs it on every push.
 
 ## Agents
 

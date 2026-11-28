@@ -164,3 +164,60 @@ func TestSitemapPages(t *testing.T) {
 		t.Errorf("SitemapPages = %q, %v; want %q", got, err, want)
 	}
 }
+
+// Every link a page has to its own site is followed, once: one to an address that is not there, and one to a
+// part of a page that has no such part, are said, with the page that has the link. What answers anything but
+// "not there" is there (a page that wants its reader signed in, an endpoint that takes another method), and a
+// link to another site is not this site's to check.
+func TestLinkProblems(t *testing.T) {
+	asked := map[string]int{}
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		asked[r.URL.Path]++
+		switch r.URL.Path {
+		case "/":
+			fmt.Fprint(w, `<h1 id="top">Home</h1>
+				<a href="/docs/api#who">there, and its part</a> <a href="docs/api#nothing">a part that is not</a>
+				<a href="/api/openapi.json">not there</a> <a href="/account">signed in only</a> <a href="/api/mcp">POST only</a>
+				<a href="#top">here</a> <a href="#gone">nowhere here</a> <a href="https://example.org/x">elsewhere</a>
+				<a href="mailto:a@b.c">mail</a>`)
+		case "/docs/api":
+			fmt.Fprint(w, `<h1>The API</h1><h2 id="who">Who may call</h2><a href="/api/openapi.json">not there</a><a href="/">home</a>`)
+		case "/account":
+			w.WriteHeader(http.StatusUnauthorized)
+		case "/api/mcp":
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	at, _ := url.Parse(srv.URL)
+	var pages []page
+	for _, path := range []string{"/", "/docs/api"} {
+		p := page{}
+		body, status, err := fetchPage(context.Background(), srv.Client(), srv.URL+path, &p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		p.url, p.status = srv.URL+path, status
+		parsePage(body, &p)
+		pages = append(pages, p)
+	}
+	got := linkProblems(context.Background(), srv.Client(), at, pages)
+	for i := range got {
+		got[i] = strings.ReplaceAll(got[i], srv.URL, "")
+	}
+	want := []string{
+		"/: links to /docs/api#nothing, and that page has nothing with the id nothing",
+		"/: links to /api/openapi.json, which answers HTTP 404 (and 1 more pages link there)",
+		"/: links to /#gone, and that page has nothing with the id gone",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("found:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	// A page the audit has read already is not asked for again, and an address many pages link to is asked once.
+	if asked["/docs/api"] != 1 || asked["/api/openapi.json"] != 1 {
+		t.Errorf("asked /docs/api %d times and /api/openapi.json %d times, want once each", asked["/docs/api"], asked["/api/openapi.json"])
+	}
+}

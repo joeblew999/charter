@@ -45,7 +45,7 @@ func Post(ctx context.Context, store Store, by charter.Caller, body string) (Not
 | An SDK client | `Notes.Events(ctx, setHeader, w, positions, seconds, end)` | each item as JSON over server-sent events |
 | A WebSocket | `Notes.Lines(ctx, setHeader, w, positions)` | each item as a line of JSON |
 
-Write a note on [the home page](../) in one tab and it appears in another; take it away and it goes from both. Create one through the SDK and it appears there too.
+Write a note on [the example's home page](https://charter-example.gedw99.workers.dev/) in one tab and it appears in another; take it away and it goes from both. Create one through the SDK and it appears there too.
 
 ## A page's stream holds no Go
 

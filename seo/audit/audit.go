@@ -9,6 +9,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -43,8 +44,10 @@ type page struct {
 	ogTitle     string
 	ogDesc      string
 	ogURL       string
-	webSiteName string // the name in WebSite structured data (JSON-LD), the site name Google shows
-	location    string // a redirect's target
+	webSiteName string          // the name in WebSite structured data (JSON-LD), the site name Google shows
+	location    string          // a redirect's target
+	links       []string        // every <a href> of the page, as written
+	ids         map[string]bool // every id in the page: what a link's #fragment can name
 }
 
 // Audit fetches robots.txt, the sitemap at base/sitemap.xml and every URL it lists as Googlebot, and returns how many
@@ -108,6 +111,9 @@ func audit(ctx context.Context, httpc *http.Client, base, sitemap string, urls [
 	for _, msg := range siteProblems(ctx, httpc, site, pages) {
 		add("%s", msg)
 	}
+	for _, msg := range linkProblems(ctx, httpc, site, pages) {
+		add("%s", msg)
+	}
 
 	inSitemap := map[string]bool{}
 	for _, u := range urls {
@@ -135,6 +141,103 @@ func audit(ctx context.Context, httpc *http.Client, base, sitemap string, urls [
 		}
 	}
 	return problems
+}
+
+// linkProblems follows every link the pages have to an address of the site itself, and says each that leads
+// nowhere: an address that answers 404 or 410 (or fails), and a #fragment that names no id of the page it is on. A
+// reader who clicks one is as lost as a crawler. An address that answers anything else is there: a redirect, a
+// page that wants its reader signed in (401, 403), an endpoint that takes another method (405). Links to other
+// sites are not followed: whether they answer is not this site's to say.
+func linkProblems(ctx context.Context, httpc *http.Client, site *url.URL, pages []page) []string {
+	// Each address once, with the pages that link to it and the fragments they name.
+	type target struct {
+		from      []string
+		fragments map[string][]string // fragment → the pages that name it
+	}
+	targets := map[string]*target{}
+	var order []string
+	for _, p := range pages {
+		at, err := url.Parse(p.url)
+		if err != nil || p.status != 200 {
+			continue
+		}
+		for _, href := range p.links {
+			to, err := at.Parse(href)
+			if err != nil || (to.Scheme != "http" && to.Scheme != "https") || to.Host != site.Host {
+				continue
+			}
+			fragment := to.Fragment
+			to.Fragment, to.RawFragment = "", ""
+			address := to.String()
+			t := targets[address]
+			if t == nil {
+				t = &target{fragments: map[string][]string{}}
+				targets[address] = t
+				order = append(order, address)
+			}
+			if !slices.Contains(t.from, p.url) {
+				t.from = append(t.from, p.url)
+			}
+			if fragment != "" && !slices.Contains(t.fragments[fragment], p.url) {
+				t.fragments[fragment] = append(t.fragments[fragment], p.url)
+			}
+		}
+	}
+	known := map[string]page{}
+	for _, p := range pages {
+		known[p.url] = p
+	}
+	// What the sitemap did not list is fetched now: a page out of the sitemap, a file, an endpoint.
+	found := make([]page, len(order))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 6)
+	for i, address := range order {
+		if p, ok := known[address]; ok {
+			found[i] = p
+			continue
+		}
+		wg.Go(func() {
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			body, status, err := fetchPage(ctx, httpc, address, &found[i])
+			if err != nil {
+				found[i] = page{url: address, status: -1, title: err.Error()}
+				return
+			}
+			found[i].url, found[i].status = address, status
+			if len(targets[address].fragments) > 0 {
+				parsePage(body, &found[i])
+			}
+		})
+	}
+	wg.Wait()
+	var out []string
+	for i, address := range order {
+		t, p := targets[address], found[i]
+		switch {
+		case p.status == -1:
+			out = append(out, fmt.Sprintf("%s: links to %s, which does not answer: %s", t.from[0], address, p.title))
+		case p.status == 404 || p.status == 410 || p.status >= 500:
+			out = append(out, fmt.Sprintf("%s: links to %s, which answers HTTP %d%s", t.from[0], address, p.status, alsoFrom(t.from)))
+		case p.status == 200:
+			fragments := slices.Sorted(maps.Keys(t.fragments))
+			for _, fragment := range fragments {
+				if !p.ids[fragment] {
+					from := t.fragments[fragment]
+					out = append(out, fmt.Sprintf("%s: links to %s#%s, and that page has nothing with the id %s%s", from[0], address, fragment, fragment, alsoFrom(from)))
+				}
+			}
+		}
+	}
+	return out
+}
+
+// alsoFrom says how many more pages have the same link.
+func alsoFrom(from []string) string {
+	if len(from) < 2 {
+		return ""
+	}
+	return fmt.Sprintf(" (and %d more pages link there)", len(from)-1)
 }
 
 // invisible reports whether r is a character that shows nothing but changes text: bidi marks and isolates, the zero
@@ -280,7 +383,7 @@ func parsePage(body []byte, p *page) {
 	if err != nil {
 		return
 	}
-	p.alternates = map[string]string{}
+	p.alternates, p.ids = map[string]string{}, map[string]bool{}
 	attr := func(n *html.Node, key string) string {
 		for _, a := range n.Attr {
 			if a.Key == key {
@@ -293,7 +396,14 @@ func parsePage(body []byte, p *page) {
 		if n.Type != html.ElementNode {
 			continue
 		}
+		if id := attr(n, "id"); id != "" {
+			p.ids[id] = true
+		}
 		switch n.Data {
+		case "a":
+			if href := attr(n, "href"); href != "" {
+				p.links = append(p.links, href)
+			}
 		case "html":
 			p.lang = attr(n, "lang")
 		case "title":
