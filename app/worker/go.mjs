@@ -202,6 +202,9 @@ export function goWorker({ createRuntimeContext, loadModule } = build) {
 			runtime = take();
 		}
 		if (runtime) {
+			// Its first request or event: Cloudflare's clock runs for it from here, and its Go has its collector
+			// back (app.Run turned it off for as long as the module loaded).
+			if (!runtime.asked && typeof runtime.binding.asked === "function") runtime.binding.asked();
 			runtime.asked = true;
 			runtime.context.env = env;
 			runtime.context.ctx = ctx;

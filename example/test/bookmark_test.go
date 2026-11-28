@@ -202,3 +202,19 @@ func TestARequestThatSaysNewestReadsThePrimary(t *testing.T) {
 		t.Errorf("with %s: X-D1-Served %q, want the primary only", cloud.NewestHeader, served)
 	}
 }
+
+// The Go that starts as the Worker's module loads is there for the first request. When it is not (Cloudflare
+// refused something it did there, or its own runtime ended it), the Worker says so to whoever asks which runtime
+// answered, and starts another for each first request: every request is still answered, later, and nothing else
+// shows it. A local Worker allows while its module loads what Cloudflare refuses, so it is the deployed one this
+// is for.
+func TestTheWorkersGoStartedWithIt(t *testing.T) {
+	res, _ := asked(t, http.MethodGet, "/api/hello", "", "x-go-runtime", "?")
+	said := res.Header.Get("x-go-runtime")
+	if said == "" {
+		t.Fatal("the Worker does not say which runtime answered (x-go-runtime)")
+	}
+	if strings.Contains(said, "failed") {
+		t.Errorf("the Go that started with the Worker did not last: %s", said)
+	}
+}

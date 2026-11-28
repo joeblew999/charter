@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"runtime"
+	"runtime/debug"
 	"syscall/js"
 
 	"github.com/syumai/workers-go"
@@ -43,23 +44,26 @@ func init() {
 // binding. What a new isolate's first request would have paid for is then done already.
 func Run(h http.Handler) {
 	if paths := binding.Get("warm"); paths.Type() == js.TypeObject {
+		// While the Worker's module loads, Go's collector must not run. Cloudflare refuses there what it does (a
+		// timer: "Disallowed operation called within global scope"), and its clock reads zero, at which the
+		// collector ends the program. Either way this runtime would be gone before its first request, the Worker
+		// would start another for it, and nothing would say why a first reader waited. So the collector is off
+		// until go.mjs gives this runtime its first request or event (the binding's "asked"), where both hold.
+		// What the warm-up leaves is little, and is collected then.
+		percent := debug.SetGCPercent(-1)
+		binding.Set("asked", js.FuncOf(func(js.Value, []js.Value) any {
+			debug.SetGCPercent(percent)
+			binding.Delete("asked")
+			return nil
+		}))
 		for i := 0; i < paths.Length(); i++ {
 			if request, err := http.NewRequest(http.MethodGet, "https://warm.invalid"+paths.Index(i).String(), nil); err == nil {
 				h.ServeHTTP(&discard{header: http.Header{}}, request)
 			}
 		}
 	}
-	warmed := binding.Get("warm").Type() == js.TypeObject
 	workers.ServeNonBlock(Serve(h))
 	workers.Ready()
-	if warmed {
-		// What the warm-up left is collected now, while nobody waits, and not in the first request. It is also what
-		// keeps true that Go's collector can run here: the module is still loading, Cloudflare's clock reads zero,
-		// and the collector ends the program at a zero (go.mjs gives it a nanosecond until its first request). A
-		// collection would otherwise happen here only in an app whose warm-up fills its heap, and end that app's
-		// first runtime with nothing to say why: the Worker starts another, and its first reader waits for it.
-		runtime.GC()
-	}
 	select {}
 }
 

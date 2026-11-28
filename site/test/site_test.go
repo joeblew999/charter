@@ -84,6 +84,26 @@ func TestTheDocsAreSearched(t *testing.T) {
 	page.WaitText("#doc h1", "Getting started")
 }
 
+// The Go that starts as the Worker's module loads is there for the first request: when it is not, the Worker says
+// so to whoever asks which runtime answered. A local Worker allows while its module loads what Cloudflare refuses,
+// so it is the deployed one this is for.
+func TestTheWorkersGoStartedWithIt(t *testing.T) {
+	req, _ := http.NewRequest(http.MethodGet, apptest.Base(t)+at(pages.Home{}), nil)
+	req.Header.Set("x-go-runtime", "?")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	said := res.Header.Get("x-go-runtime")
+	if said == "" {
+		t.Fatal("the Worker does not say which runtime answered (x-go-runtime)")
+	}
+	if strings.Contains(said, "failed") {
+		t.Errorf("the Go that started with the Worker did not last: %s", said)
+	}
+}
+
 // On a phone the list of pages is a menu. A link in it shows its page with the menu closed, and the menu opens
 // again from there, under its button: a page reached by a link is as that page loaded would be, with nothing of
 // the page before left open over it.
