@@ -56,8 +56,10 @@ How the repo works: the docs, which are `site/docs/*.md`, served by `site/` at h
   holds to gsxui's source.
 - **One document around every page**: the layout screen (`app/screens/layout.gsx.tmpl`), made of gsxui's
   components (`Sidebar`, `Sheet`), never of markup copied from gsxui's website: what `gsxui add` brings is what
-  follows gsxui. Three modes a page names, never a width, a header or a `<!DOCTYPE html>` of a page's own
-  (`charter check` fails one). What is in a header twice (in it, and under its
+  follows gsxui. A page names its mode and nothing else: never a width, a header, a way back or a
+  `<!DOCTYPE html>` of its own (`charter check` fails one). The header and the footer are the app's, said once
+  (`screens.Around`), and every page and every screen has them: a screen that shows something no other does
+  (a back button, a header of its own) is a bug. What is in a header twice (in it, and under its
   menu on a narrow window) has no id. A test opens every page at a phone's, a tablet's and a desk's width and
   fails one that is wider than its window (`apptest`'s `Fits`).
 - **What every app needs is a screen** (`app/screens`: the docs' pages, the theme switch, the language list and

@@ -45,21 +45,10 @@ component AdminLink(attrs gsx.Attrs) {
 	} }
 }
 
-// adminPage is the pages' frame: the way back, the pages' names with the one shown marked, and the page.
+// adminPage is the pages' frame: the pages' names with the one shown marked, and the page.
 component adminPage(title intl.Msg, about intl.Msg, here string, children gsx.Node) {
-	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
-	<Layout
-		mode={LayoutMarketing}
-		title={title |> text}
-		description={about |> text}
-		brand={ <LayoutBrand/> }
-		tools={ <ThemeToggle/> }
-	>
-		<div class="mx-auto flex w-full max-w-2xl flex-col gap-6">
-			<ui.Button variant="link" class="self-start px-0" href={intl.URL(ctx, "/")}>
-				<icon.ArrowLeft class="rtl:rotate-180"/>
-				<span translate="no">{ app.Name(ctx) }</span>
-			</ui.Button>
+	<Layout mode={LayoutPage} title={title |> text} description={about |> text}>
+		<div class="flex flex-col gap-6">
 			<nav id="admin-nav" class="flex flex-wrap gap-1" aria-label={locales.ScreensAdmin}>
 				<adminTab href={AdminOverview{} |> url} name={locales.ScreensAdminOverview} here={here == "overview"}/>
 				<adminTab href={PeoplePage{} |> url} name={locales.ScreensPeople} here={false}/>

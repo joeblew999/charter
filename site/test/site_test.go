@@ -29,7 +29,7 @@ func TestFromTheFrontPageThroughTheDocs(t *testing.T) {
 	page.Click(`[data-gsxui-slot-sidebar-desktop] a[href$="/docs/getting-started"]`)
 	page.WaitText("#doc h1", "Getting started")
 	page.WaitText("#doc pre", "go tool charter dev")
-	if repo, edit := page.Attr("[data-layout-links] a[data-docs-repo]", "href"), page.Attr("#docs-edit", "href"); repo != pages.Repo || edit != pages.Repo+"/edit/main/site/docs/01-getting-started.md" {
+	if repo, edit := page.Attr("#docs-repo", "href"), page.Attr("#docs-edit", "href"); repo != pages.Repo || edit != pages.Repo+"/edit/main/site/docs/01-getting-started.md" {
 		t.Errorf("repository %q, edit %q", repo, edit)
 	}
 	page.Click(`[data-gsxui-slot-sidebar-desktop] a[href$="/docs/agents"]`)

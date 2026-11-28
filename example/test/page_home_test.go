@@ -116,7 +116,7 @@ func TestANotesRowOpensByItself(t *testing.T) {
 	}
 }
 
-// The app's own pages fit their window on a phone, a tablet, a small laptop and a desk, signed in and not: nothing
+// The app's pages fit their window, with the app's own header on each (the docs and the theme editor too) on a phone, a tablet, a small laptop and a desk, signed in and not: nothing
 // is wider than the window and nothing in the header is cut off. On a phone the ways to the pages are in a drawer,
 // from the header's menu button, and lead where they say.
 func TestThePagesFitTheirWindow(t *testing.T) {
@@ -125,7 +125,7 @@ func TestThePagesFitTheirWindow(t *testing.T) {
 	fits := func() {
 		for _, width := range []int{360, 390, 768, 1024, 1280} {
 			page.Wide(width)
-			for _, path := range []string{at(pages.Home{}), at(pages.BuiltIndex{})} {
+			for _, path := range []string{at(pages.Home{}), at(pages.BuiltIndex{}), at(screens.DocsIndex{}), at(screens.Theme{})} {
 				page.Open(path)
 				page.Fits()
 			}

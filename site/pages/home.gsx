@@ -11,14 +11,11 @@ import (
 
 // Page is the front page: what charter is, where to read, see and get it, and what it gives an app.
 component (p Home) Page() {
-	// charter's layout screen, which is gsxui's own site's shell, as a centred page.
+	// A front page, in the one document every page has (charter's layout screen).
 	<screens.Layout
 		mode={screens.LayoutMarketing}
 		title={locales.SiteTitle |> text}
 		description={locales.SiteDescription |> text}
-		brand={ <screens.LayoutBrand/> }
-		links={ <Links/> }
-		tools={ <Tools/> }
 	>
 		<div class="flex flex-col gap-10">
 			<section class="flex flex-col gap-4">
@@ -61,6 +58,11 @@ component Gives(title intl.Msg, about intl.Msg) {
 }
 
 var _ gsx.Node
+
+// What is around every page of the site, said once: these, the docs, the theme editor.
+func init() {
+	screens.Around.Links, screens.Around.Tools = Links(), Tools()
+}
 
 // Links are the ways out of the front page. The layout shows them in the header, and under its menu where the
 // window has no room, so nothing in them has an id.

@@ -8,7 +8,6 @@ import (
 	"github.com/gsxhq/gsx"
 	"github.com/jackielii/structpages"
 	"github.com/joeblew999/charter/app"
-	"github.com/joeblew999/charter/intl"
 	"github.com/joeblew999/charter/site/locales"
 	"github.com/joeblew999/charter/site/ui/icon"
 	ui "github.com/joeblew999/charter/site/ui/styles"
@@ -71,8 +70,6 @@ component DocsDocument(v DocsView) {
 		mode={LayoutDocs}
 		title={v.Doc.Title + " · " + v.Docs.Name}
 		description={v.Doc.Description}
-		brand={ <DocsBrand v={v}/> }
-		links={ <DocsLinks v={v}/> }
 		tools={ <DocsTools v={v}/> }
 		navigation={ <DocsList v={v}/> }
 		contents={ <DocsSections v={v}/> }
@@ -112,28 +109,34 @@ component DocsDocument(v DocsView) {
 			} }
 		</article>
 		<DocsAround v={v}/>
-		{ if v.Docs.Edit(v.Doc) != "" {
-			<ui.Button
-				variant="link"
-				size="sm"
-				class="mt-2 px-0 text-muted-foreground"
-				href={v.Docs.Edit(v.Doc)}
-				rel="noopener"
-				id="docs-edit"
-			>
-				{ locales.ScreensDocsEdit }
-			</ui.Button>
-		} }
+		// Where the page comes from: its own file, and the repository.
+		<div class="mt-2 flex flex-wrap gap-x-4">
+			{ if v.Docs.Edit(v.Doc) != "" {
+				<ui.Button
+					variant="link"
+					size="sm"
+					class="px-0 text-muted-foreground"
+					href={v.Docs.Edit(v.Doc)}
+					rel="noopener"
+					id="docs-edit"
+				>
+					{ locales.ScreensDocsEdit }
+				</ui.Button>
+			} }
+			{ if v.Docs.Repo != "" {
+				<ui.Button
+					variant="link"
+					size="sm"
+					class="px-0 text-muted-foreground"
+					href={v.Docs.Repo}
+					rel="noopener"
+					id="docs-repo"
+				>
+					{ locales.ScreensDocsOnGithub(docsRepo(v.Docs.Repo)) }
+				</ui.Button>
+			} }
+		</div>
 	</Layout>
-}
-
-// DocsBrand is what the list of pages begins with: the docs' name, the way to the app's front page, and that these
-// are its docs.
-component DocsBrand(v DocsView) {
-	<ui.SidebarMenuButton size="lg" href={intl.URL(ctx, "/")}>
-		<span class="font-semibold" translate="no">{ v.Docs.Name }</span>
-		<ui.Badge variant="secondary">{ locales.ScreensDocs }</ui.Badge>
-	</ui.SidebarMenuButton>
 }
 
 // DocsHere is where the page is among the others, at the top, which stays as the page is read: its group, and
@@ -154,18 +157,7 @@ component DocsHere(v DocsView) {
 	</ui.Breadcrumb>
 }
 
-// DocsLinks is the way to the repository, for docs that name one: in the header where there is room, under its
-// menu where there is not. The layout shows it in both, so nothing in it has an id.
-component DocsLinks(v DocsView) {
-	{ if v.Docs.Repo != "" {
-		<ui.Button variant="ghost" size="sm" href={v.Docs.Repo} rel="noopener" data-docs-repo>
-			{ locales.ScreensDocsOnGithub(docsRepo(v.Docs.Repo)) }
-		</ui.Button>
-	} }
-}
-
-// DocsTools is what the docs' header always has: the search, the way to the theme editor, and light or dark.
-// The search is as gsxui's own docs have it: every page and every section of one, by its title. Cmd-K (Ctrl-K)
+// DocsTools is what the docs add to the app's header: the search. It is as gsxui's own docs have it: every page and every section of one, by its title. Cmd-K (Ctrl-K)
 // opens it.
 component DocsTools(v DocsView) {
 	<ui.CommandDialog
@@ -175,11 +167,11 @@ component DocsTools(v DocsView) {
 			<ui.DialogTrigger
 				id="docs-search"
 				aria-label={locales.ScreensDocsSearch}
-				class="inline-flex h-8 items-center gap-2 rounded-lg border bg-muted/50 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted sm:w-56"
+				class="inline-flex h-8 items-center gap-2 rounded-lg border bg-muted/50 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted lg:w-56"
 			>
 				<icon.Search class="size-4"/>
-				<span class="hidden flex-1 text-start sm:inline">{ locales.ScreensDocsSearch }</span>
-				<ui.Kbd class="hidden sm:inline-flex">⌘K</ui.Kbd>
+				<span class="hidden flex-1 text-start lg:inline">{ locales.ScreensDocsSearch }</span>
+				<ui.Kbd class="hidden lg:inline-flex">⌘K</ui.Kbd>
 			</ui.DialogTrigger>
 		}
 	>
@@ -198,8 +190,6 @@ component DocsTools(v DocsView) {
 			} }
 		</ui.CommandList>
 	</ui.CommandDialog>
-	<ThemeLink/>
-	<ThemeToggle/>
 }
 
 // DocsList is the docs' pages, the one being read marked, in the groups the docs' front page lists them in

@@ -115,9 +115,8 @@ func (SignOut) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.Auth)
 }
 
 component (p SignInPage) Page(v SignInView) {
-	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
-	<Layout mode={LayoutMarketing} title={locales.ScreensSignIn |> text} description={locales.ScreensSignUpIntro |> text} brand={<LayoutBrand/>} tools={<ThemeToggle/>}>
-		<div class="mx-auto flex w-full max-w-sm flex-col gap-6" hx-boost:inherited="false">
+		<Layout mode={LayoutPage} title={locales.ScreensSignIn |> text} description={locales.ScreensSignUpIntro |> text}>
+		<div class="flex flex-col gap-6" hx-boost:inherited="false">
 				<ui.Card>
 					<ui.CardHeader>
 						<ui.CardTitle>
@@ -364,13 +363,8 @@ func (AccountLeave) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.
 }
 
 component (p AccountPage) Page(v AccountView) {
-	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
-	<Layout mode={LayoutMarketing} title={locales.ScreensAccount |> text} description={locales.ScreensTokensIntro |> text} brand={<LayoutBrand/>} tools={<ThemeToggle/>}>
-		<div class="mx-auto flex w-full max-w-xl flex-col gap-6" hx-boost:inherited="false">
-				<ui.Button variant="link" class="self-start px-0" href={intl.URL(ctx, "/")}>
-					<icon.ArrowLeft class="rtl:rotate-180"/>
-					<span translate="no">{ app.Name(ctx) }</span>
-				</ui.Button>
+		<Layout mode={LayoutPage} title={locales.ScreensAccount |> text} description={locales.ScreensTokensIntro |> text}>
+		<div class="flex flex-col gap-6" hx-boost:inherited="false">
 				<ui.Card>
 					<ui.CardHeader>
 						<ui.CardTitle>
@@ -531,13 +525,8 @@ func (PeopleInvite) ServeHTTP(w http.ResponseWriter, r *http.Request, auth *api.
 }
 
 component (p PeoplePage) Page(v PeopleView) {
-	// gsxui's layout for a centred page (Layout), the page itself at the width it reads at.
-	<Layout mode={LayoutMarketing} title={locales.ScreensPeople |> text} description={locales.ScreensPeopleIntro |> text} brand={<LayoutBrand/>} tools={<ThemeToggle/>}>
-		<div class="mx-auto flex w-full max-w-xl flex-col gap-6" hx-boost:inherited="false">
-				<ui.Button variant="link" class="self-start px-0" href={AccountPage{} |> url}>
-					<icon.ArrowLeft class="rtl:rotate-180"/>
-					{ locales.ScreensAccount }
-				</ui.Button>
+		<Layout mode={LayoutPage} title={locales.ScreensPeople |> text} description={locales.ScreensPeopleIntro |> text}>
+		<div class="flex flex-col gap-6" hx-boost:inherited="false">
 				<ui.Card>
 					<ui.CardHeader>
 						<ui.CardTitle>

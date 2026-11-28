@@ -9,25 +9,20 @@ import (
 	"github.com/joeblew999/charter/intl"
 )
 
-// Layout is the document around every page of the app: charter's layout screen, which is gsxui's own site's shell,
-// as a centred page. This says what is in it: the ways to the pages, the tools in the header, and the languages
-// under the page. app.Head is its whole <head> (the title and description as search engines read them, the page in
-// every language, the theme, and web/main.js as Vite built it).
+// Layout is a page of the app, in the one document every page has: charter's layout screen, made of gsxui's
+// components. It has the header and the footer said below, once, for every page: these, the docs, the theme
+// editor, signing in and the admin's pages. app.Head is its whole <head> (the title and description as search
+// engines read them, the page in every language, the theme, and web/main.js as Vite built it).
 component Layout(title intl.Msg, description intl.Msg, children gsx.Node) {
-	<screens.Layout
-		mode={screens.LayoutMarketing}
-		title={title |> text}
-		description={description |> text}
-		brand={ <screens.LayoutBrand/> }
-		links={ <Links/> }
-		tools={ <Tools/> }
-		footer={ <screens.LanguageList/> }
-	>
-		<div class="flex flex-col gap-6">
-			<screens.LanguageOffer/>
-			{ children }
-		</div>
+	<screens.Layout mode={screens.LayoutPage} title={title |> text} description={description |> text}>
+		<screens.LanguageOffer/>
+		{ children }
 	</screens.Layout>
+}
+
+// What is around every page of the app, said once.
+func init() {
+	screens.Around.Links, screens.Around.Tools, screens.Around.Footer = Links(), Tools(), Footer()
 }
 
 // Links are the pages, the one being shown marked (current, by the tree). The layout shows them in the header, and
@@ -48,4 +43,9 @@ component Tools() {
 	<screens.PreferencesDialog/>
 	<screens.ThemeLink/>
 	<screens.ThemeToggle/>
+}
+
+// Footer is under every page: the page in each language the app ships. A full page load: <html lang> changes.
+component Footer() {
+	<screens.LanguageList/>
 }

@@ -52,24 +52,37 @@ A screen's text follows the same way, message by message and in every language: 
 go tool charter add screen:layout
 ```
 
-One document is around every page of an app: `screens.Layout`. What moves in it is gsxui's own components, as `gsxui add` brings and updates them: its `Sidebar`, which is a drawer on a phone by itself, and its `Sheet` for what else has no room there. A page names its mode and hands over what goes where; it writes no `<!DOCTYPE html>`, no header and no width.
+One document is around every page of an app: `screens.Layout`. Every page has the same header (the app's name, the ways to its pages, its tools) and the same footer, charter's screens too: the docs, the theme editor, signing in, the account, the admin's pages. The app says them once, as it starts:
+
+```go
+	screens.Around.Links, screens.Around.Tools, screens.Around.Footer = Links(), Tools(), Footer()
+```
+
+A page then names its mode and nothing else. It writes no `<!DOCTYPE html>`, no header, no width and no way back: the app's name in the header is the way to the front page, on every page.
+
+```gsx
+	<screens.Layout mode={screens.LayoutPage} title={title |> text} description={description |> text}>
+```
+
+What moves in the layout is gsxui's own components, as `gsxui add` brings and updates them: its `Sidebar`, which is a drawer on a phone by itself, and its `Sheet` for what else has no room there.
 
 | Mode | For | What it is |
 |---|---|---|
-| `LayoutMarketing` | a front page, a page of the app | a header, the page centred under it, a footer |
+| `LayoutMarketing` | a front page | as wide as the header |
+| `LayoutPage` | a page of the app: a list, a form, signing in, the admin's pages | one column at a width that reads, the same on every one |
 | `LayoutDocs` | a page to read | gsxui's `Sidebar` with the pages, the page beside it, its sections at the other side |
 | `LayoutWorkspace` | the theme editor | the whole window under the header, no footer |
 
-| A page hands over | On a wide window | On a phone |
+| What | On a wide window | On a phone |
 |---|---|---|
-| `brand` | at the start of the header (`<screens.LayoutBrand/>` is the app's name, linked to the front page) | the same |
-| `links` | in the header | in a drawer, from the header's menu button |
-| `tools` | in the header | in the header |
-| `navigation` | in the `Sidebar`, which its button or Cmd-B folds away | the `Sidebar` slides in over the page |
-| `contents` | at the other side, staying in view | under "On this page" at the top of the page |
-| `footer` | under the page | under the page |
+| The app's name | at the start of the header | the same |
+| `Around.Links` | in the header | in a drawer, from the header's menu button; on a page of docs, at the top of the list of pages |
+| `Around.Tools` | in the header | in the header |
+| `Around.Footer` | under the page | under the page |
+| A docs page's `navigation` | in the `Sidebar`, which its button or Cmd-B folds away | the `Sidebar` slides in over the page |
+| A docs page's `contents` | at the other side, staying in view | under "On this page" at the top of the page |
 
-`links` and `contents` are shown in two places, so nothing in them has an id.
+The links are shown in two places, so nothing in them has an id.
 
 What is checked: `check` fails a page that writes a document of its own. A browser test opens each page at a phone's, a tablet's, a laptop's and a desk's width and fails one that is wider than its window, has something in its header cut off, or shows a menu before it is opened (`page.Wide(390)`, `page.Fits()`).
 

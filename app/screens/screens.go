@@ -60,7 +60,8 @@ var Screens = &registry.Registry{
 				"  (&app.App{Facts: []app.Fact{{Label: locales.Notes, Value: …}}, …}: lines of the app's own on its overview)"},
 		{Name: "layout", Gsxui: []string{"sidebar", "sheet", "separator", "icon"},
 			Use: "  the document around a page, of gsxui's Sidebar and Sheet: a centred page, a page of docs, or a workspace\n" +
-				"    <screens.Layout mode={screens.LayoutMarketing} title={…} description={…} brand={<screens.LayoutBrand/>} links={…} tools={…}>…</screens.Layout>"},
+				"    <screens.Layout mode={screens.LayoutPage} title={…} description={…}>…</screens.Layout>\n" +
+				"  and, once, what every page has around it: screens.Around.Links, screens.Around.Tools, screens.Around.Footer = Links(), Tools(), Footer()"},
 		{Name: "docs", Gsxui: []string{"badge", "button", "command", "kbd", "item", "table", "breadcrumb", "sidebar", "icon"}, Needs: []string{"layout", "theme-toggle", "theme"},
 			Use: "  the docs' pages (docs/*.md), in the page tree, with the docs named in the App:\n" +
 				"    docs screens.Docs `route:\"/docs Docs\"`\n" +

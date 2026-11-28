@@ -10,6 +10,20 @@ What you wrote does not, when a release changes how something is written. This p
 
 charter is before 1.0: a release may change how an app is written, and says so here. This page starts at 0.63; it does not cover what changed before that.
 
+## 0.76
+
+Two lines of yours change: what is around your pages is said once.
+
+- **Every page has the same header and footer.** The app says them once, and no page or screen passes its own:
+
+  | Was | Is |
+  |---|---|
+  | `<screens.Layout mode={…} title={…} description={…} brand={…} links={…} tools={…} footer={…}>` on each page | `screens.Around.Links, screens.Around.Tools, screens.Around.Footer = Links(), Tools(), Footer()` in a `func init()`, once, and `<screens.Layout mode={…} title={…} description={…}>` on each page |
+
+  The compiler names each page that still passes them.
+- **`LayoutPage`** is a page of the app at one width, the same for all: your lists and forms, and charter's sign-in, account and admin pages. `LayoutMarketing` is a front page.
+- **No screen has a way back of its own** (the account's, the admin's): the app's name in the header is the way to the front page everywhere. The docs' link to the repository is at the foot of a page, beside "Edit this page".
+
 ## 0.75
 
 Nothing to change in an app's code, unless it took 0.74.
