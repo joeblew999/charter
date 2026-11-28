@@ -203,6 +203,33 @@ func secretNames(dir string) ([]string, error) {
 	return names, nil
 }
 
+// Declared is the bindings of one kind an app declares: what the kind is, as one line, and their names.
+type Declared struct {
+	About string
+	Names []string
+}
+
+// Read is what dir's files declare, by kind, in the order env/env.built.go has them: for what describes the
+// Worker to a reader (the docs' page of it). A kind with nothing declared is left out.
+func Read(dir string) ([]Declared, error) {
+	kinds, err := read(dir)
+	if err != nil {
+		return nil, err
+	}
+	var out []Declared
+	for _, k := range kinds {
+		if len(k.of) == 0 {
+			continue
+		}
+		d := Declared{About: k.about}
+		for _, b := range k.of {
+			d.Names = append(d.Names, b.name)
+		}
+		out = append(out, d)
+	}
+	return out, nil
+}
+
 // Go is dir's env/env.built.go, and "" for a Worker that declares nothing.
 func Go(dir string) (string, error) {
 	kinds, err := read(dir)

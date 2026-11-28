@@ -80,6 +80,10 @@ func Dev(args []string) {
 	})
 	go watch(p, "docs", "docs", func() []string {
 		files, _ := filepath.Glob(filepath.Join(p.Root, "docs", "*.md"))
+		// And what the pages charter writes of the app itself are read from (docsgen's reference.go).
+		for _, name := range append([]string{"fern/openapi.json", "db/schema.sql", "db/queries.sql"}, envcode.Sources...) {
+			files = append(files, filepath.Join(p.Root, filepath.FromSlash(name)))
+		}
 		return files
 	})
 	// As gsx's flags take them: a command line, split on spaces. go tool charter is this charter, by the app's go.mod.

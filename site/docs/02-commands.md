@@ -69,6 +69,7 @@ Each save runs the generator that owns the file, then the Go compiler:
 | `db/schema.sql` | the migration, and the local database follows | every query, again, against the new schema |
 | `db/queries.sql` | `db/queries.gen.go`: a function and a row type for each query | sqlc: columns and types; then the compiler, on every caller |
 | `locales/*.toml` | the messages as Go names | the compiler, on every page that uses one |
+| The API's spec, `db/*.sql`, `wrangler.jsonc` | the docs' pages of the API, the database and what the Worker is bound to ([what charter writes](11-docs.md#what-you-write-and-what-charter-writes)) | nothing to check: they are read from the source |
 | `wrangler.jsonc`, `.dev.vars.example`, `fnox.toml` | `env/env.built.go`: each binding, variable and secret's name as a typed value | the compiler, on every line that uses one |
 
 A mistake shows in the browser in gsx's overlay within a second or two, and the last page that worked stays up.

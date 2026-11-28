@@ -74,6 +74,10 @@ changing that part.
   `cloud.ConsumeEmail`.
 - **Memory between requests is a cache, never state**: any request may start a new Go runtime.
 - **D1 has no interactive transactions**: single statements with `RETURNING`, or `cloud.Batch` of the `…Stmt` functions written beside the queries (`cloud.Batch(conn, db.AStmt(id), db.BStmt(id))`).
+- **Docs**: write what the app is for in `docs/*.md`. Never write out its operations, tables or bindings there:
+  charter writes `/docs/reference-api`, `/docs/reference-database` and `/docs/reference-bindings` from
+  `fern/openapi.json`, `db/*.sql` and `wrangler.jsonc`. Link to one by its address (`[the API](reference-api)`).
+  `charter test` follows every link and fails on one that leads nowhere.
 - Never hand-write what a command generates: `db/migrations/`, `*.gen.go`, `*.built.go` (`env/`, the messages), `*.x.go`, `fern/`, `sdk/`, `build/`, `dist/`.
 - Not in git: `.dev.vars` (made from `.dev.vars.example`), and what is built each time (`*.x.go`,
   `*.built.go`, `.charter/`, `build/`, `dist/`). In git, and held to its source by `check`: `*.gen.go`,

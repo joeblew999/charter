@@ -11,6 +11,28 @@ docs/
 
 A page's first heading is its title and its first paragraph its description. The number in a file's name is its place in the list, and is not in its address. A link to another page is written to its file (`[the start](index.md)`), so it works on GitHub too.
 
+## What you write, and what charter writes
+
+You write what only you know: what the app is for, and how to use it.
+
+What the app *has* is already written down once, in the files that make it. charter reads those and writes a page of the docs for each, after yours:
+
+| Page | Address | Written from | Says |
+|---|---|---|---|
+| The API | `/docs/reference-api` | `fern/openapi.json`, the contract `charter check` holds to your Go types | every operation, who may call it and how often, what it takes and answers, every type |
+| The database | `/docs/reference-database` | `db/schema.sql`, `db/queries.sql` | every table and column, every statement the app runs |
+| What the Worker is bound to | `/docs/reference-bindings` | `wrangler.jsonc`, `.dev.vars.example`, `fnox.toml` | each database, bucket, queue and variable, and the names of the secrets |
+
+A page is there when its source is: an app with no API has no API page. Nobody keeps them in step, because there is nothing to keep: rename a column and the database's page has the new name at the next save. They are pages like any other: listed, searched, given to language models as Markdown, and their "edit" link goes to the file they are written from. Link to one by its address: `[the API](reference-api)`.
+
+[The example's](https://github.com/joeblew999/charter/tree/main/example) are live: [its API](https://charter-example.gedw99.workers.dev/docs/reference-api), [its database](https://charter-example.gedw99.workers.dev/docs/reference-database), [what it is bound to](https://charter-example.gedw99.workers.dev/docs/reference-bindings).
+
+charter's own site has none of the first two, and says so: it has no API and no database. Its pages explain how charter works; for what an app made with it looks like, they point at the example.
+
+## Links are checked
+
+`charter test` follows every link a page of the docs has to the app itself, as it does for every other page, and fails on one that leads nowhere: an address that answers 404, or a `#part` the page it names does not have. A link to another page's file (`03-pages.md`) or to a written page's address is such a link.
+
 ## Showing them
 
 ```go

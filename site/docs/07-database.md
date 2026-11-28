@@ -74,6 +74,8 @@ CREATE TABLE ceremonies (
 );
 ```
 
+What the example's database has, every table, column and statement, is [a page of its docs](https://charter-example.gedw99.workers.dev/docs/reference-database) that charter writes from this file. Your app gets the same.
+
 ## Changing it
 
 Edit the schema and save. Nobody writes a migration.

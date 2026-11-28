@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	_ "modernc.org/sqlite" // SQLite in Go, as D1 is SQLite: for working the migrations out, in the command only
@@ -439,4 +440,69 @@ func Tags(schema string) map[string]map[string]string {
 		}
 	}
 	return out
+}
+
+// Table is a table of a schema, as SQLite itself has it once the schema ran: for what describes a database to a
+// reader (the docs' page of it).
+type Table struct {
+	Name    string
+	Columns []TableColumn
+}
+
+// TableColumn is a column: its type as declared, whether it may be NULL, its default as SQL ("" for none), whether
+// it is the primary key or part of it, and what the schema's comment says of it (doc: …).
+type TableColumn struct {
+	Name, Type, Default, Doc string
+	NotNull, Key             bool
+}
+
+// Tables are the tables a schema makes, in the order it declares them, read from SQLite after running it: so they
+// are what the database has, not what a reading of the text takes it to say.
+func Tables(schema string) ([]Table, error) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+	if _, err := db.Exec(schema); err != nil {
+		return nil, err
+	}
+	rows, err := db.Query(`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' ORDER BY rowid`)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for rows.Next() {
+		var name string
+		rows.Scan(&name)
+		names = append(names, name)
+	}
+	rows.Close()
+	docs := Tags(schema)
+	said := regexp.MustCompile(`doc:"((?:[^"\\]|\\.)*)"`)
+	var tables []Table
+	for _, name := range names {
+		t := Table{Name: name}
+		cols, err := db.Query(`SELECT name, type, "notnull", COALESCE(dflt_value, ''), pk FROM pragma_table_info(?) ORDER BY cid`, name)
+		if err != nil {
+			return nil, err
+		}
+		for cols.Next() {
+			var c TableColumn
+			var notNull, key int
+			if err := cols.Scan(&c.Name, &c.Type, &notNull, &c.Default, &key); err != nil {
+				cols.Close()
+				return nil, err
+			}
+			c.NotNull, c.Key = notNull != 0 || key != 0, key != 0
+			if m := said.FindStringSubmatch(docs[name][c.Name]); m != nil {
+				c.Doc, _ = strconv.Unquote(`"` + m[1] + `"`)
+			}
+			t.Columns = append(t.Columns, c)
+		}
+		cols.Close()
+		tables = append(tables, t)
+	}
+	return tables, nil
 }

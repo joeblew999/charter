@@ -16,7 +16,9 @@ The API is written once, as a contract in Go (`api/contract.go`). Its OpenAPI an
 
 `charter check --fix` writes `fern/openapi.json` and `fern/asyncapi.json` from the contract; `charter check` fails when they are behind it.
 
-This site has no API of its own. The example's is live: [its OpenAPI document](https://charter-example.gedw99.workers.dev/api/openapi.json), and [its notes](https://charter-example.gedw99.workers.dev/api/notes).
+This site has no API of its own. The example's is live: [every operation of it, written from its contract](https://charter-example.gedw99.workers.dev/docs/reference-api), [its OpenAPI document](https://charter-example.gedw99.workers.dev/api/openapi.json), and [its notes](https://charter-example.gedw99.workers.dev/api/notes).
+
+An app's docs get that page without anyone writing it: [what charter writes](11-docs.md#what-you-write-and-what-charter-writes).
 
 ## Who may call
 
