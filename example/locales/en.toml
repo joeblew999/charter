@@ -225,3 +225,8 @@ admin_memory_intro = "What this instance of the Worker holds in Go runtimes now.
 admin_runtimes = "Go runtimes alive"
 admin_held = "They hold"
 admin_budget = "They may hold"
+# The docs on a phone: the button that opens the list of pages. And at the foot of a page, the labels above the
+# links to the page before it and the page after it.
+docs_menu = "Menu"
+docs_previous = "Previous page"
+docs_next = "Next page"

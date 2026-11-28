@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/joeblew999/charter/app/apptest"
 	"github.com/joeblew999/charter/site/pages"
@@ -104,34 +105,81 @@ func TestTheWorkersGoStartedWithIt(t *testing.T) {
 	}
 }
 
-// On a phone the list of pages is a menu. A link in it shows its page with the menu closed, and the menu opens
-// again from there, under its button: a page reached by a link is as that page loaded would be, with nothing of
-// the page before left open over it.
-func TestTheDocsMenuOnAPhone(t *testing.T) {
+// On a phone there is no room for the list of pages at the side: it slides in from a bar that stays at the top,
+// in the groups the docs' front page has. A link in it shows its page with the list gone, and the list opens again
+// from there. The page's own sections come down from the same bar, and go when one is chosen.
+func TestTheDocsOnAPhone(t *testing.T) {
 	t.Parallel()
 	page := apptest.Browser(t)
 	page.Phone()
 	page.Open(at(pages.Home{}))
 	page.Click(`main a[href$="/docs/"]`)
 	page.WaitText("#doc h1", "charter")
-	// Whether the menu is open, and how far below the top of the window it is: "true 52".
-	menu := func() string {
-		return page.JS(`(() => { const m = document.querySelector("#docs-menu-pages"); return m.matches(":popover-open") + " " + Math.round(m.getBoundingClientRect().top) })()`)
-	}
-	if got := menu(); got != "false 0" {
-		t.Fatalf("before it is opened, the menu is %q", got)
+	open := func(id string) string { return page.JS(`String(document.querySelector("#` + id + `").open)`) }
+	if got := open("docs-menu-pages"); got != "false" {
+		t.Fatalf("before it is opened, the list of pages is open: %s", got)
 	}
 	page.Click("#docs-menu")
-	if got := menu(); !strings.HasPrefix(got, "true ") || got == "true 0" {
-		t.Fatalf("opened, the menu is %q: want it open, below its button", got)
+	page.WaitText("#docs-menu-pages", "Ship and watch")
+	if got := open("docs-menu-pages"); got != "true" {
+		t.Fatalf("opened, the list of pages is open: %s", got)
 	}
 	page.Click(`#docs-menu-pages a[href$="/docs/getting-started"]`)
 	page.WaitText("#doc h1", "Getting started")
-	if got := menu(); got != "false 0" {
-		t.Errorf("after a link in it was followed, the menu is %q: want it closed", got)
+	if got := open("docs-menu-pages"); got != "false" {
+		t.Errorf("after a link in it was followed, the list of pages is open: %s", got)
 	}
 	page.Click("#docs-menu")
-	if got := menu(); !strings.HasPrefix(got, "true ") || got == "true 0" {
-		t.Errorf("opened again on the next page, the menu is %q: want it open, below its button", got)
+	if got := open("docs-menu-pages"); got != "true" {
+		t.Errorf("opened again on the next page, the list of pages is open: %s", got)
+	}
+	// The sections of the page, from a page loaded anew: chosen, the list is gone and the page is at the section.
+	page.Open(at(pages.Home{}))
+	page.Click(`main a[href$="/docs/"]`)
+	page.WaitText("#doc h1", "charter")
+	page.Click("#docs-sections")
+	if got := open("docs-sections-list"); got != "true" {
+		t.Fatalf("opened, the page's sections are open: %s", got)
+	}
+	page.Click(`#docs-sections-list a[href="#where-to-go"]`)
+	// It goes as gsxui's sheets go, sliding away: until it has.
+	for start := time.Now(); open("docs-sections-list") == "true" && time.Since(start) < 5*time.Second; {
+		time.Sleep(50 * time.Millisecond)
+	}
+	if got := open("docs-sections-list"); got != "false" {
+		t.Errorf("after a section was chosen, the sections are open: %s", got)
+	}
+	if hash := page.JS(`location.hash`); hash != "#where-to-go" {
+		t.Errorf("choosing a section went to %q", hash)
+	}
+	// Nothing on a page is wider than a phone: a table or a sample that is scrolls by itself.
+	if wider := page.JS(`String(document.documentElement.scrollWidth - window.innerWidth)`); wider != "0" {
+		t.Errorf("the page is %s px wider than the window", wider)
+	}
+}
+
+// The list at the side is in the groups the docs' front page names, and the docs are read from one end to the
+// other by the links at the foot of each page, in that order, without going back to the list.
+func TestTheDocsAreReadInOrder(t *testing.T) {
+	t.Parallel()
+	page := apptest.Browser(t)
+	page.Open(at(pages.Home{}))
+	page.Click(`main a[href$="/docs/"]`)
+	page.WaitText("#doc h1", "charter")
+	for _, group := range []string{"Start", "Write", "Prove", "Ship and watch", "Reference"} {
+		page.WaitText("#docs-nav", group)
+	}
+	if page.Has("#docs-previous") {
+		t.Error("the first page has a page before it")
+	}
+	page.WaitText("#docs-next", "Getting started")
+	page.Click("#docs-next")
+	page.WaitText("#doc h1", "Getting started")
+	page.WaitText("#docs-previous", "charter")
+	page.WaitText("#docs-next", "The commands")
+	page.Click("#docs-next")
+	page.WaitText("#doc h1", "The commands, and what each one proves")
+	if here := page.Attr(`#docs-nav a[aria-current="page"]`, "href"); !strings.HasSuffix(here, "/docs/commands") {
+		t.Errorf("the list marks %q as the page being read", here)
 	}
 }

@@ -168,3 +168,6 @@ admin_memory_intro = "Was diese Instanz des Workers gerade in Go-Laufzeiten häl
 admin_runtimes = "Aktive Go-Laufzeiten"
 admin_held = "Sie belegen"
 admin_budget = "Sie dürfen belegen"
+docs_menu = "Menü"
+docs_previous = "Vorherige Seite"
+docs_next = "Nächste Seite"

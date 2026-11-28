@@ -25,6 +25,7 @@
     "ui/native-select.gsx": "6c4b54af0a61aa8870c9e2e739a63547b70d92840f9b933b29e848717f562bb6",
     "ui/popover.gsx": "8da9c183a47be4c7cb51d63b2b434dd1c87bcfaf19a9359cbe91a0d5d1a61e61",
     "ui/separator.gsx": "ed17da94c06b28bbdcd8f30d5b05059d13da4fb2fc84e87e43903ba3fc4e93fc",
+    "ui/sheet.gsx": "524a059169f2dfa8e0d708c890f4c02a81b8e786f5e103782ef7219fed947553",
     "web/gsxui/command.js": "26de740789e8216329dd98fb251dd84dadf0ff88798804caa6e947dc44a2c501",
     "web/gsxui/dialog.js": "43860dddef85d0fe0cf5105b5a05bf334221e59655746f264dfeee361e7a2e69",
     "web/gsxui/fonts/NOTICE.md": "5eb34652439872f68249cc67323cf589d5ed40a84b30e309e864c26ce207fd76",

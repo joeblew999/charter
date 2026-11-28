@@ -50,3 +50,8 @@ theme = "Switch between light and dark"
 # The docs' search: its button and field, and what it says when no page or section matches.
 docs_search = "Search the docs"
 docs_none = "Nothing found."
+# The docs on a phone: the button that opens the list of pages. And at the foot of a page, the labels above the
+# links to the page before it and the page after it.
+docs_menu = "Menu"
+docs_previous = "Previous page"
+docs_next = "Next page"

@@ -25,6 +25,23 @@ A page's first heading is its title and its first paragraph its description. The
 
 **Not checked by anything:** what a page says in words. When the code a paragraph describes changes, nothing can tell. So keep prose for what does not change with every commit (what the app is for, why it is built as it is), and take facts from files: a sample by its file's name, a table or an operation from the page charter writes.
 
+## Groups, and the order
+
+The front page, `docs/index.md`, says both, where a reader finds them too. A line that is only bold names a group, and the pages the list under it links to are in it, in that order:
+
+```
+**Start**
+
+- [Getting started](01-getting-started.md): a new app in three commands.
+- [An app's layout](03-layout.md)
+
+**Write**
+
+- [Pages](04-pages.md), [the API](05-api.md)
+```
+
+The list at the side of every page is then those groups, and "next" at the foot of a page is the next one listed. There is nothing else to keep: no file of settings, and no second list. A page the front page lists in no group comes after them, and what charter writes of the app is the group Reference. A front page with no such lines groups nothing, and the pages are in the order of their files' numbers.
+
 ## What you write, and what charter writes
 
 You write what only you know: what the app is for, and how to use it.
@@ -79,7 +96,10 @@ While `charter dev` runs, saving a Markdown file reloads the page.
 
 ## What the pages have
 
-- The list of pages at the side, and in a menu where there is no room for a side.
+- The list of pages at the side, in groups, staying in view as the page is read.
+- The page's own sections at the other side.
+- At the foot of each page, the page before it and the page after it: the docs read from one end to the other.
+- On a phone, a bar that stays at the top: the list of pages slides in from it, and the page's sections come down from it.
 - Search by the titles of pages and their sections. Cmd-K (Ctrl-K) opens it.
 - Code marked up by what each word is, in the colours of your app's theme, light and dark.
 - The theme switch, the repository, and "edit this page".

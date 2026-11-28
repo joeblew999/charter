@@ -211,3 +211,37 @@ func TestCharterDocsShowRealCode(t *testing.T) {
 		}
 	}
 }
+
+// The groups of the docs, and the order they are read in, are the front page's: a line that is only bold names a
+// group, and the pages the list under it links to are in it, in that order, whatever their files are numbered. A
+// page it lists nowhere comes after, in no group, and what charter writes of the app is the Reference.
+func TestGroups(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, text string) {
+		os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755)
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("docs/index.md", "# An app\n\nWhat it is for. See [the start](01-start.md) too.\n\n**Write**\n\n- [Pages](03-pages.md), and [the API](02-api.md#operations).\n\n**Start**\n\n- [Starting](01-start.md): first.\n\nElsewhere: [a site](https://example.org/x.md).\n")
+	write("docs/01-start.md", "# Starting\n\nFirst.\n")
+	write("docs/02-api.md", "# The API\n\nSecond.\n\n## Operations\n")
+	write("docs/03-pages.md", "# Pages\n\nThird.\n")
+	write("docs/04-other.md", "# Other\n\nNot listed.\n")
+	write("wrangler.jsonc", `{"name": "x", "vars": {"APP_NAME": "x"}}`)
+	if _, err := Write(dir); err != nil {
+		t.Fatal(err)
+	}
+	built, _ := os.ReadFile(filepath.Join(dir, "docs", "docs.built.json"))
+	var pages []struct{ Slug, Group string }
+	if err := json.Unmarshal(built, &pages); err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, p := range pages {
+		got = append(got, p.Slug+"="+p.Group)
+	}
+	if want := "=, pages=Write, api=Write, start=Start, other=, reference-bindings=Reference"; strings.Join(got, ", ") != want {
+		t.Errorf("the pages and their groups:\n%s\nwant:\n%s", strings.Join(got, ", "), want)
+	}
+}

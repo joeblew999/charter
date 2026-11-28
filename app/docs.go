@@ -43,6 +43,46 @@ type Doc struct {
 	Headings []DocHeading
 	// Source is the file, from the app's folder: docs/03-pages.md.
 	Source string
+	// Group is the group the docs' front page lists the page in (a line of docs/index.md that is only bold, above
+	// the list that links to it), "" for a page it lists in none. What charter writes of the app itself is in
+	// "Reference".
+	Group string
+}
+
+// DocGroup is pages of the docs under one name, as the list at the side shows them.
+type DocGroup struct {
+	Name  string
+	Pages []Doc
+}
+
+// Groups are the docs' pages as the list at the side has them: in their order, those of one group together under
+// its name, and those of none (the front page among them) under no name.
+func (d *Docs) Groups() []DocGroup {
+	var groups []DocGroup
+	for _, page := range d.Pages {
+		if n := len(groups); n > 0 && groups[n-1].Name == page.Group {
+			groups[n-1].Pages = append(groups[n-1].Pages, page)
+			continue
+		}
+		groups = append(groups, DocGroup{Name: page.Group, Pages: []Doc{page}})
+	}
+	return groups
+}
+
+// Around is the page before a page and the one after it, in the order the docs are read: nil at either end.
+func (d *Docs) Around(page Doc) (before, after *Doc) {
+	for i := range d.Pages {
+		if d.Pages[i].Slug != page.Slug {
+			continue
+		}
+		if i > 0 {
+			before = &d.Pages[i-1]
+		}
+		if i+1 < len(d.Pages) {
+			after = &d.Pages[i+1]
+		}
+	}
+	return before, after
 }
 
 // DocHeading is a section of a Doc: the id its heading has in the HTML, and how deep it is (2 or 3).

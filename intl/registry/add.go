@@ -130,12 +130,6 @@ func (r *Registry) Add(c config.Config, names []string, o Options) (int, error) 
 		fmt.Printf("%s's components and the app's copies are the same\n", r.Command)
 		return 0, nil
 	}
-	// The gsxui components they are made of, after the copies are written: gsxui add generates the app's Go, and a
-	// copy written for an older release of this library may no longer compile against this one, which would stop it
-	// before the copy that does was there.
-	if err := gsxuiAdd(c.Root, gsxui, picked); err != nil {
-		return 1, err
-	}
 	// The tables a component keeps what it knows in go where every table is written down: db/schema.sql. charter
 	// writes the migration from there.
 	for _, comp := range picked {
@@ -170,6 +164,12 @@ func (r *Registry) Add(c config.Config, names []string, o Options) (int, error) 
 		p.SetCopied(textRecord+key, h)
 	}
 	if err := p.Generate(os.Stderr); err != nil {
+		return 1, err
+	}
+	// The gsxui components they are made of, last: gsxui add generates the app's Go, which compiles only when the
+	// copies are the ones written above (one written for an older release of this library may no longer compile
+	// against this one) and the messages they show are there.
+	if err := gsxuiAdd(c.Root, gsxui, picked); err != nil {
 		return 1, err
 	}
 	if err := setup.GsxuiRenderer(c.Root, gsxui, os.Stderr); err != nil {

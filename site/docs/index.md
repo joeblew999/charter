@@ -25,7 +25,7 @@ This site is a charter app too: [`site/`](https://github.com/joeblew999/charter/
 
 ## Where to go
 
-The docs follow what a developer does, in order. Each page opens with the commands that matter for it, what is checked before the app runs, and what is not.
+The docs follow what a developer does, in order: start an app, write it beside `charter dev`, prove it with `charter check` and `charter test`, ship it with `charter deploy` and watch it with `charter run`. Each page opens with the commands that matter for it, what is checked before the app runs, and what is not.
 
 **Start**
 
@@ -33,7 +33,7 @@ The docs follow what a developer does, in order. Each page opens with the comman
 - [The commands, and what each one proves](02-commands.md): the whole day, command by command. Read this one first.
 - [An app's layout](03-layout.md): what goes where, and what charter finds by itself.
 
-**Write, beside `charter dev`**
+**Write**
 
 - [Pages](04-pages.md), [the API](05-api.md), [the live feed](06-live.md), [the database](07-database.md).
 - [Signing in, and who may do what](14-sign-in.md): one caller and one rule for pages and API; passkeys.
@@ -41,11 +41,11 @@ The docs follow what a developer does, in order. Each page opens with the comman
 - [Screens and themes](13-screens-and-themes.md): what charter gives every app's interface, in the app's own look.
 - [Docs](11-docs.md): your app's own, from Markdown and from the app itself.
 
-**Prove, with `charter check` and `charter test`**
+**Prove**
 
 - [Tests](09-tests.md): what to test, what not to, and how.
 
-**Ship and watch, with `charter deploy` and `charter run`**
+**Ship and watch**
 
 - [Deploying](10-deploy.md), [the admin screen](15-admin.md), [watching a deployed Worker](16-watching.md).
 

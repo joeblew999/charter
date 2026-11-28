@@ -40,8 +40,8 @@ func slug(file string) string {
 }
 
 type page struct {
-	Slug, Title, Description, HTML, Markdown, Source string
-	Headings                                         [][3]string // id, title, depth
+	Slug, Title, Description, HTML, Markdown, Source, Group string
+	Headings                                                [][3]string // id, title, depth
 }
 
 // Write writes dir's docs/docs.built.go from its docs/*.md, and reports how many pages; none when there is no docs
@@ -88,12 +88,38 @@ func Write(dir string) (int, error) {
 		}
 		sources = append(sources, source{g.slug, g.from, []byte(g.markdown)})
 	}
+	// The groups the pages are listed in, and their order, are the front page's: docs/index.md (grouped, below).
+	group, order := map[string]string{}, map[string]int{}
+	if len(sources) > 0 && sources[0].slug == "" {
+		group, order = grouped(md, sources[0].written)
+	}
+	for _, g := range generated {
+		if _, listed := group[g.slug]; !listed {
+			group[g.slug] = "Reference"
+		}
+	}
+	// index.md, then the pages it lists in its order, then the rest as they were (a file's number, then what
+	// charter writes).
+	rank := func(s source, i int) int {
+		switch at, listed := order[s.slug]; {
+		case s.slug == "":
+			return -1
+		case listed:
+			return at
+		}
+		return len(order) + i
+	}
+	at := map[string]int{}
+	for i, s := range sources {
+		at[s.slug] = rank(s, i)
+	}
+	slices.SortStableFunc(sources, func(a, b source) int { return at[a.slug] - at[b.slug] })
 	var pages []page
 	for _, src := range sources {
 		written := src.written
 		// gsx is read as Go, which it mostly is; a sample taken from a file says which.
 		source := []byte(strings.ReplaceAll(captioned(string(written)), "```gsx\n", "```go\n"))
-		p := page{Slug: src.slug, Source: src.from}
+		p := page{Slug: src.slug, Source: src.from, Group: group[src.slug]}
 		doc := md.Parser().Parse(text.NewReader(source))
 		ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 			if !entering {
@@ -145,12 +171,12 @@ func Write(dir string) (int, error) {
 		Depth     int
 	}
 	type doc struct {
-		Slug, Title, Description, HTML, Markdown, Source string
-		Headings                                         []heading
+		Slug, Title, Description, HTML, Markdown, Source, Group string
+		Headings                                                []heading
 	}
 	docs := make([]doc, len(pages))
 	for i, p := range pages {
-		docs[i] = doc{Slug: p.Slug, Title: p.Title, Description: p.Description, HTML: p.HTML, Markdown: p.Markdown, Source: p.Source, Headings: []heading{}}
+		docs[i] = doc{Slug: p.Slug, Title: p.Title, Description: p.Description, HTML: p.HTML, Markdown: p.Markdown, Source: p.Source, Group: p.Group, Headings: []heading{}}
 		for _, h := range p.Headings {
 			depth, _ := strconv.Atoi(h[2])
 			docs[i].Headings = append(docs[i].Headings, heading{h[0], h[1], depth})
@@ -179,6 +205,43 @@ func Write(dir string) (int, error) {
 		}
 	}
 	return len(pages), nil
+}
+
+// grouped reads the groups of an app's docs from their front page, where a reader finds them too: a line that is
+// only bold (**Start**) names a group, and the pages the list under it links to (their files: 01-start.md) are in
+// it, in that order. So the list at the side of every page is the front page's own, said once. A front page with
+// no such lines groups nothing, and the pages are listed as their files are numbered.
+func grouped(md goldmark.Markdown, index []byte) (group map[string]string, order map[string]int) {
+	group, order = map[string]string{}, map[string]int{}
+	doc := md.Parser().Parse(text.NewReader(index))
+	current := ""
+	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
+		switch n := n.(type) {
+		case *ast.Paragraph:
+			current = ""
+			if strong, ok := n.FirstChild().(*ast.Emphasis); ok && strong.Level == 2 && n.ChildCount() == 1 {
+				current = plain(n, index)
+			}
+		case *ast.List:
+			if current == "" {
+				continue
+			}
+			ast.Walk(n, func(l ast.Node, entering bool) (ast.WalkStatus, error) {
+				if link, ok := l.(*ast.Link); ok && entering {
+					file, _, _ := strings.Cut(string(link.Destination), "#")
+					if strings.HasSuffix(file, ".md") && !strings.Contains(file, "://") {
+						if _, seen := order[slug(file)]; !seen && slug(file) != "" {
+							group[slug(file)], order[slug(file)] = current, len(order)
+						}
+					}
+				}
+				return ast.WalkContinue, nil
+			})
+		default:
+			current = ""
+		}
+	}
+	return group, order
 }
 
 // short is a paragraph as a search result has room for: its text, cut at a word within 155 characters.
